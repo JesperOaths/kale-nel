@@ -188,6 +188,124 @@ public final class ClipClassifier {
   return output;
  }
 
+ /** Refresh an existing motion thumbnail using the strongest person
+  * observation in its saved sample timeline. Decode ONE frame on the S9+,
+  * then crop out the distant street. Keep the old JPEG for rollback.
+  */
+ public synchronized boolean rebuildGardenThumbnail(File video,File folder,
+                                                    JSONObject manifest)throws Exception{
+  if(video==null||!video.isFile()||manifest==null||
+     "foreground_garden_motion".equals(manifest.optString("thumbnail_focus")))
+   return false;
+  MediaMetadataRetriever media=new MediaMetadataRetriever();
+  Bitmap bitmap=null;
+  try{
+   media.setDataSource(video.getAbsolutePath());
+   long duration=Long.parseLong(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+   if(duration<1500)return false;
+   long at=duration/2;
+   double high=-1;
+   JSONArray samples=manifest.optJSONArray("person_sample_timeline");
+   if(samples!=null)for(int i=0;i<samples.length();i++){
+    JSONObject sample=samples.optJSONObject(i);
+    if(sample==null)continue;
+    double weight=sample.optDouble("person_peak_score",0)+
+         (sample.optInt("people_at_050",0)>0?10.0:0.0);
+    if(weight>high){high=weight;at=sample.optLong("time_ms",at);}
+   }
+   at=Math.max(0,Math.min(duration-1,at));
+   bitmap=media.getFrameAtTime(at*1000,MediaMetadataRetriever.OPTION_CLOSEST);
+   if(bitmap==null)return false;
+   float[] personBox=null;
+   float peak=0;
+   for(Detection d:detect(bitmap)){
+    if(!"person".equals(d.label)||d.score<.30f)continue;
+    float[] box=d.box;
+    if(box==null||box.length!=4||box[2]<.64f)continue;
+    float cx=(box[1]+box[3])*.5f;
+    if(cx<.045f||cx>.955f||d.score<=peak)continue;
+    peak=d.score;personBox=box;
+   }
+   Bitmap thumbnail=makeGardenThumbnail(bitmap,personBox);
+   String name=video.getName();
+   File dest=new File(folder,name+".thumb.jpg");
+   File tmp=new File(folder,name+".thumb.garden-partial");
+   File backup=new File(folder,name+".thumb.previous-garden.jpg");
+   try{
+    try(FileOutputStream output=new FileOutputStream(tmp)){
+     thumbnail.compress(Bitmap.CompressFormat.JPEG,88,output);
+     output.getFD().sync();
+    }
+   }finally{thumbnail.recycle();}
+   if(!tmp.isFile()||tmp.length()<1000)throw new IOException("garden_thumbnail_empty");
+   boolean backed=false;
+   if(dest.exists()&&!backup.exists()){
+    if(!dest.renameTo(backup))throw new IOException("original_thumbnail_backup_failed");
+    backed=true;
+   }
+   if(!tmp.renameTo(dest)){
+    if(backed)backup.renameTo(dest);
+    throw new IOException("garden_thumbnail_promotion_failed");
+   }
+   manifest.put("thumbnail",dest.getName())
+     .put("thumbnail_focus","foreground_garden_motion")
+     .put("thumbnail_source_time_ms",at)
+     .put("thumbnail_garden_person_confidence",Math.round(peak*1000f)/1000.0)
+     .put("thumbnail_person_candidate_in_garden",personBox!=null);
+   writeJson(new File(folder,name+".verified.json"),manifest);
+   return true;
+  }finally{
+   if(bitmap!=null)bitmap.recycle();
+   media.release();
+  }
+ }
+
+ /** Secondary retention pass. The on-phone model examines 24 points in
+  * the original video; no decoding is performed on the C720P. A single weak
+  * person box touching the garden is sufficient to KEEP the clip.
+  * No model result can conclusively prove absence of a person: "no evidence"
+  * is handled as reversible quarantine only, never immediate deletion.
+  */
+ public synchronized JSONObject gardenRetentionProbe(File video,float top,float margin)throws Exception{
+  if(video==null||!video.isFile()||top<.4f||top>.85f)throw new IllegalArgumentException("invalid_video_or_roi");
+  init();
+  MediaMetadataRetriever grabber=new MediaMetadataRetriever();
+  int frames=0,personFrames=0,anyPersonFrames=0;
+  float maximumGardenScore=0f;
+  try{
+   grabber.setDataSource(video.getAbsolutePath());
+   String durationText=grabber.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+   long duration=Long.parseLong(durationText);
+   if(duration<2500||duration>600000)throw new IOException("unsupported_clip_duration");
+   for(int i=0;i<24;i++){
+    long micros=(long)(((i+.5)/24.0)*duration*1000);
+    Bitmap still=grabber.getFrameAtTime(micros,MediaMetadataRetriever.OPTION_CLOSEST);
+    if(still==null)continue;
+    try{
+     frames++;
+     boolean garden=false,any=false;
+     for(Detection d:detect(still)){
+      if(!"person".equals(d.label)||d.score<.30f)continue;
+      any=true;
+      float[] b=d.box;
+      if(b!=null&&b.length==4&&(b[1]+b[3])*.5f>=margin&&
+         (b[1]+b[3])*.5f<=1f-margin&&b[2]>=top){
+       garden=true;
+       maximumGardenScore=Math.max(maximumGardenScore,d.score);
+      }
+     }
+     if(garden)personFrames++;
+     if(any)anyPersonFrames++;
+    }finally{still.recycle();}
+   }
+  }finally{grabber.release();}
+  return new JSONObject().put("model","ssd_mobilenet_garden_retention_v1")
+   .put("valid_frames",frames).put("garden_person_frames_at_030",personFrames)
+   .put("any_person_frames_at_030",anyPersonFrames)
+   .put("peak_garden_person_score",maximumGardenScore)
+   .put("decision",frames<20?"uncertain_incomplete_samples":
+      personFrames>0?"retain_possible_garden_person":"no_garden_person_evidence");
+ }
  public synchronized JSONObject process(File mp4, File folder, String name, String trigger, long motionEvents)throws Exception{
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
@@ -207,6 +325,10 @@ public final class ClipClassifier {
   final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
   double maxPerson=0,maxAnimal=0,maxVehicle=0;
   Bitmap best=null;double bestScore=-1;
+  long bestMotionTimeMs=-1;
+  boolean bestGardenPerson=false;
+  float bestGardenPersonScore=0f;
+  int[] previousGardenLuma=null;
   long duration=0;
   try{
    media.setDataSource(mp4.getAbsolutePath());
@@ -273,11 +395,34 @@ public final class ClipClassifier {
        .put("person_peak_score",Math.round(framePersonMax*1000)/1000.0)
        .put("vehicles_at_050",v).put("animals_at_050",a);
      frameEvidence.put(sample);
-     double quality=confidence*2.0+0.05*(p+a+v);
+     // Prioritize the actual foreground person or largest garden change.
+     // Cars on the road cannot dominate a saved thumbnail.
+     final float gardenTop=.64f,margin=.045f;
+     float personInGarden=0f;
+     float[] gardenPersonBox=null;
+     for(Detection detected:found){
+      if(!"person".equals(detected.label)||detected.score<.30f)continue;
+      float[] box=detected.box;
+      if(box==null||box.length!=4)continue;
+      float center=(box[1]+box[3])*.5f;
+      if(box[2]>=gardenTop&&center>=margin&&center<=1f-margin
+          &&detected.score>personInGarden){
+       personInGarden=detected.score;
+       gardenPersonBox=box;
+      }
+     }
+     int[] currentGardenLuma=sampleGardenLuma(bitmap,gardenTop);
+     double movement=previousGardenLuma==null?0.0:
+        gardenFrameDifference(previousGardenLuma,currentGardenLuma);
+     previousGardenLuma=currentGardenLuma;
+     double quality=personInGarden>0f?1000.0+personInGarden*100.0+movement:movement;
      if(quality>bestScore){
       if(best!=null)best.recycle();
-      best=Bitmap.createScaledBitmap(bitmap,1200,Math.max(2,(int)(bitmap.getHeight()*1200.0/bitmap.getWidth())),true);
+      best=makeGardenThumbnail(bitmap,gardenPersonBox);
       bestScore=quality;
+      bestMotionTimeMs=micros/1000;
+      bestGardenPerson=personInGarden>0f;
+      bestGardenPersonScore=personInGarden;
      }
     }finally{bitmap.recycle();}
    }
@@ -334,6 +479,10 @@ public final class ClipClassifier {
    outfit.publish(result,folder,name,persons==1&&framesWithMultiplePeople==0);
    faceReview.publish(result);
    result.put("processing_elapsed_ms",SystemClock.elapsedRealtime()-begin);
+   result.put("thumbnail_source_time_ms",bestMotionTimeMs>=0?bestMotionTimeMs:JSONObject.NULL);
+   result.put("thumbnail_focus","foreground_garden_motion");
+   result.put("thumbnail_person_candidate_in_garden",bestGardenPerson);
+   result.put("thumbnail_garden_person_confidence",Math.round(bestGardenPersonScore*1000f)/1000.0);
    if(best!=null){
     File thumb=new File(folder,name+".thumb.jpg");
     File temp=new File(folder,name+".thumb.partial");
@@ -351,6 +500,44 @@ public final class ClipClassifier {
   }
   writeJson(new File(folder,name+".verified.json"),result);
   return result;
+ }
+ /** Simple exposure-neutral 12x8 foreground motion sampling, on S9+ only. */
+ private static int[] sampleGardenLuma(Bitmap bitmap,float start){
+  int[] values=new int[96];
+  for(int y=0;y<8;y++)for(int x=0;x<12;x++){
+   int sx=Math.min(bitmap.getWidth()-1,(int)((x+.5f)*bitmap.getWidth()/12f));
+   int sy=Math.min(bitmap.getHeight()-1,(int)((start+(y+.5f)*(1-start)/8f)*bitmap.getHeight()));
+   int rgb=bitmap.getPixel(sx,sy);
+   values[y*12+x]=(77*((rgb>>16)&255)+150*((rgb>>8)&255)+29*(rgb&255))>>8;
+  }
+  return values;
+ }
+ private static double gardenFrameDifference(int[] old,int[] current){
+  double shift=0,delta=0;
+  for(int i=0;i<old.length;i++)shift+=current[i]-old[i];
+  shift/=old.length;
+  for(int i=0;i<old.length;i++)delta+=Math.abs(current[i]-old[i]-shift);
+  return delta/old.length;
+ }
+ /** Crop out distant traffic; where possible center a person in the garden. */
+ private static Bitmap makeGardenThumbnail(Bitmap bitmap,float[] box){
+  int w=bitmap.getWidth(),h=bitmap.getHeight();
+  float left=0f,right=1f,top=.42f;
+  if(box!=null){
+   float cx=(box[1]+box[3])*.5f;
+   float cw=Math.max(.48f,Math.min(.76f,(box[3]-box[1])*2.4f));
+   left=Math.max(0f,Math.min(1f-cw,cx-cw/2f));
+   right=left+cw;
+   top=Math.max(0f,Math.min(.5f,box[0]-.14f));
+  }
+  int x0=Math.min(w-2,Math.max(0,(int)(w*left)));
+  int x1=Math.max(x0+1,Math.min(w,(int)(w*right)));
+  int y0=Math.min(h-2,Math.max(0,(int)(h*top)));
+  Bitmap cropped=Bitmap.createBitmap(bitmap,x0,y0,x1-x0,h-y0);
+  try{
+   return Bitmap.createScaledBitmap(cropped,1200,
+       Math.max(2,(int)(cropped.getHeight()*1200.0/cropped.getWidth())),true);
+  }finally{if(cropped!=bitmap)cropped.recycle();}
  }
  private static String digest(File file)throws Exception{
   MessageDigest md=MessageDigest.getInstance("SHA-256");

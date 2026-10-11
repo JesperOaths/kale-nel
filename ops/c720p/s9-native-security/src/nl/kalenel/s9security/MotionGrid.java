@@ -31,9 +31,13 @@ public final class MotionGrid {
   if(!gardenZone.equals(value)){gardenZone=value;resetForCameraControl();}
  }
  public float topBoundary(){
-  return "strict".equals(gardenZone)?0.58f:
-    "near".equals(gardenZone)?0.42f:
-    "wide".equals(gardenZone)?0.28f:0f;
+  // Camera scene calibration, 2026-10-11: parked bikes and street occupy
+  // approximately image rows 0.40-0.59; the nearer garden starts ~0.64.
+  // Require a person's box to extend into the garden, not just appear
+  // behind it. Retain selectable presets rather than permanently cropping.
+  return "strict".equals(gardenZone)?0.72f:
+    "near".equals(gardenZone)?0.64f:
+    "wide".equals(gardenZone)?0.50f:0f;
  }
  public float sideMargin(){
   return "strict".equals(gardenZone)?0.09f:

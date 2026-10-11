@@ -78,18 +78,16 @@ class GardenRealtimePriorityTests(unittest.TestCase):
         self.assertFalse(tool.assess({**healthy,'garden_person_gate_last_queue_wait_ms':4400})['ok'])
         self.assertFalse(tool.assess({**healthy,'temperature_c':42})['ok'])
 
-    def test_fallback_evidence_never_waits_for_video_archive_review(self):
+    def test_recording_guard_does_not_create_still_substitutes(self):
         camera=CAMERA.read_text()
         body=camera.split('private void saveFallbackEvidence(String why){',1)[1].split(
             'private static boolean validCompleted4K(',1)[0]
-        self.assertIn('evidenceWriter.execute(new Runnable()',body)
-        self.assertNotIn('reviewer.execute(',body)
-        self.assertIn('now-lastFallbackAt<45000L',body)
-        self.assertIn('new FileOutputStream(temp)',body)
-        self.assertIn('out.getFD().sync()',body)
-        self.assertIn('ClipClassifier.writeJson(',body)
-        self.assertIn('evidenceWriter.shutdown()',camera)
-        self.assertIn('s9-microsd-motion-evidence',camera)
+        self.assertIn('skippedRecordingsWithoutStill++',body)
+        self.assertNotIn('FileOutputStream',body)
+        self.assertNotIn('preview_motion_',body)
+        self.assertNotIn('.jpg',body)
+        self.assertIn('fallback_stills_enabled",false',camera)
+        self.assertIn('post_record_cooldown_ms",COOLDOWN_MS',camera)
 
     def test_4k_and_thermal_guards_remain_intact(self):
         s=CAMERA.read_text()
@@ -99,7 +97,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
             'recorder.setVideoEncodingBitRate(36000000)',
             'temperature()<415',
             'folder.getUsableSpace()>15L*1024*1024*1024',
-            'COOLDOWN_MS=12000',
+            'COOLDOWN_MS=0',
             'recording_rate_max_per_hour',
             'PhoneMediaRange.handle',
             'PreviewJpeg.encode(copied,58)',
@@ -108,7 +106,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
             'Math.max(0,gateStarted-now)',
         ):
             self.assertIn(required,s)
-        self.assertIn('if(now-lastFallbackAt<45000L',s)
+        self.assertIn('MAX_MS=120000',s)
 
 if __name__=='__main__':
     unittest.main(verbosity=2)

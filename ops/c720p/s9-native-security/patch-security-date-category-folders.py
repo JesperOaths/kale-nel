@@ -31,11 +31,14 @@ SNIPPET=r'''
 #s9-date-folders button:focus-visible{outline:2px solid #a8eaff;outline-offset:2px}
 #s9-date-folders .s9-folder-more{font-size:12px;background:#264f66;color:#fff;border:1px solid #75a6bf;padding:8px 10px;border-radius:7px;cursor:pointer}
 #s9-date-folders .s9-folder-refresh{font-size:12px;color:#c3e5f8;font-weight:700}
+#s9-date-folders .s9-people-filter{display:flex;align-items:center;gap:10px;margin:11px 0}
+#s9-date-folders .s9-people-filter select{background:#163f55;border:1px solid #81b5cb;border-radius:8px;color:#fff;padding:10px;font-size:14px;max-width:100%}
 </style>
 <script id="s9-saved-virtual-folders-script-v1">
 (()=>{
  'use strict';
  const ID='s9-date-folders', BASE='/local/frontyard-security-new/';
+ let folderMode='people';
  const native=/^(?:motion|native4k)_([0-9]{13})[.]mp4$/;
  const legacy=/^rec_([0-9]{4}-[0-9]{2}-[0-9]{2})_([0-9]{2}-[0-9]{2})[.]mp4$/;
  const safe=/^(?:(?:motion|native4k)_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4$/;
@@ -147,7 +150,7 @@ SNIPPET=r'''
   // Do not repopulate while the user is expanding a date/category.
   // A person-model review can change while the filename/scene label stays
   // unchanged. Include detector evidence so live category folders refresh.
-  const signature=data.map(x=>[
+  const signature=folderMode+'|'+data.map(x=>[
    nameOf(x),x.scene_category||'',x.person_event_category||'',
    Number(x.person_count)||0,Array.isArray(x.content_categories)?x.content_categories.join(','):''
   ].join(':')).join('|');
@@ -155,12 +158,28 @@ SNIPPET=r'''
   const open=new Set([...host.querySelectorAll('details[open]')].map(x=>x.dataset.folderKey));
   host.replaceChildren();
   host.dataset.signature=signature;
-  host.append(tag('h3','', 'Saved S9+ clips · date folders'));
+  const visible=data.filter(r=>folderMode==='all'||
+    (folderMode==='people'?['multiple','person'].includes(category(r)):
+       !['multiple','person'].includes(category(r))));
+  host.append(tag('h3','', 'S9+ saved garden people · date folders'));
+  const controls=tag('label','s9-people-filter');
+  controls.append(tag('span','', 'Show recordings'));
+  const select=tag('select');
+  const nPeople=data.filter(x=>['multiple','person'].includes(category(x))).length;
+  for(const [key,title,n] of [['people','People detected',nPeople],
+                                ['review','Needs review / other motion',data.length-nPeople],
+                                ['all','All recordings',data.length]]){
+   const option=tag('option','',title+' · '+n);option.value=key;
+   select.append(option);
+  }
+  select.value=folderMode;
+  select.addEventListener('change',()=>{folderMode=select.value;render(current)});
+  controls.append(select);host.append(controls);
   host.append(tag('p','',
    'Original videos stay on microSD. Folders are a searchable view, not file moves. Detection categories are model estimates; no verified identities.'));
-  host.append(tag('p','s9-folder-refresh',data.length+' playable recordings · newest dates first'));
+  host.append(tag('p','s9-folder-refresh',visible.length+' shown · '+data.length+' indexed · newest dates first'));
   const byDay=new Map();
-  for(const r of data){
+  for(const r of visible){
    const day=dayOf(r);if(!day)continue;
    if(!byDay.has(day))byDay.set(day,[]);
    byDay.get(day).push(r);

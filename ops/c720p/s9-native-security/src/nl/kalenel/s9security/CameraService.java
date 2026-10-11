@@ -100,6 +100,10 @@ public final class CameraService extends Service {
  private volatile long faceBackfillDone=0,faceBackfillErrors=0,lastFaceBackfillScan=0;
  private volatile long historicalReviewed=0,historicalErrors=0,lastHistoricalScan=0;
  private volatile String lastHistoricalError="";
+ private volatile long gardenTriageQuarantined=0,gardenTriagePreserved=0,gardenTriageErrors=0;
+ private volatile long gardenTriageLastScan=0;
+ private volatile boolean gardenTriageQueued=false;
+ private long gardenTriageCutoffMs=0;
  private long lastFallbackAt=0;
  // Near-camera person gate executes on the S9+ review worker, never on C720P.
  // Only cameraHandler can start/stop the native MediaRecorder.
@@ -120,7 +124,7 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- private static final long QUIET_MS=8500,MAX_MS=30000,COOLDOWN_MS=12000;
+ private static final long QUIET_MS=8500,MAX_MS=120000,COOLDOWN_MS=0;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
@@ -208,6 +212,12 @@ public final class CameraService extends Service {
  private void prepare(){
   try{
    folder=sd();
+   android.content.SharedPreferences retentionPrefs=getSharedPreferences("native",MODE_PRIVATE);
+   gardenTriageCutoffMs=retentionPrefs.getLong("garden_roi_archive_cutoff_ms",0L);
+   if(gardenTriageCutoffMs<=0){
+    gardenTriageCutoffMs=System.currentTimeMillis();
+    retentionPrefs.edit().putLong("garden_roi_archive_cutoff_ms",gardenTriageCutoffMs).commit();
+   }
    queueArchiveRecovery();
    if(checkSelfPermission("android.permission.CAMERA")!=PackageManager.PERMISSION_GRANTED)
     throw new SecurityException("camera_permission_required");
@@ -379,8 +389,7 @@ public final class CameraService extends Service {
        saveFallbackEvidence("stale_person_result_skipped");
       return;
      }
-     if(lastFrameAt<cooldownUntil)saveFallbackEvidence("cooldown_person_candidate");
-     else if(temperature()<415 && folder!=null&&
+     if(temperature()<415 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024)startRecording();
      else saveFallbackEvidence("thermal_or_space_guard");
     }});
@@ -429,7 +438,6 @@ public final class CameraService extends Service {
   if(!rateAllowed(motion.strong)){
    if(suppressedByRate++%140==0)Log.w(TAG,"4K_RATE_GUARD_PRIORITY_RESERVE_EXHAUSTED_OR_WEAK");
    saveFallbackEvidence("recording_budget_rejected");
-   cooldownUntil=SystemClock.elapsedRealtime()+12000;
    return;
   }
   if(temperature()>=415||folder.getUsableSpace()<15L*1024*1024*1024){
@@ -507,7 +515,7 @@ public final class CameraService extends Service {
   }finally{
    if(recorder!=null){try{recorder.release();}catch(Exception ignored){}recorder=null;}
    closeSession();
-   cooldownUntil=SystemClock.elapsedRealtime()+COOLDOWN_MS;
+   cooldownUntil=0;
    if(temporaryTest)cameraHandler.postDelayed(new Runnable(){public void run(){shutdown();}},800);
    else cameraHandler.postDelayed(new Runnable(){public void run(){configurePreview();}},700);
   }
@@ -533,41 +541,14 @@ public final class CameraService extends Service {
    return false;
   }
  }
- // Keep an SD-only low-resolution evidence frame if the 4K budget, cooldown,
- // thermal or free-space guard prevents a recording. Rate-limit independently
- // so a flickering light cannot fill the microSD with preview images.
+ // No still-image substitutes for a video: the request is for actual
+ // recordings of a person in the foreground garden. Existing saved JPEGs
+ // remain intact until independently audited, but no new ones are created.
+ private volatile long skippedRecordingsWithoutStill=0;
  private void saveFallbackEvidence(String why){
-  long now=SystemClock.elapsedRealtime();
-  if(now-lastFallbackAt<45000L || latestJpeg.length<2000 || folder==null || evidenceWriter==null)return;
-  lastFallbackAt=now;
-  final byte[] jpeg=latestJpeg.clone();
-  final File archive=folder;
-  final long timestamp=System.currentTimeMillis();
-  final String reason=why;
-  try{
-   evidenceWriter.execute(new Runnable(){public void run(){
-    String name="preview_motion_"+timestamp+".jpg";
-    File target=new File(archive,name);
-    File temp=new File(archive,name+".partial");
-    try{
-     try(FileOutputStream out=new FileOutputStream(temp)){
-      out.write(jpeg);
-      out.getFD().sync();
-     }
-     if(!temp.renameTo(target))throw new IOException("preview_evidence_rename_failed");
-     JSONObject meta=new JSONObject();
-     meta.put("name",name).put("kind","preview_only_motion_evidence")
-         .put("reason",reason).put("captured_at_ms",timestamp)
-         .put("width",640).put("height",480)
-         .put("archive","S9_microSD_only")
-         .put("person_identity","not_evaluated");
-     ClipClassifier.writeJson(new File(archive,name+".json"),meta);
-     fallbackEvidenceSaved++;
-    }catch(Exception e){fallbackEvidenceFailed++;Log.w(TAG,"fallback_evidence_failed",e);}
-   }});
-  }catch(java.util.concurrent.RejectedExecutionException e){
-   fallbackEvidenceFailed++;
-  }
+  skippedRecordingsWithoutStill++;
+  if(skippedRecordingsWithoutStill%40==1)
+   Log.w(TAG,"VIDEO_GUARD_NO_STILL "+why);
  }
  private static boolean validCompleted4K(File movie){
   if(!movie.isFile() || movie.length()<200000)return false;
@@ -704,6 +685,40 @@ public final class CameraService extends Service {
    }});
   }catch(java.util.concurrent.RejectedExecutionException e){faceBackfillQueued=false;}
  }
+ /** Offloaded archived-video retention review. Runs on the S9+ only,
+  * never downloads/decodes videos on C720P. Quarantine is reversible and
+  * never purges permanently based on an uncertain night model prediction.
+  */
+ private void maybeGardenArchiveTriage(){
+  long now=SystemClock.elapsedRealtime();
+  if(!running||gardenTriageQueued||now-gardenTriageLastScan<60000L||
+     folder==null||classifier==null||reviewer==null||
+     !"watching".equals(mode)||faceBackfillQueued||historicalQueued||
+     temperature()>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
+  gardenTriageQueued=true;
+  final File media=folder;
+  final long cutoff=gardenTriageCutoffMs;
+  final float roiTop=motion.topBoundary(),roiMargin=motion.sideMargin();
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    try{
+     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     int changed=new GardenArchiveTriage(media,classifier,roiTop,roiMargin,cutoff).processOne();
+     if(changed==1)gardenTriageQuarantined++;
+     if(changed==2)gardenTriagePreserved++;
+    }catch(Exception ex){
+     gardenTriageErrors++;
+     Log.w(TAG,"garden_archive_retention_pass_failed",ex);
+    }finally{
+     gardenTriageLastScan=SystemClock.elapsedRealtime();
+     gardenTriageQueued=false;
+    }
+   }});
+  }catch(RejectedExecutionException reject){
+   gardenTriageErrors++;
+   gardenTriageQueued=false;
+  }
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
@@ -713,6 +728,7 @@ public final class CameraService extends Service {
   }
   maybeHistoricalImport();
   maybeFaceBackfill();
+  maybeGardenArchiveTriage();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -752,6 +768,11 @@ public final class CameraService extends Service {
    d.put("priority_motion",motion.strong);
    d.put("priority_reserve_used",reserveUsed);
    d.put("fallback_evidence_saved",fallbackEvidenceSaved);
+    d.put("fallback_stills_enabled",false);
+    d.put("suppressed_video_without_stills",skippedRecordingsWithoutStill);
+    d.put("post_record_cooldown_ms",COOLDOWN_MS);
+    d.put("max_person_clip_ms",MAX_MS);
+    d.put("person_recording_extend_by_garden_motion",true);
    d.put("fallback_evidence_failed",fallbackEvidenceFailed);
    d.put("recovery_partials_finalized",recoveredPartials);
    d.put("recovery_missing_reviews_repaired",recoveredReviews);
@@ -763,6 +784,12 @@ public final class CameraService extends Service {
    d.put("historical_import_queued",historicalQueued);
    d.put("face_review_engine","s9_native_face_review_v1");
    d.put("face_backfill_queued",faceBackfillQueued);
+    d.put("garden_archive_triage_version","onphone_24frame_reversible_quarantine_v1");
+    d.put("garden_archive_triage_queued",gardenTriageQueued);
+    d.put("garden_archive_quarantined_since_start",gardenTriageQuarantined);
+    d.put("garden_archive_preserved_since_start",gardenTriagePreserved);
+    d.put("garden_archive_triage_errors",gardenTriageErrors);
+    d.put("garden_archive_triage_permanent_deletion_enabled",false);
    d.put("face_backfill_completed",faceBackfillDone);
    d.put("face_backfill_errors",faceBackfillErrors);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
