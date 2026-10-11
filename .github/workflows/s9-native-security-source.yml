@@ -20,6 +20,7 @@ jobs:
           python3 ops/c720p/s9-native-security/test_pipeline_contract.py
           python3 ops/c720p/s9-native-security/test-historical-event-categories.py
           python3 ops/c720p/s9-native-security/test-live-person-watch.py
+          python3 ops/c720p/s9-native-security/test-phone-detector-version-contract.py
           python3 ops/c720p/s9-native-security/test-native-camera-controls.py
           python3 ops/c720p/s9-native-security/test-native-garden-phone-status.py
           python3 ops/c720p/s9-native-security/test-garden-realtime-priority.py
