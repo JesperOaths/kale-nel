@@ -1,0 +1,31 @@
+name: S9 Security Command Center V5
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/patch-security-command-center-v5.py'
+      - 'ops/c720p/s9-native-security/patch-security-secondary-pages-v5.py'
+      - 'ops/c720p/s9-native-security/deploy-security-command-center-v5.py'
+      - 'ops/c720p/s9-native-security/test-security-command-center-v5.py'
+      - '.github/workflows/s9-security-command-center-v5.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/patch-security-command-center-v5.py'
+      - 'ops/c720p/s9-native-security/patch-security-secondary-pages-v5.py'
+      - 'ops/c720p/s9-native-security/deploy-security-command-center-v5.py'
+      - 'ops/c720p/s9-native-security/test-security-command-center-v5.py'
+      - '.github/workflows/s9-security-command-center-v5.yml'
+permissions:
+  contents: read
+jobs:
+  browser-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Parse source and compile JavaScript
+        run: |
+          set -euo pipefail
+          P=ops/c720p/s9-native-security
+          python3 -m py_compile "$P/patch-security-command-center-v5.py" "$P/patch-security-secondary-pages-v5.py" "$P/deploy-security-command-center-v5.py"
+          python3 "$P/test-security-command-center-v5.py"
+          echo S9_SECURITY_V5_SOURCE_AND_ROLLBACK_PASS
