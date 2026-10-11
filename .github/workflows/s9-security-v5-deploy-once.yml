@@ -1,0 +1,33 @@
+name: C720P Security V5 one-time rollout
+on:
+  push:
+    branches: [design/security-command-center-v5-20261011]
+    paths: ['.github/workflows/s9-security-v5-deploy-once.yml']
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify four-page V5 UI and rollback tests
+        run: |
+          python3 ops/c720p/s9-native-security/test-security-command-center-v5.py
+      - name: Request one authenticated C720P UI-only operation
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${TOKEN:-}" || { echo "Missing SUPABASE_ACCESS_TOKEN"; exit 2; }
+          response="$(curl -fsS --connect-timeout 10 --max-time 40 -X POST \
+            https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v868-maintenance \
+            -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
+            --data '{"operation":"deploy_security_v5"}')"
+          RESPONSE="$response" python3 - <<'PY'
+          import json,os
+          result=json.loads(os.environ['RESPONSE'])
+          assert result.get('ok') is True and result.get('operation')=='deploy_security_v5'
+          assert result.get('source_ref')=='34dd6dcef35c124c5daa7d7bb2764b4e88f1898d'
+          print('SECURITY_V5_RELEASE_JOB_ACCEPTED',result['job'])
+          PY
