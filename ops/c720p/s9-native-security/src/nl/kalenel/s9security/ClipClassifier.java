@@ -188,6 +188,78 @@ public final class ClipClassifier {
   return output;
  }
 
+ /** Refresh an existing motion thumbnail using the strongest person
+  * observation in its saved sample timeline. Decode ONE frame on the S9+,
+  * then crop out the distant street. Keep the old JPEG for rollback.
+  */
+ public synchronized boolean rebuildGardenThumbnail(File video,File folder,
+                                                    JSONObject manifest)throws Exception{
+  if(video==null||!video.isFile()||manifest==null||
+     "foreground_garden_motion".equals(manifest.optString("thumbnail_focus")))
+   return false;
+  MediaMetadataRetriever media=new MediaMetadataRetriever();
+  Bitmap bitmap=null;
+  try{
+   media.setDataSource(video.getAbsolutePath());
+   long duration=Long.parseLong(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+   if(duration<1500)return false;
+   long at=duration/2;
+   double high=-1;
+   JSONArray samples=manifest.optJSONArray("person_sample_timeline");
+   if(samples!=null)for(int i=0;i<samples.length();i++){
+    JSONObject sample=samples.optJSONObject(i);
+    if(sample==null)continue;
+    double weight=sample.optDouble("person_peak_score",0)+
+         (sample.optInt("people_at_050",0)>0?10.0:0.0);
+    if(weight>high){high=weight;at=sample.optLong("time_ms",at);}
+   }
+   at=Math.max(0,Math.min(duration-1,at));
+   bitmap=media.getFrameAtTime(at*1000,MediaMetadataRetriever.OPTION_CLOSEST);
+   if(bitmap==null)return false;
+   float[] personBox=null;
+   float peak=0;
+   for(Detection d:detect(bitmap)){
+    if(!"person".equals(d.label)||d.score<.30f)continue;
+    float[] box=d.box;
+    if(box==null||box.length!=4||box[2]<.64f)continue;
+    float cx=(box[1]+box[3])*.5f;
+    if(cx<.045f||cx>.955f||d.score<=peak)continue;
+    peak=d.score;personBox=box;
+   }
+   Bitmap thumbnail=makeGardenThumbnail(bitmap,personBox);
+   String name=video.getName();
+   File dest=new File(folder,name+".thumb.jpg");
+   File tmp=new File(folder,name+".thumb.garden-partial");
+   File backup=new File(folder,name+".thumb.previous-garden.jpg");
+   try{
+    try(FileOutputStream output=new FileOutputStream(tmp)){
+     thumbnail.compress(Bitmap.CompressFormat.JPEG,88,output);
+     output.getFD().sync();
+    }
+   }finally{thumbnail.recycle();}
+   if(!tmp.isFile()||tmp.length()<1000)throw new IOException("garden_thumbnail_empty");
+   boolean backed=false;
+   if(dest.exists()&&!backup.exists()){
+    if(!dest.renameTo(backup))throw new IOException("original_thumbnail_backup_failed");
+    backed=true;
+   }
+   if(!tmp.renameTo(dest)){
+    if(backed)backup.renameTo(dest);
+    throw new IOException("garden_thumbnail_promotion_failed");
+   }
+   manifest.put("thumbnail",dest.getName())
+     .put("thumbnail_focus","foreground_garden_motion")
+     .put("thumbnail_source_time_ms",at)
+     .put("thumbnail_garden_person_confidence",Math.round(peak*1000f)/1000.0)
+     .put("thumbnail_person_candidate_in_garden",personBox!=null);
+   writeJson(new File(folder,name+".verified.json"),manifest);
+   return true;
+  }finally{
+   if(bitmap!=null)bitmap.recycle();
+   media.release();
+  }
+ }
+
  /** Secondary retention pass. The on-phone model examines 24 points in
   * the original video; no decoding is performed on the C720P. A single weak
   * person box touching the garden is sufficient to KEEP the clip.
