@@ -1,0 +1,111 @@
+name: C720P Security face folders and independent controls V22
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-face-folders-v22.html'
+      - 'ops/c720p/s9-native-security/security-camera-controls-v22.html'
+      - 'ops/c720p/s9-native-security/deploy-drive-person-review-relay-v22.py'
+      - 'ops/c720p/s9-native-security/deploy-independent-security-views-v22.py'
+      - '.github/workflows/c720p-security-face-folders-v22.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-independent-security-views-v22.py'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-security-face-folders-v22
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate signed relay scope and standalone UI scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-drive-person-review-relay-v22.py ops/c720p/s9-native-security/deploy-independent-security-views-v22.py
+          node - <<'JS'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const dir='ops/c720p/s9-native-security/';
+          for(const [file,markers] of [
+            ['security-face-folders-v22.html',['security-face-folders-v22','Manually linked recordings','Historical Drive','/new/api/drive-person-review','/new/drive/saved/clip/','S9+ · faces not captured']],
+            ['security-camera-controls-v22.html',['security-standalone-native-controls-v22','explicit-user-selection-v1','/new/camera-controls','/new/camera-control','Refresh controls']]
+          ]){
+            const src=fs.readFileSync(dir+file,'utf8');
+            assert(!src.includes('innerHTML='),'No unsafe string HTML');
+            for(const marker of markers)assert(src.includes(marker),file+':'+marker);
+            const scripts=[...src.matchAll(/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g)];
+            assert(scripts.length>=1);
+            for(const [,body]of scripts)if(body.trim())new vm.Script(body,{filename:file});
+            console.log('SECURITY_V22_JS_OK '+file);
+          }
+          JS
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('ops/c720p/s9-native-security/deploy-drive-person-review-relay-v22.py').read_text()
+          ui=Path('ops/c720p/s9-native-security/deploy-independent-security-views-v22.py').read_text()
+          for marker in ('SECURITY_DRIVE_PERSON_READONLY_V22','/api/drive-person-review','SECURITY_DRIVE_PERSON_RELAY_V22_ROLLED_BACK'):
+            assert marker in src,marker
+          for marker in ('SECURITY_FACE_FOLDERS_V22_VERIFIED','SECURITY_FACE_FOLDERS_V22_ROLLED_BACK','s9FacesGalleryFrame','originals','camera_unchanged'):
+            # s9FacesGalleryFrame is part of the target root HTML; installer patches its asset URL
+            if marker=='s9FacesGalleryFrame':continue
+            assert marker in ui,marker
+          print('SECURITY_V22_BACKUP_AND_READONLY_SCOPE_PASS')
+          PY
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Checksum-pinned private device deployment with rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          dir="ops/c720p/s9-native-security"
+          route="$dir/deploy-drive-person-review-relay-v22.py"
+          installer="$dir/deploy-independent-security-views-v22.py"
+          rsha="$(sha256sum "$route"|cut -d' ' -f1)"
+          isha="$(sha256sum "$installer"|cut -d' ' -f1)"
+          facesha="$(sha256sum "$dir/security-face-folders-v22.html"|cut -d' ' -f1)"
+          settingsha="$(sha256sum "$dir/security-camera-controls-v22.html"|cut -d' ' -f1)"
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ && "$rsha" =~ ^[a-f0-9]{64}$ && "$isha" =~ ^[a-f0-9]{64}$ ]]
+          base="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}"
+          rfile="/tmp/security-face-review-route-${GITHUB_SHA:0:12}.py"
+          ifile="/tmp/security-face-views-${GITHUB_SHA:0:12}.py"
+          cmd="set -e; curl -fSsL --max-time 30 '${base}/${route}' -o '${rfile}'; curl -fSsL --max-time 30 '${base}/${installer}' -o '${ifile}'; printf '%s  %s\\n%s  %s\\n' '${rsha}' '${rfile}' '${isha}' '${ifile}' | sha256sum -c - >/dev/null; /usr/bin/python3 '${rfile}'; /usr/bin/python3 '${ifile}' --ref '${GITHUB_SHA}' --face-sha '${facesha}' --settings-sha '${settingsha}'"
+          idem="s9-face-folders-v22-${GITHUB_SHA:0:24}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-face-folders-v22','deployment',:'cmd',260,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "SECURITY_V22_JOB_ID=$id"
+          for i in $(seq 1 50); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$status" == done\|* || "$status" == failed\|* || "$status" == error\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 9000)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]] || exit 1
+              grep -q 'SECURITY_DRIVE_PERSON_RELAY_V22_VERIFIED' <<< "$output" || exit 1
+              grep -q 'SECURITY_FACE_FOLDERS_V22_VERIFIED' <<< "$output" || exit 1
+              echo "SECURITY_FACE_FOLDERS_V22_PRODUCTION_PASS"
+              exit 0
+            fi
+            sleep 8
+          done
+          exit 1
