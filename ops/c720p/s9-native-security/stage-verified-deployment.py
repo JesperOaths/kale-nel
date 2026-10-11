@@ -52,7 +52,7 @@ PROXY=[
  "s9_human_thumbnail_review.py",
  "s9_phone_garden_status.py",
 ]
-ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java","AnonymousClipTracks.java","CameraOrientation.java","HistoricalImportWorker.java","S9FaceReview.java"]
+ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java","AnonymousClipTracks.java","CameraOrientation.java","HistoricalImportWorker.java","S9FaceReview.java","CaptureContinuity.java","EventFrameRanker.java"]
 TESTS=["test-native-camera-controls.py","test-drive-person-batch-catalog.py",
        "test-drive-visitor-review.py","test-appearance-review.py",
        "test-anonymous-index-ui.py","test-s9-face-review.py"]
