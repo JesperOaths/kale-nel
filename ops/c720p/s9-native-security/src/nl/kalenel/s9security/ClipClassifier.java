@@ -188,6 +188,52 @@ public final class ClipClassifier {
   return output;
  }
 
+ /** Secondary retention pass. The on-phone model examines 24 points in
+  * the original video; no decoding is performed on the C720P. A single weak
+  * person box touching the garden is sufficient to KEEP the clip.
+  * No model result can conclusively prove absence of a person: "no evidence"
+  * is handled as reversible quarantine only, never immediate deletion.
+  */
+ public synchronized JSONObject gardenRetentionProbe(File video,float top,float margin)throws Exception{
+  if(video==null||!video.isFile()||top<.4f||top>.85f)throw new IllegalArgumentException("invalid_video_or_roi");
+  init();
+  MediaMetadataRetriever grabber=new MediaMetadataRetriever();
+  int frames=0,personFrames=0,anyPersonFrames=0;
+  float maximumGardenScore=0f;
+  try{
+   grabber.setDataSource(video.getAbsolutePath());
+   String durationText=grabber.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+   long duration=Long.parseLong(durationText);
+   if(duration<2500||duration>600000)throw new IOException("unsupported_clip_duration");
+   for(int i=0;i<24;i++){
+    long micros=(long)(((i+.5)/24.0)*duration*1000);
+    Bitmap still=grabber.getFrameAtTime(micros,MediaMetadataRetriever.OPTION_CLOSEST);
+    if(still==null)continue;
+    try{
+     frames++;
+     boolean garden=false,any=false;
+     for(Detection d:detect(still)){
+      if(!"person".equals(d.label)||d.score<.30f)continue;
+      any=true;
+      float[] b=d.box;
+      if(b!=null&&b.length==4&&(b[1]+b[3])*.5f>=margin&&
+         (b[1]+b[3])*.5f<=1f-margin&&b[2]>=top){
+       garden=true;
+       maximumGardenScore=Math.max(maximumGardenScore,d.score);
+      }
+     }
+     if(garden)personFrames++;
+     if(any)anyPersonFrames++;
+    }finally{still.recycle();}
+   }
+  }finally{grabber.release();}
+  return new JSONObject().put("model","ssd_mobilenet_garden_retention_v1")
+   .put("valid_frames",frames).put("garden_person_frames_at_030",personFrames)
+   .put("any_person_frames_at_030",anyPersonFrames)
+   .put("peak_garden_person_score",maximumGardenScore)
+   .put("decision",frames<20?"uncertain_incomplete_samples":
+      personFrames>0?"retain_possible_garden_person":"no_garden_person_evidence");
+ }
  public synchronized JSONObject process(File mp4, File folder, String name, String trigger, long motionEvents)throws Exception{
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
