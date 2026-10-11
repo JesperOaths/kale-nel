@@ -38,7 +38,7 @@ class Tests(unittest.TestCase):
                           'recorder.setVideoEncodingBitRate(36000000)',
                           'PhoneMediaRange.handle(in,out,line,folder)',
                           'garden_roi_gpu_person_gate_v1',
-                          'COOLDOWN_MS=12000',
+                          'COOLDOWN_MS=3500',
                           'PreviewJpeg.encode(copied,58)'):
             self.assertIn(invariant,text)
 
