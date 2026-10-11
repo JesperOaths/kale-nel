@@ -1,0 +1,67 @@
+name: C720P secure maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Allowlisted C720P diagnostic to enqueue"
+        required: true
+        type: choice
+        options:
+          - agent-status
+          - adb-devices
+          - home-assistant-status
+          - camera-tunnel-status
+  workflow_call:
+    inputs:
+      operation:
+        description: "Allowlisted C720P diagnostic to enqueue"
+        required: true
+        type: string
+    secrets:
+      SUPABASE_DB_URL:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c720p-secure-maintenance-${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      REQUEST_OPERATION: ${{ inputs.operation }}
+    steps:
+      - name: Assert private connection and install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo "Missing repository secret SUPABASE_DB_URL"; exit 1; }
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+      - name: Enqueue audited operation using authenticated database connection
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$REQUEST_OPERATION" in
+            agent-status) cmd='systemctl --user is-active c720p-agent-runner.service' ;;
+            adb-devices) cmd='adb devices' ;;
+            home-assistant-status) cmd='systemctl is-active home-assistant.service || systemctl --user is-active home-assistant.service' ;;
+            camera-tunnel-status) cmd='systemctl --user is-active c720p-security-tunnel.service' ;;
+            *) echo 'Operation is not allowlisted'; exit 2 ;;
+          esac
+          idem="gh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${REQUEST_OPERATION}"
+          export PGCONNECT_TIMEOUT=12
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id, job_state, disposition
+          from c720p_agent.submit_management_job_v1(
+            'github-actions', 'diagnostic', :'cmd', 90, :'idem'
+          );
+          SQL
