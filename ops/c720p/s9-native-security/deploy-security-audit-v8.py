@@ -113,7 +113,7 @@ const obs=new MutationObserver(()=>document.querySelectorAll('video').forEach(ho
 obs.observe(document.documentElement,{subtree:true,childList:true});
 document.querySelectorAll('video').forEach(hook);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)document.querySelectorAll('video').forEach(v=>v.pause())});
-window.addEventListener('pagehide',()=>{active=false;document.querySelectorAll('video').forEach(v=>v.pause())});
+window.addEventListener('pagehide',()=>{document.querySelectorAll('video').forEach(v=>v.pause())});
 })();
 </script>"""
 
