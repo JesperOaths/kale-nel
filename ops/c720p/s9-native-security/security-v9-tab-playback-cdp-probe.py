@@ -33,17 +33,19 @@ try:
   clicked=read("document.querySelector('#s9v5-nav button[data-view=evidence]').click(); true")
   print('V9_CDP_TAB_CLICK',clicked,flush=True)
  except RuntimeError as error:print('V9_CDP_TAB_CLICK_CONTEXT_CHANGE',str(error)[:160],flush=True)
- for i in range(30):
+ for i in range(60):
   try:
    d=read("""({
       href:location.href,view:document.querySelector('#s9v5-shell')?.dataset.view,
       pane:!!document.querySelector('#s9v8-evidence iframe'),
       frameLoaded:document.querySelector('#s9v8-evidence iframe')?.contentDocument?.readyState,
       frameTitle:document.querySelector('#s9v8-evidence iframe')?.contentDocument?.title,
+      frameSrc:document.querySelector('#s9v8-evidence iframe')?.getAttribute('src'),
+      frameHref:document.querySelector('#s9v8-evidence iframe')?.contentWindow?.location?.href,
       items:document.querySelector('#s9v8-evidence iframe')?.contentDocument?.querySelectorAll('#list .clip')?.length||0,
       smoothController:!!document.querySelector('#s9v8-evidence iframe')?.contentWindow?.C720PSecurityVideo
     })""")
-   if d and (d.get('items',0)>0 or d.get('view')=='evidence' and d.get('frameLoaded')=='complete'):break
+   if d and d.get('items',0)>0:break
   except RuntimeError:pass
   time.sleep(.35)
  print('V9_CDP_TAB_AFTER_CLICK',json.dumps(d),flush=True)
