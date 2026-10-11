@@ -1,4 +1,4 @@
-name: S9 Event V3 read-only certificate equality audit
+name: S9 Event V3 guarded Camera2 rollout once
 on:
   push:
     branches: [feat/s9-event-continuity-thumbnails-v3-20261011]
@@ -16,7 +16,7 @@ jobs:
           python3 ops/c720p/s9-native-security/test-recording-event-v3-contract.py
           python3 ops/c720p/s9-native-security/test_pipeline_contract.py
           python3 ops/c720p/s9-native-security/test-garden-only-retention.py
-      - name: Compare new and current APK certificates without installing
+      - name: Request idle-only native 4K Camera2 upgrade with automatic rollback
         shell: bash
         env:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -26,10 +26,10 @@ jobs:
           response="$(curl -fsS --connect-timeout 10 --max-time 40 -X POST \
             'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v868-maintenance' \
             -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' \
-            --data '{"operation":"s9_event_v3_signature_audit"}')"
+            --data '{"operation":"s9_event_v3_guarded_upgrade"}')"
           RESPONSE="$response" python3 - <<'PY'
           import json,os
           r=json.loads(os.environ['RESPONSE'])
-          assert r.get('ok') is True and r.get('operation')=='s9_event_v3_signature_audit'
+          assert r.get('ok') is True and r.get('operation')=='s9_event_v3_guarded_upgrade'
           print('S9_EVENT_V3_REMOTE_BUILD_ACCEPTED',r['job'])
           PY
