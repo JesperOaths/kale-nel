@@ -109,10 +109,9 @@ public final class MotionGrid {
   shift/=validCells;
   int nChange=0;
   for(int i=0;i<N;i++){
-   // Slightly more responsive to people crossing a dim fixed-camera view,
-   // while retaining temporal voting, coherent-region and exposure guards.
-   // Bright daylight threshold is unchanged; low-light threshold 27 -> 23.
-   boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?23.0f:18.5f);
+   // Garden-motion V4: lower only the dim-scene luma threshold modestly
+   // (23 -> 22); keep daytime pixels, exposure subtraction and ROI unchanged.
+   boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?22.0f:18.5f);
    // Motion outside the garden cannot vote or join connected regions.
    int gx=i%W,gy=i/W;
    c=c&&insideGarden((gx+.5f)/W,(gy+.5f)/H);
@@ -134,12 +133,15 @@ public final class MotionGrid {
   }
   // Sudden global exposure/camera adjustment should not count as an intruder.
   boolean dim=lighting<42;
-  boolean meaningful=changedRatio>=(dim?0.038:0.022)&&changedRatio<0.46
-      &&coherent>=(dim?10:7)&&Math.abs(shift)<(dim?18:26);
+  // Garden-motion V4 admits shorter/smaller garden crossings as *candidates*,
+  // not as recordings. Existing SSD person gate remains the final decision.
+  // 7-sample temporal vote and exposure-change rejection still apply.
+  boolean meaningful=changedRatio>=(dim?0.030:0.020)&&changedRatio<0.46
+      &&coherent>=(dim?8:6)&&Math.abs(shift)<(dim?18:26);
   votes.addLast(meaningful);
   while(votes.size()>7)votes.removeFirst();
   int positive=0;for(Boolean yes:votes)if(yes)positive++;
-  motion=positive>=(lighting<42?5:4);
+  motion=positive>=4;
   // Priority evidence must be coherent and sustained, not a single flash.
   boolean priority=meaningful && changedRatio>=(dim?0.055:0.035)
       && coherent>=(dim?13:9) && Math.abs(shift)<(dim?16:23);
