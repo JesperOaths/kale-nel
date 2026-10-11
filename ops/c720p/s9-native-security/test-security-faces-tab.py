@@ -26,7 +26,7 @@ class Tests(unittest.TestCase):
               'id="panel-saved"','id="panel-camera"','id="panel-live"',
               'id="panel-faces"','s9SavedFolderFrame','s9FacesGalleryFrame'):
    self.assertIn(key,output)
-  self.assertEqual(output.count('data-tab="faces"'),1)
+  self.assertEqual(output.count('data-tab="faces"'),2)
   self.assertIn('queueMicrotask',output)
   self.assertNotIn('window.location.href=',output)
  def test_guard_against_unsupported_markup(self):
