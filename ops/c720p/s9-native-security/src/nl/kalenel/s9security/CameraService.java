@@ -31,6 +31,7 @@ public final class CameraService extends Service {
  private CameraControls cameraControls;
  private CaptureRequest.Builder activeCameraRequest;
  private final MotionGrid motion=new MotionGrid();
+ private final GardenPresencePolicy gardenPresence=new GardenPresencePolicy();
  // Read-only Camera2 metadata distinguishes night exposure from callback load.
  private volatile long sensorCaptureResults=0,lastSensorTimestampNs=0,lastSensorCaptureAt=0;
  private volatile float sensorResultFps=0f,sensorExposureMs=-1f,sensorFrameDurationMs=-1f;
@@ -100,6 +101,8 @@ public final class CameraService extends Service {
  private volatile long gardenPersonGateChecks=0,gardenPersonGateMatches=0;
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
+ private volatile long gardenPersonIdleChecks=0,gardenPersonConfirmed=0,gardenPersonExtended=0;
+ private volatile String gardenPersonLastReason="none";
  private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
  // Ignore detector triggers from deliberate user changes of zoom, torch or exposure.
@@ -112,7 +115,7 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- private static final long QUIET_MS=8500,MAX_MS=30000,COOLDOWN_MS=12000;
+ private static final long QUIET_MS=8500,MAX_MS=30000,COOLDOWN_MS=3500;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
@@ -237,14 +240,17 @@ public final class CameraService extends Service {
      if(temporaryTest&&!pilotStarted&&frames>12&&"watching".equals(mode)){
       pilotStarted=true;startRecording();
      }
-     if(change && lastFrameAt>=cameraControlSettleUntil){
+     boolean freshMotion=change&&lastFrameAt>=cameraControlSettleUntil;
+     if(freshMotion){
       motionEvents++;
       lastMovementAt=lastFrameAt;
-      if(!pilotOnly&&"watching".equals(mode)){
-       // Motion merely requests on-device person inference. Vehicles on the
-       // road and non-person garden motion do not start new videos.
-       evaluateGardenPersonAsync();
-      }
+     }
+     // Periodic phone-local person detection also catches slow or stationary
+     // garden visitors; no raw-motion event can record without a person check.
+     if(!pilotOnly&&lastFrameAt>=cameraControlSettleUntil&&
+        ("watching".equals(mode)||"recording".equals(mode))&&
+        (freshMotion||lastFrameAt-gardenPersonGateLastAt>=2800)){
+      evaluateGardenPersonAsync(freshMotion);
      }
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500&&
         (lastFrameAt-lastStart>MAX_MS||lastFrameAt-lastMovementAt>QUIET_MS))stopRecording("motion_completed");
@@ -291,38 +297,52 @@ public final class CameraService extends Service {
    },cameraHandler);
   }catch(Exception e){failure("preview_setup_failed",e);scheduleRecover();}
  }
- private void evaluateGardenPersonAsync(){
+ private void evaluateGardenPersonAsync(boolean motionRequest){
   final long now=SystemClock.elapsedRealtime();
-  if(gardenPersonGateBusy||now-gardenPersonGateLastAt<900||latestJpeg.length<1000||
-      now-lastJpegAt>1200||reviewer==null||classifier==null)return;
+  final boolean inRecording="recording".equals(mode);
+  final long cadence=motionRequest?650L:2800L;
+  if(gardenPersonGateBusy||now-gardenPersonGateLastAt<cadence||
+      latestJpeg.length<1000||now-lastJpegAt>1200||
+      reviewer==null||classifier==null||temperature()>=400)return;
   gardenPersonGateBusy=true;gardenPersonGateLastAt=now;
+  if(!motionRequest)gardenPersonIdleChecks++;
   final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
+  final boolean strongMotion=motion.strong;
+  final boolean recentMotion=motionRequest||now-lastMovementAt<2500;
   try{
    reviewer.execute(new Runnable(){public void run(){
-    float value=0;boolean failed=false;
-    try{value=classifier.personScoreInGarden(jpg,top,margin);}
+    ClipClassifier.GardenPersonEvidence evidence=null;
+    boolean failed=false;
+    try{evidence=classifier.personEvidenceInGarden(jpg,top,margin);}
     catch(Throwable issue){
-     failed=true;
-     Log.w(TAG,"garden_person_gate_"+issue.getClass().getSimpleName());
+     failed=true;Log.w(TAG,"garden_person_gate_"+issue.getClass().getSimpleName());
     }
-    final float score=value;
+    final ClipClassifier.GardenPersonEvidence result=evidence;
     final boolean error=failed;
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
-     gardenPersonGateBusy=false;
-     gardenPersonGateChecks++;
-     gardenPersonGateScore=score;
-     if(error){gardenPersonGateErrors++;return;}
-     if(score<0.44f){gardenPersonGateRejects++;return;}
+     gardenPersonGateBusy=false;gardenPersonGateChecks++;
+     if(error||result==null){gardenPersonGateErrors++;return;}
+     gardenPersonGateScore=result.score;
+     if(!running||SystemClock.elapsedRealtime()-now>3500||
+        lastFrameAt<cameraControlSettleUntil)return;
+     GardenPresencePolicy.Decision decision=gardenPresence.observe(
+       result.score,result.centerX,result.feetY,now,recentMotion,strongMotion,inRecording);
+     gardenPersonLastReason=decision.reason;
+     if(!decision.personCandidate){gardenPersonGateRejects++;return;}
      gardenPersonGateMatches++;
-     // Do not start recording on stale detections, if the camera has moved
-     // into a new capture session, or after a deliberate controls change.
-     if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
-         lastFrameAt<cameraControlSettleUntil)return;
-     if(lastFrameAt<cooldownUntil)saveFallbackEvidence("cooldown_person_candidate");
-     else if(temperature()<415 && folder!=null&&
-             folder.getUsableSpace()>15L*1024*1024*1024)startRecording();
+     if(inRecording){
+      if("recording".equals(mode)&&decision.extendVideo){
+       lastMovementAt=lastFrameAt;gardenPersonExtended++;
+      }
+      return;
+     }
+     if(!"watching".equals(mode)||!decision.startVideo)return;
+     gardenPersonConfirmed++;
+     if(lastFrameAt<cooldownUntil){saveFallbackEvidence("brief_person_cooldown");return;}
+     if(temperature()<415&&folder!=null&&
+        folder.getUsableSpace()>15L*1024*1024*1024)startRecording(true);
      else saveFallbackEvidence("thermal_or_space_guard");
     }});
    }});
