@@ -62,6 +62,7 @@ function path(u:URL){
   if(k==="events") return `/${c}/api/events`;
   if(k==="saved") return `/${c}/api/saved`;
   if(k==="drivesaved") return `/${c}/api/drive-saved`;
+  if(k==="livewatch"&&u.searchParams.get("camera")==="new") return `/${c}/api/live-person-watch`;
   if(k==="controls") return `/${c}/api/controls`;
   if(k==="control") return `/${c}/api/control`;
   if(k==="live") return `/${c}/live.mjpg`;

@@ -1,0 +1,33 @@
+name: Verify signed S9 live telemetry route
+on:
+  pull_request:
+    paths:
+      - 'cloudflare/workers/admin-gate/src/worker.js'
+      - 'supabase/functions/c720p-security-relay/index.ts'
+      - '.github/workflows/security-live-telemetry-route-v12.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify both authenticated route implementations
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check cloudflare/workers/admin-gate/src/worker.js
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const worker=fs.readFileSync('cloudflare/workers/admin-gate/src/worker.js','utf8');
+          const relay=fs.readFileSync('supabase/functions/c720p-security-relay/index.ts','utf8');
+          assert(worker.includes('api/live-person-watch'));
+          assert(worker.includes("kind=m[2]==='drive-saved'?'drivesaved':m[2]==='live-person-watch'?'livewatch':m[2]"));
+          assert(worker.includes('api\\/(?:status|events|saved|drive-saved|live-person-watch|controls|control)'));
+          assert(relay.includes('if(k==="livewatch"&&u.searchParams.get("camera")==="new")'));
+          assert(relay.includes('if(!await media(req,u))'));
+          assert(worker.includes('securityProxyTarget(media, upstreamPath)'));
+          console.log('SIGNED_S9_NATIVE_LIVE_TELEMETRY_ROUTE_V12_PASS');
+          JS
