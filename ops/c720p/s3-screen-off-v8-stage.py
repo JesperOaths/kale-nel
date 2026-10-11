@@ -128,7 +128,7 @@ def main():
  password=HOME/'state/s3-motion-signing-password'
  if not key.is_file() or not password.is_file():raise RuntimeError('previous_signer_unavailable')
  output=run(['keytool','-list','-v','-keystore',key,'-storepass',password.read_text().strip()],timeout=30)
- match=re.search(r'(?im)^Alias name:\\s*([^\\s]+)',output)
+ match=re.search(r'(?im)^Alias name:\s*([^\s]+)',output)
  if not match:raise RuntimeError('key_alias_unavailable')
  apk=STAGE/'s3-motion-v8-signed.apk'
  run(['apksigner','sign','--ks',key,'--ks-key-alias',match.group(1),
