@@ -141,6 +141,10 @@ jobs:
           javac -d "$WORK"             ops/c720p/s9-native-security/src/nl/kalenel/s9security/RecordingRate.java             ops/c720p/s9-native-security/tests/RecordingRateTest.java
           java -cp "$WORK" nl.kalenel.s9security.RecordingRateTest
           javac -d "$WORK" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/GardenPersonTrackGate.java \
+            ops/c720p/s9-native-security/test/GardenPersonTrackGateTest.java
+          java -cp "$WORK" nl.kalenel.s9security.GardenPersonTrackGateTest
+          javac -d "$WORK" \
             ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraOrientation.java \
             ops/c720p/s9-native-security/tests/CameraOrientationTest.java
           java -cp "$WORK" nl.kalenel.s9security.CameraOrientationTest
