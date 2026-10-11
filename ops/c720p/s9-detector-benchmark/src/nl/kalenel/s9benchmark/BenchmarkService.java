@@ -22,7 +22,8 @@ public final class BenchmarkService extends Service {
  private static final String TAG="S9_AB_TEST";
  private static final String SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K";
  private static final AtomicBoolean busy=new AtomicBoolean(false);
- private static final int MAX_FILES=8, FRAMES=3, MAX_TEMP=37;
+ private static final int MAX_FILES=6, FRAMES=15, MAX_TEMP=37;
+ private static final long MAX_SESSION_MS=6*60*1000L;
  @Override public IBinder onBind(Intent i){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
   if(!busy.compareAndSet(false,true))return START_NOT_STICKY;
@@ -123,7 +124,11 @@ public final class BenchmarkService extends Service {
    out.put(indices[0],boxes);out.put(indices[1],classes);
    out.put(indices[2],scores);out.put(indices[3],count);
   }
-  JSONObject test(Bitmap bitmap)throws Exception{
+  static final class Observation {
+   final JSONObject metrics;final float[][] personBoxes;
+   Observation(JSONObject m,float[][] b){metrics=m;personBoxes=b;}
+  }
+  Observation test(Bitmap bitmap)throws Exception{
    Bitmap scaled=Bitmap.createScaledBitmap(bitmap,w,h,true);
    try{
     int[] p=new int[w*h];scaled.getPixels(p,0,w,0,0,w,h);
@@ -135,16 +140,27 @@ public final class BenchmarkService extends Service {
     ms.add(delay);frameCount++;
     int n=Math.min(num,Math.max(0,Math.round(count[0]))),zero=0,other=0;
     double highZero=0;
+    ArrayList<float[]> personBoxes=new ArrayList<>();
     for(int i=0;i<n;i++){
      float score=scores[0][i],category=classes[0][i];
      if(Float.isNaN(score)||score<0||score>1.01)throw new IOException("invalid_score");
-     if(score<0.5)continue;
+     if(Math.round(category)==0 && score>=.44f){
+      float[] b=boxes[0][i];
+      if(b!=null&&b.length==4&&Float.isFinite(b[0])&&Float.isFinite(b[1])&&
+         Float.isFinite(b[2])&&Float.isFinite(b[3])){
+       float y1=Math.max(0f,b[0]),x1=Math.max(0f,b[1]);
+       float y2=Math.min(1f,b[2]),x2=Math.min(1f,b[3]);
+       if(y2>y1&&x2>x1)personBoxes.add(new float[]{y1,x1,y2,x2,score});
+      }
+     }
+     if(score<0.5f)continue;
      if(Math.round(category)==0){zero++;highZero=Math.max(highZero,score);}else other++;
     }
     if(zero>0)classZeroFrames++;
-    return new JSONObject().put("class_index_0_at_50",zero)
+    JSONObject metrics=new JSONObject().put("class_index_0_at_50",zero)
       .put("other_class_at_50",other).put("class_index_0_peak",highZero)
-      .put("inference_ms",delay);
+      .put("person_boxes_at_44",personBoxes.size()).put("inference_ms",delay);
+    return new Observation(metrics,personBoxes.toArray(new float[personBoxes.size()][]));
    }finally{if(scaled!=bitmap)scaled.recycle();}
   }
   JSONObject summary()throws Exception{
