@@ -39,6 +39,13 @@ class LayoutTests(unittest.TestCase):
   self.assertIn('object-fit:contain!important',after)
   self.assertIn('<section id="panel-saved">Keep Drive</section>',after)
   self.assertNotIn('MediaRecorder',after)
+ def test_v4_compact_gallery_keeps_specialized_review_widgets(self):
+  saved=compact.patch(self.saved(),'saved')
+  for retained in ('s9-human-review','s9-face-review','s9-fallback-section',
+                   's9-anonymous-clips-v1','s9-drive-person-review','s9-live-person-watch'):
+   self.assertIn(':not(#'+retained+')',saved)
+  self.assertIn('360px',saved)
+  self.assertIn('370px',saved)
  def test_unknown_shapes_fail_closed(self):
   with self.assertRaises(ValueError):compact.patch(self.saved().replace('id="list"','id="lost"'),'saved')
   with self.assertRaises(ValueError):compact.patch(self.live().replace('id="cameraLive"','id="lost"'),'live')
