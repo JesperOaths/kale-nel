@@ -154,6 +154,97 @@ async function refresh(){try{const a=relay();if(!a?.fetch)throw Error('relay');c
 if(!Array.isArray(j.events)||j.archive_mode!=='S9-microSD-only')throw Error('index');
 records=j.events.filter(x=>safe.test(name(x))&&day(x)).sort((a,b)=>name(b).localeCompare(name(a)));months();render()}
 catch(_){$('status').textContent='Archive unavailable';if(!records.length){$('timeline').replaceChildren();$('empty').hidden=false}}}
+
+/* Historical Drive uses its own verified catalog and original signed clip routes. */
+const driveVideoName=r=>String(r.remote_name||'');
+const driveSafe=/^[A-Za-z0-9._-]{1,180}[.]mp4$/;
+const driveDate=r=>{const m=/^([0-9]{4}-[0-9]{2}-[0-9]{2})/.exec(String(r.timestamp||r.date||''));return m?m[1]:''};
+const driveTime=r=>{const m=/[T ]([0-9]{2}:[0-9]{2})/.exec(String(r.timestamp||''));return m?m[1]:'—'};
+const driveLabel=r=>{const n=r.clip_no!=null?'Clip #'+String(r.clip_no):driveVideoName(r);return n.length>50?n.slice(0,47)+'…':n};
+let driveRecords=[],driveOpenDays=new Set(),driveMonth='all',driveRendered=false;
+async function drivePreview(img,r){
+ const n=String(r.snapshot_name||''),a=relay();
+ if(!n||!/^[A-Za-z0-9._-]{1,180}[.]jpg$/i.test(n)||n.includes('..')||!a?.url)return;
+ try{const src=await a.url('/new/drive/saved/snap/'+encodeURIComponent(n));if(img.isConnected)img.src=src}catch(_){}
+}
+function driveCard(r){
+ const btn=create('button','clip');btn.type='button';
+ btn.setAttribute('aria-label',driveLabel(r)+' '+String(r.timestamp||''));
+ const picture=create('span','picture'),fallback=create('span','fallback','▣'),img=create('img');
+ img.alt='Archived recording preview';img.loading='lazy';img.decoding='async';
+ picture.append(fallback,img);btn.append(picture);
+ const m=create('span','meta');m.append(create('b','',driveTime(r)),create('span','',driveLabel(r)));btn.append(m);
+ btn.addEventListener('click',()=>playDrive(r));drivePreview(img,r);
+ return btn;
+}
+async function playDrive(r){
+ const a=relay(),n=driveVideoName(r),token=++playing;
+ $('viewerTitle').textContent=formatDay(driveDate(r))+' · '+driveTime(r);
+ $('playerState').textContent='Opening original Google Drive recording…';
+ const v=$('video');v.pause();v.removeAttribute('src');v.load();
+ if(!$('viewer').open)$('viewer').showModal();
+ try{
+  if(!driveSafe.test(n)||n.includes('..')||!a?.url)throw Error('Invalid video');
+  const src=await a.url('/new/drive/saved/clip/'+encodeURIComponent(n));
+  if(token!==playing)return;
+  v.src=src;v.load();$('playerState').textContent='';
+ }catch(_){if(token===playing)$('playerState').textContent='Could not open this Drive recording. Refresh the archive and try again.'}
+}
+function driveMonths(){
+ const values=[...new Set(driveRecords.map(driveDate).filter(Boolean).map(x=>x.slice(0,7)))].sort().reverse();
+ const sel=$('driveMonthSelect');sel.replaceChildren();
+ const all=create('option','','All dates');all.value='all';sel.append(all);
+ for(const month of values){const op=create('option','',formatMonth(month+'-01'));op.value=month;sel.append(op)}
+ if(driveMonth!=='all'&&!values.includes(driveMonth))driveMonth='all';
+ sel.value=driveMonth;
+}
+function renderDrive(){
+ const groups=new Map();
+ for(const item of driveRecords){
+  const d=driveDate(item);
+  if(!d||(driveMonth!=='all'&&!d.startsWith(driveMonth)))continue;
+  if(!groups.has(d))groups.set(d,[]);
+  groups.get(d).push(item);
+ }
+ const dates=[...groups.keys()].sort().reverse();
+ if(!driveRendered){driveOpenDays=new Set(dates.slice(0,1));driveRendered=true}
+ const target=$('driveTimeline');target.replaceChildren();let lastMonth='';
+ for(const d of dates){
+  if(d.slice(0,7)!==lastMonth){target.append(create('div','month',formatMonth(d)));lastMonth=d.slice(0,7)}
+  const details=create('details','day');details.open=driveOpenDays.has(d);
+  const summary=create('summary');
+  summary.append(create('span','date',formatDay(d)),create('span','summary-end',groups.get(d).length+' clips'),create('span','arrow','⌄'));
+  details.append(summary);
+  const cards=create('div','clips');details.append(cards);let loadedCards=false;
+  const populate=()=>{if(loadedCards)return;loadedCards=true;for(const r of groups.get(d))cards.append(driveCard(r))};
+  if(details.open)populate();
+  details.addEventListener('toggle',()=>{if(details.open){driveOpenDays.add(d);populate()}else driveOpenDays.delete(d)});
+  target.append(details);
+ }
+ $('driveEmpty').hidden=dates.length>0;
+ $('driveStatus').textContent=driveRecords.length+' Google Drive recordings · '+dates.length+' dates';
+ $('driveTab').querySelector('small').textContent=driveRecords.length+' archived clips';
+}
+async function refreshDrive(){
+ $('driveStatus').textContent='Loading historical Google Drive recordings…';
+ try{
+  const a=relay();if(!a?.fetch)throw Error('Authenticated camera connection missing');
+  const res=await a.fetch('/new/api/drive-saved',{cache:'no-store'});
+  if(!res.ok)throw Error('HTTP '+res.status);
+  const j=await res.json();
+  if(j.ok!==true||!Array.isArray(j.events)||j.archive_mode==='S9-microSD-only')throw Error('Drive catalog invalid');
+  driveRecords=j.events.filter(r=>driveSafe.test(driveVideoName(r))&&!driveVideoName(r).includes('..')&&driveDate(r))
+   .sort((a,b)=>String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
+  driveRendered=false;driveMonths();renderDrive();
+ }catch(err){
+  $('driveStatus').textContent='Drive archive unavailable: '+String(err.message||'Connection failed');
+  if(!driveRecords.length){
+   $('driveTimeline').replaceChildren();
+   $('driveEmpty').textContent='Could not load historical recordings. Try Refresh.';
+   $('driveEmpty').hidden=false;
+  }
+ }
+}
 $('driveTab').addEventListener('click',()=>showSource('drive'));
 $('localTab').addEventListener('click',()=>showSource('local'));
 $('driveRefresh').addEventListener('click',refreshDrive);
@@ -162,6 +253,7 @@ $('driveTab').addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventD
 $('localTab').addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();showSource('drive',true)}});
 $('monthSelect').addEventListener('change',e=>{selectedMonth=e.target.value;openDays.clear();loaded=false;render()});
 $('refresh').addEventListener('click',refresh);
+$('video').addEventListener('error',()=>{if($('viewer').open)$('playerState').textContent='Playback failed. Try refreshing this recording.'});
 $('close').addEventListener('click',()=>$('viewer').close());
 $('viewer').addEventListener('close',()=>{++playing;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
