@@ -1,0 +1,80 @@
+name: Publish C720P native dual-source Archive V10
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-archive-v7.html'
+      - 'ops/c720p/s9-native-security/deploy-security-archive-v10.py'
+      - 'ops/c720p/s9-native-security/test-security-v7.py'
+      - '.github/workflows/c720p-security-archive-v10.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-security-archive-v10.py'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify both catalogs and browser source separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-security-archive-v10.py
+          python3 ops/c720p/s9-native-security/test-security-v7.py
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("ops/c720p/s9-native-security/security-archive-v7.html").read_text()
+          assert "id=\"driveTimeline\"" in html and "id=\"localLibrary\"" in html
+          assert "/new/api/drive-saved" in html and "/new/api/saved" in html
+          assert "id=\"driveArchiveFrame\"" not in html
+          print("ARCHIVE_V10_SOURCE_VERIFIED")
+          PY
+  publish:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: "12"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Enqueue one narrowly scoped authenticated C720P page update
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'Missing private gateway configuration'; exit 1; }
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          htmlhash="$(sha256sum ops/c720p/s9-native-security/security-archive-v7.html | cut -d' ' -f1)"
+          deployhash="$(sha256sum ops/c720p/s9-native-security/deploy-security-archive-v10.py | cut -d' ' -f1)"
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ && "$htmlhash" =~ ^[a-f0-9]{64}$ && "$deployhash" =~ ^[a-f0-9]{64}$ ]]
+          remote="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/ops/c720p/s9-native-security/deploy-security-archive-v10.py"
+          tmp="/tmp/c720p-archive-v10-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 30 '${remote}' -o '${tmp}' && printf '%s  %s\\n' '${deployhash}' '${tmp}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${tmp}' --ref '${GITHUB_SHA}' --sha256 '${htmlhash}'"
+          idem="security-archive-v10-${GITHUB_SHA:0:24}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+           'github-actions-security-archive-v10','deployment',:'cmd',300,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || { echo 'Invalid deployment job ID'; exit 1; }
+          echo "C720P_ARCHIVE_V10_JOB_ID=$job"
+          for tick in $(seq 1 42); do
+            result="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${job}" | head -n 1)"
+            if [[ "$result" == done\|* || "$result" == error\|* || "$result" == failed\|* ]]; then
+              out="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${job}" | head -c 4500)"
+              echo "$out"
+              [[ "$result" == 'done|0' ]] || { echo 'Archive deployment rejected or rolled back'; exit 1; }
+              grep -q 'ARCHIVE_V10_DEVICE_VERIFIED' <<< "$out" || { echo 'Missing on-device verification marker'; exit 1; }
+              grep -Fq "$htmlhash" <<< "$out" || { echo 'Unexpected published page hash'; exit 1; }
+              echo "SECURITY_ARCHIVE_V10_HUB_PUBLISH_PASS"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'C720P deployment result not yet verified'
+          exit 1
