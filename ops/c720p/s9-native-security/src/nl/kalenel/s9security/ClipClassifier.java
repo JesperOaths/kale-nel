@@ -514,9 +514,13 @@ public final class ClipClassifier {
    String scene="motion_other";
    // An isolated multi-box frame is not reliable evidence for two people.
    if(persons>0){
+    // An isolated model-positive frame is review evidence, not proof.
+    // Preserve person_count and the full per-frame timeline.
     scene=framesWithMultiplePeople>=2?"multiple_people":
-      framesWithMultiplePeople==1?"unreviewed":"one_person";
-    categories.put("person");
+      framesWithMultiplePeople==1?"unreviewed":
+      strongPersonFrames>=2?"one_person":"unreviewed";
+    if(framesWithMultiplePeople>=2||strongPersonFrames>=2)
+     categories.put("person");
    }
    if(vehicles>0)categories.put("vehicle");
    if(animals>0)categories.put("animal");
