@@ -120,10 +120,9 @@ public final class CameraService extends Service {
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
  private volatile float gardenPersonGateAnyScore=0f;
- private long gardenPersonGatePreviousPositiveJpegAt=0;
  private volatile long gardenPersonDuplicateJpegRejects=0;
- private int gardenPersonGatePositiveStreak=0;
- private long gardenPersonGatePreviousPositiveAt=0;
+ private final GardenPersonTrackGate personTrackGate=new GardenPersonTrackGate();
+ private volatile int gardenPersonLastLocalMotionCells=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
  private volatile long deepFaceScanned=0,deepFaceErrors=0;
  private String captureTier="normal";
@@ -395,16 +394,18 @@ public final class CameraService extends Service {
   try{
    gardenGateExecutor.execute(new Runnable(){public void run(){
     final long gateStarted=SystemClock.elapsedRealtime();
-    float value=0,wholeFrameScore=0;boolean failed=false;
+    ClipClassifier.GardenPersonEvidence evidence=null;
+    float wholeFrameScore=0;boolean failed=false;
     try{
-     value=gardenGateClassifier.personScoreInGarden(jpg,top,margin,selectedZone);
+     evidence=gardenGateClassifier.personEvidenceInGarden(jpg,top,margin,selectedZone);
      wholeFrameScore=gardenGateClassifier.lastPersonScoreAnywhere();
     }
     catch(Throwable issue){
      failed=true;
      Log.w(TAG,"garden_person_gate_"+issue.getClass().getSimpleName());
     }
-    final float score=value;
+    final float score=evidence==null?0f:evidence.score;
+    final float[] personBox=evidence==null?null:evidence.box;
     final float anyScore=wholeFrameScore;
     final boolean error=failed;
     if(cameraHandler==null)return;
@@ -416,36 +417,35 @@ public final class CameraService extends Service {
      gardenPersonGateAnyScore=anyScore;
      if(error){
       gardenPersonGateErrors++;
+      personTrackGate.reset();
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
-     if(score<0.44f){gardenPersonGateRejects++;gardenPersonGatePositiveStreak=0;gardenPersonGatePreviousPositiveJpegAt=0;return;}
+     // A weak model prediction cannot form half of a valid two-frame track.
+     if(score<GardenPersonTrackGate.MIN_SCORE){
+      gardenPersonGateRejects++;
+      personTrackGate.reset();return;
+     }
      gardenPersonGateMatches++;
-     // Do not start recording on stale detections, if the camera has moved
-     // into a new capture session, or after a deliberate controls change.
      if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
-      gardenPersonGatePositiveStreak=0;
-      gardenPersonGatePreviousPositiveJpegAt=0;
+      personTrackGate.reset();
       if(running&&"watching".equals(mode))
        saveFallbackEvidence("stale_person_result_skipped");
       return;
      }
-     // Two positive detections must originate from DIFFERENT JPEGs.
-     if(gardenPersonGatePreviousPositiveJpegAt>0&&
-         jpegAt<=gardenPersonGatePreviousPositiveJpegAt){
-      gardenPersonDuplicateJpegRejects++;return;
-     }
-     if(gardenPersonGatePreviousPositiveAt>0 && now-gardenPersonGatePreviousPositiveAt<=3000L)
-      gardenPersonGatePositiveStreak=Math.min(2,gardenPersonGatePositiveStreak+1);
-     else gardenPersonGatePositiveStreak=1;
-     gardenPersonGatePreviousPositiveAt=now;
-     gardenPersonGatePreviousPositiveJpegAt=jpegAt;
-     if(gardenPersonGatePositiveStreak<2)return;
-      gardenPersonGatePositiveStreak=0;
-      gardenPersonCandidateUntil=0;
-      eventChain.evidence(SystemClock.elapsedRealtime());
+     // The motion grid retains 5s of accepted cells. A marginal person
+     // classification must overlap actual garden movement, not merely
+     // coincide with an unrelated passing vehicle or moving shrub.
+     int localCells=motion.recentMotionCellsInBox(personBox,SystemClock.elapsedRealtime());
+     gardenPersonLastLocalMotionCells=localCells;
+     GardenPersonTrackGate.Decision verdict=
+         personTrackGate.offer(now,jpegAt,score,personBox,localCells);
+     gardenPersonDuplicateJpegRejects=personTrackGate.duplicateFrames;
+     if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED)return;
+     gardenPersonCandidateUntil=0;
+     eventChain.evidence(SystemClock.elapsedRealtime());
      if(temperature()<415 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
      else saveFallbackEvidence("thermal_or_space_guard");
@@ -869,7 +869,7 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
-   d.put("motion_detector","garden_roi_gpu_two_frame_person_gate_v2");
+   d.put("motion_detector",GardenPersonTrackGate.VERSION);
     d.put("capture_event_version",CaptureContinuity.VERSION);
     d.put("capture_event_id",eventChain.eventId());
     d.put("capture_segment_index",eventChain.segmentNumber());
@@ -878,7 +878,7 @@ public final class CameraService extends Service {
     d.put("capture_segment_auto_resume_guard_denied",segmentResumeDenied);
     d.put("capture_segments_are_gapless",false);
     d.put("thumbnail_selector",EventFrameRanker.VERSION);
-   d.put("previous_detector_version","garden_roi_gpu_person_gate_v1");
+   d.put("previous_detector_version","garden_roi_gpu_two_frame_person_gate_v2");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
    d.put("storage","removable_microSD_only");
@@ -950,6 +950,12 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
     d.put("garden_person_gate_last_anywhere_score",gardenPersonGateAnyScore);
+   d.put("garden_person_spatial_gate",true);
+   d.put("garden_person_motion_corroboration",true);
+   d.put("garden_person_last_local_motion_cells",gardenPersonLastLocalMotionCells);
+   d.put("garden_person_unrelated_boxes",personTrackGate.unrelatedBoxes);
+   d.put("garden_person_no_local_motion",personTrackGate.noLocalMotion);
+   d.put("garden_person_rejected_weak",personTrackGate.rejectedWeak);
     d.put("garden_person_followup_version","motion_armed_4500ms_unique_jpeg_v5");
     d.put("garden_person_candidate_window_ms",GARDEN_PERSON_CANDIDATE_MS);
     d.put("garden_person_motion_windows",gardenPersonMotionWindows);
