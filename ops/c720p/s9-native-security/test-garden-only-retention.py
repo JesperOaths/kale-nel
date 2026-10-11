@@ -51,6 +51,18 @@ class Tests(unittest.TestCase):
             self.assertIn(token,s)
         self.assertNotIn('double quality=confidence*2.0+0.05*(p+a+v)',s)
 
+    def test_archive_thumbnail_warms_cold_classifier(self):
+        source=(SRC/'ClipClassifier.java').read_text()
+        method=source.split('public synchronized boolean rebuildGardenThumbnail(',1)[1].split(
+            'public synchronized JSONObject gardenRetentionProbe(',1)[0]
+        self.assertIn('init();',method)
+        self.assertLess(method.index('init();'),method.index('detect(bitmap)'))
+        # Initialization only on the S9+ background review thread, not the
+        # real-time camera callback or the Home Assistant proxy.
+        camera=(SRC/'CameraService.java').read_text()
+        self.assertIn('reviewer.execute(new Runnable()',camera)
+        self.assertIn('detector.rebuildGardenThumbnail(movie,live,meta)',(SRC/'GardenArchiveTriage.java').read_text())
+
     def test_secondary_person_check_and_nonpermanent_quarantine(self):
         c=(SRC/'ClipClassifier.java').read_text()
         q=(SRC/'GardenArchiveTriage.java').read_text()
