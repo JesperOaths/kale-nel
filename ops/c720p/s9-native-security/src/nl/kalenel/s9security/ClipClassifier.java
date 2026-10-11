@@ -124,7 +124,17 @@ public final class ClipClassifier {
   // the precise named mask so it agrees with the motion grid.
   return personScoreInGarden(jpeg,top,margin,null);
  }
- public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin,String zone)throws Exception{
+ /** Best live SSD person candidate with coordinates. Still anonymous and
+  * only accepted by CameraService if a later *different* JPEG corroborates.
+  */
+ public static final class GardenPersonEvidence {
+  public final float score;
+  public final float[] box;
+  GardenPersonEvidence(float score,float[] box){
+   this.score=score;this.box=box.clone();
+  }
+ }
+ public synchronized GardenPersonEvidence personEvidenceInGarden(byte[] jpeg,float top,float margin,String zone)throws Exception{
   if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f||
       (zone!=null&&!MotionGrid.validGardenZone(zone)))
    throw new IllegalArgumentException("invalid_preview_or_region");
@@ -133,6 +143,7 @@ public final class ClipClassifier {
   if(bitmap==null)throw new IOException("invalid_preview_jpeg");
   try{
    float highest=0f,any=0f;
+   float[] bestBox=null;
    lastPersonAnywhere=0f;
    for(Detection detection:detect(bitmap)){
     if(!"person".equals(detection.label))continue;
@@ -146,13 +157,19 @@ public final class ClipClassifier {
     if(zone!=null){
      if(!MotionGrid.insideZone(zone,center,feet))continue;
     }else if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
-    highest=Math.max(highest,detection.score);
+    if(GardenPersonTrackGate.valid(b)&&detection.score>highest){
+     highest=detection.score;bestBox=b;
+    }
    }
    lastPersonAnywhere=any;
-   return highest;
+   return bestBox==null?null:new GardenPersonEvidence(highest,bestBox);
   }finally{bitmap.recycle();}
  }
 
+ public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin,String zone)throws Exception{
+  GardenPersonEvidence person=personEvidenceInGarden(jpeg,top,margin,zone);
+  return person==null?0f:person.score;
+ }
  /** Lightweight RGB upper-torso tag; deliberately excludes face and has no identity features. */
  private static String upperClothingColour(Bitmap image,float[] b){
   if(image==null||b==null||b.length!=4)return "uncertain";
