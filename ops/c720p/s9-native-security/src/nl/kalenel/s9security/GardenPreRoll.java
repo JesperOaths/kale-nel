@@ -182,7 +182,7 @@ public final class GardenPreRoll {
  private void save(File original,Frozen frozen)throws Exception{
   if(!original.isFile()||original.length()<100000)throw new IllegalArgumentException("original_not_final");
   String name=original.getName();
-  if(!name.matches("motion_[0-9]{13}[.]mp4"))throw new IllegalArgumentException("invalid_original");
+  if(!name.matches("(?:motion|diagnostic_preroll)_[0-9]{13}[.]mp4"))throw new IllegalArgumentException("invalid_original");
   File parent=original.getCanonicalFile().getParentFile();
   File finalFile=new File(parent,name+".preroll.mp4");
   if(finalFile.isFile())return;
