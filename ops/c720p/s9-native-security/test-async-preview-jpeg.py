@@ -29,8 +29,8 @@ class Tests(unittest.TestCase):
                     'recorder.setVideoFrameRate(30)',
                     'recorder.setVideoEncodingBitRate(36000000)',
                     'PhoneMediaRange.handle(in,out,line,folder)',
-                    'garden_roi_gpu_person_gate_v1',
-                    'COOLDOWN_MS=12000',
+                    'garden_roi_temporal_person_presence_v2',
+                    'COOLDOWN_MS=3500',
                     'temperature()<415',
                     'gardenPersonGateBusy',
                     'reviewer.shutdown()'):
