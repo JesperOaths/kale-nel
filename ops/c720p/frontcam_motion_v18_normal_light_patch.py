@@ -37,6 +37,12 @@ def normal_motion_evidence(changed, largest, coherence, bbox, background_support
     supported = (background_supported and changed >= 0.07
                  and largest >= 18.0 and coherence >= 0.08)
     return bool(temporal or supported)
+
+def night_motion_source_ok(source, transition_guard):
+    # A verified incident at 21:23 passed the V17 shape gate while still
+    # tagged localized-during-transition. A normal scene transition must
+    # never switch an OFF lamp on, even when its contour resembles a person.
+    return bool(source in ("background","temporal") and not transition_guard)
 '''
 
 NORMAL_OLD = 'return {"mode":"normal","delta":18,"changed":0.65,"contour":95.0,"confirm":2}'
@@ -56,7 +62,7 @@ CANDIDATE_NEW = '''            if th["mode"] == "normal":
 '''
 DARK_CONFIRM_OLD = "confirmed=bool(dark_confirmed and dark_shape_gate_ok)"
 DARK_CONFIRM_NEW = '''confirmed=bool(dark_confirmed and dark_shape_gate_ok
-                           and source in ("background","temporal","localized-during-transition"))'''
+                           and night_motion_source_ok(source,in_transition_guard))'''
 
 def replace_once(text, old, new, why):
     count = text.count(old)
@@ -90,12 +96,13 @@ def validate(updated):
     ns = {}
     funcs = [x for x in astree.body
              if isinstance(x, ast.FunctionDef) and x.name in
-             ("night_lamp_shape_gate","normal_motion_evidence","thresholds")]
-    if len(funcs) != 3:
+             ("night_lamp_shape_gate","normal_motion_evidence","thresholds","night_motion_source_ok")]
+    if len(funcs) != 4:
         raise RuntimeError("missing V17/V18 helpers after patch")
     exec(compile(ast.Module(body=funcs, type_ignores=[]),str(SOURCE),"exec"),ns)
     night=ns["night_lamp_shape_gate"]
     normal=ns["normal_motion_evidence"]
+    source_ok=ns["night_motion_source_ok"]
     cases = [
       ("old_false_1918",False,night((70,98,17,14),146,.90,4,4.0,.35)),
       ("old_false_1937",False,night((7,71,9,10),36,2.09,4,4.0,.33)),
@@ -112,18 +119,29 @@ def validate(updated):
       ("incoherent_normal",False,normal(1.2,33,.02,(20,20,15,15))),
       ("global_flicker_normal",False,normal(60.,9000.,1.,(0,0,160,120))),
       ("unmoving_background",False,normal(.01,0.,0.,(20,20,30,40),True)),
+      # These two false ONs occurred on the actual C720P after V17 cutover.
+      ("false_2107_transition_settling",False,
+       night((24,62,30,52),1071,8.40,3,3,.50)
+       and source_ok("transition-settling",True)),
+      ("false_2123_localized_transition",False,
+       night((0,80,22,40),700,7.36,3,3,.50)
+       and source_ok("localized-during-transition",True)),
+      ("dark_light_transition",False,source_ok("lighting-transition",True)),
+      ("normal_dark_background",True,source_ok("background",False)),
+      ("normal_dark_temporal",True,source_ok("temporal",False)),
+      ("dark_temporal_guarded",False,source_ok("temporal",True)),
     ]
     fail=[n for n,expected,actual in cases if bool(actual)!=expected]
     if ns["thresholds"](110)["delta"] != 12:
         fail.append("normal_threshold_not_updated")
     if ns["thresholds"](8)["delta"] != 1:
         fail.append("dark_threshold_changed")
-    if 'source in ("background","temporal","localized-during-transition")' not in updated:
+    if 'and night_motion_source_ok(source,in_transition_guard)' not in updated:
         fail.append("transition_veto_not_integrated")
     if fail:raise RuntimeError("regression failures: "+repr(fail))
     return {"cases":len(cases)+2,"passed":len(cases)+2,"night_v17_unchanged":True,
             "normal_profile":"delta12/changed0.30/contour60",
-            "transition_settling_blocked":True}
+            "transition_settling_and_localized_blocked":True}
 
 def active():
     p=subprocess.run(["systemctl","--user","is-active",UNIT],

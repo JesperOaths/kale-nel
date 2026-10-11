@@ -37,3 +37,11 @@ The **read-only on-device dry run completed** in job **10308**, with a source SH
 ## Privacy and rollback
 
 The detector processes 160×120 local camera frames. This fix records no images, face identities, tokens or webhook URL in the repository. The original V17 script is backed up locally by the installer when it is run. Source changes are restricted to the frontcam detector and require a compiled/tested cutover.
+
+## New post-V17 production incident: 21:23:02
+
+The C720P detector continued to run unmodified V17 as of 23:45. A second false-on pattern was identified at **21:23:02 Europe/Amsterdam**: the detector reported `mode=dark source=localized-during-transition luma=7.6 temporal=7.36%/700 bbox=(0,80,22,40)` with `on_allowed=1`. Home Assistant recorded the lamp switching ON at the same second. It turned OFF at **21:30:42** after repeated camera-owned timer extensions.
+
+This is an additional bug in the **original V18 staging draft**: its source guard excluded `transition-settling` but mistakenly *allowed* `localized-during-transition`. That draft therefore did not fully address the observed problem. The revised V18 package requires a confirmed dark-mode motion event to originate from `background` or `temporal` **and** be outside the lighting-transition guard. It adds two actual incident regression cases (21:07:34 and 21:23:02), plus checks for safe sources and transition-guard status. V17's existing nighttime size/track shape gate remains unchanged.
+
+The post-cutover lamp behaviour still requires physical acceptance testing; source tests use historical event metadata and synthetic gait proxies, not recorded true-person footage. **No installer or script change in this PR deploys automatically.**
