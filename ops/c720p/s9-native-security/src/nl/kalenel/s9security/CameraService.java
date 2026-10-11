@@ -31,6 +31,8 @@ public final class CameraService extends Service {
  private CameraControls cameraControls;
  private CaptureRequest.Builder activeCameraRequest;
  private final MotionGrid motion=new MotionGrid();
+ private final CaptureContinuity eventChain=new CaptureContinuity();
+ private volatile long segmentResumeAttempts=0,segmentResumeDenied=0;
  // Read-only Camera2 metadata distinguishes night exposure from callback load.
  private volatile long sensorCaptureResults=0,lastSensorTimestampNs=0,lastSensorCaptureAt=0;
  private volatile float sensorResultFps=0f,sensorExposureMs=-1f,sensorFrameDurationMs=-1f;
@@ -277,6 +279,7 @@ public final class CameraService extends Service {
      if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
       lastMovementAt=lastFrameAt;
+      eventChain.evidence(lastFrameAt);
       if(!pilotOnly&&"watching".equals(mode)){
        // Motion merely requests on-device person inference. Vehicles on the
        // road and non-person garden motion do not start new videos.
@@ -285,8 +288,10 @@ public final class CameraService extends Service {
        else evaluateGardenPersonAsync();
       }
      }
-     if("recording".equals(mode)&&lastFrameAt-lastStart>2500&&
-        (lastFrameAt-lastStart>MAX_MS||lastFrameAt-lastMovementAt>QUIET_MS))stopRecording("motion_completed");
+     if("recording".equals(mode)&&lastFrameAt-lastStart>2500){
+       if(lastFrameAt-lastStart>MAX_MS)stopRecording("max_segment");
+       else if(lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end");
+      }
     }catch(Throwable error){failure("frame_"+error.getClass().getSimpleName(),error);}
     finally{if(frame!=null)frame.close();}
    },cameraHandler);
@@ -322,6 +327,16 @@ public final class CameraService extends Service {
       activeCameraRequest=r;
       s.setRepeatingRequest(r.build(),sensorTelemetry,cameraHandler);
       mode="watching";Log.i(TAG,"YUV_PREVIEW_ACTIVE 640x480 mode="+(pilotOnly?"pilot":"motion_record"));
+       // MediaRecorder needs a new physical file; preserve logical lineage.
+       // Never bypass existing thermal/SD checks or claim gapless MP4 bytes.
+       if(!pilotOnly&&!temporaryTest&&eventChain.continuationReady(SystemClock.elapsedRealtime())){
+        eventChain.cancelContinuation();segmentResumeAttempts++;
+        if(temperature()<415&&folder!=null&&folder.getUsableSpace()>15L*1024*1024*1024){
+         cameraHandler.postDelayed(new Runnable(){public void run(){
+          if(running&&"watching".equals(mode))startRecording();
+         }},180);
+        }else{segmentResumeDenied++;saveFallbackEvidence("event_continuation_guard");}
+       }
      }catch(Exception e){failure("preview_request_failed",e);scheduleRecover();}
     }
     @Override public void onConfigureFailed(CameraCaptureSession s){
@@ -399,7 +414,8 @@ public final class CameraService extends Service {
      else gardenPersonGatePositiveStreak=1;
      gardenPersonGatePreviousPositiveAt=now;
      if(gardenPersonGatePositiveStreak<2)return;
-     gardenPersonGatePositiveStreak=0;
+      gardenPersonGatePositiveStreak=0;
+      eventChain.evidence(SystemClock.elapsedRealtime());
      if(temperature()<415 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
      else saveFallbackEvidence("thermal_or_space_guard");
@@ -485,8 +501,9 @@ public final class CameraService extends Service {
       recorder.start();
       noteRecordingStarted();
       lastStart=SystemClock.elapsedRealtime();
-      lastRecordAt=lastStart;
-      mode="recording";
+       lastRecordAt=lastStart;
+       eventChain.started(lastStart,System.currentTimeMillis());
+       mode="recording";
       Log.i(TAG,"START_MOTION_4K "+finished.getName());
       if(temporaryTest)cameraHandler.postDelayed(new Runnable(){public void run(){if("recording".equals(mode))stopRecording("pilot_short");}},9000);
      }catch(Exception e){failure("recorder_start_failed",e);abortRecording();}
@@ -516,13 +533,17 @@ public final class CameraService extends Service {
     if(w!=3840||h!=2160)throw new IOException("encoded_resolution_"+w+"x"+h);
    }finally{m.release();}
    completed++;lastClip=candidate.getName();
-   Log.i(TAG,"FINALIZED_TRUE_4K name="+lastClip+" bytes="+candidate.length());
-   final File saved=candidate;final long motionAtSave=motionEvents;
-   final String reviewTrigger=reason+"_"+captureTier;
-   reviewer.submit(new Runnable(){public void run(){review(saved,reviewTrigger,motionAtSave);}});
+    final CaptureContinuity.Segment eventSegment=eventChain.stopped(
+      SystemClock.elapsedRealtime(),lastClip,reason);
+    Log.i(TAG,"FINALIZED_TRUE_4K name="+lastClip+" bytes="+candidate.length()
+      +" event="+eventSegment.eventId+" segment="+eventSegment.sequence);
+    final File saved=candidate;final long motionAtSave=motionEvents;
+    final String reviewTrigger=reason+"_"+captureTier;
+    reviewer.submit(new Runnable(){public void run(){review(saved,reviewTrigger,motionAtSave,eventSegment);}});
   }catch(Exception e){
    failure("finalize_failed_"+e.getClass().getSimpleName(),e);
-   // Keep the raw .recording file for forensic recovery, never delete incomplete footage.
+    eventChain.reset();
+    // Keep the raw .recording file for forensic recovery, never delete incomplete footage.
   }finally{
    if(recorder!=null){try{recorder.release();}catch(Exception ignored){}recorder=null;}
    closeSession();
@@ -539,8 +560,26 @@ public final class CameraService extends Service {
   cameraHandler.postDelayed(new Runnable(){public void run(){configurePreview();}},1300);
  }
  private boolean review(File f,String reason,long count){
+  return review(f,reason,count,null);
+ }
+ private boolean review(File f,String reason,long count,CaptureContinuity.Segment segment){
   try{
    JSONObject j=classifier.process(f,folder,f.getName(),reason,count);
+   if(segment!=null){
+    j.put("capture_event_version",CaptureContinuity.VERSION);
+    j.put("capture_event_id",segment.eventId);
+    j.put("capture_segment_index",segment.sequence);
+    j.put("capture_previous_segment",segment.previousClip.isEmpty()?JSONObject.NULL:segment.previousClip);
+    j.put("capture_segment_transition",segment.transitionReason);
+    j.put("capture_segment_end_reason",segment.stopReason);
+    j.put("capture_segment_start_elapsed_ms",segment.startMonotonicMs);
+    j.put("capture_segment_stop_elapsed_ms",segment.stopMonotonicMs);
+    j.put("capture_segment_gap_from_previous_ms",segment.gapMs<0?JSONObject.NULL:segment.gapMs);
+    j.put("capture_segment_auto_resume_armed",segment.autoResumeArmed);
+    j.put("capture_segments_have_unrecorded_transition_gaps",true);
+    j.put("capture_metadata_is_model_evidence_not_verified_identity",true);
+    ClipClassifier.writeJson(new File(folder,f.getName()+".verified.json"),j);
+   }
    backend=j.optString("backend","unknown");
    reviewed++;
    lastReview=j.optString("scene_category")+" people="+j.optInt("person_count");
@@ -771,6 +810,14 @@ public final class CameraService extends Service {
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
    d.put("motion_detector","garden_roi_gpu_two_frame_person_gate_v2");
+    d.put("capture_event_version",CaptureContinuity.VERSION);
+    d.put("capture_event_id",eventChain.eventId());
+    d.put("capture_segment_index",eventChain.segmentNumber());
+    d.put("capture_segment_continuation_pending",eventChain.isContinuationPending());
+    d.put("capture_segment_auto_resume_attempts",segmentResumeAttempts);
+    d.put("capture_segment_auto_resume_guard_denied",segmentResumeDenied);
+    d.put("capture_segments_are_gapless",false);
+    d.put("thumbnail_selector",EventFrameRanker.VERSION);
    d.put("previous_detector_version","garden_roi_gpu_person_gate_v1");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
