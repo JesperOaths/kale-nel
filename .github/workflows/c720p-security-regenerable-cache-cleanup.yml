@@ -1,0 +1,81 @@
+name: C720P protected Security cache cleanup
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-security-regenerable-cache-cleanup.yml'
+      - 'ops/c720p/s9-native-security/reclaim-regenerable-chromium-cache.py'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/reclaim-regenerable-chromium-cache.py'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-security-chromium-cache-only
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/reclaim-regenerable-chromium-cache.py
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('ops/c720p/s9-native-security/reclaim-regenerable-chromium-cache.py').read_text()
+          assert 'SECURITY_REGENERABLE_CACHE_CLEANUP_V1' in source
+          assert 'chromium-headless' in source and 'Service Worker/CacheStorage' in source
+          assert 'benchmark_only_inspected' in source and 'detector_build_deleted":False' in source
+          for protected in ('frontyard-security-new/clips','s9-phone-thumbs','native-security-cutover'):
+           assert protected not in source, protected
+          assert 'shutil.rmtree(target)' in source
+          print('GUARDED_CACHE_ONLY_MAINTENANCE_SCOPE_VERIFIED')
+          PY
+  execute:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: "12"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'Private management path unavailable'; exit 1; }
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          script="ops/c720p/s9-native-security/reclaim-regenerable-chromium-cache.py"
+          hash="$(sha256sum "$script" | cut -d' ' -f1)"
+          [[ "$hash" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          remote="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${script}"
+          target="/tmp/security-safe-cache-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 30 '${remote}' -o '${target}' && printf '%s  %s\\n' '${hash}' '${target}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${target}'"
+          idem="security-safe-cache-only-${GITHUB_SHA:0:24}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-cache','maintenance',:'cmd',180,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "SECURITY_CACHE_MAINTENANCE_JOB=$id"
+          for i in $(seq 1 38); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == failed\|* || "$state" == error\|* ]]; then
+              out="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 16000)"
+              echo "$out"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'SECURITY_REGENERABLE_CACHE_CLEANUP_V1' <<< "$out" || exit 1
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
