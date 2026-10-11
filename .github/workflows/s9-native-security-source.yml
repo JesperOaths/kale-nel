@@ -48,6 +48,19 @@ jobs:
           python3 ops/c720p/s9-native-security/test-security-saved-tab-date-nav.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-security-saved-tab-date-nav.py
           python3 ops/c720p/s9-native-security/test-security-date-category-folders.py
+          python3 ops/c720p/s9-native-security/test-security-compact-layout.py
+          python3 -m py_compile ops/c720p/s9-native-security/patch-security-compact-layout.py
+          python3 - <<'PY'
+          import importlib.util,re
+          from pathlib import Path
+          p=Path("ops/c720p/s9-native-security/patch-security-compact-layout.py")
+          spec=importlib.util.spec_from_file_location("compact",p)
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          scripts=re.findall(r'<script[^>]+>(.*?)</script>',mod.SAVED_SNIPPET,re.S)
+          assert len(scripts)==1
+          Path("/tmp/s9-compact-recordings.js").write_text(scripts[0])
+          PY
+          node --check /tmp/s9-compact-recordings.js
           python3 ops/c720p/s9-native-security/test-security-fallback-dated-stills.py
           python3 ops/c720p/s9-native-security/test-legacy-stills-optin-ui.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-security-fallback-dated-stills.py
