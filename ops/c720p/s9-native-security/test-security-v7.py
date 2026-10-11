@@ -36,6 +36,7 @@ class V7Tests(unittest.TestCase):
  def test_drive_and_micro_sd_are_both_available_in_archive(self):
   page=(HERE/'security-archive-v7.html').read_text()
   self.assertIn('id="driveTab"',page)
+  self.assertIn('<script src="/gejast-auth-gate.js?v817"></script>',page)
   self.assertIn('id="localTab"',page)
   self.assertIn('role="tablist"',page)
   self.assertIn('aria-selected="true" aria-controls="driveLibrary"',page)
@@ -56,7 +57,7 @@ class V7Tests(unittest.TestCase):
   for target in ('security-archive-v7.html','security-tracks-v7.html'):
    sources.append((HERE/target).read_text())
   for i,source in enumerate(sources):
-   found=re.findall(r'<script[^>]*>([\s\S]*?)</script>',source)
+   found=re.findall(r'<script(?![^>]*\\bsrc=)[^>]*>([\s\S]*?)</script>',source)
    self.assertEqual(len(found),1,str(i))
    with tempfile.TemporaryDirectory() as tmp:
     p=Path(tmp)/"test.js";p.write_text(found[0])
