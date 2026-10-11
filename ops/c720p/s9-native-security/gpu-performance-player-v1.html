@@ -1,0 +1,214 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta http-equiv="Cache-Control" content="no-store">
+<script src="/gejast-auth-gate.js?v817"></script>
+<title>S9+ GPU performance playback</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif}
+*{box-sizing:border-box}body{background:#0a1119;color:#edf7fa;margin:0;font-size:13px;min-height:100dvh}
+main{max-width:900px;margin:auto;padding:16px clamp(12px,2vw,24px) 24px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:15px}
+h1{font-size:18px;margin:0;letter-spacing:-.035em}
+p{color:#9cb4c2;margin:5px 0 0}
+.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:#7ae2c5;font-weight:800}
+button,input{font:inherit}button{border-radius:9px;border:1px solid #476071;background:#253849;color:#eefaff;padding:9px 13px;cursor:pointer}
+button:hover{background:#2c4a5b}button:focus-visible,input:focus-visible{outline:2px solid #80dfc0;outline-offset:2px}
+.viewport{display:grid;place-items:center;background:#050a0e;border:1px solid #324a5b;border-radius:13px;min-height:280px;position:relative;padding:8px}
+canvas{width:min(100%,480px);height:auto;aspect-ratio:16/9;background:#111f26;border-radius:6px;image-rendering:auto}
+#loading{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:#c6dee8;background:#091725dc;line-height:1.5;border-radius:13px}
+.controls{padding:15px 0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+.controls input{width:100%;accent-color:#7bdbbc}
+.stats{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:6px 0 0}
+.stat{border:1px solid #365162;background:#152837;border-radius:9px;padding:9px 12px}
+.stat b{font-size:17px;display:block;font-variant-numeric:tabular-nums}
+.stat small{color:#9ebcca;font-size:11px}
+#status{font-size:12px;color:#bdd3dd;min-height:20px}
+.note{font-size:11px;color:#b5ceda;line-height:1.5;padding:12px;border-left:2px solid #5bd4b4;background:#122734;margin-top:16px}
+@media(max-width:550px){.controls{grid-template-columns:auto 1fr;gap:9px}.controls label{grid-column:1/-1}.stat{flex:1}}
+</style></head>
+<body><main>
+<header><div><div class="eyebrow">S9+ · CPU-light playback</div><h1>25 FPS performance player</h1><p id="filename"></p></div>
+<button id="close" type="button">Return to Security</button></header>
+<div class="viewport"><canvas id="screen" width="320" height="180" aria-label="Recording frames from S9+ microSD"></canvas><div id="loading" role="status">Connecting to your private Security archive…</div></div>
+<div class="controls"><button id="play" type="button" disabled>Pause</button><label aria-label="Recording position"><input id="timeline" type="range" min="0" max="5" step=".04" value="0" disabled></label><span id="clock">00:00 / --:--</span></div>
+<div class="stats"><div class="stat"><b id="actual">—</b><small>Measured displayed FPS</small></div><div class="stat"><b id="sourcefps">25</b><small>Frames per source second</small></div><div class="stat"><b id="skipped">0</b><small>Skipped frame positions</small></div></div>
+<p id="status">Preparing a 320×180 RGB565 hardware-rendered copy…</p>
+<div class="note">Performance mode is optimized for the C720P's older hardware and contains video only. The original recording remains stored at 4K on the S9+ and can be opened from the previous Security view. A measured FPS below 24 is reported rather than concealed.</div>
+</main>
+<script id="s9-gpu-player-v1">
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id),NAME=/^(?:motion_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4$/;
+const name=new URLSearchParams(location.search).get('clip')||'';
+const WIDTH=320,HEIGHT=180,FPS=25,PACK=WIDTH*HEIGHT*2,CHUNK=5,FRAMES=125;
+const state={duration:0,playing:false,seconds:0,epoch:0,buffers:new Map(),promises:new Map(),
+last:-1,frameCount:0,skipped:0,measureStart:0,measureCount:0,active:true,generation:0};
+$('filename').textContent=name;
+function relay(){
+ let w=window;
+ for(let i=0;i<5;i++){
+  try{if(w.C720PSecureRelay?.fetch)return w.C720PSecureRelay;if(w.parent===w)break;w=w.parent}catch(_){break}
+ }
+ return null;
+}
+const base='/new/saved/clip/'+encodeURIComponent(name);
+function delay(ms){return new Promise(done=>setTimeout(done,ms))}
+function status(text){$('status').textContent=text}
+function loaded(text){$('loading').textContent=text;$('loading').style.display='grid'}
+function hideLoading(){$('loading').style.display='none'}
+function fmt(seconds){let s=Math.max(0,Math.round(seconds));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function updateClock(){$('clock').textContent=fmt(state.seconds)+' / '+fmt(state.duration);$('timeline').value=String(Math.min(state.duration,state.seconds))}
+function glSetup(){
+ const canvas=$('screen'),gl=canvas.getContext('webgl',{alpha:false,antialias:false,depth:false,stencil:false});
+ if(!gl)throw Error('GPU video canvas unavailable');
+ function shader(type,src){const obj=gl.createShader(type);gl.shaderSource(obj,src);gl.compileShader(obj);if(!gl.getShaderParameter(obj,gl.COMPILE_STATUS))throw Error('Video GPU shader unavailable');return obj}
+ const program=gl.createProgram();
+ gl.attachShader(program,shader(gl.VERTEX_SHADER,'attribute vec2 a;varying vec2 uv;void main(){uv=(a+1.0)*0.5;gl_Position=vec4(a,0.0,1.0);}'));
+ gl.attachShader(program,shader(gl.FRAGMENT_SHADER,'precision mediump float;varying vec2 uv;uniform sampler2D image;void main(){gl_FragColor=texture2D(image,vec2(uv.x,1.0-uv.y));}'));
+ gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error('Unable to initialize GPU renderer');
+ gl.useProgram(program);
+ gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+ const a=gl.getAttribLocation(program,'a');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
+ gl.bindTexture(gl.TEXTURE_2D,gl.createTexture());
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+ gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+ return (pixels)=>{gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,WIDTH,HEIGHT,0,gl.RGB,gl.UNSIGNED_SHORT_5_6_5,pixels);gl.drawArrays(gl.TRIANGLE_STRIP,0,4)};
+}
+let draw;
+async function waitJson(path,valid,deadlineMs=180000){
+ const r=relay();const start=Date.now();
+ while(state.active&&Date.now()-start<deadlineMs){
+  const response=await r.fetch(path,{cache:'no-store'});
+  if(!response.ok)throw Error('Archive playback status '+response.status);
+  const d=await response.json();
+  if(d.state==='failed'||d.ok===false)throw Error(d.error||'Video preparation failed');
+  if(valid(d))return d;
+  await delay(850);
+ }
+ throw Error('Video preparation timed out');
+}
+async function getChunk(index){
+ if(index<0||index>=36||index*CHUNK>=state.duration+.1)return null;
+ if(state.buffers.has(index))return state.buffers.get(index);
+ if(state.promises.has(index))return state.promises.get(index);
+ const promise=(async()=>{
+  const path=base+'?playback=rgb_prepare&chunk='+index;
+  const info=await waitJson(path,d=>d.state==='ready',200000);
+  const response=await relay().fetch(base+'?playback=rgb_pack&chunk='+index,{cache:'no-store'});
+  if(!response.ok)throw Error('Buffered video unavailable '+response.status);
+  const bytes=await response.arrayBuffer();
+  if(bytes.byteLength!==Number(info.frames)*PACK||bytes.byteLength<2*PACK)throw Error('Corrupt buffered video chunk');
+  const chunk={bytes,frames:info.frames};
+  state.buffers.set(index,chunk);
+  if(state.buffers.size>3){
+   const old=[...state.buffers.keys()].sort((a,b)=>Math.abs(b-index)-Math.abs(a-index))[0];
+   if(old!==index)state.buffers.delete(old);
+  }
+  return chunk;
+ })().finally(()=>state.promises.delete(index));
+ state.promises.set(index,promise);
+ return promise;
+}
+function paint(target){
+ const position=Math.floor(Math.min(Math.max(0,target),Math.max(0,state.duration-.01))*FPS);
+ const index=Math.floor(position/FRAMES),local=position%FRAMES;
+ const chunk=state.buffers.get(index);
+ if(!chunk||local>=chunk.frames)return false;
+ if(state.last===position)return true;
+ const array=new Uint16Array(chunk.bytes,local*PACK,WIDTH*HEIGHT);
+ draw(array);
+ if(state.last>=0)state.skipped+=Math.max(0,position-state.last-1);
+ state.last=position;state.frameCount++;state.measureCount++;
+ $('skipped').textContent=String(state.skipped);
+ return true;
+}
+function fpsUpdate(now){
+ if(!state.measureStart)state.measureStart=now;
+ if(now-state.measureStart>=1800){
+  const fps=state.measureCount*1000/(now-state.measureStart);
+  $('actual').textContent=fps.toFixed(1);
+  $('actual').style.color=fps>=24?'#84e7c9':'#ffc28d';
+  status(fps>=24?'Measured playback currently meets the 24 FPS target.':'Measured playback is below 24 FPS; this is not a confirmed smooth interval.');
+  state.measureCount=0;state.measureStart=now;
+ }
+}
+function run(now){
+ if(!state.active)return;
+ if(state.playing){
+  const target=Math.min(state.duration,state.seconds+(now-state.epoch)/1000);
+  if(paint(target)){
+   fpsUpdate(now);
+   if(target>=state.duration-.045){
+    state.playing=false;state.seconds=state.duration;$('play').textContent='Replay';
+    status('Recording ended');
+   }else if(now-state.measureStart>300){
+    state.seconds=target;state.epoch=now;
+    updateClock();
+    const chunk=Math.floor(state.seconds/CHUNK);
+    getChunk(chunk+1).catch(()=>{});
+   }
+  }else{
+   state.playing=false;
+   state.seconds=Math.max(0,Math.min(target,state.duration));
+   const n=Math.floor(state.seconds/CHUNK);
+   loaded('Buffering the next private GPU video segment…');
+   getChunk(n).then(()=>{
+    if(state.active){hideLoading();state.epoch=performance.now();state.playing=true}
+   }).catch(e=>{loaded('Playback unavailable: '+e.message);status('Original 4K recording is unchanged')});
+  }
+ }
+ requestAnimationFrame(run);
+}
+function setPlay(value){
+ if(value&&!state.active)return;
+ if(value&&state.seconds>=state.duration-.045){state.seconds=0;state.last=-1}
+ state.epoch=performance.now();
+ state.playing=value;
+ $('play').textContent=value?'Pause':'Play';
+ if(value)hideLoading();
+}
+$('play').addEventListener('click',()=>setPlay(!state.playing));
+$('timeline').addEventListener('change',async e=>{
+ if(!state.duration)return;
+ setPlay(false);
+ state.seconds=Number(e.target.value)||0;
+ state.last=-1;state.skipped=0;state.measureCount=0;state.measureStart=0;
+ updateClock();
+ loaded('Seeking to selected recording time…');
+ try{
+  const n=Math.floor(state.seconds/CHUNK);
+  await getChunk(n);paint(state.seconds);hideLoading();setPlay(true);
+ }catch(error){loaded('Seek unavailable: '+error.message)}
+});
+$('close').addEventListener('click',()=>{
+ if(window.parent!==window){window.parent.postMessage({kind:'s9-gpu-performance-close-v1'},location.origin)}
+ else history.back();
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)setPlay(false)});
+window.addEventListener('pagehide',()=>{state.active=false;state.buffers.clear();state.promises.clear()});
+async function boot(){
+ if(!NAME.test(name)){loaded('Invalid recording filename');return}
+ if(!relay()){loaded('Private Security access is unavailable. Open this player through the Security tab.');return}
+ try{
+  draw=glSetup();
+  loaded('Preparing an independent low-CPU playback copy; original 4K remains untouched…');
+  const source=await waitJson(base+'?playback=prepare',d=>d.state==='ready',420000);
+  state.duration=Number(source.duration)||0;
+  if(state.duration<=0||state.duration>300)throw Error('Recording duration unavailable');
+  $('timeline').max=String(state.duration);$('timeline').disabled=false;
+  updateClock();
+  loaded('Loading the first private RGB565 video segment…');
+  await getChunk(0);hideLoading();
+  $('play').disabled=false;setPlay(true);requestAnimationFrame(run);
+ }catch(error){
+  loaded('Performance playback unavailable: '+error.message);
+  status('The original recording remains available in the Security tab.');
+ }
+}
+boot();
+})();
+</script></body></html>
