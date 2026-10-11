@@ -152,7 +152,7 @@ function read(){
  $('personClipsCount').textContent=String(personClips);
  $('waitingCount').textContent=String(waiting);
  const older=state.data.filter(r=>Number(r.person_count)>0 && clipStamp(r)>0 && clipStamp(r)<1791687597000);
- const deepDone=older.filter(r=>Number(r.face_review_sampled_frames||0)>=36).length;
+ const deepDone=older.filter(r=>r.face_deep_review_version==='s9_onphone_36_samples_v1' && Number(r.face_review_sampled_frames||0)===36).length;
  const percent=older.length?Math.round(100*deepDone/older.length):0;
  $('scanSummary').textContent='Historical face rescue · '+deepDone+' of '+older.length+' eligible recordings rescanned';
  $('scanBar').style.width=percent+'%';
@@ -213,7 +213,7 @@ function cardFor(item){
  }else if(item.kind==='appearance')addTrackClues(body,item);
  else{
   const chips=make('div',undefined,'chips');
-  const deep=Number(rec.face_review_sampled_frames||0)>=36;
+  const deep=rec.face_deep_review_version==='s9_onphone_36_samples_v1' && Number(rec.face_review_sampled_frames||0)===36;
   addChip(chips,deep?'36-frame face scan complete':'Deep face scan pending',deep?'':'warn');
   body.append(chips);
   body.append(make('div',deep?'36 frame positions checked on the S9+. No suitable frontal face found; the clip may still contain someone.':'No suitable frontal crop in the initial sample. Awaiting a deeper on-phone review.','subtle'));
