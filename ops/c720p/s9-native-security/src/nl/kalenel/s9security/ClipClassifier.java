@@ -116,25 +116,58 @@ public final class ClipClassifier {
   * shared with post-record classification on the serialized review worker.
   * No face recognition, cross-recording identification, or persistent IDs.
   */
- public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
+ /** Bounding box is clip-frame normalized, not a person identity. */
+ public static final class PersonGateObservation {
+  public final float score,top,left,bottom,right;
+  PersonGateObservation(float s,float t,float l,float b,float r){
+   score=s;top=t;left=l;bottom=b;right=r;
+  }
+  public boolean consistentWith(PersonGateObservation other){
+   if(other==null)return false;
+   float t=Math.max(top,other.top),l=Math.max(left,other.left);
+   float b=Math.min(bottom,other.bottom),r=Math.min(right,other.right);
+   float common=Math.max(0,b-t)*Math.max(0,r-l);
+   float a=(bottom-top)*(right-left);
+   float c=(other.bottom-other.top)*(other.right-other.left);
+   float union=a+c-common;
+   if(union>0&&common/union>=.12f)return true;
+   // A person walking laterally may overlap little at one-second spacing.
+   float x=(left+right)*.5f,y=(top+bottom)*.5f;
+   float ox=(other.left+other.right)*.5f,oy=(other.top+other.bottom)*.5f;
+   return Math.abs(x-ox)<.14f&&Math.abs(y-oy)<.14f &&
+      Math.abs((bottom-top)-(other.bottom-other.top))<.16f;
+  }
+ }
+ /** One candidate per fresh JPEG, limited to plausible garden person boxes.
+  * Two spatially consistent observations are required by CameraService. */
+ public synchronized PersonGateObservation personObservationInGarden(
+    byte[] jpeg,float top,float margin)throws Exception{
   if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f)
    throw new IllegalArgumentException("invalid_preview_or_region");
   init();
   Bitmap bitmap=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length);
   if(bitmap==null)throw new IOException("invalid_preview_jpeg");
   try{
-   float highest=0f;
-   for(Detection detection:detect(bitmap)){
-    if(!"person".equals(detection.label))continue;
-    float[] b=detection.box;
-    if(b==null||b.length!=4)continue;
-    float center=(b[1]+b[3])*0.5f;
-    float feet=b[2];
-    if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
-    highest=Math.max(highest,detection.score);
+   PersonGateObservation best=null;
+   for(Detection d:detect(bitmap)){
+    if(!"person".equals(d.label)||d.box==null||d.box.length!=4)continue;
+    float[] b=d.box;
+    float x=(b[1]+b[3])*.5f,w=b[3]-b[1],h=b[2]-b[0];
+    // Screen borders, small noisy blobs and wide stationary objects are
+    // common MobileNet false positives, especially on dark garden frames.
+    if(x<margin||x>1f-margin||b[2]<top+.035f||b[2]>1.02f||
+       b[0]<-.02f||w<.032f||h<.115f||w/h>.92f||
+       b[3]>1.02f||b[1]<-.02f)continue;
+    if(best==null||d.score>best.score)
+     best=new PersonGateObservation(d.score,b[0],b[1],b[2],b[3]);
    }
-   return highest;
+   return best;
   }finally{bitmap.recycle();}
+ }
+ /** Retained for read-only scores and callers that do not need position. */
+ public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
+  PersonGateObservation o=personObservationInGarden(jpeg,top,margin);
+  return o==null?0f:o.score;
  }
 
  /** Lightweight RGB upper-torso tag; deliberately excludes face and has no identity features. */
