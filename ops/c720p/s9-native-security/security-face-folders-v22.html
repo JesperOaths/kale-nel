@@ -82,6 +82,7 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <section id="folderSection">
 <div class="toolbar"><h2>Folders</h2><input id="search" type="search" placeholder="Filter folders and recordings…" aria-label="Search folders"><button id="reload" type="button">Refresh</button></div>
 <div class="folders" id="folders" aria-live="polite"><div class="empty">Loading person and face evidence…</div></div>
+<button id="moreEvidence" type="button" hidden style="display:block;margin:17px auto">Show more</button>
 </section>
 <section id="detail" class="detail" hidden>
 <div class="detail-top"><button id="back" type="button">← All folders</button><div><h2 id="detailTitle"></h2><p id="detailInfo"></p></div></div>
@@ -104,7 +105,7 @@ const clipOK=/^motion_[0-9]{13}[.]mp4$/;
 const driveOK=/^[A-Za-z0-9._-]{1,180}[.]mp4$/i;
 const imageOK=/^[A-Za-z0-9._-]{1,200}[.]jpg$/i;
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_-]{1,55})$/;
-const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false};
+const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1};
 const relay=()=>window.C720PSecureRelay||(window.parent!==window&&window.parent.C720PSecureRelay)||null;
 async function get(path){
  const r=relay();if(!r?.fetch)throw Error('Authenticated relay missing');
@@ -228,6 +229,27 @@ function renderFolders(){
   if(pictured)signedPicture(cover,pictured);
  }
 }
+function renderEvidence(){
+ $('detail').hidden=true;$('folderSection').hidden=false;
+ const all=[...state.sd.filter(r=>clipOK.test(String(r.clip_no||''))&&Number(r.person_count)>0).map(r=>item('sd',r)),
+   ...state.drive.filter(r=>driveOK.test(String(r.remote_name||''))).map(r=>item('drive',r))];
+ const reviewIndex=new Map(state.reviews.map(r=>[String(r.remote_name||''),r]));
+ const needle=state.filter,filtered=all.filter(e=>!needle||[e.key,e.source,stamp(e),
+   reviewIndex.get(e.key)?.category||''].join(' ').toLowerCase().includes(needle));
+ const selected=filtered.slice(0,state.page*36),host=$('folders');host.replaceChildren();
+ for(const entry of selected){
+  const card=el('button','folder');card.type='button';card.setAttribute('aria-label','Play '+entry.source+' clip from '+stamp(entry));
+  const cover=el('div','cover');cover.append(el('span','glyph','▣'),el('span','tag',entry.source==='drive'?'HISTORICAL DRIVE':'S9+ MICROSD'));
+  const body=el('div','folder-body');body.append(el('strong','folder-title',stamp(entry)),
+   el('span','folder-meta',String(reviewIndex.get(entry.key)?.category||entry.rec.category||'Person evidence · face unverified').replaceAll('_',' ')));
+  const foot=el('div','folder-footer');foot.append(el('span','',entry.source==='drive'?'Archived recording':'Local camera clip'),el('b','','Play ›'));
+  card.append(cover,body,foot);card.addEventListener('click',()=>openClip(entry));host.append(card);
+  signedPicture(cover,entry);
+ }
+ if(!selected.length)host.append(el('p','empty','No matching historical or local person evidence.'));
+ $('moreEvidence').hidden=selected.length>=filtered.length;
+ $('moreEvidence').textContent='Show more recordings · '+(filtered.length-selected.length)+' remaining';
+}
 function openFolder(id){
  const g=state.folders.find(x=>x.id===id);if(!g)return;
  state.selected=id;$('folderSection').hidden=true;$('detail').hidden=false;
@@ -266,7 +288,8 @@ async function openClip(entry){
  }catch(_){$('videoState').textContent='This recording cannot be opened through the authenticated archive.'}
 }
 function setTab(which){
- state.view=which;
+ state.view=which;state.page=1;
+ $('moreEvidence').hidden=which!=='history';
  for(const [id,name] of [['foldersTab','folders'],['historyTab','history'],['timelineTab','timeline']]){
   $(id).setAttribute('aria-selected',String(which===name));
  }
@@ -281,7 +304,7 @@ function setTab(which){
    $('legacyView').src=$('legacyView').dataset.src;
   }
  }else{
-  if(which==='history')renderFolders();else renderFolders();
+  if(which==='history')renderEvidence();else renderFolders();
  }
 }
 async function refresh(){
@@ -296,13 +319,14 @@ async function refresh(){
  $('s9PersonCount').textContent=String(state.sd.filter(x=>Number(x.person_count)>0).length);
  $('verifiedCount').textContent=String(new Set(state.reviews.map(x=>x.visitor_id).filter(x=>/^VIS-[0-9]{4,6}$/.test(String(x)))).size);
  buildFolders();state.ready=true;
- if(state.view!=='timeline')renderFolders();
+ if(state.view==='history')renderEvidence();else if(state.view==='folders')renderFolders();
  const failed=tasks.filter(t=>t.status!=='fulfilled').length;
  $('sync').textContent=(failed?'Partial index · '+failed+' source unavailable':'Archive connected')+' · '+state.reviews.length+' classified Drive clips';
  if(failed)$('disclaimer').textContent='Some evidence sources are currently unavailable. This view never fills missing face matches with guessed identities.';
 }
 $('reload').addEventListener('click',refresh);
-$('search').addEventListener('input',e=>{state.filter=String(e.target.value||'').toLowerCase().trim().slice(0,140);renderFolders()});
+$('search').addEventListener('input',e=>{state.filter=String(e.target.value||'').toLowerCase().trim().slice(0,140);state.view==='history'?renderEvidence():renderFolders()});
+$('moreEvidence').addEventListener('click',()=>{state.page++;renderEvidence()});
 $('foldersTab').addEventListener('click',()=>setTab('folders'));
 $('historyTab').addEventListener('click',()=>setTab('history'));
 $('timelineTab').addEventListener('click',()=>setTab('timeline'));
