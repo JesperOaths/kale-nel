@@ -34,7 +34,7 @@ def extract(source):
     return source[first:last]
 
 def verify_syntax(page):
-    blocks=re.findall(r"<script(?:\\s+[^>]*)?>([\\s\\S]*?)</script>",page,re.I)
+    blocks=re.findall(r"<script(?:\s+[^>]*)?>([\s\S]*?)</script>",page,re.I)
     if not blocks:raise RuntimeError("Archive page has no inline script")
     with tempfile.TemporaryDirectory() as directory:
         for index,src in enumerate(blocks):
