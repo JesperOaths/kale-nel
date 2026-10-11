@@ -2,7 +2,7 @@
 """Guarded S9 original+preroll streaming: modify only C720P proxy route and V8 UI.
 No media, camera, or review-state changes; preserve installed proxy customizations.
 """
-import datetime,json,os,pathlib,py_compile,re,shutil,subprocess,urllib.request
+import datetime,json,os,pathlib,py_compile,re,shutil,subprocess,urllib.request,urllib.error,time
 P=pathlib.Path("/home/jespern/c720p-home-hub/bin/s9_sd_proxy_extension.py")
 PAGE=pathlib.Path("/opt/homeassistant/config/www/frontyard-security-new/security-review-v8.html")
 SOURCE=pathlib.Path("/home/jespern/c720p-home-hub/build/security-v8/security-review-v8.html")
@@ -59,8 +59,16 @@ def main():
   temp.write_text(updated);temp.chmod(PAGE.stat().st_mode&0o777)
   os.replace(temp,PAGE)
   run("systemctl","--user","restart",SERVICE)
-  healthy,_=http("http://127.0.0.1:8795/new/api/saved")
-  if healthy!=200:raise RuntimeError("archive_not_online")
+  # systemd's restart completes before Python has bound the proxy socket.
+  # Wait for readiness rather than falsely rolling back a healthy service.
+  healthy=0
+  for attempt in range(24):
+   try:
+    healthy,_=http("http://127.0.0.1:8795/new/api/saved")
+    if healthy==200:break
+   except (OSError,urllib.error.URLError):pass
+   time.sleep(.75)
+  if healthy!=200:raise RuntimeError("archive_not_online_after_wait")
   with urllib.request.urlopen("http://127.0.0.1:8795/new/api/saved",timeout=15) as r:
    saved=json.load(r)
   if len(saved.get("events",[]))<273:raise RuntimeError("archive_clips_missing")
