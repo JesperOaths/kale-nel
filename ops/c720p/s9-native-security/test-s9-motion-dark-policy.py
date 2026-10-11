@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conservative MotionGrid sensitivity & recording-rate regression contracts."""
+"""Modest V4 garden motion sensitivity & recording-rate regression contracts."""
 from pathlib import Path
 import re
 import unittest
@@ -10,9 +10,13 @@ SRC=ROOT/'src/nl/kalenel/s9security'
 class Tests(unittest.TestCase):
     def test_lowluma_moderate_sensitivity_with_hard_flicker_guards(self):
         code=(SRC/'MotionGrid.java').read_text()
-        self.assertIn('(lighting<42?23.0f:18.5f)',code)
+        self.assertIn('(lighting<42?22.0f:18.5f)',code)
         self.assertIn('votes.size()>7',code)
-        self.assertIn('positive>=(lighting<42?5:4)',code)
+        self.assertIn('if(t-lastSample<190)return false',code)
+        self.assertIn('positive>=4',code)
+        self.assertIn('changedRatio>=(dim?0.030:0.020)',code)
+        self.assertIn('coherent>=(dim?8:6)',code)
+        self.assertIn('changedRatio>=(dim?0.055:0.035)',code)
         self.assertIn('&&changedRatio<0.46',code)
         self.assertIn('&&Math.abs(shift)<(dim?18:26)',code)
         self.assertIn('sustainedEvidence>=3',code)
