@@ -8,7 +8,8 @@ Checks wake and satellite journal counters; captures TTS output mtime.
 import asyncio, datetime, json, os, pathlib, subprocess, threading, time
 from wyoming.client import AsyncTcpClient
 from wyoming.tts import Synthesize, SynthesizeVoice
-from wyoming.audio import AudioStart, AudioChunk
+from wyoming.audio import AudioStart, AudioChunk, AudioStop
+from wyoming.asr import Transcribe, Transcript
 
 BASE = pathlib.Path("/home/jespern/c720p-home-hub")
 MIC = BASE / "runtime/c720p_mic_telemetry.json"
@@ -55,6 +56,28 @@ def journal_events(unit, since):
     return {"waiting":sum("Waiting for wake word" in x for x in lines),
             "connected":sum("Connected to server" in x for x in lines),
             "disconnected":sum("Disconnected from server" in x for x in lines)}
+
+
+async def classify_audio(port, pcm):
+    """Send RAM-only sample to an already-running local speech recognizer."""
+    try:
+        if len(pcm)<4000:
+            return ""
+        async with AsyncTcpClient("127.0.0.1", port) as c:
+            await c.write_event(Transcribe(language="en").event())
+            await c.write_event(AudioStart(rate=16000,width=2,channels=1).event())
+            for off in range(0,len(pcm),12800):
+                await c.write_event(AudioChunk(rate=16000,width=2,channels=1,
+                                               audio=pcm[off:off+12800]).event())
+            await c.write_event(AudioStop().event())
+            for _ in range(8):
+                event=await asyncio.wait_for(c.read_event(),timeout=8)
+                if event is None:break
+                if event.type=="transcript":
+                    return (Transcript.from_event(event).text or "").strip().lower()
+    except Exception:
+        pass
+    return ""
 
 def main():
     before=mic_state()
@@ -110,7 +133,23 @@ def main():
         thread.join(timeout=2);thread2.join(timeout=1)
     # The ephemeral microphone capture is not included in logs or persisted.
     mic_bytes=len(buf)
-    del buf
+    # Classify only expected synthetic speech, and never output recognized
+    # free-form room text or store PCM. Compare exact expected commands.
+    wake_end_s=timings[0]["duration_s"] if timings else 0
+    query_start_s=wake_end_s+0.95
+    wake_pcm=bytes(buf[:int((wake_end_s+0.15)*32000)])
+    query_pcm=bytes(buf[int(max(0,query_start_s-0.05)*32000):])
+    wake_heard=asyncio.run(classify_audio(10303,wake_pcm))
+    query_heard=asyncio.run(classify_audio(10301,query_pcm))
+    acoustic_recognition={
+        "vosk_wake_exact":wake_heard.startswith("hey google"),
+        "vosk_wake_characters":len(wake_heard),
+        "vosk_home_temperature_exact":(
+            "temperature in the living room" in query_heard
+        ),
+        "vosk_home_characters":len(query_heard),
+    }
+    del wake_pcm,query_pcm,buf,wake_heard,query_heard
     updated=False
     for _ in range(22):
         if TTS.is_file() and TTS.stat().st_mtime>before_tts+0.2:
@@ -123,6 +162,7 @@ def main():
         "test_type":"two_utterance_wake_then_temperature_question",
         "sample_contents_saved":False,
         "microphone_pcm_bytes_observed":mic_bytes,
+        "acoustic_recognition":acoustic_recognition,
         "mic_peak_rms":round(max(snapshots,default=0),1),
         "mic_before_rms":before.get("raw_rms"),
         "mic_after_recent":time.time()-float(after.get("last_audio_epoch",0))<2,
