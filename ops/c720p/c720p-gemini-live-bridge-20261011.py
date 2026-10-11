@@ -158,6 +158,15 @@ async def speak(raw):
  finally:
   if proc.returncode is None:proc.kill();await proc.wait()
 
+async def stop_capture(proc):
+ """Terminate and drain recorder stdout; wait() alone can hang on a full pipe."""
+ if proc.returncode is None:proc.kill()
+ try:
+  await asyncio.wait_for(proc.communicate(),timeout=4)
+ except (asyncio.TimeoutError,RuntimeError):
+  with contextlib.suppress(Exception):proc._transport.close()
+
+
 async def run(dry=False,seconds=0):
  import webrtcvad
  gate=SpeechGate(webrtcvad.Vad(2));ha=KioskHA()
@@ -167,12 +176,17 @@ async def run(dry=False,seconds=0):
   proc=await asyncio.create_subprocess_exec("parec","--device="+SOURCE,"--raw","--format=s16le",
      "--rate=16000","--channels=1","--latency-msec=80",
      stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
+  capture_drained=False
+  status("listening",cloud_enabled=not dry,model=MODEL)
   try:
    while not seconds or time.monotonic()-started<seconds:
     frame=await asyncio.wait_for(proc.stdout.readexactly(FRAME_BYTES),timeout=5)
     if MUTE.exists():gate.reset();continue
     utterance=gate.feed(frame)
     if utterance is None:continue
+    # Stop microphone capture before cloud inference or speech playback.
+    await stop_capture(proc)
+    capture_drained=True
     now=time.monotonic()
     while attempts and now-attempts[0]>60:attempts.popleft()
     if len(attempts)>=4:status("rate_limited");continue
@@ -194,7 +208,7 @@ async def run(dry=False,seconds=0):
   except (asyncio.TimeoutError,asyncio.IncompleteReadError):
    status("microphone_restart")
   finally:
-   if proc.returncode is None:proc.kill();await proc.wait()
+   if not capture_drained:await stop_capture(proc)
    gate.reset()
   await asyncio.sleep(.5)
 
