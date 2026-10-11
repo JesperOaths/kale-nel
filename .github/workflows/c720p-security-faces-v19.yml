@@ -25,7 +25,7 @@ jobs:
           const fs=require('fs'),vm=require('vm'),assert=require('assert');
           const source=fs.readFileSync('ops/c720p/s9-native-security/face-appearances.html.txt','utf8');
           for(const x of ['.more[hidden]','/new/saved/snap/','/new/saved/clip/',
-           'data-kind="review"','Recording loaded','<div id="playerState"',
+           'data-kind="review"','Recording ready','<div id="playerState"',
            'security-video-playback.js', 'id="playerLoading"', 'id="playerOriginal"'])assert(source.includes(x),x);
           for(const m of source.matchAll(/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);
           console.log('PEOPLE_FACES_PER_CLIP_V19_HTML_JS_PASS');
