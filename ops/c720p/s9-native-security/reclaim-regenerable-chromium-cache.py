@@ -80,7 +80,18 @@ def run():
   result["status"]="skipped_profile_in_use"
  else:
   candidates=[]
-  for suffix in SUBPATHS:
+  # Headless Chromium creates a fresh scoped_dirXXXXXX profile per diagnostic.
+  # Only its HTTP/GPU caches are disposable. Do NOT remove scoped profiles,
+  # cookies, storage, Service Worker registrations or session files.
+  scoped=[]
+  for profile in BASE.iterdir():
+   if profile.is_symlink() or not profile.is_dir():continue
+   if not __import__("re").fullmatch(r"scoped_dir[A-Za-z0-9]{6,16}",profile.name):continue
+   if profile.resolve()!=profile:continue
+   for suffix in ("Default/Cache","Default/Code Cache","Default/GPUCache",
+                  "Default/Service Worker/CacheStorage"):
+    scoped.append(profile.name+"/"+suffix)
+  for suffix in SUBPATHS+scoped:
    target=BASE/suffix
    if not target.is_dir() or target.is_symlink():continue
    if target.resolve()!=target:continue
