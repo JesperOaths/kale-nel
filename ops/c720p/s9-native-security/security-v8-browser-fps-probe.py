@@ -41,8 +41,8 @@ def main():
    # Make a bounded 8-second visible video test in the temporary Security tab.
    # The 1,920px-wide 4K source remains unmodified on the S9+.
    browser.call("Target.activateTarget",{"targetId":target})
-   script=f"""(async()=>{{
-    const clip={json.dumps(clip)};
+   script="""(async()=>{{
+    const clip=__CLIP__;
     const url=await window.C720PSecureRelay.url('/new/saved/clip/'+clip);
     const v=document.createElement('video');
     v.muted=true;v.playsInline=true;v.preload='auto';v.controls=false;
@@ -79,7 +79,7 @@ def main():
       mediaCapabilities:typeof navigator.mediaCapabilities}};
     v.pause();v.removeAttribute('src');v.load();v.remove();
     return result;
-   }})()"""
+   }})()""".replace("__CLIP__",json.dumps(clip)).replace("{{","{").replace("}}","}")
    r=evaluate(tab,script,True)
    print("S9_REAL_KIOSK_4K_PLAYBACK_PERF",json.dumps(r.get("value",r),sort_keys=True),flush=True)
   finally:
