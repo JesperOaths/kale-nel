@@ -10,6 +10,23 @@ public final class MotionGrid {
  private final float[] background=new float[N],nowCells=new float[N];
  private final boolean[] changed=new boolean[N],seen=new boolean[N];
  private final int[] stack=new int[N];
+ // Recent accepted motion evidence per grid cell, aged by event time. Read
+ // only on the camera handler after GPU inference finishes.
+ private final long[] recentMotionAt=new long[N];
+ public int recentMotionCellsInBox(float[] box,long now){
+  if(!GardenPersonTrackGate.valid(box)||now<=0)return 0;
+  int count=0;
+  for(int i=0;i<N;i++){
+   int gx=i%W,gy=i/W;
+   float x=(gx+.5f)/W,y=(gy+.5f)/H;
+   // 1/2-grid-cell slack accommodates coarse 24x14 sampling and small people.
+   if(x<box[1]-.022f||x>box[3]+.022f||
+      y<box[0]-.037f||y>box[2]+.037f||!insideGarden(x,y))continue;
+   if(recentMotionAt[i]>0&&now>=recentMotionAt[i]&&
+      now-recentMotionAt[i]<=5000L)count++;
+  }
+  return count;
+ }
  private long lastSample=0;
  private int init=0;
  private final ArrayDeque<Boolean> votes=new ArrayDeque<>();
@@ -18,8 +35,15 @@ public final class MotionGrid {
  public boolean motion=false;
  public boolean strong=false;
  private int sustainedEvidence=0;
- // Foreground garden is near the camera; road traffic should not trigger it.
- // Presets remain adjustable when the outdoor camera's view changes.
+ // "near" now follows the owner's drawn garden boundary (2026-10-11).
+ // The image was 761x568; the upper green line slopes from y~=294 at the
+ // left through y~=275 in the middle to y~=245 at the right. Everything
+ // BELOW that line is selected, including the image edges.
+ // Keep strict/wide/all presets unchanged and the stored "near" setting
+ // compatible with the existing on-device configuration.
+ public static final String NEAR_ROI_VERSION="owner_drawn_sloped_garden_v6";
+ private static final float[] MARKED_X={0f,.17f,.36f,.52f,.67f,1f};
+ private static final float[] MARKED_Y={.519f,.519f,.497f,.484f,.441f,.433f};
  private String gardenZone="near";
  public String gardenZone(){return gardenZone;}
  public static boolean validGardenZone(String value){
@@ -31,21 +55,39 @@ public final class MotionGrid {
   if(!gardenZone.equals(value)){gardenZone=value;resetForCameraControl();}
  }
  public float topBoundary(){
-  // Camera scene calibration, 2026-10-11: parked bikes and street occupy
-  // approximately image rows 0.40-0.59; the nearer garden starts ~0.64.
-  // Require a person's box to extend into the garden, not just appear
-  // behind it. Retain selectable presets rather than permanently cropping.
+  // Lower bound used by legacy archive retention probes; precise live
+  // detection uses topBoundaryAt(x) instead of a horizontal cutoff.
   return "strict".equals(gardenZone)?0.72f:
-    "near".equals(gardenZone)?0.64f:
+    "near".equals(gardenZone)?0.433f:
     "wide".equals(gardenZone)?0.50f:0f;
  }
  public float sideMargin(){
-  return "strict".equals(gardenZone)?0.09f:
-    "near".equals(gardenZone)?0.045f:0f;
+  return "strict".equals(gardenZone)?0.09f:0f;
+ }
+ public static float markedTopAt(float x){
+  float clamped=Math.max(0f,Math.min(1f,x));
+  for(int i=1;i<MARKED_X.length;i++){
+   if(clamped<=MARKED_X[i]){
+    float factor=(clamped-MARKED_X[i-1])/(MARKED_X[i]-MARKED_X[i-1]);
+    return MARKED_Y[i-1]+factor*(MARKED_Y[i]-MARKED_Y[i-1]);
+   }
+  }
+  return MARKED_Y[MARKED_Y.length-1];
+ }
+ public static boolean insideZone(String zone,float x,float y){
+  if(!validGardenZone(zone)||!Float.isFinite(x)||!Float.isFinite(y)||
+     x<0f||x>1f||y<0f||y>1f)return false;
+  if("near".equals(zone))return y>=markedTopAt(x);
+  float boundary="strict".equals(zone)?0.72f:
+      "wide".equals(zone)?0.50f:0f;
+  float margin="strict".equals(zone)?0.09f:0f;
+  return x>=margin&&x<=1f-margin&&y>=boundary;
+ }
+ public float topBoundaryAt(float x){
+  return "near".equals(gardenZone)?markedTopAt(x):topBoundary();
  }
  public boolean insideGarden(float x,float y){
-  float margin=sideMargin();
-  return x>=margin&&x<=1f-margin&&y>=topBoundary()&&y<=1f;
+  return insideZone(gardenZone,x,y);
  }
 
  /** Restart temporal voting after an intentional Camera2 scene/exposure adjustment.
@@ -59,6 +101,7 @@ public final class MotionGrid {
   java.util.Arrays.fill(nowCells,0f);
   java.util.Arrays.fill(changed,false);
   java.util.Arrays.fill(seen,false);
+  java.util.Arrays.fill(recentMotionAt,0L);
   changedRatio=0;coherent=0;lighting=0;
   motion=false;strong=false;
  }
@@ -138,6 +181,10 @@ public final class MotionGrid {
   // 7-sample temporal vote and exposure-change rejection still apply.
   boolean meaningful=changedRatio>=(dim?0.030:0.020)&&changedRatio<0.46
       &&coherent>=(dim?8:6)&&Math.abs(shift)<(dim?18:26);
+  // "Motion here" must mean movement overlapping an SSD person box, not
+  // unrelated leaves/vehicles elsewhere in the owner's sloped garden mask.
+  if(meaningful)for(int i=0;i<N;i++)
+   if(changed[i])recentMotionAt[i]=t;
   votes.addLast(meaningful);
   while(votes.size()>7)votes.removeFirst();
   int positive=0;for(Boolean yes:votes)if(yes)positive++;
