@@ -52,11 +52,15 @@ def evaluate(name,now):
   if type(m.get('person_count')) is not int or m['person_count']!=0:raise ValueError('person_count_evidence')
   if type(m.get('person_frames_at_050')) is not int or m['person_frames_at_050']!=0:
    raise ValueError('strong_person_frame_evidence')
-  # Even one weak original person-model observation protects a clip.
-  if type(m.get('possible_person_frames_at_030')) is not int or m['possible_person_frames_at_030']!=0:
-   raise ValueError('weak_person_frame_evidence')
+  # Permit only very sparse sub-threshold original suggestions, and
+  # only because an independent 20+ frame pass below finds NO person at .30.
+  # More persistent weak evidence remains protected.
+  weak=m.get('possible_person_frames_at_030')
+  if (type(weak) is not int or weak<0 or weak>2 or
+      weak>int(m['sampled_frame_count'])/4):
+   raise ValueError('persistent_weak_person_evidence')
   kind=str(m.get('person_event_category',''))
-  if not kind.startswith('no_person_'):
+  if kind not in ('no_person_model_detection','possible_person_below_standard_threshold'):
    raise ValueError('uncertain_person_event_category')
   if int(m.get('face_snapshots_saved') or 0)>0 or m.get('face_candidates'):
    raise ValueError('face_candidate_evidence')
