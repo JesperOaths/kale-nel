@@ -1,54 +1,64 @@
 package nl.kalenel.s9security;
 
-/** Pure Java temporal person gate: two different source frames must contain a
- * spatially compatible person. This rejects isolated false boxes and duplicate
- * JPEG samples without adding another inference pass or cloud dependencies.
- *
- * A positive here is detector evidence, not proof of human identity.
- * All methods are called on the single Camera2 callback handler.
+/** Pure-Java live camera confirmation policy (no frames, identity or CPU inference).
+ * Two unique JPEGs must agree on the same person-shaped box. Borderline SSD
+ * person scores additionally require recent motion WITHIN that box, rather
+ * than some unrelated car/leaf elsewhere inside the garden region.
  */
 public final class GardenPersonTrackGate {
- public static final String VERSION="ssd_mobilenet_garden_spatial_2frame_v3";
+ public static final String VERSION="person_spatial_motion_corroborated_v7";
  public static final float MIN_SCORE=.44f;
- public static final long MAX_PAIR_INTERVAL_MS=3200L;
- public static final float MAX_X_SHIFT=.27f,MAX_Y_SHIFT=.20f;
- public static final float MIN_IOU=.08f;
- public enum Result {WEAK, DUPLICATE_FRAME, FIRST, UNRELATED, CONFIRMED}
- private long lastJpegAt=-1,firstAt=-1;
- private float[] previous=null;
- public long weak=0,duplicate=0,unrelated=0,confirmed=0;
- public void reset(){lastJpegAt=-1;firstAt=-1;previous=null;}
- private void clearCandidate(){firstAt=-1;previous=null;}
- public Result offer(long now,long jpegStamp,float score,float[] box){
-  if(now<=0||jpegStamp<=0||jpegStamp>now+200||
-    score<MIN_SCORE||!Float.isFinite(score)||!valid(box)){
-   clearCandidate();weak++;return Result.WEAK;
+ public static final float HIGH_CONFIDENCE=.72f;
+ public static final long MAX_PAIR_MS=3400L;
+ public enum Decision { WEAK, FIRST, DUPLICATE_JPEG, UNRELATED, NO_LOCAL_MOTION, CONFIRMED }
+ private float[] firstBox;
+ private float firstScore;
+ private long firstAt=-1,firstJpegAt=-1;
+ private boolean firstMotion;
+ public long rejectedWeak=0,duplicateFrames=0,unrelatedBoxes=0,noLocalMotion=0,confirmed=0;
+ public void reset(){firstBox=null;firstAt=-1;firstJpegAt=-1;firstScore=0;firstMotion=false;}
+ public Decision offer(long now,long jpegAt,float score,float[] box,int recentMotionCells){
+  if(now<1||jpegAt<1||jpegAt>now+200||!Float.isFinite(score)||
+     score<MIN_SCORE||!valid(box)){
+   // A single missed GPU observation must not erase a short but real
+   // walk-by. Expire it by age instead; a later positive still needs to
+   // match the exact same spatial object and local motion.
+   rejectedWeak++;
+   if(firstAt>0&&(now<firstAt||now-firstAt>MAX_PAIR_MS))reset();
+   return Decision.WEAK;
   }
-  if(jpegStamp<=lastJpegAt){duplicate++;return Result.DUPLICATE_FRAME;}
-  lastJpegAt=jpegStamp;
-  if(previous!=null&&firstAt>0&&now>=firstAt&&now-firstAt<=MAX_PAIR_INTERVAL_MS){
-   if(associated(previous,box)){
-    clearCandidate();confirmed++;return Result.CONFIRMED;
+  if(firstAt>0&&jpegAt<=firstJpegAt){duplicateFrames++;return Decision.DUPLICATE_JPEG;}
+  boolean motion=recentMotionCells>=1;
+  if(firstAt>0&&now>=firstAt&&now-firstAt<=MAX_PAIR_MS){
+   if(!samePerson(firstBox,box)){
+    remember(now,jpegAt,score,box,motion);unrelatedBoxes++;return Decision.UNRELATED;
    }
-   previous=box.clone();firstAt=now;unrelated++;return Result.UNRELATED;
+   if(!(firstMotion||motion) && Math.min(firstScore,score)<HIGH_CONFIDENCE){
+    remember(now,jpegAt,score,box,motion);noLocalMotion++;return Decision.NO_LOCAL_MOTION;
+   }
+   reset();confirmed++;return Decision.CONFIRMED;
   }
-  previous=box.clone();firstAt=now;return Result.FIRST;
+  remember(now,jpegAt,score,box,motion);return Decision.FIRST;
  }
- static boolean valid(float[] b){
+ private void remember(long now,long jpegAt,float score,float[] box,boolean motion){
+  firstAt=now;firstJpegAt=jpegAt;firstScore=score;
+  firstBox=box.clone();firstMotion=motion;
+ }
+ public static boolean valid(float[] b){
   if(b==null||b.length!=4)return false;
   for(float v:b)if(!Float.isFinite(v)||v<0f||v>1.02f)return false;
-  return b[2]>b[0]&&b[3]>b[1];
+  return b[2]>b[0]+.025f&&b[3]>b[1]+.012f;
  }
- public static boolean associated(float[] a,float[] b){
+ public static boolean samePerson(float[] a,float[] b){
   if(!valid(a)||!valid(b))return false;
   float top=Math.max(a[0],b[0]),left=Math.max(a[1],b[1]);
-  float bottom=Math.min(a[2],b[2]),right=Math.min(a[3],b[3]);
-  float overlap=Math.max(0f,bottom-top)*Math.max(0f,right-left);
+  float bot=Math.min(a[2],b[2]),right=Math.min(a[3],b[3]);
+  float area=Math.max(0,bot-top)*Math.max(0,right-left);
   float aa=(a[2]-a[0])*(a[3]-a[1]),bb=(b[2]-b[0])*(b[3]-b[1]);
-  float iou=overlap/(aa+bb-overlap);
-  if(iou>=MIN_IOU)return true;
+  if(area>0&&area/(aa+bb-area)>=.12f)return true;
   float ax=(a[1]+a[3])*.5f,ay=(a[0]+a[2])*.5f;
   float bx=(b[1]+b[3])*.5f,by=(b[0]+b[2])*.5f;
-  return Math.abs(ax-bx)<=MAX_X_SHIFT&&Math.abs(ay-by)<=MAX_Y_SHIFT;
+  return Math.abs(ax-bx)<=.26f&&Math.abs(ay-by)<=.18f &&
+      Math.min(aa,bb)/Math.max(aa,bb)>.20f;
  }
 }
