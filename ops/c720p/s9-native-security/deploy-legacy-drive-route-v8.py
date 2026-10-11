@@ -73,7 +73,7 @@ def drive():
 
 def check_video(events):
  items=[r for r in events if isinstance(r,dict) and
-        re.fullmatch(r"[A-Za-z0-9._-]{1,180}\\.mp4",str(r.get("remote_name",""))) ]
+        re.fullmatch(r"[A-Za-z0-9._-]{1,180}[.]mp4",str(r.get("remote_name",""))) ]
  if not items:return "no_mp4_indexed"
  item=items[0]
  url="http://127.0.0.1:8795/new/saved/clip/"+urllib.parse.quote(item["remote_name"])
