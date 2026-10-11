@@ -57,7 +57,7 @@ class Tests(unittest.TestCase):
         method=source.split('public synchronized boolean rebuildGardenThumbnail(',1)[1].split(
             'public synchronized JSONObject gardenRetentionProbe(',1)[0]
         self.assertIn('init();',method)
-        self.assertLess(method.index('init();'),method.index('detect(bitmap)'))
+        self.assertLess(method.index('init();'),method.index('detect(source)'))
         # Initialization only on the S9+ background review thread, not the
         # real-time camera callback or the Home Assistant proxy.
         camera=(SRC/'CameraService.java').read_text()
@@ -68,7 +68,7 @@ class Tests(unittest.TestCase):
         source=(SRC/'ClipClassifier.java').read_text()
         method=source.split('boolean rebuildGardenThumbnail(',1)[1].split(
             'public synchronized JSONObject gardenRetentionProbe(',1)[0]
-        first_detect=method.index('for(Detection d:detect(bitmap))')
+        first_detect=method.index('for(Detection d:detect(source))')
         first_init=method.index('init();')
         self.assertLess(first_init,first_detect)
         self.assertIn('MediaMetadataRetriever media=new MediaMetadataRetriever()',method)
