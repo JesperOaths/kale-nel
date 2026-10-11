@@ -107,7 +107,7 @@ const driveOK=/^[A-Za-z0-9._-]{1,180}[.]mp4$/i;
 const imageOK=/^[A-Za-z0-9._-]{1,200}[.]jpg$/i;
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_-]{1,55})$/;
 const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1};
-const relay=()=>window.C720PSecureRelay||(window.parent!==window&&window.parent.C720PSecureRelay)||null;
+const relay=()=>{if(window.C720PSecureRelay)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.C720PSecureRelay)return window.parent.C720PSecureRelay}catch(_){}return null};
 async function get(path){
  const r=relay();if(!r?.fetch)throw Error('Authenticated relay missing');
  const res=await r.fetch(path,{cache:'no-store'});
@@ -176,7 +176,7 @@ function buildFolders(){
  const notClassed=state.drive.filter(r=>driveOK.test(String(r.remote_name||''))&&!inReview.has(String(r.remote_name)));
  if(notClassed.length)folders.push(group('drive:unclassified','Drive · awaiting classification',
   'Source video available; classification still pending','drive',notClassed.map(r=>item('drive',r)),false));
- folders.sort((a,b)=>Number(b.verified)-Number(a.verified)||Number(a.kind==='face')-Number(b.kind==='face')||b.entries.length-a.entries.length);
+ folders.sort((a,b)=>Number(b.verified)-Number(a.verified)||Number(b.kind==='face')-Number(a.kind==='face')||b.entries.length-a.entries.length);
  state.folders=folders;
 }
 function thumb(entry){
@@ -300,8 +300,8 @@ function setTab(which){
  $('detail').hidden=true;$('legacyView').hidden=which!=='timeline';
  if(which==='timeline'){
   if(!$('legacyView').src){
-   const p=window.parent;
-   if(p&&p.C720PSecureRelay)window.C720PSecureRelay=p.C720PSecureRelay;
+   const shared=relay();
+   if(shared)window.C720PSecureRelay=shared;
    $('legacyView').src=$('legacyView').dataset.src;
   }
  }else{
