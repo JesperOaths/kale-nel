@@ -20,6 +20,7 @@ MARK='<script id="s9-detector-version-badges-v1">'
 STYLES='''<style id="s9-detector-version-badges-style-v1">
 #s9-date-folders .s9-detector-badge{display:inline-block!important;font-size:11px!important;line-height:1.35!important;margin-top:5px;padding:4px 7px;border-radius:6px;font-weight:800;white-space:normal!important;overflow-wrap:anywhere}
 #s9-date-folders .s9-detector-legacy{background:#6c4527;color:#ffe3bb;border:1px solid #b77f48}
+#s9-date-folders .s9-detector-prior{background:#223c5c;color:#c5deff;border:1px solid #719ac5}
 #s9-date-folders .s9-detector-current{background:#164b48;color:#adfce8;border:1px solid #4dbaa6}
 #s9-date-folders .s9-detector-unknown{background:#3b4558;color:#e9edfa;border:1px solid #79859f}
 #s9-detector-version-guide{padding:9px 10px;background:#102839;border:1px solid #587d95;border-radius:9px;font-size:12px;color:#cfe9fb;margin:8px 0}
@@ -31,6 +32,7 @@ SCRIPT=r'''<script id="s9-detector-version-badges-v1">
 // per-recording model version. All earlier releases are conservatively
 // labeled UNKNOWN / PRE-UPGRADE, even when later reviewed by current AI.
 const CUTOFF=Date.parse('2026-10-11T02:59:57Z');
+const V2_CUTOFF=Date.parse('2026-10-11T04:26:36Z');
 const RX=/^(?:motion|native4k)_([0-9]{13})[.]mp4$/;
 function generation(name){
  const match=RX.exec(String(name||''));
@@ -38,8 +40,9 @@ function generation(name){
  const timestamp=Number(match[1]);
  if(!Number.isSafeInteger(timestamp)||timestamp<Date.parse('2025-01-01T00:00:00Z'))
   return ['unknown','Unverified timestamp · detector unknown'];
- if(timestamp<CUTOFF)return ['legacy','OLDER · pre-11 Oct garden gate (exact version unknown)'];
- return ['current','CURRENT · garden ROI + GPU person gate v1'];
+ if(timestamp<CUTOFF)return ['legacy','LEGACY · pre-garden gate, version unknown'];
+ if(timestamp<V2_CUTOFF)return ['prior','PREVIOUS v1 · garden ROI + GPU person gate'];
+ return ['current','CURRENT v2 · two positive person checks'];
 }
 function decorate(){
  const host=document.getElementById('s9-date-folders');
@@ -47,7 +50,7 @@ function decorate(){
  if(!document.getElementById('s9-detector-version-guide')){
   const guide=document.createElement('div');
   guide.id='s9-detector-version-guide';
-  guide.textContent='Detection generations: amber = older recordings from mixed historical detector versions; teal = after the verified 11 Oct 2026, 04:59:57 Amsterdam S9+ APK installation. These are capture-version labels, not human-verified person detections. Historical classification or re-review does not update the capture version.';
+  guide.textContent='Detector capture versions: amber = legacy before 11 Oct 04:59:57; blue = v1 garden person gate from 04:59:57 to 06:26:36; teal = v2 requiring two independent person detections after 06:26:36 (Amsterdam time). Model outputs are not verified human identification; rescanning never changes the capture version.';
   host.insertBefore(guide,host.children[2]||null);
  }
  host.querySelectorAll('.s9-folder-clip[data-clip-no]').forEach(button=>{
@@ -91,7 +94,10 @@ def patch(content):
  found=content.count(MARK)
  if found==1:
   if content.count('id="s9-detector-version-badges-style-v1"')!=1:raise ValueError('partial_badge_install')
-  return content
+  style=re.search(r'<style id="s9-detector-version-badges-style-v1">[\\s\\S]*?</style>',content)
+  script=re.search(r'<script id="s9-detector-version-badges-v1">[\\s\\S]*?</script>',content)
+  if not style or not script:raise ValueError('badge_source_tags_missing')
+  return content.replace(style.group(0),STYLES,1).replace(script.group(0),SCRIPT,1)
  if found:raise ValueError('duplicate_badge_install')
  return content.replace('</body>',STYLES+SCRIPT+'</body>',1)
 
