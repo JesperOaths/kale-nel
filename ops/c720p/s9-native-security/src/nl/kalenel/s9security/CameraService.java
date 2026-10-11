@@ -824,7 +824,8 @@ public final class CameraService extends Service {
     d.put("suppressed_video_without_stills",skippedRecordingsWithoutStill);
     d.put("post_record_cooldown_ms",COOLDOWN_MS);
     d.put("max_person_clip_ms",MAX_MS);
-    d.put("person_recording_extend_by_garden_motion",true);
+    d.put("person_recording_extend_by_garden_motion",false);
+   d.put("person_recording_extend_by_track",true);
    d.put("fallback_evidence_failed",fallbackEvidenceFailed);
    d.put("recovery_partials_finalized",recoveredPartials);
    d.put("recovery_missing_reviews_repaired",recoveredReviews);
