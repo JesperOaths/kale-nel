@@ -34,7 +34,8 @@ class Tests(unittest.TestCase):
                       'recorder.setVideoEncodingBitRate(36000000)',
                       'temperature()>=415',
                       'folder.getUsableSpace()<15L*1024*1024*1024',
-                      'RecordingRate.TOTAL_PER_HOUR',
+                      'MAX_4K_CLIPS_PER_HOUR=-1',
+                      'recording_hourly_quota_enabled",false',
                       'reviewer.submit('):
             self.assertIn(guard,s)
 
