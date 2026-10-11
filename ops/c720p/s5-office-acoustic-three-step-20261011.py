@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""One-shot S5 loudspeaker -> C720P acoustic Home Assistant test.
+"""Timed three-step S5 speaker -> C720P wake-word and office-light test.
 
 Uses the existing C720P Piper voice service to synthesize a wake phrase and
-office-light command. Compiles a temporary AudioTrack Java runner, transfers
-PCM and dex to the Galaxy S5 over verified ADB, and plays at phone media max.
+office-light command. Compiles a temporary AudioTrack runner and tests the three spoken commands at
+reduced media volumes, with live HA light-state polling and stage metrics.
 No phone APK installs, no microphone recordings, no persistent phone service,
 no modifications to IR bridge or Home Assistant configuration.
 """
@@ -77,13 +77,13 @@ def proc(args, timeout=45, **kwargs):
 def adb(*args, timeout=45):
     return proc(["adb", "-s", SERIAL, *args], timeout=timeout)
 
-async def synth(text):
+async def synth(text, voice="en_US-lessac-medium", language="en_US"):
     audio=bytearray()
     rate=0
     channels=0
     async with AsyncTcpClient("127.0.0.1",10200) as c:
         await c.write_event(Synthesize(text=text, voice=SynthesizeVoice(
-            name="en_US-lessac-medium",language="en_US")).event())
+            name=voice,language=language)).event())
         for _ in range(100):
             e=await asyncio.wait_for(c.read_event(), timeout=22)
             if e is None: break
@@ -191,8 +191,17 @@ def synth_alternative(text, profile):
                  "-f","s16le","pipe:1"],input=p.stdout,capture_output=True,timeout=20)
             if f.returncode==0 and len(f.stdout)>3000:
                 return f.stdout, "espeak_"+profile["espeak_voice"]
-    r,rate,channels=asyncio.run(synth(text))
-    return pcm_at_rate(r,rate,channels,1.0), "piper_lessac_pitch_adjusted"
+    voice=profile.get("piper_voice","en_US-lessac-medium")
+    language=profile.get("piper_language","en_US")
+    try:
+        r,rate,channels=asyncio.run(synth(text,voice,language))
+        return pcm_at_rate(r,rate,channels,1.0), "piper_"+voice
+    except Exception:
+        # A deployed Piper instance may only advertise one model, despite
+        # having multiple on disk. Fall back without falsely claiming it used
+        # another trained voice.
+        r,rate,channels=asyncio.run(synth(text))
+        return pcm_at_rate(r,rate,channels,1.0), "piper_lessac_fallback"
 
 def alter_pcm(raw,profile):
     # Slightly alter speaking pace and vocal pitch without grotesque timbre.
@@ -233,13 +242,13 @@ def wake_log_since(start):
 PROFILES=[
     {"text":"Hey Google turn on the office lights",
      "wake":"Hey Google","command":"turn on the office lights","volume":12,
-     "espeak_voice":None,"wpm":154,"pitch":1.00,"tempo":0.97,"pause":1.10,"label":"piper_natural"},
+     "espeak_voice":None,"piper_voice":"en_US-lessac-medium","piper_language":"en_US","wpm":154,"pitch":1.00,"tempo":0.97,"pause":1.10,"label":"piper_natural"},
     {"text":"Hey Google turn the office lights off",
      "wake":"Hey Google","command":"turn the office lights off","volume":11,
-     "espeak_voice":"en+f3","wpm":147,"pitch":1.01,"tempo":0.98,"pause":1.15,"label":"alternate_female"},
+     "espeak_voice":None,"piper_voice":"en_GB-southern_english_female-low","piper_language":"en_GB","wpm":147,"pitch":1.01,"tempo":0.98,"pause":1.15,"label":"alternate_female"},
     {"text":"Hey Google turn the office lights on",
      "wake":"Hey Google","command":"turn the office lights on","volume":10,
-     "espeak_voice":"en+m3","wpm":158,"pitch":0.99,"tempo":1.02,"pause":1.00,"label":"alternate_male"},
+     "espeak_voice":None,"piper_voice":"en_US-lessac-medium","piper_language":"en_US","wpm":158,"pitch":0.96,"tempo":1.02,"pause":1.00,"label":"alternate_male"},
 ]
 
 def play_one(prof,base,ha,expected):
@@ -291,6 +300,9 @@ def play_one(prof,base,ha,expected):
        "profile":prof["label"],"actual_voice_source":source_b,
        "volume_out_of_15":prof["volume"],"wake_to_command_gap_s":prof["pause"],
        "audio_duration_s":round(total_seconds,3),
+       "wake_audio_duration_s":round(len(wake)/32000,3),
+       "command_audio_start_after_launch_s":round(0.4+len(wake)/32000+prof["pause"],3),
+       "command_audio_duration_s":round(len(command)/32000,3),
        "before":before.get("lights",{}).get("light.plafond_office"),
        "after":after.get("lights",{}).get("light.plafond_office"),
        "playback_exit_code":player.returncode,
