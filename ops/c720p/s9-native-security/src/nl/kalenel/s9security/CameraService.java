@@ -114,8 +114,7 @@ public final class CameraService extends Service {
  private volatile long gardenPersonGateChecks=0,gardenPersonGateMatches=0;
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
- private int gardenPersonGatePositiveStreak=0;
- private long gardenPersonGatePreviousPositiveAt=0;
+ private final GardenPersonTrackGate gardenTrackGate=new GardenPersonTrackGate();
  private volatile long gardenPersonGateConfirmedStarts=0;
  private volatile long deepFaceScanned=0,deepFaceErrors=0;
  private String captureTier="normal";
@@ -374,17 +373,19 @@ public final class CameraService extends Service {
       !gardenGateReady)return;
   gardenPersonGateBusy=true;gardenPersonGateLastAt=now;
   final byte[] jpg=latestJpeg.clone();
+  final long jpegAt=lastJpegAt;
   final float top=motion.topBoundary(),margin=motion.sideMargin();
   try{
    gardenGateExecutor.execute(new Runnable(){public void run(){
     final long gateStarted=SystemClock.elapsedRealtime();
-    float value=0;boolean failed=false;
-    try{value=gardenGateClassifier.personScoreInGarden(jpg,top,margin);}
+    ClipClassifier.GardenPersonEvidence evidence=null;boolean failed=false;
+    try{evidence=gardenGateClassifier.personEvidenceInGarden(jpg,top,margin);}
     catch(Throwable issue){
      failed=true;
      Log.w(TAG,"garden_person_gate_"+issue.getClass().getSimpleName());
     }
-    final float score=value;
+    final float score=evidence==null?0f:evidence.score;
+    final float[] box=evidence==null?null:evidence.box;
     final boolean error=failed;
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
@@ -394,28 +395,26 @@ public final class CameraService extends Service {
      gardenPersonGateScore=score;
      if(error){
       gardenPersonGateErrors++;
+      gardenTrackGate.reset();
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
-     if(score<0.44f){gardenPersonGateRejects++;gardenPersonGatePositiveStreak=0;return;}
-     gardenPersonGateMatches++;
+     if(score>=GardenPersonTrackGate.MIN_SCORE)gardenPersonGateMatches++;
+     else gardenPersonGateRejects++;
      // Do not start recording on stale detections, if the camera has moved
      // into a new capture session, or after a deliberate controls change.
      if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
-      gardenPersonGatePositiveStreak=0;
+      gardenTrackGate.reset();
       if(running&&"watching".equals(mode))
        saveFallbackEvidence("stale_person_result_skipped");
       return;
      }
-     if(gardenPersonGatePreviousPositiveAt>0 && now-gardenPersonGatePreviousPositiveAt<=3000L)
-      gardenPersonGatePositiveStreak=Math.min(2,gardenPersonGatePositiveStreak+1);
-     else gardenPersonGatePositiveStreak=1;
-     gardenPersonGatePreviousPositiveAt=now;
-     if(gardenPersonGatePositiveStreak<2)return;
-      gardenPersonGatePositiveStreak=0;
-      eventChain.evidence(SystemClock.elapsedRealtime());
+     // A second result only counts if a NEW JPEG sees a spatially coherent person.
+     GardenPersonTrackGate.Result verdict=gardenTrackGate.offer(now,jpegAt,score,box);
+     if(verdict!=GardenPersonTrackGate.Result.CONFIRMED)return;
+     eventChain.evidence(SystemClock.elapsedRealtime());
      if(temperature()<415 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
      else saveFallbackEvidence("thermal_or_space_guard");
@@ -839,7 +838,11 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
-   d.put("motion_detector","garden_roi_gpu_two_frame_person_gate_v2");
+   d.put("motion_detector",GardenPersonTrackGate.VERSION);
+     d.put("person_spatial_pair_required",true);
+     d.put("person_distinct_jpeg_required",true);
+     d.put("garden_person_gate_geometry_unrelated",gardenTrackGate.unrelated);
+     d.put("garden_person_gate_duplicate_jpeg",gardenTrackGate.duplicate);
     d.put("capture_event_version",CaptureContinuity.VERSION);
     d.put("capture_event_id",eventChain.eventId());
     d.put("capture_segment_index",eventChain.segmentNumber());
@@ -915,6 +918,7 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_checked",gardenPersonGateChecks);
    d.put("garden_person_gate_matches",gardenPersonGateMatches);
    d.put("garden_person_gate_required_positive_frames",2);
+    d.put("garden_person_gate_pair_window_ms",GardenPersonTrackGate.MAX_PAIR_INTERVAL_MS);
    d.put("garden_person_gate_confirmed_starts",gardenPersonGateConfirmedStarts);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
