@@ -13,12 +13,12 @@ TRIAGE=(ROOT/'src/nl/kalenel/s9security/GardenArchiveTriage.java').read_text()
 class Contract(unittest.TestCase):
  def test_two_separate_person_gate_checks(self):
   code=SOURCE.split('private void evaluateGardenPersonAsync(){',1)[1].split('private boolean rateAllowed',1)[0]
-  for required in ('now-gardenPersonGateLastAt<900','if(score<0.44f)',
-                   'gardenPersonGatePositiveStreak=0','now-gardenPersonGatePreviousPositiveAt<=3000L',
-                   'gardenPersonGatePositiveStreak<2','gardenPersonGateConfirmedStarts++',
-                   'startRecording()','gardenPersonGateStale++'):
+  for required in ('now-gardenPersonGateLastAt<900','GardenPersonTrackGate.MIN_SCORE',
+                   'gardenTrackGate.offer(now,jpegAt,score,box)',
+                   'gardenTrackGate.reset()','GardenPersonTrackGate.Result.CONFIRMED',
+                   'gardenPersonGateConfirmedStarts++','startRecording()','gardenPersonGateStale++'):
    self.assertIn(required,code)
-  self.assertLess(code.index('gardenPersonGatePositiveStreak<2'),
+  self.assertLess(code.index('GardenPersonTrackGate.Result.CONFIRMED'),
                   code.rindex('startRecording()'))
   self.assertIn('garden_roi_gpu_two_frame_person_gate_v2',SOURCE)
  def test_native_deep_review_is_bounded_and_does_not_reencode(self):
