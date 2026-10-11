@@ -17,7 +17,7 @@ assert 'mode=evidence' in mod.ROOT_JS
 assert 's9SavedFolderFrame' in mod.ROOT_JS
 assert 's9v8-evidence' in mod.ROOT_JS
 assert 'site=' not in mod.ROOT_JS
-assert 'fps>=24' in TEMPLATE
+assert 'fps<24' in TEMPLATE
 assert 'requestVideoFrameCallback' in TEMPLATE
 assert 'getVideoPlaybackQuality' in TEMPLATE
 assert 'requestVideoFrameCallback' in mod.PERFORMANCE_JS
