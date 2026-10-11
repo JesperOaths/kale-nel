@@ -10,9 +10,9 @@ SRC=ROOT/'src/nl/kalenel/s9security'
 class Tests(unittest.TestCase):
     def test_lowluma_moderate_sensitivity_with_hard_flicker_guards(self):
         code=(SRC/'MotionGrid.java').read_text()
-        self.assertIn('(lighting<42?23.0f:18.5f)',code)
+        self.assertIn('(lighting<42?19.0f:17.0f)',code)
         self.assertIn('votes.size()>7',code)
-        self.assertIn('positive>=(lighting<42?5:4)',code)
+        self.assertIn('positive>=(lighting<42?3:3)',code)
         self.assertIn('&&changedRatio<0.46',code)
         self.assertIn('&&Math.abs(shift)<(dim?18:26)',code)
         self.assertIn('sustainedEvidence>=3',code)
@@ -28,7 +28,7 @@ class Tests(unittest.TestCase):
         self.assertIn('TOTAL_PER_HOUR=BASE_PER_HOUR+PRIORITY_RESERVE_PER_HOUR',rate)
         self.assertIn('recorded<TOTAL_PER_HOUR && sustainedCoherent',rate)
         camera=(SRC/'CameraService.java').read_text()
-        for condition in ('COOLDOWN_MS=12000','temperature()<415','folder.getUsableSpace()>15L*1024*1024*1024',
+        for condition in ('COOLDOWN_MS=3500','temperature()<415','folder.getUsableSpace()>15L*1024*1024*1024',
                           'saveFallbackEvidence("recording_budget_rejected")'):
             self.assertIn(condition,camera)
 
