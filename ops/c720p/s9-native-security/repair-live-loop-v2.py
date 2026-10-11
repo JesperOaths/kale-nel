@@ -24,7 +24,7 @@ NEW_LIVE=r'''/* C720P_SECURITY_NATIVE_MJPEG_STABLE_V2:
  * transcoding on the C720P. Saved MP4 player stays unchanged.
  */
 async function liveSession(state){
- if(state.running||!state.wanted||!visible(state.img))return;
+ if(state.running||state.retryTimer||!state.wanted||!visible(state.img))return;
  cleanupLive(state);
  state.running=true;
  const generation=state.generation,controller=new AbortController();
