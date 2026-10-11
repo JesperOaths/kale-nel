@@ -20,7 +20,7 @@ public final class ClipClassifier {
  private Interpreter net;
  private GpuDelegate delegate;
  private ByteBuffer input;
- private String backend="uninitialized";
+ private volatile String backend="uninitialized";
  private String modelSha256="";
  private final float[][][] boxes=new float[1][10][4];
  private final float[][] classes=new float[1][10],scores=new float[1][10];
@@ -28,6 +28,12 @@ public final class ClipClassifier {
  private final ArrayList<String> labels=new ArrayList<>();
  private final Map<Integer,Object> outputs=new HashMap<>();
  ClipClassifier(Context c){app=c; }
+ // Safe to query from the camera status thread without holding the TFLite lock.
+ String inferenceBackend(){return backend;}
+ // Construct and validate the live-gate TFLite interpreter before motion.
+ // Call exclusively on the dedicated phone inference worker.
+ public synchronized void warmPersonGate()throws Exception{init();}
+ 
  private void init()throws Exception{
   if(net!=null)return;
   try(InputStream in=app.getAssets().open("labelmap.txt");BufferedReader br=new BufferedReader(new InputStreamReader(in))){

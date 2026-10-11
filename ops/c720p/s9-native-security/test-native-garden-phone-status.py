@@ -26,7 +26,8 @@ class Tests(unittest.TestCase):
           "garden_person_gate_checked":0,"garden_person_gate_matches":0,
           "garden_person_gate_rejected":0,
           "garden_person_gate_last_score":0,
-          "garden_person_gate_errors":0,"temperature_c":27.0}
+          "garden_person_gate_errors":0,"temperature_c":27.0,
+          "garden_person_gate_backend":"gpu","garden_person_gate_ready":True}
 
     def test_standby_no_false_positive_then_model_event(self):
         module=load(MODULE,'phone_watch')
@@ -43,6 +44,23 @@ class Tests(unittest.TestCase):
         c=module.from_phone(baseline,now_ms=113000)
         self.assertEqual(c['status']['kind'],'garden_waiting_for_motion')
         self.assertIsNone(c['status']['person_score'])
+
+    def test_reports_real_backend_and_queue_latency_without_guessing(self):
+        module=load(MODULE,'phone_watch_actual_backend')
+        sample=self.sample()
+        sample.update(garden_person_gate_backend='cpu',
+                      garden_person_gate_last_queue_wait_ms=120,
+                      garden_person_gate_stale_dropped=4)
+        report=module.from_phone(sample,now_ms=105000)
+        self.assertIs(report['on_phone_gpu_inference'],False)
+        self.assertTrue(report['on_phone_person_inference'])
+        self.assertEqual(report['person_inference_backend'],'cpu')
+        self.assertEqual(report['person_gate_queue_wait_ms'],120)
+        self.assertEqual(report['person_gate_stale_results'],4)
+        sample.pop('garden_person_gate_backend')
+        unknown=module.from_phone(sample,now_ms=107000)
+        self.assertIsNone(unknown['on_phone_gpu_inference'])
+        self.assertEqual(unknown['person_inference_backend'],'unknown')
 
     def test_rejects_camera_offline_and_bad_counters(self):
         module=load(MODULE,'phone_watch_guards')
