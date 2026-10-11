@@ -424,7 +424,10 @@ public final class CameraService extends Service {
      // A weak model prediction cannot form half of a valid two-frame track.
      if(score<GardenPersonTrackGate.MIN_SCORE){
       gardenPersonGateRejects++;
-      personTrackGate.reset();return;
+      // Brief model dropout: keep last tracked positive within MAX_PAIR_MS
+      // but still require a later independent, associated detection.
+      personTrackGate.offer(now,jpegAt,score,null,0);
+      return;
      }
      gardenPersonGateMatches++;
      if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
