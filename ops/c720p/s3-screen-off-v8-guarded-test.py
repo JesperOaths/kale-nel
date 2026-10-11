@@ -27,7 +27,7 @@ def current():
  wake=re.search('mWakefulness=([A-Za-z]+)',power)
  try:
   log=adb('logcat','-d','-s','S3MOTION:I','*:S',timeout=17)
-  h=re.findall(r'HEARTBEAT session=([0-9]+)[^\\n]*?frames=([0-9]+)',log)
+  h=re.findall(r'HEARTBEAT session=([0-9]+)[^\n]*?frames=([0-9]+)',log)
   last=h[-1] if h else None
  except Exception:last=None
  return {'wake':wake.group(1) if wake else 'unknown','camera':alive,
