@@ -1,0 +1,44 @@
+name: C720P historical Drive Archive V9
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-drive-archive-v9.yml'
+      - 'cloudflare/workers/admin-gate/src/worker.js'
+      - 'supabase/functions/c720p-security-relay/index.ts'
+      - 'ops/c720p/s9-native-security/deploy-drive-archive-v9.py'
+  push:
+    paths:
+      - '.github/workflows/c720p-drive-archive-v9.yml'
+      - 'cloudflare/workers/admin-gate/src/worker.js'
+      - 'supabase/functions/c720p-security-relay/index.ts'
+      - 'ops/c720p/s9-native-security/deploy-drive-archive-v9.py'
+
+permissions:
+  contents: read
+
+jobs:
+  route-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compile source and verify authenticated route contracts
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-drive-archive-v9.py
+          node --check cloudflare/workers/admin-gate/src/worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          c=Path("cloudflare/workers/admin-gate/src/worker.js").read_text()
+          s=Path("supabase/functions/c720p-security-relay/index.ts").read_text()
+          p=Path("ops/c720p/s9-native-security/deploy-drive-archive-v9.py").read_text()
+          for code in ("api/drive-saved", "drive/saved/clip", "drive/saved/snap"):
+              assert code in c and code in s and code in p, code
+          for kind in ("drivesaved","driveclip","drivesnap"):
+              assert kind in c and kind in s, kind
+          assert "if(!await media(req,u))" in s
+          assert "if (!validSecurityMediaSession(env, media, outer))" in c
+          assert "archive_range_playback_failed" in p
+          assert "ARCHIVE_DRIVE_V9_ROLLED_BACK" in p
+          print("S9_DRIVE_ARCHIVE_V9_ROUTE_AND_ROLLBACK_CONTRACT_PASS")
+          PY
