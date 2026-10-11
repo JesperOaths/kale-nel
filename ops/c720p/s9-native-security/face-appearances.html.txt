@@ -53,6 +53,13 @@ h2{font-size:16px;margin:0 0 8px}p{margin:5px 0 12px;color:var(--muted)}
 dialog{color:var(--ink);background:#102332;border:1px solid #6992aa;border-radius:13px;width:min(820px,94vw);max-width:100%;max-height:88dvh;padding:14px;overflow:auto}
 dialog::backdrop{background:#000d}dialog video{width:100%;max-height:min(52dvh,450px);aspect-ratio:16/9;object-fit:contain;background:#050a0e;display:block;margin:8px 0}
 .modal-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.video-shell{position:relative;min-height:220px}
+.playback-loading{position:absolute;inset:8px 0;display:flex;align-items:center;justify-content:center;text-align:center;background:#081722f0;border:1px dashed #517b91;border-radius:11px;color:#d6ecf7;font-size:14px;font-weight:650;padding:24px;z-index:2;line-height:1.65}
+.playback-loading[hidden]{display:none!important}
+.playback-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:9px 0}
+.playback-actions button[hidden]{display:none!important}
+#playerState{flex:1;font-size:12px;color:#b9d0de}
+
 .watermark{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#a7c6d4;background:#0a2234ee;border:1px solid #45677d;border-radius:999px;padding:3px 9px;z-index:8;white-space:nowrap}
 footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
 @media(max-width:720px){body{padding:12px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.visual{height:210px}}
@@ -91,8 +98,14 @@ footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
 <button id="more" class="more" type="button" hidden>Show more evidence</button>
 <dialog id="playerDialog" aria-label="Original S9 camera recording">
  <div class="modal-head"><strong id="playerLabel">Original recording</strong><button id="closePlayer" type="button">Close</button></div>
- <video id="player" controls playsinline preload="metadata"></video>
- <div id="playerState" class="subtle" aria-live="polite">Waiting for recording…</div>
+ <div class="video-shell">
+  <video id="player" controls playsinline preload="metadata"></video>
+  <div id="playerLoading" class="playback-loading" role="status" aria-live="polite">Preparing smooth playback…</div>
+ </div>
+ <div class="playback-actions">
+  <div id="playerState" class="subtle" aria-live="polite">Waiting for recording…</div>
+  <button type="button" id="playerOriginal" hidden>Try original 4K instead</button>
+ </div>
  <div class="subtle">Played directly from the S9+ microSD through the authenticated relay. Person identities have not been confirmed.</div>
 </dialog>
 <footer>Faces and video stay in the phone's existing microSD archive. Face crops are streamed only when visible and are not permanently cached by this page. Original 4K recordings are preserved.</footer>
@@ -106,6 +119,7 @@ const cropOK=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const types={face:'Face crop',appearance:'Appearance',review:'Person clip'};
 const colours={black:'#252d34',white:'#eff4fa',gray:'#94a3b8',red:'#d45757',orange:'#e5964b',yellow:'#ecd05d',green:'#59ae7e',blue:'#5694d2',purple_or_pink:'#ae8ccc',brown:'#97715b'};
 const state={data:[],items:[],kind:'all',page:1,query:'',color:'',busy:false,observer:null};
+let activeClip=null,playbackTimer=null;
 const make=(tag,value,cls)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=String(value);if(cls)e.className=cls;return e;};
 const relay=()=>{
  if(window.C720PSecureRelay?.fetch && window.C720PSecureRelay?.url)return window.C720PSecureRelay;
@@ -189,8 +203,21 @@ async function play(rec,at,button){
   const url=await r.url('/new/saved/clip/'+encodeURIComponent(rec.clip_no));
   const vid=$('player'),dlg=$('playerDialog');
   $('playerLabel').textContent=displayTime(rec)+' · '+rec.clip_no;
-  $('playerState').textContent='Loading original recording…';
+  activeClip={clip:rec.clip_no,originalUrl:url,startedAt:Date.now()};
+  clearInterval(playbackTimer);
+  $('playerLoading').hidden=false;
+  $('playerLoading').textContent='Preparing a smooth version for your browser…';
+  $('playerOriginal').hidden=true;
+  $('playerState').textContent='Preparing smooth playback. The original 4K recording remains saved on the S9+.';
   vid.src=url;vid.load();
+  playbackTimer=setInterval(()=>{
+   if(!$('playerDialog').open||!activeClip){clearInterval(playbackTimer);return}
+   if(vid.readyState>0){clearInterval(playbackTimer);return}
+   const seconds=Math.round((Date.now()-activeClip.startedAt)/1000);
+   $('playerLoading').textContent=seconds<20?'Preparing smooth playback · '+seconds+' seconds…':
+     'Still preparing · '+seconds+' seconds. You can try the original 4K version below.';
+   if(seconds>=20)$('playerOriginal').hidden=false;
+  },1000);
   const atSeconds=Number(at)/1000;
   if(Number.isFinite(atSeconds)&&atSeconds>0)vid.addEventListener('loadedmetadata',()=>{
    try{vid.currentTime=Math.max(0,Math.min(atSeconds,Math.max(0,vid.duration-0.25)));}catch(_){}
@@ -284,9 +311,37 @@ for(const [id] of Object.entries(colours)){
 }
 $('refresh').addEventListener('click',refresh);
 $('more').addEventListener('click',()=>{state.page++;render();});
-function stopVideo(){const v=$('player');v.pause();v.removeAttribute('src');v.load();$('playerState').textContent='Waiting for recording…';}
-$('player').addEventListener('loadedmetadata',()=>{$('playerState').textContent='Recording loaded · '+(Number.isFinite($('player').duration)?$('player').duration.toFixed(1)+' seconds':'duration unknown')});
-$('player').addEventListener('error',()=>{$('playerState').textContent='Video could not be decoded here. Original recording remains saved on the S9+.'});
+function stopVideo(){
+ clearInterval(playbackTimer);activeClip=null;
+ const v=$('player');v.pause();v.removeAttribute('src');v.load();
+ $('playerLoading').hidden=false;$('playerLoading').textContent='Waiting for recording…';
+ $('playerOriginal').hidden=true;$('playerState').textContent='Waiting for recording…';
+}
+$('playerOriginal').addEventListener('click',()=>{
+ if(!activeClip)return;
+ const current=activeClip,video=$('player'),helper=window.C720PSecurityVideo;
+ if(!helper||typeof helper.setSource!=='function'){
+  $('playerState').textContent='Original playback option unavailable on this browser.';
+  return;
+ }
+ clearInterval(playbackTimer);
+ $('playerLoading').hidden=false;
+ $('playerLoading').textContent='Opening preserved original 4K clip…';
+ $('playerState').textContent='Original 4K may stutter on the C720P. The recording is unchanged.';
+ $('playerOriginal').hidden=true;
+ helper.setSource(video,'/new/saved/clip/'+encodeURIComponent(current.clip),
+   {mode:'original',originalUrl:current.originalUrl,play:true});
+});
+$('player').addEventListener('loadedmetadata',()=>{
+ clearInterval(playbackTimer);$('playerLoading').hidden=true;
+ $('playerState').textContent='Recording ready · '+(Number.isFinite($('player').duration)?$('player').duration.toFixed(1)+' seconds':'duration unknown')+' · press Play if it does not start';
+});
+$('player').addEventListener('error',()=>{
+ clearInterval(playbackTimer);$('playerLoading').hidden=false;
+ $('playerLoading').textContent='This browser could not decode the prepared video.';
+ $('playerState').textContent='The source recording is preserved. You may try the original 4K.';
+ $('playerOriginal').hidden=false;
+});
 $('closePlayer').addEventListener('click',()=>$('playerDialog').close());
 $('playerDialog').addEventListener('close',stopVideo);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopVideo();else refresh();});
