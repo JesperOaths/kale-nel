@@ -1,0 +1,51 @@
+name: S9 Shadow Detector V2
+on:
+  pull_request:
+    paths: ['ops/c720p/s9-detector-benchmark/**', '.github/workflows/s9-detector-shadow-benchmark-v2.yml']
+  push:
+    paths: ['ops/c720p/s9-detector-benchmark/**', '.github/workflows/s9-detector-shadow-benchmark-v2.yml']
+permissions:
+  contents: read
+jobs:
+  shadow-detector-pure-java:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Motion and multi-person tracking tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          P=ops/c720p/s9-detector-benchmark
+          bash -n "$P/build-only.sh"
+          java -version
+          mkdir -p /tmp/s9-shadow
+          javac -source 8 -target 8 -d /tmp/s9-shadow "$P/src/nl/kalenel/s9benchmark/GardenShadowPipeline.java" "$P/tests/GardenShadowPipelineTest.java"
+          java -cp /tmp/s9-shadow nl.kalenel.s9benchmark.GardenShadowPipelineTest
+          grep -q 'GardenShadowPipeline.java' "$P/build-only.sh"
+          grep -q 'android.permission.DUMP' "$P/AndroidManifest.xml"
+  android-benchmark-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compile on-phone benchmarking Android classes against SDK and TFLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          P=ops/c720p/s9-detector-benchmark/src/nl/kalenel/s9benchmark
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          ANDROID_JAR="$(find "$SDK/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$ANDROID_JAR"
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+          curl -fsSL --retry 2 --max-time 80 https://repo.maven.apache.org/maven2/org/tensorflow/tensorflow-lite/2.14.0/tensorflow-lite-2.14.0.aar -o "$WORK/tflite.aar"
+          curl -fsSL --retry 2 --max-time 80 https://repo.maven.apache.org/maven2/org/tensorflow/tensorflow-lite-api/2.14.0/tensorflow-lite-api-2.14.0.aar -o "$WORK/tflite-api.aar"
+          unzip -p "$WORK/tflite.aar" classes.jar > "$WORK/tflite.jar"
+          unzip -p "$WORK/tflite-api.aar" classes.jar > "$WORK/tflite-api.jar"
+          test -s "$WORK/tflite.jar" && test -s "$WORK/tflite-api.jar"
+          mkdir -p "$WORK/classes"
+          javac -source 8 -target 8 -cp "$ANDROID_JAR:$WORK/tflite.jar:$WORK/tflite-api.jar" -d "$WORK/classes" "$P/BenchmarkService.java" "$P/GardenShadowPipeline.java"
+          test -s "$WORK/classes/nl/kalenel/s9benchmark/BenchmarkService.class"
+          test -s "$WORK/classes/nl/kalenel/s9benchmark/GardenShadowPipeline.class"
+          echo S9_SHADOW_BENCHMARK_ANDROID_BUILD_PASS
