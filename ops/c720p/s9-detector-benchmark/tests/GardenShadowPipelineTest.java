@@ -61,7 +61,8 @@ public final class GardenShadowPipelineTest {
   float[] frame=background();
   for(int y=10;y<13;y++)for(int x=10;x<14;x++)frame[y*GardenShadowPipeline.W+x]+=65;
   p.observe(4000,frame,null);
-  GardenShadowPipeline.Result r=p.observe(4700,frame,null);
+  p.observe(4700,frame,null);
+  GardenShadowPipeline.Result r=p.observe(5400,frame,null);
   check(r.motion,"coherent garden region should pass adaptive motion voting");
   check(r.largestComponent>=8,"coherence measurable");
   GardenShadowPipeline road=new GardenShadowPipeline();warm(road,100);
