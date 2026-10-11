@@ -1,0 +1,31 @@
+name: C720P Historical Drive Archive Thumbnails
+
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/drive_archive_thumbnail_backfill_v1.py'
+      - 'ops/c720p/tests/test_drive_archive_thumbnail_backfill_v1.py'
+      - '.github/workflows/c720p-drive-archive-thumbs-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/drive_archive_thumbnail_backfill_v1.py'
+      - 'ops/c720p/tests/test_drive_archive_thumbnail_backfill_v1.py'
+      - '.github/workflows/c720p-drive-archive-thumbs-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pure-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Validate no-original-media writes, safe path handling and archive fallback
+        run: |
+          python -m py_compile ops/c720p/drive_archive_thumbnail_backfill_v1.py
+          python -m unittest discover -s ops/c720p/tests -p 'test_drive_archive_thumbnail_backfill_v1.py' -v
