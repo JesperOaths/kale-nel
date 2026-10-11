@@ -11,7 +11,7 @@ class Tests(unittest.TestCase):
         self.assertIn('S9_ALLOW_FACE_SNAPSHOTS_ONLY:-0',SH)
         self.assertIn('S9_FACE_EMBEDDING_MODEL',SH)
         self.assertIn('S9_FACE_MODEL_SHA256_REQUIRED',SH)
-        self.assertIn('S9_FACE_MODEL_SHA256_MISMATCH',SH)
+        self.assertIn('FACE_MODEL_SHA256_MISMATCH',SH)
         self.assertIn('face_embedding.tflite',SH)
         self.assertIn('sha256sum -c -',SH)
         self.assertIn('exit 4',SH)
