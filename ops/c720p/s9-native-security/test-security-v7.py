@@ -57,7 +57,7 @@ class V7Tests(unittest.TestCase):
   for target in ('security-archive-v7.html','security-tracks-v7.html'):
    sources.append((HERE/target).read_text())
   for i,source in enumerate(sources):
-   found=re.findall(r'<script(?![^>]*\\bsrc=)[^>]*>([\s\S]*?)</script>',source)
+   found=re.findall(r'<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)</script>',source)
    self.assertEqual(len(found),1,str(i))
    with tempfile.TemporaryDirectory() as tmp:
     p=Path(tmp)/"test.js";p.write_text(found[0])
