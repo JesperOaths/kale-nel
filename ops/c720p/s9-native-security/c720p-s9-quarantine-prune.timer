@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodic verified-negative S9+ empty clip microSD cleanup
+
+[Timer]
+OnBootSec=20min
+OnUnitInactiveSec=45min
+AccuracySec=4min
+Persistent=true
+Unit=c720p-s9-quarantine-prune.service
+
+[Install]
+WantedBy=timers.target
