@@ -185,6 +185,10 @@ def install_local_sd(H):
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
+ # Optional user-requested low-resolution playback copies. Originals keep
+ # their existing phone/Drive byte-range route and are never rewritten.
+ import s9_hub_playback
+ s9_hub_playback.install(H,rows)
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:
