@@ -161,12 +161,17 @@ def main():
     if not a.apply or already:
         print(json.dumps(report,separators=(",",":")))
         return
-    if BACKUP.exists():
-        raise RuntimeError("backup path exists; refuse overwrite")
     if not active():
         raise RuntimeError("service was not active before cutover")
-    BACKUP.parent.mkdir(parents=True,exist_ok=True)
-    shutil.copy2(SOURCE,BACKUP)
+    if BACKUP.exists():
+        # Prior guarded cutover may have rolled back, leaving the backup.
+        # Never overwrite it, but allow a retry if the bytes match V17.
+        existing_backup_sha=hashlib.sha256(BACKUP.read_bytes()).hexdigest()
+        if existing_backup_sha!=EXPECTED_SHA:
+            raise RuntimeError("existing V17 rollback backup differs; refuse retry")
+    else:
+        BACKUP.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copy2(SOURCE,BACKUP)
     staged=SOURCE.with_suffix(".py.v18-tmp")
     staged.write_text(new)
     os.chmod(staged,SOURCE.stat().st_mode & 0o777)
@@ -175,13 +180,36 @@ def main():
         r=subprocess.run(["systemctl","--user","restart",UNIT],timeout=17,
                          capture_output=True,text=True)
         if r.returncode != 0:raise RuntimeError("restart failed")
-        time.sleep(4)
-        if not active():raise RuntimeError("service inactive after restart")
-        state=json.loads(STATE.read_text())
-        if (state.get("version")!="frontcam-motion-v18"
-            or not state.get("ok") or state.get("camera_failures")!=0
-            or time.time()-float(state.get("updated_at",0))>6):
-            raise RuntimeError("fresh camera state/label/health check failed")
+        restart_started_at=time.time()
+        # This low-power laptop takes several seconds just to import cv2 and
+        # initialize V4L2; the original 4s probe rolled back a healthy startup.
+        # Require two distinct fresh status writes from the *new* process.
+        startup_deadline=time.monotonic()+35.0
+        healthy_samples=0
+        last_sample_ts=0.0
+        state={}
+        while time.monotonic()<startup_deadline:
+            if active():
+                try:
+                    state=json.loads(STATE.read_text())
+                except (OSError,json.JSONDecodeError):
+                    state={}
+                sample_ts=float(state.get("updated_at") or 0.0)
+                good=(state.get("version")=="frontcam-motion-v18"
+                      and state.get("ok") is True
+                      and state.get("camera_failures")==0
+                      and sample_ts>restart_started_at
+                      and time.time()-sample_ts<=6.0)
+                if good and sample_ts>last_sample_ts:
+                    healthy_samples+=1
+                    last_sample_ts=sample_ts
+                    if healthy_samples>=2:
+                        break
+                elif not good:
+                    healthy_samples=0
+            time.sleep(1.5)
+        if healthy_samples<2 or not active():
+            raise RuntimeError("V18 did not publish two fresh healthy camera samples within 35s")
     except Exception:
         shutil.copy2(BACKUP,SOURCE)
         subprocess.run(["systemctl","--user","restart",UNIT],timeout=18)
