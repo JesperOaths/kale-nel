@@ -149,11 +149,7 @@ public final class CameraService extends Service {
    t.setPriority(Math.min(Thread.MAX_PRIORITY,Thread.NORM_PRIORITY+1));return t;
   });
   gardenGateClassifier=new ClipClassifier(this);
-  final ClipClassifier liveGate=gardenGateClassifier;
-  gardenGateExecutor.execute(new Runnable(){public void run(){
-   try{liveGate.warmPersonGate();gardenGateReady=true;}
-   catch(Throwable e){gardenGatePrepareErrors++;Log.w(TAG,"realtime_garden_gate_init_failed",e);}
-  }});
+  warmGardenGateAsync();
 
   jpegEncoder=Executors.newSingleThreadExecutor(job->{
    Thread thread=new Thread(job,"s9-onphone-preview-jpeg");
@@ -312,6 +308,28 @@ public final class CameraService extends Service {
     }
    },cameraHandler);
   }catch(Exception e){failure("preview_setup_failed",e);scheduleRecover();}
+ }
+ // Retry occasional GPU delegate initialization failures without blocking the
+ // camera callback or leaving the detector permanently unarmed.
+ private void warmGardenGateAsync(){
+  final ClipClassifier gate=gardenGateClassifier;
+  final ExecutorService worker=gardenGateExecutor;
+  if(!running||gate==null||worker==null||gardenGateReady)return;
+  try{
+   worker.execute(new Runnable(){public void run(){
+    try{
+     gate.warmPersonGate();
+     if(running)gardenGateReady=true;
+    }catch(Throwable error){
+     gardenGatePrepareErrors++;
+     Log.w(TAG,"realtime_garden_gate_init_failed",error);
+     if(running&&gardenGatePrepareErrors<5&&cameraHandler!=null)
+      cameraHandler.postDelayed(new Runnable(){public void run(){
+       warmGardenGateAsync();
+      }},Math.min(60000L,5000L*gardenGatePrepareErrors));
+    }
+   }});
+  }catch(RejectedExecutionException error){gardenGatePrepareErrors++;}
  }
  private void evaluateGardenPersonAsync(){
   final long now=SystemClock.elapsedRealtime();
