@@ -2,6 +2,7 @@
 """Verify private derived playback, original fidelity, ranges, and bounded jobs."""
 import importlib.util
 import json
+import subprocess
 import tempfile
 import threading
 import time
@@ -118,6 +119,71 @@ class Tests(unittest.TestCase):
              mock.patch.object(mod.subprocess, "run") as run:
             with self.assertRaisesRegex(ValueError, "source_below_24fps"): mod.build(src)
             run.assert_not_called()
+
+    def test_hardware_timeout_leaves_only_remaining_budget_for_successful_fallback(self):
+        src = {"key": "c" * 64, "url": "safe", "source_kind": "phone"}
+        mod.CACHE.mkdir()
+        elapsed = [0.0]
+        calls = []
+        real_exists, real_is_file = Path.exists, Path.is_file
+        def exists(path):
+            return True if str(path).replace("\\", "/") == "/dev/dri/renderD128" else real_exists(path)
+        def is_file(path):
+            return True if str(path).replace("\\", "/") == "/usr/lib/x86_64-linux-gnu/dri/i965_drv_video.so" else real_is_file(path)
+        def probe(url, timeout):
+            elapsed[0] += 25 if url == "safe" else 20
+            self.assertGreaterEqual(timeout, 20)
+            return {"fps": 30, "duration": 120, "width": 3840 if url == "safe" else 1280,
+                    "height": 2160 if url == "safe" else 720}
+        def run(command, **kwargs):
+            calls.append(kwargs["timeout"])
+            if "-hwaccel" in command:
+                elapsed[0] += kwargs["timeout"]
+                raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+            self.assertLess(kwargs["timeout"], mod.JOB_TIMEOUT)
+            self.assertGreater(kwargs["timeout"], 100)
+            elapsed[0] += 100
+            Path(command[-1]).write_bytes(b"x" * 10001)
+            return mock.Mock(returncode=0)
+        with mock.patch.object(mod, "cache_home"), mock.patch.object(mod, "trim_cache"), \
+             mock.patch.object(mod.time, "monotonic", side_effect=lambda: elapsed[0]), \
+             mock.patch.object(mod.Path, "exists", autospec=True, side_effect=exists), \
+             mock.patch.object(mod.Path, "is_file", autospec=True, side_effect=is_file), \
+             mock.patch.object(mod, "probe", side_effect=probe), \
+             mock.patch.object(mod.subprocess, "run", side_effect=run):
+            data = mod.build(src)
+        self.assertEqual(data["decoder"], "software")
+        self.assertEqual(calls, [390, 155])
+        self.assertLess(data["generated_seconds"], mod.JOB_TIMEOUT)
+        self.assertTrue((mod.CACHE / (src["key"] + ".mp4")).is_file())
+
+    def test_exhausted_hardware_budget_does_not_start_another_full_timeout(self):
+        src = {"key": "d" * 64, "url": "safe", "source_kind": "phone"}
+        mod.CACHE.mkdir()
+        elapsed = [0.0]
+        real_exists, real_is_file = Path.exists, Path.is_file
+        def exists(path):
+            return True if str(path).replace("\\", "/") == "/dev/dri/renderD128" else real_exists(path)
+        def is_file(path):
+            return True if str(path).replace("\\", "/") == "/usr/lib/x86_64-linux-gnu/dri/i965_drv_video.so" else real_is_file(path)
+        def probe(*args, **kwargs):
+            elapsed[0] += 25
+            return {"fps": 30, "duration": 200}
+        def run(command, **kwargs):
+            Path(command[-1]).write_bytes(b"incomplete")
+            elapsed[0] += kwargs["timeout"]
+            raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+        with mock.patch.object(mod, "cache_home"), mock.patch.object(mod, "trim_cache"), \
+             mock.patch.object(mod.time, "monotonic", side_effect=lambda: elapsed[0]), \
+             mock.patch.object(mod.Path, "exists", autospec=True, side_effect=exists), \
+             mock.patch.object(mod.Path, "is_file", autospec=True, side_effect=is_file), \
+             mock.patch.object(mod, "probe", side_effect=probe), \
+             mock.patch.object(mod.subprocess, "run", side_effect=run) as execute:
+            with self.assertRaisesRegex(OSError, "playback_copy_deadline_exceeded"):
+                mod.build(src)
+            self.assertEqual(execute.call_count, 1)
+        self.assertLessEqual(elapsed[0], mod.JOB_TIMEOUT)
+        self.assertEqual(list(mod.CACHE.glob("*")), [])
 
     def test_queue_has_one_worker_and_a_hard_pending_limit(self):
         now = time.monotonic()
