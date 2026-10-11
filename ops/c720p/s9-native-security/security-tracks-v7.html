@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta http-equiv="Cache-Control" content="no-store">
+<meta http-equiv="Referrer-Policy" content="no-referrer">
+<title>Security · Tracks</title>
+<style>
+:root{color-scheme:dark;--bg:#0e151e;--panel:#131f2b;--raised:#1b2b39;--border:#2d414f;--ink:#eef5f8;--muted:#94acb9;--accent:#80dccc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#app{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+header{height:73px;display:flex;align-items:center;justify-content:space-between;padding:16px 30px;border-bottom:1px solid #273947}
+h1{font-size:23px;font-weight:760;letter-spacing:-.04em;margin:0}#count{color:var(--muted);font-size:12px}
+.workspace{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0;overflow:hidden}
+aside{padding:26px 18px 28px 24px;border-right:1px solid #273947;overflow-y:auto;scrollbar-width:thin}
+.label{font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:.12em;color:#7999a9;margin:12px 0 12px}
+.segment{display:flex;flex-direction:column;gap:4px;margin:0 0 25px}
+.segment button{background:transparent;border:1px solid transparent;border-radius:9px;color:#c1d2da;text-align:left;padding:11px 12px}
+.segment button[aria-pressed=true]{background:#1c383d;color:#e3fff9;border-color:#385c5b}
+.segment button:hover:not([aria-pressed=true]){background:#192935}
+.colours{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
+.swatch{aspect-ratio:1;border:2px solid transparent;border-radius:10px;min-width:0;padding:0;background:var(--paint);box-shadow:inset 0 0 0 1px #ffffff33}
+.swatch[aria-pressed=true]{border-color:#ffffff;box-shadow:0 0 0 2px #6fdec6}
+.swatch[title="All colours"]{background:conic-gradient(#6ca5db,#da7171,#78b881,#f4d46a,#6ca5db)}
+.track-option{display:flex;align-items:center;gap:8px;margin-top:6px;color:#adc0cb;font-size:12px}
+.track-option input{accent-color:#7bdac5}
+.content{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:12px;flex:none;padding:18px 25px;border-bottom:1px solid #273947}
+.toolbar input,.toolbar select{background:#182938;border:1px solid #314854;border-radius:9px;padding:10px 12px;min-height:39px}
+.toolbar input{width:min(420px,100%);flex:1;min-width:90px}
+.toolbar select{max-width:190px}
+.results{min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain;padding:24px 25px 50px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));align-items:start;gap:19px}
+.card{border:1px solid #304451;background:var(--panel);border-radius:13px;overflow:hidden;min-width:0}
+.card:hover{border-color:#5d938d}
+.image{display:block;position:relative;aspect-ratio:16/9;background:#1e303d;overflow:hidden}
+.image img{width:100%;height:100%;object-fit:cover;position:relative}
+.image .fallback{display:grid;place-items:center;position:absolute;inset:0;color:#617e8d;font-size:35px}
+.card-body{padding:13px 15px 15px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.top b{font-weight:720;font-variant-numeric:tabular-nums;font-size:13px}
+.kind{font-size:10px;font-weight:650;color:#b6c9d2}
+.tracks{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0;min-height:26px}
+.track{background:#223846;border:1px solid #344f60;border-radius:7px;padding:5px 7px;display:inline-flex;align-items:center;gap:6px;font-size:11px}
+.colour-dot{width:9px;height:9px;border-radius:50%;background:var(--paint);display:inline-block;border:1px solid #ffffff55}
+.details{font-size:11px;color:var(--muted);min-height:18px}
+.open{margin-top:14px;width:100%;background:#1d3c43;color:#d8f8f0;border:1px solid #3b6462;padding:9px;border-radius:8px}
+.open:hover{background:#2c5156}
+#more{display:block;margin:28px auto 0;background:#203844;border:1px solid #47616d;padding:11px 22px;border-radius:9px}
+#noResults{padding:50px;text-align:center;color:var(--muted)}
+dialog{width:min(820px,94vw);max-height:88dvh;padding:15px;border:1px solid #3f5968;background:#12202c;color:var(--ink);border-radius:14px}
+dialog::backdrop{background:#03070cdb}
+.dialoghead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.dialoghead button{background:#263d4b;border:1px solid #496371;border-radius:8px;padding:7px 13px}
+video{display:block;width:100%;max-height:64dvh;background:black;border-radius:9px}
+#videoStatus{font-size:12px;color:var(--muted);margin-top:8px}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:#0d1720}::-webkit-scrollbar-thumb{background:#405b68;border:2px solid #0d1720;border-radius:8px}
+@media(max-width:900px){.workspace{grid-template-columns:175px minmax(0,1fr)}aside{padding:16px 12px}.toolbar{padding:11px}.results{padding:12px}}
+@media(max-width:650px){header{height:60px;padding:12px 14px}h1{font-size:19px}.workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}aside{border-right:0;border-bottom:1px solid #273947;padding:8px 12px;overflow:visible}.segment{flex-direction:row;flex-wrap:wrap;gap:5px;margin:5px 0}.segment button{padding:6px 9px;font-size:11px}.label{margin:5px 0}.colours{display:flex;gap:6px;margin:7px 0}.swatch{width:26px;height:26px;flex:0 0 26px}.track-option{margin:4px 0 7px}.toolbar{flex-wrap:wrap;gap:7px}.toolbar input{flex-basis:100%}.grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:10px}}
+</style></head>
+<body>
+<div id="app"><header><h1>Tracks & clothing</h1><span id="count">Loading…</span></header>
+<div class="workspace"><aside>
+<div class="label">Category</div>
+<div class="segment" id="categories">
+<button type="button" data-kind="all" aria-pressed="true">All recordings</button>
+<button type="button" data-kind="tracked" aria-pressed="false">With tracks</button>
+<button type="button" data-kind="people" aria-pressed="false">People</button>
+<button type="button" data-kind="group" aria-pressed="false">Groups</button>
+<button type="button" data-kind="vehicle" aria-pressed="false">Vehicles</button>
+<button type="button" data-kind="animal" aria-pressed="false">Animals</button>
+</div>
+<div class="label">Upper clothing</div>
+<div id="colours" class="colours"></div>
+<label class="track-option"><input id="reviewed" type="checkbox"> Scanned clips only</label>
+</aside>
+<div class="content"><div class="toolbar">
+<input id="search" type="search" placeholder="Search date, colour, clip, ID…" aria-label="Search recording observations" autocomplete="off">
+<select id="day" aria-label="Filter by day"><option value="all">All dates</option></select>
+<select id="order" aria-label="Sort records"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="tracks">Most tracks</option></select>
+</div>
+<div class="results" id="results"><div class="grid" id="grid"></div><div id="noResults" hidden>No matching recordings</div><button id="more" type="button" hidden>Show more</button></div>
+</div></div></div>
+<dialog id="viewer" aria-label="Original camera clip"><div class="dialoghead"><strong id="videoTitle">S9+ recording</strong><button type="button" id="close">Close</button></div><video id="video" controls playsinline preload="metadata"></video><div id="videoStatus"></div></dialog>
+<script id="s9v7-tracks-script">
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const valid=/^motion_[0-9]{13}[.]mp4$/;
+const palette={black:'#252d34',white:'#edf2f7',gray:'#98a5af',red:'#d76f6a',orange:'#de9a59',yellow:'#e9d36e',green:'#6ab587',blue:'#70a9d7',purple_or_pink:'#b88ecb',brown:'#aa8162'};
+const make=(tag,cls,txt)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(txt!==undefined)el.textContent=String(txt);return el};
+const relay=()=>{if(window.C720PSecureRelay?.fetch&&window.C720PSecureRelay?.url)return window.C720PSecureRelay;
+try{if(window.parent!==window&&window.parent.location.origin===location.origin&&window.parent.C720PSecureRelay?.fetch)return window.parent.C720PSecureRelay}catch(_){}return null};
+const fmtColour=c=>String(c||'unknown').replaceAll('_',' ');
+const isReviewed=r=>['sampled_tracks_available','none_detected_in_sampled_frames'].includes(r.anonymous_tracking_status);
+const trackCount=r=>Array.isArray(r.anonymous_tracks)?r.anonymous_tracks.length:Number(r.anonymous_track_count)||0;
+const dayOf=r=>{const ms=Number(String(r.clip_no||'').slice(7,20));const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms));const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day};
+const timeOf=r=>new Date(Number(r.clip_no.slice(7,20))).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit'});
+const category=r=>{const g=String(r.scene_category||'').toLowerCase(),tags=Array.isArray(r.content_categories)?r.content_categories.map(String):[];
+if(g==='multiple_people'||Number(r.person_count)>1)return 'Group';
+if(Number(r.person_count)>0||g==='one_person')return 'Person';
+if(g.includes('vehicle')||tags.includes('vehicle'))return 'Vehicle';if(g.includes('animal')||tags.includes('animal'))return 'Animal';return 'Motion'};
+const matchesKind=r=>{const k=state.kind;if(k==='all')return true;if(k==='tracked')return trackCount(r)>0;if(k==='people')return Number(r.person_count)>0;if(k==='group')return category(r)==='Group';if(k==='vehicle')return category(r)==='Vehicle';if(k==='animal')return category(r)==='Animal';return true};
+const state={all:[],kind:'all',colour:'all',day:'all',reviewed:false,query:'',order:'new',limit:48,busy:false};
+let playerToken=0;
+async function thumbnail(img,r){try{const api=relay();if(api?.url)img.src=await api.url('/new/saved/snap/'+encodeURIComponent(r.clip_no+'.thumb.jpg'))}catch(_){
+img.src='/local/frontyard-security-new/s9-phone-thumbs/'+encodeURIComponent(r.clip_no)+'.thumb.jpg'}}
+function colourPill(track){const c=String(track.upper_clothing_colour||'');const name=String(track.id||'');
+const el=make('span','track');const dot=make('i','colour-dot');dot.style.setProperty('--paint',palette[c]||'#677b88');el.append(dot,make('span','',name.replace('Person ','P')+' · '+fmtColour(c)));return el}
+function card(r){const el=make('article','card'),pic=make('div','image'),img=make('img');img.loading='lazy';img.decoding='async';img.alt='Clip preview';
+pic.append(make('div','fallback','▣'),img);el.append(pic);
+const body=make('div','card-body'),head=make('div','top'),c=category(r);
+head.append(make('b','',dayOf(r)+' · '+timeOf(r)),make('span','kind',c));body.append(head);
+const wrap=make('div','tracks'),tracks=Array.isArray(r.anonymous_tracks)?r.anonymous_tracks:[];
+for(const track of tracks.slice(0,9))if(/^Person (?:[1-9]|[1-5][0-9]|6[0-4])$/.test(String(track.id||'')))wrap.append(colourPill(track));
+if(!wrap.children.length)wrap.append(make('span','kind',isReviewed(r)?'No tracks in sampled frames':'Awaiting track scan'));
+body.append(wrap);
+const stats=make('div','details',((Number(r.person_count)||0)+' people max')+'  ·  '+(Number(r.sampled_frames)||0)+' sampled frames');
+body.append(stats);
+const open=make('button','open','Play clip');open.type='button';open.addEventListener('click',()=>play(r));body.append(open);
+el.append(body);thumbnail(img,r);return el}
+function matches(r){if(!matchesKind(r))return false;if(state.reviewed&&!isReviewed(r))return false;
+if(state.day!=='all'&&dayOf(r)!==state.day)return false;
+const tracks=Array.isArray(r.anonymous_tracks)?r.anonymous_tracks:[];
+if(state.colour!=='all'&&!tracks.some(t=>t.upper_clothing_colour===state.colour))return false;
+if(state.query){const q=[r.clip_no,dayOf(r),r.timestamp,r.scene_category,...tracks.map(t=>[t.id,t.upper_clothing_colour].join(' '))].join(' ').toLowerCase();
+if(!q.includes(state.query))return false}
+return true}
+function render(){let entries=state.all.filter(matches);
+entries.sort((a,b)=>state.order==='tracks'?trackCount(b)-trackCount(a)||b.clip_no.localeCompare(a.clip_no):
+state.order==='old'?a.clip_no.localeCompare(b.clip_no):b.clip_no.localeCompare(a.clip_no));
+const grid=$('grid');grid.replaceChildren();
+for(const r of entries.slice(0,state.limit))grid.append(card(r));
+$('more').hidden=entries.length<=state.limit;
+$('more').textContent='Show more · '+(entries.length-state.limit)+' left';
+$('noResults').hidden=entries.length!==0;
+$('count').textContent=entries.length+' clips';
+}
+function dayOptions(){const select=$('day'),days=[...new Set(state.all.map(dayOf))].sort().reverse();select.replaceChildren();
+const all=make('option','','All dates');all.value='all';select.append(all);
+for(const d of days){const opt=make('option','',d);opt.value=d;select.append(opt)}
+if(!days.includes(state.day))state.day='all';select.value=state.day}
+async function play(r){const api=relay(),token=++playerToken,v=$('video');v.pause();v.removeAttribute('src');v.load();$('videoTitle').textContent=dayOf(r)+' · '+timeOf(r);
+$('videoStatus').textContent='Loading…';if(!$('viewer').open)$('viewer').showModal();
+try{if(!api?.url)throw Error('relay');const signed=await api.url('/new/saved/clip/'+encodeURIComponent(r.clip_no));if(token!==playerToken)return;v.src=signed;v.load();$('videoStatus').textContent=''}
+catch(_){if(token===playerToken)$('videoStatus').textContent='Recording unavailable'}}
+async function reload(){if(state.busy)return;state.busy=true;
+try{const api=relay();if(!api?.fetch)throw Error('relay');const resp=await api.fetch('/new/api/saved',{cache:'no-store'});
+if(!resp.ok)throw Error('not_found');const j=await resp.json();if(!Array.isArray(j.events)||j.archive_mode!=='S9-microSD-only')throw Error('index');
+state.all=j.events.filter(r=>valid.test(String(r.clip_no||'')));dayOptions();render()}
+catch(_){$('count').textContent='Archive unavailable';if(!state.all.length)$('noResults').hidden=false}
+finally{state.busy=false}}
+const colours=$('colours'),all=make('button','swatch');all.type='button';all.title='All colours';all.setAttribute('aria-label','All clothing colours');all.setAttribute('aria-pressed','true');all.dataset.colour='all';colours.append(all);
+for(const [name,paint] of Object.entries(palette)){const el=make('button','swatch');el.type='button';el.title=fmtColour(name);el.setAttribute('aria-label',fmtColour(name));el.setAttribute('aria-pressed','false');el.dataset.colour=name;el.style.setProperty('--paint',paint);colours.append(el)}
+colours.addEventListener('click',e=>{const b=e.target.closest('button[data-colour]');if(!b)return;state.colour=b.dataset.colour;state.limit=48;
+for(const x of colours.querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));render()});
+$('categories').addEventListener('click',e=>{const b=e.target.closest('button[data-kind]');if(!b)return;state.kind=b.dataset.kind;state.limit=48;
+for(const x of $('categories').querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));render()});
+$('reviewed').addEventListener('change',e=>{state.reviewed=e.target.checked;state.limit=48;render()});
+$('day').addEventListener('change',e=>{state.day=e.target.value;state.limit=48;render()});
+$('order').addEventListener('change',e=>{state.order=e.target.value;render()});
+$('search').addEventListener('input',e=>{state.query=e.target.value.toLowerCase().trim().slice(0,100);state.limit=48;render()});
+$('more').addEventListener('click',()=>{state.limit+=48;render()});
+$('close').addEventListener('click',()=>$('viewer').close());
+$('viewer').addEventListener('close',()=>{++playerToken;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
+reload();
+})();
+</script>
+<div style="position:fixed;bottom:4px;right:10px;color:#647c89;font-size:10px;pointer-events:none">SECURITY V7</div>
+</body></html>
