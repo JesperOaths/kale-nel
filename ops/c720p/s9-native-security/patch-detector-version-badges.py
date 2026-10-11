@@ -18,7 +18,7 @@ OLD="button.type='button';\n    const img=tag('img');"
 NEW="button.type='button';\n    button.dataset.clipNo=name;\n    const img=tag('img');"
 MARK='<script id="s9-detector-version-badges-v1">'
 STYLES='''<style id="s9-detector-version-badges-style-v1">
-#s9-date-folders .s9-detector-badge{display:inline-block!important;font-size:11px!important;line-height:1.35!important;margin-top:5px;padding:4px 7px;border-radius:6px;font-weight:800;white-space:normal!important;overflow-wrap:anywhere}
+#s9-date-folders .s9-detector-badge{display:inline-block!important;font-size:10px!important;line-height:1.15!important;margin-top:2px;padding:3px 5px;border-radius:5px;font-weight:700;white-space:normal!important;overflow-wrap:anywhere}
 #s9-date-folders .s9-detector-legacy{background:#6c4527;color:#ffe3bb;border:1px solid #b77f48}
 #s9-date-folders .s9-detector-prior{background:#223c5c;color:#c5deff;border:1px solid #719ac5}
 #s9-date-folders .s9-detector-current{background:#164b48;color:#adfce8;border:1px solid #4dbaa6}
@@ -51,9 +51,9 @@ function decorate(){
   const guide=document.createElement('div');
   guide.id='s9-detector-version-guide';
   guide.textContent='Detector capture versions: amber = legacy before 11 Oct 04:59:57; blue = v1 garden person gate from 04:59:57 to 06:26:36; teal = v2 requiring two independent person detections after 06:26:36 (Amsterdam time). Model outputs are not verified human identification; rescanning never changes the capture version.';
-  host.insertBefore(guide,host.children[2]||null);
+  host.append(guide);
  }
- host.querySelectorAll('.s9-folder-clip[data-clip-no]').forEach(button=>{
+ host.querySelectorAll('.s9-folder-clip[data-clip-no],.s9-v4-clip[data-clip-no]').forEach(button=>{
   const name=button.dataset.clipNo;
   const version=generation(name);
   if(button.dataset.detectorVersion===version[0])return;
@@ -62,7 +62,7 @@ function decorate(){
   span.className='s9-detector-badge s9-detector-'+version[0];
   span.textContent=version[1];
   span.title='Recording generation inferred from the clip timestamp and actual installed APK date. Exact older build is unknown.';
-  const copy=button.querySelector('.s9-folder-copy');
+  const copy=button.querySelector('.s9-folder-copy,.s9-v4-copy');
   if(!copy)return;
   const previous=copy.querySelector('.s9-detector-badge');if(previous)previous.remove();
   copy.append(span);
@@ -90,7 +90,8 @@ def patch(content):
  existing=content[script_start:script_end]
  if OLD in existing:
   content=content[:script_start]+existing.replace(OLD,NEW,1)+content[script_end:]
- elif NEW not in existing:raise ValueError('existing_virtual_folder_card_layout_unknown')
+ elif NEW not in existing and "b.dataset.clipNo=name" not in existing:
+  raise ValueError('existing_virtual_folder_card_layout_unknown')
  found=content.count(MARK)
  if found==1:
   if content.count('id="s9-detector-version-badges-style-v1"')!=1:raise ValueError('partial_badge_install')
