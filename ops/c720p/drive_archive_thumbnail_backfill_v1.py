@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import re
+import urllib.request
 import shutil
 import subprocess
 import sys
@@ -26,7 +27,9 @@ BASE=HOME/"c720p-home-hub"
 BIN=BASE/"bin"
 CONFIG=BASE/"config/drive-security-archive.json"
 INDEX=BASE/"state/drive-security-archive.json"
-CACHE=BASE/"drive-archive-thumbs/new"
+DISK_CACHE=BASE/"drive-archive-thumbs/new"
+CACHE=Path("/tmp/c720p-drive-archive-thumbs-new")
+BACKEND=BIN/"c720p-drive-security-archive.py"
 STATUS=BASE/"state/google-drive-thumbnail-backfill-v1.json"
 SCRIPT=BIN/"c720p-drive-archive-thumb-backfill-v1.py"
 UNIT=HOME/".config/systemd/user"
@@ -60,8 +63,11 @@ def valid(path):
         with path.open("rb") as fd:return fd.read(2)==b"\xff\xd8"
     except OSError:return False
 
+def ready(snapshot):
+    return valid(DISK_CACHE/snapshot) or valid(CACHE/snapshot)
+
 def coverage(rows):
-    ready=sum(valid(CACHE/row["snapshot_name"]) for row in rows)
+    ready=sum(ready(row["snapshot_name"]) for row in rows)
     return {"verified_clips":len(rows),"thumbnails_ready":ready,"remaining":len(rows)-ready}
 
 def atomic_status(data):
@@ -109,15 +115,15 @@ def batch(max_items,video_limit):
     for key in ("rclone","rclone_config","remote","folders"):
         if key not in cfg:raise RuntimeError("Drive config missing "+key)
     remote=remote_inventory(cfg)
-    pending=[row for row in rows if not valid(CACHE/row["snapshot_name"])]
+    pending=[row for row in rows if not ready(row["snapshot_name"])]
     # Prefer small remote JPEGs before downloading any legacy videos.
     pending.sort(key=lambda row:row["snapshot_name"] not in remote)
     before=coverage(rows)
     success=[];errors=[];videos=0
     for row in pending:
         if len(success)+len(errors)>=max_items:break
-        if shutil.disk_usage(CACHE).free<60_000_000:
-            errors.append({"clip":"<disk>","reason":"root_reserve_below_60mb"})
+        if shutil.disk_usage(CACHE).free<300_000_000:
+            errors.append({"clip":"<disk>","reason":"tmpfs_reserve_below_300mb"})
             break
         snap=row["snapshot_name"];clip=row["remote_name"]
         with tempfile.TemporaryDirectory(prefix=".drive-thumb-",dir=CACHE) as t:
@@ -130,9 +136,9 @@ def batch(max_items,video_limit):
                     length=remote[clip]
                     tmpfs=Path("/tmp")
                     free_tmp=shutil.disk_usage(tmpfs).free
-                    free_root=shutil.disk_usage(CACHE).free
+                    free_ram=shutil.disk_usage(CACHE).free
                     if not (0<length<=MAX_VIDEO_BYTES and free_tmp>=length+250_000_000
-                            and free_root>=60_000_000):
+                            and free_ram>=length+250_000_000):
                         errors.append({"clip":clip,"reason":"insufficient_temp_space_or_oversized_video"})
                         continue
                     videos+=1
@@ -146,7 +152,7 @@ def batch(max_items,video_limit):
                     errors.append({"clip":clip,"reason":"preview_source_not_accessible"})
                     continue
                 target=CACHE/snap
-                if valid(target):continue
+                if ready(snap):continue
                 os.replace(jpg,target)
                 if not valid(target):raise RuntimeError("thumbnail_validation_failed")
                 success.append({"clip":clip,"method":method})
@@ -166,13 +172,34 @@ def batch(max_items,video_limit):
     print(json.dumps(result,separators=(",",":")))
     return 0
 
+def backend_with_tmpfs(text):
+    if "C720P_DRIVE_RAM_THUMB_V1" in text:return text
+    marker="if root in f.parents and f.is_file():self.local_file(f,'image/jpeg');return"
+    if text.count(marker)!=1:raise RuntimeError("archive snapshot route anchor changed")
+    replacement=marker+"""
+    # C720P_DRIVE_RAM_THUMB_V1: validated transient Drive JPEGs; original files
+    # stay in Google Drive and the existing persistent thumbnail cache.
+    if cam=="new":
+     ram_root=pathlib.Path("/tmp/c720p-drive-archive-thumbs-new").resolve()
+     ram=(ram_root/n).resolve()
+     if ram_root in ram.parents and ram.is_file() and not ram.is_symlink() and 2500<=ram.stat().st_size<=8_000_000:
+      self.local_file(ram,'image/jpeg');return"""
+    data=text.replace(marker,replacement,1)
+    compile(data,str(BACKEND),"exec")
+    return data
+
 def install():
     if not INDEX.exists() or not CONFIG.exists():raise RuntimeError("required verified Drive configuration missing")
+    if shutil.disk_usage("/").free<12_000_000:raise RuntimeError("C720P root free space below safe install floor")
     rows=verified_rows()
     if not rows:raise RuntimeError("no verified Drive clips; refusing empty install")
     UNIT.mkdir(parents=True,exist_ok=True);BIN.mkdir(parents=True,exist_ok=True)
     backup=BASE/"backups/drive-archive-thumb-backfill-v1"/datetime.datetime.now().strftime("%Y%m%dT%H%M%SZ")
+    if not BACKEND.is_file():raise RuntimeError("original Drive archive backend unavailable")
+    original_backend=BACKEND.read_text()
+    patched_backend=backend_with_tmpfs(original_backend)
     staged=[
+      (BACKEND,patched_backend),
       (SCRIPT,Path(__file__).read_text()),
       (SERVICE,f"""[Unit]
 Description=C720P safe historical Google Drive thumbnail backfill
@@ -213,7 +240,8 @@ WantedBy=timers.target
             temp.write_text(text)
             if path==SCRIPT:temp.chmod(0o755)
             os.replace(temp,path)
-        subprocess.run(["/usr/bin/python3","-m","py_compile",str(SCRIPT)],check=True,timeout=10)
+        subprocess.run(["/usr/bin/python3","-m","py_compile",str(SCRIPT),str(BACKEND)],check=True,timeout=12)
+        subprocess.run(["systemctl","--user","restart","c720p-drive-security-archive.service"],check=True,timeout=25)
         subprocess.run(["systemctl","--user","daemon-reload"],check=True,timeout=20)
         subprocess.run(["systemctl","--user","enable","--now",TIMER.name],check=True,timeout=30)
         t=subprocess.run(["systemctl","--user","is-active",TIMER.name],capture_output=True,text=True,timeout=8)
@@ -223,9 +251,20 @@ WantedBy=timers.target
             if contents is None:path.unlink(missing_ok=True)
             else:path.write_bytes(contents)
         subprocess.run(["systemctl","--user","daemon-reload"],timeout=20)
+        subprocess.run(["systemctl","--user","restart","c720p-drive-security-archive.service"],timeout=25)
         raise
+    # A first small sample confirms the authenticated Drive JPEG route, new
+    # tmpfs cache and archive-serving fallback all function together.
+    batch(1,0)
+    new_cached=next((row for row in rows if valid(CACHE/row["snapshot_name"])),None)
+    if not new_cached:raise RuntimeError("Drive worker failed to populate a fresh preview")
+    sample_url="http://127.0.0.1:8794/new/saved/snap/"+new_cached["snapshot_name"]
+    with urllib.request.urlopen(urllib.request.Request(sample_url,method="HEAD"),timeout=12) as response:
+        if response.status!=200 or "image/jpeg" not in response.headers.get("Content-Type",""):
+            raise RuntimeError("Archive HTTP thumbnail readback failed")
     print(json.dumps({"installed":True,"version":VERSION,"verified_drive_clips":len(rows),
-                      "coverage":coverage(rows),"timer_active":True,"backup":str(backup)},separators=(",",":")))
+                      "coverage":coverage(rows),"http_preview_verified":True,
+                      "timer_active":True,"backup":str(backup)},separators=(",",":")))
 
 def main():
     parser=argparse.ArgumentParser()
