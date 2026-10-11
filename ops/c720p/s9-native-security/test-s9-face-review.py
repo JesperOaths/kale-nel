@@ -57,6 +57,21 @@ class FaceReviewTests(unittest.TestCase):
   malicious["face_candidates"]=[{}]*50
   self.assertEqual(self.catalog.safe_face_review_metadata(malicious)["face_candidates"],[])
 
+ def test_deep_face_rescue_metadata_is_bounded_and_nonbiometric(self):
+  meta={"face_review_version":"s9_face_review_v1",
+    "face_review_status":"no_frontal_face_in_samples",
+    "face_review_sampled_frames":36,
+    "face_deep_review_version":"s9_onphone_36_samples_v1",
+    "face_candidates":[],"embedding":[.2]*128}
+  result=self.catalog.safe_face_review_metadata(meta)
+  self.assertEqual(result["face_review_sampled_frames"],36)
+  self.assertEqual(result["face_deep_review_version"],"s9_onphone_36_samples_v1")
+  self.assertNotIn("embedding",json.dumps(result))
+  meta["face_review_sampled_frames"]=49
+  result=self.catalog.safe_face_review_metadata(meta)
+  self.assertIsNone(result["face_review_sampled_frames"])
+  self.assertIsNone(result["face_deep_review_version"])
+
  def test_api_has_labels_only(self):
   class Handler:
    def __init__(self):
