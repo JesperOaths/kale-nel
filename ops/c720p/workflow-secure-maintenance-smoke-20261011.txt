@@ -1,4 +1,0 @@
-GitHub C720P management gateway end-to-end smoke test
-Operation: agent-status
-Run date: 2026-10-11
-Expected action: authenticated private PostgreSQL enqueue, audit row, successful C720P execution
