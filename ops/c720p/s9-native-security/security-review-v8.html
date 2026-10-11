@@ -99,7 +99,25 @@ async function open(rec){
  if(!native.test(name(rec))){quality.textContent='Legacy clip: use Archive for playback; this view preserves its evidence metadata.';return}
  const r=relay();if(!r?.url){quality.textContent='Secure video relay unavailable';return}
  try{const url=await r.url('/new/saved/clip/'+encodeURIComponent(name(rec)));
- if(state.selected!==entryKey(rec))return;video.src=url;
+ if(state.selected!==entryKey(rec))return;
+ // When the native S9+ recorded a video pre-roll, play that short on-device
+ // 640x480 AVC segment FIRST and automatically hand off to original 4K footage.
+ // Missing/unsupported pre-rolls simply play the original (no blank clips).
+ let preFound=false;
+ const prePath='/new/saved/preroll/'+encodeURIComponent(name(rec));
+ if(r.fetch)try{const check=await r.fetch(prePath,{method:'HEAD',cache:'no-store'});preFound=check.ok;}catch(_){}
+ if(state.selected!==entryKey(rec))return;
+ if(preFound){
+  try{
+   const early=await r.url(prePath);
+   video.src=early;
+   quality.textContent='Pre-event buffered video · automatically continues into original 4K';
+   video.addEventListener('ended',()=>{
+    if(state.selected!==entryKey(rec))return;
+    video.src=url;video.play().catch(()=>{});
+   },{once:true});
+  }catch(_){video.src=url;}
+ }else video.src=url;
  video.addEventListener('loadedmetadata',()=>{quality.textContent='Original video · '+video.videoWidth+' × '+video.videoHeight+' · '+(Number.isFinite(video.duration)?video.duration.toFixed(1)+'s':'unknown duration')+' · monitoring displayed frames';},{once:true});
  let count=0,start=0,reported=0;const cb=(now,meta)=>{if(state.activeVideo!==video||!video.isConnected)return;
  if(!start)start=now;count++;
