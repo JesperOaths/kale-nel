@@ -20,7 +20,12 @@ public final class GardenPersonTrackGate {
  public Decision offer(long now,long jpegAt,float score,float[] box,int recentMotionCells){
   if(now<1||jpegAt<1||jpegAt>now+200||!Float.isFinite(score)||
      score<MIN_SCORE||!valid(box)){
-   reset();rejectedWeak++;return Decision.WEAK;
+   // A single missed GPU observation must not erase a short but real
+   // walk-by. Expire it by age instead; a later positive still needs to
+   // match the exact same spatial object and local motion.
+   rejectedWeak++;
+   if(firstAt>0&&(now<firstAt||now-firstAt>MAX_PAIR_MS))reset();
+   return Decision.WEAK;
   }
   if(firstAt>0&&jpegAt<=firstJpegAt){duplicateFrames++;return Decision.DUPLICATE_JPEG;}
   boolean motion=recentMotionCells>=1;
