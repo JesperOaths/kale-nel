@@ -483,6 +483,45 @@ public final class ClipClassifier {
      }
     }finally{bitmap.recycle();}
    }
+    // Closest-sync frames are efficient for classification, but may be
+    // keyframes distant from the triggering event. Inspect two bounded,
+    // actual-time nearest frames for the cover image only, preserving video.
+    int nearestFrameAttempts=0,nearestFrameDecoded=0;
+    if(bestMotionTimeMs>=0&&duration>700){
+     long[] offsets={0L,320L};
+     for(long offset:offsets){
+      long requested=Math.min(duration-1,Math.max(0,bestMotionTimeMs+offset));
+      nearestFrameAttempts++;
+      Bitmap near=null;
+      try{
+       near=media.getFrameAtTime(requested*1000,MediaMetadataRetriever.OPTION_CLOSEST);
+       if(near==null)continue;
+       nearestFrameDecoded++;
+       float[] candidateBox=null;float personScore=0;
+       for(Detection d:detect(near)){
+        if(!"person".equals(d.label)||d.score<.30f||d.box==null||d.box.length!=4)continue;
+        float center=(d.box[1]+d.box[3])*.5f;
+        if(d.box[2]>=.64f&&center>=.045f&&center<=.955f&&d.score>personScore){
+         personScore=d.score;candidateBox=d.box;
+        }
+       }
+       EventFrameRanker.Rank exactRank=EventFrameRanker.rank(
+           sampleSharpnessGarden(near),48,27,personScore,0);
+       rankedThumbnailCandidates++;
+       if(EventFrameRanker.better(exactRank,bestFrameRank)){
+        Bitmap cover=makeGardenThumbnail(near,candidateBox);
+        if(best!=null)best.recycle();
+        best=cover;bestFrameRank=exactRank;bestScore=exactRank.value;
+        bestMotionTimeMs=requested;
+        bestGardenPerson=candidateBox!=null;
+        bestGardenPersonScore=personScore;
+       }
+      }catch(Exception seekError){
+       Log.w("S9_NATIVE_SECURITY","thumbnail_nearest_frame_failed",seekError);
+      }finally{if(near!=null)near.recycle();}
+     }
+    }
+
    JSONArray categories=new JSONArray();
    String scene="motion_other";
    // An isolated multi-box frame is not reliable evidence for two people.
@@ -539,6 +578,9 @@ public final class ClipClassifier {
    result.put("thumbnail_source_time_ms",bestMotionTimeMs>=0?bestMotionTimeMs:JSONObject.NULL);
     result.put("thumbnail_rank_version",EventFrameRanker.VERSION);
     result.put("thumbnail_candidate_frames",rankedThumbnailCandidates);
+    result.put("thumbnail_nearest_frame_attempts",nearestFrameAttempts);
+    result.put("thumbnail_nearest_frame_decoded",nearestFrameDecoded);
+    result.put("thumbnail_accurate_seek_requested",nearestFrameAttempts>0);
     result.put("thumbnail_focus_score",bestScore);
     result.put("thumbnail_sharpness",bestFrameRank==null?JSONObject.NULL:bestFrameRank.sharpness);
     result.put("thumbnail_contrast",bestFrameRank==null?JSONObject.NULL:bestFrameRank.contrast);
