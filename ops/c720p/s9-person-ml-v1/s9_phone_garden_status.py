@@ -13,6 +13,13 @@ _URL="http://127.0.0.1:18808/status"
 _LOCK=threading.Lock()
 _LAST_COUNT=None
 _LAST_CHANGED_AT=0
+# Retain compatibility with the original dashboard while accepting real on-phone
+# detector upgrades. Unknown versions remain unavailable, never silently green.
+KNOWN_DETECTORS=frozenset((
+    "garden_roi_gpu_person_gate_v1",
+    "garden_roi_gpu_two_frame_person_gate_v2",
+    "person_spatial_motion_corroborated_v7",
+))
 
 def _sensor_value(value,lowest,highest):
     # Telemetry is optional on older Camera2 APKs, never fabricate 30 FPS.
@@ -25,7 +32,7 @@ def from_phone(phone,now_ms=None):
     if now_ms is None:now_ms=int(time.time()*1000)
     if (not isinstance(phone,dict) or phone.get("ok") is not True or
         phone.get("mode") not in ("watching","recording") or
-        phone.get("motion_detector")!="garden_roi_gpu_person_gate_v1" or
+        phone.get("motion_detector") not in KNOWN_DETECTORS or
         int(phone.get("last_frame_age_ms",999999))>9000):
         raise ValueError("on_phone_garden_model_unavailable")
     checked=int(phone.get("garden_person_gate_checked",0))
@@ -67,6 +74,13 @@ def from_phone(phone,now_ms=None):
       "motion_changed_ratio":phone.get("changed_ratio"),
       "motion_coherent_cells":phone.get("coherent_cells"),
       "garden_zone":phone.get("garden_zone","unknown"),
+      "detector_version":phone.get("motion_detector"),
+      "roi_mask_version":phone.get("garden_roi_mask_version"),
+      "person_gate_spatial":phone.get("garden_person_spatial_gate") is True,
+      "person_motion_corroboration":phone.get("garden_person_motion_corroboration") is True,
+      "person_unrelated_boxes":_sensor_value(phone.get("garden_person_unrelated_boxes"),0,1000000000),
+      "person_missing_local_motion":_sensor_value(phone.get("garden_person_no_local_motion"),0,1000000000),
+      "person_local_motion_cells":_sensor_value(phone.get("garden_person_last_local_motion_cells"),0,336),
       "model_check_age_ms":age,
       "camera_sensor":{
         "fps":_sensor_value(phone.get("sensor_result_fps"),0,120),
