@@ -48,6 +48,12 @@ def main():
    script="""(async()=>{
     const clip=__CLIP__;
     const url=await window.C720PSecureRelay.url('/new/saved/clip/'+clip);
+    const existingIframes=[...document.querySelectorAll('iframe')];
+    const preTestFrameCount=existingIframes.length;
+    if(__STRIP_IFRAMES__){
+      for(const frame of existingIframes)frame.remove();
+      for(const player of document.querySelectorAll('video'))player.pause();
+    }
     const v=document.createElement('video');
     v.muted=true;v.playsInline=true;v.preload='auto';v.controls=false;
     v.style.cssText='position:fixed;z-index:2147483600;bottom:0;right:0;width:480px;height:270px;object-fit:contain;background:#000';
@@ -89,14 +95,14 @@ def main():
       droppedFrames:q?.droppedVideoFrames,totalFrames:q?.totalVideoFrames,
       readyState:v.readyState,networkState:v.networkState,errors,
       mediaTimeFirst:seen[0]??null,mediaTimeLast:seen.at(-1)??null,
-      duration_ms:performance.now()-start,events,fetchProbe,signedURL,prefetchDiagnostic,
+      duration_ms:performance.now()-start,preTestFrameCount,diagnosticStrippedIframes:__STRIP_IFRAMES__,events,fetchProbe,signedURL,prefetchDiagnostic,
       mediaError:v.error?.message??null,isConnected:v.isConnected,
       srcLength:String(v.currentSrc||v.src).length,paused:v.paused,
       sourceUrlStart:String(v.currentSrc||v.src).slice(0,135),
       mediaCapabilities:typeof navigator.mediaCapabilities};
     v.pause();v.removeAttribute('src');v.load();v.remove();if(blobURL)URL.revokeObjectURL(blobURL);
     return result;
-   })()""".replace("__CLIP__",json.dumps(clip)).replace("__PREFETCH__","true" if os.environ.get("S9_TEST_PREFETCH")=="1" else "false")
+   })()""".replace("__CLIP__",json.dumps(clip)).replace("__PREFETCH__","true" if os.environ.get("S9_TEST_PREFETCH")=="1" else "false").replace("__STRIP_IFRAMES__","true" if os.environ.get("S9_TEST_STRIP_IFRAMES")=="1" else "false")
    r=evaluate(tab,script,True)
    print("S9_REAL_KIOSK_4K_PLAYBACK_PERF",json.dumps(r.get("value",r),sort_keys=True),flush=True)
   finally:
