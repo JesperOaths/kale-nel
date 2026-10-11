@@ -73,7 +73,10 @@ try:
       videoSource:video?.currentSrc||null,
       playable:video?.readyState??null,
       controllerPresent:!!f.contentWindow.C720PSecurityVideo,
-      browserError:video?.error?.message||null};
+      browserError:video?.error?.message||null,
+      scripts:[...f.contentDocument.querySelectorAll('script[src]')].map(x=>x.getAttribute('src')),
+      importedResource:f.contentWindow.performance.getEntriesByType('resource').filter(x=>x.name.includes('security-video-playback')).map(x=>({url:x.name,duration:x.duration,transfer:x.transferSize})),
+      iframeSecurityOrigin:f.contentWindow.location.origin};
   })()""")
   print('V9_CDP_EVIDENCE_PLAYER',json.dumps(readback),flush=True)
 finally:
