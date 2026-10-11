@@ -35,7 +35,7 @@ class Tests(unittest.TestCase):
                FIXTURE.replace('id="panel-saved"','id="panel-gone"')):
    with self.assertRaises(ValueError):MOD.patch(page)
  def test_face_gallery_asset_is_local_and_signed_only(self):
-  source=(ROOT/'face-appearances.html').read_text()
+  source=(ROOT/'face-appearances.html.txt').read_text()
   for value in ('id="s9-faces-appearances-gallery-v1"','C720PSecureRelay',
                 '/new/api/saved','/new/saved/face/','/new/saved/clip/',
                 'data-kind="face"','data-kind="appearance"','data-kind="review"',
