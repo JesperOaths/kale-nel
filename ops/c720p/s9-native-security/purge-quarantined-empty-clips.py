@@ -105,7 +105,10 @@ def main():
    else:
     # Absolute, generated basename; never wildcard, recurse, or touch live.
     adb('shell','rm','-f',Q+name)
-    adb('shell','sh','-c','test ! -e "$1"','_',Q+name)
+    still_there=subprocess.run(['adb','-s',PHONE,'shell','stat','-c','%s',Q+name],
+      capture_output=True,timeout=25)
+    if still_there.returncode==0:
+     raise RuntimeError('clip_still_exists_after_purge')
     for suffix in SUFFIX:
      adb('shell','rm','-f',Q+name+suffix)
     r['status']='deleted'
