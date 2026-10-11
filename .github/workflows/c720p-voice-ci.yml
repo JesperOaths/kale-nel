@@ -14,6 +14,7 @@ on:
       - 'ops/c720p/deploy-fast-time-voice-20261011.py'
       - 'ops/c720p/deploy-fast-time-variants-voice-20261011.py'
       - 'ops/c720p/voice-acoustic-canary-20261011.py'
+      - 'ops/c720p/s5-office-voice-playback-canary-20261011.py'
       - 'ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py'
       - '.github/workflows/c720p-voice-ci.yml'
   workflow_dispatch:
@@ -32,5 +33,33 @@ jobs:
           python-version: '3.13'
       - name: Syntax and offline protocol/repair regression tests
         run: |
-          python -m py_compile ops/c720p/voice-assist-canary-20261010.py ops/c720p/voice-pipeline-diagnostic-20261010.py ops/c720p/reclaim-safe-cache-20261010.py ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py ops/c720p/apply-heygoogle-calibrated-threshold-v62.py ops/c720p/deploy-fast-time-voice-20261011.py ops/c720p/deploy-fast-time-variants-voice-20261011.py ops/c720p/voice-acoustic-canary-20261011.py
+          python -m py_compile ops/c720p/voice-assist-canary-20261010.py ops/c720p/voice-pipeline-diagnostic-20261010.py ops/c720p/reclaim-safe-cache-20261010.py ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py ops/c720p/apply-heygoogle-calibrated-threshold-v62.py ops/c720p/deploy-fast-time-voice-20261011.py ops/c720p/deploy-fast-time-variants-voice-20261011.py ops/c720p/voice-acoustic-canary-20261011.py ops/c720p/s5-office-voice-playback-canary-20261011.py
           python -m unittest discover -s ops/c720p/tests -p 'test_*.py' -v
+      - name: Compile Galaxy S5 AudioTrack playback runner for Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/s5-audio-ci/classes /tmp/s5-audio-ci/dex
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          path = Path("ops/c720p/s5-office-voice-playback-canary-20261011.py")
+          tree = ast.parse(path.read_text())
+          node = next(
+              n for n in tree.body
+              if isinstance(n, ast.Assign)
+              and any(isinstance(t, ast.Name) and t.id == "JAVA" for t in n.targets)
+          )
+          source = ast.literal_eval(node.value)
+          assert "AudioTrack" in source
+          assert "S5_AUDIO_RESULT" in source
+          Path("/tmp/s5-audio-ci/S5Play.java").write_text(source)
+          PY
+          SDK_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          ANDROID_JAR="$(find "$SDK_HOME/platforms" -maxdepth 2 -name android.jar | sort -V | tail -1)"
+          D8="$(find "$SDK_HOME/build-tools" -maxdepth 2 -name d8 -type f | sort -V | tail -1)"
+          test -s "$ANDROID_JAR"
+          test -x "$D8"
+          javac -source 8 -target 8 -bootclasspath "$ANDROID_JAR" -d /tmp/s5-audio-ci/classes /tmp/s5-audio-ci/S5Play.java
+          "$D8" --lib "$ANDROID_JAR" --min-api 23 --output /tmp/s5-audio-ci/dex /tmp/s5-audio-ci/classes/com/bruis/s5audio/S5Play.class
+          test -s /tmp/s5-audio-ci/dex/classes.dex
