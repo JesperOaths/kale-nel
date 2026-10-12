@@ -1,0 +1,26 @@
+name: C720P Camera Settings Inline V23
+
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-camera-settings-inline-v23.py'
+      - 'ops/c720p/s9-native-security/test-camera-settings-inline-v23.py'
+      - '.github/workflows/c720p-camera-settings-inline-v23-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-camera-settings-inline-v23.py'
+      - 'ops/c720p/s9-native-security/test-camera-settings-inline-v23.py'
+      - '.github/workflows/c720p-camera-settings-inline-v23-ci.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate native Camera2 control panel regression contracts
+        run: |
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-camera-settings-inline-v23.py
+          python3 ops/c720p/s9-native-security/test-camera-settings-inline-v23.py -v
