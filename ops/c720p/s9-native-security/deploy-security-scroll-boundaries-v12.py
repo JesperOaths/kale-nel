@@ -43,6 +43,19 @@ html,body{height:100%!important;max-height:100%!important;overflow:hidden!import
 }
 #s9v5-shell #panel-live .c720p-s9-live-only{padding-bottom:54px!important}
 #s9v5-shell #panel-controls>.controls{padding-bottom:40px!important}
+/* On current HA builds the legacy control panel is under #view, not #s9v5-shell.
+   The extra embedded control iframe occupied an entire viewport above the actual
+   controls, making the bottom of the settings panel unreachable. */
+#panel-controls{
+ overflow-y:auto!important;overflow-x:hidden!important;min-height:0!important;
+ overscroll-behavior-y:contain!important;scrollbar-gutter:stable!important;
+ scroll-padding-bottom:55px!important
+}
+#panel-controls #s9v22-camera-frame{display:none!important}
+#panel-controls>.controls{
+ box-sizing:border-box!important;display:block!important;height:auto!important;
+ min-height:0!important;overflow:visible!important;padding-bottom:55px!important
+}
 """,
  "frontyard-security-new/security-archive-v7.html":"""
 /* The iframe's actual client height, not its outer Home Assistant viewport. */
