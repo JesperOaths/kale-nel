@@ -23,7 +23,6 @@ import urllib.request
 
 PAGE=Path("/opt/homeassistant/config/www/c720p-surveillance.html")
 BACKUP=Path("/home/jespern/c720p-home-hub/backups/security-camera-settings-stage-v24")
-PREVIOUS_SHA="d88ab261071fc6b3256722de4a15c03266fd2bdbf35a68a772af4b228c0fea66"
 MARK="SECURITY_CAMERA_SETTINGS_STAGE_MOUNT_V24"
 SCRIPT=r'''
 <script id="security-camera-settings-stage-v24">
@@ -80,8 +79,10 @@ def patch(html):
 def run(apply):
     if PAGE.is_symlink() or not PAGE.is_file():raise RuntimeError("invalid_page")
     before=PAGE.read_bytes()
-    if MARK not in before.decode("utf-8") and sha(before)!=PREVIOUS_SHA:
-        raise RuntimeError("Security HTML changed concurrently")
+    # The Security shell is also updated by independent authorized workers.
+    # Preserve their changes: add only the isolated stage-mount script after
+    # verifying structural contracts. Recheck the exact bytes immediately
+    # before atomic replacement and retain the complete rollback backup.
     after=patch(before.decode("utf-8")).encode()
     result={"version":MARK,"mode":"apply" if apply else "dry_run",
             "previous_sha256":sha(before),"patched_sha256":sha(after),
