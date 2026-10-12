@@ -172,4 +172,30 @@ class FaceReviewTests(unittest.TestCase):
   self.assertIn("FaceSnapshots",src)
   self.assertNotIn("face_embedding", (PHONE/"s9_sd_proxy_extension.py").read_text())
 
+ def test_face_review_uses_original_microSD_4k_mp4_not_1080p_proxy(self):
+  """Face detections may scale working bitmaps, but originals must be S9 SD 4K."""
+  c=(HERE/"src/nl/kalenel/s9security/CameraService.java").read_text()
+  k=(HERE/"src/nl/kalenel/s9security/ClipClassifier.java").read_text()
+  face=(HERE/"src/nl/kalenel/s9security/S9FaceReview.java").read_text()
+  self.assertIn('folder=sd()',c)
+  self.assertIn('new File(root,"Security4K")',c)
+  self.assertIn('recorder.setVideoSize(3840,2160)',c)
+  self.assertIn('if(w!=3840||h!=2160)',c)
+  self.assertIn('validCompleted4K(File movie)',c)
+  self.assertIn('File video=new File(target,mp4name)',c)
+  self.assertIn('classifier.deepFaceReview(video,target,mp4name,meta)',c)
+  self.assertIn('decoder.setDataSource(mp4.getAbsolutePath())',k)
+  self.assertIn('media.setDataSource(mp4.getAbsolutePath())',k)
+  self.assertIn('METADATA_KEY_VIDEO_WIDTH',k)
+  self.assertIn('METADATA_KEY_VIDEO_HEIGHT',k)
+  # Scaled 960px only for face localization; final crop is from the original
+  # decoded 4K frame, never from the reduced browser playback stream.
+  self.assertIn('scaled=Bitmap.createScaledBitmap(frame,width,height,true)',face)
+  self.assertIn('int x=(int)(center.x*frame.getWidth()/width)',face)
+  self.assertIn('Bitmap face=crop(frame,x,y,size)',face)
+  self.assertNotIn('getFilesDir(),"1080',k)
+  self.assertNotIn('ffmpeg',k)
+  self.assertNotIn('adb',k)
+
+
 if __name__=="__main__":unittest.main(verbosity=2)
