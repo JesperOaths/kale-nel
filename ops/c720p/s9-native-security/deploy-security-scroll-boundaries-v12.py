@@ -193,7 +193,7 @@ def main():
   # The HA kiosk retained old iframe HTML under unchanged embedded URLs.
   # Change only allowlisted frontend page references, never media/API URLs.
   if rel=="c720p-surveillance.html":
-   allowed=re.compile(r"((?:security-archive-v7|security-review-v8|security-tracks-v7|security-face-folders-v22|clips)[.]html[?][^\\\\"'<>\\s]{1,230})")
+   allowed=re.compile(r'((?:security-archive-v7|security-review-v8|security-tracks-v7|security-face-folders-v22|clips)[.]html[?][A-Za-z0-9_&=%.-]{1,230})')
    found=allowed.findall(modified)
    if len(found)<4:raise RuntimeError("embedded_security_routes_missing")
    modified=allowed.sub(lambda m:m.group(1) if "scrollBoundary=v12" in m.group(1)
