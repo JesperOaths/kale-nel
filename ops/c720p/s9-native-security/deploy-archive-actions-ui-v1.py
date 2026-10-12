@@ -21,7 +21,7 @@ HTML=WWW/"frontyard-security-new/security-archive-v7.html"
 JS=WWW/"frontyard-security-new/archive-card-actions-v1.js"
 ROOT=WWW/"c720p-surveillance.html"
 BACK=Path("/home/jespern/c720p-home-hub/backups/security-archive-card-actions-ui-v1")
-PIN="1ed526dfa13a49910c384200eaa9fb3556db7614"
+PIN="4257f8c97c07f123e6a53e2d2a65444a33d75aed"
 URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/"+PIN+"/ops/c720p/s9-native-security/archive-card-actions-v1.js"
 MARKER="ARCHIVE_ACTIONS_V1_20261012"
 LOCAL_ANCHOR="b.addEventListener('click',()=>play(r));preview(img,r);return b;}"
