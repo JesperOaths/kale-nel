@@ -393,6 +393,85 @@ public final class ClipClassifier {
    return true;
   }finally{faces.close();decoder.release();}
  }
+
+ /** Restore anonymous movement observations in already reviewed native 4K clips.
+  * Reads original microSD media on the phone; changes only the verified JSON
+  * sidecar. It never overwrites facial review, snapshots, thumbnails, or MP4.
+  * Intended for a single idle-time clip on the serialized reviewer worker.
+  */
+ public synchronized boolean backfillMovementEvidence(File video,File folder,String name,
+                                                      JSONObject manifest)throws Exception{
+  if(video==null||folder==null||manifest==null||name==null||
+     !name.matches("motion_[0-9]{13}[.]mp4")||!video.isFile()||
+     !video.getParentFile().getCanonicalFile().equals(folder.getCanonicalFile())||
+     !name.equals(video.getName())||!name.equals(manifest.optString("name"))||
+     manifest.optLong("bytes",-1)!=video.length()||
+     manifest.optInt("width",0)!=3840||manifest.optInt("height",0)!=2160||
+     manifest.optInt("person_count",0)<=0)return false;
+  if(manifest.optString("movement_backfill_version").equals("s9_4k_clip_movement_v24"))return false;
+  JSONArray oldTracks=manifest.optJSONArray("anonymous_tracks");
+  if("sampled_box_tracklets_v1".equals(manifest.optString("anonymous_tracking_version"))&&
+     oldTracks!=null){
+   boolean complete=true;
+   for(int i=0;i<oldTracks.length();i++){
+    JSONObject t=oldTracks.optJSONObject(i);
+    if(t==null||!t.has("image_movement_direction")){complete=false;break;}
+   }
+   if(complete)return false;
+  }
+  String originalDigest=manifest.optString("sha256","");
+  if(!originalDigest.matches("[a-f0-9]{64}")||
+     !originalDigest.equalsIgnoreCase(digest(video)))
+   throw new IOException("movement_backfill_original_4k_sha_mismatch");
+  MediaMetadataRetriever media=new MediaMetadataRetriever();
+  AnonymousClipTracks tracks=new AnonymousClipTracks();
+  int decoded=0;
+  long duration;
+  try{
+   media.setDataSource(video.getAbsolutePath());
+   duration=Long.parseLong(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+   if(duration<1000||duration>120000||manifest.optLong("duration_ms",-1)!=duration)
+    throw new IOException("movement_backfill_invalid_duration");
+   init();
+   // Match the original 12-frame tracking model rather than inventing gait.
+   int frames=(int)Math.min(12,Math.max(6,(duration+1799L)/1800L));
+   for(int i=0;i<frames;i++){
+    long ms=(long)(((i+.5)/(double)frames)*duration);
+    Bitmap bitmap=media.getFrameAtTime(ms*1000,MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+    if(bitmap==null)continue;
+    try{
+     ArrayList<float[]> distinct=new ArrayList<>();
+     ArrayList<AnonymousClipTracks.Hit> hits=new ArrayList<>();
+     for(Detection d:detect(bitmap)){
+      if(!"person".equals(d.label)||d.score<.50f||d.box==null)continue;
+      boolean duplicate=false;
+      for(float[] box:distinct)if(samePersonBox(d.box,box)){duplicate=true;break;}
+      if(!duplicate){
+       distinct.add(d.box);
+       hits.add(new AnonymousClipTracks.Hit(d.box,d.score,upperClothingColour(bitmap,d.box)));
+      }
+     }
+     tracks.addFrame(ms,hits);
+     decoded++;
+    }finally{bitmap.recycle();}
+   }
+  }finally{media.release();}
+  if(decoded<3)throw new IOException("movement_backfill_insufficient_decoded_frames");
+  if(video.length()!=manifest.optLong("bytes",-1))
+   throw new IOException("movement_backfill_original_changed");
+  manifest.put("anonymous_tracking_version","sampled_box_tracklets_v1")
+   .put("anonymous_track_scope","this_recording_only")
+   .put("anonymous_id_not_verified_person",true)
+   .put("anonymous_track_count",tracks.appearances())
+   .put("anonymous_track_count_is_not_unique_people",true)
+   .put("anonymous_tracks",anonymousTracksJson(tracks))
+   .put("movement_backfill_version","s9_4k_clip_movement_v24")
+   .put("movement_backfill_decoded_frames",decoded)
+   .put("movement_backfill_source","original_4k_microSD")
+   .put("movement_backfill_identity","not_attempted");
+  writeJson(new File(folder,name+".verified.json"),manifest);
+  return true;
+ }
  public synchronized JSONObject process(File mp4, File folder, String name, String trigger, long motionEvents)throws Exception{
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
