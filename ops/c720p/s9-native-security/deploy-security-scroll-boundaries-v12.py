@@ -10,6 +10,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import tempfile
@@ -189,6 +190,14 @@ def main():
    modified=text[:start]+newblock+text[end+len("</style>"):]
   else:
    modified=text.replace("</head>",newblock+"\n</head>",1)
+  # The HA kiosk retained old iframe HTML under unchanged embedded URLs.
+  # Change only allowlisted frontend page references, never media/API URLs.
+  if rel=="c720p-surveillance.html":
+   allowed=re.compile(r"((?:security-archive-v7|security-review-v8|security-tracks-v7|security-face-folders-v22|clips)[.]html[?][^\\\\"'<>\\s]{1,230})")
+   found=allowed.findall(modified)
+   if len(found)<4:raise RuntimeError("embedded_security_routes_missing")
+   modified=allowed.sub(lambda m:m.group(1) if "scrollBoundary=v12" in m.group(1)
+                        else m.group(1)+"&scrollBoundary=v12",modified)
   if modified.count(first)!=1:raise RuntimeError("duplicate_style:"+rel)
   if rel=="c720p-surveillance.html" and ("#s9v5-shell" not in modified or "s9v5-stage" not in modified):
    raise RuntimeError("security_shell_contract_changed")
