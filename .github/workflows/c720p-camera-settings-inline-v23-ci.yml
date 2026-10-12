@@ -23,4 +23,4 @@ jobs:
       - name: Validate native Camera2 control panel regression contracts
         run: |
           python3 -m py_compile ops/c720p/s9-native-security/deploy-camera-settings-inline-v23.py
-          python3 -m unittest discover -s ops/c720p/s9-native-security -p 'test-camera-settings-inline-v23.py' -v
+          python3 ops/c720p/s9-native-security/test-camera-settings-inline-v23.py -v
