@@ -13,6 +13,7 @@ NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 # appearance vectors, face features, names or cross-clip matching suggestions.
 TRACK_VERSION="sampled_box_tracklets_v1"
 COLOURS={"black","white","gray","red","orange","yellow","green","blue","purple_or_pink","brown","uncertain"}
+DIRECTIONS={"image_left","image_right","image_up","image_down","diagonal","stationary_or_uncertain","insufficient_samples"}
 def anonymous_clip_metadata(manifest):
  status={"anonymous_tracking_status":"not_available_in_original_review",
          "anonymous_track_count":None,"anonymous_tracks":[]}
@@ -55,7 +56,11 @@ def anonymous_clip_metadata(manifest):
    if colour not in COLOURS:colour="uncertain"
    tracks.append({"id":f"Person {index}","temporary_track_id":index,
     "first_sample_ms":first,"last_sample_ms":last,"sample_count":samples,
-    "peak_detection_score":round(float(peak),3),"upper_clothing_colour":colour})
+    "peak_detection_score":round(float(peak),3),"upper_clothing_colour":colour,
+    "image_movement_direction":entry.get("image_movement_direction")
+      if entry.get("image_movement_direction") in DIRECTIONS else "insufficient_samples",
+    "body_posture_status":"not_measured_no_pose_keypoints",
+    "gait_cadence_status":"not_measurable_from_sampled_frames"})
    seen.add(index)
   claimed=manifest.get("anonymous_track_count")
   if isinstance(claimed,bool) or not isinstance(claimed,int) or claimed!=len(tracks):
