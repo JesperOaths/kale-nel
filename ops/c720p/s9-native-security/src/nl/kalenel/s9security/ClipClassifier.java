@@ -215,6 +215,9 @@ public final class ClipClassifier {
     .put("sample_count",t.samples)
     .put("peak_detection_score",Math.round(t.peakConfidence*1000)/1000.0)
     .put("upper_clothing_colour",t.colour())
+    .put("image_movement_direction",t.imageDirection())
+    .put("body_posture_status",t.postureAvailability())
+    .put("gait_cadence_status","not_measurable_from_sampled_frames")
     .put("cross_recording_identity","not_attempted");
    output.put(item);
   }
