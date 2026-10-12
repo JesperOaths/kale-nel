@@ -53,6 +53,16 @@ POST="""  # C720P_SD_EXPLICIT_DELETE_V1: owner action, fixed localhost upstream,
    except Exception:
     return self.empty(502)
 """
+DRIVE_ANCHOR="  return original(self)\\n H.go=go"
+DRIVE_PATCH="""  # ARCHIVE_HISTORICAL_DRIVE_ALIAS_V1: restore read-only history.
+  # The original underlying handler still serves historic Drive /saved media.
+  if path=='/new/api/drive-saved' or re.fullmatch(r'/new/drive/saved/(?:clip|snap)/[A-Za-z0-9._-]{1,180}',path):
+   before=self.path
+   if path=='/new/api/drive-saved':self.path=before.replace('/new/api/drive-saved','/new/api/saved',1)
+   else:self.path=before.replace('/new/drive/saved/','/new/saved/',1)
+   try:return original(self)
+   finally:self.path=before
+"""
 EXT_ANCHOR=" import s9_native_camera_controls\n s9_native_camera_controls.install(H)"
 EXT_REPLACEMENT=EXT_ANCHOR+"\n # C720P_SD_EXPLICIT_DELETE_V1: filter tombstones and mount read-only by default.\n import s9_archive_delete_v1\n globals()['rows']=s9_archive_delete_v1.install(H,rows,SECURITY_SD,NATIVE_SD,SD)"
 
@@ -88,7 +98,7 @@ def healthy(baseline):
   try:
    sd=json_get(8794,"/new/api/saved")
    dr=historical()
-   if sd.get("archive_mode")!="S9-microSD-only" or len(sd["events"])<baseline[0] or len(dr["events"])<baseline[1]:
+   if sd.get("archive_mode")!="S9-microSD-only" or len(sd["events"])<baseline[0] or len(dr["events"])<max(120,baseline[1]):
     raise RuntimeError("catalog_regression")
    code,body=request(8795,"/new/api/sd/delete",b'{"clip_no":"invalid_name","expected_bytes":10001,"confirm":"DELETE invalid_name"}')
    if code!=400 or body.get("ok") is not False:
@@ -123,13 +133,13 @@ def main():
   print("ARCHIVE_DELETE_BACKEND_ALREADY_INSTALLED",json.dumps(healthy(baseline)));return
  if MARKER in relay or MARKER in ext:
   raise RuntimeError("partial_previous_install_requires_review")
- if relay.count(ANCHOR)!=1 or relay.count(OLD_HEADERS)!=1 or ext.count(EXT_ANCHOR)!=1:
+ if relay.count(ANCHOR)!=1 or relay.count(OLD_HEADERS)!=1 or ext.count(EXT_ANCHOR)!=1 or ext.count(DRIVE_ANCHOR)!=1:
   raise RuntimeError("unexpected_routing_source_changed")
  module=get(BASE_URL+"s9_archive_delete_v1.py")
  if len(module)<3500 or b"original_file_deleted" not in module or b"explicit_archive_ui" not in module:
   raise RuntimeError("unexpected_backend_module")
  patch_relay=relay.replace(ANCHOR,POST+ANCHOR,1).replace(OLD_HEADERS,NEW_HEADERS,1).encode()
- patch_ext=ext.replace(EXT_ANCHOR,EXT_REPLACEMENT,1).encode()
+ patch_ext=ext.replace(DRIVE_ANCHOR,DRIVE_PATCH+DRIVE_ANCHOR,1).replace(EXT_ANCHOR,EXT_REPLACEMENT,1).encode()
  updates={RELAY:patch_relay,EXT:patch_ext,MODULE:module}
  with tempfile.TemporaryDirectory(prefix="s9-archive-delete-preflight-") as tmp:
   for p,data in updates.items():
