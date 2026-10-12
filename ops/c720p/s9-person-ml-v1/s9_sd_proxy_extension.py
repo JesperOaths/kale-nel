@@ -143,6 +143,7 @@ def install_local_sd(H):
         (0 if track_status=="none_detected_in_sampled_frames" else None),
       "anonymous_tracks":tracks,
       "anonymous_id_scope":"clip_only_never_across_recordings",
+      "movement_evidence_scope":"camera_image_only_not_gait_identity",
       "face_review_status":r.get("face_review_status","not_available_in_original_review"),
       "face_review_sampled_frames":r.get("face_review_sampled_frames"),
       "face_deep_review_version":r.get("face_deep_review_version"),
