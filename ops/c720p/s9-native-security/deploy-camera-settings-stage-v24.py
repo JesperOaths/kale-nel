@@ -60,7 +60,7 @@ def sha(blob):return hashlib.sha256(blob).hexdigest()
 
 def patch(html):
     if MARK in html:
-        if html.count(MARK)!=2 or 'stage.appendChild(panel)' not in html:
+        if html.count(MARK)!=1 or 'stage.appendChild(panel)' not in html:
             raise RuntimeError("unexpected_v24_revision")
         return html
     required=(
