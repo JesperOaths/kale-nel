@@ -107,6 +107,8 @@ public final class CameraService extends Service {
  private volatile boolean recoveryQueued=false;
  private volatile boolean historicalQueued=false;
  private volatile boolean faceBackfillQueued=false;
+ private volatile boolean movementBackfillQueued=false;
+ private volatile long movementBackfillDone=0,movementBackfillErrors=0,lastMovementBackfillScan=0;
  private volatile long faceBackfillDone=0,faceBackfillErrors=0,lastFaceBackfillScan=0;
  private volatile long historicalReviewed=0,historicalErrors=0,lastHistoricalScan=0;
  private volatile String lastHistoricalError="";
@@ -860,6 +862,75 @@ public final class CameraService extends Service {
   * never downloads/decodes videos on C720P. Quarantine is reversible and
   * never purges permanently based on an uncertain night model prediction.
   */
+
+ /** Review missing movement observations from finalized original 4K MP4s on
+  * the phone's existing serialized worker. Capture and face review stay live. */
+ private void maybeMovementBackfill(){
+  long now=SystemClock.elapsedRealtime();
+  if(!running||movementBackfillQueued||faceBackfillQueued||historicalQueued||
+     now-lastMovementBackfillScan<90000L||
+     folder==null||reviewer==null||classifier==null||
+     !"watching".equals(mode)||temperature()>=335||gardenPersonGateBusy||
+     (lastMovementAt>0&&now-lastMovementAt<60000L)||
+     folder.getUsableSpace()<20L*1024*1024*1024)return;
+  movementBackfillQueued=true;
+  final File target=folder;
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    try{
+     if(!running||!"watching".equals(mode)||temperature()>=335)return;
+     File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
+     if(manifests==null)return;
+     Arrays.sort(manifests,Comparator.comparing(File::getName));
+     for(File manifest:manifests){
+      if(!running||!"watching".equals(mode)||temperature()>=335||
+         gardenPersonGateBusy||(lastMovementAt>0&&
+         SystemClock.elapsedRealtime()-lastMovementAt<60000L))return;
+      if(manifest.length()<100||manifest.length()>28000)continue;
+      String name=manifest.getName().replace(".verified.json","");
+      File video=new File(target,name);
+      if(!video.isFile()||video.length()<100000||video.length()>800000000)continue;
+      try{
+       JSONObject meta;
+       try(FileInputStream in=new FileInputStream(manifest);
+           ByteArrayOutputStream out=new ByteArrayOutputStream()){
+        byte[] buffer=new byte[8192];int n;
+        while((n=in.read(buffer))>0){
+         out.write(buffer,0,n);
+         if(out.size()>28000)throw new IOException("movement_manifest_too_large");
+        }
+        meta=new JSONObject(out.toString("UTF-8"));
+       }
+       if(meta.optInt("person_count",0)<=0||
+          meta.has("movement_backfill_version"))continue;
+       JSONArray tracks=meta.optJSONArray("anonymous_tracks");
+       if("sampled_box_tracklets_v1".equals(meta.optString("anonymous_tracking_version"))&&
+          tracks!=null){
+        boolean complete=true;
+        for(int i=0;i<tracks.length();i++){
+         JSONObject track=tracks.optJSONObject(i);
+         if(track==null||!track.has("image_movement_direction")){complete=false;break;}
+        }
+        if(complete)continue;
+       }
+       if(classifier.backfillMovementEvidence(video,target,name,meta)){
+        movementBackfillDone++;
+        Log.i(TAG,"S9_MOVEMENT_4K_BACKFILL_COMPLETE "+name);
+       }
+       return; // one candidate per guarded phone-local pass
+      }catch(Exception e){
+       movementBackfillErrors++;
+       Log.w(TAG,"movement_4k_backfill_failed",e);
+       return;
+      }
+     }
+    }finally{
+     lastMovementBackfillScan=SystemClock.elapsedRealtime();
+     movementBackfillQueued=false;
+    }
+   }});
+  }catch(java.util.concurrent.RejectedExecutionException e){movementBackfillQueued=false;}
+ }
  private void maybeGardenArchiveTriage(){
   long now=SystemClock.elapsedRealtime();
   // Increase archive throughput ONLY when the garden has been quiet for
@@ -870,7 +941,7 @@ public final class CameraService extends Service {
                   batteryTenths<335?40000L:60000L;
   if(!running||gardenTriageQueued||now-gardenTriageLastScan<archiveWait||
      folder==null||classifier==null||reviewer==null||
-     !"watching".equals(mode)||faceBackfillQueued||historicalQueued||
+     !"watching".equals(mode)||faceBackfillQueued||historicalQueued||movementBackfillQueued||
      gardenPersonGateBusy||
      (lastMovementAt>0&&now-lastMovementAt<30000L)||
      batteryTenths>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
@@ -907,6 +978,7 @@ public final class CameraService extends Service {
   }
   maybeHistoricalImport();
   maybeFaceBackfill();
+  maybeMovementBackfill();
   maybeGardenArchiveTriage();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
@@ -1000,6 +1072,9 @@ public final class CameraService extends Service {
     d.put("garden_archive_latest_motion_age_ms",lastMovementAt<=0?
       JSONObject.NULL:Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt));
     d.put("garden_archive_triage_permanent_deletion_enabled",false);
+   d.put("movement_4k_backfill_completed",movementBackfillDone);
+   d.put("movement_4k_backfill_errors",movementBackfillErrors);
+   d.put("movement_4k_backfill_queued",movementBackfillQueued);
    d.put("face_backfill_completed",faceBackfillDone);
    d.put("face_deep_scanned",deepFaceScanned);
    d.put("face_deep_errors",deepFaceErrors);
