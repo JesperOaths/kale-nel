@@ -88,10 +88,11 @@ function details(source,name,info){
  add('Date',info.timestamp||info.date);
  if(Number.isFinite(Number(info.size))&&Number(info.size)>0)add('File size',(Number(info.size)/(1024*1024)).toFixed(1)+' MB');
  if(info.scene_category||info.person_status)add('Classification',info.scene_category||info.person_status);
- if(Number.isFinite(Number(info.person_count)))add('Detected people',info.person_count);
- if(Number.isFinite(Number(info.person_score)))add('Person detector score',(100*Number(info.person_score)).toFixed(1)+'%');
+ if(info.person_count!==null&&info.person_count!==undefined&&Number.isFinite(Number(info.person_count)))add('Detected people',info.person_count);
+ if(info.person_score!==null&&info.person_score!==undefined&&Number.isFinite(Number(info.person_score)))add('Person detector score',(100*Number(info.person_score)).toFixed(1)+'%');
  if(Number(info.face_snapshots_saved)>0)add('Face snapshots',info.face_snapshots_saved);
  if(info.review_backend)add('Reviewed using',info.review_backend);
+ const copyButton=document.createElement('button');copyButton.type='button';copyButton.textContent='Copy filename';copyButton.style.marginRight='10px';copyButton.onclick=()=>copy(name);dialog.append(copyButton);
  const close=document.createElement('button');close.type='button';close.textContent='Close';close.onclick=()=>dialog.close();dialog.append(close);
  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
  document.body.append(dialog);dialog.showModal();
