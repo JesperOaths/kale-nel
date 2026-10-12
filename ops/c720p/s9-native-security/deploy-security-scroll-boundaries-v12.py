@@ -164,7 +164,7 @@ def main():
   else:
    modified=text.replace("</head>",newblock+"\n</head>",1)
   if modified.count(first)!=1:raise RuntimeError("duplicate_style:"+rel)
-  if rel=="c720p-surveillance.html" and modified.count("id=\"s9v5-shell\"")!=1:
+  if rel=="c720p-surveillance.html" and ("#s9v5-shell" not in modified or "s9v5-stage" not in modified):
    raise RuntimeError("security_shell_contract_changed")
   originals[p]=data;updated[p]=modified.encode();modes[p]=p.stat()
  BACK.mkdir(parents=True,exist_ok=True);os.chmod(BACK,0o700)
