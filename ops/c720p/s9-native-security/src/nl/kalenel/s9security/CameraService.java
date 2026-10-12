@@ -108,6 +108,7 @@ public final class CameraService extends Service {
  private volatile boolean historicalQueued=false;
  private volatile boolean faceBackfillQueued=false;
  private volatile boolean movementBackfillQueued=false;
+ private final Map<String,Integer> movementBackfillRetries=new HashMap<>();
  private volatile long movementBackfillDone=0,movementBackfillErrors=0,lastMovementBackfillScan=0;
  private volatile long faceBackfillDone=0,faceBackfillErrors=0,lastFaceBackfillScan=0;
  private volatile long historicalReviewed=0,historicalErrors=0,lastHistoricalScan=0;
@@ -781,7 +782,7 @@ public final class CameraService extends Service {
  private void maybeHistoricalImport(){
   long now=SystemClock.elapsedRealtime();
   if(!running||historicalQueued||now-lastHistoricalScan<60000||folder==null||classifier==null||reviewer==null||
-     !"watching".equals(mode)||temperature()>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
+     !"watching".equals(mode)||movementBackfillQueued||temperature()>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
   historicalQueued=true;
   final File sandbox=folder.getParentFile();
   final ClipClassifier model=classifier;
@@ -807,7 +808,7 @@ public final class CameraService extends Service {
   long now=SystemClock.elapsedRealtime();
   if(!running||faceBackfillQueued||now-lastFaceBackfillScan<60000||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||temperature()>=350||gardenPersonGateBusy||
+     !"watching".equals(mode)||movementBackfillQueued||temperature()>=350||gardenPersonGateBusy||
      (lastMovementAt>0&&now-lastMovementAt<45000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   faceBackfillQueued=true;
@@ -889,6 +890,7 @@ public final class CameraService extends Service {
       if(manifest.length()<100||manifest.length()>28000)continue;
       String name=manifest.getName().replace(".verified.json","");
       File video=new File(target,name);
+      if(movementBackfillRetries.getOrDefault(name,0)>=3)continue;
       if(!video.isFile()||video.length()<100000||video.length()>800000000)continue;
       try{
        JSONObject meta;
@@ -920,6 +922,7 @@ public final class CameraService extends Service {
        return; // one candidate per guarded phone-local pass
       }catch(Exception e){
        movementBackfillErrors++;
+       movementBackfillRetries.put(name,movementBackfillRetries.getOrDefault(name,0)+1);
        Log.w(TAG,"movement_4k_backfill_failed",e);
        return;
       }
@@ -976,9 +979,9 @@ public final class CameraService extends Service {
   else if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
    failure("stalled_YUV_camera",null);scheduleRecover();
   }
+  maybeMovementBackfill();
   maybeHistoricalImport();
   maybeFaceBackfill();
-  maybeMovementBackfill();
   maybeGardenArchiveTriage();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
@@ -1074,6 +1077,7 @@ public final class CameraService extends Service {
     d.put("garden_archive_triage_permanent_deletion_enabled",false);
    d.put("movement_4k_backfill_completed",movementBackfillDone);
    d.put("movement_4k_backfill_errors",movementBackfillErrors);
+   d.put("movement_4k_backfill_skipped_after_retries",movementBackfillRetries.size());
    d.put("movement_4k_backfill_queued",movementBackfillQueued);
    d.put("face_backfill_completed",faceBackfillDone);
    d.put("face_deep_scanned",deepFaceScanned);
