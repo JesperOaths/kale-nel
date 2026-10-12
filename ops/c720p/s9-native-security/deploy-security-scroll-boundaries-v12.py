@@ -56,6 +56,19 @@ html,body{height:100%!important;max-height:100%!important;overflow:hidden!import
  box-sizing:border-box!important;display:block!important;height:auto!important;
  min-height:0!important;overflow:visible!important;padding-bottom:55px!important
 }
+/* Override legacy #view > .panel overflow rules with full selector specificity. */
+html body #view > section#panel-controls.panel.active.s9v5-active{
+ overflow-y:auto!important;overflow-x:hidden!important;
+ max-height:calc(100% - 69px)!important;min-height:0!important;
+ scrollbar-gutter:stable!important;overscroll-behavior-y:contain!important
+}
+html body #view > section#panel-controls.panel.active.s9v5-active > iframe#s9v22-camera-frame{
+ display:none!important;height:0!important
+}
+html body #view > section#panel-controls.panel.active.s9v5-active > .controls{
+ display:block!important;height:auto!important;min-height:0!important;
+ overflow:visible!important;padding-bottom:60px!important
+}
 """,
  "frontyard-security-new/security-archive-v7.html":"""
 /* The iframe's actual client height, not its outer Home Assistant viewport. */
