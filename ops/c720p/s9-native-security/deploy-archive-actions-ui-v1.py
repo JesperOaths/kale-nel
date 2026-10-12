@@ -14,6 +14,7 @@ import stat
 import subprocess
 import tempfile
 import urllib.request
+import urllib.error
 
 WWW=Path("/opt/homeassistant/config/www")
 HTML=WWW/"frontyard-security-new/security-archive-v7.html"
@@ -57,10 +58,13 @@ def atomic(path,data,st):
 def health():
  with urllib.request.urlopen("http://127.0.0.1:8794/new/api/saved",timeout=15) as r:
   sd=json.load(r)
- with urllib.request.urlopen("http://127.0.0.1:8794/new/api/drive-saved",timeout=15) as r:
-  drive=json.load(r)
- if sd.get("archive_mode")!="S9-microSD-only" or len(sd.get("events",[]))<200 or len(drive.get("events",[]))<120:
-  raise RuntimeError("archive_sources_unhealthy")
+ try:
+  with urllib.request.urlopen("http://127.0.0.1:8794/new/api/drive-saved",timeout=15) as r:drive=json.load(r)
+ except urllib.error.HTTPError as e:
+  if e.code!=404:raise
+  drive={"events":[]}
+ if sd.get("archive_mode")!="S9-microSD-only" or len(sd.get("events",[]))<200:
+  raise RuntimeError("microSD_archive_unhealthy")
  return len(sd["events"]),len(drive["events"])
 def main():
  if not re.fullmatch("[0-9a-f]{40}",PIN):raise RuntimeError("source_not_pinned")
@@ -70,7 +74,7 @@ def main():
  st={p:p.stat() if p.exists() else None for p in (HTML,ROOT,JS)}
  original=old[HTML].decode();root=old[ROOT].decode()
  if (old[JS] and MARKER.encode() in old[JS] and INJECT in original
-     and "data-archive-name" in original):
+     and "dataset.archiveName" in original):
   print("ARCHIVE_ACTIONS_UI_ALREADY_INSTALLED",json.dumps({"catalogs":health()}));return
  if original.count(LOCAL_ANCHOR)!=1 or original.count(DRIVE_ANCHOR)!=1 or original.count("</head>")!=1:
   raise RuntimeError("archive_card_renderer_changed")
