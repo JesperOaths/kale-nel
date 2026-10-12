@@ -53,7 +53,7 @@ POST="""  # C720P_SD_EXPLICIT_DELETE_V1: owner action, fixed localhost upstream,
    except Exception:
     return self.empty(502)
 """
-DRIVE_ANCHOR="  return original(self)\\n H.go=go"
+DRIVE_ANCHOR="  return original(self)\n H.go=go"
 DRIVE_PATCH="""  # ARCHIVE_HISTORICAL_DRIVE_ALIAS_V1: restore read-only history.
   # The original underlying handler still serves historic Drive /saved media.
   if path=='/new/api/drive-saved' or re.fullmatch(r'/new/drive/saved/(?:clip|snap)/[A-Za-z0-9._-]{1,180}',path):
