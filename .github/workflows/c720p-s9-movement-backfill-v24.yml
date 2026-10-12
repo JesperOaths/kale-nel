@@ -1,0 +1,33 @@
+name: S9 Historical Movement Backfill V24
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java'
+      - 'ops/c720p/s9-native-security/test-movement-backfill-v24.py'
+      - '.github/workflows/c720p-s9-movement-backfill-v24.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/test-movement-backfill-v24.py'
+      - '.github/workflows/c720p-s9-movement-backfill-v24.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check metadata-only movement migration contracts
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-movement-backfill-v24.py
+          python3 ops/c720p/s9-native-security/test-anonymous-index-ui.py
+      - name: Compile and verify the underlying anonymous movement tracker
+        run: |
+          set -euo pipefail
+          p="$(mktemp -d)"
+          trap 'rm -rf "$p"' EXIT
+          javac -d "$p" ops/c720p/s9-native-security/src/nl/kalenel/s9security/AnonymousClipTracks.java ops/c720p/s9-native-security/tests/AnonymousClipTracksTest.java
+          java -cp "$p" nl.kalenel.s9security.AnonymousClipTracksTest
