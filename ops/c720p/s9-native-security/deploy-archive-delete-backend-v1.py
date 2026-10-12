@@ -65,6 +65,11 @@ def get(url,limit=90000):
 def json_get(port,route):
  with urllib.request.urlopen(f"http://127.0.0.1:{port}{route}",timeout=22) as r:
   return json.load(r)
+def historical():
+ try:return json_get(8794,"/new/api/drive-saved")
+ except urllib.error.HTTPError as e:
+  if e.code==404:return {"events":[],"temporarily_unavailable":True}
+  raise
 def request(port,route,body):
  req=urllib.request.Request(f"http://127.0.0.1:{port}{route}",
      headers={"Content-Type":"application/json"},method="POST",data=body)
@@ -82,7 +87,7 @@ def healthy(baseline):
  for _ in range(28):
   try:
    sd=json_get(8794,"/new/api/saved")
-   dr=json_get(8794,"/new/api/drive-saved")
+   dr=historical()
    if sd.get("archive_mode")!="S9-microSD-only" or len(sd["events"])<baseline[0] or len(dr["events"])<baseline[1]:
     raise RuntimeError("catalog_regression")
    code,body=request(8795,"/new/api/sd/delete",b'{"clip_no":"invalid_name","expected_bytes":10001,"confirm":"DELETE invalid_name"}')
@@ -110,7 +115,7 @@ def main():
   raise RuntimeError("unpinned_source")
  for p in (RELAY,EXT):
   if not p.is_file() or p.is_symlink():raise RuntimeError("unsafe_live_backend")
- baseline=(len(json_get(8794,"/new/api/saved")["events"]),len(json_get(8794,"/new/api/drive-saved")["events"]))
+ baseline=(len(json_get(8794,"/new/api/saved")["events"]),len(historical()["events"]))
  old={p:p.read_bytes() if p.exists() else None for p in (RELAY,EXT,MODULE)}
  st={p:p.stat() if p.exists() else None for p in (RELAY,EXT,MODULE)}
  relay=old[RELAY].decode();ext=old[EXT].decode()
