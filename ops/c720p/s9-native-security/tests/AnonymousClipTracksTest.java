@@ -26,6 +26,22 @@ public final class AnonymousClipTracksTest {
   try{two.addFrame(200,new ArrayList<AnonymousClipTracks.Hit>());}
   catch(IllegalArgumentException ok){rejected=true;}
   check(rejected,"timestamps must increase");
+  AnonymousClipTracks walking=new AnonymousClipTracks();
+  walking.addFrame(100,Arrays.asList(h(.10f,.18f,.25f,.84f,"blue")));
+  walking.addFrame(600,Arrays.asList(h(.125f,.18f,.275f,.84f,"blue")));
+  walking.addFrame(1300,Arrays.asList(h(.155f,.18f,.305f,.84f,"blue")));
+  check(walking.appearances()==1,"chronological boxes belong to one clip track");
+  check("image_right".equals(walking.tracks().get(0).imageDirection()),"apparent image direction");
+  check("not_measured_no_pose_keypoints".equals(walking.tracks().get(0).postureAvailability()),
+    "do not invent body-joint posture");
+  check("insufficient_samples".equals(two.tracks().get(0).imageDirection()),
+    "sparse detections never claim movement direction");
+  AnonymousClipTracks still=new AnonymousClipTracks();
+  still.addFrame(100,Arrays.asList(h(.2f,.18f,.4f,.84f,"gray")));
+  still.addFrame(700,Arrays.asList(h(.201f,.18f,.401f,.84f,"gray")));
+  still.addFrame(1300,Arrays.asList(h(.201f,.18f,.401f,.84f,"gray")));
+  check("stationary_or_uncertain".equals(still.tracks().get(0).imageDirection()),
+    "do not infer walking from stationary pixel boxes");
   System.out.println("S9_ANONYMOUS_CLIP_TRACK_TESTS_PASS");
  }
 }
