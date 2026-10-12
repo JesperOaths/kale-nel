@@ -48,7 +48,7 @@ try:
      }else if(frame!=='none'){
       const f=document.getElementById(frame);doc=f&&f.contentDocument;
      }
-     if(!doc||doc.readyState!=='complete'||!doc.getElementById('s9-security-scroll-boundaries-v12'))return {pending:true};
+     if(!doc||!doc.body||!doc.getElementById('s9-security-scroll-boundaries-v12'))return {pending:true};
      el=doc.querySelector(selector);
      if(!el||getComputedStyle(el).display==='none'||el.getBoundingClientRect().height<90)
       return {pending:true};
