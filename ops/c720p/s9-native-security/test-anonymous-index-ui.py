@@ -52,6 +52,22 @@ class Tests(unittest.TestCase):
         self.assertNotIn("cross_recording_identity",json.dumps(result))
         self.assertNotIn("name",json.dumps(result))
 
+    def test_motion_metadata_is_clip_scoped_and_validated(self):
+        m=self.manifest()
+        m["anonymous_tracks"][0].update(
+            image_movement_direction="image_right",
+            body_posture_status="not_measured_no_pose_keypoints",
+            gait_cadence_status="not_measurable_from_sampled_frames")
+        parsed=self.catalog.anonymous_clip_metadata(m)
+        track=parsed["anonymous_tracks"][0]
+        self.assertEqual(track["image_movement_direction"],"image_right")
+        self.assertEqual(track["body_posture_status"],"not_measured_no_pose_keypoints")
+        self.assertEqual(track["gait_cadence_status"],"not_measurable_from_sampled_frames")
+        m["anonymous_tracks"][0]["image_movement_direction"]="individual_visitor_123"
+        parsed=self.catalog.anonymous_clip_metadata(m)
+        self.assertEqual(parsed["anonymous_tracks"][0]["image_movement_direction"],"insufficient_samples")
+        self.assertNotIn("individual_visitor_123",json.dumps(parsed))
+
     def test_old_recordings_distinguished_from_zero_person_samples(self):
         a=self.catalog.anonymous_clip_metadata({"duration_ms":12000})
         self.assertIsNone(a["anonymous_track_count"])

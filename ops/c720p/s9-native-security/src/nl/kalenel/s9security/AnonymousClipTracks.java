@@ -13,14 +13,26 @@ public final class AnonymousClipTracks {
  }
  public static final class Track {
   public final int id; public final long firstMs; public long lastMs;
-  public int samples; public float peakConfidence; public float[] lastBox;
+  public int samples; public float peakConfidence; public float[] firstBox,lastBox;
   public final Map<String,Integer> colourVotes=new LinkedHashMap<>();
-  private Track(int n,long ms,Hit h){id=n;firstMs=ms;update(ms,h);}
+  private Track(int n,long ms,Hit h){id=n;firstMs=ms;firstBox=h.box.clone();update(ms,h);}
   private void update(long ms,Hit h){
    lastMs=ms;samples++;peakConfidence=Math.max(peakConfidence,h.confidence);lastBox=h.box.clone();
    if(!"uncertain".equals(h.upperColour))
     colourVotes.put(h.upperColour,colourVotes.getOrDefault(h.upperColour,0)+1);
   }
+  /** Camera-image movement only, never walking cadence or cross-video identity. */
+  public String imageDirection(){
+   if(samples<3||lastMs-firstMs<600)return "insufficient_samples";
+   float x0=(firstBox[1]+firstBox[3])*.5f,y0=(firstBox[0]+firstBox[2])*.5f;
+   float x1=(lastBox[1]+lastBox[3])*.5f,y1=(lastBox[0]+lastBox[2])*.5f;
+   float dx=x1-x0,dy=y1-y0;
+   if(dx*dx+dy*dy<.0016f)return "stationary_or_uncertain";
+   if(Math.abs(dx)>=1.3f*Math.abs(dy))return dx>0?"image_right":"image_left";
+   if(Math.abs(dy)>=1.3f*Math.abs(dx))return dy>0?"image_down":"image_up";
+   return "diagonal";
+  }
+  public String postureAvailability(){return "not_measured_no_pose_keypoints";}
   public String colour(){
    String best="uncertain";int count=0;
    for(Map.Entry<String,Integer> e:colourVotes.entrySet())

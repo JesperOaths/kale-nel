@@ -79,7 +79,7 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <div class="stat"><strong id="driveCount">—</strong><span>Verified historical Drive clips</span></div>
 <div class="stat"><strong id="s9PersonCount">—</strong><span>MicroSD clips with person evidence</span></div>
 </section>
-<p class="note" id="disclaimer">Person detection does not establish facial identity. Face-similarity groupings are suggestions only; distinct people must not be merged without reviewing the recordings. No real names are inferred.</p>
+<p class="note" id="disclaimer">Person detection does not establish facial identity. Face-similarity groupings are suggestions only; distinct people must not be merged without reviewing the recordings. No real names are inferred. Body movement folders show image direction only; they do not identify a person or measure walking cadence.</p>
 <section id="folderSection">
 <div class="toolbar"><h2>Folders</h2><input id="search" type="search" placeholder="Filter folders and recordings…" aria-label="Search folders"><button id="reload" type="button">Refresh</button></div>
 <div class="folders" id="folders" aria-live="polite"><div class="empty">Loading person and face evidence…</div></div>
@@ -176,6 +176,27 @@ function buildFolders(){
  const notClassed=state.drive.filter(r=>driveOK.test(String(r.remote_name||''))&&!inReview.has(String(r.remote_name)));
  if(notClassed.length)folders.push(group('drive:unclassified','Drive · awaiting classification',
   'Source video available; classification still pending','drive',notClassed.map(r=>item('drive',r)),false));
+ // Review folders describe motion observed in the camera image, not identity or gait.
+ const movementBuckets=new Map();
+ const movementLabels={
+  image_left:'Across image · left',image_right:'Across image · right',
+  image_up:'Towards top of image',image_down:'Towards bottom of image',
+  diagonal:'Diagonal movement',stationary_or_uncertain:'Stationary / uncertain'};
+ for(const rec of state.sd){
+  if(!clipOK.test(String(rec.clip_no||'')))continue;
+  const valid=Array.isArray(rec.anonymous_tracks)?rec.anonymous_tracks:[];
+  const directions=new Set(valid.map(t=>String(t.image_movement_direction||''))
+   .filter(label=>Object.hasOwn(movementLabels,label)));
+  for(const direction of directions){
+   if(!movementBuckets.has(direction))movementBuckets.set(direction,[]);
+   movementBuckets.get(direction).push(item('sd',rec));
+  }
+ }
+ for(const [direction,entries] of movementBuckets){
+  folders.push(group('movement:'+direction,'Body & movement · '+movementLabels[direction],
+   'Clip-level camera-image motion; not a person or walking-style identity',
+   'movement',entries,false));
+ }
  folders.sort((a,b)=>Number(b.verified)-Number(a.verified)||Number(b.kind==='face')-Number(a.kind==='face')||b.entries.length-a.entries.length);
  state.folders=folders;
 }
@@ -265,6 +286,16 @@ function openFolder(id){
   body.append(el('strong','',stamp(e)),
    el('small','',e.source==='drive'?'Google Drive historical recording':'S9+ native camera recording'),
    el('small','',String(e.rec.reviewCategory||e.rec.category||e.rec.face_review_status||'Face unverified').replaceAll('_',' ')));
+  if(e.source==='sd'){
+   const tracks=Array.isArray(e.rec.anonymous_tracks)?e.rec.anonymous_tracks:[];
+   for(const track of tracks.slice(0,4)){
+    const direction=String(track.image_movement_direction||'insufficient_samples').replaceAll('_',' ');
+    const colour=String(track.upper_clothing_colour||'uncertain').replaceAll('_',' ');
+    body.append(el('small','',String(track.id||'Anonymous person')+
+      ' · '+colour+' clothing · movement: '+direction+
+      ' · posture: not measured · gait: not measurable from sampled frames'));
+   }
+  }
   const play=el('button','','Play recording');play.type='button';
   play.addEventListener('click',()=>openClip(e));body.append(play);
   card.append(pic,body);records.append(card);signedPicture(pic,e);
