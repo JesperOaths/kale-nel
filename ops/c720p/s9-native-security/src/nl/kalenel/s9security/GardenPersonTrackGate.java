@@ -6,17 +6,18 @@ package nl.kalenel.s9security;
  * than some unrelated car/leaf elsewhere inside the garden region.
  */
 public final class GardenPersonTrackGate {
- public static final String VERSION="person_spatial_motion_corroborated_v7";
- public static final float MIN_SCORE=.44f;
- public static final float HIGH_CONFIDENCE=.72f;
- public static final long MAX_PAIR_MS=3400L;
+ public static final String VERSION="person_multiscale_threeframe_static_v8";
+ public static final float MIN_SCORE=.36f;
+ public static final float HIGH_CONFIDENCE=.79f;
+ public static final long MAX_PAIR_MS=5200L;
  public enum Decision { WEAK, FIRST, DUPLICATE_JPEG, UNRELATED, NO_LOCAL_MOTION, CONFIRMED }
  private float[] firstBox;
  private float firstScore;
  private long firstAt=-1,firstJpegAt=-1;
  private boolean firstMotion;
+ private int staticHighHits;
  public long rejectedWeak=0,duplicateFrames=0,unrelatedBoxes=0,noLocalMotion=0,confirmed=0;
- public void reset(){firstBox=null;firstAt=-1;firstJpegAt=-1;firstScore=0;firstMotion=false;}
+ public void reset(){firstBox=null;firstAt=-1;firstJpegAt=-1;firstScore=0;firstMotion=false;staticHighHits=0;}
  public Decision offer(long now,long jpegAt,float score,float[] box,int recentMotionCells){
   if(now<1||jpegAt<1||jpegAt>now+200||!Float.isFinite(score)||
      score<MIN_SCORE||!valid(box)){
@@ -31,13 +32,30 @@ public final class GardenPersonTrackGate {
   boolean motion=recentMotionCells>=1;
   if(firstAt>0&&now>=firstAt&&now-firstAt<=MAX_PAIR_MS){
    if(!samePerson(firstBox,box)){
+    staticHighHits=(!motion&&score>=HIGH_CONFIDENCE)?1:0;
     remember(now,jpegAt,score,box,motion);unrelatedBoxes++;return Decision.UNRELATED;
    }
-   if(!(firstMotion||motion) && Math.min(firstScore,score)<HIGH_CONFIDENCE){
+   // Two distinct high-confidence static sightings could still be a car or
+   // garden decoration. Require THREE when luma motion was never local.
+   if(!(firstMotion||motion)){
+    if(Math.min(firstScore,score)<HIGH_CONFIDENCE){
+     staticHighHits=(!motion&&score>=HIGH_CONFIDENCE)?1:0;
+     remember(now,jpegAt,score,box,motion);noLocalMotion++;return Decision.NO_LOCAL_MOTION;
+    }
+    staticHighHits++;
+    if(staticHighHits<3){
+     remember(now,jpegAt,score,box,motion);noLocalMotion++;return Decision.NO_LOCAL_MOTION;
+    }
+   }
+   // Weak (0.36..0.44) multi-scale classifications need local motion in
+   // BOTH observations, never a single unrelated leaf-movement moment.
+   if(Math.min(firstScore,score)<.44f&&!(firstMotion&&motion)){
+    staticHighHits=0;
     remember(now,jpegAt,score,box,motion);noLocalMotion++;return Decision.NO_LOCAL_MOTION;
    }
    reset();confirmed++;return Decision.CONFIRMED;
   }
+  staticHighHits=(!motion&&score>=HIGH_CONFIDENCE)?1:0;
   remember(now,jpegAt,score,box,motion);return Decision.FIRST;
  }
  private void remember(long now,long jpegAt,float score,float[] box,boolean motion){
