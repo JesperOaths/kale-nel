@@ -65,7 +65,7 @@ def main():
  # Preserve the entire live adapter and any site-specific fixes: insert only
  # the new version literal plus the small v8 telemetry field group.
  oldMarker='    "person_spatial_motion_corroborated_v7",'
- newMarker=oldMarker+'\\n    "person_multiscale_threeframe_static_v8",'
+ newMarker=oldMarker+chr(10)+'    "person_multiscale_threeframe_static_v8",'
  oldFields='      "detector_version":phone.get("motion_detector"),'
  if source.count(oldMarker)!=1 or source.count(oldFields)!=1:
   raise RuntimeError("production_status_adapter_contract_changed")
@@ -74,8 +74,8 @@ def main():
  fieldEnd=contract.find('      "roi_mask_version":',fieldBegin)
  if fieldBegin<0 or fieldEnd<0:raise RuntimeError("reference_v8_fields_missing")
  insert=contract[fieldBegin:fieldEnd]
- patched=source.replace(oldMarker,newMarker.replace('\\n','\\n'),1)
- patched=patched.replace(oldFields,oldFields+'\\n'+insert.rstrip('\\n'),1)
+ patched=source.replace(oldMarker,newMarker,1)
+ patched=patched.replace(oldFields,oldFields+chr(10)+insert.rstrip(chr(10)),1)
  new=patched.encode("utf-8")
  with tempfile.TemporaryDirectory(prefix="s9-person-v8-status-preflight-") as td:
   f=Path(td)/"s9_phone_garden_status.py";f.write_bytes(new)
