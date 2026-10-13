@@ -1002,14 +1002,14 @@ public final class CameraService extends Service {
   }
  }
  private boolean personEvidenceSafe(){
-  return running&&"watching".equals(mode)&&temperature()<335&&!gardenPersonGateBusy&&
+  return running&&"watching".equals(mode)&&temperature()<335&&
    (lastMovementAt<=0||SystemClock.elapsedRealtime()-lastMovementAt>=60000L)&&
    folder!=null&&folder.getUsableSpace()>20L*1024*1024*1024;
  }
  private void maybePersonEvidence(){
   long now=SystemClock.elapsedRealtime();
   if(personEvidenceQueued||movementBackfillQueued||faceBackfillQueued||historicalQueued||
-     recoveryQueued||gardenTriageQueued||reviewer==null||classifier==null||now-lastPersonEvidenceScan<90000L||!personEvidenceSafe())return;
+     recoveryQueued||gardenTriageQueued||gardenPersonGateBusy||reviewer==null||classifier==null||now-lastPersonEvidenceScan<90000L||!personEvidenceSafe())return;
   personEvidenceQueued=true;final File target=folder;
   try{reviewer.execute(new Runnable(){public void run(){
    try{

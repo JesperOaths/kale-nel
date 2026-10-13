@@ -243,6 +243,21 @@ def install_local_sd(H):
   if match:
    name=match.group(1);item=data.get(name)
    if item:return play_sd(self,name,item)
+  # S9_JOINED_PREROLL_V1: read-only complete segment for indexed original.
+  joined=re.fullmatch(r"/new/saved/complete/(motion_[0-9]{13}[.]mp4)",path)
+  if joined:
+   original=joined.group(1);record=data.get(original)
+   if record:
+    nm=original+".complete.mp4"
+    try:
+     req=urllib.request.Request("http://127.0.0.1:18808/clip/"+nm,method="HEAD")
+     with urllib.request.urlopen(req,timeout=9) as response:
+      if response.status!=200 or "video/mp4" not in response.headers.get("Content-Type",""):
+       raise ValueError("not_video")
+      size=int(response.headers.get("Content-Length","0"))
+     if 25000<size<260000000:return play_sd(self,nm,{**record,"size":size})
+    except (ValueError,TypeError,urllib.error.HTTPError,urllib.error.URLError,TimeoutError):pass
+   self.js(404,{"ok":False,"error":"complete_video_not_yet_available"});return
   snap=re.fullmatch(r"/new/saved/snap/([A-Za-z0-9._-]+[.]mp4[.]thumb[.]jpg)",path)
   if snap:
    name=snap.group(1)

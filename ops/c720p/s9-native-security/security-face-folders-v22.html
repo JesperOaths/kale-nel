@@ -68,6 +68,7 @@ dialog::backdrop{background:#02080ddd}
 .modal-head{display:flex;align-items:center;justify-content:space-between;gap:9px}
 video{width:100%;max-height:55dvh;aspect-ratio:16/9;object-fit:contain;background:#010607;margin:12px 0}
 #faceImage{display:block;max-height:65dvh;max-width:100%;margin:16px auto;object-fit:contain}
+#personName{display:block;width:min(430px,100%);margin-top:6px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:#122738;color:var(--ink)}
 #videoState{color:#bfd5dc;font-size:13px;min-height:20px}
 footer{color:#819daa;font-size:11px;margin-top:30px}
 @media(max-width:820px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.cover{height:140px}body{padding:14px}}
@@ -232,7 +233,7 @@ function buildFolders(){
    if(!tracks.length)folders.push(group('recording:'+entry.key,'Person evidence · '+stamp(entry),'Recording saved; separate person review pending','candidate',[entry]));
    for(const track of tracks){const key=entry.key+':track:'+track.temporary_track_id;if(!used.has(key))folders.push(group('pending:'+key,track.id+' · '+stamp(entry),'Person matching review pending','appearance',[item('sd',entry.rec,null,track)]));}
   }
-  state.folders=folders;return;
+  folders.sort((a,b)=>(b.kind==='profile')-(a.kind==='profile')||timeKey(b.entries[0])-timeKey(a.entries[0])||a.id.localeCompare(b.id));state.folders=folders;return;
  }
  if(state.view==='people'&&state.grouping!=='date'){
   for(const entry of sourcePeople()){
@@ -303,11 +304,11 @@ function updateSummary(){
  const people=sourcePeople(),faces=state.source==='sd'?s9Faces():[];
  const clipsWithFaces=new Set(faces.map(x=>x.key));
  $('personCount').textContent=String(people.length);$('facesCount').textContent=String(faces.length);
- $('folderCount').textContent=String(state.folders.length);$('folderLabel').textContent=state.view==='faces'?'Face evidence folders':state.grouping==='appearances'?'Appearance folders':'Recording date folders';
+ $('folderCount').textContent=String(state.folders.length);$('folderLabel').textContent=state.view==='faces'?'Face evidence folders':state.grouping==='profiles'?'People & appearance folders':state.grouping==='appearances'?'Appearance folders':'Recording date folders';
  $('archiveKicker').textContent=state.source==='sd'?'Recorded on S9+ microSD':'Historical Drive recordings';
  $('missingCount').textContent=String(people.filter(x=>!clipsWithFaces.has(x.key)).length);
  $('summary').hidden=state.source==='sd'?!state.ready:!state.driveLoaded;
- $('sectionTitle').textContent=state.view==='faces'?'Recorded face folders':state.grouping==='appearances'?'Recorded person appearances':'Person recording folders';
+ $('sectionTitle').textContent=state.view==='faces'?'Recorded face folders':state.grouping==='profiles'?'People and recorded appearances':state.grouping==='appearances'?'Recorded person appearances':'Person recording folders';
  $('groupingControl').hidden=state.view==='faces';
  const error=state.source==='sd'?state.sdError:state.driveError;
  if(error){$('archiveNotice').textContent=error;return}
