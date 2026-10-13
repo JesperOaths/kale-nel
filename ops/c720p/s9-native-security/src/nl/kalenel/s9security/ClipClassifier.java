@@ -112,7 +112,77 @@ public final class ClipClassifier {
   }finally{if(scaled!=original)scaled.recycle();}
  }
 
- /** Preview-only per-event person gate. The same 300x300 MobileNet detector,
+ /** Garden-aware multiscale person detector v8.
+  *  One original-frame pass keeps full scene context. Two overlapping foreground
+  *  tiles magnify smaller walkers inside the owner's front garden before
+  *  MobileNet's fixed 300x300 input. Map each tile prediction back to the
+  *  source image, and merge cross-tile duplicates. No identity analysis.
+  *
+  *  Runs ONLY on the S9+ inference worker, never the C720P / camera callback.
+  *  Recording and its original 4K dimensions remain completely unchanged.
+  */
+ private static final String GARDEN_PERSON_MULTISCALE_VERSION="garden_overlapping_person_tiles_v8";
+ private volatile int lastGardenInferencePasses=0;
+ public int lastGardenInferencePasses(){return lastGardenInferencePasses;}
+ public String gardenPersonMultiscaleVersion(){return GARDEN_PERSON_MULTISCALE_VERSION;}
+ private static float boxIoU(float[] a,float[] b){
+  if(!GardenPersonTrackGate.valid(a)||!GardenPersonTrackGate.valid(b))return 0f;
+  float top=Math.max(a[0],b[0]),left=Math.max(a[1],b[1]);
+  float bottom=Math.min(a[2],b[2]),right=Math.min(a[3],b[3]);
+  float intersection=Math.max(0,bottom-top)*Math.max(0,right-left);
+  float aa=(a[2]-a[0])*(a[3]-a[1]),bb=(b[2]-b[0])*(b[3]-b[1]);
+  float union=aa+bb-intersection;
+  return union>0?intersection/union:0f;
+ }
+ private static void addGardenPersonCandidate(ArrayList<Detection> people,Detection incoming){
+  if(!"person".equals(incoming.label)||!GardenPersonTrackGate.valid(incoming.box))return;
+  for(int i=0;i<people.size();i++){
+   Detection old=people.get(i);
+   if(boxIoU(old.box,incoming.box)>=.38f){
+    if(incoming.score>old.score)people.set(i,incoming);
+    return;
+   }
+  }
+  people.add(incoming);
+ }
+ private List<Detection> detectGardenPeopleMultiscale(Bitmap image)throws Exception{
+  ArrayList<Detection> people=new ArrayList<>();
+  lastGardenInferencePasses=0;
+  for(Detection d:detect(image))addGardenPersonCandidate(people,d);
+  lastGardenInferencePasses++;
+  // Garden starts near 43-52% of height; retain 28% so upper bodies
+  // straddling the owner's boundary are not cut off by the tile.
+  int width=image.getWidth(),height=image.getHeight();
+  if(width<160||height<120)return people;
+  final int top=(int)(height*.28f);
+  final int croppedHeight=height-top;
+  final int tileWidth=(int)(width*.65f);
+  int[] starts={0,width-tileWidth};
+  for(int x:starts){
+   Bitmap tile=Bitmap.createBitmap(image,x,top,tileWidth,croppedHeight);
+   try{
+    for(Detection d:detect(tile)){
+     if(!"person".equals(d.label)||!GardenPersonTrackGate.valid(d.box))continue;
+     float[] b=d.box;
+     float[] mapped={
+      (top+b[0]*croppedHeight)/height,
+      (x+b[1]*tileWidth)/(float)width,
+      (top+b[2]*croppedHeight)/height,
+      (x+b[3]*tileWidth)/(float)width
+     };
+     if(!GardenPersonTrackGate.valid(mapped))continue;
+     Detection result=new Detection();
+     result.label="person";result.score=d.score;result.box=mapped;
+     addGardenPersonCandidate(people,result);
+    }
+    lastGardenInferencePasses++;
+   }finally{if(tile!=image)tile.recycle();}
+  }
+  return people;
+ }
+
+ /** Preview-only per-event person gate. A 300x300 MobileNet detector is
+  * applied to the full view and overlapping garden tiles,
   * shared with post-record classification on the serialized review worker.
   * No face recognition, cross-recording identification, or persistent IDs.
   */
@@ -145,7 +215,7 @@ public final class ClipClassifier {
    float highest=0f,any=0f;
    float[] bestBox=null;
    lastPersonAnywhere=0f;
-   for(Detection detection:detect(bitmap)){
+   for(Detection detection:detectGardenPeopleMultiscale(bitmap)){
     if(!"person".equals(detection.label))continue;
     any=Math.max(any,detection.score);
     float[] b=detection.box;
@@ -482,6 +552,7 @@ public final class ClipClassifier {
   MediaMetadataRetriever media=new MediaMetadataRetriever();
   int persons=0,animals=0,vehicles=0;
   int strongPersonFrames=0,possiblePersonFrames=0,validFrames=0;
+  int multiscaleReviewedFrames=0,multiscaleExtraPersonBoxes=0;
   int framesWithMultiplePeople=0;
   long firstStrongAt=-1,lastStrongAt=-1;
   final JSONArray frameEvidence=new JSONArray();
@@ -506,6 +577,8 @@ public final class ClipClassifier {
    result.put("height",Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
    init();
    result.put("model_sha256",modelSha256);
+   result.put("person_review_model",GARDEN_PERSON_MULTISCALE_VERSION);
+   result.put("person_review_fullframe_negative_refinement",true);
    // Denser temporal coverage catches short walk-bys that a handful of keyframes miss.
    // Cap decoding/inference to 12 samples per clip to protect device thermals.
    int frames=(int)Math.min(12,Math.max(6,(duration+1799L)/1800L));
@@ -515,6 +588,27 @@ public final class ClipClassifier {
     if(bitmap==null)continue;
     try{
      List<Detection> found=detect(bitmap);
+     // Only run extra high-detail crops when the standard 4K frame
+     // classification did not find a strongly supported person.
+     boolean wholeFramePerson=false;
+     for(Detection d:found)
+      if("person".equals(d.label)&&d.score>=.50f){wholeFramePerson=true;break;}
+     if(!wholeFramePerson){
+      multiscaleReviewedFrames++;
+      for(Detection refined:detectGardenPeopleMultiscale(bitmap)){
+       boolean duplicate=false;
+       for(int k=0;k<found.size();k++){
+        Detection old=found.get(k);
+        if("person".equals(old.label)&&boxIoU(old.box,refined.box)>=.38f){
+         if(refined.score>old.score)found.set(k,refined);
+         duplicate=true;break;
+        }
+       }
+       if(!duplicate&&refined.score>=.35f){
+        found.add(refined);multiscaleExtraPersonBoxes++;
+       }
+      }
+     }
      validFrames++;
      int p=0,a=0,v=0,weakPerson=0;
      final ArrayList<float[]> distinctPersonBoxes=new ArrayList<>();
@@ -565,7 +659,7 @@ public final class ClipClassifier {
      frameEvidence.put(sample);
      // Prioritize the actual foreground person or largest garden change.
      // Cars on the road cannot dominate a saved thumbnail.
-     final float gardenTop=.64f,margin=.045f;
+     final float gardenTop=.433f,margin=.045f;
      float personInGarden=0f;
      float[] gardenPersonBox=null;
      for(Detection detected:found){
@@ -573,7 +667,7 @@ public final class ClipClassifier {
       float[] box=detected.box;
       if(box==null||box.length!=4)continue;
       float center=(box[1]+box[3])*.5f;
-      if(box[2]>=gardenTop&&center>=margin&&center<=1f-margin
+      if(box[2]>=MotionGrid.markedTopAt(center)&&center>=margin&&center<=1f-margin
           &&detected.score>personInGarden){
        personInGarden=detected.score;
        gardenPersonBox=box;
@@ -601,6 +695,8 @@ public final class ClipClassifier {
     // Closest-sync frames are efficient for classification, but may be
     // keyframes distant from the triggering event. Inspect two bounded,
     // actual-time nearest frames for the cover image only, preserving video.
+    result.put("person_review_multiscale_frames",multiscaleReviewedFrames);
+    result.put("person_review_extra_boxes",multiscaleExtraPersonBoxes);
     int nearestFrameAttempts=0,nearestFrameDecoded=0;
     if(bestMotionTimeMs>=0&&duration>700){
      long[] offsets={0L,320L};
