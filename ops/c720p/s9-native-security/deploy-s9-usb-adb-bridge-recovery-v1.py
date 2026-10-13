@@ -17,7 +17,7 @@ URL='https://raw.githubusercontent.com/JesperOaths/kale-nel/d74e132220892ff8244d
 OVERRIDE='''[Service]
 ExecStart=
 ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/recover-authorized-s9-adb-from-usb-v1.py
-TimeoutStartSec=35
+TimeoutStartSec=75
 '''
 def call(*a):
  x=subprocess.run(a,capture_output=True,text=True,timeout=17)
