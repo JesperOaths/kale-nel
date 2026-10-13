@@ -757,7 +757,9 @@ public final class CameraService extends Service {
   if(recoveryQueued || reviewer==null || folder==null)return;
   recoveryQueued=true;
   final File archive=folder;
-  try{reviewer.execute(new Runnable(){public void run(){recoverArchive(archive);}});}
+  try{reviewer.execute(new Runnable(){public void run(){
+   try{recoverArchive(archive);}finally{recoveryQueued=false;}
+  }});}
   catch(java.util.concurrent.RejectedExecutionException e){recoveryQueued=false;}
  }
  private void recoverArchive(File archive){
@@ -1125,6 +1127,7 @@ public final class CameraService extends Service {
    d.put("historical_import_queued",historicalQueued);
    d.put("face_review_engine","s9_native_face_review_v1");
    d.put("person_evidence_version",ClipClassifier.PERSON_EVIDENCE_VERSION);
+   d.put("archive_recovery_queued",recoveryQueued);
    d.put("person_evidence_completed",personEvidenceDone).put("person_evidence_errors",personEvidenceErrors)
     .put("person_evidence_queued",personEvidenceQueued).put("pose_review_last_status",classifier==null?"not_ready":classifier.lastPoseStatus());
    d.put("face_backfill_queued",faceBackfillQueued);
