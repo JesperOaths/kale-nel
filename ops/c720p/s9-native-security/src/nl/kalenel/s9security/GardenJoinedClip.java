@@ -144,9 +144,9 @@ public final class GardenJoinedClip {
   };
   try{
    CountDownLatch finish=new CountDownLatch(1);
-   AtomicReference<FFmpegSession> completed=new AtomicReference<>();
+   AtomicReference<FFmpegSession> finishedSession=new AtomicReference<>();
    FFmpegSession session=FFmpegKit.executeWithArgumentsAsync(args,finished->{
-    completed.set(finished);
+    finishedSession.set(finished);
     finish.countDown();
    });
    if(session==null)throw new IOException("ffmpeg_session_not_started");
@@ -156,7 +156,7 @@ public final class GardenJoinedClip {
     FFmpegKit.cancel(activeSession);
     throw new IOException("ffmpegkit_timeout");
    }
-   FFmpegSession result=completed.get();
+   FFmpegSession result=finishedSession.get();
    if(result==null||!ReturnCode.isSuccess(result.getReturnCode())||
       cancelled)throw new IOException("ffmpegkit_"+(result==null?"null":String.valueOf(result.getReturnCode())));
    if(!tmp.isFile()||tmp.length()<25000||tmp.length()>250000000)
