@@ -11,6 +11,9 @@ import java.util.ArrayDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * On-phone, single-file pre-event playback assembly.
@@ -140,16 +143,29 @@ public final class GardenJoinedClip {
    tmp.getAbsolutePath()
   };
   try{
-   FFmpegSession session=FFmpegKit.executeWithArguments(args);
-   if(session!=null)activeSession=session.getSessionId();
-   if(session==null||!ReturnCode.isSuccess(session.getReturnCode())||
-       cancelled)throw new IOException("ffmpegkit_"+(session==null?"null":String.valueOf(session.getReturnCode())));
+   CountDownLatch finish=new CountDownLatch(1);
+   AtomicReference<FFmpegSession> completed=new AtomicReference<>();
+   FFmpegSession session=FFmpegKit.executeWithArgumentsAsync(args,finished->{
+    completed.set(finished);
+    finish.countDown();
+   });
+   if(session==null)throw new IOException("ffmpeg_session_not_started");
+   activeSession=session.getSessionId();
+   if(cancelled)FFmpegKit.cancel(activeSession);
+   if(!finish.await(300,TimeUnit.SECONDS)){
+    FFmpegKit.cancel(activeSession);
+    throw new IOException("ffmpegkit_timeout");
+   }
+   FFmpegSession result=completed.get();
+   if(result==null||!ReturnCode.isSuccess(result.getReturnCode())||
+      cancelled)throw new IOException("ffmpegkit_"+(result==null?"null":String.valueOf(result.getReturnCode())));
    if(!tmp.isFile()||tmp.length()<25000||tmp.length()>250000000)
     throw new IOException("joined_mp4_size");
    long joined=duration(tmp);
    // Important: a truncated, one-segment MP4 must never be published.
    if(joined<main+prefix-1200||joined>main+prefix+2800)
     throw new IOException("join_duration_invalid_"+joined+"_expected_"+(main+prefix));
+   if(cancelled||!guard.mayMerge())throw new IOException("recording_started_before_merge_commit");
    if(!tmp.renameTo(output))throw new IOException("join_atomic_rename_failed");
    completed++;lastName=output.getName();
    lastDurationMs=joined;lastPreRollMs=prefix;lastError="";
