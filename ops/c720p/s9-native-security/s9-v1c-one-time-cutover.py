@@ -22,7 +22,7 @@ def run(argv,seconds=30):
  return p.stdout
 def adb(*args,seconds=28):return run(["adb","-s",PHONE,*args],seconds)
 def signer(p):
- txt=run(["apksigner","verify","--print-certs",str(p)],seconds=25)
+ txt=run(["apksigner","verify","--print-certs",str(p)],seconds=110)
  if CERT not in txt:raise RuntimeError("apk_signer_not_authorized")
 def model_hashes(p):
  with zipfile.ZipFile(p) as z:
@@ -43,7 +43,7 @@ def healthy(x,require_new=False):
     x.get("preroll_prepend_halted_after_failures") is False)
  return good
 def launch():
- adb("shell","am","start","-n",PKG+"/.CameraActivity",
+ adb("shell","am","start-foreground-service","-n",PKG+"/.CameraService",
      "--ez","enable_native_camera","true",seconds=40)
 def write_report(out):
  RELEASE.mkdir(mode=0o700,parents=True,exist_ok=True)
