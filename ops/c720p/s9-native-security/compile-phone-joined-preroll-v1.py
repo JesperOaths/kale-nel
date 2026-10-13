@@ -39,6 +39,9 @@ def main():
  if not smart.is_file():smart.write_bytes(get('https://repo.maven.apache.org/maven2/'+SMART,100000))
  if sha(smart.read_bytes())!='5b96aaa5f191dedbef72fb0c38f1a2b01807920afc0d92a75a2acd6e0cc7703c':
   raise RuntimeError('smart_java_integrity')
+ common=ROOT/'exceptions-common.jar'
+ if not common.is_file():common.write_bytes(get('https://repo.maven.apache.org/maven2/com/arthenica/smart-exception-common/0.2.1/smart-exception-common-0.2.1.jar',40000))
+ if sha(common.read_bytes())!='1cad0fb4dfa01755a014331b5ed199281d2c3fab5aca5c9d7abd0b41d0ec3f7b':raise RuntimeError('dependency_checksum')
  with zipfile.ZipFile(ffaar) as archive:
   (ROOT/'kit-classes.jar').write_bytes(archive.read('classes.jar'))
   libs=[n for n in archive.namelist() if n.startswith('jni/arm64-v8a/') and n.endswith('.so')]
@@ -48,7 +51,7 @@ def main():
  if classes.exists():shutil.rmtree(classes)
  classes.mkdir()
  src=sorted((stage/JAVA).glob('*.java'))
- cp=os.pathsep.join(map(str,[sdk,*jars,ROOT/'kit-classes.jar',smart]))
+ cp=os.pathsep.join(map(str,[sdk,*jars,ROOT/'kit-classes.jar',smart,common]))
  run(['javac','-source','8','-target','8','-cp',cp,'-d',str(classes),*map(str,src)],180)
  if not (classes/'nl/kalenel/s9security/GardenJoinedClip.class').is_file():
   raise RuntimeError('joiner_not_compiled')
