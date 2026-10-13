@@ -42,7 +42,7 @@ public final class GardenJoinedClip {
  // Protect real-time 4K capture from an encoder that repeatedly fails at
  // runtime. Re-enable only through a controlled new app session or upgrade.
  private static final long FAILURE_CIRCUIT_BREAKER=3;
- private volatile long completed=0,failed=0,skipped=0;
+ private volatile long completed=0,failed=0,skipped=0,consecutiveFailures=0;
  private volatile long lastDurationMs=0,lastPreRollMs=0;
  private volatile String lastName="",lastError="";
  private volatile long activeSession=-1L;
@@ -108,8 +108,8 @@ public final class GardenJoinedClip {
    // A new person-triggered 4K capture is never counted as a failure.
    if(cancelled){skipped++;lastError="merge_preempted_for_live_capture";}
    else {
-    failed++;lastError="merged_"+e.getClass().getSimpleName();
-    if(failed>=FAILURE_CIRCUIT_BREAKER){
+    failed++;consecutiveFailures++;lastError="merged_"+e.getClass().getSimpleName();
+    if(consecutiveFailures>=FAILURE_CIRCUIT_BREAKER){
      halted=true;
      Log.e("S9_EVENT_PREPEND",
        "MERGE_DISABLED_AFTER_REPEATED_FAILURES; originals and camera preserved");
@@ -185,7 +185,7 @@ public final class GardenJoinedClip {
     throw new IOException("join_duration_invalid_"+joined+"_expected_"+(main+prefix));
    if(cancelled||!guard.mayMerge())throw new IOException("recording_started_before_merge_commit");
    if(!tmp.renameTo(output))throw new IOException("join_atomic_rename_failed");
-   completed++;failed=0;lastName=output.getName();
+   completed++;consecutiveFailures=0;lastName=output.getName();
    lastDurationMs=joined;lastPreRollMs=prefix;lastError="";
    Log.i("S9_EVENT_PREPEND","VERIFIED_COMBINED_CLIP "+lastName+
      " pre_ms="+prefix+" total_ms="+joined+" bytes="+output.length());
