@@ -66,7 +66,8 @@ def run(stage,apply):
  (backup/'restore.json').write_text(json.dumps(record,indent=2));os.chmod(backup/'restore.json',0o600)
  try:
   # Install child assets and services first, then the single root entrypoint.
-  ordered=[p for p in new if p!=WWW/'c720p-surveillance.html']+[WWW/'c720p-surveillance.html']
+  ordered=[p for p in new if p!=WWW/'c720p-surveillance.html' and new[p]!=before[p][0]]
+  if new[WWW/'c720p-surveillance.html']!=before[WWW/'c720p-surveillance.html'][0]:ordered.append(WWW/'c720p-surveillance.html')
   for path in ordered:
    old,meta=before[path]
    if (path.read_bytes() if path.exists() else None)!=old:raise RuntimeError('Concurrent UI/service write')
@@ -88,8 +89,9 @@ def run(stage,apply):
    if sha(served)!=sha(new[path]):raise RuntimeError('HA asset readback mismatch '+name)
   if not get('/new/camera-controls').get('ok') or not get('/new/api/live-person-watch').get('ok'):raise RuntimeError('Camera health regressed')
   # Metadata rebuild reads existing signed sidecars and thumbnails only.
-  subprocess.run(['systemctl','--user','start','--no-block','c720p-s9-local-sd-catalog.service'],check=True,timeout=10)
-  result.update({'backup':str(backup),'installed':True,'assets_verified':8,'recordings_after':len(after['events']),'catalog_refresh_started':True,'camera_restarted':False,'media_changed':False})
+  catalog_changed=BIN/'c720p-s9-local-sd-catalog.py' in written
+  if catalog_changed:subprocess.run(['systemctl','--user','start','--no-block','c720p-s9-local-sd-catalog.service'],check=True,timeout=10)
+  result.update({'backup':str(backup),'installed':True,'changed_files':len(written),'assets_verified':8,'recordings_after':len(after['events']),'catalog_refresh_started':catalog_changed,'camera_restarted':False,'media_changed':False})
   print(json.dumps(result),flush=True)
  except BaseException:
   for path in reversed(written):

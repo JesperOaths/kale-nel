@@ -6,7 +6,7 @@ let current='live',liveData=null,healthBusy=false,controlsBusy=false,controlGene
 const create=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=String(txt);return n};
 const api=()=>window.C720PSecureRelay;
 const paneFor=id=>$(id==='camera'?'panel-controls':'panel-'+id);
-function stopMedia(pane){if(!pane)return;try{const doc=pane.querySelector('iframe')?.contentDocument;doc?.querySelectorAll('video').forEach(v=>{doc.defaultView?.C720PSecurityVideo?.suspendPlayer(v);v.pause()});doc?.querySelectorAll('dialog[open]').forEach(d=>d.close())}catch(_){} }
+function stopMedia(pane){if(!pane)return;try{const doc=pane.querySelector('iframe')?.contentDocument;doc?.querySelectorAll('video').forEach(v=>{doc.defaultView?.C720PSecurityVideo?.suspendPlayer(v);v.pause()});doc?.querySelectorAll('dialog[open]').forEach(d=>d.close());doc?.defaultView?.postMessage({kind:'s9-gpu-performance-close-v1'},location.origin)}catch(_){} }
 function live(on){const image=$('cameraLive'),video=window.C720PSecurityVideo;if(!video)return;on?video.startLive(image,{status:$('cameraStatus')}):video.stopLive(image)}
 function show(id){if(!tabs.some(t=>t[0]===id))return;current=id;$('s9v5-shell').dataset.view=id;
  for(const t of tabs){const selected=t[0]===id,pane=paneFor(t[0]);pane.hidden=!selected;pane.classList.toggle('s9v5-active',selected);if(!selected)stopMedia(pane);const b=$('s9v5-nav').querySelector('[data-view="'+t[0]+'"]');b.setAttribute('aria-current',selected?'page':'false')}
