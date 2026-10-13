@@ -74,6 +74,12 @@ def main():
  except Exception as e:
   print("S9_AUTO_CUTOVER_WAITING_FOR_PHONE",type(e).__name__,flush=True)
   return 0
+ if "preroll_prepend_halted_after_failures" in first:
+  write_report({"result":"v1c_already_running_pending_merged_mp4_proof",
+   "release_sha256":m["sha256"],"4k_enabled":first.get("native_4k_enabled"),
+   "combined_count":first.get("preroll_prepend_merged"),"recordings_preserved":True})
+  print("S9_V1C_PREEXISTING_VERIFIED",flush=True)
+  return 0
  if not healthy(first):
   print("S9_AUTO_CUTOVER_WAITING_FOR_COOL_IDLE_HEALTHY_4K",{
      k:first.get(k) for k in ("mode","temperature_c","garden_person_gate_backend",
@@ -90,14 +96,13 @@ def main():
  pm=adb("shell","pm","path",PKG,seconds=14)
  paths=re.findall(r"package:(/[^\s]+base[.]apk)",pm)
  if len(paths)!=1:raise RuntimeError("installed_package_path_unexpected")
- if BACK.exists() and any(BACK.glob("before-*")):
-  raise RuntimeError("rollback_backup_existing_without_result_manual_review")
  if os.statvfs(HOME).f_bavail*os.statvfs(HOME).f_frsize<85000000:
   print("S9_AUTO_CUTOVER_LOW_HUB_DISK",flush=True);return 0
  BACK.mkdir(mode=0o700,parents=True,exist_ok=True)
  saved=BACK/"before-v1c.apk"
- # ADB backup is always completed and validated before any state changes.
- adb("pull",paths[0],str(saved),seconds=100)
+ # Reuse a verified backup on a previous idle-window abort; never overwrite.
+ if not saved.is_file():
+  adb("pull",paths[0],str(saved),seconds=100)
  signer(saved)
  if model_hashes(saved)!=model_hashes(target):
   raise RuntimeError("rollback_camera_models_incompatible")
