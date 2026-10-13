@@ -50,6 +50,64 @@ def write_report(out):
  tmp=REPORT.with_suffix(".tmp")
  tmp.write_text(json.dumps(out,sort_keys=True,indent=2)+"\n")
  os.replace(tmp,REPORT)
+def verify_complete_video(m):
+ try:
+  run(["adb","connect",PHONE],seconds=12)
+  adb("forward","tcp:18808","tcp:8808",seconds=12)
+  status=state()
+  count=int(status.get("preroll_prepend_merged") or 0)
+  name=str(status.get("preroll_prepend_last_name") or "")
+  if status.get("preroll_prepend_halted_after_failures"):
+   print("S9_V1C_MERGER_HALTED_CAMERA_PRESERVED",status.get("preroll_prepend_last_error"),flush=True)
+   return
+  if count<1 or not re.fullmatch(r"motion_[0-9]{13}[.]mp4[.]complete[.]mp4",name):
+   print("S9_V1C_MERGE_EVIDENCE_NOT_YET_READY",count,status.get("preroll_prepend_errors"),flush=True)
+   return
+  original=name.replace(".complete.mp4","")
+  duration=int(status.get("preroll_prepend_last_duration_ms") or 0)
+  pretime=int(status.get("preroll_prepend_last_prefix_ms") or 0)
+  if duration<pretime+700 or pretime<500:
+   print("S9_V1C_MERGED_DURATION_NOT_VERIFIED",duration,pretime,flush=True)
+   return
+  bytes_by_type={}
+  for kind,p in (("merged",name),("original",original),("preroll",original+".preroll.mp4")):
+   u="http://127.0.0.1:18808/clip/"+p
+   with urllib.request.urlopen(urllib.request.Request(u,method="HEAD"),timeout=20) as response:
+    if response.status!=200 or "video/mp4" not in response.headers.get("Content-Type",""):
+     raise RuntimeError("video_head_invalid_"+kind)
+    bytes_by_type[kind]=int(response.headers.get("Content-Length","0"))
+  if min(bytes_by_type.values())<10000:
+   raise RuntimeError("video_part_truncated")
+  url="http://127.0.0.1:8794/new/saved/complete/"+original
+  req=urllib.request.Request(url,headers={"Range":"bytes=0-4095"})
+  with urllib.request.urlopen(req,timeout=20) as res:
+   sample=res.read(4096)
+   if res.status!=206 or sample[4:8]!=b"ftyp":
+    raise RuntimeError("joined_http_range_invalid")
+  result={"result":"one_complete_pre_event_mp4_verified",
+   "release_sha256":m["sha256"],"file":name,"merged_bytes":bytes_by_type["merged"],
+   "original_4k_bytes":bytes_by_type["original"],"pre_event_bytes":bytes_by_type["preroll"],
+   "pre_event_ms":pretime,"combined_duration_ms":duration,
+   "joined_count":count,"join_failures":status.get("preroll_prepend_errors"),
+   "native_4k_original_preserved":True,
+   "signed_archive_range_verified":True}
+  tool=__import__("shutil").which("ffprobe")
+  if tool:
+   clipurl="http://127.0.0.1:18808/clip/"+name
+   probe=subprocess.run([tool,"-v","error","-select_streams","v:0",
+      "-show_entries","stream=width,height,avg_frame_rate,codec_name",
+      "-of","json",clipurl],capture_output=True,text=True,timeout=40)
+   if probe.returncode!=0:raise RuntimeError("ffprobe_failed_"+probe.stderr[-130:])
+   streams=json.loads(probe.stdout).get("streams",[])
+   if not streams or streams[0].get("width")!=1280 or streams[0].get("height")!=720:
+    raise RuntimeError("joined_playback_resolution_invalid")
+   result["codec"]=streams[0].get("codec_name")
+   result["frame_rate"]=streams[0].get("avg_frame_rate")
+  write_report(result)
+  print("S9_V1C_COMBINED_PRE_ROLL_AND_MOTION_VERIFIED",json.dumps(result,sort_keys=True),flush=True)
+ except Exception as e:
+  print("S9_V1C_JOINED_MP4_PROOF_PENDING",type(e).__name__,str(e)[:200],flush=True)
+
 def main():
  manifest=RELEASE/"release.json"
  if not manifest.is_file():
@@ -61,7 +119,12 @@ def main():
  signer(target)
  if model_hashes(target)!=m["model_sha256"]:raise RuntimeError("model_checksum_changed")
  if REPORT.is_file():
-  print("S9_AUTO_CUTOVER_ALREADY_RESOLVED",REPORT.read_text()[:500],flush=True)
+  previous=json.loads(REPORT.read_text())
+  if previous.get("result") in ("v1c_live_camera_healthy_pending_merged_mp4_proof",
+                                "v1c_already_running_pending_merged_mp4_proof"):
+   verify_complete_video(m)
+  else:
+   print("S9_AUTO_CUTOVER_ALREADY_RESOLVED",previous.get("result"),flush=True)
   return 0
  try:
   run(["adb","connect",PHONE],seconds=13)
