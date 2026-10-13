@@ -11,8 +11,8 @@ import datetime,json,os,stat,tempfile,time,urllib.request,urllib.error,subproces
 from pathlib import Path
 UP=Path("/home/jespern/c720p-home-hub/bin/c720p-drive-security-archive.py")
 BACK=Path("/home/jespern/c720p-home-hub/backups/security-playback-routing-v31")
-ANCHOR=" import s9_sd_proxy_extension\n s9_sd_proxy_extension.install_local_sd(H)\n"
-ADD=" import s9_hub_playback\n s9_hub_playback.install(H,s9_sd_proxy_extension.rows)\n"
+ANCHOR="import s9_sd_proxy_extension\ns9_sd_proxy_extension.install_local_sd(H)\n"
+ADD="import s9_hub_playback\ns9_hub_playback.install(H,s9_sd_proxy_extension.rows)\n"
 UNIT="c720p-drive-security-archive.service"
 
 def read(url,method="GET",headers=None,limit=1400000):
