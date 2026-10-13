@@ -955,7 +955,12 @@ public final class CameraService extends Service {
    }});
   }catch(java.util.concurrent.RejectedExecutionException e){movementBackfillQueued=false;}
  }
+ // Never quarantine an existing person-negative original while testing a
+ // detector whose false-negative rate is not independently established.
+ // Original 4K MP4 files remain on microSD for manual review and recovery.
+ private static final boolean GARDEN_AUTO_QUARANTINE_ENABLED=false;
  private void maybeGardenArchiveTriage(){
+  if(!GARDEN_AUTO_QUARANTINE_ENABLED)return;
   long now=SystemClock.elapsedRealtime();
   // Increase archive throughput ONLY when the garden has been quiet for
   // 30 seconds, the realtime person GPU gate is idle, and the phone is cool.
@@ -1085,6 +1090,7 @@ public final class CameraService extends Service {
    d.put("face_review_engine","s9_native_face_review_v1");
    d.put("face_backfill_queued",faceBackfillQueued);
     d.put("garden_archive_triage_version","onphone_24frame_reversible_quarantine_v1");
+   d.put("garden_archive_auto_quarantine_enabled",GARDEN_AUTO_QUARANTINE_ENABLED);
     d.put("garden_archive_triage_queued",gardenTriageQueued);
     d.put("garden_archive_quarantined_since_start",gardenTriageQuarantined);
     d.put("garden_archive_preserved_since_start",gardenTriagePreserved);
