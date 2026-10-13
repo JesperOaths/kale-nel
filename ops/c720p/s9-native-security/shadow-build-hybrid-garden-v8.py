@@ -5,7 +5,7 @@ Stage the pinned complete Android source tree away from the production build,
 compile against the existing Android/TFLite SDK, then execute deterministic
 tracking tests. Does not change phone, recordings, camera or baseline binaries.
 """
-import argparse,datetime as dt,hashlib,json,os
+import argparse,datetime as dt,hashlib,json,os,shutil
 from pathlib import Path
 import re,subprocess,tempfile,urllib.request
 
@@ -45,8 +45,14 @@ def main():
  with tempfile.TemporaryDirectory(prefix="s9-detector-v8-source-") as directory:
   root=Path(directory);stage=root/JAVA;stage.mkdir(parents=True)
   for file in FILES:
-   data=fetch(args.commit,(JAVA/file).as_posix())
-   (stage/file).write_bytes(data)
+   if file in ("CameraService.java","ClipClassifier.java","GardenPersonTrackGate.java"):
+    data=fetch(args.commit,(JAVA/file).as_posix())
+    (stage/file).write_bytes(data)
+   else:
+    original=ORIGINAL/JAVA/file
+    if not original.is_file() or original.stat().st_size<100:
+     raise RuntimeError("original_source_missing_"+file)
+    shutil.copy2(original,stage/file)
   tests=root/"tests";tests.mkdir()
   for f in TESTS:(tests/Path(f).name).write_bytes(fetch(args.commit,f))
   # Source compile only: no production mutation and no APK app lifecycle.
@@ -64,5 +70,6 @@ def main():
   print("HYBRID_GARDEN_PERSON_V8_SHADOW_COMPILED",json.dumps({
    "source_sha":args.commit,"files":len(FILES),"compiled":len(list(out.rglob("*.class"))),
    "test_result":test.stdout.strip(),"changed_production_files":False,
-   "camera_still_running":True,"apk_not_installed":True},sort_keys=True),flush=True)
+   "camera_still_running":True,"apk_not_installed":True,
+   "base_sources_preserved":len(FILES)-3},sort_keys=True),flush=True)
 if __name__=="__main__":main()
