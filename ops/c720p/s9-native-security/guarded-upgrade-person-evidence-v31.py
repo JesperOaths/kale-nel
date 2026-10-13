@@ -91,6 +91,9 @@ def main():
   raise RuntimeError("untrusted_apk_or_release_attestation")
  if os.statvfs(str(BASE)).f_bavail*os.statvfs(str(BASE)).f_frsize<190*1024**2:
   raise RuntimeError("hub_disk_not_safe_to_backup_apk")
+ if (adb("shell","getprop","ro.product.model",timeout=15).stdout.strip()!="SM-G965F" or
+     adb("shell","getprop","ro.serialno",timeout=15).stdout.strip()!="27bb603837047ece"):
+  raise RuntimeError("direct_transport_is_not_the_verified_s9_camera")
  sd=adb("shell","df","-h","/storage/9C33-6BBD",timeout=17).stdout
  if "/storage/9C33-6BBD" not in sd:raise RuntimeError("phone_sd_not_mounted")
  adb("forward",f"tcp:{LOCAL}","tcp:8808",timeout=18)
