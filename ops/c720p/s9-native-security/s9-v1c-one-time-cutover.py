@@ -43,7 +43,7 @@ def healthy(x,require_new=False):
     x.get("preroll_prepend_halted_after_failures") is False)
  return good
 def launch():
- adb("shell","am","start-foreground-service","-n",PKG+"/.CameraService",
+ adb("shell","am","start","-n",PKG+"/.CameraActivity",
      "--ez","enable_native_camera","true",seconds=40)
 def write_report(out):
  RELEASE.mkdir(mode=0o700,parents=True,exist_ok=True)
