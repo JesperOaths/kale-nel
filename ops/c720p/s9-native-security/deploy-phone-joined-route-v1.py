@@ -28,7 +28,9 @@ EXT='''  # S9_JOINED_PREROLL_V1: read-only complete segment for indexed original
     except (ValueError,TypeError,urllib.error.HTTPError,urllib.error.URLError,TimeoutError):pass
    self.js(404,{"ok":False,"error":"complete_video_not_yet_available"});return
 '''
-RELAY='''   # S9_JOINED_PREROLL_SIGNED_V1: no path passthrough, existing auth.
+RELAY='''   # S9_JOINED_PREROLL_SIGNED_V1: indexed on-phone derivatives, after auth.
+   m=re.fullmatch(r'/(new)/saved/preroll/(motion_[0-9]{13}[.]mp4)',path)
+   if m:return self.archive(m.group(1),'/saved/preroll/'+m.group(2),head)
    m=re.fullmatch(r'/(new)/saved/complete/(motion_[0-9]{13}[.]mp4)',path)
    if m:return self.archive(m.group(1),'/saved/complete/'+m.group(2),head)
 '''
