@@ -111,7 +111,7 @@ def main():
   remote=next((line.split("package:",1)[1].strip() for line in installed.splitlines()
               if line.startswith("package:")),None)
   if not remote:raise RuntimeError("no_installed_package_to_backup")
-  BACK.mkdir(mode=0o700,parents=True)
+  BACK.mkdir(mode=0o700,parents=True,exist_ok=True)
   old=BACK/("before-v31-"+dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")+".apk")
   adb("pull",remote,str(old),timeout=80)
   if not 8*1024*1024<old.stat().st_size<30*1024*1024:
