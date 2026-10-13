@@ -73,7 +73,7 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 @media(max-width:820px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.cover{height:140px}body{padding:14px}}
 </style>
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script defer src="/local/frontyard-security-new/security-video-playback-v30.js?v=security-v30-20261013"></script>
+<script defer src="/local/frontyard-security-new/security-video-playback-v30.js?v=s9-prepended-player-v1-20261013"></script>
 <style id="s9-security-scroll-boundaries-v12">
 html{height:100%!important;min-height:0!important;overflow:hidden!important}
 body{
@@ -89,7 +89,7 @@ body{
 <nav class="tabs" aria-label="People and faces views">
 <button id="peopleTab" type="button" aria-pressed="true">Person folders</button>
 <button id="facesTab" type="button" aria-pressed="false">Face folders</button>
-<label id="groupingControl" class="source">Group by <select id="grouping"><option value="appearances" selected>Person appearances</option><option value="date">Recording date</option></select></label>
+<label id="groupingControl" class="source">Group by <select id="grouping"><option value="profiles" selected>People &amp; matches</option><option value="appearances">Person appearances</option><option value="date">Recording date</option></select></label>
 <label class="source">Archive <select id="source"><option value="sd" selected>S9+ microSD</option><option value="drive">Historical Drive</option></select></label>
 </nav>
 <section id="summary" class="stats" aria-label="Current archive evidence totals">
@@ -111,6 +111,13 @@ body{
 <p id="detailCount" class="result-count"></p><div class="records" id="records"></div>
 <button id="moreRecords" type="button" hidden style="display:block;margin:17px auto">Show more evidence</button>
 </section>
+<dialog id="personReview" aria-labelledby="personReviewTitle">
+<form id="personForm"><div class="modal-head"><strong id="personReviewTitle">Save appearance to a person</strong><button type="button" id="cancelPerson">Cancel</button></div>
+<p style="margin:14px 0">Review the recording and face evidence before linking. Posture, clothing and walking measurements can support a match.</p>
+<label>Person folder <select id="personChoice"><option value="new">Create a person folder</option></select></label>
+<label style="display:block;margin:14px 0">Folder name <input id="personName" maxlength="56" placeholder="Name or label" autocomplete="off"></label>
+<label style="display:block;margin:14px 0"><input id="personConfirmed" type="checkbox" required> I reviewed this appearance and confirm this folder assignment.</label>
+<p id="personReviewStatus" role="status"></p><button id="savePerson" type="submit">Save to folder</button></form></dialog>
 <dialog id="viewer" aria-label="Security evidence recording">
 <div class="modal-head"><strong id="videoTitle">Recorded evidence</strong><button id="closeVideo" type="button">Close</button></div>
 <video id="video" controls playsinline preload="metadata"></video>
@@ -131,7 +138,7 @@ const nativeOK=/^motion_[0-9]{13}[.]mp4$/;
 const driveOK=/^[A-Za-z0-9][A-Za-z0-9._-]{0,179}[.]mp4$/i;
 const cropOK=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_.-]{1,56})$/;
-const state={sd:[],drive:[],reviews:[],folders:[],selected:null,source:'sd',view:'people',grouping:'appearances',filter:'',ready:false,page:1,detailPage:1,sdError:'',driveError:'',driveLoaded:false,loading:0};
+const state={sd:[],drive:[],reviews:[],folders:[],selected:null,source:'sd',view:'people',grouping:'profiles',persons:null,personError:'',filter:'',ready:false,page:1,detailPage:1,sdError:'',driveError:'',driveLoaded:false,loading:0};
 const relay=()=>{if(window.C720PSecureRelay)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.location.origin===window.location.origin&&window.parent.C720PSecureRelay)return window.parent.C720PSecureRelay}catch(_){}return null};
 async function get(path){
  const r=relay();if(!r?.fetch)throw Error('Authenticated archive connection unavailable');
@@ -199,9 +206,35 @@ function sdPerson(rec){return safeSD(rec)&&(Number(rec.person_count)>0||(Array.i
  (Array.isArray(rec.face_candidates)&&rec.face_candidates.some(f=>safeFace(rec,f))))}
 function drivePerson(rec){return Number(rec.person_count)>0||Number(rec.person_detected_frames_050)>0||/person|people|group/.test(String(rec.reviewCategory||rec.category||rec.scene_category||''))}
 function sourcePeople(){return state.source==='sd'?state.sd.filter(sdPerson).map(rec=>item('sd',rec)):state.drive.filter(drivePerson).map(rec=>item('drive',rec))}
+function personEntry(obs){
+ const rec=state.sd.find(x=>x.clip_no===obs.clip_no);if(!rec)return null;
+ const track=validTracks(rec).find(x=>x.temporary_track_id===obs.track_id);if(!track)return null;
+ const face=(obs.face_evidence||[]).find(x=>safeFace(rec,x));return {...item('sd',rec,face,track),observation:obs};
+}
 function buildFolders(){
  const folders=[];
- if(state.view==='people'&&state.grouping==='appearances'){
+ if(state.view==='people'&&state.source==='sd'&&state.grouping==='profiles'&&state.persons){
+  const used=new Set();
+  for(const profile of state.persons.profiles||[]){
+   const entries=(profile.observations||[]).map(personEntry).filter(Boolean);entries.forEach(e=>used.add(e.observation.observation_key));
+   if(entries.length){const g=group('profile:'+profile.profile_id,profile.name,profile.confirmed_appearance_count+' reviewed appearances'+(profile.needs_review_count?' · '+profile.needs_review_count+' need another review':''),'profile',entries);g.profile=profile;folders.push(g);}
+  }
+  for(const candidate of state.persons.candidates||[]){
+   const entries=(candidate.observations||[]).map(personEntry).filter(Boolean);entries.forEach(e=>used.add(e.observation.observation_key));
+   if(entries.length)folders.push(group(candidate.candidate_id,'Possible person · '+candidate.face_alias,candidate.association_status==='ambiguous_face_alias'?'Conflicting face matches · review separately':'Similar faces across '+candidate.recording_count+' recordings · review needed','candidate',entries));
+  }
+  for(const obs of state.persons.unassigned||[]){if(used.has(obs.observation_key))continue;const entry=personEntry(obs);if(!entry)continue;
+   const suggestions=(state.persons.suggestions||[]).filter(x=>x.observation_key===obs.observation_key);
+   used.add(obs.observation_key);folders.push(group('observation:'+obs.observation_key,obs.track_label+' · '+stamp(entry),suggestions.length?'Possible match: '+suggestions.map(x=>x.profile_name).join(', ')+' · review needed':'Unassigned appearance · open to save to a person','appearance',[entry]));
+  }
+  for(const entry of sourcePeople()){
+   const tracks=validTracks(entry.rec);
+   if(!tracks.length)folders.push(group('recording:'+entry.key,'Person evidence · '+stamp(entry),'Recording saved; separate person review pending','candidate',[entry]));
+   for(const track of tracks){const key=entry.key+':track:'+track.temporary_track_id;if(!used.has(key))folders.push(group('pending:'+key,track.id+' · '+stamp(entry),'Person matching review pending','appearance',[item('sd',entry.rec,null,track)]));}
+  }
+  state.folders=folders;return;
+ }
+ if(state.view==='people'&&state.grouping!=='date'){
   for(const entry of sourcePeople()){
    const tracks=entry.source==='sd'?validTracks(entry.rec):[];
    if(tracks.length){
@@ -231,7 +264,8 @@ function buildFolders(){
      ['new_anonymous_candidate','anonymous_similarity_unverified','reference_similarity_unverified'].includes(face.match_status)&&
      (id.startsWith('unknown_')||face.match_status==='reference_similarity_unverified');
    // Snapshot-only faces have no cross-recording identity; group only within that recording.
-   const key=canCompare?'face:'+id:'crop:'+entry.key;
+   const epoch=String(face.face_gallery_epoch||entry.rec.face_gallery_epoch||'');
+   const key=canCompare&&/^[a-f0-9]{64}$/.test(epoch)?'face:'+epoch+':'+id:'crop:'+entry.key;
    if(!buckets.has(key))buckets.set(key,{entries:[],id:canCompare?id:null,name:canCompare?face.candidate_name:null});
    buckets.get(key).entries.push(entry);
   }
@@ -320,7 +354,7 @@ function reviewText(rec){
   face_embedding_failed_snapshots_only:'Face crops saved; matching failed',
   review_complete_unverified_matches:'On-device face review complete; matches unverified',
   face_review_failed:'Face review failed',face_model_changed_requires_reenrollment:'Reference gallery needs new enrollment',
-  face_index_read_error:'Face index could not be read'};
+  face_index_read_error:'Face index could not be read',face_evidence_saved_quality_limited:'Face crop saved; insufficient detail for matching'};
  return labels[rec.face_review_status]||'Face-review status unavailable';
 }
 function trackText(track,includeID=true){
@@ -329,6 +363,10 @@ function trackText(track,includeID=true){
  if(typeof track.upper_clothing_colour==='string'&&track.upper_clothing_colour!=='uncertain')parts.push(track.upper_clothing_colour.replaceAll('_',' ')+' clothing');
  const first=number(track.first_sample_ms),last=number(track.last_sample_ms);
  if(first!==null&&last!==null&&first>=0&&last>=first)parts.push((first/1000).toFixed(1)+'–'+(last/1000).toFixed(1)+' s');
+ const pose=track.pose_metrics;
+ if(pose?.posture_availability==='available')parts.push(pose.posture.replace('projected_','').replaceAll('_',' ')+' posture');
+ if(number(pose?.apparent_speed_body_heights_per_second)!==null)parts.push(pose.apparent_speed_body_heights_per_second.toFixed(2)+' body heights/s in image');
+ if(pose?.gait_availability==='available_projected_ankle_cycle'&&number(pose.cadence_steps_per_minute)!==null)parts.push(Math.round(pose.cadence_steps_per_minute)+' steps/min');
  if(number(track.sample_count)>0)parts.push(track.sample_count+' sampled frames');return parts.join(' · ');
 }
 function renderRecords(){
@@ -358,6 +396,16 @@ function renderRecords(){
   }
   const actions=el('div','record-actions'),play=el('button','',entry.face?'Play at face timestamp':entry.track?'Play at appearance':'Play recording');play.type='button';play.addEventListener('click',()=>openClip(entry));actions.append(play);
   if(entry.face){const crop=el('button','','Open face crop');crop.type='button';crop.addEventListener('click',()=>openFace(entry));actions.append(crop)}
+  if(entry.source==='sd'&&entry.track){
+   if(entry.face)body.append(el('small','',trackText(entry.track)));
+   const key=entry.key+':track:'+entry.track.temporary_track_id;
+   const obs=entry.observation||(state.persons?.unassigned||[]).find(o=>o.observation_key===key);
+   if(obs){const save=el('button','',obs.association_status==='human_confirmed'?'Change person folder':'Save to person…');save.type='button';save.onclick=()=>reviewPerson(obs);actions.append(save);
+    if(obs.profile_id){const unlink=el('button','','Remove from person');unlink.type='button';unlink.onclick=async()=>{try{await saveReview({action:'unlink',observation_key:key})}catch(e){$('sync').textContent=String(e.message||'Could not remove this link')}};actions.append(unlink)}
+    for(const suggestion of (state.persons?.suggestions||[]).filter(x=>x.observation_key===key))body.append(el('small','', 'Possible '+suggestion.profile_name+': '+suggestion.evidence.map(e=>({face:'similar face',clothing:'clothing colour',outfit:'outfit',posture:'posture',movement:'movement speed',cadence:'walking cadence'})[e.metric]||'evidence').join(', ')+(suggestion.ambiguous?' · ambiguous':'')));
+   }
+   if(!entry.track.pose_metrics)body.append(el('small','','Posture and walking review pending'));
+  }
   body.append(actions);card.append(pic,body);records.append(card);signedPicture(pic,entry);
  }
  $('detailCount').textContent='Showing '+shown.length+' of '+g.entries.length+' evidence entries';
@@ -383,7 +431,7 @@ async function openFace(entry){
  try{const url=await r.url(thumb(entry));if(ticket!==faceTicket)return;$('faceImage').src=url}
  catch(_){if(ticket===faceTicket)$('faceState').textContent='Saved face crop is unavailable through the authenticated archive.'}
 }
-function render(){buildFolders();updateSummary();if(state.selected&&state.folders.some(g=>g.id===state.selected))renderRecords();else{state.selected=null;renderFolders()}}
+function render(){if(state.personError&&state.source==='sd')$('sync').textContent=state.personError;buildFolders();updateSummary();if(state.selected&&state.folders.some(g=>g.id===state.selected))renderRecords();else{state.selected=null;renderFolders()}}
 function setTab(view){state.view=view;state.page=1;state.selected=null;$('peopleTab').setAttribute('aria-pressed',String(view==='people'));$('facesTab').setAttribute('aria-pressed',String(view==='faces'));render()}
 async function refresh(){
  const ticket=++state.loading,source=state.source;$('reload').disabled=true;$('sync').textContent='Refreshing '+(source==='sd'?'S9+':'Drive')+' evidence…';
@@ -392,6 +440,8 @@ async function refresh(){
    const data=await get('/new/api/saved');if(ticket!==state.loading)return;
    if(data.archive_mode!=='S9-microSD-only'||!Array.isArray(data.events))throw Error('S9+ archive index has an unexpected format');
    state.sd=[...new Map(data.events.filter(safeSD).map(rec=>[rec.clip_no,rec])).values()];state.ready=true;state.sdError='';
+   try{const persons=await get('/new/api/person-folders');if(ticket!==state.loading)return;if(persons.version!=='s9_person_folders_v31')throw Error('Person folders unavailable');state.persons=persons;state.personError=''}
+   catch(_){state.personError='Person matching is temporarily unavailable. Existing appearances and recordings remain accessible.';state.persons=null;}
   }else{
    const [archive,review]=await Promise.allSettled([get('/new/api/drive-saved'),get('/new/api/drive-person-review')]);if(ticket!==state.loading)return;
    if(archive.status!=='fulfilled'||!Array.isArray(archive.value.events))throw Error('Historical Drive archive is unavailable');
@@ -408,10 +458,30 @@ async function refresh(){
   if(state.source===source){$('sync').textContent=kept?'Showing previous index':'Archive unavailable';render()}
  }finally{if(ticket===state.loading)$('reload').disabled=false}
 }
+let reviewedObservation=null;
+function reviewPerson(obs){
+ reviewedObservation=obs;const select=$('personChoice');select.replaceChildren(new Option('Create a person folder','new'));
+ for(const p of state.persons?.profiles||[])select.add(new Option(p.name,p.profile_id));
+ select.value=obs.profile_id||'new';$('personName').value='';$('personName').required=select.value==='new';$('personName').disabled=select.value!=='new';
+ $('personConfirmed').checked=false;$('personReviewStatus').textContent='';$('personReview').showModal();
+}
+async function saveReview(fields){
+ const r=relay();if(!r?.fetch)throw Error('Authenticated connection unavailable');
+ const result=await r.fetch('/new/api/person-folders/review',{method:'POST',headers:{'Content-Type':'application/json','X-S9-Person-Folder-Intent':'explicit-review-v31'},body:JSON.stringify({action:fields.action,observation_key:fields.observation_key??null,profile_id:fields.profile_id??null,name:fields.name??null,human_confirmed:true})});
+ const data=await result.json();if(!result.ok||!data.ok)throw Error(data.error||'Folder update failed');await refresh();
+}
+$('personChoice').onchange=()=>{$('personName').required=$('personChoice').value==='new';$('personName').disabled=$('personChoice').value!=='new'};
+$('cancelPerson').onclick=()=>$('personReview').close();
+$('personForm').onsubmit=async event=>{
+ event.preventDefault();if(!$('personConfirmed').checked||!reviewedObservation)return;$('savePerson').disabled=true;
+ try{const create=$('personChoice').value==='new';await saveReview({action:create?'create':'link',observation_key:reviewedObservation.observation_key,profile_id:create?null:$('personChoice').value,name:create?$('personName').value.trim():null});$('personReview').close()}
+ catch(e){$('personReviewStatus').textContent=String(e.message||'Could not save this folder')}
+ finally{$('savePerson').disabled=false}
+};
 $('reload').addEventListener('click',refresh);
 $('search').addEventListener('input',event=>{state.filter=String(event.target.value||'').toLowerCase().trim().slice(0,140);state.page=1;state.selected=null;renderFolders()});
 $('source').addEventListener('change',()=>{state.source=$('source').value==='drive'?'drive':'sd';state.page=1;state.selected=null;state.filter='';$('search').value='';render();refresh()});
-$('grouping').addEventListener('change',()=>{state.grouping=$('grouping').value==='date'?'date':'appearances';state.page=1;state.selected=null;render()});
+$('grouping').addEventListener('change',()=>{state.grouping=['profiles','date'].includes($('grouping').value)?$('grouping').value:'appearances';state.page=1;state.selected=null;render()});
 $('peopleTab').addEventListener('click',()=>setTab('people'));$('facesTab').addEventListener('click',()=>setTab('faces'));
 $('moreFolders').addEventListener('click',()=>{state.page++;renderFolders()});$('moreRecords').addEventListener('click',()=>{state.detailPage++;renderRecords()});
 $('back').addEventListener('click',()=>{state.selected=null;renderFolders()});

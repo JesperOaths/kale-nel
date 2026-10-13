@@ -24,7 +24,7 @@ class FaceReviewTests(unittest.TestCase):
   self.ui=load(HERE/"patch-s9-face-review-ui.py","s9_face_ui")
 
  def test_safe_metadata_without_biometric_exfiltration(self):
-  m={"face_review_version":"s9_face_review_v1",
+  m={"name":"motion_1791600000000.mp4","face_review_version":"s9_face_review_v1",
      "face_review_status":"review_complete_unverified_matches",
      "face_review_sampled_frames":4,"face_snapshots_saved":2,
      "face_model_sha256":"deadbeef",
@@ -32,13 +32,14 @@ class FaceReviewTests(unittest.TestCase):
      "face_candidates":[
       {"person_id":"unknown_00001","match_status":"new_anonymous_candidate",
        "snapshot":"motion_1791600000000__unknown_00001__1600_0.jpg","time_ms":1600,
+       "snapshot_size_bytes":4000,"snapshot_sha256":"a"*64,
        "embedding":[.2]*128,"cosine_similarity":.908},
       {"person_id":"known_candidate_Alice","candidate_name":"Alice",
        "match_status":"reference_similarity_unverified","time_ms":2800,
        "snapshot":"face.jpg","cosine_similarity":.943}
      ]}
   safe=self.catalog.safe_face_review_metadata(m)
-  self.assertEqual(safe["face_snapshots_saved"],2)
+  self.assertEqual(safe["face_snapshots_saved"],1)
   self.assertEqual(safe["face_candidates"][0]["person_id"],"unknown_00001")
   self.assertEqual(safe["face_candidates"][1]["candidate_name"],"Alice")
   output=json.dumps(safe)
@@ -188,11 +189,12 @@ class FaceReviewTests(unittest.TestCase):
   self.assertIn('media.setDataSource(mp4.getAbsolutePath())',k)
   self.assertIn('METADATA_KEY_VIDEO_WIDTH',k)
   self.assertIn('METADATA_KEY_VIDEO_HEIGHT',k)
-  # Scaled 960px only for face localization; final crop is from the original
-  # decoded 4K frame, never from the reduced browser playback stream.
-  self.assertIn('scaled=Bitmap.createScaledBitmap(frame,width,height,true)',face)
-  self.assertIn('int x=(int)(center.x*frame.getWidth()/width)',face)
-  self.assertIn('Bitmap face=crop(frame,x,y,size)',face)
+  # Bounded upper-person ROIs magnify native detail for face localization;
+  # final evidence always crops the original decoded 4K source bitmap.
+  self.assertIn('proposal=Bitmap.createBitmap(frame,region.left,region.top,region.width(),region.height())',face)
+  self.assertIn('scaled=Bitmap.createScaledBitmap(proposal,width,height,true)',face)
+  self.assertIn('region.left+center.x*region.width()/(double)width',face)
+  self.assertIn('Bitmap face=Bitmap.createBitmap(frame,bounds.left,bounds.top,bounds.width(),bounds.height())',face)
   self.assertNotIn('getFilesDir(),"1080',k)
   self.assertNotIn('ffmpeg',k)
   self.assertNotIn('adb',k)

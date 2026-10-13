@@ -99,7 +99,7 @@ public final class CameraService extends Service {
  private volatile boolean jpegBusy=false;
  private volatile long jpegRequestedAt=0,jpegEncoded=0,jpegErrors=0;
  private File folder,partial,finished;
- private String cameraId="",mode="stopped",lastFailure="",lastClip="",lastReview="",backend="pending";
+ private volatile String cameraId="",mode="stopped",lastFailure="",lastClip="",lastReview="",backend="pending";
  private volatile boolean running=false,pilotOnly=true;
  private volatile long frames=0,motionEvents=0,completed=0,reviewed=0,failed=0,suppressedByRate=0;
  private volatile long reserveUsed=0,fallbackEvidenceSaved=0,fallbackEvidenceFailed=0;
@@ -108,6 +108,9 @@ public final class CameraService extends Service {
  private volatile boolean historicalQueued=false;
  private volatile boolean faceBackfillQueued=false;
  private volatile boolean movementBackfillQueued=false;
+ private volatile boolean personEvidenceQueued=false;
+ private volatile long personEvidenceDone=0,personEvidenceErrors=0,lastPersonEvidenceScan=0;
+ private final Map<String,Integer> personEvidenceRetries=new HashMap<>();
  private final Map<String,Integer> movementBackfillRetries=new HashMap<>();
  private volatile long movementBackfillDone=0,movementBackfillErrors=0,lastMovementBackfillScan=0;
  private volatile long faceBackfillDone=0,faceBackfillErrors=0,lastFaceBackfillScan=0;
@@ -998,6 +1001,36 @@ public final class CameraService extends Service {
    gardenTriageQueued=false;
   }
  }
+ private boolean personEvidenceSafe(){
+  return running&&"watching".equals(mode)&&temperature()<335&&!gardenPersonGateBusy&&
+   (lastMovementAt<=0||SystemClock.elapsedRealtime()-lastMovementAt>=60000L)&&
+   folder!=null&&folder.getUsableSpace()>20L*1024*1024*1024;
+ }
+ private void maybePersonEvidence(){
+  long now=SystemClock.elapsedRealtime();
+  if(personEvidenceQueued||movementBackfillQueued||faceBackfillQueued||historicalQueued||
+     recoveryQueued||gardenTriageQueued||reviewer==null||classifier==null||now-lastPersonEvidenceScan<90000L||!personEvidenceSafe())return;
+  personEvidenceQueued=true;final File target=folder;
+  try{reviewer.execute(new Runnable(){public void run(){
+   try{
+    File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
+    if(manifests==null)return;Arrays.sort(manifests,Comparator.comparing(File::getName).reversed());
+    for(File sidecar:manifests){
+     if(!personEvidenceSafe())return;
+     String name=sidecar.getName().replace(".verified.json","");
+     if(sidecar.length()>90000||personEvidenceRetries.getOrDefault(name,0)>=3)continue;
+     try{
+      JSONObject meta;try(FileInputStream in=new FileInputStream(sidecar);ByteArrayOutputStream out=new ByteArrayOutputStream()){
+       byte[] b=new byte[8192];int n;while((n=in.read(b))>0){out.write(b,0,n);if(out.size()>90000)throw new IOException("person_manifest_too_large");}meta=new JSONObject(out.toString("UTF-8"));}
+      if(meta.optInt("person_count",0)<=0||ClipClassifier.PERSON_EVIDENCE_VERSION.equals(meta.optString("person_evidence_version")))continue;
+      File video=new File(target,name);if(!video.isFile()||video.length()<100000||video.length()>800000000)continue;
+      if(classifier.enrichPersonEvidence(video,target,name,meta,()->personEvidenceSafe())){personEvidenceDone++;Log.i(TAG,"S9_PERSON_EVIDENCE_V31_COMPLETE "+name);}
+      return;
+     }catch(Exception e){personEvidenceErrors++;personEvidenceRetries.put(name,personEvidenceRetries.getOrDefault(name,0)+1);Log.w(TAG,"person_evidence_v31_failed",e);return;}
+    }
+   }finally{lastPersonEvidenceScan=SystemClock.elapsedRealtime();personEvidenceQueued=false;}
+  }});}catch(java.util.concurrent.RejectedExecutionException e){personEvidenceQueued=false;}
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
@@ -1005,10 +1038,13 @@ public final class CameraService extends Service {
   else if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
    failure("stalled_YUV_camera",null);scheduleRecover();
   }
+  maybePersonEvidence();
+  if(!personEvidenceQueued){
   maybeMovementBackfill();
   maybeHistoricalImport();
   maybeFaceBackfill();
   maybeGardenArchiveTriage();
+  }
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -1088,6 +1124,9 @@ public final class CameraService extends Service {
    d.put("historical_import_last_error_type",lastHistoricalError);
    d.put("historical_import_queued",historicalQueued);
    d.put("face_review_engine","s9_native_face_review_v1");
+   d.put("person_evidence_version",ClipClassifier.PERSON_EVIDENCE_VERSION);
+   d.put("person_evidence_completed",personEvidenceDone).put("person_evidence_errors",personEvidenceErrors)
+    .put("person_evidence_queued",personEvidenceQueued).put("pose_review_last_status",classifier==null?"not_ready":classifier.lastPoseStatus());
    d.put("face_backfill_queued",faceBackfillQueued);
     d.put("garden_archive_triage_version","onphone_24frame_reversible_quarantine_v1");
    d.put("garden_archive_auto_quarantine_enabled",GARDEN_AUTO_QUARANTINE_ENABLED);

@@ -14,6 +14,28 @@ NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 TRACK_VERSION="sampled_box_tracklets_v1"
 COLOURS={"black","white","gray","red","orange","yellow","green","blue","purple_or_pink","brown","uncertain"}
 DIRECTIONS={"image_left","image_right","image_up","image_down","diagonal","stationary_or_uncertain","insufficient_samples"}
+def safe_pose_summary(raw,duration):
+ if not isinstance(raw,dict) or raw.get("version")!="projected_pose_motion_v1" or raw.get("scope")!="this_recording_only" or raw.get("identity_eligible") is not False:return None
+ out={"version":"projected_pose_motion_v1","scope":"this_recording_only","identity_eligible":False}
+ enums={"posture_availability":{"available","insufficient_visible_torso"},"gait_availability":{"available_projected_ankle_cycle","insufficient_dense_full_body_samples","no_reliable_walking_periodicity"},"posture":{"projected_upright","projected_leaning","projected_bent_knees","projected_horizontal","unavailable"},"projected_direction":DIRECTIONS}
+ for key,allowed in enums.items():
+  if raw.get(key) not in allowed:return None
+  out[key]=raw[key]
+ for key in ("samples","torso_samples","full_body_samples","dense_samples"):
+  v=raw.get(key)
+  if type(v) is not int or not 0<=v<=64:return None
+  out[key]=v
+ for key in ("first_ms","last_ms","dense_span_ms"):
+  v=raw.get(key)
+  if type(v) is not int or not 0<=v<=duration:return None
+  out[key]=v
+ ranges={"mean_confidence":(0,1),"torso_lean_degrees":(0,180),"knee_bend_degrees":(0,180),"shoulder_hip_projected_ratio":(0,20),"apparent_speed_body_heights_per_second":(0,20),"cadence_steps_per_minute":(12,300),"ankle_swing_body_heights":(0,10),"walking_periodicity":(-1,1),"arm_swing_body_heights":(0,10)}
+ for key,(lo,hi) in ranges.items():
+  v=raw.get(key);out[key]=round(v,4) if type(v) in (int,float) and math.isfinite(v) and lo<=v<=hi else None
+ if out["posture_availability"]!="available" or out["torso_samples"]<3:out["posture"]="unavailable"
+ if out["gait_availability"]!="available_projected_ankle_cycle" or out["dense_samples"]<22 or out["dense_span_ms"]<2500:out["cadence_steps_per_minute"]=None
+ return out
+
 def anonymous_clip_metadata(manifest):
  status={"anonymous_tracking_status":"not_available_in_original_review",
          "anonymous_track_count":None,"anonymous_tracks":[]}
@@ -61,6 +83,8 @@ def anonymous_clip_metadata(manifest):
       if entry.get("image_movement_direction") in DIRECTIONS else "insufficient_samples",
     "body_posture_status":"not_measured_no_pose_keypoints",
     "gait_cadence_status":"not_measurable_from_sampled_frames"})
+   pose=safe_pose_summary(entry.get("pose_metrics"),duration)
+   if pose:tracks[-1].update(pose_metrics=pose,body_posture_status=pose["posture_availability"],gait_cadence_status=pose["gait_availability"])
    seen.add(index)
   claimed=manifest.get("anonymous_track_count")
   if isinstance(claimed,bool) or not isinstance(claimed,int) or claimed!=len(tracks):
@@ -187,7 +211,7 @@ def safe_face_review_metadata(m):
  valid=("no_frontal_face_in_samples","face_embedding_unavailable_snapshots_only",
    "face_embedding_failed_snapshots_only","face_review_failed",
    "review_complete_unverified_matches","face_model_changed_requires_reenrollment",
-   "face_index_read_error")
+   "face_index_read_error","face_evidence_saved_quality_limited")
  result["face_review_status"]=status if status in valid else "invalid_face_review_status"
  n=m.get("face_review_sampled_frames")
  if type(n) is int and 0<=n<=48:result["face_review_sampled_frames"]=n
@@ -199,7 +223,7 @@ def safe_face_review_metadata(m):
  for row in rows:
   if not isinstance(row,dict):continue
   status=row.get("match_status")
-  if status not in ("not_comparable_model_unavailable","reference_similarity_unverified",
+  if status not in ("not_comparable_model_unavailable","not_comparable_face_quality","reference_similarity_unverified",
     "anonymous_similarity_unverified","new_anonymous_candidate","face_model_changed_requires_reenrollment",
     "face_index_read_error","face_database_unavailable","face_index_capacity_reached"):continue
   ms=row.get("time_ms")
@@ -227,6 +251,15 @@ def safe_face_review_metadata(m):
     "time_ms":ms,"cosine_similarity":round(score,3) if score is not None else None,
     "snapshot_on_s9":snap is not None,
     "snapshot_name":snap,"snapshot_size":size,"snapshot_sha256":digest})
+  clean=out[-1]
+  for field in ("temporary_track_id",):
+   value=row.get(field)
+   if type(value) is int and 1<=value<=64:clean[field]=value
+  for field in ("recognition_quality",):
+   if type(row.get(field)) is bool:clean[field]=row[field]
+  if row.get("source_region") in ("person_head_roi","full_frame"):clean["source_region"]=row["source_region"]
+ result["face_gallery_epoch"]=m.get("face_gallery_epoch") if isinstance(m.get("face_gallery_epoch"),str) and re.fullmatch(r"[a-f0-9]{64}",m["face_gallery_epoch"]) else None
+ result["face_capture_algorithm"]=m.get("face_capture_algorithm") if m.get("face_capture_algorithm")=="person_head_roi_face_evidence_v2" else None
  result["face_candidates"]=out
  result["face_snapshots_saved"]=sum(row["snapshot_on_s9"] for row in out)
  return result
@@ -245,7 +278,7 @@ def main():
   if not NAMES.fullmatch(name):continue
   try:
    b=adb("exec-out","cat",SD+"/"+name+".verified.json")
-   if len(b)>14000:raise ValueError("manifest too large")
+   if len(b)>90000:raise ValueError("manifest too large")
    m=json.loads(b)
    size=int(m.get("bytes",0))
    if m.get("name")!=name or size<10000 or not re.fullmatch("[a-f0-9]{64}",str(m.get("sha256",""))):raise ValueError("manifest")

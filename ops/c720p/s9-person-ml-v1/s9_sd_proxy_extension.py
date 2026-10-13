@@ -200,6 +200,8 @@ def install_local_sd(H):
       "anonymous_tracks":tracks,
       "anonymous_id_scope":"clip_only_never_across_recordings",
       "movement_evidence_scope":"camera_image_only_not_gait_identity",
+      "face_gallery_epoch":r.get("face_gallery_epoch"),
+      "face_capture_algorithm":r.get("face_capture_algorithm"),
       "face_review_status":r.get("face_review_status","not_available_in_original_review"),
       "face_review_sampled_frames":r.get("face_review_sampled_frames"),
       "face_deep_review_version":r.get("face_deep_review_version"),
@@ -269,6 +271,8 @@ def install_local_sd(H):
  # C720P_SD_EXPLICIT_DELETE_V1: filter tombstones and mount read-only by default.
  import s9_archive_delete_v1
  globals()['rows']=s9_archive_delete_v1.install(H,rows,SECURITY_SD,NATIVE_SD,SD)
+ import s9_person_folders_v31
+ s9_person_folders_v31.install(H,lambda:rows())
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:
