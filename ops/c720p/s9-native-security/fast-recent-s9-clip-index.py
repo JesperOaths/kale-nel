@@ -24,6 +24,7 @@ PHONE="192.168.178.250:5555"
 FOLDER="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
 VIDEO=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
 DIGEST=re.compile(r"[a-f0-9]{64}\Z")
+PERSON_EVIDENCE_VERSION="s9_person_evidence_v31"
 
 def adb(*args,limit=160000,timeout=17):
     proc=subprocess.run(["adb","-s",PHONE,*args],stdout=subprocess.PIPE,
@@ -64,24 +65,31 @@ def row_from_manifest(name,m,actual_bytes,thumb,helpers):
         "content_categories":m.get("categories",[]) if isinstance(m.get("categories"),list) else [],
         **helpers.anonymous_clip_metadata(m),
         **helpers.safe_face_review_metadata(m),
+        "person_evidence_version":PERSON_EVIDENCE_VERSION if m.get("person_evidence_version")==PERSON_EVIDENCE_VERSION else None,
         "storage":"S9 native 4K Security microSD"
     }
 
 def new_records(index, remote_names, helpers):
     records=index.get("phone_recordings")
     if not isinstance(records,list):raise ValueError("catalog_missing_rows")
-    current={row.get("name") for row in records if isinstance(row,dict)}
+    current={row.get("name"):row for row in records if isinstance(row,dict)}
     recent=sorted((x for x in remote_names if VIDEO.fullmatch(x) and x not in current),
         reverse=True)[:12]
+    # The phone preserves this sidecar just before atomically publishing V31
+    # evidence. Refresh a bounded set of existing rows without rescanning videos.
+    suffix=".verified.pre-v31.json"
+    refreshed={x[:-len(suffix)] for x in remote_names if x.endswith(suffix)}
+    recent+=sorted((name for name in refreshed if VIDEO.fullmatch(name) and name in current
+        and current[name].get("person_evidence_version")!=PERSON_EVIDENCE_VERSION),reverse=True)[:4]
     added=[]
     for name in recent:
-        metadata=adb("exec-out","cat",FOLDER+"/"+name+".verified.json",limit=14000)
+        metadata=adb("exec-out","cat",FOLDER+"/"+name+".verified.json",limit=90000)
         m=json.loads(metadata)
         size_raw=adb("shell","stat","-c","%s",FOLDER+"/"+name,limit=64)
         size=int(size_raw.strip())
-        thumbnail=None
+        thumbnail=current.get(name,{}).get("thumbnail")
         try:
-            img=adb("exec-out","cat",FOLDER+"/"+name+".thumb.jpg",limit=2200000)
+            img=b"" if thumbnail else adb("exec-out","cat",FOLDER+"/"+name+".thumb.jpg",limit=2200000)
             if img[:3]==bytes((255,216,255)) and 4000<len(img)<2200000:
                 p=ROOT/"s9-phone-thumbs"/(name+".thumb.jpg")
                 p.parent.mkdir(parents=True,exist_ok=True)
@@ -91,7 +99,7 @@ def new_records(index, remote_names, helpers):
                     os.replace(part,p)
                 thumbnail="s9-phone-thumbs/"+p.name
         except (OSError,subprocess.TimeoutExpired,RuntimeError):pass
-        added.append(row_from_manifest(name,m,size,thumbnail,helpers))
+        added.append({**current.get(name,{}),**row_from_manifest(name,m,size,thumbnail,helpers)})
     return added
 
 def update_index(existing,added):

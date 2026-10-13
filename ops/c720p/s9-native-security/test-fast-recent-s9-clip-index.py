@@ -3,6 +3,8 @@
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest import mock
+import json
 M=Path(__file__).with_name("fast-recent-s9-clip-index.py")
 spec=importlib.util.spec_from_file_location("fast_s9",M)
 module=importlib.util.module_from_spec(spec)
@@ -19,6 +21,34 @@ class Helpers:
  def safe_face_review_metadata(m):return {"face_candidates":[]}
 
 class FastIndexTests(unittest.TestCase):
+ def test_existing_enriched_recording_refreshes_without_duplicate_or_thumbnail_copy(self):
+  name="motion_1791739041453.mp4"
+  old={"name":name,"size":2345000,"thumbnail":"s9-phone-thumbs/old.jpg","preserved_field":"yes"}
+  index={"phone_recordings":[old]}
+  manifest={"name":name,"bytes":2345000,"sha256":"b"*64,"width":3840,"height":2160,
+   "person_evidence_version":"s9_person_evidence_v31","person_count":1}
+  def phone(*args,**kw):
+   if args[:2]==("exec-out","cat"):return json.dumps(manifest).encode()
+   if args[:2]==("shell","stat"):return b"2345000\n"
+   raise AssertionError("unexpected phone operation")
+  with mock.patch.object(module,"adb",side_effect=phone) as read:
+   rows=module.new_records(index,[name,name+".verified.pre-v31.json"],Helpers)
+  self.assertEqual(read.call_count,2)
+  updated=module.update_index(index,rows)
+  self.assertEqual(len(updated["phone_recordings"]),1)
+  row=updated["phone_recordings"][0]
+  self.assertEqual(row["person_evidence_version"],"s9_person_evidence_v31")
+  self.assertEqual(row["preserved_field"],"yes")
+  self.assertEqual(row["thumbnail"],old["thumbnail"])
+  with mock.patch.object(module,"adb",side_effect=AssertionError("already indexed")):
+   self.assertEqual(module.new_records(updated,[name,name+".verified.pre-v31.json"],Helpers),[])
+
+ def test_enrichment_marker_is_whitelisted(self):
+  name="motion_1791739041453.mp4"
+  manifest={"name":name,"bytes":2345000,"sha256":"b"*64,"width":3840,"height":2160,
+   "person_evidence_version":{"unexpected":"value"}}
+  self.assertIsNone(module.row_from_manifest(name,manifest,2345000,None,Helpers)["person_evidence_version"])
+
  def test_preserves_old_and_adds_verified_video(self):
   old={"storage_policy":"local_microSD","phone_recordings":[
      {"name":"motion_1791600000000.mp4","timestamp":"2026-10-10 12:00","size":55555,
