@@ -37,8 +37,11 @@ public final class GardenJoinedClip {
   return t;
  });
  private final ArrayDeque<File> queue=new ArrayDeque<>();
- private boolean closed=false;
+ private volatile boolean closed=false,halted=false;
  private volatile boolean busy=false,cancelled=false;
+ // Protect real-time 4K capture from an encoder that repeatedly fails at
+ // runtime. Re-enable only through a controlled new app session or upgrade.
+ private static final long FAILURE_CIRCUIT_BREAKER=3;
  private volatile long completed=0,failed=0,skipped=0;
  private volatile long lastDurationMs=0,lastPreRollMs=0;
  private volatile String lastName="",lastError="";
@@ -48,13 +51,14 @@ public final class GardenJoinedClip {
  public long errors(){return failed;}
  public long skipped(){return skipped;}
  public boolean busy(){return busy;}
+ public boolean halted(){return halted;}
  public int pending(){synchronized(queue){return queue.size();}}
  public long lastDurationMs(){return lastDurationMs;}
  public long lastPreRollMs(){return lastPreRollMs;}
  public String lastName(){return lastName;}
  public String lastError(){return lastError;}
  public void offer(File original,File preroll){
-  if(closed||original==null||preroll==null)return;
+  if(closed||halted||original==null||preroll==null)return;
   String name=original.getName();
   if(!name.matches("motion_[0-9]{13}[.]mp4"))return;
   if(!preroll.equals(new File(original.getParentFile(),name+".preroll.mp4")))return;
@@ -68,7 +72,7 @@ public final class GardenJoinedClip {
   schedule();
  }
  public void maybeRetryOne(File media){
-  if(closed||busy||media==null||!guard.mayMerge())return;
+  if(closed||halted||busy||media==null||!guard.mayMerge())return;
   File[] pending=media.listFiles((dir,n)->n.matches("motion_[0-9]{13}[.]mp4[.]preroll[.]mp4"));
   if(pending==null)return;
   java.util.Arrays.sort(pending,(a,b)->Long.compare(b.lastModified(),a.lastModified()));
@@ -89,7 +93,7 @@ public final class GardenJoinedClip {
   }
  }
  private void processOne(){
-  if(busy||closed)return;
+  if(busy||closed||halted)return;
   File original;
   synchronized(queue){original=queue.pollFirst();}
   if(original==null)return;
@@ -101,8 +105,17 @@ public final class GardenJoinedClip {
   try{
    combine(original);
   }catch(Throwable e){
-   failed++;lastError="merged_"+e.getClass().getSimpleName();
-   Log.w("S9_EVENT_PREPEND",lastError,e);
+   // A new person-triggered 4K capture is never counted as a failure.
+   if(cancelled){skipped++;lastError="merge_preempted_for_live_capture";}
+   else {
+    failed++;lastError="merged_"+e.getClass().getSimpleName();
+    if(failed>=FAILURE_CIRCUIT_BREAKER){
+     halted=true;
+     Log.e("S9_EVENT_PREPEND",
+       "MERGE_DISABLED_AFTER_REPEATED_FAILURES; originals and camera preserved");
+    }
+    Log.w("S9_EVENT_PREPEND",lastError,e);
+   }
   }finally{
    busy=false;activeSession=-1L;
   }
@@ -128,7 +141,12 @@ public final class GardenJoinedClip {
   long prefix=duration(preroll),main=duration(original);
   if(prefix<500||prefix>9000||main<900||main>130000)
    throw new IOException("invalid_input_durations");
-  if(tmp.exists())throw new IOException("previous_partial_exists");
+  if(tmp.exists()){
+   // Delete ONLY our exact derivative after a stale interrupted merge.
+   // Never touch the pre-roll companion or the original 4K recording.
+   if(System.currentTimeMillis()-tmp.lastModified()<15L*60L*1000L||
+      !tmp.delete())throw new IOException("previous_partial_active_or_unremovable");
+  }
   // Preserve 4:3 preview and 16:9 4K event via aspect-preserving letterbox.
   final String prep="[0:v:0]setpts=PTS-STARTPTS,scale=1280:720:force_original_aspect_ratio=decrease,"
     +"pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30[p];";
@@ -167,7 +185,7 @@ public final class GardenJoinedClip {
     throw new IOException("join_duration_invalid_"+joined+"_expected_"+(main+prefix));
    if(cancelled||!guard.mayMerge())throw new IOException("recording_started_before_merge_commit");
    if(!tmp.renameTo(output))throw new IOException("join_atomic_rename_failed");
-   completed++;lastName=output.getName();
+   completed++;failed=0;lastName=output.getName();
    lastDurationMs=joined;lastPreRollMs=prefix;lastError="";
    Log.i("S9_EVENT_PREPEND","VERIFIED_COMBINED_CLIP "+lastName+
      " pre_ms="+prefix+" total_ms="+joined+" bytes="+output.length());
