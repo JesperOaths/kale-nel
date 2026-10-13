@@ -190,6 +190,10 @@ public final class PersonMotionMetrics {
   List<Observation> dense=new ArrayList<>(),current=new ArrayList<>();
   Set<String> frameEvidence=new HashSet<>();
   for(Observation frame:frames){
+   // Coarse sync samples support posture only. They are not observations of
+   // a missing frame in the separately decoded dense burst, and must not split
+   // that burst at invented sync-frame timestamps.
+   if(frame.frameEvidenceFingerprint.isEmpty())continue;
    boolean unique=!frame.frameEvidenceFingerprint.isEmpty()&&frameEvidence.add(frame.frameEvidenceFingerprint);
    if(!frame.fullBody()||!unique){if(current.size()>dense.size())dense=new ArrayList<>(current);current.clear();continue;}
    if(!current.isEmpty()&&frame.atMs-current.get(current.size()-1).atMs>MAX_DENSE_GAP_MS){

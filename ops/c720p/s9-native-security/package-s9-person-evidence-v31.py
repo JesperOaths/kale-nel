@@ -136,7 +136,7 @@ def main():
    if len(z.read("classes.dex"))<20000:raise RuntimeError("empty_dex")
   # An atomic 10MB artifact is the only persistent new build; never modify
   # current 4K camera binaries, model files or production source tree.
-  OUT.mkdir(mode=0o700,parents=True)
+  OUT.mkdir(mode=0o700,parents=True,exist_ok=True)
   dst=OUT/("s9-person-evidence-v31-"+opts.commit[:12]+".apk")
   if dst.exists():
    if sha(dst.read_bytes())!=sha(signed.read_bytes()):

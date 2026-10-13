@@ -32,6 +32,11 @@ public final class PersonMotionMetricsTest {
   check("projected_upright".equals(s.posture),"upright torso in image projection");
   check("image_right".equals(s.projectedDirection),"image movement direction");
   check(Double.isFinite(s.armSwingBodyHeights),"visible wrists measure projected swing");
+  for(long at:new long[]{50,1650}){
+   PersonMotionMetrics.Observation coarse=sample(at,true,false,true,1920);
+   walking.add(new PersonMotionMetrics.Observation(at,1920,1080,coarse.keypoints(),coarse.personBox(),false));
+  }
+  check("available_projected_ankle_cycle".equals(walking.snapshot().gaitAvailability),"coarse sync samples cannot split a separately decoded dense burst");
   PersonMotionMetrics stationary=new PersonMotionMetrics();
   for(int i=0;i<32;i++)stationary.add(sample(i*100,false,false,false,1920));
   check(Double.isNaN(stationary.snapshot().cadenceStepsPerMinute),"still feet never produce cadence");
