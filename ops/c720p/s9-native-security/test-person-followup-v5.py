@@ -6,16 +6,16 @@ ROOT=Path(__file__).resolve().parent
 S=(ROOT/"src/nl/kalenel/s9security/CameraService.java").read_text()
 M=(ROOT/"src/nl/kalenel/s9security/ClipClassifier.java").read_text()
 class FollowupTests(unittest.TestCase):
- def test_bounded_motion_followup(self):
-  self.assertIn("GARDEN_PERSON_CANDIDATE_MS=4500L",S)
+ def test_hybrid_motion_and_sentinel_followup(self):
+  self.assertIn("GARDEN_PERSON_CANDIDATE_MS=6500L",S)
   cb=S.split("boolean change=motion.analyze(frame);",1)[1].split('}catch(Throwable error)',1)[0]
   self.assertIn("gardenPersonCandidateUntil=lastFrameAt+GARDEN_PERSON_CANDIDATE_MS",cb)
   self.assertIn('!"watching".equals(mode)',S)
   self.assertIn('if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&',cb)
-  self.assertIn("lastFrameAt>=cameraControlSettleUntil&&lastFrameAt<gardenPersonCandidateUntil",cb)
-  self.assertIn("evaluateGardenPersonAsync();",cb)
+  self.assertIn("lastFrameAt>=cameraControlSettleUntil",cb)
+  self.assertIn("evaluateGardenPersonAsync(safeSentinel);",cb)
   self.assertNotIn("startRecording();",cb.split("if(change &&",1)[1])
- def test_gpu_gate_is_rate_limited_and_resists_reused_frames(self):
+ def test_hybrid_gpu_gate_is_rate_limited_and_resists_reused_frames(self):
   body=S.split("private void evaluateGardenPersonAsync(){",1)[1].split("private boolean rateAllowed",1)[0]
   for required in ("now-gardenPersonGateLastAt<900","gardenPersonGateBusy","gardenGateExecutor.execute",
     "gardenGateClassifier.personEvidenceInGarden","gardenGateClassifier.lastPersonScoreAnywhere",
@@ -24,13 +24,18 @@ class FollowupTests(unittest.TestCase):
     "temperature()<415","folder.getUsableSpace()>15L*1024*1024*1024"):
    self.assertIn(required,body)
   self.assertLess(body.index("GardenPersonTrackGate.Decision.CONFIRMED"),body.index("startRecording()"))
- def test_roi_diagnostics_do_not_add_inference(self):
+ def test_roi_multiscale_passes_and_diagnostics(self):
   body=M.split("public synchronized float personScoreInGarden",1)[1].split("private static String upperClothingColour",1)[0]
-  self.assertEqual(body.count("for(Detection detection:detect(bitmap))"),1)
+  self.assertEqual(body.count("for(Detection detection:detectGardenPeopleMultiscale(bitmap))"),1)
+  self.assertIn('Bitmap.createBitmap(image,x,top,tileWidth,croppedHeight)',M)
+  self.assertIn('int[] starts={0,width-tileWidth}',M)
+  self.assertIn('lastGardenInferencePasses++',M)
+  self.assertIn('GARDEN_PERSON_SENTINEL_MS=1600L',S)
+  self.assertIn('evaluateGardenPersonAsync(safeSentinel)',S)
   self.assertIn("lastPersonAnywhere=any",body)
   self.assertIn("highest=detection.score;bestBox=b;",body)
   self.assertIn('d.put("garden_person_gate_last_anywhere_score",gardenPersonGateAnyScore)',S)
-  self.assertIn('d.put("garden_person_followup_version","motion_armed_4500ms_unique_jpeg_v5")',S)
+  self.assertIn('d.put("garden_person_followup_version","hybrid_periodic_multiscale_v8")',S)
  def test_existing_safety(self):
   for forbidden in ("cloud_upload\",true","setVideoSize(1920","setVideoFrameRate(15)"):
    self.assertNotIn(forbidden,S)
