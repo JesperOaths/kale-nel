@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Never uploads video, records a false event, or writes untriggered SD media.
  */
 public final class GardenPreRoll {
- static final String VERSION="s9_on_phone_avc_memory_ring_v1";
+ static final String VERSION="s9_on_phone_avc_memory_ring_keyframe_preroll_v2";
  static final int WIDTH=640,HEIGHT=480,FPS=24,BIT_RATE=1400000;
- static final long RING_US=7000000L,DESIRED_US=5000000L,MIN_US=550000L;
+ static final long RING_US=8000000L,DESIRED_US=5500000L,MIN_US=550000L;
  private static final int MAX_BYTES=11000000;
  private final Object lock=new Object();
  private final ArrayDeque<Sample> compressed=new ArrayDeque<>();
@@ -157,9 +157,12 @@ public final class GardenPreRoll {
    long latest=packets.get(packets.size()-1).pts;
    long min=latest-DESIRED_US;
    int first=-1;
-   // Choose first keyframe at/after the nominal 5-second preroll.
+   // Choose the most recent KEYFRAME BEFORE the desired start (rather
+   // than the first after it). Starting after the boundary discarded
+   // several seconds when the hardware encoder emitted sparse IDRs.
+   // With an 8s ring this retains >=5.5s whenever any older IDR exists.
    for(int i=0;i<packets.size();i++)
-    if(packets.get(i).pts>=min&&packets.get(i).key()){first=i;break;}
+    if(packets.get(i).pts<=min&&packets.get(i).key())first=i;
    if(first<0){
     for(int i=0;i<packets.size();i++)
      if(packets.get(i).key()){first=i;break;}
@@ -171,11 +174,20 @@ public final class GardenPreRoll {
    return new Frozen(codecFormat,selected,duration/1000);
   }
  }
+ /** Completion callback is invoked only AFTER the companion MP4 was atomically
+  * renamed and validated, entirely off the camera capture thread. */
+ public interface Saved {void onSaved(File original,File companion);}
  public void saveAsync(File original4K,Frozen frozen){
+  saveAsync(original4K,frozen,null);
+ }
+ public void saveAsync(File original4K,Frozen frozen,Saved callback){
   if(closed||frozen==null||original4K==null)return;
   try{worker.execute(()->{
-   try{save(original4K,frozen);}
-   catch(Throwable problem){lastError="muxer_"+problem.getClass().getSimpleName();
+   try{
+    save(original4K,frozen);
+    File companion=new File(original4K.getParentFile(),original4K.getName()+".preroll.mp4");
+    if(callback!=null&&companion.isFile())callback.onSaved(original4K,companion);
+   }catch(Throwable problem){lastError="muxer_"+problem.getClass().getSimpleName();
     Log.w("S9_PREROLL","pre_event_mux_failed",problem);}
   });}catch(RuntimeException reject){lastError="preroll_writer_unavailable";}
  }
