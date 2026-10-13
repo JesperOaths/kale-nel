@@ -244,7 +244,13 @@ def safe_face_review_metadata(m):
       and snap.startswith(base+"__"))
   size=row.get("snapshot_size_bytes")
   digest=row.get("snapshot_sha256")
-  if not (valid_snapshot and type(size) is int and 2000<=size<=2200000
+  # Small native face crops can legitimately compress below 2 KiB. Permit
+  # those only from the focused detector-confirmed evidence pipeline; SHA and
+  # exact clip-bound basenames remain mandatory.
+  minimum=500 if (m.get("face_capture_algorithm")=="person_head_roi_face_evidence_v2" and
+    row.get("capture_quality")=="detector_confirmed_evidence" and
+    row.get("source_region") in ("person_head_roi","full_frame")) else 2000
+  if not (valid_snapshot and type(size) is int and minimum<=size<=2200000
           and isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest)):
    snap=None;size=None;digest=None
   out.append({"person_id":key,"candidate_name":label,"match_status":status,

@@ -18,6 +18,23 @@ def load(path,name):
  return module
 
 class FaceReviewTests(unittest.TestCase):
+ def test_focused_small_face_evidence_is_kept_without_identity_score(self):
+  catalog=load(PHONE/"local-sd-catalog.py","small_face_catalog")
+  meta={"name":"motion_1791600000000.mp4","face_review_version":"s9_face_review_v1",
+   "face_capture_algorithm":"person_head_roi_face_evidence_v2",
+   "face_review_status":"face_evidence_saved_quality_limited",
+   "face_candidates":[{"match_status":"not_comparable_face_quality","capture_quality":"detector_confirmed_evidence",
+     "source_region":"person_head_roi","recognition_quality":False,"time_ms":1000,
+     "snapshot":"motion_1791600000000__roi31_0_pending_1__1000_0.jpg",
+     "snapshot_size_bytes":900,"snapshot_sha256":"a"*64,"temporary_track_id":2}]}
+  result=catalog.safe_face_review_metadata(meta)
+  self.assertEqual(result["face_snapshots_saved"],1)
+  self.assertEqual(result["face_candidates"][0]["temporary_track_id"],2)
+  self.assertIsNone(result["face_candidates"][0]["person_id"])
+  self.assertIsNone(result["face_candidates"][0]["cosine_similarity"])
+  meta["face_capture_algorithm"]="unknown"
+  self.assertEqual(catalog.safe_face_review_metadata(meta)["face_snapshots_saved"],0)
+
  def setUp(self):
   self.catalog=load(PHONE/"local-sd-catalog.py","s9_face_catalog")
   self.proxy=load(PHONE/"s9_sd_proxy_extension.py","s9_face_proxy")

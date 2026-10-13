@@ -99,6 +99,9 @@ def main():
   baseline=get()
   if not healthy(baseline) or baseline.get("mode")!="watching":
    raise RuntimeError("cannot_upgrade_active_or_unhealthy_camera")
+  if (baseline.get("motion_detector")!="person_multiscale_threeframe_static_v8" or
+      baseline.get("garden_person_multiscale_version")!="garden_overlapping_person_tiles_v8"):
+   raise RuntimeError("installed_camera_changed_since_verified_v8_baseline")
   if baseline.get("temperature_c",999)>=37:
    raise RuntimeError("phone_too_warm_to_restart_camera")
   installed=adb("shell","pm","path","nl.kalenel.s9security",timeout=18).stdout

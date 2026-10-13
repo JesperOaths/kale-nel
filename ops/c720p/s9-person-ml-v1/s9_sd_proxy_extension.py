@@ -58,7 +58,7 @@ def serve_face_snapshot(handler,name,record):
  evidence=next((entry for entry in record.get("face_candidates",[]) if
                 entry.get("snapshot_name")==name and entry.get("snapshot_on_s9")
                 and isinstance(entry.get("snapshot_size"),int)
-                and 2000<=entry["snapshot_size"]<=2200000
+                and (500 if record.get("face_capture_algorithm")=="person_head_roi_face_evidence_v2" else 2000)<=entry["snapshot_size"]<=2200000
                 and re.fullmatch(r"[a-f0-9]{64}",str(entry.get("snapshot_sha256","")))),None)
  if evidence is None:
   handler.js(404,{"ok":False,"error":"face_snapshot_not_indexed"});return
