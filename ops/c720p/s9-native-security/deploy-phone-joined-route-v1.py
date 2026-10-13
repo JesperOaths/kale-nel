@@ -11,7 +11,7 @@ F=ROOT/'s9_sd_proxy_extension.py'
 R=ROOT/'c720p-lan-camera-relay.py'
 BACK=Path('/home/jespern/c720p-home-hub/backups/s9-preroll-complete-route-v1')
 EXT_ANCHOR='  snap=re.fullmatch(r"/new/saved/snap/([A-Za-z0-9._-]+[.]mp4[.]thumb[.]jpg)",path)'
-RELAY_ANCHOR="   m=re.fullmatch(r'/(new)/saved/(clip|snap)/([A-Za-z0-9._-]{1,220})',path)"
+RELAY_ANCHOR="  m=re.fullmatch(r'/(new)/saved/(clip|snap)/([A-Za-z0-9._-]{1,220})',path)"
 EXT='''  # S9_JOINED_PREROLL_V1: read-only complete segment for indexed original.
   joined=re.fullmatch(r"/new/saved/complete/(motion_[0-9]{13}[.]mp4)",path)
   if joined:
@@ -28,11 +28,11 @@ EXT='''  # S9_JOINED_PREROLL_V1: read-only complete segment for indexed original
     except (ValueError,TypeError,urllib.error.HTTPError,urllib.error.URLError,TimeoutError):pass
    self.js(404,{"ok":False,"error":"complete_video_not_yet_available"});return
 '''
-RELAY='''   # S9_JOINED_PREROLL_SIGNED_V1: indexed on-phone derivatives, after auth.
-   m=re.fullmatch(r'/(new)/saved/preroll/(motion_[0-9]{13}[.]mp4)',path)
-   if m:return self.archive(m.group(1),'/saved/preroll/'+m.group(2),head)
-   m=re.fullmatch(r'/(new)/saved/complete/(motion_[0-9]{13}[.]mp4)',path)
-   if m:return self.archive(m.group(1),'/saved/complete/'+m.group(2),head)
+RELAY='''  # S9_JOINED_PREROLL_SIGNED_V1: indexed on-phone derivatives, after auth.
+  m=re.fullmatch(r'/(new)/saved/preroll/(motion_[0-9]{13}[.]mp4)',path)
+  if m:return self.archive(m.group(1),'/saved/preroll/'+m.group(2),head)
+  m=re.fullmatch(r'/(new)/saved/complete/(motion_[0-9]{13}[.]mp4)',path)
+  if m:return self.archive(m.group(1),'/saved/complete/'+m.group(2),head)
 '''
 def atomic(path,raw,st):
  fd,p=tempfile.mkstemp(prefix='.s9-joined-route-',dir=path.parent)
