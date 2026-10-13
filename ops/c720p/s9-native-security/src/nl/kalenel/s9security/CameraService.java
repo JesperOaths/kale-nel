@@ -126,7 +126,13 @@ public final class CameraService extends Service {
  // 4.5 s. Motion itself still cannot start the MediaRecorder.
  private long gardenPersonCandidateUntil=0;
  private volatile long gardenPersonMotionWindows=0,gardenPersonFollowupChecks=0;
- private static final long GARDEN_PERSON_CANDIDATE_MS=4500L;
+ private static final long GARDEN_PERSON_CANDIDATE_MS=6500L;
+ // Low-duty periodic GPU scan finds small/low-light people even when
+ // the coarse luma motion grid never arms a candidate. Only a tracked
+ // person, not this timer, can start a 4K recording.
+ private static final long GARDEN_PERSON_SENTINEL_MS=1600L;
+ private volatile long gardenPersonSentinelChecks=0,gardenPersonSentinelStarts=0;
+ private volatile long gardenPersonInferenceLastMs=0,gardenPersonInferenceMaxMs=0;
  private volatile long gardenPersonGateChecks=0,gardenPersonGateMatches=0;
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
@@ -323,8 +329,12 @@ public final class CameraService extends Service {
       }
      }
      if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&
-         lastFrameAt>=cameraControlSettleUntil&&lastFrameAt<gardenPersonCandidateUntil)
-      evaluateGardenPersonAsync();
+         lastFrameAt>=cameraControlSettleUntil){
+      boolean eventFollowup=lastFrameAt<gardenPersonCandidateUntil;
+      boolean safeSentinel=!eventFollowup&&temperature()<370&&
+           lastFrameAt-gardenPersonGateLastAt>=GARDEN_PERSON_SENTINEL_MS;
+      if(eventFollowup||safeSentinel)evaluateGardenPersonAsync(safeSentinel);
+     }
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500){
        if(lastFrameAt-lastStart>MAX_MS)stopRecording("max_segment");
        else if(lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end");
@@ -404,12 +414,14 @@ public final class CameraService extends Service {
    }});
   }catch(RejectedExecutionException error){gardenGatePrepareErrors++;}
  }
- private void evaluateGardenPersonAsync(){
+ private void evaluateGardenPersonAsync(boolean sentinel){
   final long now=SystemClock.elapsedRealtime();
   if(gardenPersonGateBusy||now-gardenPersonGateLastAt<900||latestJpeg.length<1000||
       now-lastJpegAt>1200||gardenGateExecutor==null||gardenGateClassifier==null||
       !gardenGateReady)return;
   gardenPersonGateBusy=true;gardenPersonGateLastAt=now;
+  if(sentinel)gardenPersonSentinelChecks++;
+  final boolean sentinelObservation=sentinel;
   if(now>lastMovementAt+250)gardenPersonFollowupChecks++;
   final long jpegAt=lastJpegAt;
   final byte[] jpg=latestJpeg.clone();
@@ -436,6 +448,8 @@ public final class CameraService extends Service {
     cameraHandler.post(new Runnable(){public void run(){
      gardenPersonGateBusy=false;
      gardenPersonGateQueueWaitMs=Math.max(0,gateStarted-now);
+     gardenPersonInferenceLastMs=SystemClock.elapsedRealtime()-gateStarted;
+     gardenPersonInferenceMaxMs=Math.max(gardenPersonInferenceMaxMs,gardenPersonInferenceLastMs);
      gardenPersonGateChecks++;
      gardenPersonGateScore=score;
      gardenPersonGateAnyScore=anyScore;
@@ -472,9 +486,16 @@ public final class CameraService extends Service {
      gardenPersonDuplicateJpegRejects=personTrackGate.duplicateFrames;
      if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED)return;
      gardenPersonCandidateUntil=0;
-     eventChain.evidence(SystemClock.elapsedRealtime());
+     // Also set the quiet-window anchor for periodic-only detections, where
+     // no MotionGrid vote ever updated lastMovementAt.
+     lastMovementAt=SystemClock.elapsedRealtime();
+     eventChain.evidence(lastMovementAt);
      if(temperature()<415 && folder!=null&&
-             folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
+             folder.getUsableSpace()>15L*1024*1024*1024){
+      gardenPersonGateConfirmedStarts++;
+      if(sentinelObservation)gardenPersonSentinelStarts++;
+      startRecording();
+     }
      else saveFallbackEvidence("thermal_or_space_guard");
     }});
    }});
@@ -934,7 +955,12 @@ public final class CameraService extends Service {
    }});
   }catch(java.util.concurrent.RejectedExecutionException e){movementBackfillQueued=false;}
  }
+ // Never quarantine an existing person-negative original while testing a
+ // detector whose false-negative rate is not independently established.
+ // Original 4K MP4 files remain on microSD for manual review and recovery.
+ private static final boolean GARDEN_AUTO_QUARANTINE_ENABLED=false;
  private void maybeGardenArchiveTriage(){
+  if(!GARDEN_AUTO_QUARANTINE_ENABLED)return;
   long now=SystemClock.elapsedRealtime();
   // Increase archive throughput ONLY when the garden has been quiet for
   // 30 seconds, the realtime person GPU gate is idle, and the phone is cool.
@@ -1064,6 +1090,7 @@ public final class CameraService extends Service {
    d.put("face_review_engine","s9_native_face_review_v1");
    d.put("face_backfill_queued",faceBackfillQueued);
     d.put("garden_archive_triage_version","onphone_24frame_reversible_quarantine_v1");
+   d.put("garden_archive_auto_quarantine_enabled",GARDEN_AUTO_QUARANTINE_ENABLED);
     d.put("garden_archive_triage_queued",gardenTriageQueued);
     d.put("garden_archive_quarantined_since_start",gardenTriageQuarantined);
     d.put("garden_archive_preserved_since_start",gardenTriagePreserved);
@@ -1104,7 +1131,17 @@ public final class CameraService extends Service {
    d.put("garden_person_unrelated_boxes",personTrackGate.unrelatedBoxes);
    d.put("garden_person_no_local_motion",personTrackGate.noLocalMotion);
    d.put("garden_person_rejected_weak",personTrackGate.rejectedWeak);
-    d.put("garden_person_followup_version","motion_armed_4500ms_unique_jpeg_v5");
+    d.put("garden_person_followup_version","hybrid_periodic_multiscale_v8");
+    d.put("garden_person_multiscale_version",gardenGateClassifier==null?
+          "not_ready":gardenGateClassifier.gardenPersonMultiscaleVersion());
+    d.put("garden_person_last_multiscale_passes",gardenGateClassifier==null?
+          0:gardenGateClassifier.lastGardenInferencePasses());
+    d.put("garden_person_sentinel_interval_ms",GARDEN_PERSON_SENTINEL_MS);
+    d.put("garden_person_sentinel_checks",gardenPersonSentinelChecks);
+    d.put("garden_person_sentinel_recordings",gardenPersonSentinelStarts);
+    d.put("garden_person_inference_last_ms",gardenPersonInferenceLastMs);
+    d.put("garden_person_inference_peak_ms",gardenPersonInferenceMaxMs);
+    d.put("garden_person_no_motion_requires_distinct_frames",3);
     d.put("garden_person_candidate_window_ms",GARDEN_PERSON_CANDIDATE_MS);
     d.put("garden_person_motion_windows",gardenPersonMotionWindows);
     d.put("garden_person_followup_checks",gardenPersonFollowupChecks);

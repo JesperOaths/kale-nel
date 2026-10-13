@@ -15,7 +15,7 @@ MODEL=(HERE/'src/nl/kalenel/s9security/ClipClassifier.java')
 class GardenRealtimePriorityTests(unittest.TestCase):
     def test_live_motion_never_queues_behind_historical_archive_or_faces(self):
         s=CAMERA.read_text()
-        gate=s.split('private void evaluateGardenPersonAsync(){',1)[1].split(
+        gate=s.split('private void evaluateGardenPersonAsync(boolean sentinel){',1)[1].split(
             'private boolean rateAllowed(',1)[0]
         self.assertIn('gardenGateExecutor.execute(new Runnable()',gate)
         self.assertIn('gardenGateClassifier.personEvidenceInGarden',gate)
@@ -23,6 +23,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
         self.assertNotIn('reviewer.submit',gate)
         self.assertNotIn('classifier.process(',gate)
         self.assertIn('SystemClock.elapsedRealtime()-now>3500',gate)
+        self.assertIn('gardenPersonInferenceLastMs',gate)
         self.assertIn('!gardenGateReady',s)
         self.assertIn('realtime_person_detector_warming_or_unavailable',s)
         self.assertIn('realtime_person_detector_failed',gate)

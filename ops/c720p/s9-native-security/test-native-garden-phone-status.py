@@ -62,6 +62,34 @@ class Tests(unittest.TestCase):
         self.assertIsNone(unknown['on_phone_gpu_inference'])
         self.assertEqual(unknown['person_inference_backend'],'unknown')
 
+    def test_hybrid_v8_is_accepted_without_inventing_identity(self):
+        module=load(MODULE,'phone_watch_hybrid_v8')
+        sample=self.sample()
+        sample.update({
+          "motion_detector":"person_multiscale_threeframe_static_v8",
+          "garden_person_multiscale_version":"garden_overlapping_person_tiles_v8",
+          "garden_person_last_multiscale_passes":3,
+          "garden_person_sentinel_interval_ms":1600,
+          "garden_person_sentinel_checks":14,
+          "garden_person_sentinel_recordings":1,
+          "garden_person_inference_last_ms":112,
+          "garden_person_no_motion_requires_distinct_frames":3,
+          "garden_archive_auto_quarantine_enabled":False,
+          "garden_person_gate_checked":14,
+          "garden_person_gate_matches":2,
+          "garden_person_gate_rejected":12,
+        })
+        report=module.from_phone(sample,now_ms=99000)
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["detector_version"],"person_multiscale_threeframe_static_v8")
+        self.assertEqual(report["detector_inference_passes"],3)
+        self.assertEqual(report["person_periodic_checks"],14)
+        self.assertEqual(report["person_periodic_scan_interval_ms"],1600)
+        self.assertEqual(report["person_gpu_inference_ms"],112)
+        self.assertEqual(report["person_without_motion_requires_frames"],3)
+        self.assertFalse(report["auto_quarantine_model_negative_enabled"])
+        self.assertEqual(report["status"]["identity"],"not_evaluated")
+
     def test_rejects_camera_offline_and_bad_counters(self):
         module=load(MODULE,'phone_watch_guards')
         with self.assertRaises(ValueError):
