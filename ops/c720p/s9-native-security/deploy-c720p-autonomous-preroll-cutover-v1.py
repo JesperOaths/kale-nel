@@ -55,7 +55,7 @@ def main():
  with urllib.request.urlopen(URI,timeout=35) as r:payload=r.read(22000)
  if not 5000<len(payload)<20000:raise RuntimeError("unexpected_installer_length")
  text=payload.decode()
- if not all(t in text for t in ("ONE_TIME","one_complete_pre_event_mp4_verified",
+ if not all(t in text for t in ("S9_AUTO_CUTOVER","one_complete_pre_event_mp4_verified",
      "healthy","model_hashes","rollback_completed")):
   # Instead of trusting the text shape, bail before any install.
   raise RuntimeError("source_contract_check")
