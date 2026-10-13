@@ -552,6 +552,7 @@ public final class ClipClassifier {
   MediaMetadataRetriever media=new MediaMetadataRetriever();
   int persons=0,animals=0,vehicles=0;
   int strongPersonFrames=0,possiblePersonFrames=0,validFrames=0;
+  int multiscaleReviewedFrames=0,multiscaleExtraPersonBoxes=0;
   int framesWithMultiplePeople=0;
   long firstStrongAt=-1,lastStrongAt=-1;
   final JSONArray frameEvidence=new JSONArray();
@@ -576,6 +577,8 @@ public final class ClipClassifier {
    result.put("height",Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
    init();
    result.put("model_sha256",modelSha256);
+   result.put("person_review_model",GARDEN_PERSON_MULTISCALE_VERSION);
+   result.put("person_review_fullframe_negative_refinement",true);
    // Denser temporal coverage catches short walk-bys that a handful of keyframes miss.
    // Cap decoding/inference to 12 samples per clip to protect device thermals.
    int frames=(int)Math.min(12,Math.max(6,(duration+1799L)/1800L));
@@ -585,6 +588,27 @@ public final class ClipClassifier {
     if(bitmap==null)continue;
     try{
      List<Detection> found=detect(bitmap);
+     // Only run extra high-detail crops when the standard 4K frame
+     // classification did not find a strongly supported person.
+     boolean wholeFramePerson=false;
+     for(Detection d:found)
+      if("person".equals(d.label)&&d.score>=.50f){wholeFramePerson=true;break;}
+     if(!wholeFramePerson){
+      multiscaleReviewedFrames++;
+      for(Detection refined:detectGardenPeopleMultiscale(bitmap)){
+       boolean duplicate=false;
+       for(int k=0;k<found.size();k++){
+        Detection old=found.get(k);
+        if("person".equals(old.label)&&boxIoU(old.box,refined.box)>=.38f){
+         if(refined.score>old.score)found.set(k,refined);
+         duplicate=true;break;
+        }
+       }
+       if(!duplicate&&refined.score>=.35f){
+        found.add(refined);multiscaleExtraPersonBoxes++;
+       }
+      }
+     }
      validFrames++;
      int p=0,a=0,v=0,weakPerson=0;
      final ArrayList<float[]> distinctPersonBoxes=new ArrayList<>();
@@ -635,7 +659,7 @@ public final class ClipClassifier {
      frameEvidence.put(sample);
      // Prioritize the actual foreground person or largest garden change.
      // Cars on the road cannot dominate a saved thumbnail.
-     final float gardenTop=.64f,margin=.045f;
+     final float gardenTop=.433f,margin=.045f;
      float personInGarden=0f;
      float[] gardenPersonBox=null;
      for(Detection detected:found){
@@ -643,7 +667,7 @@ public final class ClipClassifier {
       float[] box=detected.box;
       if(box==null||box.length!=4)continue;
       float center=(box[1]+box[3])*.5f;
-      if(box[2]>=gardenTop&&center>=margin&&center<=1f-margin
+      if(box[2]>=MotionGrid.markedTopAt(center)&&center>=margin&&center<=1f-margin
           &&detected.score>personInGarden){
        personInGarden=detected.score;
        gardenPersonBox=box;
@@ -671,6 +695,8 @@ public final class ClipClassifier {
     // Closest-sync frames are efficient for classification, but may be
     // keyframes distant from the triggering event. Inspect two bounded,
     // actual-time nearest frames for the cover image only, preserving video.
+    result.put("person_review_multiscale_frames",multiscaleReviewedFrames);
+    result.put("person_review_extra_boxes",multiscaleExtraPersonBoxes);
     int nearestFrameAttempts=0,nearestFrameDecoded=0;
     if(bestMotionTimeMs>=0&&duration>700){
      long[] offsets={0L,320L};
