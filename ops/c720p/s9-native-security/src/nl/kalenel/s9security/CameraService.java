@@ -1067,6 +1067,7 @@ public final class CameraService extends Service {
    d.put("preroll_prepend_errors",joinedClip==null?0:joinedClip.errors());
    d.put("preroll_prepend_skipped",joinedClip==null?0:joinedClip.skipped());
    d.put("preroll_prepend_busy",joinedClip!=null&&joinedClip.busy());
+   d.put("preroll_prepend_halted_after_failures",joinedClip!=null&&joinedClip.halted());
    d.put("preroll_prepend_pending",joinedClip==null?0:joinedClip.pending());
    d.put("preroll_prepend_last_name",joinedClip==null?"":joinedClip.lastName());
    d.put("preroll_prepend_last_duration_ms",joinedClip==null?0:joinedClip.lastDurationMs());
