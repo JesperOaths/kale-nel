@@ -78,7 +78,8 @@ def main():
    atomic(p,raw,st[p]);written.append(p)
   restart('c720p-drive-security-archive.service')
   restart('c720p-lan-camera-relay.service')
-  for attempt in range(12):
+  last_error=''
+  for attempt in range(16):
    try:
     after={kind:count(kind) for kind in prior}
     if any(after[k]<prior[k] for k in prior):raise RuntimeError('catalog_regressed')
@@ -90,8 +91,11 @@ def main():
      {'old_counts':prior,'new_counts':after,'unindexed_denied':True,
       'backup':str(d),'original_media_preserved':True},sort_keys=True),flush=True)
     return
-   except Exception:time.sleep(1)
-  raise RuntimeError('live_route_readback_failed')
+   except Exception as error:
+    last_error=str(error)[:240]
+    print('ROUTE_VERIFY',attempt,last_error,flush=True)
+    time.sleep(1)
+  raise RuntimeError('live_route_readback_failed_'+last_error)
  except BaseException:
   for p in reversed(written):
    atomic(p,old[p],st[p])
