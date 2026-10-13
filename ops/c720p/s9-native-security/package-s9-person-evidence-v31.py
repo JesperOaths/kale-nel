@@ -42,7 +42,9 @@ def source(ref,path):
 def main():
  arg=argparse.ArgumentParser();arg.add_argument("--commit",required=True);arg.add_argument("--sources",type=Path,required=True);opts=arg.parse_args()
  if not re.fullmatch("[a-f0-9]{40}",opts.commit):raise RuntimeError("bad_commit")
- if shutil.disk_usage(str(BASE)).free<220*1024*1024:
+ # Compilation runs in tmpfs. Persistent growth is a single <=20 MiB APK;
+ # retain >=170 MiB after packaging plus the separate cutover's backup guard.
+ if shutil.disk_usage(str(BASE)).free<190*1024*1024:
   raise RuntimeError("hub_root_disk_too_full_for_safe_signed_artifact")
  if shutil.disk_usage("/tmp").free<400*1024*1024:
   raise RuntimeError("temporary_ramdisk_too_small")
