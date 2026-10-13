@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """S9 microSD security catalog. No Google Drive access or MP4 hub caching."""
-import json,subprocess,os,re,datetime,math
+import json,subprocess,os,re,datetime,math,hashlib
 from pathlib import Path
 ADDR="192.168.178.250:5555"
 SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
@@ -70,6 +70,42 @@ def anonymous_clip_metadata(manifest):
  return {"anonymous_tracking_status":"sampled_tracks_available" if tracks else "none_detected_in_sampled_frames",
          "anonymous_track_count":len(tracks),"anonymous_tracks":tracks}
 
+def safe_thumbnail_revision(row):
+ """Return a bounded cache key from validated thumbnail digests only."""
+ digest=row.get("thumbnail_sha256")
+ if isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest):return digest[:16]
+ revision=row.get("thumbnail_revision")
+ return revision if isinstance(revision,str) and re.fullmatch(r"[a-f0-9]{16}",revision) else None
+
+def safe_detection_timeline(row):
+ """Bounded sampled model observations, never identities or raw frame bytes."""
+ import math
+ raw=row.get("person_sample_timeline")
+ result={"person_sample_timeline":[],"person_timeline_status":"not_in_original_review",
+         "person_first_sample_ms":None,"person_last_sample_ms":None}
+ if raw is None:return result
+ duration=row.get("duration_ms")
+ frames=row.get("sampled_frames",row.get("sampled_frame_count"))
+ if (not isinstance(raw,list) or len(raw)>12 or type(duration) is not int or
+     not 0<duration<=120000 or type(frames) is not int or not 0<=frames<=32 or len(raw)>frames):
+  return {**result,"person_timeline_status":"invalid_sample_timeline"}
+ clean=[];previous=-1
+ for point in raw:
+  if not isinstance(point,dict):return {**result,"person_timeline_status":"invalid_sample_timeline"}
+  ms=point.get("time_ms");score=point.get("person_peak_score")
+  counts=[point.get(k) for k in ("people_at_050","vehicles_at_050","animals_at_050")]
+  if (type(ms) is not int or not previous<ms<=duration or
+      any(type(n) is not int or not 0<=n<=64 for n in counts) or
+      type(score) not in (int,float) or not math.isfinite(score) or not 0<=score<=1):
+   return {**result,"person_timeline_status":"invalid_sample_timeline"}
+  clean.append({"time_ms":ms,"people_at_050":counts[0],"vehicles_at_050":counts[1],
+                "animals_at_050":counts[2],"person_peak_score":round(float(score),3)})
+  previous=ms
+ positive=[p["time_ms"] for p in clean if p["people_at_050"]>0]
+ return {"person_sample_timeline":clean,"person_timeline_status":"sampled_model_evidence",
+         "person_first_sample_ms":positive[0] if positive else None,
+         "person_last_sample_ms":positive[-1] if positive else None}
+
 def safe_native_detection_stats(manifest):
  """Whitelisted, non-biometric detection provenance from S9 signed manifests."""
  value=manifest.get("person_confidence")
@@ -99,7 +135,7 @@ def safe_native_detection_stats(manifest):
  return {"person_score":round(score,3) if score is not None else None,
          "sampled_frames":frames,"person_detected_frames_050":hits,
          "person_presence_percent":coverage,"duration_ms":duration,
-         "review_backend":backend,"person_event_category":category}
+         "review_backend":backend,"person_event_category":category,**safe_detection_timeline(manifest)}
 
 def safe_capture_event_metadata(manifest, current_name):
  """Expose bounded, non-biometric segment lineage and cover diagnostics."""
@@ -192,7 +228,7 @@ def safe_face_review_metadata(m):
     "snapshot_on_s9":snap is not None,
     "snapshot_name":snap,"snapshot_size":size,"snapshot_sha256":digest})
  result["face_candidates"]=out
- result["face_snapshots_saved"]=len(out)
+ result["face_snapshots_saved"]=sum(row["snapshot_on_s9"] for row in out)
  return result
 
 def adb(*args):
@@ -215,7 +251,7 @@ def main():
    if m.get("name")!=name or size<10000 or not re.fullmatch("[a-f0-9]{64}",str(m.get("sha256",""))):raise ValueError("manifest")
    actual=int(adb("shell","stat","-c","%s",SD+"/"+name).strip())
    if actual!=size:raise ValueError("partial file")
-   thumb=None
+   thumb=None;thumb_revision=safe_thumbnail_revision(m)
    try:
     img=adb("exec-out","cat",SD+"/"+name+".thumb.jpg")
     if img[:3]==bytes([255,216,255]) and 4000<len(img)<2200000:
@@ -224,7 +260,7 @@ def main():
      if not dest.is_file() or dest.read_bytes()!=img:
       part=dest.with_suffix(".jpg.tmp")
       part.write_bytes(img);os.replace(part,dest)
-     thumb="s9-phone-thumbs/"+dest.name
+     thumb="s9-phone-thumbs/"+dest.name;thumb_revision=hashlib.sha256(dest.read_bytes()).hexdigest()[:16]
    except Exception:pass
    group=m.get("content_group")
    if group not in ("one_person","multiple_people"):group="unreviewed"
@@ -232,7 +268,7 @@ def main():
    rows.append({"name":name,"timestamp":dt.strftime("%Y-%m-%d %H:%M"),"size":size,
      "drive_verified":False,"sd_verified":True,"sd_only":True,
      "scene_category":group,"person_count":m.get("ai_person_count_at_trigger",0),
-     "thumbnail":thumb})
+     "thumbnail":thumb,"thumbnail_revision":thumb_revision})
   except Exception as e:problems.append(name+":"+type(e).__name__)
  # Include only native 4K recordings whose S9-generated SHA-256 evidence matches.
  native="/storage/9C33-6BBD/Android/data/nl.kalenel.s9nativefourk/files/Native4K"
@@ -250,7 +286,7 @@ def main():
   if actual!=size:raise ValueError("native_4k_size_mismatch")
   digest=adb("shell","sha256sum",native+"/"+name).decode().split()[0].lower()
   if sha!=digest:raise ValueError("native_4k_sha256_mismatch")
-  thumb=None
+  thumb=None;thumb_revision=safe_thumbnail_revision(m)
   try:
    img=adb("exec-out","cat",native+"/"+name+".thumb.jpg")
    if img[:3]==bytes([255,216,255]) and 4000<len(img)<2200000:
@@ -259,12 +295,12 @@ def main():
     if not dest.is_file() or dest.read_bytes()!=img:
      part=dest.with_suffix(".jpg.tmp")
      part.write_bytes(img);os.replace(part,dest)
-    thumb="s9-phone-thumbs/"+dest.name
+    thumb="s9-phone-thumbs/"+dest.name;thumb_revision=hashlib.sha256(dest.read_bytes()).hexdigest()[:16]
   except Exception:pass
   stamp=datetime.datetime.fromtimestamp(int(name.split("_")[1].split(".")[0])/1000.0)
   rows.append({"name":name,"timestamp":stamp.strftime("%Y-%m-%d %H:%M"),"size":size,
     "drive_verified":False,"sd_verified":True,"sd_only":True,
-    "scene_category":"unreviewed","person_count":0,"thumbnail":thumb,
+    "scene_category":"unreviewed","person_count":0,"thumbnail":thumb,"thumbnail_revision":thumb_revision,
     "resolution":"3840x2160","codec":"H.264","storage":"S9+ native 4K microSD"})
  except Exception as e:
   if type(e).__name__!="OSError":problems.append("native_4k:"+type(e).__name__)
@@ -290,7 +326,7 @@ def main():
    group=str(m.get("scene_category","motion_other"))
    if group not in ("one_person","multiple_people","motion_other"):
     group="unreviewed"
-   thumb=None
+   thumb=None;thumb_revision=safe_thumbnail_revision(m)
    try:
     raw=adb("exec-out","cat",native_security+"/"+name+".thumb.jpg")
     if 4000<len(raw)<2200000 and raw[:3]==bytes([255,216,255]):
@@ -298,7 +334,7 @@ def main():
      dest.parent.mkdir(parents=True,exist_ok=True)
      if not dest.is_file() or dest.read_bytes()!=raw:
       t=dest.with_suffix(".jpg.partial");t.write_bytes(raw);os.replace(t,dest)
-     thumb="s9-phone-thumbs/"+dest.name
+     thumb="s9-phone-thumbs/"+dest.name;thumb_revision=hashlib.sha256(dest.read_bytes()).hexdigest()[:16]
    except Exception:pass
    when=datetime.datetime.fromtimestamp(int(name.split("_")[1].split(".")[0])/1000.0)
    rows.append({"name":name,"timestamp":when.strftime("%Y-%m-%d %H:%M"),
@@ -306,7 +342,7 @@ def main():
      "scene_category":group,"person_count":int(m.get("person_count",0)),
      **safe_native_detection_stats(m),
      **safe_capture_event_metadata(m,name),
-     "thumbnail":thumb,"resolution":"3840x2160","codec":"H.264",
+     "thumbnail":thumb,"thumbnail_revision":thumb_revision,"resolution":"3840x2160","codec":"H.264",
      "content_categories":m.get("categories",[]),
      **anonymous_clip_metadata(m),
      **safe_face_review_metadata(m),

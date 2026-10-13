@@ -80,6 +80,62 @@ def serve_face_snapshot(handler,name,record):
  handler.end_headers()
  if handler.command!="HEAD":handler.wfile.write(data)
 
+def safe_thumbnail_revision(row):
+ """Return a bounded cache key from validated thumbnail digests only."""
+ digest=row.get("thumbnail_sha256")
+ if isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest):return digest[:16]
+ revision=row.get("thumbnail_revision")
+ return revision if isinstance(revision,str) and re.fullmatch(r"[a-f0-9]{16}",revision) else None
+
+def safe_detection_timeline(row):
+ """Bounded sampled model observations, never identities or raw frame bytes."""
+ import math
+ raw=row.get("person_sample_timeline")
+ result={"person_sample_timeline":[],"person_timeline_status":"not_in_original_review",
+         "person_first_sample_ms":None,"person_last_sample_ms":None}
+ if raw is None:return result
+ duration=row.get("duration_ms")
+ frames=row.get("sampled_frames",row.get("sampled_frame_count"))
+ if (not isinstance(raw,list) or len(raw)>12 or type(duration) is not int or
+     not 0<duration<=120000 or type(frames) is not int or not 0<=frames<=32 or len(raw)>frames):
+  return {**result,"person_timeline_status":"invalid_sample_timeline"}
+ clean=[];previous=-1
+ for point in raw:
+  if not isinstance(point,dict):return {**result,"person_timeline_status":"invalid_sample_timeline"}
+  ms=point.get("time_ms");score=point.get("person_peak_score")
+  counts=[point.get(k) for k in ("people_at_050","vehicles_at_050","animals_at_050")]
+  if (type(ms) is not int or not previous<ms<=duration or
+      any(type(n) is not int or not 0<=n<=64 for n in counts) or
+      type(score) not in (int,float) or not math.isfinite(score) or not 0<=score<=1):
+   return {**result,"person_timeline_status":"invalid_sample_timeline"}
+  clean.append({"time_ms":ms,"people_at_050":counts[0],"vehicles_at_050":counts[1],
+                "animals_at_050":counts[2],"person_peak_score":round(float(score),3)})
+  previous=ms
+ positive=[p["time_ms"] for p in clean if p["people_at_050"]>0]
+ return {"person_sample_timeline":clean,"person_timeline_status":"sampled_model_evidence",
+         "person_first_sample_ms":positive[0] if positive else None,
+         "person_last_sample_ms":positive[-1] if positive else None}
+
+def capture_event_metrics(row):
+ """Preserve verified logical event grouping while validating catalog readback."""
+ result={"capture_evidence_status":"not_in_original_manifest"}
+ if row.get("capture_evidence_status")!="recording_segment_verified":return result
+ event=row.get("capture_event_id");index=row.get("capture_segment_index")
+ transition=row.get("capture_segment_transition");prior=row.get("capture_previous_segment")
+ if (not isinstance(event,str) or not re.fullmatch(r"garden_[0-9]{13}",event) or
+     type(index) is not int or not 1<=index<=250 or
+     transition not in ("new_event","reentry_after_quiet","max_duration_continuation") or
+     (index==1 and transition!="new_event")):
+  return {"capture_evidence_status":"invalid_event_metadata"}
+ gap=row.get("capture_segment_gap_ms")
+ if index>1 and (not isinstance(prior,str) or not re.fullmatch(r"motion_[0-9]{13}[.]mp4",prior) or
+                 prior==row.get("name") or type(gap) is not int or not 0<=gap<=60000):
+  return {"capture_evidence_status":"invalid_event_link"}
+ return {"capture_evidence_status":"recording_segment_verified","capture_event_id":event,
+         "capture_segment_index":index,"capture_previous_segment":prior if index>1 else None,
+         "capture_segment_transition":transition,"capture_segment_gap_ms":gap if index>1 else None,
+         "capture_has_physical_transition_gaps":True}
+
 def detection_metrics(row):
  """Bounded model evidence. Never expose person identity or appearance vectors."""
  import math
@@ -104,7 +160,7 @@ def detection_metrics(row):
  return {"person_score":round(float(s),3) if s is not None else None,
          "sampled_frames":n,"person_detected_frames_050":hits,
          "person_presence_percent":coverage,"duration_ms":duration,
-         "review_backend":backend,"person_event_category":event}
+         "review_backend":backend,"person_event_category":event,"thumbnail_revision":safe_thumbnail_revision(row),**safe_detection_timeline(row),**capture_event_metrics(row)}
 
 def install_local_sd(H):
  original=H.go
@@ -191,6 +247,14 @@ def install_local_sd(H):
    source=BASE/"s9-phone-thumbs"/name
    if source.is_file() and name[:-10] in data:
     return self.local_file(source,"image/jpeg")
+  # ARCHIVE_HISTORICAL_DRIVE_ALIAS_V1: restore read-only history.
+  # The original underlying handler still serves historic Drive /saved media.
+  if path=='/new/api/drive-saved' or re.fullmatch(r'/new/drive/saved/(?:clip|snap)/[A-Za-z0-9._-]{1,180}',path):
+   before=self.path
+   if path=='/new/api/drive-saved':self.path=before.replace('/new/api/drive-saved','/new/api/saved',1)
+   else:self.path=before.replace('/new/drive/saved/','/new/saved/',1)
+   try:return original(self)
+   finally:self.path=before
   return original(self)
  H.go=go
  # Review writes use the same signed relay but never affect video/playback.
@@ -202,6 +266,9 @@ def install_local_sd(H):
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
+ # C720P_SD_EXPLICIT_DELETE_V1: filter tombstones and mount read-only by default.
+ import s9_archive_delete_v1
+ globals()['rows']=s9_archive_delete_v1.install(H,rows,SECURITY_SD,NATIVE_SD,SD)
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:

@@ -62,16 +62,28 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 #driveEmpty{color:var(--soft);font-size:13px;padding:26px 0}
 @media(max-width:750px){.source-switch{gap:6px;margin-bottom:12px}.source-switch button{flex:1;padding:9px;min-width:140px;font-size:12px}.drive-toolbar{margin-bottom:12px}#driveMonthSelect{flex:1}}
 </style>
-<script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
+<script defer src="/local/frontyard-security-new/security-video-playback-v30.js?v=security-v30-20261013"></script>
+<script defer src="/local/frontyard-security-new/archive-card-actions-v1.js?v=ARCHIVE_ACTIONS_V1B_20261012"></script>
+<style id="s9-security-scroll-boundaries-v12">
+/* The iframe's actual client height, not its outer Home Assistant viewport. */
+html,body{height:100%!important;min-height:0!important;overflow:hidden!important}
+main#archive{
+ box-sizing:border-box!important;height:100%!important;min-height:0!important;
+ max-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior-y:contain!important;scrollbar-gutter:stable!important;
+ scroll-padding-bottom:52px!important;padding-bottom:max(64px,env(safe-area-inset-bottom))!important
+}
+#driveTimeline,#timeline{min-width:0;max-width:100%}
+</style>
 </head>
 <body>
-<main id="archive" data-archive-ui-version="v10"><div class="wrap">
-<header class="heading"><h1>Archive</h1><div class="controls source-controls" id="localControls" hidden><select id="monthSelect" aria-label="Choose archive month"><option value="all">All dates</option></select><button id="refresh" class="subtle-button" type="button" aria-label="Refresh local archive">↻</button></div></header>
+<main id="archive" data-archive-ui-version="v30"><div class="wrap">
+<header class="heading"><h1>Recording library</h1><div class="controls source-controls" id="localControls"><select id="monthSelect" aria-label="Choose archive month"><option value="all">All dates</option></select><button id="refresh" class="subtle-button" type="button" aria-label="Refresh local archive">↻</button></div></header>
 <nav class="source-switch" role="tablist" aria-label="Archived recording source">
-<button id="driveTab" role="tab" type="button" aria-selected="true" aria-controls="driveLibrary">Google Drive <small>Historical saved clips</small></button>
-<button id="localTab" role="tab" type="button" aria-selected="false" aria-controls="localLibrary" tabindex="-1">S9+ microSD <small>Native camera archive</small></button>
+<button id="localTab" role="tab" type="button" aria-selected="true" aria-controls="localLibrary">S9+ microSD <small>Native camera archive</small></button>
+<button id="driveTab" role="tab" type="button" aria-selected="false" aria-controls="driveLibrary" tabindex="-1">Google Drive <small>Historical saved clips</small></button>
 </nav>
-<section id="driveLibrary" class="source-view" role="tabpanel" aria-labelledby="driveTab">
+<section id="driveLibrary" class="source-view" role="tabpanel" aria-labelledby="driveTab" hidden>
 <div class="drive-toolbar"><p class="drive-hint"><b>Historical Google Drive videos</b> · Stored separately from microSD. Open a date to browse recordings.</p>
 <div class="controls"><select id="driveMonthSelect" aria-label="Choose historical Drive month"><option value="all">All dates</option></select>
 <button id="driveRefresh" class="subtle-button" type="button" aria-label="Refresh Google Drive recordings">↻</button></div></div>
@@ -79,7 +91,7 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 <div id="driveTimeline" aria-label="Historical Google Drive recording dates"></div>
 <div id="driveEmpty" hidden>No historical Drive recordings found.</div>
 </section>
-<section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab" hidden>
+<section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab">
 <div id="status" class="status" role="status">Loading local recordings…</div>
 <div id="timeline" aria-label="S9+ local recording dates"></div><div id="empty" hidden>No local recordings found</div>
 </section>
@@ -116,17 +128,22 @@ const time=r=>{const m=native.exec(name(r)),l=older.exec(name(r));return m?new D
 const formatDay=d=>{const [y,m,dd]=d.split('-').map(Number);return new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(Date.UTC(y,m-1,dd,12)))};
 const formatMonth=d=>{const [y,m]=d.split('-').map(Number);return new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(Date.UTC(y,m-1,15,12)))};
 const category=r=>{const g=String(r.person_event_category||r.scene_category||'').toLowerCase(),tags=Array.isArray(r.content_categories)?r.content_categories.map(String):[];
-if(g.includes('person')||Number(r.person_count)>0)return 'Person';
+if(g.includes('possible')||g.includes('single_frame'))return 'Uncertain person';
+if(g.includes('person')||Number(r.person_count)>0)return 'Person candidate';
 if(g.includes('animal')||tags.includes('animal'))return 'Animal';
 if(g.includes('vehicle')||tags.includes('vehicle'))return 'Vehicle';return 'Motion'};
 let records=[],openDays=new Set(),selectedMonth='all',loaded=false,playing=0;
 async function preview(img,r){const n=name(r),a=relay();if(!a?.url)return;
-try{const p=await a.url('/new/saved/snap/'+encodeURIComponent(n+'.thumb.jpg'));if(img.isConnected)img.src=p}catch(_){
+try{const p=await a.url('/new/saved/snap/'+encodeURIComponent(n+'.thumb.jpg')+(r.thumbnail_revision?'?rev='+encodeURIComponent(r.thumbnail_revision):''));if(img.isConnected)img.src=p}catch(_){
 if(img.isConnected)img.src='/local/frontyard-security-new/s9-phone-thumbs/'+encodeURIComponent(n)+'.thumb.jpg';}}
 function card(r){const b=create('button','clip');b.type='button';b.setAttribute('aria-label',formatDay(day(r))+' '+time(r)+' '+category(r));
 const picture=create('span','picture'),f=create('span','fallback','▣'),img=create('img');img.loading='lazy';img.decoding='async';img.alt='Recording preview';
 picture.append(f,img);b.append(picture);
 const meta=create('span','meta');meta.append(create('b','',time(r)),create('span','',category(r)));b.append(meta);
+b.dataset.archiveSource='sd';b.dataset.archiveName=name(r);
+b.dataset.archiveInfo=JSON.stringify({timestamp:r.timestamp,size:r.size,person_count:r.person_count,
+ person_status:r.person_status,scene_category:r.scene_category,person_score:r.person_score,
+ face_snapshots_saved:r.face_snapshots_saved,review_backend:r.review_backend});
 b.addEventListener('click',()=>play(r));preview(img,r);return b;}
 async function play(r){const a=relay(),n=name(r),token=++playing;
 $('viewerTitle').textContent=formatDay(day(r))+' · '+time(r);
@@ -146,7 +163,7 @@ if(!loaded){openDays=new Set(sorted.slice(0,1));loaded=true}
 let prevMonth='';
 for(const d of sorted){const month=d.slice(0,7);if(month!==prevMonth){root.append(create('div','month',formatMonth(d)));prevMonth=month}
 root.append(dayBox(d,grouped.get(d),openDays.has(d)))}
-$('empty').hidden=sorted.length>0;$('status').textContent=records.length+' recordings · '+sorted.length+' dates';}
+$('empty').hidden=sorted.length>0;$('status').textContent=[...grouped.values()].reduce((n,v)=>n+v.length,0)+' recordings · '+sorted.length+' dates';}
 function months(){const values=[...new Set(records.map(day).filter(Boolean).map(x=>x.slice(0,7)))].sort().reverse();
 const sel=$('monthSelect');sel.replaceChildren();const all=create('option','','All dates');all.value='all';sel.append(all);
 for(const d of values){const op=create('option','',formatMonth(d+'-01'));op.value=d;sel.append(op)}
@@ -193,7 +210,10 @@ function driveCard(r){
  img.alt='Archived recording preview';img.loading='lazy';img.decoding='async';
  picture.append(fallback,img);btn.append(picture);
  const m=create('span','meta');m.append(create('b','',driveTime(r)),create('span','',driveLabel(r)));btn.append(m);
- btn.addEventListener('click',()=>playDrive(r));drivePreview(img,r);
+ btn.dataset.archiveSource='drive';btn.dataset.archiveName=driveVideoName(r);
+btn.dataset.archiveInfo=JSON.stringify({timestamp:r.timestamp,size:r.size,person_count:r.person_count,
+ person_status:r.person_status,person_score:r.person_confidence,scene_category:r.person_status});
+btn.addEventListener('click',()=>playDrive(r));drivePreview(img,r);
  return btn;
 }
 async function playDrive(r){
@@ -241,7 +261,7 @@ function renderDrive(){
   target.append(details);
  }
  $('driveEmpty').hidden=dates.length>0;
- $('driveStatus').textContent=driveRecords.length+' Google Drive recordings · '+dates.length+' dates';
+ $('driveStatus').textContent=[...groups.values()].reduce((n,v)=>n+v.length,0)+' Google Drive recordings · '+dates.length+' dates';
  $('driveTab').querySelector('small').textContent=driveRecords.length+' archived clips';
 }
 async function refreshDrive(){
@@ -268,19 +288,20 @@ $('driveTab').addEventListener('click',()=>showSource('drive'));
 $('localTab').addEventListener('click',()=>showSource('local'));
 $('driveRefresh').addEventListener('click',refreshDrive);
 $('driveMonthSelect').addEventListener('change',e=>{driveMonth=e.target.value;driveOpenDays.clear();driveRendered=false;renderDrive()});
-$('driveTab').addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();showSource('local',true)}});
-$('localTab').addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();showSource('drive',true)}});
+$('driveTab').addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();showSource('local',true)}});
+$('localTab').addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();showSource('drive',true)}});
 $('monthSelect').addEventListener('change',e=>{selectedMonth=e.target.value;openDays.clear();loaded=false;render()});
 $('refresh').addEventListener('click',refresh);
 $('video').addEventListener('error',()=>{if($('viewer').open)$('playerState').textContent='Playback failed. Try refreshing this recording.'});
 $('close').addEventListener('click',()=>$('viewer').close());
 $('viewer').addEventListener('close',()=>{++playing;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
-showSource('drive');
+showSource('local');
 })();
 
 const GEJAST_PAGE_VERSION='v817';
 </script>
 <div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#647c89;font-size:10px;pointer-events:none">v817 - Made by Bruis</div>
+<script src="./security-gpu-launcher-v1.js?v=S9_GPU_PLAYER_V1_20261012"></script>
 </body>
 </html>
