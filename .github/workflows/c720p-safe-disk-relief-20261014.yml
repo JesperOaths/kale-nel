@@ -1,0 +1,65 @@
+name: C720P Safe Disk Relief
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/safe-disk-relief-20261014.py'
+      - 'ops/c720p/test-safe-disk-relief-20261014.py'
+      - '.github/workflows/c720p-safe-disk-relief-20261014.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-safe-disk-relief-20261014.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 ops/c720p/test-safe-disk-relief-20261014.py
+          python3 -m py_compile ops/c720p/safe-disk-relief-20261014.py
+  clean:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Run bounded cleanup using authorized remote maintenance queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          if ! command -v psql >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; fi
+          file='ops/c720p/safe-disk-relief-20261014.py'
+          hash="$(sha256sum "$file" | cut -d' ' -f1)"
+          temp="/tmp/c720p-safe-relief-${GITHUB_SHA:0:12}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
+          cmd="curl -fSsL --max-time 35 '${url}' -o '${temp}' && printf '%s  %s\n' '${hash}' '${temp}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${temp}'"
+          idem="c720p-safe-relief-${GITHUB_SHA:0:22}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-safe-disk-relief','maintenance',:'cmd',125,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "C720P_RELIEF_JOB=$id"
+          for i in $(seq 1 22); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$status" == done\|* || "$status" == error\|* || "$status" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 8000)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]] || exit 1
+              grep -q 'C720P_SAFE_DISK_RELIEF' <<< "$output" || exit 1
+              echo 'C720P_RELIEF_REMOTE_RESULT_CONFIRMED'
+              exit 0
+            fi
+            sleep 6
+          done
+          exit 1
