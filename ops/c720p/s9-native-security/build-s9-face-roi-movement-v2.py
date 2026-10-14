@@ -30,9 +30,15 @@ def signcheck(p):
 def main():
  if not re.fullmatch(r"[0-9a-f]{40}",REF):
   raise RuntimeError("S9_FACE_ROI_V2_REF_must_be_immutable_40_character_SHA")
+ # Heavy javac/d8 and APK-repack intermediates live in RAM-backed /tmp.
+ # Keep enough *persistent* disk for the signed APK and rollback; do not
+ # require 1.3GiB on the root volume when /tmp is an independent tmpfs.
  free=os.statvfs(HOME)
- if free.f_bavail*free.f_frsize<1300*1024**2:
-  raise RuntimeError("hub_disk_below_1_3GiB_refuse_build")
+ scratch=os.statvfs("/tmp")
+ if free.f_bavail*free.f_frsize<380*1024**2:
+  raise RuntimeError("hub_disk_below_380MiB_refuse_build")
+ if scratch.f_bavail*scratch.f_frsize<650*1024**2:
+  raise RuntimeError("tmpfs_below_650MiB_refuse_build")
  if not BASE.is_file():raise RuntimeError("baseline_signed_apk_missing")
  signcheck(BASE)
  with zipfile.ZipFile(BASE) as apk:
