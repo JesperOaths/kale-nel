@@ -40,13 +40,13 @@ def status():
  with urllib.request.urlopen("http://127.0.0.1:18808/status",timeout=12) as f:
   return json.load(f)
 def healthy(d,full=True):
- return d.get("ok") is True and d.get("mode")=="watching" and
+ return (d.get("ok") is True and d.get("mode")=="watching" and
   d.get("garden_person_gate_backend")=="gpu" and
   0<=d.get("last_frame_age_ms",99999)<1500 and
   (not full or (d.get("continuous_4k_ready") is True and
    d.get("continuous_4k_production_persisted") is True and
    d.get("continuous_4k_dropped_output_frames")==0 and
-   not d.get("continuous_4k_error")))
+   not d.get("continuous_4k_error"))))
 def stop_timer():
  p=subprocess.run(["systemctl","--user","disable","--now",TIMER],
                   text=True,capture_output=True,timeout=25)
@@ -86,9 +86,9 @@ def main():
   try:two=status();new_t=temp()
   except Exception:
    note("second_probe_failed");return
-  if not healthy(two,False) or new_t>37.0 or
-     two.get("recorded")!=one.get("recorded") or
-     two.get("motion_events")!=one.get("motion_events"):
+  if (not healthy(two,False) or new_t>37.0 or
+      two.get("recorded")!=one.get("recorded") or
+      two.get("motion_events")!=one.get("motion_events")):
    note("safe_idle_window_changed",{"battery_c":new_t});return
   # A transient thermal fall-back in v6 does not rearm until battery<35C.
   # Rebooting the app while <37.0C is the verified way to reinitialize it.
