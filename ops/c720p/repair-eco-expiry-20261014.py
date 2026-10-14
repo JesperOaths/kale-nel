@@ -99,17 +99,34 @@ def run(args, timeout=100):
     return result.stdout
 
 def replace_atomically(path, data):
-    fd, name = tempfile.mkstemp(prefix=".eco-expiry-", dir=str(path.parent))
-    try:
-        with os.fdopen(fd, "w") as f:
-            f.write(data)
-            f.flush()
-            os.fsync(f.fileno())
-        shutil.copystat(path, name)
-        os.replace(name, path)
-    finally:
-        if os.path.exists(name):
-            os.unlink(name)
+    # The host package directory is root-controlled. Do an atomic replacement
+    # *inside* the existing Home Assistant container, preserving uid/gid/mode.
+    # No host privilege escalation or broad chmod required.
+    assert path == PATH, "Unexpected write target"
+    script = r'''import os,sys,tempfile,stat
+from pathlib import Path
+p=Path(sys.argv[1]); old=p.stat()
+fd,name=tempfile.mkstemp(prefix=".eco-expiry-",dir=str(p.parent))
+try:
+ with os.fdopen(fd,"wb") as f:
+  f.write(sys.stdin.buffer.read());f.flush();os.fsync(f.fileno())
+ os.chmod(name,stat.S_IMODE(old.st_mode))
+ os.chown(name,old.st_uid,old.st_gid)
+ os.replace(name,p)
+ print("ATOMIC_HA_CONTAINER_WRITE_OK")
+finally:
+ if os.path.exists(name):os.unlink(name)
+'''
+    result = subprocess.run(
+        ["docker", "exec", "-i", "homeassistant", "python", "-c", script,
+         "/config/packages/c720p_energy_saver_v1.yaml"],
+        input=data.encode(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        timeout=30,
+    )
+    if result.returncode:
+        raise RuntimeError("Container atomic write failed: " +
+                           result.stderr.decode(errors="replace")[-1000:])
+    return result.stdout.decode().strip()
 
 def verify_automation_enabled():
     code = '''import sqlite3
@@ -159,8 +176,10 @@ def main():
     name = "eco-before-expiry-" + datetime.datetime.now().strftime("%Y%m%dT%H%M%S") + ".yaml"
     backup = backup_dir / name
     shutil.copy2(PATH, backup)
+    applied = False
     try:
         replace_atomically(PATH, after)
+        applied = True
         check_config()
         restart_and_wait()
         if PATH.read_text() != after:
@@ -170,11 +189,12 @@ def main():
                           "automation": enabled, "backup": str(backup),
                           "physical_lights_toggled": False}))
     except Exception:
-        replace_atomically(PATH, before)
-        try:
-            restart_and_wait()
-        except Exception as rollback_error:
-            print("ROLLBACK_RESTART_FAILED: " + str(rollback_error))
+        if applied:
+            replace_atomically(PATH, before)
+            try:
+                restart_and_wait()
+            except Exception as rollback_error:
+                print("ROLLBACK_RESTART_FAILED: " + str(rollback_error))
         raise
 
 if __name__ == "__main__":
