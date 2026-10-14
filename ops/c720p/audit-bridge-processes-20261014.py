@@ -7,6 +7,19 @@ def run(a,timeout=15):
   p=subprocess.run(a,capture_output=True,text=True,timeout=timeout)
   return {'rc':p.returncode,'out':p.stdout[:12000],'err':p.stderr[-200:]}
  except Exception as e:return {'error':type(e).__name__}
+# Focused follow-up: identify high-RSS Python/chromium owners before changing services.
+for pid in (2171173,3382983,1749396,1749205,2756808,2265796,2269048,2171453):
+ p=Path('/proc')/str(pid)
+ try:
+  command=(p/'cmdline').read_bytes().replace(b'\\0',b' ').decode(errors='replace')
+  stat=(p/'status').read_text().splitlines()
+  identity=[x.strip() for x in stat if x.startswith(('Name:','VmRSS:','VmSwap:'))]
+  print('PROCESS_OWNER',pid,'command',command[:260],'stats',identity)
+ except OSError:pass
+print('DIR_SIZES',run(['du','-sh','/tmp','/var/log','/var/cache','/home/jespern/.cache',
+  '/home/jespern/c720p-home-hub','/home/jespern/c720p-backups','/opt/homeassistant',
+  '/home/jespern/.local','/home/jespern/.config','/var/lib/docker'],22))
+print('TMP_TOP_DIRS',run(['du','-sh','/tmp/s9-*','/tmp/c720p-*','/tmp/pytest-*'],15))
 print('DISK',run(['df','-h','/']))
 print('DISK_INODES',run(['df','-i','/']))
 print('MEMORY',run(['free','-m']))
