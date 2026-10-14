@@ -62,6 +62,8 @@ public final class Continuous4KEncoder {
  private volatile boolean outputFormatReady;
  private volatile Session active;
  private volatile long stopAfterPtsUs=-1;
+ // The clip stop boundary must use the same PTS clock as MediaCodec frames.
+ private volatile long lastAcceptedEncodedPtsUs=-1;
  private MediaCodec encoder;
  private Surface surface;
  private Thread drainThread,writeThread;
@@ -130,9 +132,12 @@ public final class Continuous4KEncoder {
   synchronized(guard){
    Session s=active;
    if(s==null||stopAfterPtsUs>=0)return false;
-   // Camera2 and MediaCodec input timestamps share the boot clock. Do not
-   // enqueue END before in-flight hardware output has been drained.
-   stopAfterPtsUs=android.os.SystemClock.elapsedRealtimeNanos()/1000L;
+   // Android elapsedRealtimeNanos() can differ from codec presentation
+   // time after suspend. The old cross-clock comparison made a requested
+   // 12.5s diagnostic last ~30s. End after three further encoded frames.
+   if(lastAcceptedEncodedPtsUs<0)return false;
+   stopAfterPtsUs=lastAcceptedEncodedPtsUs+
+       3L*(1000000L/Encoded4KRing.FPS);
    return true;
   }
  }
@@ -156,6 +161,7 @@ public final class Continuous4KEncoder {
      boolean key=(info.flags&MediaCodec.BUFFER_FLAG_KEY_FRAME)!=0;
      synchronized(guard){
       if(!ring.offer(data,info.presentationTimeUs,info.flags,key))continue;
+      lastAcceptedEncodedPtsUs=info.presentationTimeUs;
       Session s=active;
       if(s!=null){
        // Prefix was frozen at START, so subsequent packets in one encoder
@@ -254,7 +260,7 @@ public final class Continuous4KEncoder {
   running=false;
  }
  public void close(){
-  synchronized(guard){running=false;active=null;}
+  synchronized(guard){running=false;active=null;stopAfterPtsUs=-1;lastAcceptedEncodedPtsUs=-1;}
   outputQueue.offer(new Work(Work.QUIT,null,null,null,null));
   if(drainThread!=null)try{drainThread.join(1800);}catch(InterruptedException e){Thread.currentThread().interrupt();}
   if(writeThread!=null)try{writeThread.join(2500);}catch(InterruptedException e){Thread.currentThread().interrupt();}
