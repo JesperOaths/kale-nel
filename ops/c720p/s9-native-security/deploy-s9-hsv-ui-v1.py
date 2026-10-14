@@ -65,7 +65,7 @@ def patch(proxy,page,source_proxy):
         # of the old v7 "Tracks & clothing" header. Preserve either page.
         head=page.find("<header>")
         title=page.find("</h1>",head)
-        if head<0 or title<0 or title-head>700 or head>2000:
+        if head<0 or title<0 or title-head>700:
             raise RuntimeError("unexpected_tracks_header")
         tracks=page[:title+5]+LINK+page[title+5:]
     return new_proxy,tracks
