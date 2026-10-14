@@ -90,6 +90,34 @@ class Tests(unittest.TestCase):
         self.assertFalse(report["auto_quarantine_model_negative_enabled"])
         self.assertEqual(report["status"]["identity"],"not_evaluated")
 
+    def test_v9_avoids_claiming_transport_as_person(self):
+        module=load(MODULE,'phone_watch_transport_v9')
+        sample=self.sample()
+        sample.update({
+          "motion_detector":"person_spatiotemporal_transport_v9",
+          "garden_person_gate_checked":6,
+          "garden_person_gate_matches":3,
+          "garden_person_gate_rejected":3,
+          "garden_person_gate_last_score":.78,
+          "garden_person_transport_conflicts_last_frame":1,
+          "garden_person_transport_conflicts_total":7,
+          "garden_person_requires_local_motion_or_spatial_translation":True,
+          "garden_motion_strong_only_extends_recording":True,
+          "garden_person_no_motion_requires_distinct_frames":2,
+        })
+        report=module.from_phone(sample,now_ms=101000)
+        self.assertEqual(report["detector_version"],"person_spatiotemporal_transport_v9")
+        self.assertEqual(report["status"]["kind"],"transport_conflict_not_confirmed_person")
+        self.assertEqual(report["person_transport_conflicts_total"],7)
+        self.assertTrue(report["person_motion_or_translation_required"])
+        self.assertTrue(report["recording_extension_requires_strong_garden_motion"])
+        self.assertEqual(report["status"]["identity"],"not_evaluated")
+        sample.update(garden_person_gate_checked=7,
+                      garden_person_gate_matches=4,
+                      garden_person_transport_conflicts_last_frame=0)
+        accepted=module.from_phone(sample,now_ms=101900)
+        self.assertEqual(accepted["status"]["kind"],"person_likely_candidate")
+
     def test_rejects_camera_offline_and_bad_counters(self):
         module=load(MODULE,'phone_watch_guards')
         with self.assertRaises(ValueError):
