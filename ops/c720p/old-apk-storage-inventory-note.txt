@@ -1,0 +1,1 @@
+Read-only size and age inventory is required before any archival file transfer.
