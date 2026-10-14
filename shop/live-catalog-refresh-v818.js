@@ -1,10 +1,10 @@
 (() => {
   'use strict';
 
-  // The storefront is static-first. Live reconciliation is a low-priority
-  // enhancement and must never become a high-frequency Supabase poller.
-  if(window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__) return;
-  window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__ = true;
+  // Use the static snapshot for an immediate first paint, then verify against
+  // the live server catalog once per page load. Later checks remain throttled.
+  if(window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R10__) return;
+  window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R10__ = true;
 
   // Render the generated catalog immediately, then reconcile its product list
   // against the authoritative Printify cache after first paint and while browsing.
@@ -20,15 +20,15 @@
   function sharedLastCheckedAt(){
     try { return Number(localStorage.getItem(SHARED_CHECK_KEY) || 0) || 0; } catch { return 0; }
   }
-  function claimSharedRefresh(now){
+  function claimSharedRefresh(now, force = false){
     try {
       const shared = sharedLastCheckedAt();
-      if(shared && now - shared < SHARED_MIN_REFRESH_MS) return false;
+      if(!force && shared && now - shared < SHARED_MIN_REFRESH_MS) return false;
       localStorage.setItem(SHARED_CHECK_KEY, String(now));
       localStorage.setItem(SHARED_OWNER_KEY, TAB_ID);
       return true;
     } catch {
-      return !lastCheckedAt || now - lastCheckedAt >= SHARED_MIN_REFRESH_MS;
+      return force || !lastCheckedAt || now - lastCheckedAt >= SHARED_MIN_REFRESH_MS;
     }
   }
 
@@ -128,11 +128,11 @@
     renderCart();
   }
 
-  async function checkCatalog(){
+  async function checkCatalog({ force = false } = {}){
     if(checking || typeof loadLiveCatalog !== 'function' || document.visibilityState === 'hidden' || navigator.onLine === false) return;
     const now = Date.now();
-    if(lastCheckedAt && now - lastCheckedAt < SHARED_MIN_REFRESH_MS) return;
-    if(!claimSharedRefresh(now)) return;
+    if(!force && lastCheckedAt && now - lastCheckedAt < SHARED_MIN_REFRESH_MS) return;
+    if(!claimSharedRefresh(now, force)) return;
     checking = true;
     lastCheckedAt = now;
     try {
@@ -164,7 +164,7 @@
   // Initial reconciliation is deferred until after the first page render.
   // The shared lease limits repeated network traffic across tabs.
   function startAutomaticReconciliation(){
-    void checkCatalog();
+    void checkCatalog({ force: true });
     window.setInterval(() => { void checkCatalog(); }, SHARED_MIN_REFRESH_MS);
   }
   if(document.readyState === 'complete') startAutomaticReconciliation();
@@ -176,7 +176,7 @@
 
   window.BRUIS_LIVE_CATALOG_REFRESH_V818 = Object.freeze({
     refreshNow: () => checkCatalog(),
-    mode: 'static-first-automatic-20m-r9'
+    mode: 'static-first-immediate-live-check-20m-r10'
   });
   window.addEventListener('storage', event => {
     if(event.key !== catalogCacheKey || !event.newValue) return;
