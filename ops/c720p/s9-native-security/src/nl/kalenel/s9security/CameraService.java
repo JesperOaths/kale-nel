@@ -1295,8 +1295,10 @@ public final class CameraService extends Service {
           "not_ready":gardenGateClassifier.gardenPersonMultiscaleVersion());
     d.put("garden_person_last_multiscale_passes",gardenGateClassifier==null?
           0:gardenGateClassifier.lastGardenInferencePasses());
-    d.put("garden_person_transport_conflicts_rejected",gardenGateClassifier==null?
+    d.put("garden_person_transport_conflicts_last_frame",gardenGateClassifier==null?
           0:gardenGateClassifier.lastGardenVehicleVetoes());
+    d.put("garden_person_transport_conflicts_total",gardenGateClassifier==null?
+          0:gardenGateClassifier.totalGardenVehicleVetoes());
     d.put("garden_person_requires_local_motion_or_spatial_translation",true);
     d.put("garden_motion_strong_only_extends_recording",true);
     d.put("garden_person_sentinel_interval_ms",GARDEN_PERSON_SENTINEL_MS);
