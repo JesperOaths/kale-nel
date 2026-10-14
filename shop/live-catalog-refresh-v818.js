@@ -3,8 +3,8 @@
 
   // Use the static snapshot for an immediate first paint, then verify against
   // the live server catalog once per page load. Later checks remain throttled.
-  if(window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R10__) return;
-  window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R10__ = true;
+  if(window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__) return;
+  window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__ = true;
 
   // Render the generated catalog immediately, then reconcile its product list
   // against the authoritative Printify cache after first paint and while browsing.
@@ -176,7 +176,7 @@
 
   window.BRUIS_LIVE_CATALOG_REFRESH_V818 = Object.freeze({
     refreshNow: () => checkCatalog(),
-    mode: 'static-first-immediate-live-check-20m-r10'
+    mode: 'static-first-automatic-20m-r9'
   });
   window.addEventListener('storage', event => {
     if(event.key !== catalogCacheKey || !event.newValue) return;
