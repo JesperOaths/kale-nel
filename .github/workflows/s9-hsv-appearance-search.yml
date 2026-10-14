@@ -40,7 +40,7 @@ jobs:
           from pathlib import Path
           import re
           html=Path("ops/c720p/s9-native-security/security-hsv-search-v1.html").read_text()
-          scripts=re.findall(r'<script[^>]*>(.*?)</script>',html,re.S)
+          scripts=[s for s in re.findall(r'<script[^>]*>(.*?)</script>',html,re.S) if s.strip()]
           assert len(scripts)==1
           Path("/tmp/s9-hsv-visual-search.js").write_text(scripts[0])
           PY
