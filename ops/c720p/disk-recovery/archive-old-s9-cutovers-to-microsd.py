@@ -42,7 +42,7 @@ def main():
  files=sorted(p for p in SRC.rglob("*") if p.is_file())
  if not 20<=len(files)<=70 or any(p.is_symlink() for p in SRC.rglob("*")):
   raise RuntimeError("unexpected_legacy_backup_tree")
- if any(not p.suffix.lower() in (".apk",".json",".txt",".sha256") for p in files):
+ if any(not p.suffix.lower() in (".apk",".json",".txt",".sha256",".backup") for p in files):
   raise RuntimeError("unexpected_file_type_abort")
  if max(p.stat().st_mtime for p in files)>1791936000:  # 2026-10-14 00:00 UTC
   raise RuntimeError("cutover_tree_recently_modified")
