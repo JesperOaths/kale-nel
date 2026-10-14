@@ -1165,6 +1165,7 @@ public final class CameraService extends Service {
    d.put("recorder","camera2_3840x2160_h264");
    d.put("preroll_version",continuous4KTrial?"continuous_native_4k_h264_ring_v1":GardenPreRoll.VERSION);
    d.put("continuous_4k_trial_active",continuous4KTrial);
+   d.put("continuous_4k_production_persisted",getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_4k_production_enabled",false));
    d.put("continuous_4k_ready",continuous4K!=null&&continuous4K.readyForEvent());
    d.put("continuous_4k_buffered_ms",continuous4K==null?0:continuous4K.bufferedMs());
    d.put("continuous_4k_buffer_bytes",continuous4K==null?0:continuous4K.bufferedBytes());
@@ -1374,8 +1375,19 @@ public final class CameraService extends Service {
        .put("requested_duration_ms",9000);
     }
    if("continuous_4k_trial".equals(key)){
-    if(!"enable".equals(value)&&!"disable".equals(value))
+    if(!"enable".equals(value)&&!"disable".equals(value)&&!"promote".equals(value))
      return response.put("ok",false).put("error","invalid_4k_trial_option");
+    if("promote".equals(value)){
+     if(!continuous4KTrial||continuous4K==null||!continuous4K.readyForEvent()||
+        continuous4KCompleted<1||continuous4KFailures>0||
+        continuous4K.droppedOutputFrames()!=0||temperature()>=375||
+        !continuous4KLastResult.startsWith("verified_native_4k_"))
+      return response.put("ok",false).put("error","4k_trial_not_verified_or_unhealthy");
+     boolean stored=getSharedPreferences("native",MODE_PRIVATE).edit()
+       .putBoolean("continuous_4k_production_enabled",true).commit();
+     return response.put("ok",stored).put("production_persisted",stored)
+       .put("hardware_4k_pre_event",true);
+    }
     if("enable".equals(value)){
      if(pilotOnly||continuous4KTrial||temperature()>=375||folder==null||
         folder.getUsableSpace()<15L*1024*1024*1024)
