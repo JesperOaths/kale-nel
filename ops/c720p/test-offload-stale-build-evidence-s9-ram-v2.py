@@ -82,5 +82,41 @@ class SafeArchiveTests(unittest.TestCase):
         self.assertIn("stat().st_nlink != 1", impl)
         self.assertIn('"s9-visual-attributes-v36"' not in str(module.HISTORICAL_APK_GENERATIONS), (True,))
 
+    def test_old_build_guard_requires_inactive_old_regular_files(self):
+        from unittest.mock import patch
+        import time
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"build"
+            b=root/"s9-detector-benchmark"
+            b.mkdir(parents=True)
+            sample=b/"benchmark.tmp"
+            with sample.open("wb") as out:
+                out.truncate(3*1024**2)
+            old=time.time()-7*3600
+            os.utime(b,(old,old))
+            with patch.object(module,"BUILD_ROOT",root), patch.object(
+                module,"HISTORIC_BUILDS",("s9-detector-benchmark",)), patch.object(
+                module,"referenced_by_process",return_value=False):
+                self.assertIsNotNone(module.validated_old_build(b))
+                link=b/"badlink"
+                link.symlink_to("/etc/passwd")
+                self.assertIsNone(module.validated_old_build(b))
+                link.unlink()
+                os.utime(b,(time.time(),time.time()))
+                self.assertIsNone(module.validated_old_build(b))
+
+    def test_old_build_offload_verifies_remote_then_records_before_removal(self):
+        text=SOURCE.read_text()
+        start=text.index("def offload_old_build(")
+        end=text.index("\ndef main():",start)
+        body=text[start:end]
+        self.assertLess(body.index("remote_hash(final) != checksum"),
+                        body.index("shutil.rmtree(folder)"))
+        self.assertLess(body.index("os.fsync(writer.fileno())"),
+                        body.index("shutil.rmtree(folder)"))
+        self.assertIn("phone_ready_with_recovery()",body)
+        self.assertNotIn("s9-native-security",module.HISTORIC_BUILDS)
+        self.assertNotIn("s9-visual-attributes-v36",module.HISTORIC_BUILDS)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
