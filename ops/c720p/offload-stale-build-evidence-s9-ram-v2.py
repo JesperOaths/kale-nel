@@ -213,6 +213,25 @@ def exact_file_stat(source):
     return (st.st_dev,st.st_ino,st.st_size,st.st_nlink,
             st.st_mtime_ns,st.st_ctime_ns)
 
+
+def phone_ready_with_recovery(attempts=5):
+    """Give live Camera2 a few seconds to recover after network copying."""
+    diagnostic = "unavailable"
+    for i in range(attempts):
+        try:
+            okay, status = phone_ready()
+            if okay:
+                return True, status
+            diagnostic = "unhealthy:mode=%s,temperature=%s,frame_age_ms=%s" % (
+                status.get("mode"),status.get("temperature_c"),
+                status.get("last_frame_age_ms"))
+        except Exception as exc:
+            diagnostic = type(exc).__name__
+        if i < attempts-1:
+            time.sleep(7)
+    return False, {"diagnostic":diagnostic}
+
+
 def offload_historical_apk(root,source):
     if (root.parent != BACKUP_ROOT or root.name not in HISTORICAL_APK_GENERATIONS
         or not source.is_file() or source.is_symlink() or source.stat().st_nlink != 1
@@ -225,9 +244,10 @@ def offload_historical_apk(root,source):
     rel = source.relative_to(root).as_posix()
     final = DEST+"/historical-apks/"+root.name+"/"+rel
     part = final+".part"
-    healthy,status = phone_ready()
+    healthy,status = phone_ready_with_recovery()
     if not healthy:
-        return {"source":str(source),"skipped":"phone_health_precheck"}
+        return {"source":str(source),"skipped":"phone_health_precheck",
+                "health":status.get("diagnostic")}
     adb("shell","mkdir","-p",final.rsplit("/",1)[0],timeout=30)
     if remote_exists(final):
         if remote_hash(final) != checksum:
@@ -242,9 +262,9 @@ def offload_historical_apk(root,source):
     if (exact_file_stat(source) != before or sha_file(source) != checksum
         or referenced_by_process(source) or referenced_by_process(root)):
         raise RuntimeError("local_apk_changed_during_transfer")
-    healthy,status = phone_ready()
+    healthy,status = phone_ready_with_recovery()
     if not healthy:
-        raise RuntimeError("phone_health_lost_after_transfer")
+        raise RuntimeError("phone_health_lost_after_transfer:"+str(status.get("diagnostic")))
     # Durable recovery manifest stored on hub before removing only this file.
     manifest = Path("/home/jespern/c720p-home-hub/reports/s9-archived-apks-20261014.jsonl")
     manifest.parent.mkdir(parents=True,exist_ok=True)
@@ -258,6 +278,88 @@ def offload_historical_apk(root,source):
     source.unlink()
     return {"source":str(source),"result":"verified_microSD_offload",
             "bytes":before[2],"sha256":checksum,"remote":final}
+
+
+# Old reproducible Android experiment output. The live native-security
+# source, active detector, and current visual-attributes release are excluded.
+HISTORIC_BUILDS = (
+    "s9-5s10s-v9", "s9-5s10s-v10", "s9-garden-hybrid-v8",
+    "s9-face-model-evaluation", "s9-person-ml-v1",
+    "s9-frame-metrics-stage", "s9-detector-benchmark",
+)
+BUILD_ROOT = Path("/home/jespern/c720p-home-hub/build")
+MAX_OFFLOAD_BUILD = 90 * 1024**2
+BUILD_MIN_AGE_SECONDS = 4 * 3600
+MAX_BUILD_TOTAL = 190 * 1024**2
+
+def validated_old_build(folder):
+    if (folder.parent != BUILD_ROOT or folder.name not in HISTORIC_BUILDS
+        or not folder.is_dir() or folder.is_symlink()
+        or time.time()-folder.stat().st_mtime < BUILD_MIN_AGE_SECONDS
+        or referenced_by_process(folder)):
+        return None
+    base_device = folder.stat().st_dev
+    for top, dirs, files in os.walk(folder,followlinks=False):
+        for name in dirs + files:
+            entry=Path(top)/name
+            st=entry.lstat()
+            if st.st_dev != base_device or not (stat.S_ISREG(st.st_mode)
+                                                or stat.S_ISDIR(st.st_mode)):
+                return None
+    before, size = snapshot(folder)
+    if not 2 * 1024**2 <= size <= MAX_OFFLOAD_BUILD:
+        return None
+    return before, size
+
+def offload_old_build(folder):
+    saved = validated_old_build(folder)
+    if saved is None:
+        return {"source":str(folder),"skipped":"not_stale_safe_build"}
+    before,size = saved
+    if (mem_available() < MIN_RAM
+        or shutil.disk_usage("/dev/shm").free < size + 90*1024**2):
+        return {"source":str(folder),"skipped":"insufficient_tmpfs_or_memory"}
+    with tempfile.TemporaryDirectory(prefix="c720p-archival-",dir="/dev/shm") as d:
+        archive=Path(d)/"old-build.tar"
+        checksum=make_archive(folder,str(archive))
+        if snapshot(folder)[0] != before or referenced_by_process(folder):
+            raise RuntimeError("build_changed_before_transfer")
+        healthy,status=phone_ready_with_recovery()
+        if not healthy:
+            return {"source":str(folder),"skipped":"phone_unhealthy_before_build",
+                    "diagnostic":status.get("diagnostic")}
+        final=DEST+"/historical-builds/"+folder.name+".tar"
+        part=final+".part"
+        adb("shell","mkdir","-p",final.rsplit("/",1)[0],timeout=30)
+        if remote_exists(final):
+            if remote_hash(final) != checksum:
+                raise RuntimeError("existing_build_archive_checksum_conflict")
+        else:
+            adb("push",str(archive),part,timeout=320)
+            if remote_hash(part) != checksum:
+                raise RuntimeError("staged_build_archive_hash_mismatch")
+            adb("shell","mv",part,final,timeout=30)
+        if remote_hash(final) != checksum:
+            raise RuntimeError("final_build_archive_hash_mismatch")
+        if snapshot(folder)[0] != before or referenced_by_process(folder):
+            raise RuntimeError("build_changed_after_transfer")
+        healthy,status=phone_ready_with_recovery()
+        if not healthy:
+            raise RuntimeError("phone_unhealthy_after_build_transfer:"+str(
+                status.get("diagnostic")))
+        manifest=Path("/home/jespern/c720p-home-hub/reports/s9-archived-builds-20261014.jsonl")
+        manifest.parent.mkdir(parents=True,exist_ok=True)
+        if manifest.is_symlink():
+            raise RuntimeError("build_manifest_is_symlink")
+        with manifest.open("a",encoding="utf-8") as writer:
+            writer.write(json.dumps({"source":str(folder),"remote":final,
+                     "sha256":checksum,"source_bytes":size})+"\n")
+            writer.flush()
+            os.fsync(writer.fileno())
+        shutil.rmtree(folder)
+        return {"source":str(folder),"result":"verified_microSD_build_offload",
+                "bytes":size,"sha256":checksum,"remote":final}
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -297,6 +399,33 @@ def main():
                 {"source":str(source),"error":str(exc)[:180]})
             break
     report["historic_apk_bytes_verified"] = archived_bytes
+    report["historic_build_results"] = []
+    build_total=0
+    for name in HISTORIC_BUILDS:
+        folder=BUILD_ROOT/name
+        if not folder.exists():
+            continue
+        try:
+            saved=validated_old_build(folder)
+            if saved is None:
+                report["historic_build_results"].append(
+                    {"source":str(folder),"skipped":"in_use_or_not_stale"})
+                continue
+            if build_total+saved[1] > MAX_BUILD_TOTAL:
+                report["historic_build_results"].append(
+                    {"source":str(folder),"skipped":"aggregate_limit"})
+                continue
+            result=offload_old_build(folder)
+            report["historic_build_results"].append(result)
+            if result.get("result")=="verified_microSD_build_offload":
+                build_total+=result["bytes"]
+            if "phone_unhealthy" in str(result.get("skipped","")):
+                break
+        except Exception as exc:
+            report["historic_build_results"].append(
+                {"source":str(folder),"error":str(exc)[:180]})
+            break
+    report["historic_build_bytes_verified"] = build_total
     report["free_after"] = shutil.disk_usage("/").free
     report["net_free_change"] = report["free_after"] - report["free_before"]
     print("S9_RAM_OFFLOAD_RESULT " + json.dumps(report, sort_keys=True), flush=True)
