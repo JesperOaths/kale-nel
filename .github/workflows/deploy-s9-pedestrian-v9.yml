@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-s9-pedestrian-v9.yml'
+      - 'ops/c720p/s9-native-security/deploy-person-motion-v9.py'
 
 permissions:
   contents: read
