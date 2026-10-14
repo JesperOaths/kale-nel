@@ -96,7 +96,7 @@ class Tests(unittest.TestCase):
   classifier=(ROOT/'src/nl/kalenel/s9security/ClipClassifier.java').read_text()
   outfit=(ROOT/'src/nl/kalenel/s9security/OutfitEvidence.java').read_text()
   self.assertIn('outfit.add(bitmap,personBox',classifier)
-   self.assertIn('if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)',classifier)
+  self.assertIn('if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)',classifier)
   self.assertIn('outfit.publish(result,folder,name,persons==1',classifier)
   self.assertIn('new JSONArray()',outfit)
   self.assertIn('human_review_required',outfit)
