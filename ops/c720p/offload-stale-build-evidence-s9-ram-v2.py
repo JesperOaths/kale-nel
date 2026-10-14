@@ -162,6 +162,103 @@ def transfer(source):
                 "archive_bytes":os.stat(staging).st_size,
                 "sha256":checksum, "remote":final}
 
+
+# Explicitly retired signed-backup APKs only; do not move current releases.
+BACKUP_ROOT = Path("/home/jespern/c720p-home-hub/backups")
+HISTORICAL_APK_GENERATIONS = (
+    "s9-continuous4k-v5", "s9-continuous4k-v6", "s9-onphone-prepend-v1",
+    "s9-face-roi-movement-v1", "smooth-video", "s9-5s10s-v9",
+    "s9-continuous4k-v4", "s9-preroll-v3", "s9-person-evidence-v31",
+    "s9-prepended-v1c-one-time",
+)
+MAX_HISTORICAL_APK_BYTES = 290 * 1024**2
+HISTORICAL_APK_AGE_SECONDS = 8 * 3600
+
+def historical_apk_candidates():
+    """Single-linked, old, conventionally named APKs only."""
+    import re
+    for generation in HISTORICAL_APK_GENERATIONS:
+        root = BACKUP_ROOT / generation
+        if root.is_symlink() or not root.is_dir():
+            continue
+        for source in sorted(root.rglob("*.apk")):
+            try:
+                relative = source.relative_to(root)
+                if (source.is_symlink() or not source.is_file()
+                    or any(not re.fullmatch(r"[A-Za-z0-9._-]{1,120}",part)
+                           for part in relative.parts)
+                    or any(p.is_symlink() for p in (source,*source.parents)
+                           if p != BACKUP_ROOT.parent)):
+                    continue
+                st = source.stat()
+                if st.st_nlink != 1:
+                    continue
+                if not 5 * 1024**2 <= st.st_size <= 55 * 1024**2:
+                    continue
+                if time.time() - st.st_mtime < HISTORICAL_APK_AGE_SECONDS:
+                    continue
+                yield root, source
+            except OSError:
+                continue
+
+def sha_file(source):
+    h = hashlib.sha256()
+    with source.open("rb") as handle:
+        for piece in iter(lambda:handle.read(1024*1024),b""):
+            h.update(piece)
+    return h.hexdigest()
+
+def exact_file_stat(source):
+    st = source.stat()
+    return (st.st_dev,st.st_ino,st.st_size,st.st_nlink,
+            st.st_mtime_ns,st.st_ctime_ns)
+
+def offload_historical_apk(root,source):
+    if (root.parent != BACKUP_ROOT or root.name not in HISTORICAL_APK_GENERATIONS
+        or not source.is_file() or source.is_symlink() or source.stat().st_nlink != 1
+        or time.time()-source.stat().st_mtime < HISTORICAL_APK_AGE_SECONDS):
+        return {"source":str(source),"skipped":"not_eligible"}
+    if referenced_by_process(source) or referenced_by_process(root):
+        return {"source":str(source),"skipped":"process_reference"}
+    before = exact_file_stat(source)
+    checksum = sha_file(source)
+    rel = source.relative_to(root).as_posix()
+    final = DEST+"/historical-apks/"+root.name+"/"+rel
+    part = final+".part"
+    healthy,status = phone_ready()
+    if not healthy:
+        return {"source":str(source),"skipped":"phone_health_precheck"}
+    adb("shell","mkdir","-p",final.rsplit("/",1)[0],timeout=30)
+    if remote_exists(final):
+        if remote_hash(final) != checksum:
+            raise RuntimeError("remote_archive_conflicts")
+    else:
+        adb("push",str(source),part,timeout=280)
+        if remote_hash(part) != checksum:
+            raise RuntimeError("staged_apk_checksum_mismatch")
+        adb("shell","mv",part,final,timeout=30)
+    if remote_hash(final) != checksum:
+        raise RuntimeError("final_apk_checksum_mismatch")
+    if (exact_file_stat(source) != before or sha_file(source) != checksum
+        or referenced_by_process(source) or referenced_by_process(root)):
+        raise RuntimeError("local_apk_changed_during_transfer")
+    healthy,status = phone_ready()
+    if not healthy:
+        raise RuntimeError("phone_health_lost_after_transfer")
+    # Durable recovery manifest stored on hub before removing only this file.
+    manifest = Path("/home/jespern/c720p-home-hub/reports/s9-archived-apks-20261014.jsonl")
+    manifest.parent.mkdir(parents=True,exist_ok=True)
+    if manifest.is_symlink():
+        raise RuntimeError("manifest_is_symlink")
+    with manifest.open("a",encoding="utf-8") as out:
+        out.write(json.dumps({"source":str(source),"remote":final,
+                "sha256":checksum,"bytes":before[2]})+"\\n")
+        out.flush()
+        os.fsync(out.fileno())
+    source.unlink()
+    return {"source":str(source),"result":"verified_microSD_offload",
+            "bytes":before[2],"sha256":checksum,"remote":final}
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--execute", action="store_true")
@@ -181,6 +278,25 @@ def main():
         except Exception as exc:
             report["results"].append({"source":str(source), "error":str(exc)[:220]})
             break
+    report["historic_apk_results"] = []
+    archived_bytes = 0
+    for root, source in historical_apk_candidates():
+        if archived_bytes + source.stat().st_size > MAX_HISTORICAL_APK_BYTES:
+            report["historic_apk_results"].append(
+                {"source":str(source),"skipped":"aggregate_limit"})
+            continue
+        try:
+            result = offload_historical_apk(root,source)
+            report["historic_apk_results"].append(result)
+            if result.get("result")=="verified_microSD_offload":
+                archived_bytes += result["bytes"]
+            if result.get("skipped")=="phone_health_precheck":
+                break
+        except Exception as exc:
+            report["historic_apk_results"].append(
+                {"source":str(source),"error":str(exc)[:180]})
+            break
+    report["historic_apk_bytes_verified"] = archived_bytes
     report["free_after"] = shutil.disk_usage("/").free
     report["net_free_change"] = report["free_after"] - report["free_before"]
     print("S9_RAM_OFFLOAD_RESULT " + json.dumps(report, sort_keys=True), flush=True)
