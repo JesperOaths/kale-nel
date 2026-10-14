@@ -95,4 +95,41 @@ try:
 except Exception as exc:payload["memory_error"]=type(exc).__name__
 v=__import__("os").statvfs("/")
 payload["filesystem_reserved_mb"]=round((v.f_bfree-v.f_bavail)*v.f_frsize/(1024**2),1)
+# Specific, bounded disk consumers. This reports metadata only and never reads file contents.
+# Directory contents are restricted to top-level entries; do not traverse secrets.
+SCAN_ROOTS={
+ "tmp":"/tmp",
+ "build":"/home/jespern/c720p-home-hub/build",
+ "rollback_backups":"/home/jespern/c720p-home-hub/backups",
+ "reports":"/home/jespern/c720p-home-hub/reports",
+ "var_cache":"/var/cache",
+ "var_log":"/var/log",
+ "user_cache":"/home/jespern/.cache",
+ "ha_config_backups":"/opt/homeassistant/config/backups",
+ "home_bin":"/home/jespern/c720p-home-hub/bin",
+}
+focused={}
+for label,path in SCAN_ROOTS.items():
+ root=pathlib.Path(path)
+ if not root.is_dir() or root.is_symlink():continue
+ entries=[]
+ try:
+  for item in root.iterdir():
+   try:
+    if item.is_symlink():continue
+    if item.is_file():
+     st=item.stat()
+     entries.append({"entry":item.name[:90],"kind":"file","allocated_mb":round(st.st_blocks*512/(1024**2),1),
+                     "age_days":round((__import__("time").time()-st.st_mtime)/86400,1)})
+   except OSError:continue
+ except OSError:continue
+ focused[label]=sorted(entries,key=lambda e:-e["allocated_mb"])[:18]
+payload["large_direct_files"]=focused
+# Reads only capped metadata from /proc: no process command lines or environment secrets.
+payload["mounts"]={}
+for label,path in (("root","/"),("shared_memory","/dev/shm")):
+ try:
+  disk=shutil.disk_usage(path)
+  payload["mounts"][label]={"used_mib":round(disk.used/(1024**2),1),"free_mib":round(disk.free/(1024**2),1)}
+ except OSError:pass
 print("C720P_SAFE_STORAGE_INVENTORY_V1 "+json.dumps(payload,separators=(",",":"),sort_keys=True),flush=True)
