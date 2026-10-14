@@ -7,6 +7,9 @@ CHECK=[
  ("hub","/home/jespern/c720p-home-hub",1),
  ("hub_build","/home/jespern/c720p-home-hub/build",1),
  ("hub_backups","/home/jespern/c720p-home-hub/backups",1),
+ ("old_apks_v5","/home/jespern/c720p-home-hub/backups/s9-continuous4k-v5",1),
+ ("old_apks_v6","/home/jespern/c720p-home-hub/backups/s9-continuous4k-v6",1),
+ ("old_apks_prepend","/home/jespern/c720p-home-hub/backups/s9-onphone-prepend-v1",1),
  ("user_cache","/home/jespern/.cache",1),
  ("user_config","/home/jespern/.config",1),
  ("chromium_profile","/home/jespern/.config/chromium",2),
@@ -60,4 +63,22 @@ for label,argv in [
  except Exception as e:r[label]={"error":type(e).__name__}
 d=shutil.disk_usage("/")
 r["root"]={"free_bytes":d.free,"used_bytes":d.used,"total_bytes":d.total}
+# Read-only historical APK assessment; restrict to old, superseded release directories.
+HISTORICAL=("s9-continuous4k-v5","s9-continuous4k-v6",
+ "s9-onphone-prepend-v1","s9-face-roi-movement-v1","smooth-video",
+ "s9-5s10s-v9","s9-continuous4k-v4","s9-preroll-v3",
+ "s9-person-evidence-v31","s9-prepended-v1c-one-time")
+apks=[]
+for gen in HISTORICAL:
+ root=pathlib.Path("/home/jespern/c720p-home-hub/backups")/gen
+ if not root.is_dir() or root.is_symlink():continue
+ for file in root.rglob("*.apk"):
+  try:
+   if file.is_symlink() or not file.is_file():continue
+   st=file.stat()
+   apks.append({"path":str(file),"mib":round(st.st_size/1048576,1),
+                "age_hours":round((time.time()-st.st_mtime)/3600,1),
+                "link_count":st.st_nlink})
+  except OSError:continue
+r["historical_apk_candidates"]=apks
 print("C720P_STORAGE_FOLLOWUP_V2 "+json.dumps(r,separators=(",",":"),sort_keys=True),flush=True)
