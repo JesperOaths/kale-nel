@@ -47,7 +47,7 @@ def health():
     if not (s.get("ok") is True and s.get("mode") == "watching"
             and s.get("garden_person_gate_backend") == "gpu"
             and s.get("continuous_4k_ready") is True
-            and int(s.get("last_frame_age_ms") or 999999) < 2000):
+            and int(s.get("last_frame_age_ms",999999)) < 2000):
         raise RuntimeError("phone_camera_not_healthy_watching_gpu_4k")
     return {"camera":"watching", "gpu":True, "4k":True, "temperature_c":s.get("temperature_c")}
 
