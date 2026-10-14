@@ -35,3 +35,13 @@ jobs:
         run: |
           set -euo pipefail
           "$RUNNER_TEMP/s9-hsv/bin/python" ops/c720p/s9-native-security/test-s9-hsv-search.py
+          "$RUNNER_TEMP/s9-hsv/bin/python" ops/c720p/s9-native-security/test-s9-hsv-integration.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path("ops/c720p/s9-native-security/security-hsv-search-v1.html").read_text()
+          scripts=re.findall(r'<script[^>]*>(.*?)</script>',html,re.S)
+          assert len(scripts)==1
+          Path("/tmp/s9-hsv-visual-search.js").write_text(scripts[0])
+          PY
+          node --check /tmp/s9-hsv-visual-search.js
