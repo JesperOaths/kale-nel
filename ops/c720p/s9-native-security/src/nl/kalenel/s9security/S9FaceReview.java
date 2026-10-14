@@ -273,9 +273,39 @@ final class S9FaceReview implements AutoCloseable {
   writeIndex();
   return result.put("person_id",id).put("match_status","new_anonymous_candidate");
  }
- void sample(Bitmap frame,long ms){
-  if(!FILE.matcher(clip).matches()||frames>=frameLimit||captures.length()>=MAX_CAPTURES)return;
-  frames++;
+ /** Person-relative high-resolution face search: the full 4K image is
+  * still scanned first. Search up to two detected upper-body regions only
+  * when no full-frame face was captured. These are anonymous face-review
+  * snapshots, never confirmed identity claims or pose estimates. */
+ void sampleWithPersonBoxes(Bitmap frame,long ms,List<float[]> boxes){
+  int before=captures.length();
+  scan(frame,ms,true);
+  if(captures.length()>before||boxes==null||boxes.isEmpty()||
+     captures.length()>=MAX_CAPTURES)return;
+  int attempted=0;
+  for(float[] b:boxes){
+   if(attempted>=2||captures.length()>before)break;
+   if(b==null||b.length!=4)continue;
+   boolean valid=true;
+   for(float value:b)if(!Float.isFinite(value)||value<0||value>1)valid=false;
+   if(!valid||b[2]-b[0]<.12f||b[3]-b[1]<.045f)continue;
+   int w=frame.getWidth(),h=frame.getHeight();
+   float bw=b[3]-b[1],bh=b[2]-b[0];
+   int x0=Math.max(0,(int)((b[1]-.16f*bw)*w));
+   int x1=Math.min(w,(int)((b[3]+.16f*bw)*w));
+   int y0=Math.max(0,(int)((b[0]-.13f*bh)*h));
+   int y1=Math.min(h,(int)((b[0]+.62f*bh)*h));
+   if(x1-x0<72||y1-y0<72)continue;
+   Bitmap roi=Bitmap.createBitmap(frame,x0,y0,x1-x0,y1-y0);
+   attempted++;
+   try{scan(roi,ms,false);}finally{roi.recycle();}
+  }
+ }
+ void sample(Bitmap frame,long ms){scan(frame,ms,true);}
+ private void scan(Bitmap frame,long ms,boolean countFrame){
+  if(!FILE.matcher(clip).matches()||
+     (countFrame&&frames>=frameLimit)||captures.length()>=MAX_CAPTURES)return;
+  if(countFrame)frames++;
   Bitmap scaled=null,rgb=null;
   try{
    int width=960,height=Math.max(2,(int)Math.round(frame.getHeight()*960.0/frame.getWidth())&~1);
