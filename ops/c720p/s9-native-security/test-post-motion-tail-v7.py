@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard S9's 30s motion tail and continuous native 4K segment behavior.
+"""Guard S9's 10s motion tail and continuous native 4K segment behavior.
 Does not touch phones; uses the committed Java source and a JVM contract.
 """
 from pathlib import Path
@@ -7,7 +7,7 @@ import re,subprocess,tempfile,textwrap
 ROOT=Path(__file__).resolve().parent
 JAVA=ROOT/"src/nl/kalenel/s9security"
 s=(JAVA/"CameraService.java").read_text()
-assert re.search(r'QUIET_MS\s*=\s*30000\s*,\s*MAX_MS\s*=\s*120000',s), "post motion must be 30s; capped 120s"
+assert re.search(r'QUIET_MS\s*=\s*10000\s*,\s*MAX_MS\s*=\s*120000',s), "post motion must be 10s; capped 120s"
 assert "lastMovementAt=lastFrameAt;" in s, "accepted new motion must reset quiet tail"
 assert 'else if(lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end")' in s
 assert 'continuous4KStopReason=reason;' in s, "actual stop reason must be saved"
@@ -15,9 +15,9 @@ assert 'SystemClock.elapsedRealtime(),lastClip,finishedReason)' in s, "actual re
 assert 'if(segment.autoResumeArmed)cameraHandler.postDelayed' in s
 assert 'eventChain.continuationReady(SystemClock.elapsedRealtime())' in s
 assert '"record_tail_once".equals(value)' in s
-assert 'diagnosticTailProof?32000:9000' in s
+assert 'diagnosticTailProof?12500:9000' in s
 assert 'd.put("person_post_motion_hold_ms",QUIET_MS)' in s
-assert "MAX_REJOIN_MS=12000,MAX_RESUME_MS=30000" in (JAVA/"CaptureContinuity.java").read_text()
+assert "MAX_REJOIN_MS=12000,MAX_RESUME_MS=10000" in (JAVA/"CaptureContinuity.java").read_text()
 assert 'd.put("person_post_motion_remaining_ms"' in s
 # Pure-Java continuity simulation: an actual 120s cap with recent accepted motion
 # arms the next segment; an expired or quiet-finished event does not.
@@ -39,14 +39,14 @@ with tempfile.TemporaryDirectory(prefix="s9-tail-tests-") as dir:
    if(quiet.autoResumeArmed||chain.continuationReady(150800))throw new AssertionError("quiet end rejoined");
    CaptureContinuity tail=new CaptureContinuity();
    tail.evidence(1000);tail.started(2000,1777777779000L);
-   tail.evidence(101000);
+   tail.evidence(113000);
    CaptureContinuity.Segment mid=tail.stopped(121000,"motion_1777777779000.mp4","max_segment");
-   if(!mid.autoResumeArmed||!tail.continuationReady(121400))throw new AssertionError("20s-tail-cap-should-continue");
+   if(!mid.autoResumeArmed||!tail.continuationReady(121400))throw new AssertionError("8s-tail-cap-should-continue");
    CaptureContinuity stale=new CaptureContinuity();
    stale.evidence(1000);stale.started(2000,1777777780000L);
-   stale.evidence(90000);
+   stale.evidence(109000);
    CaptureContinuity.Segment no=stale.stopped(121100,"motion_1777777780000.mp4","max_segment");
-   if(no.autoResumeArmed)throw new AssertionError("expired-31s-tail-should-stop");
+   if(no.autoResumeArmed)throw new AssertionError("expired-12s-tail-should-stop");
    CaptureContinuity idle=new CaptureContinuity();
    idle.evidence(1000);idle.started(2000,1777777778000L);
    CaptureContinuity.Segment old=idle.stopped(121000,"motion_1777777778000.mp4","max_segment");
@@ -60,4 +60,4 @@ with tempfile.TemporaryDirectory(prefix="s9-tail-tests-") as dir:
  out=subprocess.run(["java","-cp",str(p),"nl.kalenel.s9security.TailContractTest"],capture_output=True,text=True,check=True,timeout=20)
  assert "PASS" in out.stdout
  print(out.stdout.strip())
-print("S9_30S_TAIL_SOURCE_CONTRACT_PASS")
+print("S9_10S_TAIL_SOURCE_CONTRACT_PASS")
