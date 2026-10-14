@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Static safety tests for Visual Search, guarded release, and historical index."""
 import ast
+import importlib.util
 import pathlib
 import unittest
 
@@ -39,6 +40,24 @@ class HsvIntegration(unittest.TestCase):
         self.assertIn('not identity probabilities',page)
         self.assertIn('verified_same_person===false',page)
         self.assertNotIn('face_embedding',page)
+    def test_ui_deploy_preserves_both_old_and_new_recording_headers(self):
+        path=HERE/"deploy-s9-hsv-ui-v1.py"
+        spec=importlib.util.spec_from_file_location("hsv_deployer",path)
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        source=(HERE.parent/"s9-person-ml-v1/s9_sd_proxy_extension.py").read_text()
+        beginning=source.index(module.MARKER)
+        ending=source.index(module.ANCHOR,beginning)
+        original=source[:beginning]+source[ending:]
+        for header in ('<header><h1>Tracks & clothing</h1>',
+                       '<header><div><h1>Recording review</h1><p>Original 4K</p></div>'):
+            page="<html><head><style>"+"*"*2200+"</style></head><body>"+header+"</body></html>"
+            proxy,html=module.patch(original,page,source)
+            self.assertIn(module.LINK,html)
+            self.assertEqual(proxy.count(module.MARKER),1)
+            self.assertEqual((proxy,html),module.patch(proxy,html,source))
+            ast.parse(proxy)
+
     def test_guarded_apk_release_contract(self):
         build=(HERE/"build-s9-hsv-v1.py").read_text()
         deploy=(HERE/"deploy-s9-hsv-v1.py").read_text()
