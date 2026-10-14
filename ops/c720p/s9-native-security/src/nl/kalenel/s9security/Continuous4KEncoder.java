@@ -61,6 +61,7 @@ public final class Continuous4KEncoder {
  private volatile MediaFormat encodedFormat;
  private volatile boolean outputFormatReady;
  private volatile Session active;
+ private volatile long stopAfterPtsUs=-1;
  private MediaCodec encoder;
  private Surface surface;
  private Thread drainThread,writeThread;
@@ -120,6 +121,7 @@ public final class Continuous4KEncoder {
    Session s=new Session(recording,finalFile,orientation,callback);
    if(!outputQueue.offer(new Work(Work.START,s,prefix,null,encodedFormat)))return false;
    active=s;
+   stopAfterPtsUs=-1;
    return true;
   }
  }
@@ -127,12 +129,10 @@ public final class Continuous4KEncoder {
  public boolean stopEvent(){
   synchronized(guard){
    Session s=active;
-   if(s==null)return false;
-   active=null;
-   if(!outputQueue.offer(new Work(Work.END,s,null,null,null))){
-    markFailure(new IllegalStateException("4k_mp4_writer_queue_overflow"));
-    return false;
-   }
+   if(s==null||stopAfterPtsUs>=0)return false;
+   // Camera2 and MediaCodec input timestamps share the boot clock. Do not
+   // enqueue END before in-flight hardware output has been drained.
+   stopAfterPtsUs=android.os.SystemClock.elapsedRealtimeNanos()/1000L;
    return true;
   }
  }
@@ -158,12 +158,17 @@ public final class Continuous4KEncoder {
       if(!ring.offer(data,info.presentationTimeUs,info.flags,key))continue;
       Session s=active;
       if(s!=null){
-       // Prefix was frozen at START, so only subsequently encoded frames
-       // go through the queue; no duplicated overlapping timestamps.
+       // Prefix was frozen at START, so subsequent packets in one encoder
+       // flow into the event without a Camera2 reconfiguration.
        if(!outputQueue.offer(new Work(Work.FRAME,s,null,
           new Encoded4KRing.Sample(data,info.presentationTimeUs,info.flags,key),null))){
         droppedOutputFrames++;
         markFailure(new IllegalStateException("4k_mp4_writer_queue_overflow"));
+       }
+       if(stopAfterPtsUs>=0&&info.presentationTimeUs>=stopAfterPtsUs){
+        active=null;stopAfterPtsUs=-1;
+        if(!outputQueue.offer(new Work(Work.END,s,null,null,null)))
+         markFailure(new IllegalStateException("4k_mp4_end_queue_overflow"));
        }
       }
      }
