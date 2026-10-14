@@ -25,7 +25,7 @@ class Observer {
   observe(target){io.observed.push(target)}
   disconnect(){disconnected=true}
 }
-const ctx={qsa:()=>[card],window:{IntersectionObserver:Observer,requestAnimationFrame:fn=>fn()},console};
+const ctx={qsa:()=>[card],IntersectionObserver:Observer,window:{IntersectionObserver:Observer,requestAnimationFrame:fn=>fn()},console};
 vm.createContext(ctx);
 vm.runInContext(source.slice(start,end)+';this.boot=initializeGalleries;',ctx);
 ctx.boot();
