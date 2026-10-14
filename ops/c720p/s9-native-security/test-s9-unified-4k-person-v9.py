@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""Release gates: S9+ integrated pedestrian and 5s/10s 4K recording."""
+import ast
+import pathlib
+import unittest
+ROOT=pathlib.Path(__file__).resolve().parent
+BUILDER=(ROOT/'build-s9-unified-4k-person-v9.py').read_text()
+DEPLOY=(ROOT/'deploy-s9-unified-4k-person-v9.py').read_text()
+class UnifiedReleaseSafety(unittest.TestCase):
+ def test_both_scripts_parse(self):
+  ast.parse(BUILDER)
+  ast.parse(DEPLOY)
+ def test_pinned_model_preservation(self):
+  for needle in ('S9_UNIFIED_REF','person_spatiotemporal_transport_v9',
+       'transportDominates','garden_person_transport_conflicts_total',
+       'QUIET_MS=10000,MAX_MS=120000','TARGET_US=5000000L',
+       'MIN_VALID_US=4400000L','changed_model_manifest_or_native_lib',
+       'models_native_and_manifest_preserved','APK_SIGNER_CHANGED'):
+   self.assertIn(needle,BUILDER,needle)
+  self.assertIn('s9-unified-4k-person-v9.apk',BUILDER)
+  self.assertIn('hub_disk_below_280MiB_refuse_build',BUILDER)
+ def test_current_apk_backup_and_fail_closed(self):
+  for needle in ('9e04105240a93b1a489e4c9ad32726e89c1beb756074cff3f3f8456cf58efe3d',
+   'models_native_and_manifest_preserved','person_gate_version',
+   'compiled_person_v9_gate_not_running','pedestrian_gate_v9_not_persistent_after_restart',
+   'installed_4k_assets_or_libraries_changed','installed_apk_asset_mismatch_',
+   'native_4k_production_promotion_failed','SIGNER',
+   'S9_UNIFIED_4K_PERSON_V9_DEPLOYMENT_VERIFIED',
+   'baseline_backup_hash_mismatch','REAL_4K_PRE5_POST10_MP4_VERIFIED',
+   'S9_5S10S_V9_ROLLBACK_CONFIRMED'):
+   self.assertIn(needle,DEPLOY,needle)
+  self.assertLess(DEPLOY.index('oldpaths=adb('),DEPLOY.index('changed=True'))
+  self.assertLess(DEPLOY.index('signer(old)'),DEPLOY.index('changed=True'))
+  self.assertNotIn('control("continuous_4k_trial","disable")',DEPLOY)
+  self.assertNotIn('adb("uninstall"',DEPLOY)
+ def test_no_implicit_camera_install_in_builder(self):
+  self.assertNotIn('adb("install"',BUILDER)
+  self.assertNotIn('am force-stop',BUILDER)
+if __name__=='__main__': unittest.main(verbosity=2)
