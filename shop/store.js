@@ -515,7 +515,15 @@ function renderProducts(){
   const regularList = sortProductsForDisplay(fullList.filter(product => !isAnimalDesign(product)));
   // Keep the separately requested Animals section, but apply the selected
   // display ordering consistently in both sections.
-  const animalList = sortProductsForDisplay(fullList.filter(isAnimalDesign));
+  const animalList = fullList
+    .filter(isAnimalDesign)
+    .sort((a, b) => {
+      const byName = String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+      if(productSortMode === 'name') return byName;
+      if(productSortMode === 'price-asc') return a.price - b.price || byName;
+      if(productSortMode === 'price-desc') return b.price - a.price || byName;
+      return productCreatedMs(b) - productCreatedMs(a) || byName;
+    });
   const sortInput = qs('[data-shop-sort]');
   if(sortInput) sortInput.value = productSortMode;
   const countLabel = qs('[data-visible-count]');
