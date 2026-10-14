@@ -163,7 +163,7 @@ def detection_metrics(row):
          "review_backend":backend,"person_event_category":event,"thumbnail_revision":safe_thumbnail_revision(row),**safe_detection_timeline(row),**capture_event_metrics(row)}
 
 def install_local_sd(H):
- original=H.go
+ original_handler=H.go
  def go(self):
   url=urllib.parse.urlsplit(self.path)
   path=url.path
@@ -270,9 +270,9 @@ def install_local_sd(H):
    before=self.path
    if path=='/new/api/drive-saved':self.path=before.replace('/new/api/drive-saved','/new/api/saved',1)
    else:self.path=before.replace('/new/drive/saved/','/new/saved/',1)
-   try:return original(self)
+   try:return original_handler(self)
    finally:self.path=before
-  return original(self)
+  return original_handler(self)
  H.go=go
  # Review writes use the same signed relay but never affect video/playback.
  import s9_human_thumbnail_review

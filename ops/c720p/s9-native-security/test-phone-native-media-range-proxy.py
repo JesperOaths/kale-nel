@@ -6,6 +6,8 @@ from io import BytesIO
 from unittest import mock
 import urllib.error
 import unittest
+import sys
+import types
 
 ROOT=Path(__file__).resolve().parent.parent/"s9-person-ml-v1"/"s9_sd_proxy_extension.py"
 spec=importlib.util.spec_from_file_location("s9_phone_range_proxy",ROOT)
@@ -38,6 +40,20 @@ class Reply:
     def __exit__(self,*args):pass
 
 class Tests(unittest.TestCase):
+    def test_fallback_and_drive_history_still_delegate_after_complete_route_added(self):
+        class Routed:
+            def go(self):return self.path
+        names=('s9_human_thumbnail_review','s9_drive_visitor_review','s9_native_camera_controls',
+               's9_archive_delete_v1','s9_person_folders_v31')
+        stubs={name:types.SimpleNamespace(install=lambda *args:args[1] if len(args)>1 else None) for name in names}
+        with mock.patch.dict(sys.modules,stubs),mock.patch.object(mod,'rows',return_value={}),mock.patch.object(mod,'preview_rows',return_value={}):
+            mod.install_local_sd(Routed)
+            handler=Routed();handler.path='/unhandled'
+            self.assertEqual(handler.go(),'/unhandled')
+            handler.path='/new/api/drive-saved'
+            self.assertEqual(handler.go(),'/new/api/saved')
+            self.assertEqual(handler.path,'/new/api/drive-saved')
+
     def test_native_phone_range_is_exact_and_avoids_adb(self):
         name="motion_1791651708493.mp4"
         start,end,size=32768,105700,200000
