@@ -33,7 +33,7 @@ def main():
  with zipfile.ZipFile(BASE) as apk:
   baseline={n:sha(apk.read(n)) for n in apk.namelist()
    if n=="AndroidManifest.xml" or n.startswith("assets/") or
-   n.startswith("lib/") or n=="classes2.dex"}
+   n.startswith("lib/")}
   original_main=sha(apk.read("classes.dex"))
  if not any(x.endswith("/libtensorflowlite_gpu_jni.so") for x in baseline):
   raise RuntimeError("baseline_gpu_library_missing")
@@ -61,8 +61,9 @@ def main():
   dex=p/"dex";dex.mkdir()
   run(["d8","--min-api","26","--lib",str(android),"--output",str(dex),
       *map(str,classes.rglob("*.class")),*map(str,cp)],240)
-  outputs=list(dex.glob("classes*.dex"))
-  if len(outputs)!=1 or outputs[0].stat().st_size<250000:
+  outputs=sorted(dex.glob("classes*.dex"))
+  print("DEX_OUTPUTS",[(a.name,a.stat().st_size) for a in outputs],flush=True)
+  if not 1<=len(outputs)<=4 or outputs[0].stat().st_size<10000:
    raise RuntimeError("unexpected_dex_artifact_count")
   primary=outputs[0].read_bytes()
   unsigned=p/"unsigned.apk"
@@ -71,8 +72,12 @@ def main():
     if member.filename.startswith("META-INF/") and (
        member.filename=="MANIFEST.MF" or
        member.filename.endswith((".RSA",".SF",".DSA",".EC"))):continue
-    data=primary if member.filename=="classes.dex" else original.read(member.filename)
-    out.writestr(member,data)
+    # The release omits ALL legacy FFmpegKit Java and smart-exception classes,
+    # including any old secondary dex. Replace dex set atomically.
+    if member.filename.startswith("classes") and member.filename.endswith(".dex"):continue
+    out.writestr(member,original.read(member.filename))
+   for release_dex in outputs:
+    out.writestr(release_dex.name,release_dex.read_bytes())
   aligned=p/"aligned.apk";run(["zipalign","-f","4",str(unsigned),str(aligned)],80)
   signed=p/"signed.apk"
   run(["apksigner","sign","--ks",str(KEY/"key.jks"),"--ks-key-alias","s9security",
@@ -94,7 +99,7 @@ def main():
   if not dest.exists():shutil.copy2(signed,dest)
   result={"signed":True,"installed":False,"apk":str(dest),
      "sha256":sha(dest.read_bytes()),"bytes":dest.stat().st_size,
-     "compiled_java_sources":len(JAVAS),"source_sha":REF,
+     "compiled_java_sources":len(JAVAS),"dex_files":len(outputs),"source_sha":REF,
      "signer":FINGERPRINT,"models_native_and_manifest_preserved":True,
      "unsafe_in_app_merger_included":False,
      "face_roi":"high_resolution_isolated_person_head_roi_v2",
