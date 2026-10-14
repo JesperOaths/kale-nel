@@ -42,17 +42,34 @@ def status():
         if r.status!=200:raise RuntimeError("native_status_http_error")
         return json.load(r)
 
-def healthy(s,expected_version=None):
+def using_continuous_4k(s):
+    return (s.get("continuous_4k_trial_active") is True and
+            s.get("continuous_4k_production_persisted") is True)
+
+def buffered_and_ready(s,require_continuous):
+    if require_continuous:
+        return (using_continuous_4k(s) and
+                s.get("continuous_4k_ready") is True and
+                int(s.get("continuous_4k_buffered_ms") or 0)>=5000 and
+                int(s.get("continuous_4k_dropped_output_frames") or 0)==0 and
+                not s.get("continuous_4k_error"))
+    return s.get("preroll_ready") is True
+
+def healthy(s,expected_version=None,require_continuous=False,preflight=False):
+    # The continuous native-4K ring intentionally disables legacy preroll.
+    # Never replace its live release with a build that falls back to 1080p.
+    # Require cool preflight for the boot-time <37.5C persistent 4K gate.
+    thermal_ceiling=36.7 if preflight and require_continuous else 38.5
     return (s.get("ok") is True and s.get("mode")=="watching"
       and s.get("native_4k_enabled") is True
       and s.get("garden_zone")=="near"
       and s.get("garden_roi_mask_version")=="owner_drawn_sloped_garden_v6"
       and s.get("garden_person_gate_backend")=="gpu"
       and s.get("garden_person_gate_ready") is True
-      and s.get("preroll_ready") is True
-      and float(s.get("temperature_c",100))<38.5
+      and buffered_and_ready(s,require_continuous)
+      and float(s.get("temperature_c",100))<thermal_ceiling
       and int(s.get("sd_free_bytes") or 0)>15*1024**3
-      and int(s.get("last_frame_age_ms") or 999999)<2000
+      and int(s.get("last_frame_age_ms",999999))<2000
       and (expected_version is None or s.get("motion_detector")==expected_version))
 
 def free_bytes():
@@ -93,14 +110,14 @@ def pull_current_apk():
 def launch():
     adb("shell","am","start","-n",PACKAGE+"/.CameraActivity","--ez","enable_native_camera","true",timeout=35)
 
-def check_boot(expected):
+def check_boot(expected,require_continuous):
     deadline=time.monotonic()+105
     while time.monotonic()<deadline:
         time.sleep(3)
         try:
             adb("forward","tcp:18808","tcp:8808",timeout=15)
             s=status()
-            if healthy(s,expected):return s
+            if healthy(s,expected,require_continuous):return s
         except Exception:pass
     raise RuntimeError("new_camera_not_healthy_or_wrong_gate")
 
@@ -110,11 +127,15 @@ def main():
     if free_bytes()<320*1024**2:
         print("S9_PEDESTRIAN_V9_DEFERRED_C720P_DISK",free_bytes(),flush=True);return
     baseline=status()
+    # Persist the current 4K recording path exactly, including on-phone C4K.
+    continuous_before=using_continuous_4k(baseline)
     if baseline.get("motion_detector")==EXPECTED_GATE:
         print("S9_PEDESTRIAN_V9_ALREADY_ACTIVE",flush=True);return
-    if not healthy(baseline):
+    if not healthy(baseline,require_continuous=continuous_before,preflight=True):
         print("S9_PEDESTRIAN_V9_DEFERRED_UNSAFE_INITIAL_HEALTH",json.dumps({
-            k:baseline.get(k) for k in ("mode","temperature_c","garden_person_gate_ready","preroll_ready","sd_free_bytes","garden_zone")}),flush=True)
+            k:baseline.get(k) for k in ("mode","temperature_c","garden_person_gate_ready",
+                "preroll_ready","continuous_4k_ready","continuous_4k_production_persisted",
+                "continuous_4k_buffered_ms","sd_free_bytes","garden_zone")}),flush=True)
         return
     # Check source-compatibility prerequisites before disk-intensive compilation.
     if not (HOME/"build/s9-person-ml-v1/assets/face_embedding.tflite").is_file():
@@ -166,12 +187,12 @@ def main():
     previous=None
     for _ in range(3):
         snap=status()
-        if not healthy(snap) or (previous is not None and
+        if not healthy(snap,require_continuous=continuous_before,preflight=True) or (previous is not None and
             snap.get("recorded")!=previous.get("recorded")):
             print("S9_PEDESTRIAN_V9_DEFERRED_ACTIVE_MOTION",flush=True);return
         previous=snap
         time.sleep(6)
-    if not healthy(status()):
+    if not healthy(status(),require_continuous=continuous_before,preflight=True):
         print("S9_PEDESTRIAN_V9_DEFERRED_LATE_EVENT",flush=True);return
     changed=False
     try:
@@ -180,19 +201,24 @@ def main():
         result=adb("install","-r","-g",str(apk),timeout=175)
         if "Success" not in result:raise RuntimeError("install_not_confirmed")
         launch()
-        after=check_boot(EXPECTED_GATE)
+        after=check_boot(EXPECTED_GATE,continuous_before)
         start_frames=int(after.get("frames") or 0)
         time.sleep(9)
         later=status()
-        if not healthy(later,EXPECTED_GATE):raise RuntimeError("camera_failed_after_initial_recovery")
+        if not healthy(later,EXPECTED_GATE,continuous_before):raise RuntimeError("camera_failed_after_initial_recovery")
         if int(later.get("frames") or 0)-start_frames<40:raise RuntimeError("camera_frame_progress_missing")
         if later.get("garden_person_requires_local_motion_or_spatial_translation") is not True:
             raise RuntimeError("v9_movement_gate_not_active")
         if later.get("garden_motion_strong_only_extends_recording") is not True:
             raise RuntimeError("v9_recording_continuation_not_active")
+        if continuous_before and (not using_continuous_4k(later) or
+            int(later.get("continuous_4k_buffered_ms") or 0)<5000):
+            raise RuntimeError("native_continuous_4k_buffer_was_not_preserved")
         print("S9_PEDESTRIAN_V9_LIVE_HEALTH_PASS",json.dumps({
            "detector":later.get("motion_detector"),"gpu":later.get("garden_person_gate_backend"),
            "4k":later.get("native_4k_enabled"),"preroll":later.get("preroll_ready"),
+           "continuous_4k":later.get("continuous_4k_ready"),
+           "continuous_4k_buffered_ms":later.get("continuous_4k_buffered_ms"),
            "fps":later.get("sensor_result_fps"),"temperature":later.get("temperature_c"),
            "sd_free":later.get("sd_free_bytes"),"rollback":str(backup),
            "not_human_validated":True
@@ -205,7 +231,7 @@ def main():
                 old=adb("install","-r","-g",str(backup),timeout=175)
                 if "Success" not in old:raise RuntimeError("old_install_failed")
                 launch()
-                restored=check_boot(None)
+                restored=check_boot(None,continuous_before)
                 print("S9_PEDESTRIAN_V9_ROLLBACK_HEALTH",restored.get("motion_detector"),flush=True)
             except BaseException as rb:
                 print("S9_PEDESTRIAN_V9_ROLLBACK_FAILED",str(rb)[:180],flush=True)
