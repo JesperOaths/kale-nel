@@ -64,6 +64,7 @@ const ANIMAL_DESIGN_NAMES = new Set([
   'orchid mantis','pom-pom crab','pufferfish','seahorse','secretary bird','thorny devil'
 ]);
 let showAnimalDesigns = true;
+let productSortMode = 'newest';
 
 function isAnimalDesign(product){
   return ANIMAL_DESIGN_NAMES.has(String(product?.name || '').trim().toLowerCase());
@@ -151,6 +152,33 @@ function sortByShirtBase(list){
   return [...list].sort((a, b) =>
     String(a.baseLabel || '').localeCompare(String(b.baseLabel || '')) || a.price - b.price || a.name.localeCompare(b.name)
   );
+}
+
+// Source product IDs are Mongo ObjectIds; their first eight hex digits are
+// the immutable creation timestamp. UpdatedAt cannot be used for "newest":
+// editing the price or mockups of an old design would incorrectly move it first.
+function productCreatedMs(product){
+  const explicit = Date.parse(String(product?.createdAt || product?.created_at || ''));
+  if(Number.isFinite(explicit)) return explicit;
+  const id = String(product?.id || '').trim();
+  if(/^[0-9a-f]{24}$/i.test(id)){
+    const fromId = parseInt(id.slice(0, 8), 16) * 1000;
+    if(fromId >= Date.UTC(2020, 0, 1) && fromId <= Date.now() + 86400000) return fromId;
+  }
+  const updated = Date.parse(String(product?.updatedAt || ''));
+  return Number.isFinite(updated) ? updated : 0;
+}
+function isNewArrival(product){
+  const age = Date.now() - productCreatedMs(product);
+  return age >= -86400000 && age <= 21 * 86400000;
+}
+function sortProductsForDisplay(list){
+  return [...list].sort((a, b) => {
+    if(productSortMode === 'name') return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+    if(productSortMode === 'price-asc') return a.price - b.price || String(a.name || '').localeCompare(String(b.name || ''));
+    if(productSortMode === 'price-desc') return b.price - a.price || String(a.name || '').localeCompare(String(b.name || ''));
+    return productCreatedMs(b) - productCreatedMs(a) || String(a.name || '').localeCompare(String(b.name || ''));
+  });
 }
 
 async function loadLiveCatalog(timeoutMs = 5000){
@@ -449,6 +477,7 @@ function productCardHtml(product, collection){
         <div class="product-top">
           <div>
             <span class="product-collection-label">${esc(collection.label)}</span>
+            ${isNewArrival(product) ? '<span class="product-new-label">New arrival</span>' : ''}
             <h3>${esc(product.name)}</h3>
             <p class="shirt-base">${esc(product.baseLabel)}</p>
           </div>
@@ -483,13 +512,22 @@ function renderProducts(){
 
   const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
   const fullList = productsForCollection();
-  const regularList = fullList.filter(product => !isAnimalDesign(product));
-  // Animal designs are a browsable subject collection, so order them by name
-  // rather than by price. This keeps Axolotl at A instead of burying it behind
-  // every €24 animal article just because its current price is €25.
+  const regularList = sortProductsForDisplay(fullList.filter(product => !isAnimalDesign(product)));
+  // Keep the separately requested Animals section, but apply the selected
+  // display ordering consistently in both sections.
   const animalList = fullList
     .filter(isAnimalDesign)
-    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+    .sort((a, b) => {
+      const byName = String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+      if(productSortMode === 'name') return byName;
+      if(productSortMode === 'price-asc') return a.price - b.price || byName;
+      if(productSortMode === 'price-desc') return b.price - a.price || byName;
+      return productCreatedMs(b) - productCreatedMs(a) || byName;
+    });
+  const sortInput = qs('[data-shop-sort]');
+  if(sortInput) sortInput.value = productSortMode;
+  const countLabel = qs('[data-visible-count]');
+  if(countLabel) countLabel.textContent = `${fullList.length} design${fullList.length === 1 ? '' : 's'} in this collection`;
   qs('[data-collection-title]').textContent = collection.heading;
   updateShapeControls();
   updateAnimalFilterUi();
@@ -638,6 +676,13 @@ function closeCart(){
 }
 
 document.addEventListener('change', event => {
+  const sortInput = event.target.closest('[data-shop-sort]');
+  if(sortInput){
+    const next = String(sortInput.value || '');
+    productSortMode = ['newest', 'name', 'price-asc', 'price-desc'].includes(next) ? next : 'newest';
+    renderProducts();
+    return;
+  }
   const animalFilter = event.target.closest('[data-animal-filter]');
   if(!animalFilter) return;
   showAnimalDesigns = !!animalFilter.checked;
