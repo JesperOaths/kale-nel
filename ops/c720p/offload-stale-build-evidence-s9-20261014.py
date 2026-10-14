@@ -65,6 +65,9 @@ class HashSink:
   self.stream.write(b)
   return len(b)
  def flush(self):self.stream.flush()
+def remote_exists(path):
+ p=subprocess.run(['adb','-s',PHONE,'shell','test','-e',path],capture_output=True,timeout=12)
+ return p.returncode==0
 def digest_remote(path):
  value=adb('shell','sha256sum',path,timeout=70)
  return value.split()[0] if value else ''
@@ -76,9 +79,10 @@ def offload(p):
   with p.open('rb') as f:
    for buf in iter(lambda:f.read(1024*1024),b''):digest.update(buf)
   expect=digest.hexdigest()
-  if digest_remote(final)==expect:
-   p.unlink()
-   return {'name':p.name,'result':'already_verified_on_SD_source_released','bytes':p.stat().st_size if p.exists() else 0}
+  if remote_exists(final):
+   if digest_remote(final)!=expect:raise RuntimeError('remote_archive_conflicts_with_local')
+   n=p.stat().st_size;p.unlink()
+   return {'name':p.name,'result':'already_verified_on_SD_source_released','bytes_reclaimed':n}
   adb('push',str(p),part,timeout=210)
   if digest_remote(part)!=expect:raise RuntimeError('archive_readback_mismatch')
   adb('shell','mv',part,final)
@@ -87,6 +91,7 @@ def offload(p):
   p.unlink()
   return {'name':p.name,'result':'verified_offload','bytes_reclaimed':previous,'sha256':expect,'sd_location':final}
  # Stream the tar directly into SD. This never creates another local 224MB file.
+ if remote_exists(final):raise RuntimeError('remote_archived_tar_already_exists_no_overwrite')
  proc=subprocess.Popen(['adb','-s',PHONE,'exec-in','sh','-c',
       'cat > '+shlex.quote(part)],stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
  sink=HashSink(proc.stdin)
