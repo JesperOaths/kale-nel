@@ -1109,7 +1109,14 @@ public final class CameraService extends Service {
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
   if("recording".equals(mode)&&n-lastStart>MAX_MS+8000)stopRecording("watchdog_cap");
-  else if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
+  if(continuous4KTrial&&continuous4K!=null&&
+    (continuous4K.error().length()>0||continuous4K.droppedOutputFrames()>0||temperature()>=395)){
+   failure("continuous_4k_trial_failed_health_guard",null);
+   if("watching".equals(mode))restoreLegacy4K("thermal_or_codec");
+   else if("recording".equals(mode))stopRecording("trial_health_guard");
+   else if("stopping".equals(mode))restoreLegacy4K("stopping_health_guard");
+  }
+  if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
    failure("stalled_YUV_camera",null);scheduleRecover();
   }
   maybeMovementBackfill();
