@@ -12,6 +12,23 @@ print('DISK_INODES',run(['df','-i','/']))
 print('MEMORY',run(['free','-m']))
 print('SWAP',run(['swapon','--show','--bytes']))
 print('TOP_RSS',run(['ps','-eo','pid,comm,rss,%cpu,etime','--sort=-rss']))
+
+# For large processes expose only program/script basenames and cgroup identity,
+# never command-line flags, tokens, passwords or process environments.
+rows=run(['ps','-eo','pid,rss,comm','--sort=-rss']).get('out','').splitlines()[1:18]
+for row in rows:
+ parts=row.strip().split(None,2)
+ if len(parts)!=3:continue
+ pid,ram,comm=parts
+ try:
+  args=[x.decode('utf-8','replace') for x in (Path('/proc')/pid/'cmdline').read_bytes().split(b'\\0') if x]
+  scripts=[Path(a).name for a in args[1:] if a.endswith(('.py','.jar','.sh'))]
+  group=(Path('/proc')/pid/'cgroup').read_text(errors='replace')
+  scope='docker' if 'docker' in group else 'user' if 'user.slice' in group else 'system'
+  print('LARGE_PROCESS',pid,ram,comm,'script',scripts[:2],'scope',scope)
+ except (OSError,UnicodeError):pass
+print('TMP_SIZE_BREAKDOWN',run(['bash','-lc',"du -sm /tmp/* 2>/dev/null | sort -nr | head -25"],timeout=20))
+print('JOURNAL_STORAGE',run(['journalctl','--disk-usage'],timeout=12))
 print('ROOTLESS_DOCKER_DF',run(['docker','system','df'],timeout=12))
 print('DOCKER_MEMORY',run(['docker','stats','--no-stream','--format','{{.Name}} {{.MemUsage}} {{.CPUPerc}}'],timeout=17))
 services=run(['systemctl','--user','list-units','--type=service','--state=running','--no-legend','--no-pager'])
