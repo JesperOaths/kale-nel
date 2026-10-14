@@ -29,6 +29,7 @@ jobs:
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-unified-4k-person-v11.py
           grep -Fq 'person_spatiotemporal_transport_v9' ops/c720p/s9-native-security/src/nl/kalenel/s9security/GardenPersonTrackGate.java
           grep -Fq 'QUIET_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
+          grep -Fq 'lastAcceptedEncodedPtsUs' ops/c720p/s9-native-security/src/nl/kalenel/s9security/Continuous4KEncoder.java
   deploy:
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
