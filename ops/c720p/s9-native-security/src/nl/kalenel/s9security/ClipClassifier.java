@@ -123,7 +123,28 @@ public final class ClipClassifier {
   */
  private static final String GARDEN_PERSON_MULTISCALE_VERSION="garden_overlapping_person_tiles_v8";
  private volatile int lastGardenInferencePasses=0;
+ private volatile int lastGardenVehicleVetoes=0;
+ // Only on the serialized S9+ inference worker. Rebuilt from every preview
+ // pass so a vehicle class may challenge a false "person" observation.
+ private final ArrayList<Detection> lastGardenTransports=new ArrayList<>();
  public int lastGardenInferencePasses(){return lastGardenInferencePasses;}
+ public int lastGardenVehicleVetoes(){return lastGardenVehicleVetoes;}
+ private static boolean isTransport(Detection hit){
+  if(hit==null||hit.label==null)return false;
+  return "car".equals(hit.label)||"bus".equals(hit.label)||"truck".equals(hit.label)||
+      "bicycle".equals(hit.label)||"motorcycle".equals(hit.label)||"train".equals(hit.label);
+ }
+ private void rememberGardenTransport(Detection hit){
+  if(!isTransport(hit)||!GardenPersonTrackGate.valid(hit.box)||lastGardenTransports.size()>=30)return;
+  for(int i=0;i<lastGardenTransports.size();i++){
+   Detection existing=lastGardenTransports.get(i);
+   if(boxIoU(existing.box,hit.box)>=.46f){
+    if(hit.score>existing.score)lastGardenTransports.set(i,hit);
+    return;
+   }
+  }
+  lastGardenTransports.add(hit);
+ }
  public String gardenPersonMultiscaleVersion(){return GARDEN_PERSON_MULTISCALE_VERSION;}
  private static float boxIoU(float[] a,float[] b){
   if(!GardenPersonTrackGate.valid(a)||!GardenPersonTrackGate.valid(b))return 0f;
@@ -147,8 +168,12 @@ public final class ClipClassifier {
  }
  private List<Detection> detectGardenPeopleMultiscale(Bitmap image)throws Exception{
   ArrayList<Detection> people=new ArrayList<>();
+  lastGardenTransports.clear();
   lastGardenInferencePasses=0;
-  for(Detection d:detect(image))addGardenPersonCandidate(people,d);
+  for(Detection d:detect(image)){
+   addGardenPersonCandidate(people,d);
+   rememberGardenTransport(d);
+  }
   lastGardenInferencePasses++;
   // Garden starts near 43-52% of height; retain 28% so upper bodies
   // straddling the owner's boundary are not cut off by the tile.
@@ -162,7 +187,8 @@ public final class ClipClassifier {
    Bitmap tile=Bitmap.createBitmap(image,x,top,tileWidth,croppedHeight);
    try{
     for(Detection d:detect(tile)){
-     if(!"person".equals(d.label)||!GardenPersonTrackGate.valid(d.box))continue;
+     if((!"person".equals(d.label)&&!isTransport(d))||
+          !GardenPersonTrackGate.valid(d.box))continue;
      float[] b=d.box;
      float[] mapped={
       (top+b[0]*croppedHeight)/height,
@@ -172,8 +198,9 @@ public final class ClipClassifier {
      };
      if(!GardenPersonTrackGate.valid(mapped))continue;
      Detection result=new Detection();
-     result.label="person";result.score=d.score;result.box=mapped;
-     addGardenPersonCandidate(people,result);
+     result.label=d.label;result.score=d.score;result.box=mapped;
+     if("person".equals(result.label))addGardenPersonCandidate(people,result);
+     else rememberGardenTransport(result);
     }
     lastGardenInferencePasses++;
    }finally{if(tile!=image)tile.recycle();}
@@ -215,6 +242,7 @@ public final class ClipClassifier {
    float highest=0f,any=0f;
    float[] bestBox=null;
    lastPersonAnywhere=0f;
+   lastGardenVehicleVetoes=0;
    for(Detection detection:detectGardenPeopleMultiscale(bitmap)){
     if(!"person".equals(detection.label))continue;
     any=Math.max(any,detection.score);
@@ -227,6 +255,15 @@ public final class ClipClassifier {
     if(zone!=null){
      if(!MotionGrid.insideZone(zone,center,feet))continue;
     }else if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
+    if(!GardenPersonTrackGate.plausiblePersonShape(b))continue;
+    boolean strongerTransport=false;
+    for(Detection transport:lastGardenTransports){
+     if(GardenPersonTrackGate.transportDominates(b,detection.score,
+          transport.box,transport.score,transport.label)){
+      strongerTransport=true;break;
+     }
+    }
+    if(strongerTransport){lastGardenVehicleVetoes++;continue;}
     if(GardenPersonTrackGate.valid(b)&&detection.score>highest){
      highest=detection.score;bestBox=b;
     }
