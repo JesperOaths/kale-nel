@@ -39,7 +39,13 @@ def main():
   evaluate(tab,"document.querySelector('#s9v5-nav [data-view=archive]').click();")
   time.sleep(2)
   evaluate(tab,"(()=>{const f=document.querySelector('#panel-archive iframe');if(f?.contentDocument?.getElementById('driveTab'))f.contentDocument.getElementById('driveTab').click();return !!f?.contentDocument?.getElementById('driveTab')})()")
-  time.sleep(5)
+  # Drive catalog API can take >5 s while the C720P is handling another
+  # operation. Wait until real DOM cards exist before measuring images.
+  for _ in range(40):
+   state=evaluate(tab,"(()=>{const d=document.querySelector('#panel-archive iframe')?.contentDocument;return {cards:d?.querySelectorAll('#driveTimeline .clip')?.length||0,status:d?.getElementById('driveStatus')?.textContent||''}})()")
+   if state and state.get("cards",0)>=7 and "Google Drive recordings" in state.get("status",""):break
+   time.sleep(.75)
+  time.sleep(4)
   inspect="""(async()=>{
    const f=document.querySelector('#panel-archive iframe'),d=f?.contentDocument;
    const imgs=d?[...d.querySelectorAll('#driveTimeline img')]:[];
