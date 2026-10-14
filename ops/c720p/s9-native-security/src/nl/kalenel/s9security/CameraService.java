@@ -575,6 +575,38 @@ public final class CameraService extends Service {
 
   // Capture previous H.264 frames BEFORE recorder reconfigures the camera.
   // A failed/missing preroll never blocks the full-quality event recording.
+  if(continuous4KTrial){
+   if(continuous4K==null||!continuous4K.readyForEvent()){
+    saveFallbackEvidence("continuous_4k_ring_not_ready");return;
+   }
+   String clip=(diagnosticPrerollActive?"diagnostic_preroll_":"motion_")+
+       System.currentTimeMillis()+".mp4";
+   partial=new File(folder,clip+".recording");finished=new File(folder,clip);
+   final boolean diagnostic=diagnosticPrerollActive;
+   boolean accepted=continuous4K.startEvent(partial,finished,recordingRotation(),
+     new Continuous4KEncoder.Listener(){
+      @Override public void completed(File movie,long durationMs){
+       cameraHandler.post(()->finishContinuous4K(movie,durationMs,diagnostic));
+      }
+      @Override public void failed(File retained,String cause){
+       cameraHandler.post(()->{
+        continuous4KFailures++;
+        failure("continuous_4k_muxer_"+cause,null);
+        eventChain.reset();restoreLegacy4K("muxer_"+cause);
+       });
+      }
+     });
+   if(!accepted){saveFallbackEvidence("continuous_4k_start_rejected");return;}
+   noteRecordingStarted();
+   lastStart=SystemClock.elapsedRealtime();lastRecordAt=lastStart;
+   lastMovementAt=lastStart;eventChain.started(lastStart,System.currentTimeMillis());
+   mode="recording";
+   Log.i(TAG,"START_NATIVE_CONTINUOUS_4K "+clip);
+   if(diagnostic)cameraHandler.postDelayed(()->{
+    if("recording".equals(mode))stopRecording("continuous_4k_diagnostic");
+   },9000);
+   return;
+  }
   frozenPreRoll=preRoll==null?null:preRoll.freeze();
   mode="starting";lastMovementAt=SystemClock.elapsedRealtime();
   try{
