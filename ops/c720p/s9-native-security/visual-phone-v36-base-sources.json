@@ -1,0 +1,26 @@
+{
+  "ref": "ae547c163909940047a74fcada4a367a0cb972e1",
+  "sources": {
+    "AnonymousClipTracks.java": "2ef4781c02845f3a9edd8fe2fd745325bc87d3188217ab74ac15b789cd661118",
+    "Boot.java": "eec20e8f7e09e98ead5f63cb2214b8f22c10d30b4799cab8267fe345164585b1",
+    "CameraActivity.java": "2dadcd6f6228119ae8eb4154fee6069b82457c3b19dd6f6189bbb089e4dd73c8",
+    "CameraControls.java": "a275b63bd629577854d6f93b976f117dc792baa82ec7d709d006196b5e63a47e",
+    "CameraOrientation.java": "7a14c2b0b2512dfe951ab1f5da2d231d732e6422a734364e817a1b2f07476592",
+    "CameraService.java": "4bc43d98f5b716a429b06fdb942686b306031e061e7bc09b2d40d64be3cddd1b",
+    "CaptureContinuity.java": "69a203a96d8e483c3971b5529f3791db4e0d8bcf77a9e316dfcd148f65672154",
+    "ClipClassifier.java": "c526c1f482b233e131de95d7a4e5c3c65f04981b1eb4b5e0cb8461b343e87995",
+    "Continuous4KEncoder.java": "3feeb2a572350980a02a8fd0e966b9157d9de60fc3102b4e2c36d78ec19f0f5d",
+    "Encoded4KRing.java": "057c9d5a847c8be1d9717bde7eb2ca09d6eaa83c19c058019bb3fa3bf5bc7aea",
+    "EventFrameRanker.java": "7a3344c3b4e70169c69bab4dcd88369cd81226b57e4f0f5a7722fe3f12454ee1",
+    "GardenArchiveTriage.java": "c01e3d97cb3b8e1bea99e4376c1ecd41adbaf3cd019a7a2678a54ee4521ce39b",
+    "GardenPersonTrackGate.java": "2369e995c04ef810bb9c1b56609a36ef42dbf6402cc1cfdd076800329cfe787a",
+    "GardenPreRoll.java": "cbc89f8c5118aa1eab15eec31a7820988ca5203415dba2f2b693b6ddde5f20a1",
+    "HistoricalImportWorker.java": "910381ee843c4a2174b0051c3213e3ea83b1f0667709b8dcda14e3f7fa3b6b84",
+    "MotionGrid.java": "6b10728983ca3418e10a6d1fa823b932140f73f5baff5635fa48dd551902b8a1",
+    "OutfitEvidence.java": "9f7a6e1420372903ea76487fb34f774b36589dcb784cd34f3fb00427540717c8",
+    "PhoneMediaRange.java": "68db5d2407c1f6f5dc83db4cd2e35081805b2c6f1982c1ad032159a2cb2b718c",
+    "PreviewJpeg.java": "15bdc5157473e87669ca8c1848ce4868ca5795b9c99fc3ffd8f76954acf6626d",
+    "RecordingRate.java": "0c6854cadfaa7f62eb2b24b8d5e9eb26004835766b1c988860211bffe95b4004",
+    "S9FaceReview.java": "5f98df2af2ff2e280700b7a09f91354b32175902aeae44748a01339ee478c498"
+  }
+}
