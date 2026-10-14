@@ -353,7 +353,7 @@ def offload_old_build(folder):
             raise RuntimeError("build_manifest_is_symlink")
         with manifest.open("a",encoding="utf-8") as writer:
             writer.write(json.dumps({"source":str(folder),"remote":final,
-                     "sha256":checksum,"source_bytes":size})+"\\n")
+                     "sha256":checksum,"source_bytes":size})+"\n")
             writer.flush()
             os.fsync(writer.fileno())
         shutil.rmtree(folder)
