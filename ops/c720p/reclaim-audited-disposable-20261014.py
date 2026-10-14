@@ -21,22 +21,29 @@ CACHE = Path("/home/jespern/.cache")
 # Specific historical non-production staging and disposable build inputs.
 DIRECTORIES = {
     TMP / "people-v33-runtime": (8, 350),
-    TMP / "people-v35-models": (8, 85),
-    TMP / "s9-complete-signed-cache-v1": (8, 85),
-    TMP / "s9-preroll-ffmpegkit-819": (24, 85),
+    TMP / "people-v35-models": (2, 85),
+    TMP / "s9-complete-signed-cache-v1": (2, 85),
+    TMP / "s9-preroll-ffmpegkit-819": (8, 85),
     TMP / "s9-smooth-release-20261011": (24, 85),
+    TMP / "s9-join-proof-20261014": (4, 90),
     TMP / "s9-edge-ml-libs": (48, 65),
-    TMP / "s9-v31-source": (24, 65),
-    TMP / "s9-person-ml-v1": (48, 65),
-    BUILD / "s9-5s10s-v10": (4, 60),
+    TMP / "s9-v31-source": (3, 65),
+    TMP / "s9-person-ml-v1": (3, 65),
+    BUILD / "s9-5s10s-v10": (2, 60),
     BUILD / "s9-continuous4k-v6": (4, 60),
-    CACHE / "selenium": (24, 80),
+    BUILD / "s9-5s10s-v9": (12, 45),
+    BUILD / "s9-garden-hybrid-v8": (12, 30),
+    BUILD / "s9-person-ml-v1": (24, 30),
+    BUILD / "s9-frame-metrics-stage": (24, 15),
+    CACHE / "selenium": (2, 80),
 }
 # Redundant temporary APK readbacks. The original live phone APK and rollback
 # release copies are NOT in /tmp and are never addressed by this script.
 FILES = {
     TMP / "s9-installed-real-apk-20261014.apk": (6, 40),
     TMP / "s9-audit-20261014-installed-current.apk": (6, 40),
+    TMP / "yolo11n.onnx": (48, 25),
+    TMP / "yolov5n.onnx": (48, 15),
 }
 EXPECTED_PARENTS = {TMP, BUILD, CACHE}
 MAX_TOTAL = 800 * 1024 * 1024
