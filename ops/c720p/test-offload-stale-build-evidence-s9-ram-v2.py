@@ -78,7 +78,7 @@ class SafeArchiveTests(unittest.TestCase):
                         impl.index("source.unlink()"))
         self.assertLess(impl.index("os.fsync(out.fileno())"),
                         impl.index("source.unlink()"))
-        self.assertIn("phone_ready()", impl)
+        self.assertIn("phone_ready_with_recovery()", impl)
         self.assertIn("stat().st_nlink != 1", impl)
         self.assertIn('"s9-visual-attributes-v36"' not in str(module.HISTORICAL_APK_GENERATIONS), (True,))
 
