@@ -56,13 +56,13 @@ def adb_phone():
   if p.returncode:raise RuntimeError("adb_not_available")
   return p.stdout.splitlines()
  rows=inventory()
- usb=[line.split()[0] for line in rows if
-      " device " in line and "model:SM_G965F" in line and "usb:" in line]
- if len(usb)==1:return usb[0]
  wifi=[line.split()[0] for line in rows if
        " device " in line and "model:SM_G965F" in line
        and line.startswith("192.168.178.250:5555")]
  if len(wifi)==1:return wifi[0]
+ usb=[line.split()[0] for line in rows if
+      " device " in line and "model:SM_G965F" in line and "usb:" in line]
+ if len(usb)==1:return usb[0]
  subprocess.run(["adb","connect","192.168.178.250:5555"],
     capture_output=True,text=True,timeout=10)
  if any(line.startswith("192.168.178.250:5555") and
