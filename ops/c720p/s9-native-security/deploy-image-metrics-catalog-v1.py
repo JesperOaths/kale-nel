@@ -74,7 +74,7 @@ def main():
  updated=old.replace(marker,patch+marker,1).replace(original,inserted+original,1)
  assert "import math" in updated or ",math" in updated
  BACK.mkdir(parents=True,exist_ok=True,mode=0o700)
- tmp=FILE.with_name(FILE.name+".2d-proof-candidate")
+ tmp=FILE.with_name(FILE.name+".2d-proof-candidate.py")
  try:
   tmp.write_text(updated)
   py_compile.compile(str(tmp),doraise=True)
