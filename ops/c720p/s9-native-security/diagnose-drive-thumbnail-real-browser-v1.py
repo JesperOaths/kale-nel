@@ -31,6 +31,10 @@ def main():
    if ready:break
    time.sleep(.25)
   else:raise RuntimeError("authenticated_security_shell_not_ready")
+  # A background Chromium tab suppresses requestAnimationFrame, so verify with
+  # the temporary tab active and restore the user's original target afterwards.
+  browser.call("Target.activateTarget",{"targetId":target})
+  time.sleep(.5)
   evaluate(tab,"document.querySelector('#s9v5-nav [data-view=archive]').click();")
   time.sleep(2)
   evaluate(tab,"(()=>{const f=document.querySelector('#panel-archive iframe');if(f?.contentDocument?.getElementById('driveTab'))f.contentDocument.getElementById('driveTab').click();return !!f?.contentDocument?.getElementById('driveTab')})()")
