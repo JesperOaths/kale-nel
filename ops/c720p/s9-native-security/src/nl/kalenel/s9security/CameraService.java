@@ -366,6 +366,9 @@ public final class CameraService extends Service {
  }
  private void restoreLegacy4K(String reason){
   continuous4KLastResult="fallback_"+reason;
+  // A failing or deliberately disabled 4K encoder MUST NOT restart on boot.
+  getSharedPreferences("native",MODE_PRIVATE).edit()
+    .putBoolean("continuous_4k_production_enabled",false).commit();
   continuous4KTrial=false;
   if(continuous4K!=null){continuous4K.close();continuous4K=null;}
   if(!pilotOnly&&preRoll==null)preRoll=new GardenPreRoll();
