@@ -223,10 +223,16 @@ public final class Continuous4KEncoder {
    }
   }catch(Throwable e){
    markFailure(e);
-   if(current!=null)current.listener.failed(current.temporary,e.getClass().getSimpleName());
   }finally{
    if(muxer!=null)try{muxer.release();}catch(Throwable ignored){}
-   // On failure keep .recording for forensic recovery, never delete evidence.
+   // Includes codec failure, queue overflow, explicit stop and muxer I/O.
+   // Always notify about an unfinished event; never silently discard it.
+   if(current!=null&&!current.finished)try{
+    Throwable cause=failure;
+    current.listener.failed(current.temporary,
+       cause==null?"4k_writer_stopped":cause.getClass().getSimpleName());
+   }catch(Throwable ignored){}
+   // Retain any .recording partial for forensic recovery.
   }
  }
  private static void write(MediaMuxer muxer,Session s,Encoded4KRing.Sample p){
