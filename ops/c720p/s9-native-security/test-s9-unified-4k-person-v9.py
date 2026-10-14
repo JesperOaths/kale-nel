@@ -36,8 +36,8 @@ class UnifiedReleaseSafety(unittest.TestCase):
  def test_runner_remote_timer_variable_escaped_once(self):
   workflow=(ROOT.parents[2]/'.github/workflows/deploy-s9-unified-4k-person-v9.yml').read_text()
   line=next(x for x in workflow.splitlines() if 'OBSOLETE_TIMERS_DISARMED' in x)
-  self.assertIn('\\\\$u',line)
-  self.assertNotIn('\\\\\\\\$u',line)
+  self.assertIn(chr(92)+'$u',line)
+  self.assertNotIn(chr(92)*2+'$u',line)
   self.assertIn('set -euo pipefail',workflow)
  def test_no_implicit_camera_install_in_builder(self):
   self.assertNotIn('adb("install"',BUILDER)
