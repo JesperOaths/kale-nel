@@ -44,6 +44,23 @@ def control(key,value):
         return json.loads(e.read().decode())
 def healthy(d):
     return d.get("ok") is True and d.get("mode")=="watching" and d.get("native_4k_enabled") is True and d.get("garden_person_gate_backend")=="gpu" and d.get("temperature_c",100)<38.5 and d.get("sd_free_bytes",0)>15*1024**3 and 0<=d.get("last_frame_age_ms",999999)<1500
+def wait_for_camera_idle(seconds=14,maxwait=210):
+    """Refuse promotion or restart during genuine security recording activity."""
+    stable=None
+    start=time.monotonic()
+    while time.monotonic()-start<maxwait:
+        time.sleep(2)
+        d=status()
+        if d.get("ok") is not True or d.get("temperature_c",100)>=38.5:
+            raise RuntimeError("camera_unhealthy_during_idle_wait")
+        if d.get("mode")!="watching":
+            stable=None
+            continue
+        seq=d.get("recorded")
+        if stable is None or stable[1]!=seq:stable=(time.monotonic(),seq)
+        if time.monotonic()-stable[0]>=seconds:return d
+    raise RuntimeError("camera_remained_busy_refuse_unsafe_rollout")
+
 def configure_connection():
     if adb("shell","getprop","ro.product.model",timeout=15).strip()!="SM-G965F":raise RuntimeError("wrong_phone")
     adb("forward","tcp:18808","tcp:8808",timeout=15)
@@ -200,9 +217,10 @@ def main():
             adb("shell","rm","--",PHONE_ROOT+"/"+clip,timeout=20)
         # Promotion requires a real verified 4K diagnostic on this exact
         # signed APK: it cannot be enabled on a newly started encoder.
-        d=status()
+        d=wait_for_camera_idle()
         if d.get("continuous_4k_last_result","").startswith("verified_native_4k_") is False:
             raise RuntimeError("latest_native_4k_evidence_missing")
+        print("NATIVE_4K_IDLE_BEFORE_PROMOTION",json.dumps({"mode":d.get("mode"),"recorded":d.get("recorded")}),flush=True)
         promoted=control("continuous_4k_trial","promote")
         if not promoted.get("ok") or not promoted.get("production_persisted"):
             raise RuntimeError("production_promotion_refused_"+str(promoted)[:160])
@@ -212,8 +230,9 @@ def main():
         print("4K_PRODUCTION_PROMOTED",json.dumps({"temp":persisted.get("temperature_c"),"buffer_ms":persisted.get("continuous_4k_buffered_ms")}),flush=True)
         # A *real restart* proves that the on-phone, self-contained 4K service
         # comes back without a hub watchdog or human control call.
-        if not healthy(persisted) or persisted.get("mode")!="watching":
-            raise RuntimeError("camera_not_idle_before_reboot_test")
+        persisted=wait_for_camera_idle()
+        if not persisted.get("continuous_4k_production_persisted"):
+            raise RuntimeError("production_preboot_flag_missing")
         adb("shell","am","force-stop",PACKAGE,timeout=20)
         launch()
         verified_boot=wait_for_health(VERSION,maxsec=125)
