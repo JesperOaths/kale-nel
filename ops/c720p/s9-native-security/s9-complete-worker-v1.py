@@ -52,8 +52,18 @@ def phone():
  rows=command(["adb","devices","-l"],12).splitlines()
  usb=[r.split()[0] for r in rows if " device " in r and
       "model:SM_G965F" in r and "usb:" in r]
- if len(usb)!=1:raise RuntimeError("authorized_S9_USB_not_connected")
- return usb[0]
+ if len(usb)==1:return usb[0]
+ wifi=[r.split()[0] for r in rows if " device " in r and
+       "model:SM_G965F" in r and r.startswith("192.168.178.250:5555")]
+ if len(wifi)==1:return wifi[0]
+ # Reattach only the already-authorized, pinned S9 Wi-Fi ADB endpoint.
+ subprocess.run(["adb","connect","192.168.178.250:5555"],
+   capture_output=True,text=True,timeout=9)
+ rows=command(["adb","devices","-l"],12).splitlines()
+ if any(r.startswith("192.168.178.250:5555") and
+        " device " in r and "model:SM_G965F" in r for r in rows):
+  return "192.168.178.250:5555"
+ raise RuntimeError("authorized_S9_ADB_unavailable")
 
 def adb(serial,*parts,timeout=30):
  return command(["adb","-s",serial,*parts],timeout)
@@ -231,8 +241,12 @@ def main():
  unit=subprocess.run(["systemctl","--user","is-active",
    "c720p-s9-joined-preroll-safe-upgrade.timer"],capture_output=True,text=True)
  if unit.stdout.strip()=="active":raise RuntimeError("unsafe_legacy_merger_still_active")
- serial=phone()
- s=status()
+ try:
+  serial=phone()
+  s=status()
+ except (RuntimeError,OSError,subprocess.TimeoutExpired,ValueError) as exc:
+  print("JOINER_DEFER_PHONE_OR_RELAY_UNAVAILABLE",type(exc).__name__,flush=True)
+  return 0
  if not safe(s):
   print("JOINER_DEFER_HEALTH",s.get("mode"),s.get("temperature_c"),flush=True)
   return 0
