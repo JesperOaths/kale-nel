@@ -124,11 +124,13 @@ public final class ClipClassifier {
  private static final String GARDEN_PERSON_MULTISCALE_VERSION="garden_overlapping_person_tiles_v8";
  private volatile int lastGardenInferencePasses=0;
  private volatile int lastGardenVehicleVetoes=0;
+ private volatile long totalGardenVehicleVetoes=0L;
  // Only on the serialized S9+ inference worker. Rebuilt from every preview
  // pass so a vehicle class may challenge a false "person" observation.
  private final ArrayList<Detection> lastGardenTransports=new ArrayList<>();
  public int lastGardenInferencePasses(){return lastGardenInferencePasses;}
  public int lastGardenVehicleVetoes(){return lastGardenVehicleVetoes;}
+ public long totalGardenVehicleVetoes(){return totalGardenVehicleVetoes;}
  private static boolean isTransport(Detection hit){
   if(hit==null||hit.label==null)return false;
   return "car".equals(hit.label)||"bus".equals(hit.label)||"truck".equals(hit.label)||
@@ -263,7 +265,7 @@ public final class ClipClassifier {
       strongerTransport=true;break;
      }
     }
-    if(strongerTransport){lastGardenVehicleVetoes++;continue;}
+    if(strongerTransport){lastGardenVehicleVetoes++;totalGardenVehicleVetoes++;continue;}
     if(GardenPersonTrackGate.valid(b)&&detection.score>highest){
      highest=detection.score;bestBox=b;
     }
