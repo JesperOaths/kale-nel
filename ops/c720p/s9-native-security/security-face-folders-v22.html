@@ -287,6 +287,29 @@ function openFolder(id){
    el('small','',e.source==='drive'?'Google Drive historical recording':'S9+ native camera recording'),
    el('small','',String(e.rec.reviewCategory||e.rec.category||e.rec.face_review_status||'Face unverified').replaceAll('_',' ')));
   if(e.source==='sd'){
+   const faceOutcomes={
+    snapshot_candidates_saved:'Possible face crops saved · identity not verified',
+    review_processing_failed:'Face review failed · retry or diagnostic check needed',
+    no_face_detector_hit_in_sampled_frames:'No face detected in sampled frames · person may still be present',
+    face_candidates_rejected_in_sampling:'Possible face regions rejected for visibility, angle or image quality',
+    legacy_review_no_diagnostics:'Earlier review · reason for missing face unavailable',
+    not_reviewed:'Face sampling not yet completed'
+   };
+   const outcome=String(e.rec.face_evidence_outcome||'not_reviewed');
+   body.append(el('small','',faceOutcomes[outcome]||'Face evidence unavailable'));
+   const anchors=e.rec.face_deep_detector_anchor_frames;
+   const roi=e.rec.face_deep_person_roi_anchors;
+   if(Number.isInteger(anchors)&&Number.isInteger(roi)&&anchors>=0&&roi>=0)
+    body.append(el('small','',roi+' of '+anchors+
+      ' historical 4K face-sampling anchors used isolated person crops'));
+   const rejected=[e.rec.face_rejected_confidence_or_size,
+     e.rec.face_rejected_looking_away_or_roll,
+     e.rec.face_rejected_crop_geometry,e.rec.face_rejected_dark_or_blurry];
+   if(rejected.every(v=>Number.isInteger(v)&&v>=0)){
+    body.append(el('small','',rejected[0]+' low-confidence/small · '+
+      rejected[1]+' turned/tilted · '+rejected[2]+' crop-limited · '+
+      rejected[3]+' poor-light/low-detail face candidates'));
+   }
    const tracks=Array.isArray(e.rec.anonymous_tracks)?e.rec.anonymous_tracks:[];
    for(const track of tracks.slice(0,4)){
     const direction=String(track.image_movement_direction||'insufficient_samples').replaceAll('_',' ');
