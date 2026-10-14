@@ -1,5 +1,9 @@
 # Verified recordings → person folders
 
+**Current grouping:** [BEST_FIT_PEOPLE_V34.md](BEST_FIT_PEOPLE_V34.md) supersedes
+the V33 matching rules and 64-group result below. Extraction receipts, approved
+inputs and stored evidence from this release remain in use.
+
 The owner released the review gate with **“yes, done”** on 14 October 2026.
 The approved snapshot contains **41 human-verified historical Drive clips**.
 No microSD clip was positively verified in that snapshot. Newly verified clips

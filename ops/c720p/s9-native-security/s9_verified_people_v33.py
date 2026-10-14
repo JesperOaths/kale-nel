@@ -10,7 +10,7 @@ ROOT=review.BASE/'state/s9-verified-people-v33'
 VERSION='verified_people_v33';LOCK=threading.RLock()
 CACHE_ENABLED=False;_allowed_cache=None;_tracks_cache=None
 IMAGE=re.compile('[a-f0-9]{24}[.]jpg\\Z');OBS=re.compile('obs-[a-f0-9]{20}\\Z');PID=re.compile('P[0-9]{4,6}\\Z')
-MATCH_KINDS={'face_supported','appearance_supported','single_recording_link'}
+MATCH_KINDS={'face_supported','appearance_supported','single_recording_link','best_fit_supported','face_appearance_supported'}
 def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 @contextmanager
 def registry_lock():
@@ -137,6 +137,12 @@ def compatible_groups(first,second,tracks,cache):
 def evidence_signature(track):
  return hashlib.sha256(json.dumps({field:track.get(field) for field in ('body_vectors','face_vectors','colour','shape','metrics','human_clip_label')},sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
 def build_registry(tracks,cache=None):
+ if read('grouping-policy.json',{}).get('algorithm')=='verified_multiview_best_fit_v34':
+  import s9_best_fit_people_v34 as fit
+  result=fit.build(tracks,cache);profiles={};links={}
+  for index,group in enumerate(result['groups'],1):
+   pid=f'P{index:04d}';profiles[pid]={'name':f'Person #{index}','reviewed':False,'created_at':utc()};links.update({k:pid for k in group})
+  return {'version':VERSION,'next_id':len(profiles)+1,'profiles':profiles,'links':links,'comparisons':result['comparisons'],'grouping':result['grouping'],'fits':result['fits'],'evidence_signatures':{k:evidence_signature(t) for k,t in tracks.items()},'generated_at':utc()}
  groups=[[k] for k in sorted(tracks)];pairs=[];comparisons={}
  keys=sorted(tracks)
  for i,a in enumerate(keys):
@@ -157,6 +163,12 @@ def public_track(track):
  return {k:track.get(k) for k in ('id','source','name','clip_key','first_s','last_s','recorded_at','samples','body_image','face_images','face_captures','metrics','quality')}
 def advance_registry():
  """Publish newly processed appearances without renumbering or undoing reviews."""
+ if read('grouping-policy.json',{}).get('algorithm')=='verified_multiview_best_fit_v34':
+  tracks=tracks_now();previous=read('registry.json')
+  if previous:
+   signatures={k:evidence_signature(t) for k,t in tracks.items()}
+   if signatures==previous.get('evidence_signatures'):return 0
+   added=len(set(tracks)-set(previous['links']));reconcile_registry();return added
  with registry_lock():
   tracks=tracks_now();data=read('registry.json')
   if data is None:
@@ -189,13 +201,13 @@ def advance_registry():
    data['links'][observation]=pid;added+=1
   if added or changed:data['updated_at']=utc();write('registry.json',data)
   return added
-def reconcile_registry():
+def reconcile_registry(fit_cache=None,receipt=None):
  """Final complete-recording grouping; preserve every named or confirmed folder."""
  with registry_lock():
   tracks=tracks_now();old=read('registry.json')
   if old is None:raise ValueError('registry_not_ready')
   protected={pid for pid,p in old['profiles'].items() if p.get('reviewed') or p.get('name')!='Person #'+str(int(pid[1:]))}
-  editable={k:t for k,t in tracks.items() if old['links'].get(k) not in protected};complete=build_registry(tracks);grouped=build_registry(editable,complete['comparisons'])
+  editable={k:t for k,t in tracks.items() if old['links'].get(k) not in protected};complete=build_registry(tracks,fit_cache);grouped=build_registry(editable,complete['comparisons'])
   data=json.loads(json.dumps(old));data['links']={k:v for k,v in old['links'].items() if v in protected};used=set(protected)
   for group_id in grouped['profiles']:
    members=[k for k,v in grouped['links'].items() if v==group_id];counts={}
@@ -207,10 +219,13 @@ def reconcile_registry():
     number=data['next_id'];data['next_id']+=1;pid=f'P{number:04d}';data['profiles'][pid]={'name':f'Person #{number}','reviewed':False,'created_at':utc()}
    used.add(pid);data['links'].update({k:pid for k in members})
   data['comparisons']=complete['comparisons'];data['evidence_signatures']=complete['evidence_signatures'];data['refined_at']=utc()
+  if 'grouping' in grouped:data['grouping']={**grouped['grouping'],'final_groups':len({data['links'][k] for k in tracks if k in data['links']}),'protected_folders':len(protected)}
+  if 'fits' in grouped:data['fits']={**{k:v for k,v in old.get('fits',{}).items() if old['links'].get(k) in protected},**grouped['fits']}
   backup='registry-before-final-grouping-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')+'.json';write(backup,old)
   try:
    write('registry.json',data);audit({'action':'verified_dataset_grouping','protected_folders':len(protected),'active_folders':len({data['links'][k] for k in tracks if k in data['links']}),'backup':backup})
   except OSError:write('registry.json',old);raise
+  if receipt is not None:receipt.update({'backup':backup,'after_sha256':hashlib.sha256((ROOT/'registry.json').read_bytes()).hexdigest()})
   return len({data['links'][k] for k in tracks if k in data['links']})
 def report():
  with LOCK:
@@ -224,7 +239,8 @@ def report():
    faces=sum(len(t.get('face_images',[])) for t in items);methods=set()
    for i,a in enumerate(items):
     for b in items[i+1:]:methods.add(comparison(a,b)['kind'])
-   folders.append({'id':pid,'name':p['name'],'reviewed':p.get('reviewed',False),'recordings':len({t['clip_key'] for t in items}),'appearances':len(items),'face_crops':faces,'methods':sorted(methods),'items':[public_track(t) for t in items]})
+   public_items=[{**public_track(t),'match':registry.get('fits',{}).get(t['id'])} for t in items]
+   folders.append({'id':pid,'name':p['name'],'reviewed':p.get('reviewed',False),'recordings':len({t['clip_key'] for t in items}),'appearances':len(items),'face_crops':faces,'tentative_appearances':sum(bool(t.get('match') and t['match'].get('review_required')) for t in public_items),'methods':sorted(methods),'items':public_items})
   unmeasured=[]
   for k,c in approved.items():
    entry=features.get('entries',{}).get(k)
@@ -237,7 +253,7 @@ def report():
     if not pa or not pb or pa==pb or tuple(sorted((pa,pb))) in seen:continue
     result=comparison(tracks[a],tracks[b])
     if result['kind'] in MATCH_KINDS|{'suggestion'}:
-     suggestions.append({'first':pa,'second':pb,**result});seen.add(tuple(sorted((pa,pb))))
+     suggestions.append({'first':pa,'second':pb,**{key:result[key] for key in ('kind','score','reasons')}});seen.add(tuple(sorted((pa,pb))))
   suggestions.sort(key=lambda r:r['score'],reverse=True)
   return {'ok':True,'version':VERSION,'matching_started':bool(read('approval.json')),'status':status,'approved_clips':len(approved),'processed_clips':sum(k in approved for k in features.get('entries',{})),'folders':folders,'unmeasured':unmeasured,'suggestions':suggestions[:30],'metrics':{'tracks':len(tracks),'with_faces':sum(bool(t.get('face_vectors')) for t in tracks.values()),'with_posture':sum(t.get('metrics',{}).get('posture') is not None for t in tracks.values()),'with_gait':sum(t.get('metrics',{}).get('cadence_spm') is not None for t in tracks.values())},'identity_status':'Anonymous visual groups; automatic matches need review'}
 def audit(data):
@@ -256,15 +272,22 @@ def edit(data):
    name=data.get('name')
    if not isinstance(name,str) or not 1<=len(name.strip())<=56 or any(not c.isprintable() or c in '<>' for c in name):return 400,{'ok':False,'error':'invalid_name'}
    registry['profiles'][pid]['name']=name.strip()
-  elif action=='confirm':registry['profiles'][pid]['reviewed']=True
+  elif action=='confirm':
+   registry['profiles'][pid]['reviewed']=True
+   for observation,folder in registry['links'].items():
+    if folder==pid and observation in registry.get('fits',{}):registry['fits'][observation].update(review_required=False,support='human_confirmed')
   elif action=='merge':
    if not isinstance(other,str) or other==pid or other not in registry['profiles']:return 400,{'ok':False,'error':'invalid_other_folder'}
    first=[t for k,t in tracks.items() if registry['links'].get(k)==pid];second=[t for k,t in tracks.items() if registry['links'].get(k)==other]
    if any(conflict(a,b) for a in first for b in second):return 409,{'ok':False,'error':'simultaneously_visible_people_cannot_merge'}
    registry['links']={k:pid if v==other else v for k,v in registry['links'].items()};registry['profiles'][pid]['reviewed']=True
+   for observation,folder in registry['links'].items():
+    if folder==pid and observation in registry.get('fits',{}):registry['fits'][observation].update(review_required=False,support='human_confirmed')
   elif action=='split':
    if observation not in tracks or registry['links'].get(observation)!=pid:return 404,{'ok':False,'error':'appearance_not_in_folder'}
    number=registry['next_id'];new=f'P{number:04d}';registry['next_id']+=1;registry['profiles'][new]={'name':f'Person #{number}','reviewed':True,'created_at':utc()};registry['links'][observation]=new;registry['profiles'][pid]['reviewed']=False
+   for item,folder in registry['links'].items():
+    if item in registry.get('fits',{}) and folder in (pid,new):registry['fits'][item].update(review_required=folder==pid,support='human_separated' if folder==new else 'review_after_split')
   else:return 400,{'ok':False,'error':'invalid_action'}
   try:
    write('registry.json',registry);audit({'action':action,'request':data,'before':before})

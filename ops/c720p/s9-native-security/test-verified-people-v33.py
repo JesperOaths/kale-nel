@@ -94,5 +94,19 @@ class Tests(unittest.TestCase):
  def test_images_are_bound_to_their_own_verified_appearance(self):
   a=track(1);name=hashlib.sha256((a['id']+':body').encode()).hexdigest()[:24]+'.jpg';blob=b'\xff\xd8'+b'0'*600+b'\xff\xd9';a['images']={name:{'sha256':hashlib.sha256(blob).hexdigest(),'kind':'body'}};self.features([a]);(mod.ROOT/'images').mkdir();(mod.ROOT/'images'/name).write_bytes(blob)
   self.assertEqual(mod.image_bytes(name),blob);del self.current[mod.key(self.a)];self.assertIsNone(mod.image_bytes(name))
+ def best_fit(self):mod.write('grouping-policy.json',{'algorithm':'verified_multiview_best_fit_v34'})
+ def test_best_fit_policy_builds_profiles_and_keeps_descriptors_private(self):
+  a,b=track(1,start=0,end=2),track(2,start=3,end=6);self.features([a,b]);self.best_fit();tracks=mod.tracks_now();registry=mod.build_registry(tracks);mod.write('registry.json',registry)
+  self.assertEqual(len(registry['profiles']),1);self.assertIn('fits',registry);raw=json.dumps(mod.report());self.assertNotIn('body_vectors',raw);self.assertNotIn('"evidence"',raw);self.assertNotIn('"colour"',raw)
+ def test_best_fit_preserves_named_folders(self):
+  a,b=track(1,start=0,end=2),track(2,start=3,end=6);b['body_vectors']=[[0,1,0]];self.features([a,b]);mod.write('registry.json',mod.build_registry({t['id']:t for t in (a,b)}));mod.edit({'action':'rename','profile_id':'P0001','name':'Owner name','human_confirmed':True});self.best_fit();self.assertEqual(mod.reconcile_registry(),2);self.assertEqual(mod.read('registry.json')['profiles']['P0001']['name'],'Owner name')
+ def test_best_fit_honours_a_manual_separation(self):
+  a,b=track(1,start=0,end=2),track(2,start=3,end=6);self.features([a,b]);self.best_fit();mod.write('registry.json',mod.build_registry(mod.tracks_now()));self.assertEqual(mod.edit({'action':'split','profile_id':'P0001','observation_id':a['id'],'human_confirmed':True})[0],200);self.assertEqual(mod.reconcile_registry(),2)
+ def test_confirming_a_group_clears_tentative_marks(self):
+  a=track(1);self.features([a]);registry=mod.build_registry(mod.tracks_now());registry['fits']={a['id']:{'review_required':True,'support':'tentative_profile_fit','similarity':.5}};mod.write('registry.json',registry);self.assertEqual(mod.edit({'action':'confirm','profile_id':'P0001','human_confirmed':True})[0],200);self.assertFalse(mod.read('registry.json')['fits'][a['id']]['review_required'])
+ def test_grouping_receipt_provides_an_exact_rollback(self):
+  a=track(1);self.features([a]);mod.write('registry.json',mod.build_registry(mod.tracks_now()));before=mod.read('registry.json');self.best_fit();receipt={};mod.reconcile_registry(receipt=receipt);self.assertEqual(mod.read(receipt['backup']),before);self.assertEqual(hashlib.sha256((mod.ROOT/'registry.json').read_bytes()).hexdigest(),receipt['after_sha256'])
+ def test_best_fit_still_excludes_revoked_footage(self):
+  a=track(1);self.features([a]);self.best_fit();mod.write('registry.json',mod.build_registry(mod.tracks_now()));del self.current[mod.key(self.a)];self.assertEqual(mod.report()['folders'],[]);self.assertEqual(mod.reconcile_registry(),0)
 
 if __name__=='__main__':unittest.main(verbosity=2)
