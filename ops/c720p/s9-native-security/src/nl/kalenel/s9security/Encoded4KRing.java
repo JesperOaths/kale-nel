@@ -18,7 +18,7 @@ import java.util.List;
  * No Android dependency: deterministic JVM tests cover boundary behavior.
  */
 public final class Encoded4KRing {
- public static final int WIDTH=3840, HEIGHT=2160, FPS=30, BITRATE=36000000;
+ public static final int WIDTH=3840, HEIGHT=2160, FPS=30, BITRATE=24000000;
  public static final long HISTORY_US=9000000L;
  public static final long TARGET_US=7000000L;
  public static final long MIN_VALID_US=5500000L;
