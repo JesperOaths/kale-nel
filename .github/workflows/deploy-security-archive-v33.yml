@@ -1,0 +1,76 @@
+name: Deploy Security Archive v33 response guards
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/archive-review-v33.js'
+      - 'ops/c720p/s9-native-security/archive-card-actions-v2.js'
+      - 'ops/c720p/s9-native-security/test-archive-v33.mjs'
+      - 'ops/c720p/s9-native-security/deploy-archive-v33.py'
+      - '.github/workflows/deploy-security-archive-v33.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-security-archive-v33.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify all new Archive handlers
+        run: |
+          set -euo pipefail
+          node --check ops/c720p/s9-native-security/archive-review-v33.js
+          node --check ops/c720p/s9-native-security/archive-card-actions-v2.js
+          node ops/c720p/s9-native-security/test-archive-v33.mjs
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-archive-v33.py
+          ! grep -Eq "shutil.rmtree\(|os.system\(|adb install|adb.*rm|\bunlink\(.*\.mp4" ops/c720p/s9-native-security/deploy-archive-v33.py
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Publish fail-closed Archive UI without touching recordings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          file="ops/c720p/s9-native-security/deploy-archive-v33.py"
+          digest="$(sha256sum "$file" | cut -d' ' -f1)"
+          [[ "${GITHUB_SHA}" =~ ^[a-f0-9]{40}$ && "${digest}" =~ ^[a-f0-9]{64}$ ]]
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
+          dst="/tmp/security-archive-v33-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 40 '${url}' -o '${dst}' && printf '%s  %s\n' '${digest}' '${dst}' | sha256sum -c - >/dev/null && SECURITY_ARCHIVE_REF='${GITHUB_SHA}' /usr/bin/python3 '${dst}'"
+          idem="security-archive-v33-${GITHUB_SHA:0:22}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-archive-v33','deployment',:'cmd',140,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "SECURITY_ARCHIVE_V33_JOB=${id}"
+          for count in $(seq 1 24); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 4500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'SECURITY_ARCHIVE_V33_LIVE_VERIFIED' <<< "$output" || exit 1
+              echo 'SECURITY_ARCHIVE_V33_PRODUCTION_CONFIRMED'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
