@@ -28,7 +28,9 @@ def main():
  t=raw.decode()
  if MARK not in t or "c720p_s3_bedroom_shutdown_in_progress" not in t:
   raise RuntimeError("missing_current_guarded_timeout")
- pattern=r'^ {14}- delay: "00:00:03"
+ pattern=r'^ {14}- delay: "00:00:03"$'
+ if len(re.findall(pattern,t,flags=re.M))!=1:raise RuntimeError("unexpected_initial_wait_anchor")
+ t=re.sub(pattern,'              - delay: "00:00:25"',t,count=1,flags=re.M)
  old2="""              or (not is_state('input_boolean.c720p_s3_bedroom_shutdown_in_progress','on')
                   and (s.state in ['off','unavailable'] or age >= 15))) }}"""
  new2="""              or (not is_state('input_boolean.c720p_s3_bedroom_shutdown_in_progress','on')
