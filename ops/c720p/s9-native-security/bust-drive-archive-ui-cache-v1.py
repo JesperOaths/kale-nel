@@ -45,7 +45,7 @@ def main():
    changed.append(p)
   for p,(_,new) in CHANGES.items():
    u="http://127.0.0.1:8123/local/"+str(p.relative_to(ROOT))
-   q="&verify="+stamp if b"?" in new else "?verify="+stamp
+   q="?verify="+stamp
    with urllib.request.urlopen(u+q,timeout=12) as response:
     body=response.read(180000)
     if response.status!=200 or new not in body:
