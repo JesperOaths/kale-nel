@@ -164,8 +164,8 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- // End 30s after the most recent accepted motion; continue safety-capped events.
- private static final long QUIET_MS=30000,MAX_MS=120000,COOLDOWN_MS=0;
+ // End 10 seconds after the most recent accepted motion; continue capped events.
+ private static final long QUIET_MS=10000,MAX_MS=120000,COOLDOWN_MS=0;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
@@ -652,7 +652,7 @@ public final class CameraService extends Service {
    Log.i(TAG,"START_NATIVE_CONTINUOUS_4K "+clip);
    if(diagnostic)cameraHandler.postDelayed(()->{
     if("recording".equals(mode))stopRecording("continuous_4k_diagnostic");
-   },diagnosticTailProof?32000:9000);
+   },diagnosticTailProof?12500:9000);
    return;
   }
   frozenPreRoll=preRoll==null?null:preRoll.freeze();
@@ -1431,7 +1431,7 @@ public final class CameraService extends Service {
      if(!("record_once".equals(value)||"record_tail_once".equals(value))||
         diagnosticPrerollUsed||diagnosticPrerollActive||
         pilotOnly||(!(continuous4KTrial&&continuous4K!=null&&continuous4K.readyForEvent())&&
-        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<3500))||temperature()>=("record_tail_once".equals(value)?382:375)||
+        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<4400))||temperature()>=("record_tail_once".equals(value)?382:375)||
         folder==null||folder.getUsableSpace()<15L*1024*1024*1024){
       return response.put("ok",false).put("error","diagnostic_prebuffer_not_ready_or_already_used");
      }
@@ -1447,7 +1447,7 @@ public final class CameraService extends Service {
      return response.put("ok",true).put("mode",continuous4KTrial?
        "diagnostic_continuous_native_4k":"diagnostic_preroll_4k")
        .put("excluded_from_security_archive",true)
-       .put("requested_duration_ms",diagnosticTailProof?32000:9000)
+       .put("requested_duration_ms",diagnosticTailProof?12500:9000)
        .put("requested_post_motion_hold_ms",QUIET_MS);
     }
    if("continuous_4k_trial".equals(key)){
