@@ -39,6 +39,20 @@ class HsvIntegration(unittest.TestCase):
         self.assertIn('not identity probabilities',page)
         self.assertIn('verified_same_person===false',page)
         self.assertNotIn('face_embedding',page)
+    def test_guarded_apk_release_contract(self):
+        build=(HERE/"build-s9-hsv-v1.py").read_text()
+        deploy=(HERE/"deploy-s9-hsv-v1.py").read_text()
+        ast.parse(build);ast.parse(deploy)
+        self.assertIn('AppearanceSearchIndex',build)
+        self.assertIn('installed-before.apk',build)
+        self.assertIn('baseline_apk_sha256',build)
+        self.assertIn('changed_model_manifest_or_native_lib',build)
+        self.assertIn('S9_HSV_V1_DEPLOYMENT_VERIFIED',deploy)
+        self.assertIn('S9_HSV_V1_ROLLBACK_VERIFIED',deploy)
+        self.assertIn('running_apk_changed_after_build',deploy)
+        self.assertIn('continuous_4k_buffered_ms',deploy)
+        self.assertIn('archive_clips_missing_after_upgrade',deploy)
+
     def test_deploy_is_narrow_and_reversible(self):
         script=(HERE/"deploy-s9-hsv-ui-v1.py").read_text()
         ast.parse(script)
