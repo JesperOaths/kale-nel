@@ -72,6 +72,7 @@ def main():
   if root.f_bavail*root.f_frsize<350*1024*1024:
    note("disk_below_guard");return
   try:
+   adb("forward","tcp:18808","tcp:8808",timeout=18)
    one=status();start_t=temp()
   except Exception as e:
    note("camera_unreachable",{"error_type":type(e).__name__});return
