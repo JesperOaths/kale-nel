@@ -1638,11 +1638,11 @@ public final class CameraService extends Service {
      send(out,200,"application/json",answer.toString().getBytes("UTF-8"));
     }catch(IllegalArgumentException invalid){
      send(out,400,"application/json",
-       "{\\"ok\\":false,\\"error\\":\\"invalid_appearance_search_request\\"}".getBytes("UTF-8"));
+       "{\"ok\":false,\"error\":\"invalid_appearance_search_request\"}".getBytes("UTF-8"));
     }catch(Exception unavailable){
      Log.w(TAG,"appearance_search_unavailable",unavailable);
      send(out,503,"application/json",
-       "{\\"ok\\":false,\\"error\\":\\"appearance_index_unavailable\\"}".getBytes("UTF-8"));
+       "{\"ok\":false,\"error\":\"appearance_index_unavailable\"}".getBytes("UTF-8"));
     }
    }else if(line.startsWith("GET /controls ")){
     try{send(out,200,"application/json",controlsStatus().toString().getBytes("UTF-8"));}
