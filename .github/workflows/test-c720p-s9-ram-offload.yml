@@ -1,0 +1,18 @@
+name: Check checksum-guarded S9 RAM offload
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/offload-stale-build-evidence-s9-ram-v2.py'
+      - 'ops/c720p/test-offload-stale-build-evidence-s9-ram-v2.py'
+      - '.github/workflows/test-c720p-s9-ram-offload.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 -m py_compile ops/c720p/offload-stale-build-evidence-s9-ram-v2.py
+          python3 ops/c720p/test-offload-stale-build-evidence-s9-ram-v2.py
