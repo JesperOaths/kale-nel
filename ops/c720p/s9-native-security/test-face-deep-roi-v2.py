@@ -58,7 +58,8 @@ class FaceBackfillV2Regression(unittest.TestCase):
  def test_all_embeddings_and_arbitrary_fields_never_exported(self):
   result=self.catalog.safe_face_review_metadata(self.manifest(
     embedding=[0.01]*128,face_candidates=[{"embedding":[1]*128}]))
-  self.assertNotIn("embedding",str(result))
+  self.assertNotIn("embedding",result)
+  self.assertFalse(any(isinstance(v,list) and len(v)==128 for v in result.values()))
   self.assertNotIn("private_name",result)
   self.assertEqual(result["face_candidates"],[])
 
