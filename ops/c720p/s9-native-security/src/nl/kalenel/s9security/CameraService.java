@@ -360,7 +360,7 @@ public final class CameraService extends Service {
      // Only a verified and explicitly promoted 4K recorder can resume on boot.
      boolean preferred=!pilotOnly&&getSharedPreferences("native",MODE_PRIVATE)
        .getBoolean("continuous_4k_production_enabled",false);
-     if(preferred&&temperature()<375&&folder!=null&&
+     if(preferred&&temperature()<382&&folder!=null&&
          folder.getUsableSpace()>15L*1024*1024*1024){
       Continuous4KEncoder candidate=new Continuous4KEncoder();
       try{
@@ -1431,7 +1431,7 @@ public final class CameraService extends Service {
      if(!("record_once".equals(value)||"record_tail_once".equals(value))||
         diagnosticPrerollUsed||diagnosticPrerollActive||
         pilotOnly||(!(continuous4KTrial&&continuous4K!=null&&continuous4K.readyForEvent())&&
-        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<3500))||temperature()>=375||
+        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<3500))||temperature()>=("record_tail_once".equals(value)?382:375)||
         folder==null||folder.getUsableSpace()<15L*1024*1024*1024){
       return response.put("ok",false).put("error","diagnostic_prebuffer_not_ready_or_already_used");
      }
