@@ -58,7 +58,7 @@ jobs:
           echo "C720P_DISPOSABLE_RECLAIM_JOB=$id"
           for i in $(seq 1 90); do
             state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
-            if [[ "$state" == done\\|* || "$state" == error\\|* ]]; then
+            if [[ "$state" == done\|* || "$state" == error\|* ]]; then
               report="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 15000)"
               echo "$report"
               [[ "$state" == 'done|0' ]] || exit 1
