@@ -24,9 +24,9 @@ public final class CaptureContinuityTest {
   c.evidence(168000);
   CaptureContinuity.Segment x=c.stopped(170000,"motion_1791690190000.mp4","max_segment");
   ok(x.autoResumeArmed,"fresh max cap resumable");
-  ok(c.continuationReady(180000),"recent event is eligible inside 12-second physical rejoin window");
-  ok(c.continuationReady(184000),"30-second motion evidence still allows resume");
-  ok(!c.continuationReady(199000),"30-second motion evidence expires");
+  ok(c.continuationReady(176000),"motion 8s ago is eligible for capped segment resume");
+  ok(c.continuationReady(177000),"motion 9s ago still allows resume");
+  ok(!c.continuationReady(179000),"motion evidence older than 10s expires");
   // MAX_REJOIN_MS is separately enforced when a new physical segment begins.
   ok(!c.isContinuationPending(),"resume disarmed");
   CaptureContinuity isolated=new CaptureContinuity();
