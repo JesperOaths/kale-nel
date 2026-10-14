@@ -321,7 +321,7 @@ function openFolder(id){
       ' · image path straightness: '+Math.round(100*Number(track.image_path_straightness))+'%':'';
     body.append(el('small','',String(track.id||'Anonymous person')+
       ' · '+colour+' clothing · image direction: '+direction+speed+path+
-      ' · posture: not measured · gait: no cadence model'));
+      ' · posture: not measured · gait: not measurable from sampled frames'));
    }
   }
   const play=el('button','','Play recording');play.type='button';

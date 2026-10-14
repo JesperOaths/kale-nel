@@ -121,6 +121,68 @@ def install_local_sd(H):
    except (OSError,TypeError,ValueError,OverflowError,urllib.error.URLError):
     self.js(200,s9_phone_garden_status.unavailable())
    return
+  if path=="/new/api/appearance-search":
+   # Authenticated outer 8794 relay only; phone stays bound to 127.0.0.1.
+   # Do not accept arbitrary paths, uploads, face data, or identity queries.
+   if self.command!="GET":
+    self.js(400,{"ok":False,"error":"appearance_search_get_only"});return
+   allowed={"clip","category","zone","method","from_ms","until_ms","limit"}
+   try:
+    parameters=urllib.parse.parse_qs(url.query,keep_blank_values=True,strict_parsing=True)
+    if not parameters or set(parameters)-allowed or any(len(v)!=1 for v in parameters.values()):
+     raise ValueError("invalid_search_parameters")
+    def field(name,default=None):
+     return parameters.get(name,[default])[0]
+    clip=field("clip")
+    category=field("category")
+    zone=field("zone")
+    method=field("method","bhattacharyya")
+    limit=field("limit","20")
+    if not isinstance(clip,str) or not re.fullmatch(r"motion_[0-9]{13}[.]mp4",clip) or clip not in data:
+     raise ValueError("reference_not_in_authenticated_archive")
+    if category not in ("upper_clothing","lower_clothing","vehicle"):
+     raise ValueError("invalid_category")
+    if zone is not None and zone not in ("front_garden","background_street","unspecified"):
+     raise ValueError("invalid_zone")
+    if method not in ("bhattacharyya","correlation") or not re.fullmatch(r"[0-9]{1,2}",limit) or not 1<=int(limit)<=50:
+     raise ValueError("invalid_metric_or_limit")
+    safe={"clip":clip,"category":category,"method":method,"limit":limit}
+    if zone:safe["zone"]=zone
+    for key in ("from_ms","until_ms"):
+     value=field(key)
+     if value is not None:
+      if not re.fullmatch(r"[0-9]{1,15}",value):raise ValueError("invalid_time_filter")
+      safe[key]=value
+    if "from_ms" in safe and "until_ms" in safe and int(safe["from_ms"])>int(safe["until_ms"]):
+     raise ValueError("inverted_time_range")
+   except (ValueError,TypeError):
+    self.js(400,{"ok":False,"error":"invalid_appearance_search_request"});return
+   source="http://127.0.0.1:18808/appearance/search?"+urllib.parse.urlencode(safe)
+   try:
+    with urllib.request.urlopen(source,timeout=15) as phone:
+     if phone.status!=200 or int(phone.headers.get("Content-Length","200000"))>200000:
+      raise ValueError("invalid_phone_search_response")
+     payload=json.loads(phone.read(200001))
+    if payload.get("ok") is not True or payload.get("appearance_only") is not True or not isinstance(payload.get("results"),list):
+     raise ValueError("bad_appearance_payload")
+    results=[]
+    for hit in payload["results"][:50]:
+     if not isinstance(hit,dict):continue
+     name=hit.get("clip_name")
+     score=hit.get("similarity")
+     if name not in data or not isinstance(score,(int,float)) or isinstance(score,bool) or not 0<=score<=1:
+      continue
+     if hit.get("verified_same_person") is not False:continue
+     results.append({"clip_name":name,"similarity":round(float(score),4),
+       "offset_ms":int(hit.get("offset_ms",0)),"zone":hit.get("zone","unspecified"),
+       "scene":str(hit.get("scene","unreviewed"))[:55],
+       "appearance_only":True,"verified_same_person":False})
+    self.js(200,{"ok":True,"index_version":"s9_hsv_histogram_index_v1",
+      "appearance_only":True,"verified_same_person":False,
+      "reference_clip":clip,"category":category,"results":results})
+   except (urllib.error.URLError,TimeoutError,OSError,ValueError,TypeError,json.JSONDecodeError):
+    self.js(503,{"ok":False,"error":"s9_appearance_index_unavailable"});return
+   return
   if path=="/new/api/saved":
    events=[]
    for name,r in sorted(data.items(),reverse=True):

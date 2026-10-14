@@ -1,0 +1,47 @@
+name: S9 on-phone HSV appearance-search contract
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/AppearanceSearchIndex.java'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java'
+      - 'ops/c720p/s9-native-security/s9_hsv_search_reference.py'
+      - 'ops/c720p/s9-native-security/test-s9-hsv-search.py'
+      - 'ops/c720p/s9-native-security/fetch-source.sh'
+      - '.github/workflows/s9-hsv-appearance-search.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/AppearanceSearchIndex.java'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java'
+      - 'ops/c720p/s9-native-security/s9_hsv_search_reference.py'
+      - 'ops/c720p/s9-native-security/test-s9-hsv-search.py'
+      - '.github/workflows/s9-hsv-appearance-search.yml'
+permissions:
+  contents: read
+jobs:
+  reference-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install isolated OpenCV test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/s9-hsv"
+          "$RUNNER_TEMP/s9-hsv/bin/python" -m pip install --disable-pip-version-check \
+            numpy==2.2.6 opencv-python-headless==4.12.0.88
+      - name: Run synthetic colour-distance and metadata indexing tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/s9-hsv/bin/python" ops/c720p/s9-native-security/test-s9-hsv-search.py
+          "$RUNNER_TEMP/s9-hsv/bin/python" ops/c720p/s9-native-security/test-s9-hsv-integration.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path("ops/c720p/s9-native-security/security-hsv-search-v1.html").read_text()
+          scripts=[s for s in re.findall(r'<script[^>]*>(.*?)</script>',html,re.S) if s.strip()]
+          assert len(scripts)==1
+          Path("/tmp/s9-hsv-visual-search.js").write_text(scripts[0])
+          PY
+          node --check /tmp/s9-hsv-visual-search.js
