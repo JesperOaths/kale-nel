@@ -44,5 +44,43 @@ class SafeArchiveTests(unittest.TestCase):
         for unsafe in ("adb(\"install\"", "systemctl stop", "docker system prune", "/new/api/sd/delete"):
             self.assertNotIn(unsafe, body)
 
+    def test_historical_backup_guards_reject_hardlinks_and_young_files(self):
+        from unittest.mock import patch
+        import time
+        with tempfile.TemporaryDirectory() as tmp:
+            backups = Path(tmp) / "backups"
+            old = backups / "s9-preroll-v3"
+            old.mkdir(parents=True)
+            apk = old / "old-camera.apk"
+            with apk.open("wb") as stream:
+                stream.truncate(7 * 1024**2)
+            with patch.object(module, "BACKUP_ROOT", backups), patch.object(
+                module, "HISTORICAL_APK_GENERATIONS", ("s9-preroll-v3",)):
+                self.assertEqual(list(module.historical_apk_candidates()), [])
+                past = time.time() - 12 * 3600
+                os.utime(apk, (past,past))
+                self.assertEqual(len(list(module.historical_apk_candidates())), 1)
+                clone = old / "linked-copy.apk"
+                os.link(apk,clone)
+                self.assertEqual(list(module.historical_apk_candidates()), [])
+                clone.unlink()
+                self.assertEqual(len(list(module.historical_apk_candidates())), 1)
+                fake = old / "symlinked.apk"
+                fake.symlink_to(apk)
+                self.assertEqual(len(list(module.historical_apk_candidates())), 1)
+
+    def test_old_apks_are_hashed_and_manifested_before_unlinking(self):
+        body = SOURCE.read_text()
+        start = body.index("def offload_historical_apk(")
+        end = body.index("\ndef main():", start)
+        impl = body[start:end]
+        self.assertLess(impl.index("if remote_hash(final) != checksum:"),
+                        impl.index("source.unlink()"))
+        self.assertLess(impl.index("os.fsync(out.fileno())"),
+                        impl.index("source.unlink()"))
+        self.assertIn("phone_ready()", impl)
+        self.assertIn("stat().st_nlink != 1", impl)
+        self.assertIn('"s9-visual-attributes-v36"' not in str(module.HISTORICAL_APK_GENERATIONS), (True,))
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
