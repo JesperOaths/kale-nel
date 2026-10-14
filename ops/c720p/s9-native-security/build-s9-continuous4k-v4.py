@@ -10,7 +10,7 @@ from pathlib import Path
 import hashlib,json,os,re,shutil,subprocess,tempfile,urllib.request,zipfile
 HOME=Path("/home/jespern/c720p-home-hub")
 REF=os.environ.get("S9_CONTINUOUS_4K_V4_REF","")
-BASE=HOME/"build/s9-continuous4k-v4/s9-continuous4k-v4.apk"
+BASE=HOME/"build/s9-preroll-v3/s9-preroll-v3.apk"
 TARGET=HOME/"build/s9-continuous4k-v4"
 KEY=Path("/home/jespern/.config/s9-native-security-sign")
 FINGERPRINT="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
