@@ -28,8 +28,8 @@ def main():
  t=raw.decode()
  if MARK not in t or "c720p_s3_bedroom_shutdown_in_progress" not in t:
   raise RuntimeError("missing_current_guarded_timeout")
- old1='              - delay: "00:00:03"\n              - choose:'
- new1='              - delay: "00:00:25"\n              - choose:'
+ old1='              - delay: "00:00:03"'
+ new1='              - delay: "00:00:25"'
  if t.count(old1)!=1:raise RuntimeError("unexpected_initial_wait_anchor")
  t=t.replace(old1,new1,1)
  old2="""              or (not is_state('input_boolean.c720p_s3_bedroom_shutdown_in_progress','on')
