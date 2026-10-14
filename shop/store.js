@@ -574,12 +574,46 @@ function setCollection(collection, { scroll = true } = {}){
   openShoppingView({ scroll });
 }
 
+let galleryMediaObserver = null;
 function initializeGalleries(){
+  // Remote gallery views live in an overflow rail. Browsers may defer native
+  // loading="lazy" images beyond slide 1 indefinitely, even after navigation.
+  // Warm the three lightweight garment views when their card approaches the
+  // viewport, not all products across the complete catalog at page load.
+  if(galleryMediaObserver){
+    galleryMediaObserver.disconnect();
+    galleryMediaObserver = null;
+  }
+  const warmSlide = (slide, priority = 'auto') => {
+    const img = slide?.querySelector('img');
+    if(!img) return;
+    img.loading = 'eager';
+    img.decoding = 'async';
+    if(priority === 'high') img.fetchPriority = 'high';
+  };
+  const warmGarmentViews = card => {
+    card.querySelectorAll('.mockup-rail > .mockup:not(:first-child)').forEach(slide => warmSlide(slide));
+  };
+  if('IntersectionObserver' in window){
+    galleryMediaObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if(!entry.isIntersecting) return;
+        warmGarmentViews(entry.target);
+        galleryMediaObserver?.unobserve(entry.target);
+      });
+    }, { rootMargin: '450px 0px', threshold: 0 });
+  }
+
   qsa('.product-card').forEach(card => {
     const rail = card.querySelector('.mockup-rail');
     const slides = [...card.querySelectorAll('.mockup')];
     const dots = [...card.querySelectorAll('[data-gallery-dot]')];
     if(!rail || !slides.length || !dots.length) return;
+    if(galleryMediaObserver) galleryMediaObserver.observe(card);
+    // Fallback for older browsers, and for users interacting before the
+    // viewport observer gets a chance to fire.
+    card.addEventListener('pointerenter', () => warmGarmentViews(card), { once: true });
+    card.addEventListener('focusin', () => warmGarmentViews(card), { once: true });
     let activeIndex = 0;
     let previousWidth = Math.max(1, rail.clientWidth);
     const setActive = index => {
@@ -590,14 +624,29 @@ function initializeGalleries(){
       Math.round(rail.scrollLeft / Math.max(1, rail.clientWidth))));
     const goTo = (index, behavior = 'smooth') => {
       const next = (index + slides.length) % slides.length;
+      warmSlide(slides[next], 'high');
+      // Warm adjacent slides so swiping never encounters an unloaded image.
+      if(next + 1 < slides.length) warmSlide(slides[next + 1]);
+      if(next > 0) warmSlide(slides[next - 1]);
       rail.scrollTo({ left: next * Math.max(1, rail.clientWidth), behavior });
       setActive(next);
     };
     dots.forEach((dot, index) => dot.addEventListener('click', () => goTo(index)));
     card.querySelector('[data-gallery-prev]')?.addEventListener('click', () => goTo(currentIndex() - 1));
     card.querySelector('[data-gallery-next]')?.addEventListener('click', () => goTo(currentIndex() + 1));
-    rail.addEventListener('scroll', () => window.requestAnimationFrame(() => setActive(currentIndex())), { passive: true });
-    rail.addEventListener('scrollend', () => goTo(currentIndex(), 'auto'), { passive: true });
+    rail.addEventListener('scroll', () => {
+      window.requestAnimationFrame(() => {
+        const index = currentIndex();
+        warmSlide(slides[index], 'high');
+        setActive(index);
+      });
+    }, { passive: true });
+    rail.addEventListener('scrollend', () => {
+      const index = currentIndex();
+      // Avoid calling scrollTo again when already snapped: that creates
+      // repeated scroll-end callbacks on some mobile browsers.
+      setActive(index);
+    }, { passive: true });
     if('ResizeObserver' in window){
       const resizeObserver = new ResizeObserver(() => {
         const width = Math.max(1, rail.clientWidth);
