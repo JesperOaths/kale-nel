@@ -1,0 +1,132 @@
+name: S9 unified 4K and pedestrian v9 guarded rollout
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/build-s9-unified-4k-person-v9.py'
+      - 'ops/c720p/s9-native-security/deploy-s9-unified-4k-person-v9.py'
+      - 'ops/c720p/s9-native-security/test-s9-unified-4k-person-v9.py'
+      - '.github/workflows/deploy-s9-unified-4k-person-v9.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-s9-unified-4k-person-v9.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-unified-4k-person-v9-install
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check immutable build and rollback invariants
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-s9-unified-4k-person-v9.py
+          python3 -m py_compile ops/c720p/s9-native-security/build-s9-unified-4k-person-v9.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-unified-4k-person-v9.py
+          grep -Fq 'person_spatiotemporal_transport_v9' ops/c720p/s9-native-security/src/nl/kalenel/s9security/GardenPersonTrackGate.java
+          grep -Fq 'QUIET_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 33
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install PostgreSQL client for authorized C720P management gateway
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo "Management access unavailable"; exit 1; }
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+      - name: Disarm obsolete 4K cutover timers that could overwrite newer capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmd="systemctl --user disable --now s9-pedestrian-v9-cool-idle.timer c720p-s9-postmotion-v7r2-cutover.timer 2>/dev/null || true; systemctl --user is-active s9-pedestrian-v9-cool-idle.timer c720p-s9-postmotion-v7r2-cutover.timer || true"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-unified-disarm-old-${GITHUB_SHA:0:20}" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-unified-disarm','maintenance',:'cmd',80,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "DISARM_JOB=$id"
+          for n in $(seq 1 18); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              echo "TIMER_JOB_STATE=$state"
+              [[ "$state" == 'done|0' ]] || exit 1
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Build and sign coherent 4K plus v9 person-detector APK (no install)
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='ops/c720p/s9-native-security/build-s9-unified-4k-person-v9.py'
+          digest="$(sha256sum "$file" | cut -d' ' -f1)"
+          dest="/tmp/s9-unified-build-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
+          cmd="curl -fSsL --max-time 40 '${uri}' -o '${dest}' && printf '%s  %s\n' '${digest}' '${dest}' | sha256sum -c - >/dev/null && S9_UNIFIED_REF='${GITHUB_SHA}' /usr/bin/python3 '${dest}'"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-unified-build-${GITHUB_SHA:0:22}" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-unified-build','deployment',:'cmd',770,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "UNIFIED_BUILD_JOB=$id"
+          for n in $(seq 1 96); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 9500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_UNIFIED_4K_PERSON_V9_SIGNED_STAGED' <<< "$output" || exit 1
+              exit 0
+            fi
+            sleep 7
+          done
+          echo 'Build not complete during bounded window; camera unchanged.'
+          exit 1
+      - name: Guarded APK replacement and real 4K diagnostic with original-app rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='ops/c720p/s9-native-security/deploy-s9-unified-4k-person-v9.py'
+          digest="$(sha256sum "$file" | cut -d' ' -f1)"
+          dest="/tmp/s9-unified-install-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
+          cmd="curl -fSsL --max-time 40 '${uri}' -o '${dest}' && printf '%s  %s\n' '${digest}' '${dest}' | sha256sum -c - >/dev/null && S9_UNIFIED_REF='${GITHUB_SHA}' /usr/bin/python3 '${dest}'"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-unified-install-${GITHUB_SHA:0:22}" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-unified-install','deployment',:'cmd',750,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "UNIFIED_INSTALL_JOB=$id"
+          for n in $(seq 1 98); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 15000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_UNIFIED_4K_PERSON_V9_DEPLOYMENT_VERIFIED' <<< "$output" || {
+                echo 'Installation not verified, no success claim'; exit 1;
+              }
+              echo 'S9_UNIFIED_4K_PERSON_V9_ACTIVE_AND_VIDEO_VERIFIED'
+              exit 0
+            fi
+            sleep 7
+          done
+          echo 'Upgrade outcome still pending; verify phone before making claims.'
+          exit 1
