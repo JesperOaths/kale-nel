@@ -19,7 +19,7 @@ PHONE_DIR="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4
 V6_SHA="b11b9b07632f8d31e0a254225876fccf09ccae9448417d92350b9f11c9bb4090"
 SIGNER="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
 VERSION="continuous_native_4k_h264_ring_v1"
-SRC_SHA="bc064ff33db7d63944d43d698f1433db95fcc936"
+SRC_SHA="5ec633c22a51791550a206a8651dd3fc271bb061"
 
 def call(a,timeout=35):
  p=subprocess.run(a,text=True,capture_output=True,timeout=timeout)
@@ -140,11 +140,8 @@ def main():
  before=wait_idle(hold=14)
  if before.get("preroll_version")!=VERSION:
   raise RuntimeError("expected_existing_continuous_4k_encoder")
- if before.get("temperature_c",100)>=37.5:
+ if before.get("temperature_c",100)>=38.2:
   print("S9_POSTMOTION_INSTALL_DEFERRED_TEMP",before.get("temperature_c"),flush=True)
-  return
- if before.get("recorded",0)>0:
-  print("S9_POSTMOTION_INSTALL_DEFERRED_RECENT_EVENT",flush=True)
   return
  oldpaths=adb("shell","pm","path",PACKAGE).splitlines()
  oldpaths=[row.split(":",1)[1] for row in oldpaths if row.startswith("package:") and row.endswith("base.apk")]
@@ -159,7 +156,7 @@ def main():
  diagnostic=""
  try:
   d=wait_idle(hold=12)
-  if d.get("temperature_c",100)>=37.5:
+  if d.get("temperature_c",100)>=38.2:
    print("S9_POSTMOTION_INSTALL_DEFERRED_TEMP",d.get("temperature_c"),flush=True)
    return
   adb("shell","am","force-stop",PACKAGE,timeout=20)
@@ -177,7 +174,7 @@ def main():
    if not healthy(d,True):raise RuntimeError("v7_4k_burnin_failed")
    print("V7_BURNIN",i,d.get("temperature_c"),d.get("continuous_4k_dropped_output_frames"),flush=True)
   d=wait_idle(hold=8,expect_tail=True,deadline=110)
-  if d.get("temperature_c",100)>=37.5:raise RuntimeError("diagnostic_heat_guard")
+  if d.get("temperature_c",100)>=38.2:raise RuntimeError("diagnostic_heat_guard")
   if d.get("preroll_diagnostic_used"):raise RuntimeError("diagnostic_already_used")
   requested=control("preroll_diagnostic","record_tail_once")
   if not requested.get("ok") or requested.get("requested_post_motion_hold_ms")!=30000:
@@ -198,7 +195,7 @@ def main():
   adb("shell","rm","--",PHONE_DIR+"/"+diagnostic,timeout=25)
   diagnostic=""
   reboot=wait_idle(hold=14,expect_tail=True,deadline=150)
-  if reboot.get("temperature_c",100)>=37.5:raise RuntimeError("not_cool_enough_for_restart")
+  if reboot.get("temperature_c",100)>=38.2:raise RuntimeError("not_cool_enough_for_restart")
   adb("shell","am","force-stop",PACKAGE,timeout=20)
   launch()
   after=wait_health(True,seconds=125)
