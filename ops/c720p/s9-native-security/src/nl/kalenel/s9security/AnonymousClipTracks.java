@@ -32,7 +32,22 @@ public final class AnonymousClipTracks {
    if(Math.abs(dy)>=1.3f*Math.abs(dx))return dy>0?"image_down":"image_up";
    return "diagonal";
   }
-  public String postureAvailability(){return "not_measured_no_pose_keypoints";}
+  /** Apparent 2D centroid displacement, never real-world walking speed. */
+  public Double imageDisplacementNorm(){
+   if(samples<3||lastMs-firstMs<600)return null;
+   float x0=(firstBox[1]+firstBox[3])*.5f,y0=(firstBox[0]+firstBox[2])*.5f;
+   float x1=(lastBox[1]+lastBox[3])*.5f,y1=(lastBox[0]+lastBox[2])*.5f;
+   double d=Math.hypot(x1-x0,y1-y0);
+   return Double.isFinite(d)?Math.round(d*10000.0)/10000.0:null;
+  }
+  public Double apparentImageSpeedPerSecond(){
+   Double d=imageDisplacementNorm();
+   if(d==null||lastMs<=firstMs)return null;
+   double v=d*1000.0/(lastMs-firstMs);
+   return Double.isFinite(v)?Math.round(v*100000.0)/100000.0:null;
+  }
+  public String gaitAvailability(){return "not_measured_no_temporal_body_keypoints";}
+ public String postureAvailability(){return "not_measured_no_pose_keypoints";}
   public String colour(){
    String best="uncertain";int count=0;
    for(Map.Entry<String,Integer> e:colourVotes.entrySet())
