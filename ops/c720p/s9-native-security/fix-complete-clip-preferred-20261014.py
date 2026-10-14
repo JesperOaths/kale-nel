@@ -59,7 +59,8 @@ def js_check(file_content,filename):
     # Compile the inline scripts with node if available; no HTML tag parser
     # rewrites and no host-side frontend frameworks.
     if not shutil.which("node"):return "node_unavailable"
-    scripts=re.findall(r"<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>",file_content)
+    scripts=re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script>",file_content)
+    if not scripts:raise RuntimeError("No inline scripts found: "+filename)
     for i,script in enumerate(scripts):
         if not script.strip():continue
         with tempfile.NamedTemporaryFile(mode="w",suffix=".js") as f:
