@@ -655,6 +655,8 @@ public final class ClipClassifier {
   long firstStrongAt=-1,lastStrongAt=-1;
   final JSONArray frameEvidence=new JSONArray();
   final OutfitEvidence outfit=new OutfitEvidence();
+  // Derived visual evidence only. Captured on the serialized after-recording worker.
+  final ArrayList<AppearanceSearchIndex.Observation> colourObservations=new ArrayList<>();
   final AnonymousClipTracks anonymousTracks=new AnonymousClipTracks();
   final S9FaceReview faceReview=new S9FaceReview(app,folder,name);
   final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
@@ -738,8 +740,31 @@ public final class ClipClassifier {
      }
      // Use GPU-detected isolated persons to perform bounded on-phone outfit analysis.
      // The sampled crop excludes head/face; no persistent identity assignment.
-     if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)
-      outfit.add(bitmap,distinctPersonBoxes.get(0),(float)framePersonMax);
+     if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1){
+      float[] personBox=distinctPersonBoxes.get(0);
+      outfit.add(bitmap,personBox,(float)framePersonMax);
+      float cx=(personBox[1]+personBox[3])*.5f;
+      String zone=personBox[2]>=MotionGrid.markedTopAt(cx)?"front_garden":"background_street";
+      AppearanceSearchIndex.Observation shirt=AppearanceSearchIndex.sample(
+        bitmap,personBox,micros/1000,"upper_clothing",zone);
+      AppearanceSearchIndex.Observation trousers=AppearanceSearchIndex.sample(
+        bitmap,personBox,micros/1000,"lower_clothing",zone);
+      if(shirt!=null)colourObservations.add(shirt);
+      if(trousers!=null)colourObservations.add(trousers);
+     }
+     // Index detected vehicle colour separately: no person-identity linkage.
+     for(Detection object:found){
+      if(object.score<.60f||object.box==null)continue;
+      if(!("car".equals(object.label)||"truck".equals(object.label)||
+           "bus".equals(object.label)||"motorcycle".equals(object.label)||
+           "bicycle".equals(object.label)))continue;
+      float[] vehicleBox=object.box;
+      float cx=(vehicleBox[1]+vehicleBox[3])*.5f;
+      String zone=vehicleBox[2]>=MotionGrid.markedTopAt(cx)?"front_garden":"background_street";
+      AppearanceSearchIndex.Observation vehicle=AppearanceSearchIndex.sample(
+        bitmap,vehicleBox,micros/1000,"vehicle",zone);
+      if(vehicle!=null)colourObservations.add(vehicle);
+     }
      anonymousTracks.addFrame(micros/1000,anonymousPeople);
      if(p>0)faceReview.sample(bitmap,micros/1000,
        p==1&&distinctPersonBoxes.size()==1?distinctPersonBoxes.get(0):null);
@@ -883,6 +908,17 @@ public final class ClipClassifier {
    result.put("vehicle_confidence",Math.round(maxVehicle*1000)/1000.0);
    result.put("backend",backend);
    outfit.publish(result,folder,name,persons==1&&framesWithMultiplePeople==0);
+   // SQLite resides on S9+ microSD. Failure never invalidates 4K footage.
+   result.put("appearance_search_version",AppearanceSearchIndex.VERSION);
+   result.put("appearance_search_claim","similar_visual_colours_not_identity");
+   try(AppearanceSearchIndex index=new AppearanceSearchIndex(folder)){
+    index.indexClip(name,duration,scene,colourObservations);
+    result.put("appearance_search_status","indexed_on_phone");
+    result.put("appearance_search_observations",colourObservations.size());
+   }catch(Exception indexFailure){
+    result.put("appearance_search_status","index_unavailable_original_preserved");
+    android.util.Log.w("S9_NATIVE_SECURITY","appearance_index_failed",indexFailure);
+   }
    faceReview.publish(result);
    result.put("processing_elapsed_ms",SystemClock.elapsedRealtime()-begin);
    result.put("thumbnail_source_time_ms",bestMotionTimeMs>=0?bestMotionTimeMs:JSONObject.NULL);
