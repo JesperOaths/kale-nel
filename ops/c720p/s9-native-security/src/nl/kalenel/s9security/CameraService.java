@@ -350,7 +350,30 @@ public final class CameraService extends Service {
    mode="opening";
    manager.openCamera(cameraId,new CameraDevice.StateCallback(){
     @Override public void onOpened(CameraDevice dev){
-     camera=dev;recoveryCount=0;configurePreview();
+     camera=dev;recoveryCount=0;
+     // Only a verified and explicitly promoted 4K recorder can resume on boot.
+     boolean preferred=!pilotOnly&&getSharedPreferences("native",MODE_PRIVATE)
+       .getBoolean("continuous_4k_production_enabled",false);
+     if(preferred&&temperature()<375&&folder!=null&&
+         folder.getUsableSpace()>15L*1024*1024*1024){
+      Continuous4KEncoder candidate=new Continuous4KEncoder();
+      try{
+       candidate.start();continuous4K=candidate;continuous4KTrial=true;
+       if(preRoll!=null){preRoll.stop();preRoll=null;}
+       continuous4KLastResult="resuming_verified_4k_on_boot";
+      }catch(Throwable ex){
+       try{candidate.close();}catch(Throwable ignored){}
+       continuous4KFailures++;continuous4KTrial=false;continuous4K=null;
+       getSharedPreferences("native",MODE_PRIVATE).edit()
+         .putBoolean("continuous_4k_production_enabled",false).commit();
+       continuous4KLastResult="boot_fallback_"+ex.getClass().getSimpleName();
+      }
+     }else if(preferred){
+      getSharedPreferences("native",MODE_PRIVATE).edit()
+        .putBoolean("continuous_4k_production_enabled",false).commit();
+      continuous4KLastResult="boot_thermal_or_storage_fallback";
+     }
+     configurePreview();
     }
     @Override public void onDisconnected(CameraDevice dev){
      dev.close();camera=null;
