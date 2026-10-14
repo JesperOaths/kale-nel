@@ -38,7 +38,7 @@
       margin:0!important;
       padding:12px!important;
       scroll-snap-align:start!important;
-      scroll-snap-stop:always!important;
+      scroll-snap-stop:normal!important;
       background:transparent!important;
     }
     .mockup-rail>.mockup>img{

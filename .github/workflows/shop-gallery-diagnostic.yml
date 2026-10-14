@@ -1,0 +1,42 @@
+name: Diagnose Bruis gallery media
+on:
+  push:
+    branches: [fix/shop-gallery-20261014]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Probe public catalog media with HEAD and GET
+        shell: bash
+        run: |
+          node <<'NODE'
+          const root='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
+          const ctl=new AbortController();setTimeout(()=>ctl.abort(),18000);
+          const r=await fetch(root,{signal:ctl.signal,headers:{'cache-control':'no-cache'}});
+          console.log('CATALOG',r.status,r.headers.get('content-type'));
+          if(!r.ok)process.exit(1);
+          const j=await r.json();console.log('PRODUCTS',j.products?.length,'cacheAge',j.cache?.ageSeconds);
+          const names=['Snail Vine','Fringed Gentian',"Solomon's Seal",'Saffron Crocus','Japanese Snowbell','Edelweiss','White Freesia','Ghost Orchid','Hydrangea'];
+          let bad=0;
+          for(const name of names){
+            const p=j.products?.find(x=>x.name===name);
+            if(!p){console.log('MISSING',name);continue;}
+            console.log('PRODUCT',name,'SLIDES',p.mockups?.length);
+            for(const [i,m] of (p.mockups||[]).entries()){
+              const url=m.image;let o='';const ctrl=new AbortController();const to=setTimeout(()=>ctrl.abort(),14000);
+              try{
+                const res=await fetch(url,{signal:ctrl.signal,headers:{Range:'bytes=0-2047'},redirect:'follow'});
+                const ab=await res.arrayBuffer();
+                o=[res.status,res.headers.get('content-type'),ab.byteLength,res.url===url?'':'redirected'].join(' ');
+                if(!res.ok||!String(res.headers.get('content-type')).startsWith('image/'))bad++;
+              }catch(err){bad++;o='ERROR '+String(err).slice(0,120)}
+              finally{clearTimeout(to)}
+              console.log('MEDIA',name,i+1,m.label,o);
+            }
+          }
+          console.log('BAD_MEDIA',bad);
+          NODE

@@ -17,8 +17,8 @@ const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_
 const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${SHOP_V869_VERSION}`;
 const COLLECTION_MEDIA_URL = `https://kalenel.nl/shop/collection-media-v831.js?v=${COLLECTION_MEDIA_VERSION}`;
 const PREVIEWS_URL = `https://kalenel.nl/shop/product-preview-overrides.js?v=${ASSET_VERSION}`;
-const GALLERY_URL = `https://kalenel.nl/shop/gallery-fixes-v832.js?v=${SHOP_V869_VERSION}`;
-const TRANSPARENCY_URL = `https://kalenel.nl/shop/mockup-transparency-v832.js?v=${TRANSPARENCY_V869_VERSION}`;
+const GALLERY_URL = `https://kalenel.nl/shop/gallery-fixes-v832.js?v=${SHOP_V869_VERSION}&fresh=20261014-gallery-r1`;
+const TRANSPARENCY_URL = `https://kalenel.nl/shop/mockup-transparency-v832.js?v=${TRANSPARENCY_V869_VERSION}&fresh=20261014-gallery-r1`;
 const LIGHTBOX_URL = `https://kalenel.nl/shop/image-lightbox-v832.js?v=${ASSET_VERSION}`;
 const STYLES_URL = `https://kalenel.nl/shop/styles.css?v=${STYLES_V869_VERSION}`;
 const CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
@@ -279,7 +279,7 @@ assert.match(baseStyles, /\.cart-line img[^{]*\{[^}]*background:\s*transparent/,
 
 const gallery = await textAsset(GALLERY_URL, 'gallery-fixes-v832.js');
 assert.match(gallery, /flex:0 0 100%!important/, 'each gallery slide must occupy exactly one viewport');
-assert.match(gallery, /scroll-snap-stop:always!important/, 'gallery slides must snap individually');
+assert.match(gallery, /scroll-snap-stop:normal!important/, 'gallery slides must snap individually');
 assert.match(gallery, /partialNextSlide:false/, 'gallery policy must forbid partial next-slide peeking');
 
 const transparency = await textAsset(TRANSPARENCY_URL, 'mockup-transparency-v832.js');
@@ -291,8 +291,8 @@ assert.match(transparency, /safeFallbackToOriginal:true/, 'unsafe transparency o
 assert.match(transparency, /noOneSidedSpanBridge:true/, 'foreground span bridging must not preserve bars beyond the garment');
 assert.match(transparency, /function cropBounds/, 'mockup transparency must crop empty transparent whitespace');
 assert.match(transparency, /cropsTransparentWhitespace:true/, 'mockup policy must declare transparent-whitespace cropping');
-assert.match(transparency, /eager:true/, 'mockups must be processed immediately rather than on scroll');
-assert.doesNotMatch(transparency, /new IntersectionObserver/, 'mockup cleanup must not wait for viewport visibility');
+assert.match(transparency, /viewportPrioritized:true/, 'visible mockups should be processed without expensive offscreen contention');
+assert.match(transparency, /new IntersectionObserver/, 'mockup processing should prioritize visible media');
 
 const collectionMedia = await textAsset(COLLECTION_MEDIA_URL, 'collection-media-v831.js');
 assert.match(collectionMedia, /preservesWhiteGarment:\s*true/, 'collection media must preserve white shirt fill');
