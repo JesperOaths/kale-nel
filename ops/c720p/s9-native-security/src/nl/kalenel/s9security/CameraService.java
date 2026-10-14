@@ -1339,6 +1339,38 @@ public final class CameraService extends Service {
        .put("excluded_from_security_archive",true)
        .put("requested_duration_ms",9000);
     }
+   if("continuous_4k_trial".equals(key)){
+    if(!"enable".equals(value)&&!"disable".equals(value))
+     return response.put("ok",false).put("error","invalid_4k_trial_option");
+    if("enable".equals(value)){
+     if(pilotOnly||continuous4KTrial||temperature()>=375||folder==null||
+        folder.getUsableSpace()<15L*1024*1024*1024)
+      return response.put("ok",false).put("error","4k_trial_guard");
+     // Trial is never persisted: a service restart reverts to known v3.
+     closeSession();
+     Continuous4KEncoder candidate=new Continuous4KEncoder();
+     try{
+      candidate.start();
+      continuous4K=candidate;continuous4KTrial=true;
+      if(preRoll!=null){preRoll.stop();preRoll=null;}
+      continuous4KLastResult="configuring_camera2_4k_surface";
+      configurePreview();
+      return response.put("ok",true).put("trial_only",true)
+         .put("expected_mode","configuring_preview");
+     }catch(Throwable exc){
+      continuous4KFailures++;
+      try{candidate.close();}catch(Throwable ignored){}
+      continuous4K=null;continuous4KTrial=false;
+      if(preRoll==null)preRoll=new GardenPreRoll();
+      continuous4KLastResult="enable_failed_"+exc.getClass().getSimpleName();
+      configurePreview();
+      return response.put("ok",false).put("error",continuous4KLastResult);
+     }
+    }
+    if(!continuous4KTrial)return response.put("ok",true).put("already_disabled",true);
+    restoreLegacy4K("control_disabled");
+    return response.put("ok",true).put("fallback","v3_legacy_verified");
+   }
    if("garden_zone".equals(key)){
      if(!MotionGrid.validGardenZone(value))
       return response.put("ok",false).put("error","unsupported_garden_region");
