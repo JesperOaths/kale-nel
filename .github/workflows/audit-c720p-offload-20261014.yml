@@ -1,0 +1,52 @@
+name: C720P Security Load Audit Readonly
+on:
+  push:
+    branches: [audit/c720p-resource-offload-20261014]
+    paths:
+      - '.github/workflows/audit-c720p-offload-20261014.yml'
+      - 'ops/c720p/audit-bridge-processes-20261014.py'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate read-only scope
+        run: |
+          python3 -m py_compile ops/c720p/audit-bridge-processes-20261014.py
+      - name: Run pinned remote-only hub diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          file='ops/c720p/audit-bridge-processes-20261014.py'
+          digest="$(sha256sum "$file" | cut -d' ' -f1)"
+          dst="/tmp/c720p-load-audit-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
+          cmd="curl -fSsL --max-time 40 '${uri}' -o '${dst}' && printf '%s  %s\n' '${digest}' '${dst}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${dst}'"
+          idem="c720p-memory-20261014-${GITHUB_SHA:0:20}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-load-readonly','diagnostic',:'cmd',145,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || exit 1
+          echo "LOAD_AUDIT_JOB=${job}"
+          for n in $(seq 1 22); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${job}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              stdout="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${job}" | head -c 32000)"
+              echo "$stdout"
+              [[ "$state" == 'done|0' ]] || exit 1
+              exit 0
+            fi
+            sleep 6
+          done
+          exit 1
