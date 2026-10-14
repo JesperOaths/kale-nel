@@ -39,7 +39,7 @@ def test(p):
  assert d["image_speed_body_heights_per_second"]==.125
  assert d["image_path_straightness"]==.88
  assert d["image_detector_box_aspect_ratio"]==.33
- assert "gait" in d["gait_cadence_status"]
+ assert d["gait_cadence_status"]=="not_measurable_from_sampled_frames"
  assert d["body_posture_status"]=="not_measured_no_pose_keypoints"
  row["image_speed_body_heights_per_second"]=float("nan")
  row["image_path_straightness"]=1.9
