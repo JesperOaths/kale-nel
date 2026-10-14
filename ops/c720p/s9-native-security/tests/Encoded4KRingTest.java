@@ -14,17 +14,17 @@ public final class Encoded4KRingTest {
    check(r.offer(packet,i*STEP_US, i%30==0?1:0,i%30==0),"valid packet "+i);
   }
  }
- static void testSevenSecondsWithEarlierIdr() {
+ static void testFiveSecondsWithEarlierIdr() {
   Encoded4KRing ring=new Encoded4KRing();
   feed(ring,0,360,150000);
   Encoded4KRing.Frozen prefix=ring.freeze();
   check(prefix!=null,"cold ring must freeze when populated");
   check(prefix.samples.get(0).key,"first sample must be an IDR");
-  check(prefix.durationUs>=7_000_000L,"historical prefix <7s");
-  check(prefix.durationUs<=9_000_000L,"prefix exceeds memory window");
-  check(ring.bufferedUs()<=9_000_000L,"bounded by time");
+  check(prefix.durationUs>=5_000_000L,"historical prefix <5s");
+  check(prefix.durationUs<=7_000_000L,"prefix exceeds memory window");
+  check(ring.bufferedUs()<=7_000_000L,"bounded by time");
   check(ring.bytes()<=Encoded4KRing.MAX_BYTES,"bounded by bytes");
-  check(prefix.samples.get(0).ptsUs<=prefix.lastPtsUs-7_000_000L,
+  check(prefix.samples.get(0).ptsUs<=prefix.lastPtsUs-5_000_000L,
         "IDR selected AFTER desired start");
   long last=prefix.lastPtsUs;
   long total=prefix.samples.size();
@@ -41,9 +41,9 @@ public final class Encoded4KRingTest {
   Encoded4KRing ring=new Encoded4KRing();
   feed(ring,0,46,180000);
   check(ring.freeze()==null,"partial 1.5s must not be exported");
-  feed(ring,46,160,180000);
-  check(ring.freeze()==null,"partial 5.6s with IDR at 0 may be too short");
-  feed(ring,160,220,180000);
+  feed(ring,46,115,180000);
+  check(ring.freeze()==null,"partial 3.8s must be rejected");
+  feed(ring,115,220,180000);
   check(ring.freeze()!=null,"fully populated buffer should recover");
  }
  static void testPressureNeverSpills() {
@@ -74,7 +74,7 @@ public final class Encoded4KRingTest {
   check(ring.frames()==0&&ring.bufferedUs()==0,"clear must release data");
  }
  public static void main(String[] args){
-  testSevenSecondsWithEarlierIdr();
+  testFiveSecondsWithEarlierIdr();
   testEarlyTriggerCannotSaveOneSecond();
   testPressureNeverSpills();
   testNoIdrCannotExport();
