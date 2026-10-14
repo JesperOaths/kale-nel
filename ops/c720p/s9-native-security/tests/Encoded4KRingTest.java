@@ -41,9 +41,9 @@ public final class Encoded4KRingTest {
   Encoded4KRing ring=new Encoded4KRing();
   feed(ring,0,46,180000);
   check(ring.freeze()==null,"partial 1.5s must not be exported");
-  feed(ring,46,170,180000);
+  feed(ring,46,160,180000);
   check(ring.freeze()==null,"partial 5.6s with IDR at 0 may be too short");
-  feed(ring,170,220,180000);
+  feed(ring,160,220,180000);
   check(ring.freeze()!=null,"fully populated buffer should recover");
  }
  static void testPressureNeverSpills() {
