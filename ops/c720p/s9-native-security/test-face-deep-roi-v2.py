@@ -32,7 +32,7 @@ class FaceBackfillV2Regression(unittest.TestCase):
         "face_review_sampled_frames":36,
         "face_review_status":"no_frontal_face_in_samples",
         "face_evidence_outcome":"face_candidates_rejected_in_sampling",
-        "face_embedding_model_state":"not_tested_no_usable_face",
+        "face_model_state":"not_tested_no_usable_face",
         "face_detector_raw_hits":7,
         "face_rejected_confidence_or_size":3,
         "face_rejected_looking_away_or_roll":2,
@@ -72,7 +72,7 @@ class FaceBackfillV2Regression(unittest.TestCase):
   self.assertIsNone(result["face_deep_person_roi_anchors"])
   self.assertEqual(result["face_evidence_outcome"],
        "legacy_review_no_diagnostics")
-  self.assertEqual(result["face_embedding_model_state"],
+  self.assertEqual(result["face_model_state"],
        "not_tested_no_usable_face")
 
  def test_legacy_and_missing_metadata_have_distinct_states(self):
