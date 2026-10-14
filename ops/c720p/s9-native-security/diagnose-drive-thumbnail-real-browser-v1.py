@@ -5,7 +5,7 @@ Opens temporary, inactive Security tab, observes actual archive cards/relay,
 and closes it. Never prints signed URLs/tokens, writes no user artifacts.
 """
 from __future__ import annotations
-import importlib.util,json,time,urllib.request,sys
+import importlib.util,json,time,urllib.request,sys,os
 from pathlib import Path
 LIB=Path("/home/jespern/c720p-home-hub/build/security-v8/security-v8-real-browser-probe.py")
 spec=importlib.util.spec_from_file_location("s9_cdp",LIB)
@@ -33,7 +33,8 @@ def main():
   else:raise RuntimeError("authenticated_security_shell_not_ready")
   # A background Chromium tab suppresses requestAnimationFrame, so verify with
   # the temporary tab active and restore the user's original target afterwards.
-  browser.call("Target.activateTarget",{"targetId":target})
+  if os.environ.get("DRIVE_PROBE_BACKGROUND")!="1":
+   browser.call("Target.activateTarget",{"targetId":target})
   time.sleep(.5)
   evaluate(tab,"document.querySelector('#s9v5-nav [data-view=archive]').click();")
   time.sleep(2)
