@@ -95,6 +95,9 @@ public final class CameraService extends Service {
  private volatile boolean continuous4KTrial=false;
  private volatile String continuous4KLastResult="not_tested";
  private volatile long continuous4KCompleted=0,continuous4KFailures=0;
+ // Allow thermal cooldown to restore verified full-resolution history.
+ private long continuous4KRetryAfterMs=0;
+ private int continuous4KRecoveryAttempts=0;
  // One-shot, explicitly labelled on-phone validation clip. Never treated as
  // an ordinary person detection or indexed surveillance event.
  private boolean diagnosticPrerollActive=false,diagnosticPrerollUsed=false;
@@ -369,9 +372,16 @@ public final class CameraService extends Service {
        continuous4KLastResult="boot_fallback_"+ex.getClass().getSimpleName();
       }
      }else if(preferred){
-      getSharedPreferences("native",MODE_PRIVATE).edit()
-        .putBoolean("continuous_4k_production_enabled",false).commit();
-      continuous4KLastResult="boot_thermal_or_storage_fallback";
+      // Heat is transient, keep the verified full-4K preference. Storage
+      // exhaustion remains a hard safety failure that disables rearming.
+      if(folder!=null&&folder.getUsableSpace()>15L*1024*1024*1024){
+       continuous4KRetryAfterMs=SystemClock.elapsedRealtime()+20L*60L*1000L;
+       continuous4KLastResult="boot_cooling_wait_for_4k";
+      }else{
+       getSharedPreferences("native",MODE_PRIVATE).edit()
+         .putBoolean("continuous_4k_production_enabled",false).commit();
+       continuous4KLastResult="boot_storage_guard";
+      }
      }
      configurePreview();
     }
@@ -389,9 +399,17 @@ public final class CameraService extends Service {
  }
  private void restoreLegacy4K(String reason){
   continuous4KLastResult="fallback_"+reason;
-  // A failing or deliberately disabled 4K encoder MUST NOT restart on boot.
-  getSharedPreferences("native",MODE_PRIVATE).edit()
-    .putBoolean("continuous_4k_production_enabled",false).commit();
+  boolean thermalOnly=reason.startsWith("thermal_guard");
+  // Failed codecs remain disabled until explicitly re-verified. For a
+  // thermal-only fallback preserve the previous verified 4K preference.
+  if(thermalOnly&&getSharedPreferences("native",MODE_PRIVATE)
+       .getBoolean("continuous_4k_production_enabled",false)){
+   continuous4KRetryAfterMs=SystemClock.elapsedRealtime()+20L*60L*1000L;
+  }else{
+   getSharedPreferences("native",MODE_PRIVATE).edit()
+     .putBoolean("continuous_4k_production_enabled",false).commit();
+   continuous4KRetryAfterMs=0;
+  }
   continuous4KTrial=false;
   if(continuous4K!=null){continuous4K.close();continuous4K=null;}
   if(!pilotOnly&&preRoll==null)preRoll=new GardenPreRoll();
@@ -1131,16 +1149,46 @@ public final class CameraService extends Service {
    gardenTriageQueued=false;
   }
  }
+ private void maybeRestoreCool4K(){
+  if(continuous4KTrial||pilotOnly||!"watching".equals(mode)||
+     !getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_4k_production_enabled",false)||
+     continuous4KRecoveryAttempts>=3)return;
+  long now=SystemClock.elapsedRealtime();
+  if(now<continuous4KRetryAfterMs||temperature()>350||folder==null||
+     folder.getUsableSpace()<15L*1024*1024*1024||camera==null||preview==null||
+     now-lastFrameAt>1500||now-lastMovementAt<30000||
+     gardenPersonCandidateUntil>now)return;
+  continuous4KRecoveryAttempts++;
+  continuous4KRetryAfterMs=now+20L*60L*1000L;
+  // Never disturb an ongoing event. Reconfigure the idle camera only.
+  closeSession();
+  Continuous4KEncoder candidate=new Continuous4KEncoder();
+  try{
+   candidate.start();continuous4K=candidate;continuous4KTrial=true;
+   if(preRoll!=null){preRoll.stop();preRoll=null;}
+   continuous4KLastResult="rearmed_after_thermal_cooldown";
+   configurePreview();
+  }catch(Throwable problem){
+   try{candidate.close();}catch(Throwable ignored){}
+   continuous4K=null;continuous4KTrial=false;
+   continuous4KFailures++;
+   restoreLegacy4K("codec_rearm_"+problem.getClass().getSimpleName());
+  }
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
   if("recording".equals(mode)&&n-lastStart>MAX_MS+8000)stopRecording("watchdog_cap");
-  if(continuous4KTrial&&continuous4K!=null&&
-    (continuous4K.error().length()>0||continuous4K.droppedOutputFrames()>0||temperature()>=395)){
-   failure("continuous_4k_trial_failed_health_guard",null);
-   if("watching".equals(mode))restoreLegacy4K("thermal_or_codec");
-   else if("recording".equals(mode))stopRecording("trial_health_guard");
-   else if("stopping".equals(mode))restoreLegacy4K("stopping_health_guard");
+  if(continuous4KTrial&&continuous4K!=null){
+   boolean codecBad=continuous4K.error().length()>0||continuous4K.droppedOutputFrames()>0;
+   boolean tooHot=temperature()>=395;
+   if(codecBad||tooHot){
+    failure("continuous_4k_trial_failed_health_guard",null);
+    String reason=codecBad?"codec_health_guard":"thermal_guard";
+    if("watching".equals(mode))restoreLegacy4K(reason);
+    else if("recording".equals(mode))stopRecording("trial_health_guard");
+    else if("stopping".equals(mode))restoreLegacy4K(reason+"_stopping");
+   }
   }
   if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
    failure("stalled_YUV_camera",null);scheduleRecover();
@@ -1149,6 +1197,7 @@ public final class CameraService extends Service {
   maybeHistoricalImport();
   maybeFaceBackfill();
   maybeGardenArchiveTriage();
+  maybeRestoreCool4K();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -1173,6 +1222,8 @@ public final class CameraService extends Service {
    d.put("continuous_4k_error",continuous4K==null?"":continuous4K.error());
    d.put("continuous_4k_completed",continuous4KCompleted);
    d.put("continuous_4k_failures",continuous4KFailures);
+   d.put("continuous_4k_recovery_attempts",continuous4KRecoveryAttempts);
+   d.put("continuous_4k_retry_after_ms",continuous4KRetryAfterMs);
    d.put("continuous_4k_last_result",continuous4KLastResult);
    d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
    d.put("preroll_ready",preRoll!=null&&preRoll.ready());
