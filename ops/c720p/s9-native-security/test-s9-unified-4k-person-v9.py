@@ -33,6 +33,12 @@ class UnifiedReleaseSafety(unittest.TestCase):
   self.assertLess(DEPLOY.index('signer(old)'),DEPLOY.index('changed=True'))
   self.assertNotIn('control("continuous_4k_trial","disable")',DEPLOY)
   self.assertNotIn('adb("uninstall"',DEPLOY)
+ def test_runner_remote_timer_variable_escaped_once(self):
+  workflow=(ROOT.parents[2]/'.github/workflows/deploy-s9-unified-4k-person-v9.yml').read_text()
+  line=next(x for x in workflow.splitlines() if 'OBSOLETE_TIMERS_DISARMED' in x)
+  self.assertIn('\\\\$u',line)
+  self.assertNotIn('\\\\\\\\$u',line)
+  self.assertIn('set -euo pipefail',workflow)
  def test_no_implicit_camera_install_in_builder(self):
   self.assertNotIn('adb("install"',BUILDER)
   self.assertNotIn('am force-stop',BUILDER)
