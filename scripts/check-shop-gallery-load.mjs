@@ -23,6 +23,7 @@ let io,disconnected=false;
 class Observer {
   constructor(cb,opts){io={cb,opts,observed:[],unobserve(target){this.observed=this.observed.filter(x=>x!==target)},disconnect(){disconnected=true}};}
   observe(target){io.observed.push(target)}
+  unobserve(target){io.unobserve(target)}
   disconnect(){disconnected=true}
 }
 const ctx={qsa:()=>[card],IntersectionObserver:Observer,window:{IntersectionObserver:Observer,requestAnimationFrame:fn=>fn()},console};
