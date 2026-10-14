@@ -185,6 +185,22 @@ def install_local_sd(H):
   if match:
    name=match.group(1);item=data.get(name)
    if item:return play_sd(self,name,item)
+  # S9_PHONE_JOINED_PREROLL_V1: only a derivative of an indexed 4K MP4.
+  # The actual file size is read via S9+ on-phone HEAD.
+  joined=re.fullmatch(r"/new/saved/complete/(motion_[0-9]{13}[.]mp4)",path)
+  if joined:
+   original=joined.group(1);item=data.get(original)
+   if item:
+    derivative=original+".complete.mp4"
+    try:
+     request=urllib.request.Request("http://127.0.0.1:18808/clip/"+derivative,method="HEAD")
+     with urllib.request.urlopen(request,timeout=9) as response:
+      if response.status!=200 or "video/mp4" not in response.headers.get("Content-Type",""):
+       raise ValueError("complete_not_mp4")
+      size=int(response.headers.get("Content-Length","0"))
+     if 25000<size<260000000:return play_sd(self,derivative,{**item,"size":size})
+    except (ValueError,TypeError,urllib.error.HTTPError,urllib.error.URLError,TimeoutError):pass
+   self.js(404,{"ok":False,"error":"complete_video_not_yet_available"});return
   snap=re.fullmatch(r"/new/saved/snap/([A-Za-z0-9._-]+[.]mp4[.]thumb[.]jpg)",path)
   if snap:
    name=snap.group(1)
