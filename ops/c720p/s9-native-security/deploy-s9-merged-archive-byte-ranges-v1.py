@@ -11,7 +11,7 @@ import datetime,os,subprocess,tempfile,urllib.request
 ROOT=Path("/home/jespern/c720p-home-hub")
 ARCHIVE=ROOT/"bin/c720p-drive-security-archive.py"
 HANDLER=ROOT/"bin/s9_merged_archive_stream_v1.py"
-BASE="https://raw.githubusercontent.com/JesperOaths/kale-nel/6ea9e93e0578b0c0cce25e40b33e95ab32720c3a/ops/c720p/s9-native-security/s9_merged_archive_stream_v1.py"
+BASE="https://raw.githubusercontent.com/JesperOaths/kale-nel/cbbc6a40706fb2483b59794c94df74a208f67ba5/ops/c720p/s9-native-security/s9_merged_archive_stream_v1.py"
 ENTRY="  u=urllib.parse.urlsplit(self.path); p=u.path\n"
 PATCH="""  # S9_COMPLETE_H264_AUTHENTICATED_BYTE_RANGE_V1; port 8795 is loopback only.
   m=re.fullmatch(r'/new/saved/complete/(motion_[0-9]{13}[.]mp4)',p)
@@ -47,14 +47,17 @@ def main():
  old=ARCHIVE.read_bytes();original=old.decode()
  if "S9_COMPLETE_H264_AUTHENTICATED_BYTE_RANGE_V1" in original:
   print("S9_MERGED_MEDIA_HANDLER_ALREADY_INSTALLED");return
- if original.count(ENTRY)!=1 or "def go(self)" not in original:
+ newline="\\r\\n" if b"\\r\\n" in old else "\\n"
+ entry=ENTRY.replace("\\n",newline)
+ patch=PATCH.replace("\\n",newline)
+ if original.count(entry)!=1 or "def go(self)" not in original:
   raise RuntimeError("unexpected_archive_route_layout")
  with urllib.request.urlopen(BASE,timeout=35) as r:helper=r.read(10000)
  h=helper.decode()
  if not all(v in h for v in ("serve_complete","sha256","Content-Range","both_segments_decoded")):
   raise RuntimeError("helper_source_contract")
  compile(h,str(HANDLER),"exec")
- updated=original.replace(ENTRY,ENTRY+PATCH,1).encode()
+ updated=original.replace(entry,entry+patch,1).encode()
  compile(updated.decode(),str(ARCHIVE),"exec")
  stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
  bk=ROOT/"backups/s9-complete-archive-readonly-v1"/stamp
