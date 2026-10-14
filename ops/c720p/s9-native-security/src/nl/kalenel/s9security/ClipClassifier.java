@@ -286,6 +286,12 @@ public final class ClipClassifier {
     .put("peak_detection_score",Math.round(t.peakConfidence*1000)/1000.0)
     .put("upper_clothing_colour",t.colour())
     .put("image_movement_direction",t.imageDirection())
+     .put("image_displacement_normalized",t.imageDisplacementNorm()==null?
+          JSONObject.NULL:t.imageDisplacementNorm())
+     .put("apparent_image_speed_per_second",t.apparentImageSpeedPerSecond()==null?
+          JSONObject.NULL:t.apparentImageSpeedPerSecond())
+     .put("apparent_speed_is_not_real_walking_speed",true)
+     .put("movement_geometry_basis","2d_image_box_centroids_not_gait")
     .put("body_posture_status",t.postureAvailability())
     .put("gait_cadence_status","not_measurable_from_sampled_frames")
     .put("cross_recording_identity","not_attempted");
@@ -643,7 +649,7 @@ public final class ClipClassifier {
      if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)
       outfit.add(bitmap,distinctPersonBoxes.get(0),(float)framePersonMax);
      anonymousTracks.addFrame(micros/1000,anonymousPeople);
-     if(p>0)faceReview.sample(bitmap,micros/1000);
+     if(p>0)faceReview.sampleWithPersonBoxes(bitmap,micros/1000,distinctPersonBoxes);
      if(p>=2)framesWithMultiplePeople++;
      if(p>0){
       strongPersonFrames++;
