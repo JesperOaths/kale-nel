@@ -218,8 +218,34 @@ final class AppearanceSearchIndex implements AutoCloseable {
      (!"bhattacharyya".equals(method)&&!"correlation".equals(method)))
    throw new IllegalArgumentException("bad_search_filter");
   Observation reference=reference(referenceCrop,category);
+  if(reference==null)return new JSONArray();
+  return searchHistogram(reference.hist,category,zone,fromMs,untilMs,method,maxResults);
+ }
+
+ /** Use an indexed recording as a reference without decoding new video. */
+ JSONArray searchByClip(String referenceClip,String category,String zone,
+                        Long fromMs,Long untilMs,String method,int maxResults)throws Exception{
+  if(clipTimestamp(referenceClip)<0||!categoryAllowed(category))
+   throw new IllegalArgumentException("bad_reference_clip");
+  float[] reference=null;
+  try(Cursor row=db.rawQuery("SELECT histogram FROM observations WHERE clip_name=? "+
+    "AND category=? ORDER BY offset_ms ASC LIMIT 1",
+    new String[]{referenceClip,category})){
+   if(row.moveToFirst())reference=unpack(row.getBlob(0));
+  }
+  if(reference==null)return new JSONArray();
+  return searchHistogram(reference,category,zone,fromMs,untilMs,method,maxResults);
+ }
+
+ private JSONArray searchHistogram(float[] referenceHistogram,String category,String zone,
+                                   Long fromMs,Long untilMs,String method,
+                                   int maxResults)throws Exception{
+  if(!categoryAllowed(category)||(zone!=null&&!zoneAllowed(zone))||
+     (!"bhattacharyya".equals(method)&&!"correlation".equals(method)))
+   throw new IllegalArgumentException("bad_search_filter");
+  if(fromMs!=null&&untilMs!=null&&fromMs>untilMs)
+   throw new IllegalArgumentException("inverted_interval");
   JSONArray response=new JSONArray();
-  if(reference==null)return response;
   StringBuilder sql=new StringBuilder("SELECT c.clip_name,c.start_ms,c.end_ms,"+
     "c.scene,o.offset_ms,o.zone,o.histogram FROM observations o "+
     "JOIN clips c ON c.clip_name=o.clip_name WHERE o.category=?");
@@ -234,7 +260,7 @@ final class AppearanceSearchIndex implements AutoCloseable {
    while(rows.moveToNext()){
     float[] other=unpack(rows.getBlob(6));
     if(other==null)continue;
-    double score=similarity(reference.hist,other,method);
+    double score=similarity(referenceHistogram,other,method);
     if(!Double.isFinite(score))continue;
     String name=rows.getString(0);
     JSONObject old=best.get(name);
