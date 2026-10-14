@@ -20,6 +20,7 @@ KNOWN_DETECTORS=frozenset((
     "garden_roi_gpu_two_frame_person_gate_v2",
     "person_spatial_motion_corroborated_v7",
     "person_multiscale_threeframe_static_v8",
+    "person_spatiotemporal_transport_v9",
 ))
 
 def _sensor_value(value,lowest,highest):
@@ -51,7 +52,8 @@ def from_phone(phone,now_ms=None):
             _LAST_CHANGED_AT=now_ms if checked>0 else 0
         age=now_ms-_LAST_CHANGED_AT if _LAST_CHANGED_AT else None
     recent=age is not None and 0<=age<=9000
-    likely=recent and score>=0.44
+    transport_vetoes_last=_sensor_value(phone.get("garden_person_transport_conflicts_last_frame"),0,100)
+    likely=recent and score>=0.44 and not transport_vetoes_last
     backend=phone.get("garden_person_gate_backend","unknown")
     if backend not in ("gpu","cpu","uninitialized","unavailable"):
         backend="unknown"
@@ -78,6 +80,10 @@ def from_phone(phone,now_ms=None):
       "motion_coherent_cells":phone.get("coherent_cells"),
       "garden_zone":phone.get("garden_zone","unknown"),
       "detector_version":phone.get("motion_detector"),
+      "person_motion_or_translation_required":phone.get("garden_person_requires_local_motion_or_spatial_translation") is True,
+      "recording_extension_requires_strong_garden_motion":phone.get("garden_motion_strong_only_extends_recording") is True,
+      "person_transport_conflicts_total":_sensor_value(phone.get("garden_person_transport_conflicts_total"),0,1000000000),
+      "person_transport_conflicts_last_frame":transport_vetoes_last,
       "detector_multiscale_version":phone.get("garden_person_multiscale_version"),
       "detector_inference_passes":_sensor_value(
           phone.get("garden_person_last_multiscale_passes"),0,4),
@@ -114,7 +120,8 @@ def from_phone(phone,now_ms=None):
       },
       "status":{
         "kind":"person_likely_candidate" if likely else
-          ("no_object_detected" if recent else "garden_waiting_for_motion"),
+          ("transport_conflict_not_confirmed_person" if recent and transport_vetoes_last else
+           ("no_object_detected" if recent else "garden_waiting_for_motion")),
         "person_score":round(score,4) if recent else None,
         "vehicle_score":None,"animal_score":None,
         "simultaneous_people":None,

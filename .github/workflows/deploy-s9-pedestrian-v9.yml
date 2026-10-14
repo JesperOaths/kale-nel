@@ -1,0 +1,83 @@
+name: Deploy S9 pedestrian detection v9 (guarded)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-s9-pedestrian-v9.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s9-pedestrian-v9-single-release
+  cancel-in-progress: false
+
+jobs:
+  verify-release-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check pedestrian evidence and immutable deployment safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-person-motion-v9-upgrade.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-person-motion-v9.py
+          grep -Fq 'person_spatiotemporal_transport_v9' ops/c720p/s9-native-security/src/nl/kalenel/s9security/GardenPersonTrackGate.java
+          grep -Fq 'transportDominates' ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java
+          grep -Fq 'GardenPreRoll Continuous4KEncoder Encoded4KRing; do' ops/c720p/s9-native-security/fetch-source.sh
+          test -s ops/c720p/s9-native-security/src/nl/kalenel/s9security/Encoded4KRing.java
+
+  guarded-install:
+    needs: verify-release-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Submit one authorized, backup-guarded phone update
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'Authorized management database connection unavailable'; exit 1; }
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          script='ops/c720p/s9-native-security/deploy-person-motion-v9.py'
+          digest="$(sha256sum "$script" | cut -d' ' -f1)"
+          [[ "$digest" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${script}"
+          dst="/tmp/s9-person-v9-${GITHUB_SHA:0:14}.py"
+          cmd="curl -fSsL --max-time 45 '${uri}' -o '${dst}' && printf '%s  %s\\n' '${digest}' '${dst}' | sha256sum -c - >/dev/null && S9_SECURITY_REF='${GITHUB_SHA}' /usr/bin/python3 '${dst}'"
+          idem="s9-pedestrian-v9-${GITHUB_SHA:0:24}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-pedestrian-v9','deployment',:'cmd',730,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || { echo 'Management job not accepted'; exit 1; }
+          echo "S9_PEDESTRIAN_V9_JOB_ID=$id"
+          for i in $(seq 1 84); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 7000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || { echo 'Safe deployment failed; check phone rollback result'; exit 1; }
+              if grep -q 'S9_PEDESTRIAN_V9_ALREADY_ACTIVE' <<< "$output"; then exit 0; fi
+              grep -q 'S9_PEDESTRIAN_V9_LIVE_HEALTH_PASS' <<< "$output" || {
+                echo 'Deployment deferred or health confirmation missing; active camera unchanged or rolled back.'
+                exit 1
+              }
+              echo 'S9_V9_NATIVE_PEDESTRIAN_CLASSIFIER_INSTALLED_AND_HEALTHY'
+              exit 0
+            fi
+            sleep 8
+          done
+          echo 'Management job still pending after bounded wait; no claim of installation.'
+          exit 1
