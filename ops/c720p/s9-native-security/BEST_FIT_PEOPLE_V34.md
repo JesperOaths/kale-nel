@@ -1,3 +1,5 @@
+> Superseded by [V35](ENSEMBLE_PEOPLE_V35.md). Its audit found unsupported interval-based conflicts and invalid use of presence labels as identity examples. Preserve the V35 policy and evidence gallery; do not restore V34 grouping.
+
 # Best-fit person profiles
 
 V34 replaces the overly fragmented V33 grouping for the owner's existing frozen

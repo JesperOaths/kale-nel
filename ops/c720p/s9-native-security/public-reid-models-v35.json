@@ -1,0 +1,50 @@
+{
+  "osnet_ain.py": {
+    "url": "https://raw.githubusercontent.com/KaiyangZhou/deep-person-reid/f8cd150fdf77e8d9e1ed143b7f308c2c609ded50/torchreid/models/osnet_ain.py",
+    "sha256": "a43b495866a4b1645cd134a30c3011592e8c6826ba4781955a135588cf46cd25",
+    "bytes": 17731
+  },
+  "LICENSE-osnet": {
+    "url": "https://raw.githubusercontent.com/KaiyangZhou/deep-person-reid/f8cd150fdf77e8d9e1ed143b7f308c2c609ded50/LICENSE",
+    "sha256": "3ac8ce2a83d170cb1c7c84152e0c1faca1f187794303514383960d2441716247",
+    "bytes": 1069
+  },
+  "osnet_ain.pth": {
+    "url": "https://huggingface.co/kaiyangzhou/osnet/resolve/a5c5cc037c24235cda3b21085b93ad77c9616224/osnet_ain_x1_0_msmt17_256x128_amsgrad_ep50_lr0.0015_coslr_b64_fb10_softmax_labsmth_flip_jitter.pth",
+    "sha256": "8a07e8da38946f7cee37f4561617bf8b6d2fe8f3a4027852893ea092e46d919f",
+    "bytes": 17293009
+  },
+  "yolox.py": {
+    "url": "https://raw.githubusercontent.com/opencv/opencv_zoo/47534e27c9851bb1128ccc0102f1145e27f23f98/models/object_detection_yolox/yolox.py",
+    "sha256": "c99d8f103d93d27d0fb1807c7b91cb32d2d6c4959326cb88c801f17d00468f84",
+    "bytes": 3216
+  },
+  "demo.py": {
+    "url": "https://raw.githubusercontent.com/opencv/opencv_zoo/47534e27c9851bb1128ccc0102f1145e27f23f98/models/object_detection_yolox/demo.py",
+    "sha256": "44295a9a9616fd1d8dcb7ebf337f655d85db8e8e9413ca1d2e8a9891549c68d6",
+    "bytes": 6649
+  },
+  "yolox.onnx": {
+    "url": "https://media.githubusercontent.com/media/opencv/opencv_zoo/47534e27c9851bb1128ccc0102f1145e27f23f98/models/object_detection_yolox/object_detection_yolox_2022nov.onnx",
+    "sha256": "c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063",
+    "bytes": 35858002
+  },
+  "LICENSE-yolox": {
+    "url": "https://raw.githubusercontent.com/opencv/opencv_zoo/47534e27c9851bb1128ccc0102f1145e27f23f98/models/object_detection_yolox/LICENSE",
+    "sha256": "0ec3668d3274bcf29e8a29e9576d5a2cd96fc78d3c5bec4387355a796e5d9088",
+    "bytes": 11371
+  },
+  "osnet-ain-msmt17.onnx": {
+    "sha256": "0f866ab8e5ae79cf6a5769fe681ab13605bd2eee065ebfcc5166ae0deb2ff6c7",
+    "bytes": 8741910,
+    "source_weight_sha256": "8a07e8da38946f7cee37f4561617bf8b6d2fe8f3a4027852893ea092e46d919f",
+    "export_opset": 12,
+    "output_dimensions": 512,
+    "strict_checkpoint_load": true,
+    "synthetic_parity_max_errors": [
+      2.9087066650390625e-05,
+      8.678436279296875e-05,
+      1.6689300537109375e-05
+    ]
+  }
+}

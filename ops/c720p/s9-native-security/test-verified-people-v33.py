@@ -79,7 +79,7 @@ class Tests(unittest.TestCase):
  def test_single_person_review_links_nonoverlapping_fragments_only(self):
   a,b=track(1,'one',0,3),track(2,'one',4,8);a['human_clip_label']=b['human_clip_label']='person';a['body_vectors']=b['body_vectors']=[]
   self.assertEqual(mod.compare(a,b)['kind'],'single_recording_link');self.assertEqual(len(mod.build_registry({t['id']:t for t in (a,b)})['profiles']),1)
-  b['first_s']=2;self.assertEqual(mod.compare(a,b)['kind'],'conflict');b['first_s']=4;b['human_clip_label']='people';self.assertEqual(mod.compare(a,b)['kind'],'separate')
+  b['first_s']=3;self.assertEqual(mod.compare(a,b)['kind'],'conflict');b['first_s']=4;b['human_clip_label']='people';self.assertEqual(mod.compare(a,b)['kind'],'separate')
  def test_clear_face_anchor_can_represent_verified_single_person_fragments(self):
   a,b,c=track(1,'one',0,3),track(2,'one',4,8),track(3,'other');a['human_clip_label']=b['human_clip_label']='person';b['body_vectors']=[];a['face_vectors']=c['face_vectors']=[[1,0],[1,0]]
   result=mod.build_registry({t['id']:t for t in (a,b,c)});self.assertEqual(len(result['profiles']),1)
@@ -108,5 +108,16 @@ class Tests(unittest.TestCase):
   a=track(1);self.features([a]);mod.write('registry.json',mod.build_registry(mod.tracks_now()));before=mod.read('registry.json');self.best_fit();receipt={};mod.reconcile_registry(receipt=receipt);self.assertEqual(mod.read(receipt['backup']),before);self.assertEqual(hashlib.sha256((mod.ROOT/'registry.json').read_bytes()).hexdigest(),receipt['after_sha256'])
  def test_best_fit_still_excludes_revoked_footage(self):
   a=track(1);self.features([a]);self.best_fit();mod.write('registry.json',mod.build_registry(mod.tracks_now()));del self.current[mod.key(self.a)];self.assertEqual(mod.report()['folders'],[]);self.assertEqual(mod.reconcile_registry(),0)
+ def test_actual_observations_invalidate_cached_constraints(self):
+  a=track(1);before=mod.evidence_signature(a);a['trajectory']=[[1,[0,0,20,80]]];self.assertNotEqual(before,mod.evidence_signature(a));before=mod.evidence_signature(a);a['reid_v35_vectors']=[[1,0]];self.assertNotEqual(before,mod.evidence_signature(a))
+ def test_original_view_images_still_require_per_track_binding(self):
+  a=track(1);kind='body-v35';name=hashlib.sha256((a['id']+':'+kind).encode()).hexdigest()[:24]+'.jpg';blob=b'\xff\xd8'+b'0'*600+b'\xff\xd9';a['images']={name:{'sha256':hashlib.sha256(blob).hexdigest(),'kind':kind}};self.features([a]);(mod.ROOT/'images').mkdir();(mod.ROOT/'images'/name).write_bytes(blob);self.assertEqual(mod.image_bytes(name),blob);a['images'][name]['kind']='body-v350';self.features([a]);self.assertIsNone(mod.image_bytes(name))
+ def test_ensemble_policy_does_not_expose_the_new_private_descriptors(self):
+  a=track(1);a['reid_v35_vectors']=[[1,0]];a['reid_v35_evidence']={'original_sha256':'private'};self.features([a]);mod.write('grouping-policy.json',{'algorithm':'verified_ensemble_best_fit_v35'});mod.write('registry.json',mod.build_registry(mod.tracks_now()));raw=json.dumps(mod.report());self.assertNotIn('reid_v35',raw);self.assertNotIn('private',raw);self.assertNotIn('"evidence"',raw)
+ def test_ensemble_policy_preserves_confirmed_folders_and_revocation(self):
+  a=track(1);self.features([a]);mod.write('grouping-policy.json',{'algorithm':'verified_ensemble_best_fit_v35'});mod.write('registry.json',mod.build_registry(mod.tracks_now()));mod.edit({'action':'confirm','profile_id':'P0001','human_confirmed':True});mod.reconcile_registry();self.assertTrue(mod.read('registry.json')['profiles']['P0001']['reviewed']);del self.current[mod.key(self.a)];self.assertEqual(mod.report()['folders'],[])
+ def test_unmatched_sightings_do_not_count_as_new_people_and_labels_survive_confirmation(self):
+  a,b,c=track(1,start=0,end=1),track(2,start=2,end=3),track(3,start=4,end=5);self.features([a,b,c]);mod.write('grouping-policy.json',{'algorithm':'verified_ensemble_best_fit_v35'});registry=mod.build_registry(mod.tracks_now());registry['links']={a['id']:'P0007',b['id']:'P0007',c['id']:'P0009'};registry['profiles']={'P0007':{'name':'Person #7','reviewed':False},'P0009':{'name':'Person #9','reviewed':False}};registry['next_id']=10;mod.write('registry.json',registry)
+  folders={f['id']:f for f in mod.report()['folders']};self.assertEqual(folders['P0007']['display_name'],'Person #1');self.assertFalse(folders['P0007']['standalone_appearance']);self.assertTrue(folders['P0009']['standalone_appearance']);mod.edit({'action':'confirm','profile_id':'P0007','human_confirmed':True});self.assertEqual(next(f for f in mod.report()['folders'] if f['id']=='P0007')['display_name'],'Person #1')
 
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -5,6 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlsplit
 import s9_archive_review_v32 as review
+from s9_person_observations_v35 import simultaneous
 
 ROOT=review.BASE/'state/s9-verified-people-v33'
 VERSION='verified_people_v33';LOCK=threading.RLock()
@@ -77,7 +78,7 @@ def vector_score(a,b,field):
  values=sorted((v for v in values if v is not None),reverse=True)
  return sum(values[:2])/min(2,len(values)) if values else None
 def conflict(a,b):
- return a['clip_key']==b['clip_key'] and a['id']!=b['id'] and max(a['first_s'],b['first_s'])<=min(a['last_s'],b['last_s'])
+ return simultaneous(a,b)
 def compare(a,b):
  if a['id']==b['id'] or conflict(a,b):return {'kind':'conflict','score':0,'reasons':['Simultaneously visible people stay separate']}
  face=vector_score(a,b,'face_vectors');body=vector_score(a,b,'body_vectors');colour=cosine(a.get('colour'),b.get('colour'))
@@ -135,10 +136,12 @@ def compatible_groups(first,second,tracks,cache):
    if not any(comparison_result(cache,a,b)['kind'] in MATCH_KINDS for a in first for b in second if tracks[a]['clip_key']==source_a and tracks[b]['clip_key']==source_b):return False
  return bool(results)
 def evidence_signature(track):
- return hashlib.sha256(json.dumps({field:track.get(field) for field in ('body_vectors','face_vectors','colour','shape','metrics','human_clip_label')},sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+ return hashlib.sha256(json.dumps({field:track.get(field) for field in ('body_vectors','reid_v35_vectors','reid_v35_evidence','face_vectors','colour','shape','metrics','human_clip_label','trajectory','first_s','last_s','frame_size')},sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
 def build_registry(tracks,cache=None):
- if read('grouping-policy.json',{}).get('algorithm')=='verified_multiview_best_fit_v34':
-  import s9_best_fit_people_v34 as fit
+ algorithm=read('grouping-policy.json',{}).get('algorithm')
+ if algorithm in ('verified_multiview_best_fit_v34','verified_ensemble_best_fit_v35'):
+  if algorithm=='verified_ensemble_best_fit_v35':import s9_best_fit_people_v35 as fit
+  else:import s9_best_fit_people_v34 as fit
   result=fit.build(tracks,cache);profiles={};links={}
   for index,group in enumerate(result['groups'],1):
    pid=f'P{index:04d}';profiles[pid]={'name':f'Person #{index}','reviewed':False,'created_at':utc()};links.update({k:pid for k in group})
@@ -163,7 +166,7 @@ def public_track(track):
  return {k:track.get(k) for k in ('id','source','name','clip_key','first_s','last_s','recorded_at','samples','body_image','face_images','face_captures','metrics','quality')}
 def advance_registry():
  """Publish newly processed appearances without renumbering or undoing reviews."""
- if read('grouping-policy.json',{}).get('algorithm')=='verified_multiview_best_fit_v34':
+ if read('grouping-policy.json',{}).get('algorithm') in ('verified_multiview_best_fit_v34','verified_ensemble_best_fit_v35'):
   tracks=tracks_now();previous=read('registry.json')
   if previous:
    signatures={k:evidence_signature(t) for k,t in tracks.items()}
@@ -206,7 +209,7 @@ def reconcile_registry(fit_cache=None,receipt=None):
  with registry_lock():
   tracks=tracks_now();old=read('registry.json')
   if old is None:raise ValueError('registry_not_ready')
-  protected={pid for pid,p in old['profiles'].items() if p.get('reviewed') or p.get('name')!='Person #'+str(int(pid[1:]))}
+  protected={pid for pid,p in old['profiles'].items() if p.get('reviewed') or p.get('display_name') or p.get('name')!='Person #'+str(int(pid[1:]))}
   editable={k:t for k,t in tracks.items() if old['links'].get(k) not in protected};complete=build_registry(tracks,fit_cache);grouped=build_registry(editable,complete['comparisons'])
   data=json.loads(json.dumps(old));data['links']={k:v for k,v in old['links'].items() if v in protected};used=set(protected)
   for group_id in grouped['profiles']:
@@ -241,6 +244,16 @@ def report():
     for b in items[i+1:]:methods.add(comparison(a,b)['kind'])
    public_items=[{**public_track(t),'match':registry.get('fits',{}).get(t['id'])} for t in items]
    folders.append({'id':pid,'name':p['name'],'reviewed':p.get('reviewed',False),'recordings':len({t['clip_key'] for t in items}),'appearances':len(items),'face_crops':faces,'tentative_appearances':sum(bool(t.get('match') and t['match'].get('review_required')) for t in public_items),'methods':sorted(methods),'items':public_items})
+  if read('grouping-policy.json',{}).get('algorithm')=='verified_ensemble_best_fit_v35':
+   reserved={registry['profiles'][f['id']].get('display_name',f['name']) for f in folders if f['reviewed'] or registry['profiles'][f['id']].get('display_name') or f['name']!='Person #'+str(int(f['id'][1:]))};number=1
+   for folder in sorted(folders,key=lambda f:min((i.get('recorded_at',0),i['id']) for i in f['items'])):
+    automatic=not folder['reviewed'] and not registry['profiles'][folder['id']].get('display_name') and folder['name']=='Person #'+str(int(folder['id'][1:]))
+    folder['standalone_appearance']=automatic and folder['appearances']==1
+    if folder['standalone_appearance']:folder['display_name']='Unmatched sighting'
+    elif automatic:
+     while 'Person #'+str(number) in reserved:number+=1
+     folder['display_name']='Person #'+str(number);number+=1
+    else:folder['display_name']=registry['profiles'][folder['id']].get('display_name',folder['name'])
   unmeasured=[]
   for k,c in approved.items():
    entry=features.get('entries',{}).get(k)
@@ -268,11 +281,21 @@ def edit(data):
   action=data.get('action');pid=data.get('profile_id');other=data.get('other_id');observation=data.get('observation_id')
   if not isinstance(pid,str) or pid not in registry['profiles']:return 404,{'ok':False,'error':'folder_not_found'}
   before=json.loads(json.dumps(registry))
+  labels={f['id']:f['display_name'] for f in report()['folders'] if f.get('display_name') and not f.get('standalone_appearance')} if read('grouping-policy.json',{}).get('algorithm')=='verified_ensemble_best_fit_v35' else None
+  def keep_label(profile):
+   if labels is None:return
+   if profile not in labels:
+    number=1
+    while 'Person #'+str(number) in labels.values():number+=1
+    labels[profile]='Person #'+str(number)
+   registry['profiles'][profile]['display_name']=labels[profile]
   if action=='rename':
    name=data.get('name')
    if not isinstance(name,str) or not 1<=len(name.strip())<=56 or any(not c.isprintable() or c in '<>' for c in name):return 400,{'ok':False,'error':'invalid_name'}
    registry['profiles'][pid]['name']=name.strip()
+   registry['profiles'][pid].pop('display_name',None)
   elif action=='confirm':
+   keep_label(pid)
    registry['profiles'][pid]['reviewed']=True
    for observation,folder in registry['links'].items():
     if folder==pid and observation in registry.get('fits',{}):registry['fits'][observation].update(review_required=False,support='human_confirmed')
@@ -280,12 +303,14 @@ def edit(data):
    if not isinstance(other,str) or other==pid or other not in registry['profiles']:return 400,{'ok':False,'error':'invalid_other_folder'}
    first=[t for k,t in tracks.items() if registry['links'].get(k)==pid];second=[t for k,t in tracks.items() if registry['links'].get(k)==other]
    if any(conflict(a,b) for a in first for b in second):return 409,{'ok':False,'error':'simultaneously_visible_people_cannot_merge'}
+   keep_label(pid)
    registry['links']={k:pid if v==other else v for k,v in registry['links'].items()};registry['profiles'][pid]['reviewed']=True
    for observation,folder in registry['links'].items():
     if folder==pid and observation in registry.get('fits',{}):registry['fits'][observation].update(review_required=False,support='human_confirmed')
   elif action=='split':
    if observation not in tracks or registry['links'].get(observation)!=pid:return 404,{'ok':False,'error':'appearance_not_in_folder'}
    number=registry['next_id'];new=f'P{number:04d}';registry['next_id']+=1;registry['profiles'][new]={'name':f'Person #{number}','reviewed':True,'created_at':utc()};registry['links'][observation]=new;registry['profiles'][pid]['reviewed']=False
+   keep_label(pid);keep_label(new)
    for item,folder in registry['links'].items():
     if item in registry.get('fits',{}) and folder in (pid,new):registry['fits'][item].update(review_required=folder==pid,support='human_separated' if folder==new else 'review_after_split')
   else:return 400,{'ok':False,'error':'invalid_action'}
@@ -300,7 +325,7 @@ def image_bytes(name):
   meta=track.get('images',{}).get(name)
   if meta:
    kind=meta.get('kind','')
-   if not re.fullmatch('body|face-[0-3]',kind) or hashlib.sha256((track['id']+':'+kind).encode()).hexdigest()[:24]+'.jpg'!=name:return None
+   if not re.fullmatch('body(?:-v35)?|face-(?:v35d?-)?[0-3]',kind) or hashlib.sha256((track['id']+':'+kind).encode()).hexdigest()[:24]+'.jpg'!=name:return None
    path=ROOT/'images'/name
    if path.is_symlink() or not path.is_file() or not 500<=path.stat().st_size<=600000:return None
    blob=path.read_bytes()

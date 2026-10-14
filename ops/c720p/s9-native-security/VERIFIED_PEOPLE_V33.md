@@ -1,7 +1,7 @@
 # Verified recordings → person folders
 
-**Current grouping:** [BEST_FIT_PEOPLE_V34.md](BEST_FIT_PEOPLE_V34.md) supersedes
-the V33 matching rules and 64-group result below. Extraction receipts, approved
+**Current grouping:** [ENSEMBLE_PEOPLE_V35.md](ENSEMBLE_PEOPLE_V35.md) supersedes
+the V33/V34 matching rules and historical group counts below. Extraction receipts, approved
 inputs and stored evidence from this release remain in use.
 
 The owner released the review gate with **“yes, done”** on 14 October 2026.
