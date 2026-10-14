@@ -858,9 +858,9 @@ public final class CameraService extends Service {
        // face-only review, rather than marking "no face in 12 frames" final.
        // New-era clips stay on their standard real-time review path.
        boolean hasReview=meta.has("face_review_version");
-       boolean deep=hasReview&&
-          meta.optInt("face_snapshots_saved",0)==0&&
-          !meta.has("face_deep_review_version")&&
+       // Re-run only pre-v2 face-negative historical reviews. Successful
+       // v2 no-face reviews are terminal for this sampler, not proof of absence.
+       boolean deep=ClipClassifier.deepFaceNeedsUpgrade(meta)&&
           Long.parseLong(mp4name.substring(7,20))<1791687597000L;
        if(!deep&&hasReview)continue;
        if(!mp4name.equals(meta.optString("name"))||meta.optLong("bytes",-1)!=video.length())continue;
