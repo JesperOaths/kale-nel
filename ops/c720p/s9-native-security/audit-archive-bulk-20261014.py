@@ -31,6 +31,12 @@ for p,s,hits in candidates[:5]:
  for term in ['Select all shown','Delete selected','Verify person','phone_or_media_unavailable','retained or not confirmed','JSON.parse']:
   at=s.find(term)
   if at>=0:print('NEAR',term,repr(s[max(0,at-420):at+1020]))
+for p,raw,hits in candidates:
+ if p.name=='archive-review-v32.js':
+  print('REVIEW_V32_SOURCE_BEGIN')
+  print(raw)
+  print('REVIEW_V32_SOURCE_END')
+  break
 print('PHONE_STATUS',{key:http('http://127.0.0.1:18808/status').get(key) for key in (
  'ok','mode','motion_detector','temperature_c','garden_person_gate_ready',
  'garden_person_gate_backend','continuous_4k_production_persisted','continuous_4k_ready',
