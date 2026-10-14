@@ -156,6 +156,15 @@ final class AppearanceSearchIndex implements AutoCloseable {
   return Math.abs(total-1.0)<.01?result:null;
  }
 
+ /** A manifest alone is not proof of an indexed clip after SD/database loss. */
+ boolean hasClip(String name){
+  if(clipTimestamp(name)<0)return false;
+  try(Cursor row=db.rawQuery("SELECT 1 FROM clips WHERE clip_name=? LIMIT 1",
+                             new String[]{name})){
+   return row.moveToFirst();
+  }
+ }
+
  /** Inserts are idempotent and transactional; only finalized MP4 names allowed. */
  void indexClip(String clipName,long durationMs,String scene,List<Observation> samples){
   long start=clipTimestamp(clipName);
