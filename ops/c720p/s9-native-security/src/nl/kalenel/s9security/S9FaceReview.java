@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
 final class S9FaceReview implements AutoCloseable {
  static final String VERSION="s9_face_review_v1";
  private static final int MAX_FRAMES=12,MAX_FACES=3,MAX_CAPTURES=8,EMBED=128,SIDE=112;
+ private static final int MAX_PERSON_REGIONS=4,MAX_DETECTOR_SIDE=1024,MAX_DETECTOR_PIXELS=786432;
+ static final String CAPTURE_ALGORITHM="person_head_roi_face_evidence_v2";
  private static final Pattern FILE=Pattern.compile("motion_[0-9]{13}[.]mp4");
  private static final Pattern PERSON=Pattern.compile("[A-Za-z0-9][A-Za-z0-9 _.-]{0,55}");
  private static final double KNOWN_FLOOR=.84,UNKNOWN_FLOOR=.88,MIN_MARGIN=.045;
@@ -35,7 +37,8 @@ final class S9FaceReview implements AutoCloseable {
  private final List<Entry> unknown=new ArrayList<>();
  private Interpreter net;
  private String sha="",status="no_frontal_face_in_samples",error="";
- private int nextId=1,frames=0,detected=0,saved=0;
+ private String indexEpoch=UUID.randomUUID().toString();
+ private int nextId=1,frames=0,detected=0,saved=0,regionScans=0,evidenceCandidates=0;
  private boolean loaded=false,modelAttempted=false,modelReady=false;
  private static final class Entry {
   final String id; final float[] vector;
@@ -92,26 +95,25 @@ final class S9FaceReview implements AutoCloseable {
    error=ex instanceof FileNotFoundException?"face_model_not_bundled":ex.getClass().getSimpleName();
   }
  }
- private static Bitmap crop(Bitmap b,int x,int y,int size){
-  int left=Math.max(0,Math.min(b.getWidth()-1,x-size/2));
-  int top=Math.max(0,Math.min(b.getHeight()-1,y-(int)(size*.43)));
-  int side=Math.min(size,Math.min(b.getWidth()-left,b.getHeight()-top));
-  if(side<70)return null;
-  return Bitmap.createBitmap(b,left,top,side,side);
+ private static final class Quality {
+  final double brightness,texture;
+  Quality(double brightness,double texture){this.brightness=brightness;this.texture=texture;}
+  boolean evidence(){return brightness>7&&brightness<248&&texture>=2;}
+  boolean recognition(){return brightness>10000.0/961&&brightness<235000.0/961&&texture>8500.0/961;}
  }
- private static boolean usable(Bitmap b){
+ private static Quality quality(Bitmap b){
   Bitmap mini=Bitmap.createScaledBitmap(b,64,64,true);
   try{
    int[] p=new int[4096];mini.getPixels(p,0,64,0,0,64,64);
-   double sum=0,contrast=0;
+   double sum=0,contrast=0;int count=0;
    for(int y=1;y<63;y+=2)for(int x=1;x<63;x+=2){
     int q=y*64+x,c=p[q],r=p[q+1],d=p[q+64];
     int v=((c>>16)&255)+((c>>8)&255)+(c&255);
     int vr=((r>>16)&255)+((r>>8)&255)+(r&255);
     int vd=((d>>16)&255)+((d>>8)&255)+(d&255);
-    sum+=v/3.0; contrast+=(Math.abs(v-vr)+Math.abs(v-vd))/3.0;
+    sum+=v/3.0; contrast+=(Math.abs(v-vr)+Math.abs(v-vd))/3.0;count++;
    }
-   return sum>10000&&sum<235000&&contrast>8500; // reject extremely dark/flat crops
+   return new Quality(sum/count,contrast/count);
   }finally{if(mini!=b)mini.recycle();}
  }
  private float[] vector(Bitmap face)throws Exception{
@@ -183,7 +185,10 @@ final class S9FaceReview implements AutoCloseable {
   loaded=true;
   try{
    File file=index();
-   if(!file.isFile()||file.length()>1700000||file.length()<20)return;
+   if(!file.exists()){writeIndex();return;}
+   if(!file.isFile()||file.length()>1700000||file.length()<20){
+    status="face_index_read_error";error="face_index_invalid_size";return;
+   }
    byte[] buf=new byte[(int)file.length()];
    try(InputStream in=new FileInputStream(file)){
     int pos=0;while(pos<buf.length){int n=in.read(buf,pos,buf.length-pos);if(n<0)return;pos+=n;}
@@ -193,14 +198,20 @@ final class S9FaceReview implements AutoCloseable {
     status="face_model_changed_requires_reenrollment";return;
    }
    nextId=Math.max(1,doc.optInt("next_id",1));
+   if(nextId>99999)throw new IOException("face_index_invalid_next_id");
+   String priorEpoch=doc.optString("face_index_epoch","");
+   boolean legacyEpoch=!priorEpoch.matches("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|[a-f0-9]{32,64}");
+   if(!legacyEpoch)indexEpoch=priorEpoch;
    JSONArray rows=doc.optJSONArray("anonymous");
    if(rows!=null)for(int i=0;i<Math.min(2500,rows.length());i++){
     JSONObject row=rows.optJSONObject(i);if(row==null)continue;
     String id=row.optString("id");
     if(!id.matches("unknown_[0-9]{5}"))continue;
     float[] v=parseVector(row.optJSONArray("embedding"));
-    if(v!=null)unknown.add(new Entry(id,v));
+    if(v!=null){unknown.add(new Entry(id,v));nextId=Math.max(nextId,Integer.parseInt(id.substring(8))+1);}
    }
+   // Add provenance to legacy stores without changing the enrollment/model version.
+   if(legacyEpoch)writeIndex();
   }catch(Exception e){status="face_index_read_error";error=e.getClass().getSimpleName();}
  }
  private void writeIndex(){
@@ -209,7 +220,7 @@ final class S9FaceReview implements AutoCloseable {
    JSONArray rows=new JSONArray();
    for(Entry e:unknown)rows.put(new JSONObject().put("id",e.id).put("embedding",writeVector(e.vector)));
    JSONObject doc=new JSONObject().put("version",VERSION).put("model_sha256",sha)
-    .put("next_id",nextId).put("anonymous",rows);
+    .put("face_index_epoch",indexEpoch).put("next_id",nextId).put("anonymous",rows);
    File file=index(),tmp=new File(file.getParentFile(),file.getName()+".partial");
    try(FileOutputStream out=new FileOutputStream(tmp)){
     out.write(doc.toString().getBytes("UTF-8"));out.getFD().sync();
@@ -267,41 +278,105 @@ final class S9FaceReview implements AutoCloseable {
    return result.put("person_id",closest.id).put("match_status","anonymous_similarity_unverified")
     .put("cosine_similarity",Math.round(score*1000)/1000.0);
   }
-  if(unknown.size()>=2500)return result.put("match_status","face_index_capacity_reached");
+  if(unknown.size()>=2500||nextId>99999)return result.put("match_status","face_index_capacity_reached");
   String id=String.format(Locale.US,"unknown_%05d",nextId++);
   unknown.add(new Entry(id,embedding.clone()));
   writeIndex();
   return result.put("person_id",id).put("match_status","new_anonymous_candidate");
  }
- void sample(Bitmap frame,long ms){
-  if(!FILE.matcher(clip).matches()||frames>=frameLimit||captures.length()>=MAX_CAPTURES)return;
-  frames++;
-  Bitmap scaled=null,rgb=null;
+ private static final class FaceHit {
+  S9FaceGeometry.Region crop;
+  double x,y,nativeEyes;
+  float confidence,yaw,roll;
+  String source;
+  boolean recognitionGeometry;
+ }
+ private void findFaces(Bitmap frame,S9FaceGeometry.Region region,String source,List<FaceHit> hits){
+  Bitmap proposal=null,scaled=null,rgb=null;
   try{
-   int width=960,height=Math.max(2,(int)Math.round(frame.getHeight()*960.0/frame.getWidth())&~1);
-   scaled=Bitmap.createScaledBitmap(frame,width,height,true);
+   int[] dimensions=S9FaceGeometry.detectorSize(region,MAX_DETECTOR_SIDE,MAX_DETECTOR_PIXELS);
+   if(dimensions==null)return;
+   int width=dimensions[0],height=dimensions[1];
+   proposal=Bitmap.createBitmap(frame,region.left,region.top,region.width(),region.height());
+   scaled=Bitmap.createScaledBitmap(proposal,width,height,true);
    rgb=scaled.copy(Bitmap.Config.RGB_565,false);
+   if(rgb==null)return;
+   regionScans++;
    FaceDetector.Face[] faces=new FaceDetector.Face[MAX_FACES];
    int n=new FaceDetector(width,height,MAX_FACES).findFaces(rgb,faces);
-   for(int i=0;i<n&&captures.length()<MAX_CAPTURES;i++){
-    FaceDetector.Face f=faces[i];if(f==null||f.confidence()<.65f||f.eyesDistance()<12)continue;
-    float yaw=f.pose(FaceDetector.Face.EULER_Y),roll=f.pose(FaceDetector.Face.EULER_Z);
-    if(Math.abs(yaw)>20||Math.abs(roll)>17)continue;
+   for(int i=0;i<n;i++){
+    FaceDetector.Face f=faces[i];
+    if(f==null||!Float.isFinite(f.confidence())||f.confidence()<.55f||
+       !Float.isFinite(f.eyesDistance())||f.eyesDistance()<4)continue;
     PointF center=new PointF();f.getMidPoint(center);
-    int x=(int)(center.x*frame.getWidth()/width),y=(int)(center.y*frame.getHeight()/height);
-    int size=(int)(f.eyesDistance()*3.5*frame.getWidth()/width);
-    Bitmap face=crop(frame,x,y,size);if(face==null)continue;
+    FaceHit hit=new FaceHit();
+    hit.x=region.left+center.x*region.width()/(double)width;
+    hit.y=region.top+center.y*region.height()/(double)height;
+    hit.nativeEyes=f.eyesDistance()*region.width()/(double)width;
+    if(hit.nativeEyes<9.2)continue;
+    hit.crop=S9FaceGeometry.faceCrop(frame.getWidth(),frame.getHeight(),hit.x,hit.y,hit.nativeEyes,32);
+    if(hit.crop==null)continue;
+    hit.confidence=f.confidence();hit.yaw=f.pose(FaceDetector.Face.EULER_Y);hit.roll=f.pose(FaceDetector.Face.EULER_Z);
+    if(!Float.isFinite(hit.yaw)||!Float.isFinite(hit.roll))continue;
+    hit.source=source;
+    hit.recognitionGeometry=S9FaceGeometry.recognitionGeometry(hit.confidence,hit.nativeEyes,hit.yaw,hit.roll);
+    int duplicate=-1;
+    for(int j=0;j<hits.size();j++)if(S9FaceGeometry.sameFace(hits.get(j).crop,hit.crop)){duplicate=j;break;}
+    if(duplicate<0)hits.add(hit);
+    else{
+     FaceHit old=hits.get(duplicate);
+     if((hit.recognitionGeometry&&!old.recognitionGeometry)||
+        (hit.recognitionGeometry==old.recognitionGeometry&&hit.confidence>old.confidence))hits.set(duplicate,hit);
+    }
+   }
+  }catch(Exception ex){error="face_region_"+ex.getClass().getSimpleName();}
+  finally{
+   if(rgb!=null&&rgb!=frame&&rgb!=scaled&&rgb!=proposal)rgb.recycle();
+   if(scaled!=null&&scaled!=frame&&scaled!=proposal)scaled.recycle();
+   if(proposal!=null&&proposal!=frame)proposal.recycle();
+  }
+ }
+ private static JSONArray boxJson(float[] box)throws Exception{
+  JSONArray result=new JSONArray();for(float coordinate:box)result.put((double)coordinate);return result;
+ }
+ void sample(Bitmap frame,long ms){sample(frame,ms,Collections.<float[]>emptyList());}
+ /** Boxes are detector proposals [top,left,bottom,right] normalized to this same
+  * original decoded frame. They locate evidence; they are not face detections.
+  */
+ void sample(Bitmap frame,long ms,List<float[]> personBoxes){
+  if(frame==null||frame.isRecycled()||ms<0||!FILE.matcher(clip).matches()||
+     frames>=frameLimit||captures.length()>=MAX_CAPTURES)return;
+  frames++;
+  try{
+   ArrayList<FaceHit> hits=new ArrayList<>();
+   for(S9FaceGeometry.Region region:S9FaceGeometry.headRegions(frame.getWidth(),frame.getHeight(),personBoxes,MAX_PERSON_REGIONS))
+    findFaces(frame,region,"person_head_roi",hits);
+   // One bounded scene pass catches faces when the person proposal is inaccurate.
+   findFaces(frame,new S9FaceGeometry.Region(0,0,frame.getWidth(),frame.getHeight(),-1),"full_frame",hits);
+   Collections.sort(hits,(a,b)->a.recognitionGeometry==b.recognitionGeometry?
+     Float.compare(b.confidence,a.confidence):(a.recognitionGeometry?-1:1));
+   for(int i=0;i<hits.size()&&captures.length()<MAX_CAPTURES;i++){
+    FaceHit hit=hits.get(i);S9FaceGeometry.Region bounds=hit.crop;
+    Bitmap face=Bitmap.createBitmap(frame,bounds.left,bounds.top,bounds.width(),bounds.height());
     try{
-     if(!usable(face))continue;
-     detected++;
-     float[] emb=null;
-     try{emb=vector(face);}catch(Exception ex){status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();}
-     JSONObject match=assign(emb);
-     String id=match.optString("person_id","pending_"+(detected));
-     String safe=id.replaceAll("[^A-Za-z0-9_-]","_");
+     Quality quality=quality(face);if(!quality.evidence())continue;
+     evidenceCandidates++;
+     boolean recognitionQuality=hit.recognitionGeometry&&quality.recognition();
+     float[] emb=null;JSONObject match;
+     if(recognitionQuality){
+      detected++;
+      try{emb=vector(face);}catch(Exception ex){status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();}
+      match=assign(emb);
+     }else match=new JSONObject().put("match_status","not_comparable_face_quality");
+     String id=match.optString("person_id","pending_"+evidenceCandidates);
+     // Preserve older crops and the existing authenticated snapshot basename
+     // contract. The proposal token keeps different faces unique even if an
+     // uncertain embedding happens to suggest the same alias in one frame.
+     String safe=("roi31_"+i+"_"+id).replaceAll("[^A-Za-z0-9_-]","_");
+     if(safe.length()>65)safe=safe.substring(0,65);
      File outDir=new File(sd,"FaceSnapshots");
      if(!outDir.isDirectory()&&!outDir.mkdirs())throw new IOException("snapshot_directory_failed");
-     String image=clip.substring(0,clip.length()-4)+"__"+safe+"__"+ms+"_"+i+".jpg";
+     String image=clip.substring(0,clip.length()-4)+"__"+safe+"__"+ms+"_"+(i%MAX_FACES)+".jpg";
      File target=new File(outDir,image),tmp=new File(outDir,image+".partial");
      try(FileOutputStream o=new FileOutputStream(tmp)){
       if(!face.compress(Bitmap.CompressFormat.JPEG,90,o))throw new IOException("face_jpeg_encode_failed");
@@ -310,27 +385,58 @@ final class S9FaceReview implements AutoCloseable {
      if(!tmp.renameTo(target))throw new IOException("face_jpeg_move_failed");
      saved++;
      match.put("snapshot",image).put("snapshot_size_bytes",target.length())
-      .put("snapshot_sha256",fileHash(target))
-      .put("time_ms",ms).put("frontal_candidate",true)
-      .put("yaw_degrees",Math.round(yaw)).put("roll_degrees",Math.round(roll));
+      .put("snapshot_sha256",fileHash(target)).put("time_ms",ms)
+      .put("frontal_candidate",hit.recognitionGeometry).put("recognition_quality",recognitionQuality)
+      .put("capture_quality","detector_confirmed_evidence").put("source_region",hit.source)
+      .put("face_box",boxJson(S9FaceGeometry.box(bounds,frame.getWidth(),frame.getHeight())))
+      .put("detector_confidence",Math.round(hit.confidence*1000)/1000.0)
+      .put("native_eye_distance_pixels",Math.round(hit.nativeEyes*10)/10.0)
+      .put("yaw_degrees",Math.round(hit.yaw)).put("roll_degrees",Math.round(hit.roll));
+     int owner=S9FaceGeometry.owner(hit.x,hit.y,frame.getWidth(),frame.getHeight(),personBoxes);
+     if(owner>=0){
+      match.put("person_proposal_index",owner)
+       .put("person_box",boxJson(S9FaceGeometry.normalizedBox(personBoxes.get(owner))));
+     }
      captures.put(match);
-     if(modelReady&&!status.equals("face_model_changed_requires_reenrollment"))
+     if(modelReady&&!status.equals("face_model_changed_requires_reenrollment")&&!status.equals("face_index_read_error"))
       status="review_complete_unverified_matches";
-    }finally{face.recycle();}
+     else if(status.equals("no_frontal_face_in_samples"))status="face_evidence_saved_quality_limited";
+    }finally{if(face!=frame)face.recycle();}
    }
   }catch(Exception e){error=e.getClass().getSimpleName();if(saved==0)status="face_review_failed";}
-  finally{if(rgb!=null)rgb.recycle();if(scaled!=null&&scaled!=frame)scaled.recycle();}
+ }
+ /** Attach a face only to the uniquely overlapping detector track in this frame. */
+ void associateTracks(long ms,AnonymousClipTracks tracks)throws Exception{
+  for(int i=0;i<captures.length();i++){
+   JSONObject face=captures.getJSONObject(i);
+   if(face.optLong("time_ms",-1)!=ms)continue;
+   JSONArray box=face.optJSONArray("person_box");if(box==null||box.length()!=4)continue;
+   int owner=0;
+   for(AnonymousClipTracks.Track t:tracks.tracks()){
+    if(t.lastMs!=ms)continue;
+    double delta=0;for(int k=0;k<4;k++)delta+=Math.abs(box.optDouble(k,-9)-t.lastBox[k]);
+    if(delta<.002){if(owner!=0){owner=0;break;}owner=t.id;}
+   }
+   if(owner>0)face.put("temporary_track_id",owner);
+  }
  }
  void publish(JSONObject manifest)throws Exception{
   manifest.put("face_review_version",VERSION);
+  manifest.put("face_capture_algorithm",CAPTURE_ALGORITHM);
   manifest.put("face_review_status",status);
   manifest.put("face_review_sampled_frames",frames);
   manifest.put("face_frontal_candidates",detected);
+  manifest.put("face_detected_evidence_candidates",evidenceCandidates);
+  manifest.put("face_review_region_scans",regionScans);
   manifest.put("face_snapshots_saved",saved);
   manifest.put("face_candidates",captures);
   manifest.put("face_review_identity_claim","similarity_suggestion_not_verified_identity");
   manifest.put("face_embedding_on_s9_only",true);
   manifest.put("face_model_sha256",sha.isEmpty()?JSONObject.NULL:sha);
+  // Stable store/model provenance prevents a recycled unknown_00001 after a
+  // private index reset from silently joining another person's old gallery.
+  manifest.put("face_gallery_epoch",modelReady&&loaded?
+    hash((sha+":"+indexEpoch).getBytes("UTF-8")):JSONObject.NULL);
   if(!error.isEmpty())manifest.put("face_review_error_type",error);
  }
  public void close(){

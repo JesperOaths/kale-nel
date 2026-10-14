@@ -90,6 +90,8 @@ public final class CameraService extends Service {
  private ExecutorService jpegEncoder;
  // On-phone low-bitrate H.264 memory ring: frozen only after a verified 4K trigger.
  private GardenPreRoll preRoll;
+ private volatile GardenJoinedClip joinedClip;
+ private long lastJoinBackfillScanAt=0;
  private GardenPreRoll.Frozen frozenPreRoll;
  // One-shot, explicitly labelled on-phone validation clip. Never treated as
  // an ordinary person detection or indexed surveillance event.
@@ -99,7 +101,7 @@ public final class CameraService extends Service {
  private volatile boolean jpegBusy=false;
  private volatile long jpegRequestedAt=0,jpegEncoded=0,jpegErrors=0;
  private File folder,partial,finished;
- private String cameraId="",mode="stopped",lastFailure="",lastClip="",lastReview="",backend="pending";
+ private volatile String cameraId="",mode="stopped",lastFailure="",lastClip="",lastReview="",backend="pending";
  private volatile boolean running=false,pilotOnly=true;
  private volatile long frames=0,motionEvents=0,completed=0,reviewed=0,failed=0,suppressedByRate=0;
  private volatile long reserveUsed=0,fallbackEvidenceSaved=0,fallbackEvidenceFailed=0;
@@ -108,6 +110,9 @@ public final class CameraService extends Service {
  private volatile boolean historicalQueued=false;
  private volatile boolean faceBackfillQueued=false;
  private volatile boolean movementBackfillQueued=false;
+ private volatile boolean personEvidenceQueued=false;
+ private volatile long personEvidenceDone=0,personEvidenceErrors=0,lastPersonEvidenceScan=0;
+ private final Map<String,Integer> personEvidenceRetries=new HashMap<>();
  private final Map<String,Integer> movementBackfillRetries=new HashMap<>();
  private volatile long movementBackfillDone=0,movementBackfillErrors=0,lastMovementBackfillScan=0;
  private volatile long faceBackfillDone=0,faceBackfillErrors=0,lastFaceBackfillScan=0;
@@ -193,7 +198,15 @@ public final class CameraService extends Service {
    return t;
   });
   // Failure of this independent worker never affects the native 4K recorder.
-  if(!pilotOnly)preRoll=new GardenPreRoll();
+  if(!pilotOnly){
+   preRoll=new GardenPreRoll();
+   joinedClip=new GardenJoinedClip(()->running&&
+      "watching".equals(mode)&&temperature()<345&&
+      !gardenPersonGateBusy&&!faceBackfillQueued&&!movementBackfillQueued&&
+      !personEvidenceQueued&&!historicalQueued&&!recoveryQueued&&!gardenTriageQueued&&
+      (lastMovementAt<=0||SystemClock.elapsedRealtime()-lastMovementAt>12000L)&&
+      folder!=null&&folder.getUsableSpace()>12L*1024*1024*1024);
+  }
   jpegEncoder=Executors.newSingleThreadExecutor(job->{
    Thread thread=new Thread(job,"s9-onphone-preview-jpeg");
    thread.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-2));
@@ -550,6 +563,7 @@ public final class CameraService extends Service {
    return;
   }
 
+  if(joinedClip!=null)joinedClip.pauseForCapture();
   // Capture previous H.264 frames BEFORE recorder reconfigures the camera.
   // A failed/missing preroll never blocks the full-quality event recording.
   frozenPreRoll=preRoll==null?null:preRoll.freeze();
@@ -638,7 +652,11 @@ public final class CameraService extends Service {
     Log.i(TAG,"FINALIZED_TRUE_4K name="+lastClip+" bytes="+candidate.length()
       +" event="+eventSegment.eventId+" segment="+eventSegment.sequence);
     final File saved=candidate;final long motionAtSave=motionEvents;
-    if(preRoll!=null&&frozenPreRoll!=null)preRoll.saveAsync(saved,frozenPreRoll);
+    if(preRoll!=null&&frozenPreRoll!=null)preRoll.saveAsync(saved,frozenPreRoll,
+       (original,companion)->{
+        GardenJoinedClip join=joinedClip;
+        if(join!=null)join.offer(original,companion);
+       });
     frozenPreRoll=null;
     final String reviewTrigger=reason+"_"+captureTier;
     writeCaptureEvidenceAsync(saved,eventSegment);
@@ -754,7 +772,9 @@ public final class CameraService extends Service {
   if(recoveryQueued || reviewer==null || folder==null)return;
   recoveryQueued=true;
   final File archive=folder;
-  try{reviewer.execute(new Runnable(){public void run(){recoverArchive(archive);}});}
+  try{reviewer.execute(new Runnable(){public void run(){
+   try{recoverArchive(archive);}finally{recoveryQueued=false;}
+  }});}
   catch(java.util.concurrent.RejectedExecutionException e){recoveryQueued=false;}
  }
  private void recoverArchive(File archive){
@@ -998,6 +1018,36 @@ public final class CameraService extends Service {
    gardenTriageQueued=false;
   }
  }
+ private boolean personEvidenceSafe(){
+  return running&&"watching".equals(mode)&&temperature()<335&&
+   (lastMovementAt<=0||SystemClock.elapsedRealtime()-lastMovementAt>=60000L)&&
+   folder!=null&&folder.getUsableSpace()>20L*1024*1024*1024;
+ }
+ private void maybePersonEvidence(){
+  long now=SystemClock.elapsedRealtime();
+  if(personEvidenceQueued||movementBackfillQueued||faceBackfillQueued||historicalQueued||
+     recoveryQueued||gardenTriageQueued||gardenPersonGateBusy||(joinedClip!=null&&joinedClip.busy())||reviewer==null||classifier==null||now-lastPersonEvidenceScan<90000L||!personEvidenceSafe())return;
+  personEvidenceQueued=true;final File target=folder;
+  try{reviewer.execute(new Runnable(){public void run(){
+   try{
+    File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
+    if(manifests==null)return;Arrays.sort(manifests,Comparator.comparing(File::getName).reversed());
+    for(File sidecar:manifests){
+     if(!personEvidenceSafe())return;
+     String name=sidecar.getName().replace(".verified.json","");
+     if(sidecar.length()>90000||personEvidenceRetries.getOrDefault(name,0)>=3)continue;
+     try{
+      JSONObject meta;try(FileInputStream in=new FileInputStream(sidecar);ByteArrayOutputStream out=new ByteArrayOutputStream()){
+       byte[] b=new byte[8192];int n;while((n=in.read(b))>0){out.write(b,0,n);if(out.size()>90000)throw new IOException("person_manifest_too_large");}meta=new JSONObject(out.toString("UTF-8"));}
+      if(meta.optInt("person_count",0)<=0||ClipClassifier.PERSON_EVIDENCE_VERSION.equals(meta.optString("person_evidence_version")))continue;
+      File video=new File(target,name);if(!video.isFile()||video.length()<100000||video.length()>800000000)continue;
+      if(classifier.enrichPersonEvidence(video,target,name,meta,()->personEvidenceSafe())){personEvidenceDone++;Log.i(TAG,"S9_PERSON_EVIDENCE_V31_COMPLETE "+name);}
+      return;
+     }catch(Exception e){personEvidenceErrors++;personEvidenceRetries.put(name,personEvidenceRetries.getOrDefault(name,0)+1);Log.w(TAG,"person_evidence_v31_failed",e);return;}
+    }
+   }finally{lastPersonEvidenceScan=SystemClock.elapsedRealtime();personEvidenceQueued=false;}
+  }});}catch(java.util.concurrent.RejectedExecutionException e){personEvidenceQueued=false;}
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
@@ -1005,10 +1055,17 @@ public final class CameraService extends Service {
   else if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
    failure("stalled_YUV_camera",null);scheduleRecover();
   }
+  maybePersonEvidence();
+  if(!personEvidenceQueued){
   maybeMovementBackfill();
   maybeHistoricalImport();
   maybeFaceBackfill();
   maybeGardenArchiveTriage();
+  }
+  if(!personEvidenceQueued&&joinedClip!=null&&folder!=null&&n-lastJoinBackfillScanAt>30000L){
+   lastJoinBackfillScanAt=n;
+   joinedClip.maybeRetryOne(folder);
+  }
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -1038,6 +1095,20 @@ public final class CameraService extends Service {
    d.put("preroll_diagnostic_active",diagnosticPrerollActive);
    d.put("preroll_diagnostic_clip",diagnosticPrerollClip);
    d.put("preroll_diagnostic_result",diagnosticPrerollResult);
+   d.put("preroll_prepend_version",GardenJoinedClip.VERSION);
+   d.put("preroll_prepend_enabled",joinedClip!=null);
+   d.put("preroll_prepend_4k_original_preserved",true);
+   d.put("preroll_prepend_combined_resolution","1280x720");
+   d.put("preroll_prepend_merged",joinedClip==null?0:joinedClip.joined());
+   d.put("preroll_prepend_errors",joinedClip==null?0:joinedClip.errors());
+   d.put("preroll_prepend_skipped",joinedClip==null?0:joinedClip.skipped());
+   d.put("preroll_prepend_busy",joinedClip!=null&&joinedClip.busy());
+   d.put("preroll_prepend_halted_after_failures",joinedClip!=null&&joinedClip.halted());
+   d.put("preroll_prepend_pending",joinedClip==null?0:joinedClip.pending());
+   d.put("preroll_prepend_last_name",joinedClip==null?"":joinedClip.lastName());
+   d.put("preroll_prepend_last_duration_ms",joinedClip==null?0:joinedClip.lastDurationMs());
+   d.put("preroll_prepend_last_prefix_ms",joinedClip==null?0:joinedClip.lastPreRollMs());
+   d.put("preroll_prepend_last_error",joinedClip==null?"":joinedClip.lastError());
    d.put("motion_detector",GardenPersonTrackGate.VERSION);
     d.put("capture_event_version",CaptureContinuity.VERSION);
     d.put("capture_event_id",eventChain.eventId());
@@ -1088,6 +1159,10 @@ public final class CameraService extends Service {
    d.put("historical_import_last_error_type",lastHistoricalError);
    d.put("historical_import_queued",historicalQueued);
    d.put("face_review_engine","s9_native_face_review_v1");
+   d.put("person_evidence_version",ClipClassifier.PERSON_EVIDENCE_VERSION);
+   d.put("archive_recovery_queued",recoveryQueued);
+   d.put("person_evidence_completed",personEvidenceDone).put("person_evidence_errors",personEvidenceErrors)
+    .put("person_evidence_queued",personEvidenceQueued).put("pose_review_last_status",classifier==null?"not_ready":classifier.lastPoseStatus());
    d.put("face_backfill_queued",faceBackfillQueued);
     d.put("garden_archive_triage_version","onphone_24frame_reversible_quarantine_v1");
    d.put("garden_archive_auto_quarantine_enabled",GARDEN_AUTO_QUARANTINE_ENABLED);
@@ -1375,6 +1450,7 @@ public final class CameraService extends Service {
   }
   if("starting".equals(mode))Log.w(TAG,"SHUTDOWN_DURING_RECORDER_PREPARE_PARTIAL_PRESERVED");
   running=false;mode="stopped";
+  if(joinedClip!=null){joinedClip.stop();joinedClip=null;}
   if(preRoll!=null){preRoll.stop();preRoll=null;frozenPreRoll=null;}
   if(jpegEncoder!=null){jpegEncoder.shutdownNow();jpegEncoder=null;}
   jpegBusy=false;

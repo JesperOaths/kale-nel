@@ -62,6 +62,15 @@ public final class PhoneMediaRangeTest {
    check(headers(prerollPart).contains("206 Partial Content"),"preroll 206");
    check(prerollPart.length-split(prerollPart)==4096,"preroll exact range");
    preroll.delete();
+   File complete=new File(root,name+".complete.mp4");
+   try(FileOutputStream out=new FileOutputStream(complete)){out.write(data);}
+   try{
+    byte[] joined=serve(root,"GET /clip/"+complete.getName()+" HTTP/1.1\r\nRange: bytes=1234-9876\r\n\r\n");
+    check(headers(joined).contains("206 Partial Content"),"complete recording 206");
+    check(Arrays.equals(Arrays.copyOfRange(joined,split(joined),joined.length),Arrays.copyOfRange(data,1234,9877)),"complete recording byte fidelity");
+    byte[] joinedHead=serve(root,"HEAD /clip/"+complete.getName()+" HTTP/1.1\r\n\r\n");
+    check(headers(joinedHead).contains("200 OK")&&joinedHead.length==split(joinedHead),"complete recording HEAD");
+   }finally{complete.delete();}
    byte[] traversal=serve(root,"GET /clip/../secrets HTTP/1.1\r\n\r\n");
    check(headers(traversal).contains("404 Not Found"),"no traversal");
    byte[] unfinished=serve(root,"GET /clip/"+name+".recording HTTP/1.1\r\n\r\n");

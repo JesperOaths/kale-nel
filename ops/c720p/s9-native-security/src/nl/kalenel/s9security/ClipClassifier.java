@@ -16,6 +16,10 @@ import java.security.MessageDigest;
 
 /** Offline after-motion clip classification. Optional local face review; no cloud. */
 public final class ClipClassifier {
+ static final String PERSON_EVIDENCE_VERSION="s9_person_evidence_v31";
+ interface ReviewGuard {boolean safe();}
+ private volatile String lastPoseStatus="not_reviewed";
+ String lastPoseStatus(){return lastPoseStatus;}
  private final Context app;
  private Interpreter net;
  private GpuDelegate delegate;
@@ -542,6 +546,104 @@ public final class ClipClassifier {
   writeJson(new File(folder,name+".verified.json"),manifest);
   return true;
  }
+ /** Bounded, interruptible enrichment on the serialized review worker. Original
+  * video bytes and earlier sidecar remain recoverable; live callbacks never call this. */
+ public synchronized boolean enrichPersonEvidence(File video,File folder,String name,JSONObject manifest,ReviewGuard guard)throws Exception{
+  if(!guard.safe()||PERSON_EVIDENCE_VERSION.equals(manifest.optString("person_evidence_version")))return false;
+  if(!name.matches("motion_[0-9]{13}[.]mp4")||!name.equals(manifest.optString("name"))||
+     !video.getCanonicalFile().getParentFile().equals(folder.getCanonicalFile())||
+     video.length()!=manifest.optLong("bytes")||!digest(video).equals(manifest.optString("sha256")))
+   throw new IOException("person_evidence_original_not_verified");
+  MediaMetadataRetriever media=new MediaMetadataRetriever();
+  AnonymousClipTracks tracks=new AnonymousClipTracks();
+  Map<Integer,PersonMotionMetrics> metrics=new HashMap<>();
+  S9FaceReview faces=new S9FaceReview(app,folder,name);
+  PersonPoseReview pose=new PersonPoseReview(app);
+  long began=SystemClock.elapsedRealtime();int sparse=0,dense=0;
+  try{
+   init();media.setDataSource(video.getAbsolutePath());
+   long duration=Long.parseLong(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+   if(duration<=0||duration>120000)return false;
+   int frames=(int)Math.min(12,Math.max(6,(duration+1799L)/1800L));
+   for(int n=0;n<frames;n++){
+    if(!guard.safe()||SystemClock.elapsedRealtime()-began>45000)return false;
+    long at=(long)(((n+.5)/(double)frames)*duration);
+    Bitmap bitmap=media.getFrameAtTime(at*1000,MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+    if(bitmap==null)continue;
+    try{
+     List<Detection> found=reviewPeople(bitmap);
+     List<float[]> regions=new ArrayList<>();List<AnonymousClipTracks.Hit> hits=new ArrayList<>();
+     for(Detection d:found){if(d.score<.5f)continue;boolean duplicate=false;
+      for(float[] box:regions)if(samePersonBox(box,d.box)){duplicate=true;break;}
+      if(!duplicate){regions.add(d.box);hits.add(new AnonymousClipTracks.Hit(d.box,d.score,upperClothingColour(bitmap,d.box)));}}
+     tracks.addFrame(at,hits);
+     for(AnonymousClipTracks.Track t:tracks.tracks())if(t.lastMs==at&&sparse<32){
+      PersonMotionMetrics.Observation observation=pose.infer(bitmap,t.lastBox,at);
+      if(observation!=null){if(!metrics.containsKey(t.id))metrics.put(t.id,new PersonMotionMetrics());metrics.get(t.id).add(observation);}sparse++;
+     }
+     if(!regions.isEmpty()){faces.sample(bitmap,at,regions);faces.associateTracks(at,tracks);}
+    }finally{bitmap.recycle();}
+   }
+   // Gait requires actual adjacent decoded frames, an isolated track and a
+   // stable spatial association. Sync-keyframe timestamps alone are insufficient.
+   if(tracks.appearances()==1&&pose.available()){
+    AnonymousClipTracks.Track t=tracks.tracks().get(0);
+    if(t.samples>=3&&t.lastMs-t.firstMs>=3000){
+     long start=t.firstMs;float[] prior=t.firstBox.clone();Set<String> seen=new HashSet<>();
+     for(int n=0;n<32&&start+n*100L<=t.lastMs;n++){
+      if(!guard.safe()||SystemClock.elapsedRealtime()-began>45000)return false;
+      long at=start+n*100L;Bitmap bitmap=media.getFrameAtTime(at*1000,MediaMetadataRetriever.OPTION_CLOSEST);
+      if(bitmap==null)break;
+      try{
+       String fingerprint=frameFingerprint(bitmap);if(!seen.add(fingerprint))continue;
+       List<Detection> candidates=reviewPeople(bitmap);List<float[]> distinct=new ArrayList<>();
+       for(Detection d:candidates)if(d.score>=.5f){boolean duplicate=false;for(float[] b:distinct)if(samePersonBox(b,d.box))duplicate=true;if(!duplicate)distinct.add(d.box);}
+       if(distinct.size()!=1||boxIoU(prior,distinct.get(0))<.18f)break;
+       prior=distinct.get(0);
+       PersonMotionMetrics.Observation observation=pose.infer(bitmap,prior,at,fingerprint);
+       if(observation!=null){if(!metrics.containsKey(t.id))metrics.put(t.id,new PersonMotionMetrics());metrics.get(t.id).add(observation);dense++;}
+      }finally{bitmap.recycle();}
+     }
+    }
+   }
+   JSONObject poseStatus=pose.statusJson();lastPoseStatus=poseStatus.optString("status");
+   if(!guard.safe())return false;
+   JSONArray summaries=anonymousTracksJson(tracks);
+   for(int i=0;i<summaries.length();i++){
+    JSONObject track=summaries.getJSONObject(i);PersonMotionMetrics m=metrics.get(track.getInt("temporary_track_id"));
+    if(m!=null){JSONObject summary=PersonPoseReview.metricsJson(m.snapshot());track.put("pose_metrics",summary)
+     .put("body_posture_status",summary.optString("posture_availability")).put("gait_cadence_status",summary.optString("gait_availability"));}
+   }
+   // Do not lose older useful crops when a new pass finds no face evidence.
+   JSONObject faceMeta=new JSONObject();faces.publish(faceMeta);
+   if(faceMeta.optInt("face_snapshots_saved")>0||manifest.optInt("face_snapshots_saved")==0)
+    for(Iterator<String> k=faceMeta.keys();k.hasNext();){String key=k.next();manifest.put(key,faceMeta.get(key));}
+   manifest.put("face_capture_algorithm",S9FaceReview.CAPTURE_ALGORITHM)
+    .put("person_evidence_version",PERSON_EVIDENCE_VERSION).put("pose_review",poseStatus)
+    .put("pose_sparse_inferences",sparse).put("pose_dense_observations",dense)
+    .put("anonymous_tracking_version","sampled_box_tracklets_v1").put("anonymous_track_scope","this_recording_only")
+    .put("anonymous_track_count",tracks.appearances()).put("anonymous_tracks",summaries);
+   if(video.length()!=manifest.optLong("bytes")||!digest(video).equals(manifest.optString("sha256")))throw new IOException("person_evidence_original_changed");
+   File sidecar=new File(folder,name+".verified.json"),backup=new File(folder,name+".verified.pre-v31.json");
+   if(!backup.exists()){try(FileInputStream in=new FileInputStream(sidecar);FileOutputStream out=new FileOutputStream(backup)){
+    byte[] b=new byte[8192];int count;while((count=in.read(b))>0)out.write(b,0,count);out.getFD().sync();}}
+   writeJson(sidecar,manifest);return true;
+  }finally{pose.close();faces.close();media.release();}
+ }
+ private List<Detection> reviewPeople(Bitmap bitmap)throws Exception{
+  List<Detection> found=new ArrayList<>();boolean strong=false;
+  for(Detection d:detect(bitmap))if("person".equals(d.label)){found.add(d);if(d.score>=.5f)strong=true;}
+  if(!strong)for(Detection d:detectGardenPeopleMultiscale(bitmap)){
+   boolean duplicate=false;for(int i=0;i<found.size();i++)if(samePersonBox(found.get(i).box,d.box)){if(d.score>found.get(i).score)found.set(i,d);duplicate=true;break;}
+   if(!duplicate)found.add(d);
+  }return found;
+ }
+ private static String frameFingerprint(Bitmap bitmap)throws Exception{
+  Bitmap small=Bitmap.createScaledBitmap(bitmap,64,36,true);
+  try{int[] pixels=new int[64*36];small.getPixels(pixels,0,64,0,0,64,36);ByteBuffer bytes=ByteBuffer.allocate(pixels.length*4);
+   for(int p:pixels)bytes.putInt(p);StringBuilder hex=new StringBuilder();for(byte b:MessageDigest.getInstance("SHA-256").digest(bytes.array()))hex.append(String.format(Locale.US,"%02x",b&255));return hex.toString();
+  }finally{if(small!=bitmap)small.recycle();}
+ }
  public synchronized JSONObject process(File mp4, File folder, String name, String trigger, long motionEvents)throws Exception{
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
@@ -643,7 +745,7 @@ public final class ClipClassifier {
      if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)
       outfit.add(bitmap,distinctPersonBoxes.get(0),(float)framePersonMax);
      anonymousTracks.addFrame(micros/1000,anonymousPeople);
-     if(p>0)faceReview.sample(bitmap,micros/1000);
+     if(p>0){faceReview.sample(bitmap,micros/1000,distinctPersonBoxes);faceReview.associateTracks(micros/1000,anonymousTracks);}
      if(p>=2)framesWithMultiplePeople++;
      if(p>0){
       strongPersonFrames++;

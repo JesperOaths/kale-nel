@@ -123,7 +123,7 @@ async function deleteRecording(source,name,info,card,button){
   const path=source==='drive'?'/new/api/saved/delete':'/new/api/sd/delete';
   const body=source==='drive'?{remote_name:name}:{clip_no:name,expected_bytes:size,confirm:'DELETE '+name};
   const headers={'Content-Type':'application/json'};
-  if(source==='sd')headers['X-S9-Archive-Delete-Intent']='explicit-user-delete-v1';
+  headers['X-S9-Archive-Delete-Intent']='explicit-user-delete-v1';
   const r=await a.fetch(path,{method:'POST',headers,body:JSON.stringify(body),cache:'no-store'});
   const data=await r.json().catch(()=>({}));
   if(!r.ok||data.ok!==true||!(data.deleted===true||Array.isArray(data.deleted)))

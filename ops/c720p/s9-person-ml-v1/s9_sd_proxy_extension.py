@@ -58,7 +58,7 @@ def serve_face_snapshot(handler,name,record):
  evidence=next((entry for entry in record.get("face_candidates",[]) if
                 entry.get("snapshot_name")==name and entry.get("snapshot_on_s9")
                 and isinstance(entry.get("snapshot_size"),int)
-                and 2000<=entry["snapshot_size"]<=2200000
+                and (500 if record.get("face_capture_algorithm")=="person_head_roi_face_evidence_v2" else 2000)<=entry["snapshot_size"]<=2200000
                 and re.fullmatch(r"[a-f0-9]{64}",str(entry.get("snapshot_sha256","")))),None)
  if evidence is None:
   handler.js(404,{"ok":False,"error":"face_snapshot_not_indexed"});return
@@ -79,6 +79,62 @@ def serve_face_snapshot(handler,name,record):
  handler.send_header("X-Content-Type-Options","nosniff")
  handler.end_headers()
  if handler.command!="HEAD":handler.wfile.write(data)
+
+def safe_thumbnail_revision(row):
+ """Return a bounded cache key from validated thumbnail digests only."""
+ digest=row.get("thumbnail_sha256")
+ if isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest):return digest[:16]
+ revision=row.get("thumbnail_revision")
+ return revision if isinstance(revision,str) and re.fullmatch(r"[a-f0-9]{16}",revision) else None
+
+def safe_detection_timeline(row):
+ """Bounded sampled model observations, never identities or raw frame bytes."""
+ import math
+ raw=row.get("person_sample_timeline")
+ result={"person_sample_timeline":[],"person_timeline_status":"not_in_original_review",
+         "person_first_sample_ms":None,"person_last_sample_ms":None}
+ if raw is None:return result
+ duration=row.get("duration_ms")
+ frames=row.get("sampled_frames",row.get("sampled_frame_count"))
+ if (not isinstance(raw,list) or len(raw)>12 or type(duration) is not int or
+     not 0<duration<=120000 or type(frames) is not int or not 0<=frames<=32 or len(raw)>frames):
+  return {**result,"person_timeline_status":"invalid_sample_timeline"}
+ clean=[];previous=-1
+ for point in raw:
+  if not isinstance(point,dict):return {**result,"person_timeline_status":"invalid_sample_timeline"}
+  ms=point.get("time_ms");score=point.get("person_peak_score")
+  counts=[point.get(k) for k in ("people_at_050","vehicles_at_050","animals_at_050")]
+  if (type(ms) is not int or not previous<ms<=duration or
+      any(type(n) is not int or not 0<=n<=64 for n in counts) or
+      type(score) not in (int,float) or not math.isfinite(score) or not 0<=score<=1):
+   return {**result,"person_timeline_status":"invalid_sample_timeline"}
+  clean.append({"time_ms":ms,"people_at_050":counts[0],"vehicles_at_050":counts[1],
+                "animals_at_050":counts[2],"person_peak_score":round(float(score),3)})
+  previous=ms
+ positive=[p["time_ms"] for p in clean if p["people_at_050"]>0]
+ return {"person_sample_timeline":clean,"person_timeline_status":"sampled_model_evidence",
+         "person_first_sample_ms":positive[0] if positive else None,
+         "person_last_sample_ms":positive[-1] if positive else None}
+
+def capture_event_metrics(row):
+ """Preserve verified logical event grouping while validating catalog readback."""
+ result={"capture_evidence_status":"not_in_original_manifest"}
+ if row.get("capture_evidence_status")!="recording_segment_verified":return result
+ event=row.get("capture_event_id");index=row.get("capture_segment_index")
+ transition=row.get("capture_segment_transition");prior=row.get("capture_previous_segment")
+ if (not isinstance(event,str) or not re.fullmatch(r"garden_[0-9]{13}",event) or
+     type(index) is not int or not 1<=index<=250 or
+     transition not in ("new_event","reentry_after_quiet","max_duration_continuation") or
+     (index==1 and transition!="new_event")):
+  return {"capture_evidence_status":"invalid_event_metadata"}
+ gap=row.get("capture_segment_gap_ms")
+ if index>1 and (not isinstance(prior,str) or not re.fullmatch(r"motion_[0-9]{13}[.]mp4",prior) or
+                 prior==row.get("name") or type(gap) is not int or not 0<=gap<=60000):
+  return {"capture_evidence_status":"invalid_event_link"}
+ return {"capture_evidence_status":"recording_segment_verified","capture_event_id":event,
+         "capture_segment_index":index,"capture_previous_segment":prior if index>1 else None,
+         "capture_segment_transition":transition,"capture_segment_gap_ms":gap if index>1 else None,
+         "capture_has_physical_transition_gaps":True}
 
 def detection_metrics(row):
  """Bounded model evidence. Never expose person identity or appearance vectors."""
@@ -104,10 +160,28 @@ def detection_metrics(row):
  return {"person_score":round(float(s),3) if s is not None else None,
          "sampled_frames":n,"person_detected_frames_050":hits,
          "person_presence_percent":coverage,"duration_ms":duration,
-         "review_backend":backend,"person_event_category":event}
+         "review_backend":backend,"person_event_category":event,"thumbnail_revision":safe_thumbnail_revision(row),**safe_detection_timeline(row),**capture_event_metrics(row)}
+
+def bounded_face_counter(r,key,maximum):
+ value=r.get(key)
+ return value if type(value) is int and 0<=value<=maximum else None
+
+def safe_face_outcome(r):
+ value=r.get("face_evidence_outcome")
+ return value if value in (
+  "snapshot_candidates_saved","review_processing_failed",
+  "no_face_detector_hit_in_sampled_frames",
+  "face_candidates_rejected_in_sampling",
+  "legacy_review_no_diagnostics","not_reviewed") else "not_available"
+
+def safe_face_model_state(r):
+ value=r.get("face_model_state")
+ return value if value in (
+  "not_tested_no_usable_face","available_on_phone",
+  "unavailable_on_phone","not_available") else "not_available"
 
 def install_local_sd(H):
- original=H.go
+ original_handler=H.go
  def go(self):
   url=urllib.parse.urlsplit(self.path)
   path=url.path
@@ -144,9 +218,22 @@ def install_local_sd(H):
       "anonymous_tracks":tracks,
       "anonymous_id_scope":"clip_only_never_across_recordings",
       "movement_evidence_scope":"camera_image_only_not_gait_identity",
+      "face_gallery_epoch":r.get("face_gallery_epoch"),
+      "face_capture_algorithm":r.get("face_capture_algorithm"),
       "face_review_status":r.get("face_review_status","not_available_in_original_review"),
       "face_review_sampled_frames":r.get("face_review_sampled_frames"),
       "face_deep_review_version":r.get("face_deep_review_version"),
+      "face_evidence_outcome":safe_face_outcome(r),
+      "face_model_state":safe_face_model_state(r),
+      "face_detector_raw_hits":bounded_face_counter(r,"face_detector_raw_hits",144),
+      "face_rejected_confidence_or_size":bounded_face_counter(r,"face_rejected_confidence_or_size",144),
+      "face_rejected_looking_away_or_roll":bounded_face_counter(r,"face_rejected_looking_away_or_roll",144),
+      "face_rejected_crop_geometry":bounded_face_counter(r,"face_rejected_crop_geometry",144),
+      "face_rejected_dark_or_blurry":bounded_face_counter(r,"face_rejected_dark_or_blurry",144),
+      "face_deep_detector_anchor_frames":bounded_face_counter(r,"face_deep_detector_anchor_frames",12),
+      "face_deep_person_roi_anchors":bounded_face_counter(r,"face_deep_person_roi_anchors",12),
+      "face_deep_multiple_person_anchors":bounded_face_counter(r,"face_deep_multiple_person_anchors",12),
+      "face_deep_multiscale_refinement_passes":bounded_face_counter(r,"face_deep_multiscale_refinement_passes",12),
       "face_snapshots_saved":r.get("face_snapshots_saved",0),
       "face_candidates":r.get("face_candidates",[]),**detection_metrics(r)})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
@@ -185,13 +272,39 @@ def install_local_sd(H):
   if match:
    name=match.group(1);item=data.get(name)
    if item:return play_sd(self,name,item)
+  # S9_JOINED_PREROLL_V1: read-only complete segment for indexed original.
+  joined=re.fullmatch(r"/new/saved/complete/(motion_[0-9]{13}[.]mp4)",path)
+  if joined:
+   clip_name=joined.group(1);record=data.get(clip_name)
+   if record:
+    # S9_COMPLETE_RANGE_PROOF_V1: no unverified on-phone transcode is served.
+    from s9_merged_archive_stream_v1 import receipt as _s9_receipt, serve_complete as _s9_serve
+    if _s9_receipt(clip_name):return _s9_serve(self,clip_name)
+    nm=clip_name+".complete.mp4"
+    try:
+     req=urllib.request.Request("http://127.0.0.1:18808/clip/"+nm,method="HEAD")
+     with urllib.request.urlopen(req,timeout=9) as response:
+      if response.status!=200 or "video/mp4" not in response.headers.get("Content-Type",""):
+       raise ValueError("not_video")
+      size=int(response.headers.get("Content-Length","0"))
+     if 25000<size<260000000:return play_sd(self,nm,{**record,"size":size})
+    except (ValueError,TypeError,urllib.error.HTTPError,urllib.error.URLError,TimeoutError):pass
+   self.js(404,{"ok":False,"error":"complete_video_not_yet_available"});return
   snap=re.fullmatch(r"/new/saved/snap/([A-Za-z0-9._-]+[.]mp4[.]thumb[.]jpg)",path)
   if snap:
    name=snap.group(1)
    source=BASE/"s9-phone-thumbs"/name
    if source.is_file() and name[:-10] in data:
     return self.local_file(source,"image/jpeg")
-  return original(self)
+  # ARCHIVE_HISTORICAL_DRIVE_ALIAS_V1: restore read-only history.
+  # The original underlying handler still serves historic Drive /saved media.
+  if path=='/new/api/drive-saved' or re.fullmatch(r'/new/drive/saved/(?:clip|snap)/[A-Za-z0-9._-]{1,180}',path):
+   before=self.path
+   if path=='/new/api/drive-saved':self.path=before.replace('/new/api/drive-saved','/new/api/saved',1)
+   else:self.path=before.replace('/new/drive/saved/','/new/saved/',1)
+   try:return original_handler(self)
+   finally:self.path=before
+  return original_handler(self)
  H.go=go
  # Review writes use the same signed relay but never affect video/playback.
  import s9_human_thumbnail_review
@@ -202,6 +315,14 @@ def install_local_sd(H):
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
+ # C720P_SD_EXPLICIT_DELETE_V1: filter tombstones and mount read-only by default.
+ import s9_archive_delete_v1
+ globals()['rows']=s9_archive_delete_v1.install(H,rows,SECURITY_SD,NATIVE_SD,SD)
+ import s9_person_folders_v31
+ s9_person_folders_v31.install(H,lambda:rows())
+ # Owner-verified entire recordings only; wait for the explicit matching phase.
+ import s9_archive_review_v32
+ s9_archive_review_v32.install(H,lambda:rows())
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:

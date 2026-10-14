@@ -1,182 +1,139 @@
 <!doctype html>
 <html lang="en"><head><script src="/gejast-auth-gate.js?v817"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta http-equiv="Cache-Control" content="no-store">
-<title>Security · Recordings & Evidence</title>
+<title>Security · Evidence & analytics</title>
 <style>
-:root{color-scheme:dark;--bg:#0c1520;--panel:#152432;--ink:#eef7fc;--muted:#a4bdc9;--line:#324857;--accent:#79e3d0}
-*{box-sizing:border-box}body{font:13px/1.46 system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-button,input,select{font:inherit;color:inherit}button{cursor:pointer;border:1px solid var(--line);background:#203646;border-radius:9px;padding:9px 12px}
-button:hover{border-color:#7cb7c0}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-main{height:100dvh;overflow-y:auto;padding:23px clamp(15px,2.6vw,38px) 60px;scrollbar-gutter:stable;overscroll-behavior:contain}
-header{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap}
-header .eyebrow{letter-spacing:.18em;color:var(--accent);font-size:10px;font-weight:800;text-transform:uppercase}
-h1{font-size:25px;letter-spacing:-.04em;margin:0}p{color:var(--muted);margin:5px 0 0}
-#sync{font-size:11px;color:var(--muted);padding:9px 0}
-.statrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:20px 0}
-.stat{border:1px solid var(--line);background:var(--panel);padding:13px;border-radius:13px}.stat strong{display:block;font-size:22px}.stat span{font-size:11px;color:var(--muted)}
-.filters{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}
-.filters input,.filters select{border:1px solid var(--line);background:#172a39;border-radius:8px;padding:10px;min-height:39px}
-.filters input{min-width:180px;flex:1}
-.layout{display:grid;grid-template-columns:minmax(290px,1fr) minmax(310px,.9fr);gap:16px;align-items:start}
-.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:11px}
-.clip{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0;overflow:hidden;text-align:left;min-width:0}
-.clip[aria-selected=true]{border:2px solid var(--accent);background:#1b3945}
-.pic{height:148px;display:block;position:relative;background:#253849}
-.pic img{width:100%;height:100%;object-fit:cover}
-.pic .none{position:absolute;inset:0;display:grid;place-items:center;color:#b4c5d1;font-size:12px}
-.clip-label{padding:11px}.clip-label strong{display:block;font-size:12px}.clip-label small{display:block;color:var(--muted);margin-top:5px}
-.chips{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}.chip{font-size:10px;border:1px solid #486879;background:#223c4e;padding:3px 6px;border-radius:6px}
-.detail{position:sticky;top:9px;border:1px solid var(--line);border-radius:14px;background:#132432;padding:15px;min-width:0}
-.detail h2{font-size:17px;margin:0 0 7px}.filename{overflow-wrap:anywhere;color:var(--muted);font-size:11px}
-video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;border-radius:9px;object-fit:contain}
-#quality{color:#c3d7df;font-size:11px;padding:7px 0 12px;min-height:30px}
-#metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.metric{padding:11px;border:1px solid #385161;background:#1a3040;border-radius:9px;min-width:0}
-.metric b{display:block;font-size:16px;font-variant-numeric:tabular-nums}.metric span{color:#bdd0db;font-size:11px}
-.note{color:#c2d6e1;font-size:12px;margin:12px 0;padding:12px;border-left:2px solid #74c8b6;background:#1a3541}
-.details{display:grid;grid-template-columns:150px minmax(0,1fr);gap:0;margin:12px 0 0}
-.details dt,.details dd{margin:0;padding:8px 4px;border-bottom:1px solid #294554;font-size:11px;overflow-wrap:anywhere}
-.details dt{color:#a8c1ce}.empty{padding:35px 20px;text-align:center;border:1px dashed var(--line);color:var(--muted)}
-#results{color:var(--muted);font-size:11px;margin-bottom:12px}
-@media(max-width:1020px){.layout{grid-template-columns:1fr}.detail{position:static}}
-@media(max-width:580px){.statrow{grid-template-columns:repeat(2,1fr)}.details{grid-template-columns:110px minmax(0,1fr)}.pic{height:150px}}
-</style><script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
+:root{color-scheme:dark;--bg:#0c1520;--panel:#152432;--ink:#eef7fc;--muted:#a4bdc9;--line:#324857;--accent:#79e3d0;--possible:#eaba73}
+*{box-sizing:border-box}html,body{height:100%;min-height:0;overflow:hidden}body{font:13px/1.46 system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer;border:1px solid var(--line);background:#203646;border-radius:9px;padding:9px 12px}button:hover{border-color:#7cb7c0}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}button:disabled{opacity:.5;cursor:wait}
+main{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;padding:20px clamp(15px,2.6vw,36px) max(66px,env(safe-area-inset-bottom));scrollbar-gutter:stable;overscroll-behavior:contain}
+header,.panelhead,.detailhead{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap}h1{font-size:19px;letter-spacing:-.03em;margin:0}h2{font-size:15px;margin:0}h3{font-size:13px;margin:16px 0 7px}p{color:var(--muted);margin:5px 0 0}.muted{color:var(--muted)}#sync{font-size:11px;color:var(--muted);padding:9px 0 2px;min-height:27px}
+.filters{display:flex;align-items:end;gap:9px;flex-wrap:wrap;margin:15px 0}.filters label{display:grid;gap:4px;font-size:10px;color:var(--muted)}.filters input,.filters select,#order{border:1px solid var(--line);background:#172a39;border-radius:8px;padding:9px;min-height:39px;max-width:100%;font-size:12px}.filters .search{flex:1;min-width:190px}.filters .search input{width:100%}.dates{display:flex;gap:9px;align-items:end;flex-wrap:wrap}[hidden]{display:none!important}
+.statrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.stat{border:1px solid var(--line);background:var(--panel);padding:13px;border-radius:12px}.stat strong{display:block;font-size:23px;font-variant-numeric:tabular-nums}.stat span{font-size:11px;color:var(--muted)}.stat small{display:block;font-size:10px;color:var(--muted);margin-top:4px}
+.analytics{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(250px,1fr);gap:12px;margin:14px 0 22px}.panel{border:1px solid var(--line);background:var(--panel);padding:15px;border-radius:12px}.panel p{font-size:11px}.hourchart{height:139px;display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:4px;align-items:end;margin-top:14px}.hour{border:0;border-radius:4px;background:transparent;padding:0;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:end;gap:4px;align-items:stretch}.hour:hover{background:#213a49}.hour[aria-pressed=true]{outline:2px solid var(--accent)}.hour .bar{min-height:2px;border-radius:3px 3px 0 0;background:#59ad9e;display:block}.hour .value{font-size:9px;color:#c4dadc}.hour .tick{font-size:9px;color:var(--muted)}.breakdown{display:grid;gap:6px;margin-top:11px}.breakdown button{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;text-align:left;border-color:#2f4857;background:#18303e}.breakdown button[aria-pressed=true]{border-color:var(--accent)}.breakdown b{font-variant-numeric:tabular-nums}.reviewline{display:flex;justify-content:space-between;gap:8px;margin:11px 0 0}.reviewline button{padding:6px 9px;font-size:11px}.analyticnote{color:var(--muted);font-size:10px;margin-top:11px;line-height:1.5}
+.evidencehead{margin:18px 0 12px}.evidencehead .actions{display:flex;gap:8px;align-items:center}#results{color:var(--muted);font-size:11px;margin-top:4px}.layout{display:grid;grid-template-columns:minmax(290px,1.2fr) minmax(310px,.9fr);gap:16px;align-items:start}.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:11px}.clip{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0;overflow:hidden;text-align:left;min-width:0}.clip[aria-selected=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:#1b3945}.pic{height:136px;display:block;position:relative;background:#253849}.pic img{width:100%;height:100%;object-fit:cover}.pic .none{position:absolute;inset:0;display:grid;place-items:center;color:#b4c5d1;font-size:12px}.pic .kind{position:absolute;bottom:7px;left:8px;border-radius:5px;padding:3px 6px;font-size:10px;background:#0b1825dd;color:#e3f6fa}.clip-label{padding:11px}.clip-label strong{display:block;font-size:12px}.clip-label small{display:block;color:var(--muted);margin-top:5px}.chips{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}.chip{font-size:10px;border:1px solid #486879;background:#223c4e;padding:3px 6px;border-radius:6px}.chip.possible{color:var(--possible);border-color:#6b5840}
+.detail{position:sticky;top:9px;border:1px solid var(--line);border-radius:14px;background:#132432;padding:15px;min-width:0}.detail h2{font-size:17px}.filename{overflow-wrap:anywhere;color:var(--muted);font-size:10px;margin:4px 0 10px}video,.still-image{width:100%;height:auto;max-height:340px;background:#05090d;display:block;border-radius:9px;object-fit:contain}#quality{color:#c3d7df;font-size:11px;padding:7px 0 10px;min-height:30px}#metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{padding:10px;border:1px solid #385161;background:#1a3040;border-radius:9px;min-width:0}.metric b{display:block;font-size:16px;font-variant-numeric:tabular-nums}.metric span{color:#bdd0db;font-size:10px}.note{color:#c2d6e1;font-size:11px;margin:11px 0;padding:10px;border-left:2px solid #74c8b6;background:#1a3541}.details{display:grid;grid-template-columns:130px minmax(0,1fr);gap:0;margin:9px 0 0}.details dt,.details dd{margin:0;padding:7px 3px;border-bottom:1px solid #294554;font-size:11px;overflow-wrap:anywhere}.details dt{color:#a8c1ce}.empty{grid-column:1/-1;padding:30px 18px;text-align:center;border:1px dashed var(--line);border-radius:10px;color:var(--muted)}.timeline{display:grid;gap:6px}.timeline button{font-size:11px;text-align:left;padding:8px;background:#19303e}.timeline button small{display:block;color:var(--muted);margin-top:3px}.detail details{margin-top:15px}.detail summary{cursor:pointer;color:#bdceda;font-size:11px}.detail .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.detail .actions button{font-size:11px}#more{margin:14px 0;width:100%}#filterError{color:#eaba73;font-size:11px}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}.detail{position:static}.analytics{grid-template-columns:1fr 1fr}}
+@media(max-width:690px){.analytics{grid-template-columns:1fr}.statrow{grid-template-columns:repeat(2,1fr)}.hourchart{gap:2px}.hour .tick,.hour .value{font-size:8px}.details{grid-template-columns:110px minmax(0,1fr)}.filters label{flex:1;min-width:135px}.filters .dates{width:100%}}
+.samples{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-top:9px}.samples button{font-size:11px;padding:8px;text-align:left;background:#19303e}.samples button[data-person=true]{border-color:#5caa96;background:#1c3c40}.samples small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+</style><script defer src="/local/frontyard-security-new/security-video-playback-v30.js?v=security-v30-20261013"></script>
 </head><body><main>
-<header><div><div class="eyebrow">S9+ · microSD · local only</div><h1 id="title">Recordings</h1><p id="intro"></p></div><button type="button" id="refresh">Refresh</button></header>
-<div id="sync" role="status">Connecting to the phone archive…</div>
-<section class="statrow" aria-label="Recording summary"><div class="stat"><strong id="nclips">—</strong><span id="cliplabel">Clips</span></div><div class="stat"><strong id="npeople">—</strong><span>Flagged people (unverified)</span></div><div class="stat"><strong id="nreview">—</strong><span>With sampled-frame review</span></div><div class="stat"><strong id="nfaces">—</strong><span>Saved frontal face crops</span></div></section>
-<div class="filters"><input id="search" type="search" maxlength="100" placeholder="Filter by time, filename, category" aria-label="Find recording"><select id="type" aria-label="Filter classifications"><option value="all">All categories</option><option value="people">Person candidates</option><option value="motion">Other motion</option><option value="review">Unreviewed</option></select><select id="order" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="score">Highest person score</option></select></div>
-<div id="results"></div><div class="layout"><section id="list" class="list" aria-label="Recordings"></section><aside id="detail" class="detail"><div class="empty">Choose a recording to inspect the original video and review evidence.</div></aside></div>
+<header><div><h1 id="title">Recorded evidence</h1><p id="intro">Explore recorded activity, review coverage and the evidence behind each result.</p></div><button type="button" id="refresh">Refresh</button></header>
+<div id="sync" role="status">Connecting to the S9+ archive…</div>
+<div class="filters" aria-label="Evidence filters">
+ <label class="search">Search evidence<input id="search" type="search" maxlength="100" placeholder="Date, filename or classification" autocomplete="off"></label>
+ <label>Period<select id="period"><option value="all">All dates</option><option value="today">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="custom">Choose dates</option></select></label>
+ <div class="dates" id="dates" hidden><label>From<input id="from" type="date"></label><label>Through<input id="through" type="date"></label></div>
+ <label>Evidence source<select id="source"><option value="all">All S9+ evidence</option><option value="video">Videos only</option><option value="motion">Native motion recordings</option><option value="legacy">Earlier recordings</option><option value="still">Motion stills only</option></select></label>
+ <label>Classification<select id="type"><option value="all">All classifications</option><option value="people">All person candidates</option><option value="person">Repeated person evidence</option><option value="possible">Possible person</option><option value="vehicle">Vehicle</option><option value="animal">Animal</option><option value="other">Other motion</option><option value="review">No sampled review</option></select></label>
+ <button type="button" id="reset">Reset filters</button>
+</div><div id="filterError" role="status"></div>
+<section id="totals" class="statrow" aria-label="Filtered evidence totals">
+ <div class="stat"><strong id="nclips">—</strong><span>Video recordings</span><small id="eventCount">—</small></div>
+ <div class="stat"><strong id="nstills">—</strong><span>Still-only evidence</span><small>No video captured for these entries</small></div>
+ <div class="stat"><strong id="nduration">—</strong><span>Indexed video duration</span><small id="durationCoverage">—</small></div>
+ <div class="stat"><strong id="nreview">—</strong><span>Videos with sampled review</span><small id="reviewCoverage">—</small></div>
+</section>
+<section id="analytics" class="analytics" aria-label="Activity analytics">
+ <div class="panel"><div class="panelhead"><h2>Recorded activity by hour</h2><button id="clearHour" type="button" hidden>Clear hour filter</button></div><p>Video event starts across the selected period · Amsterdam time. Select an hour to inspect its evidence.</p><div id="hourchart" class="hourchart"></div><div id="hourNote" class="analyticnote"></div></div>
+ <div class="panel"><h2>Evidence and review coverage</h2><div id="breakdown" class="breakdown"></div><div class="reviewline"><span id="reviewQueue" class="muted"></span><button id="showUnreviewed" type="button">Inspect unreviewed</button></div><div id="coverageNote" class="analyticnote"></div></div>
+</section>
+<div class="panelhead evidencehead"><div><h2 id="listTitle">Evidence library</h2><div id="results" role="status"></div></div><div class="actions"><select id="order" aria-label="Sort evidence"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="score">Highest person score</option></select><button id="export" type="button">Export index</button></div></div>
+<div class="layout"><div><section id="list" class="list" aria-label="Evidence entries"></section><button id="more" type="button" hidden>Show more evidence</button></div><aside id="detail" class="detail" aria-label="Selected evidence"><div class="empty">Select an entry to play its original recording or inspect the saved still.</div></aside></div>
 </main><script id="s9v8-review-script">
 (()=>{
 'use strict';
-const $=id=>document.getElementById(id),mode=new URLSearchParams(location.search).get('mode')==='evidence'?'evidence':'today';
-const native=/^motion_[0-9]{13}[.]mp4$/,legacy=/^rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}[.]mp4$/;
-const SAFE=/^(?:motion_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4[.]thumb[.]jpg$/;
-const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null};
-$('title').textContent=mode==='today'?"Today's recordings":"Evidence & analytics";
-$('intro').textContent=mode==='today'?'Clips recorded today, Amsterdam time. Historical clips remain in Archive.':'Detector confidence, sampled frames, tracked-appearance evidence and original recordings in one searchable place.';
-$('cliplabel').textContent=mode==='today'?'Today’s clips':'Indexed clips';
-function relay(){if(window.C720PSecureRelay?.url&&window.C720PSecureRelay?.fetch)return window.C720PSecureRelay;
-try{if(window.parent!==window&&window.parent.C720PSecureRelay?.url)return window.parent.C720PSecureRelay}catch(_){}return null}
-function stamp(rec){const n=String(rec.clip_no||'');if(native.test(n))return Number(n.slice(7,20));if(legacy.test(n)){const m=n.match(/^rec_([0-9]{4}-[0-9]{2}-[0-9]{2})_([0-9]{2})-([0-9]{2})/);if(m)return Date.parse(m[1]+'T'+m[2]+':'+m[3]+':00+02:00')||0;}const t=Date.parse(String(rec.timestamp||''));return Number.isFinite(t)?t:0}
-function day(ms){if(!ms)return '';const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms));const k=Object.fromEntries(f.map(a=>[a.type,a.value]));return k.year+'-'+k.month+'-'+k.day}
+const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),mode=params.get('mode')==='evidence'?'evidence':'today';
+const native=/^(?:motion|native4k)_([0-9]{13})[.]mp4$/,legacy=/^rec_([0-9]{4}-[0-9]{2}-[0-9]{2})_([0-9]{2})-([0-9]{2})[.]mp4$/,still=/^preview_motion_([0-9]{13})[.]jpg$/;
+const SAFE=/^(?:(?:motion|native4k)_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4[.]thumb[.]jpg$/;
+const CATEGORY={person:'Repeated person evidence',possible:'Possible person',vehicle:'Vehicle',animal:'Animal',other:'Other motion',unreviewed:'Unreviewed video',still:'Motion still'};
+const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null,limit:48,hour:null,loaded:false};
+const dayFormat=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'});
+const hourFormat=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'});
+$('title').textContent=mode==='today'?'Recorded today':'Recorded evidence';
+if(mode==='today'){$('intro').textContent='Today’s recordings and saved motion stills, in Amsterdam time.';$('period').value='today';$('period').disabled=true;$('totals').hidden=true;$('analytics').hidden=true;$('listTitle').textContent='Recordings and stills';}
+function relay(){if(window.C720PSecureRelay?.url&&window.C720PSecureRelay?.fetch)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.location.origin===location.origin&&window.parent.C720PSecureRelay?.url&&window.parent.C720PSecureRelay?.fetch)return window.parent.C720PSecureRelay}catch(_){}return null}
+function name(rec){return String(rec.clip_no||rec.name||'')}
+function isStill(rec){return still.test(name(rec))}
+function day(ms){if(!Number.isFinite(ms)||ms<=0)return '';const p=Object.fromEntries(dayFormat.formatToParts(new Date(ms)).map(a=>[a.type,a.value]));return p.year+'-'+p.month+'-'+p.day}
 function today(){return day(Date.now())}
-function name(rec){return String(rec.clip_no||'')}
-function fmt(rec){let ms=stamp(rec);return ms?new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(ms):String(rec.timestamp||'Unknown time')}
-function label(rec){const p=Number(rec.person_count||0);return p>1?p+' possible people':p>0?'Person candidate':rec.scene_category==='unreviewed'?'Awaiting review':'Motion · unverified'}
-function pct(n){return Number.isFinite(n)?(100*n).toFixed(1)+'%':'Not measured'}
+// Resolve earlier Amsterdam wall-time filenames using the actual zone offset.
+function legacyStamp(match){const wall=Date.parse(match[1]+'T'+match[2]+':'+match[3]+':00Z');let guess=wall;const fmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});for(let i=0;i<3;i++){const p=Object.fromEntries(fmt.formatToParts(new Date(guess)).map(x=>[x.type,x.value]));const displayed=Date.parse(p.year+'-'+p.month+'-'+p.day+'T'+p.hour+':'+p.minute+':'+p.second+'Z');guess+=wall-displayed;}return guess}
+function stamp(rec){const n=name(rec),m=native.exec(n)||still.exec(n);if(m)return Number(m[1]);const l=legacy.exec(n);if(l)return legacyStamp(l);return 0}
+function dayOf(rec){const l=legacy.exec(name(rec));return l?l[1]:day(stamp(rec))}
+function fmt(rec){const ms=stamp(rec);return ms?new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:isStill(rec)?'2-digit':undefined}).format(ms):'Unknown time'}
+function source(rec){if(isStill(rec))return 'still';if(name(rec).startsWith('motion_'))return 'motion';return 'legacy'}
+function category(rec){if(isStill(rec))return 'still';const event=String(rec.person_event_category||''),scene=String(rec.scene_category||rec.person_status||'').toLowerCase(),tags=Array.isArray(rec.content_categories)?rec.content_categories:[];
+ if(['single_frame_person_candidate','possible_group_needs_frame_review','possible_person_below_standard_threshold'].includes(event))return 'possible';
+ if(['single_person_repeated_candidate','multiple_people_candidate'].includes(event))return 'person';
+ if(Number(rec.person_count)>0||['one_person','multiple_people'].includes(scene)||tags.includes('person'))return 'possible';
+ if(tags.includes('animal')||scene.includes('animal'))return 'animal';if(tags.includes('vehicle')||scene.includes('vehicle'))return 'vehicle';
+ return !scene||['unknown','unreviewed'].includes(scene)?'unreviewed':'other';}
+function hasCategory(rec,kind){if(['vehicle','animal'].includes(kind)&&Array.isArray(rec.content_categories)&&rec.content_categories.includes(kind))return true;return category(rec)===kind}
+function number(value){if(value===null||value===undefined||value==='')return null;const n=Number(value);return Number.isFinite(n)?n:null}
+function samples(rec){const n=rec.sampled_frames===null||rec.sampled_frames===undefined?null:Number(rec.sampled_frames);return n!==null&&Number.isInteger(n)&&n>0?n:0}
+function positives(rec){const n=number(rec.person_detected_frames_050);return n!==null&&Number.isInteger(n)&&n>=0&&n<=samples(rec)&&samples(rec)>0?n:null}
+function score(rec){const n=number(rec.person_score);return n!==null&&n>=0&&n<=1?n:null}
+function duration(rec){const n=number(rec.duration_ms);return n!==null&&n>0?n:0}
+function durationText(ms){const s=Math.round(ms/1000);return s>=3600?Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m':s>=60?Math.floor(s/60)+'m '+s%60+'s':s+'s'}
+function eventKey(rec){return rec.capture_evidence_status==='recording_segment_verified'&&/^garden_[0-9]{13}$/.test(String(rec.capture_event_id||''))?rec.capture_event_id:name(rec)}
+function eventStarts(records){const map=new Map();for(const rec of records){const key=eventKey(rec);if(!map.has(key)||stamp(rec)<stamp(map.get(key)))map.set(key,rec)}return Array.from(map.values())}
+function hourOf(rec){return Number(hourFormat.format(new Date(stamp(rec))))}
 function text(tag,value,cls){const el=document.createElement(tag);if(cls)el.className=cls;el.textContent=String(value??'');return el}
-function pic(rec,host){const n=String(rec.snapshot_name||'');const outer=text('div','','pic');const fallback=text('span','No scene thumbnail','none');outer.append(fallback);if(SAFE.test(n)){
- const img=document.createElement('img');img.alt='Scene sample from recording; not an identified face';img.loading='lazy';img.decoding='async';img.src='/local/frontyard-security-new/s9-phone-thumbs/'+encodeURIComponent(n);
- img.onload=()=>fallback.remove();img.onerror=()=>img.remove();outer.append(img);
- }host.append(outer)}
+function action(label,handler,cls){const b=text('button',label,cls);b.type='button';b.onclick=handler;return b}
 function metric(parent,value,title){const div=text('div','','metric');div.append(text('b',value),text('span',title));parent.append(div)}
-function entryKey(rec){return name(rec)}
 function playbackStop(){if(state.activeVideo){state.activeVideo.pause();state.activeVideo.removeAttribute('src');state.activeVideo.load();state.activeVideo=null}}
+function clearDetail(message){playbackStop();state.selected=null;$('detail').replaceChildren(text('div',message||'Select an entry to inspect the evidence.','empty'));document.querySelectorAll('.clip').forEach(n=>n.setAttribute('aria-selected','false'))}
+async function thumbnail(rec,outer){const n=isStill(rec)?name(rec):String(rec.snapshot_name||'');if(!(isStill(rec)?still.test(n):SAFE.test(n)))return;const img=document.createElement('img');img.alt=isStill(rec)?'Saved motion still; no video was captured':'Scene sample from this recording';img.loading='lazy';img.decoding='async';img.onload=()=>outer.querySelector('.none')?.remove();img.onerror=()=>img.remove();outer.append(img);const r=relay();try{if(!r?.url)throw Error('relay');const url=await r.url((isStill(rec)?'/new/saved/still/':'/new/saved/snap/')+encodeURIComponent(n));if(img.isConnected)img.src=url}catch(_){if(!isStill(rec))img.src='/local/frontyard-security-new/s9-phone-thumbs/'+encodeURIComponent(n);else img.remove()}}
+function pic(rec,host){const outer=text('div','','pic');outer.append(text('span',isStill(rec)?'Saved motion still':'Scene thumbnail unavailable','none'),text('span',isStill(rec)?'Still only':duration(rec)?durationText(duration(rec)):'Video','kind'));host.append(outer);thumbnail(rec,outer)}
+function appendFields(host,fields){const def=text('dl','','details');for(const [k,v] of fields)def.append(text('dt',k),text('dd',v));host.append(def)}
+function explanation(rec){const event=String(rec.person_event_category||'');if(!samples(rec))return 'No sampled-frame detector review is indexed for this recording. Watch the original to assess what happened.';
+ if(event==='single_frame_person_candidate')return 'A person candidate appears in one sampled frame. Check the timed observations and original recording.';
+ if(event==='possible_person_below_standard_threshold')return 'The peak person score is below 0.50. This is uncertain evidence; other detected objects may appear in the same recording.';
+ if(event==='possible_group_needs_frame_review')return 'A possible group needs visual review. The detector result does not establish a reliable person count.';
+ if(category(rec)==='person')return 'Person candidates appear repeatedly in sampled frames. Review the original for context; identification has not been confirmed.';
+ return 'No person exceeded the detector threshold in the indexed samples. Unsampled moments are not covered by this result.';}
+function seek(video,ms){if(state.activeVideo!==video||!Number.isFinite(ms)||ms<0)return;video.dataset.evidenceSeek=String(ms/1000);if(video.dataset.preRoll==='true'){delete video.dataset.preRoll;video.src=video.dataset.originalSrc;video.load()}const apply=()=>{if(state.activeVideo!==video)return;video.currentTime=Number(video.dataset.evidenceSeek);video.play().catch(()=>{})};if(video.readyState>=1)apply();else video.addEventListener('loadedmetadata',apply,{once:true})}
+function download(rows,filename){const keys=['evidence_name','kind','recorded_at_amsterdam','classification','duration_ms','sampled_frames','person_detected_frames_050','person_score','maximum_person_candidates','recording_event_id','storage','sha256'];const csv=[keys,...rows.map(r=>[name(r),isStill(r)?'still_only':'video',fmt(r),CATEGORY[category(r)],duration(r)||'',samples(r)||'',positives(r)??'',score(r)??'',number(r.person_count)??'',r.capture_evidence_status==='recording_segment_verified'?r.capture_event_id:'','S9+ microSD',r.sha256||''])].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 async function open(rec){
- state.selected=entryKey(rec);
- document.querySelectorAll('.clip').forEach(n=>n.setAttribute('aria-selected',String(n.dataset.clip===state.selected)));
- playbackStop();const host=$('detail');host.replaceChildren();
- host.append(text('h2',fmt(rec)),text('div',name(rec),'filename'));
- const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.disablePictureInPicture=false;
- host.append(video);state.activeVideo=video;
- const quality=text('div','Loading media details…','');quality.id='quality';host.append(quality);
- const mf=text('div','','');mf.id='metrics';host.append(mf);
- const scores=rec.person_score===null||rec.person_score===undefined?NaN:Number(rec.person_score);
- const samples=Number(rec.sampled_frames)||0,positives=Number(rec.person_detected_frames_050)||0;
- metric(mf,Number.isFinite(scores)?(scores*100).toFixed(0)+'%':'—','Peak uncalibrated person-detector score');
- metric(mf,samples||'—','Frames reviewed (sampled, not continuous)');
- metric(mf,samples?pct(positives/samples):'—','Sampled frames with person ≥0.50 ('+positives+'/'+samples+')');
- metric(mf,Number.isFinite(Number(rec.person_count))?String(rec.person_count):'—','Maximum simultaneously detected people');
- const note=text('div','Scores are uncalibrated model outputs, not verified accuracy or identity. A negative result in sampled frames does not prove nobody appeared anywhere in the recording.','note');host.append(note);
- const def=document.createElement('dl');def.className='details';
- const fields=[['Classification',label(rec)],['Filename',name(rec)],['Recorded',fmt(rec)],['Length',Number(rec.duration_ms)>0?(rec.duration_ms/1000).toFixed(1)+' seconds':'Not indexed'],['Size',Number(rec.size)>0?(rec.size/1048576).toFixed(1)+' MiB':'Not indexed'],['Storage',rec.camera||'S9+ microSD'],['Review backend',rec.review_backend||'Not reported'],['Person event',rec.person_event_category||'Not assigned'],['Appearance tracks',Array.isArray(rec.anonymous_tracks)?rec.anonymous_tracks.length:0],['Face snapshots',Number(rec.face_snapshots_saved||0)],['Face review',rec.face_review_status||'Not completed'],['Content categories',Array.isArray(rec.content_categories)?rec.content_categories.join(', ')||'None':'Unavailable']];
- for(const [key,value] of fields)def.append(text('dt',key),text('dd',value));host.append(def);
- const details=document.createElement('details');details.append(text('summary','All indexed evidence fields'));const all=document.createElement('dl');all.className='details';
- for(const [key,value] of Object.entries(rec).sort(([a],[b])=>a.localeCompare(b))){
- all.append(text('dt',key.replaceAll('_',' ')),text('dd',typeof value==='object'?JSON.stringify(value):String(value??'—')));
- }details.append(all);host.append(details);
- if(!native.test(name(rec))){quality.textContent='Legacy clip: use Archive for playback; this view preserves its evidence metadata.';return}
- const r=relay();if(!r?.url){quality.textContent='Secure video relay unavailable';return}
- try{const url=await r.url('/new/saved/clip/'+encodeURIComponent(name(rec)));
- if(state.selected!==entryKey(rec))return;
- // When the native S9+ recorded a video pre-roll, play that short on-device
- // 640x480 AVC segment FIRST and automatically hand off to original 4K footage.
- // Missing/unsupported pre-rolls simply play the original (no blank clips).
- let preFound=false;
- const prePath='/new/saved/preroll/'+encodeURIComponent(name(rec));
- if(r.fetch)try{const check=await r.fetch(prePath,{method:'HEAD',cache:'no-store'});preFound=check.ok;}catch(_){}
- if(state.selected!==entryKey(rec))return;
- if(preFound){
-  try{
-   const early=await r.url(prePath);
-   video.src=early;
-   quality.textContent='Pre-event buffered video · automatically continues into original 4K';
-   video.addEventListener('ended',()=>{
-    if(state.selected!==entryKey(rec))return;
-    video.src=url;video.play().catch(()=>{});
-   },{once:true});
-  }catch(_){video.src=url;}
- }else video.src=url;
- video.addEventListener('loadedmetadata',()=>{quality.textContent='Original video · '+video.videoWidth+' × '+video.videoHeight+' · '+(Number.isFinite(video.duration)?video.duration.toFixed(1)+'s':'unknown duration')+' · monitoring displayed frames';},{once:true});
- let count=0,start=0,reported=0;const cb=(now,meta)=>{if(state.activeVideo!==video||!video.isConnected)return;
- if(!start)start=now;count++;
- if(now-start>=1200){const fps=count*1000/(now-start);const q=video.getVideoPlaybackQuality?.();let dropped=q?.droppedVideoFrames;
- quality.textContent='Actual displayed playback: '+fps.toFixed(1)+' FPS'+(typeof dropped==='number'?' · dropped frames '+dropped:'')+
- (fps<24?' · below 24 FPS target':' · meets 24 FPS target')+' · '+video.videoWidth+'×'+video.videoHeight;
- count=0;start=now;reported++;}
- video.requestVideoFrameCallback(cb)};
- if(typeof video.requestVideoFrameCallback==='function')video.requestVideoFrameCallback(cb);
- else quality.textContent='Video ready · FPS measurement not supported in this browser';
- }catch(_){quality.textContent='Unable to load signed MP4. Original retained on S9+.'}
-}
-function render(){
- const query=$('search').value.toLowerCase().trim(),type=$('type').value,order=$('order').value;
- let result=state.all.filter(rec=>{
-  if(mode==='today'&&day(stamp(rec))!==today())return false;
-  const p=Number(rec.person_count||0),review=Number(rec.sampled_frames||0)>0;
-  if(type==='people'&&p<=0)return false;
-  if(type==='motion'&&(p>0||rec.scene_category==='unreviewed'))return false;
-  if(type==='review'&&review)return false;
-  if(query&&!([name(rec),fmt(rec),rec.scene_category,rec.person_event_category].join(' ').toLowerCase().includes(query)))return false;
-  return true;});
- result.sort((a,b)=>order==='score'?Number(b.person_score||0)-Number(a.person_score||0):
-  order==='old'?stamp(a)-stamp(b):stamp(b)-stamp(a));
- state.visible=result;const p=result.filter(x=>Number(x.person_count)>0);
- $('nclips').textContent=result.length;
- $('npeople').textContent=p.length;
- $('nreview').textContent=result.filter(x=>Number(x.sampled_frames)>0).length;
- $('nfaces').textContent=result.reduce((n,x)=>n+Number(x.face_snapshots_saved||0),0);
- $('results').textContent=result.length+' recordings shown'+(mode==='today'?' · Today in Amsterdam, including all classifications':' · historical and current evidence');
- const host=$('list');host.replaceChildren();
- if(!result.length){host.append(text('div',mode==='today'?'No indexed clips today yet. Camera status is independent of recording count.':'No matching recordings.','empty'));return;}
- for(const rec of result.slice(0,400)){
-  const card=text('button','','clip');card.type='button';card.dataset.clip=name(rec);
-  card.setAttribute('aria-selected',String(state.selected===name(rec)));pic(rec,card);
-  const labels=text('div','','clip-label');labels.append(text('strong',fmt(rec)),text('small',label(rec)));
-  const cs=text('div','','chips');cs.append(text('span',Number(rec.sampled_frames||0)>0?'Reviewed '+rec.sampled_frames+' frames':'Unreviewed','chip'));
-  if(rec.person_score!==null&&rec.person_score!==undefined&&Number.isFinite(Number(rec.person_score)))cs.append(text('span','Peak '+(Number(rec.person_score)*100).toFixed(0)+'%','chip'));
-  labels.append(cs);card.append(labels);card.onclick=()=>open(rec);host.append(card);
+ state.selected=name(rec);document.querySelectorAll('.clip').forEach(n=>n.setAttribute('aria-selected',String(n.dataset.clip===state.selected)));playbackStop();const host=$('detail');host.replaceChildren();const head=text('div','','detailhead');head.append(text('h2',fmt(rec)),action('Close',()=>clearDetail()));host.append(head,text('div',name(rec),'filename'));const chips=text('div','','chips');chips.append(text('span',CATEGORY[category(rec)],'chip'+(category(rec)==='possible'?' possible':'')));if(!isStill(rec)&&Array.isArray(rec.content_categories))for(const tag of rec.content_categories.filter(v=>['vehicle','animal'].includes(v)))chips.append(text('span',tag[0].toUpperCase()+tag.slice(1),'chip'));host.append(chips);
+ const quality=text('div','Loading original evidence…');quality.id='quality';
+ if(isStill(rec)){
+  const img=document.createElement('img');img.className='still-image';img.alt='Original saved motion still';host.append(img,quality);img.onload=()=>{quality.textContent='Original motion still · '+img.naturalWidth+' × '+img.naturalHeight};img.onerror=()=>{quality.textContent='Still could not be loaded. It remains stored on S9+.'};host.append(text('div','Still-only event. No video or sampled person review is available for this entry.','note'));appendFields(host,[['Capture reason',String(rec.reason||'Motion event').replaceAll('_',' ')],['Size',number(rec.size)>0?(Number(rec.size)/1024).toFixed(1)+' KiB':'Not indexed'],['Storage','S9+ microSD'],['File integrity',rec.sd_verified===true?'SHA-256 verified by archive index':'Not reported'],['SHA-256',rec.sha256||'Not indexed']]);host.append(action('Export evidence metadata',()=>download([rec],'s9-evidence-'+name(rec)+'.csv')));try{const r=relay();if(!r?.url)throw Error('relay');const url=await r.url('/new/saved/still/'+encodeURIComponent(name(rec)));if(state.selected===name(rec))img.src=url}catch(_){quality.textContent='Secure still relay unavailable. Original remains on S9+.'}return;
  }
- if(state.selected&&!result.some(x=>name(x)===state.selected))playbackStop();
+ const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';host.append(video,quality);state.activeVideo=video;
+ const mf=text('div','');mf.id='metrics';host.append(mf);const n=samples(rec),p=positives(rec),s=score(rec);metric(mf,s===null?'—':(s*100).toFixed(1)+'%','Peak person score');metric(mf,n||'—','Sampled frames reviewed');metric(mf,p===null?'—':p+' / '+n,'Samples with person score ≥0.50');metric(mf,number(rec.person_count)??'—','Maximum simultaneous candidates');host.append(text('div',explanation(rec),'note'));
+ const sampledTimeline=rec.person_timeline_status==='sampled_model_evidence'&&Array.isArray(rec.person_sample_timeline)?rec.person_sample_timeline.filter(t=>number(t.time_ms)!==null&&number(t.time_ms)>=0&&number(t.time_ms)<=duration(rec)&&number(t.people_at_050)!==null&&number(t.person_peak_score)!==null):[];
+ if(mode==='evidence'&&sampledTimeline.length){const sampleEvidence=document.createElement('details');sampleEvidence.open=true;sampleEvidence.append(text('summary','Sample-by-sample evidence · '+sampledTimeline.length+' reviewed moments'));const timeline=text('div','','samples');for(const t of sampledTimeline){const objects=[Number(t.people_at_050)+' person candidate(s)'];if(Number(t.vehicles_at_050)>0)objects.push(t.vehicles_at_050+' vehicle(s)');if(Number(t.animals_at_050)>0)objects.push(t.animals_at_050+' animal(s)');const b=action((Number(t.time_ms)/1000).toFixed(1)+'s',()=>seek(video,Number(t.time_ms)));b.dataset.person=String(Number(t.people_at_050)>0);b.title=objects.join(' · ');b.append(text('small',Number(t.people_at_050)+' person · peak '+(Number(t.person_peak_score)*100).toFixed(1)+'%'));timeline.append(b)}sampleEvidence.append(timeline,text('p','Select a reviewed moment to check its original video frame. These samples do not cover every frame.'));host.append(sampleEvidence)}
+ const tracks=Array.isArray(rec.anonymous_tracks)?rec.anonymous_tracks:[],validTracks=tracks.filter(t=>/^Person (?:[1-9]|[1-5][0-9]|6[0-4])$/.test(String(t.id||''))&&number(t.first_sample_ms)!==null&&number(t.first_sample_ms)>=0&&number(t.last_sample_ms)>=number(t.first_sample_ms));
+ if(validTracks.length){host.append(text('h3','Timed observations'));const timeline=text('div','','timeline');for(const t of validTracks){const b=action(t.id+' · '+(Number(t.first_sample_ms)/1000).toFixed(1)+'–'+(Number(t.last_sample_ms)/1000).toFixed(1)+'s',()=>seek(video,Number(t.first_sample_ms)));b.append(text('small',Number(t.sample_count||0)+' samples · upper clothing '+String(t.upper_clothing_colour||'uncertain').replaceAll('_',' ')+' · '+String(t.image_movement_direction||'insufficient samples').replaceAll('_',' ')));timeline.append(b)}host.append(timeline,text('p','Select an observation to seek the original. Tracks apply only inside this clip.'))}
+ if(rec.capture_evidence_status==='recording_segment_verified'){host.append(text('h3','Recording continuity'));const group=state.all.filter(x=>!isStill(x)&&eventKey(x)===eventKey(rec)).sort((a,b)=>Number(a.capture_segment_index)-Number(b.capture_segment_index));const timeline=text('div','','timeline');for(const segment of group){const gap=number(segment.capture_segment_gap_ms);timeline.append(action('Segment '+segment.capture_segment_index+' · '+fmt(segment)+(gap!==null?' · '+(gap/1000).toFixed(1)+'s gap':''),()=>open(segment)))}host.append(timeline)}
+ const provenance=document.createElement('details');provenance.append(text('summary','Recording details and review method'));appendFields(provenance,[['Recorded duration',duration(rec)?durationText(duration(rec)):'Not indexed'],['File size',number(rec.size)>0?(Number(rec.size)/1048576).toFixed(1)+' MiB':'Not indexed'],['Storage','S9+ microSD'],['Capture format',source(rec)==='motion'?'Native motion recording':name(rec).startsWith('native4k_')?'Native 4K recording':'Earlier S9+ recording'],['Review backend',rec.review_backend?String(rec.review_backend).toUpperCase():'Not indexed'],['Detector result',String(rec.person_event_category||'Not indexed').replaceAll('_',' ')],['Frame presence',p===null?'Not measured':(100*p/n).toFixed(1)+'% of '+n+' sampled frames'],['Face evidence',Number(rec.face_snapshots_saved||0)>0?rec.face_snapshots_saved+' saved crop(s); open People & faces':'No saved face crops indexed']]);provenance.append(text('p','Scores are uncalibrated model outputs. Sampled-frame percentages are not recording coverage, detection accuracy or identity.'));host.append(provenance);const actions=text('div','','actions');actions.append(action('Export evidence metadata',()=>download([rec],'s9-evidence-'+name(rec)+'.csv')));host.append(actions);
+ const r=relay();if(!r?.url){quality.textContent='Secure video relay unavailable';return}
+ try{const url=await r.url('/new/saved/clip/'+encodeURIComponent(name(rec)));if(state.selected!==name(rec))return;video.dataset.originalSrc=url;let preFound=false;const prePath='/new/saved/preroll/'+encodeURIComponent(name(rec));if(name(rec).startsWith('motion_')&&r.fetch)try{preFound=(await r.fetch(prePath,{method:'HEAD',cache:'no-store'})).ok}catch(_){}if(state.selected!==name(rec))return;
+  video.addEventListener('loadedmetadata',()=>{if(state.activeVideo!==video)return;quality.textContent=(video.dataset.preRoll==='true'?'Pre-event buffered video':'Original video')+' · '+video.videoWidth+' × '+video.videoHeight+' · '+(Number.isFinite(video.duration)?video.duration.toFixed(1)+'s':'unknown duration')});
+  video.addEventListener('error',()=>{if(state.activeVideo!==video)return;if(video.dataset.preRoll==='true'){delete video.dataset.preRoll;video.src=url;return}quality.textContent='Playback unavailable. Original retained on S9+; select this entry again to retry.'});
+  if(preFound){try{const early=await r.url(prePath);if(state.selected!==name(rec))return;video.dataset.preRoll='true';video.src=early;quality.textContent='Pre-event buffered video · continues into original recording';video.addEventListener('ended',()=>{if(state.activeVideo!==video||video.dataset.preRoll!=='true')return;delete video.dataset.preRoll;video.src=url;video.play().catch(()=>{})},{once:true})}catch(_){video.src=url}}else video.src=url;
+  let count=0,start=0;const cb=now=>{if(state.activeVideo!==video||!video.isConnected)return;if(!start)start=now;count++;if(now-start>=1200){const fps=count*1000/(now-start),q=video.getVideoPlaybackQuality?.();quality.textContent=(video.dataset.preRoll==='true'?'Pre-event video':'Original playback')+' · '+fps.toFixed(1)+' FPS · '+video.videoWidth+' × '+video.videoHeight+(typeof q?.droppedVideoFrames==='number'?' · '+q.droppedVideoFrames+' dropped frames':'')+(fps<24?' · below 24 FPS target':'');count=0;start=now}video.requestVideoFrameCallback(cb)};if(typeof video.requestVideoFrameCallback==='function')video.requestVideoFrameCallback(cb);
+ }catch(_){if(state.selected===name(rec))quality.textContent='Unable to load signed video. Original retained on S9+.'}
 }
-async function refresh(){
- if(state.refreshing)return;state.refreshing=true;$('sync').textContent='Refreshing verified S9+ archive…';
- try{const r=relay();if(!r?.fetch)throw Error('secure_relay_unavailable');
- const resp=await r.fetch('/new/api/saved',{cache:'no-store'});
- if(!resp.ok)throw Error('archive_status_'+resp.status);
- const d=await resp.json();if(d.archive_mode!=='S9-microSD-only'||!Array.isArray(d.events))throw Error('wrong_archive');
- state.all=d.events.filter(x=>native.test(name(x))||legacy.test(name(x)));
- $('sync').textContent='S9+ microSD connected · '+state.all.length+' recordings indexed · original 4K retained';
- render();
- }catch(e){$('sync').textContent='Archive metadata unavailable · '+String(e.message||e);if(!state.all.length)$('list').replaceChildren(text('div','Connection error; recordings remain on the phone.','empty'))}
- finally{state.refreshing=false}}
-$('refresh').onclick=refresh;
-for(const id of ['search','type','order'])$(id).addEventListener(id==='search'?'input':'change',render);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)state.activeVideo?.pause();else if(!state.all.length)refresh()});
-window.addEventListener('pagehide',playbackStop);
-refresh();setInterval(()=>{if(!document.hidden)refresh()},60000);
+function shiftDay(date,offset){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10)}
+function periodBounds(){const period=$('period').value,current=today();if(period==='today'||mode==='today')return [current,current];if(period==='7'||period==='30')return [shiftDay(current,1-Number(period)),current];if(period==='custom')return [$('from').value,$('through').value];return ['','']}
+function matches(rec,ignoreHour=false){const [from,through]=periodBounds(),d=dayOf(rec),src=$('source').value,type=$('type').value,c=category(rec),q=$('search').value.toLowerCase().trim();if(from&&d<from||through&&d>through)return false;if(src==='video'&&isStill(rec)||src!=='all'&&src!=='video'&&source(rec)!==src)return false;if(type==='people'&&!['person','possible'].includes(c))return false;if(type==='review'&&(isStill(rec)||samples(rec)>0))return false;if(!['all','people','review'].includes(type)&&!hasCategory(rec,type))return false;if(!ignoreHour&&state.hour!==null&&hourOf(rec)!==state.hour)return false;return !q||[name(rec),fmt(rec),d,rec.scene_category,rec.person_event_category,rec.reason,CATEGORY[c],...(Array.isArray(rec.content_categories)?rec.content_categories:[])].join(' ').toLowerCase().includes(q)}
+function analytics(records){const videos=records.filter(r=>!isStill(r)),known=videos.filter(r=>duration(r)),reviewed=videos.filter(r=>samples(r)),events=eventStarts(videos);$('nclips').textContent=videos.length;$('nstills').textContent=records.length-videos.length;$('nduration').textContent=known.length?durationText(known.reduce((sum,r)=>sum+duration(r),0)):'—';$('nreview').textContent=reviewed.length;$('durationCoverage').textContent=known.length+' / '+videos.length+' video lengths indexed';$('reviewCoverage').textContent=videos.length?(100*reviewed.length/videos.length).toFixed(0)+'% of filtered videos':'No videos in this filter';$('eventCount').textContent=events.length+' indexed event starts'+(events.length<videos.length?' · segments grouped':'');if(mode==='today')return;
+ const baseVideos=state.all.filter(r=>!isStill(r)&&matches(r,true)),baseEvents=eventStarts(baseVideos),hours=Array(24).fill(0);for(const rec of baseEvents)hours[hourOf(rec)]++;const max=Math.max(...hours,1),chart=$('hourchart');chart.replaceChildren();for(let h=0;h<24;h++){const b=action('',()=>{state.hour=state.hour===h?null:h;state.limit=48;render()},'hour');b.setAttribute('aria-label',String(h).padStart(2,'0')+':00 · '+hours[h]+' video event starts');b.setAttribute('aria-pressed',String(state.hour===h));b.title=String(h).padStart(2,'0')+':00–'+String(h).padStart(2,'0')+':59 · '+hours[h]+' event starts';b.append(text('span',hours[h]||'','value'));const bar=text('span','','bar');bar.style.height=(hours[h]/max*92)+'px';b.append(bar,text('span',h%3===0?String(h).padStart(2,'0'):'','tick'));chart.append(b)}$('clearHour').hidden=state.hour===null;
+ $('hourNote').textContent=baseEvents.length+' video event starts in the period. Verified event segments are counted once; independent clips count separately. Still-only entries are excluded.';
+ const breakdown=$('breakdown');breakdown.replaceChildren();for(const c of ['person','possible','vehicle','animal','other','unreviewed','still']){const count=records.filter(r=>hasCategory(r,c)).length;if(!count)continue;const b=action('',()=>{$('type').value=c==='still'?'all':c==='unreviewed'?'review':c;if(c==='still')$('source').value='still';state.limit=48;render()});b.append(text('span',CATEGORY[c]),text('b',count));b.setAttribute('aria-pressed',String($('type').value===c||c==='still'&&$('source').value==='still'));breakdown.append(b)}if(!records.length)breakdown.append(text('p','No evidence matches these filters.'));
+ const unreviewed=videos.length-reviewed.length;$('reviewQueue').textContent=unreviewed+' video'+(unreviewed===1?'':'s')+' without sampled review';$('showUnreviewed').disabled=!unreviewed;const sampled=reviewed.reduce((n,r)=>n+samples(r),0),withHits=reviewed.filter(r=>positives(r)!==null);$('coverageNote').textContent=sampled+' frames sampled across '+reviewed.length+' videos. '+(reviewed.length-withHits.length)+' reviewed videos lack a threshold hit count. Object categories can overlap. Model candidates do not establish confirmed people or unique visitors.';
+}
+function render(){const [from,through]=periodBounds();$('dates').hidden=$('period').value!=='custom';const invalid=from&&through&&from>through;$('filterError').textContent=invalid?'Choose a start date on or before the end date.':'';let result=invalid?[]:state.all.filter(rec=>matches(rec));const order=$('order').value;result.sort((a,b)=>order==='score'?(score(b)??-1)-(score(a)??-1)||stamp(b)-stamp(a):order==='old'?stamp(a)-stamp(b):stamp(b)-stamp(a));state.visible=result;analytics(result);
+ const period=mode==='today'?'Today, Amsterdam time':from||through?((from||'Start')+' through '+(through||'latest')):'All indexed dates';$('results').textContent=result.filter(r=>!isStill(r)).length+' recordings · '+result.filter(isStill).length+' stills · '+period+(state.hour!==null?' · '+String(state.hour).padStart(2,'0')+':00–'+String(state.hour).padStart(2,'0')+':59':'');const host=$('list');host.replaceChildren();$('more').hidden=result.length<=state.limit;$('export').disabled=!result.length;if(!result.length)host.append(text('div',state.loaded?mode==='today'?'No evidence matches today’s filters. Reset filters to include every classification.':'No evidence matches these filters. Try another period, source or classification.':'Waiting for the S9+ evidence index…','empty'));
+ for(const rec of result.slice(0,state.limit)){const card=text('button','','clip');card.type='button';card.dataset.clip=name(rec);card.setAttribute('aria-selected',String(state.selected===name(rec)));pic(rec,card);const labels=text('div','','clip-label');labels.append(text('strong',fmt(rec)),text('small',CATEGORY[category(rec)]));const cs=text('div','','chips');if(isStill(rec))cs.append(text('span','No video captured','chip'));else if(mode==='evidence'){cs.append(text('span',samples(rec)?samples(rec)+' sampled frames':'No sampled review','chip'));if(score(rec)!==null)cs.append(text('span','Peak '+(score(rec)*100).toFixed(1)+'%','chip'+(category(rec)==='possible'?' possible':'')))}labels.append(cs);card.append(labels);card.onclick=()=>open(rec);host.append(card)}if(state.selected&&!result.some(x=>name(x)===state.selected))clearDetail('The selected entry is outside these filters. Select another entry to inspect its evidence.');
+}
+async function refresh(){if(state.refreshing)return;state.refreshing=true;$('refresh').disabled=true;$('sync').textContent='Refreshing S9+ evidence index…';try{const r=relay();if(!r?.fetch)throw Error('secure relay unavailable');const resp=await r.fetch('/new/api/saved',{cache:'no-store'});if(!resp.ok)throw Error('archive response '+resp.status);const d=await resp.json();if(d.archive_mode!=='S9-microSD-only'||!Array.isArray(d.events))throw Error('unexpected archive format');const rows=d.events.filter(x=>native.test(name(x))||legacy.test(name(x))),previews=Array.isArray(d.fallback_previews)?d.fallback_previews.filter(x=>still.test(name(x))):[];state.all=Array.from(new Map([...rows,...previews].map(r=>[name(r),r])).values());state.loaded=true;$('sync').textContent='S9+ microSD · updated '+new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit'}).format(new Date())+' · original 4K retained';render();const requested=params.get('clip');if(requested&&!state.selected){const rec=state.visible.find(r=>name(r)===requested);if(rec)open(rec)}}catch(e){$('sync').textContent=(state.loaded?'Showing the last loaded index · ':'Evidence index unavailable · ')+String(e.message||e);if(!state.loaded)$('list').replaceChildren(text('div','The secure archive connection is unavailable. Use Refresh to try again. Evidence remains on S9+.','empty'))}finally{state.refreshing=false;$('refresh').disabled=false}}
+$('refresh').onclick=refresh;$('reset').onclick=()=>{for(const id of ['search','from','through'])$(id).value='';$('source').value='all';$('type').value='all';$('order').value='new';$('period').value=mode==='today'?'today':'all';state.hour=null;state.limit=48;render()};$('clearHour').onclick=()=>{state.hour=null;state.limit=48;render()};$('showUnreviewed').onclick=()=>{$('type').value='review';$('source').value='video';state.limit=48;render()};$('more').onclick=()=>{state.limit+=48;render()};$('export').onclick=()=>download(state.visible,'s9-evidence-index-'+today()+'.csv');
+for(const id of ['search','period','from','through','source','type','order'])$(id).addEventListener(id==='search'?'input':'change',()=>{state.limit=48;render()});document.addEventListener('visibilitychange',()=>{if(document.hidden)state.activeVideo?.pause();else if(!state.loaded)refresh()});window.addEventListener('pagehide',playbackStop);refresh();setInterval(()=>{if(!document.hidden)refresh()},60000);
 })();
 const GEJAST_PAGE_VERSION='v817';
-</script><div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#7894a5;font-size:10px;pointer-events:none">v817 - Made by Bruis</div></body></html>
+</script><div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#7894a5;font-size:10px;pointer-events:none">v817 - Made by Bruis</div><script src="./security-gpu-launcher-v1.js?v=S9_GPU_PLAYER_V1_20261012"></script>
+</body></html>

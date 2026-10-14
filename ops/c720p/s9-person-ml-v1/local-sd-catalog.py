@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """S9 microSD security catalog. No Google Drive access or MP4 hub caching."""
-import json,subprocess,os,re,datetime,math
+import json,subprocess,os,re,datetime,math,hashlib
 from pathlib import Path
 ADDR="192.168.178.250:5555"
 SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
@@ -14,6 +14,28 @@ NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 TRACK_VERSION="sampled_box_tracklets_v1"
 COLOURS={"black","white","gray","red","orange","yellow","green","blue","purple_or_pink","brown","uncertain"}
 DIRECTIONS={"image_left","image_right","image_up","image_down","diagonal","stationary_or_uncertain","insufficient_samples"}
+def safe_pose_summary(raw,duration):
+ if not isinstance(raw,dict) or raw.get("version")!="projected_pose_motion_v1" or raw.get("scope")!="this_recording_only" or raw.get("identity_eligible") is not False:return None
+ out={"version":"projected_pose_motion_v1","scope":"this_recording_only","identity_eligible":False}
+ enums={"posture_availability":{"available","insufficient_visible_torso"},"gait_availability":{"available_projected_ankle_cycle","insufficient_dense_full_body_samples","no_reliable_walking_periodicity"},"posture":{"projected_upright","projected_leaning","projected_bent_knees","projected_horizontal","unavailable"},"projected_direction":DIRECTIONS}
+ for key,allowed in enums.items():
+  if raw.get(key) not in allowed:return None
+  out[key]=raw[key]
+ for key in ("samples","torso_samples","full_body_samples","dense_samples"):
+  v=raw.get(key)
+  if type(v) is not int or not 0<=v<=64:return None
+  out[key]=v
+ for key in ("first_ms","last_ms","dense_span_ms"):
+  v=raw.get(key)
+  if type(v) is not int or not 0<=v<=duration:return None
+  out[key]=v
+ ranges={"mean_confidence":(0,1),"torso_lean_degrees":(0,180),"knee_bend_degrees":(0,180),"shoulder_hip_projected_ratio":(0,20),"apparent_speed_body_heights_per_second":(0,20),"cadence_steps_per_minute":(12,300),"ankle_swing_body_heights":(0,10),"walking_periodicity":(-1,1),"arm_swing_body_heights":(0,10)}
+ for key,(lo,hi) in ranges.items():
+  v=raw.get(key);out[key]=round(v,4) if type(v) in (int,float) and math.isfinite(v) and lo<=v<=hi else None
+ if out["posture_availability"]!="available" or out["torso_samples"]<3:out["posture"]="unavailable"
+ if out["gait_availability"]!="available_projected_ankle_cycle" or out["dense_samples"]<22 or out["dense_span_ms"]<2500:out["cadence_steps_per_minute"]=None
+ return out
+
 def anonymous_clip_metadata(manifest):
  status={"anonymous_tracking_status":"not_available_in_original_review",
          "anonymous_track_count":None,"anonymous_tracks":[]}
@@ -61,6 +83,8 @@ def anonymous_clip_metadata(manifest):
       if entry.get("image_movement_direction") in DIRECTIONS else "insufficient_samples",
     "body_posture_status":"not_measured_no_pose_keypoints",
     "gait_cadence_status":"not_measurable_from_sampled_frames"})
+   pose=safe_pose_summary(entry.get("pose_metrics"),duration)
+   if pose:tracks[-1].update(pose_metrics=pose,body_posture_status=pose["posture_availability"],gait_cadence_status=pose["gait_availability"])
    seen.add(index)
   claimed=manifest.get("anonymous_track_count")
   if isinstance(claimed,bool) or not isinstance(claimed,int) or claimed!=len(tracks):
@@ -69,6 +93,42 @@ def anonymous_clip_metadata(manifest):
   return {**status,"anonymous_tracking_status":"invalid_tracking_manifest"}
  return {"anonymous_tracking_status":"sampled_tracks_available" if tracks else "none_detected_in_sampled_frames",
          "anonymous_track_count":len(tracks),"anonymous_tracks":tracks}
+
+def safe_thumbnail_revision(row):
+ """Return a bounded cache key from validated thumbnail digests only."""
+ digest=row.get("thumbnail_sha256")
+ if isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest):return digest[:16]
+ revision=row.get("thumbnail_revision")
+ return revision if isinstance(revision,str) and re.fullmatch(r"[a-f0-9]{16}",revision) else None
+
+def safe_detection_timeline(row):
+ """Bounded sampled model observations, never identities or raw frame bytes."""
+ import math
+ raw=row.get("person_sample_timeline")
+ result={"person_sample_timeline":[],"person_timeline_status":"not_in_original_review",
+         "person_first_sample_ms":None,"person_last_sample_ms":None}
+ if raw is None:return result
+ duration=row.get("duration_ms")
+ frames=row.get("sampled_frames",row.get("sampled_frame_count"))
+ if (not isinstance(raw,list) or len(raw)>12 or type(duration) is not int or
+     not 0<duration<=120000 or type(frames) is not int or not 0<=frames<=32 or len(raw)>frames):
+  return {**result,"person_timeline_status":"invalid_sample_timeline"}
+ clean=[];previous=-1
+ for point in raw:
+  if not isinstance(point,dict):return {**result,"person_timeline_status":"invalid_sample_timeline"}
+  ms=point.get("time_ms");score=point.get("person_peak_score")
+  counts=[point.get(k) for k in ("people_at_050","vehicles_at_050","animals_at_050")]
+  if (type(ms) is not int or not previous<ms<=duration or
+      any(type(n) is not int or not 0<=n<=64 for n in counts) or
+      type(score) not in (int,float) or not math.isfinite(score) or not 0<=score<=1):
+   return {**result,"person_timeline_status":"invalid_sample_timeline"}
+  clean.append({"time_ms":ms,"people_at_050":counts[0],"vehicles_at_050":counts[1],
+                "animals_at_050":counts[2],"person_peak_score":round(float(score),3)})
+  previous=ms
+ positive=[p["time_ms"] for p in clean if p["people_at_050"]>0]
+ return {"person_sample_timeline":clean,"person_timeline_status":"sampled_model_evidence",
+         "person_first_sample_ms":positive[0] if positive else None,
+         "person_last_sample_ms":positive[-1] if positive else None}
 
 def safe_native_detection_stats(manifest):
  """Whitelisted, non-biometric detection provenance from S9 signed manifests."""
@@ -99,7 +159,7 @@ def safe_native_detection_stats(manifest):
  return {"person_score":round(score,3) if score is not None else None,
          "sampled_frames":frames,"person_detected_frames_050":hits,
          "person_presence_percent":coverage,"duration_ms":duration,
-         "review_backend":backend,"person_event_category":category}
+         "review_backend":backend,"person_event_category":category,**safe_detection_timeline(manifest)}
 
 def safe_capture_event_metadata(manifest, current_name):
  """Expose bounded, non-biometric segment lineage and cover diagnostics."""
@@ -151,7 +211,7 @@ def safe_face_review_metadata(m):
  valid=("no_frontal_face_in_samples","face_embedding_unavailable_snapshots_only",
    "face_embedding_failed_snapshots_only","face_review_failed",
    "review_complete_unverified_matches","face_model_changed_requires_reenrollment",
-   "face_index_read_error")
+   "face_index_read_error","face_evidence_saved_quality_limited")
  result["face_review_status"]=status if status in valid else "invalid_face_review_status"
  n=m.get("face_review_sampled_frames")
  if type(n) is int and 0<=n<=48:result["face_review_sampled_frames"]=n
@@ -163,7 +223,7 @@ def safe_face_review_metadata(m):
  for row in rows:
   if not isinstance(row,dict):continue
   status=row.get("match_status")
-  if status not in ("not_comparable_model_unavailable","reference_similarity_unverified",
+  if status not in ("not_comparable_model_unavailable","not_comparable_face_quality","reference_similarity_unverified",
     "anonymous_similarity_unverified","new_anonymous_candidate","face_model_changed_requires_reenrollment",
     "face_index_read_error","face_database_unavailable","face_index_capacity_reached"):continue
   ms=row.get("time_ms")
@@ -184,15 +244,30 @@ def safe_face_review_metadata(m):
       and snap.startswith(base+"__"))
   size=row.get("snapshot_size_bytes")
   digest=row.get("snapshot_sha256")
-  if not (valid_snapshot and type(size) is int and 2000<=size<=2200000
+  # Small native face crops can legitimately compress below 2 KiB. Permit
+  # those only from the focused detector-confirmed evidence pipeline; SHA and
+  # exact clip-bound basenames remain mandatory.
+  minimum=500 if (m.get("face_capture_algorithm")=="person_head_roi_face_evidence_v2" and
+    row.get("capture_quality")=="detector_confirmed_evidence" and
+    row.get("source_region") in ("person_head_roi","full_frame")) else 2000
+  if not (valid_snapshot and type(size) is int and minimum<=size<=2200000
           and isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest)):
    snap=None;size=None;digest=None
   out.append({"person_id":key,"candidate_name":label,"match_status":status,
     "time_ms":ms,"cosine_similarity":round(score,3) if score is not None else None,
     "snapshot_on_s9":snap is not None,
     "snapshot_name":snap,"snapshot_size":size,"snapshot_sha256":digest})
+  clean=out[-1]
+  for field in ("temporary_track_id",):
+   value=row.get(field)
+   if type(value) is int and 1<=value<=64:clean[field]=value
+  for field in ("recognition_quality",):
+   if type(row.get(field)) is bool:clean[field]=row[field]
+  if row.get("source_region") in ("person_head_roi","full_frame"):clean["source_region"]=row["source_region"]
+ result["face_gallery_epoch"]=m.get("face_gallery_epoch") if isinstance(m.get("face_gallery_epoch"),str) and re.fullmatch(r"[a-f0-9]{64}",m["face_gallery_epoch"]) else None
+ result["face_capture_algorithm"]=m.get("face_capture_algorithm") if m.get("face_capture_algorithm")=="person_head_roi_face_evidence_v2" else None
  result["face_candidates"]=out
- result["face_snapshots_saved"]=len(out)
+ result["face_snapshots_saved"]=sum(row["snapshot_on_s9"] for row in out)
  return result
 
 def adb(*args):
@@ -209,13 +284,13 @@ def main():
   if not NAMES.fullmatch(name):continue
   try:
    b=adb("exec-out","cat",SD+"/"+name+".verified.json")
-   if len(b)>14000:raise ValueError("manifest too large")
+   if len(b)>90000:raise ValueError("manifest too large")
    m=json.loads(b)
    size=int(m.get("bytes",0))
    if m.get("name")!=name or size<10000 or not re.fullmatch("[a-f0-9]{64}",str(m.get("sha256",""))):raise ValueError("manifest")
    actual=int(adb("shell","stat","-c","%s",SD+"/"+name).strip())
    if actual!=size:raise ValueError("partial file")
-   thumb=None
+   thumb=None;thumb_revision=safe_thumbnail_revision(m)
    try:
     img=adb("exec-out","cat",SD+"/"+name+".thumb.jpg")
     if img[:3]==bytes([255,216,255]) and 4000<len(img)<2200000:
@@ -224,7 +299,7 @@ def main():
      if not dest.is_file() or dest.read_bytes()!=img:
       part=dest.with_suffix(".jpg.tmp")
       part.write_bytes(img);os.replace(part,dest)
-     thumb="s9-phone-thumbs/"+dest.name
+     thumb="s9-phone-thumbs/"+dest.name;thumb_revision=hashlib.sha256(dest.read_bytes()).hexdigest()[:16]
    except Exception:pass
    group=m.get("content_group")
    if group not in ("one_person","multiple_people"):group="unreviewed"
@@ -232,7 +307,7 @@ def main():
    rows.append({"name":name,"timestamp":dt.strftime("%Y-%m-%d %H:%M"),"size":size,
      "drive_verified":False,"sd_verified":True,"sd_only":True,
      "scene_category":group,"person_count":m.get("ai_person_count_at_trigger",0),
-     "thumbnail":thumb})
+     "thumbnail":thumb,"thumbnail_revision":thumb_revision})
   except Exception as e:problems.append(name+":"+type(e).__name__)
  # Include only native 4K recordings whose S9-generated SHA-256 evidence matches.
  native="/storage/9C33-6BBD/Android/data/nl.kalenel.s9nativefourk/files/Native4K"
@@ -250,7 +325,7 @@ def main():
   if actual!=size:raise ValueError("native_4k_size_mismatch")
   digest=adb("shell","sha256sum",native+"/"+name).decode().split()[0].lower()
   if sha!=digest:raise ValueError("native_4k_sha256_mismatch")
-  thumb=None
+  thumb=None;thumb_revision=safe_thumbnail_revision(m)
   try:
    img=adb("exec-out","cat",native+"/"+name+".thumb.jpg")
    if img[:3]==bytes([255,216,255]) and 4000<len(img)<2200000:
@@ -259,12 +334,12 @@ def main():
     if not dest.is_file() or dest.read_bytes()!=img:
      part=dest.with_suffix(".jpg.tmp")
      part.write_bytes(img);os.replace(part,dest)
-    thumb="s9-phone-thumbs/"+dest.name
+    thumb="s9-phone-thumbs/"+dest.name;thumb_revision=hashlib.sha256(dest.read_bytes()).hexdigest()[:16]
   except Exception:pass
   stamp=datetime.datetime.fromtimestamp(int(name.split("_")[1].split(".")[0])/1000.0)
   rows.append({"name":name,"timestamp":stamp.strftime("%Y-%m-%d %H:%M"),"size":size,
     "drive_verified":False,"sd_verified":True,"sd_only":True,
-    "scene_category":"unreviewed","person_count":0,"thumbnail":thumb,
+    "scene_category":"unreviewed","person_count":0,"thumbnail":thumb,"thumbnail_revision":thumb_revision,
     "resolution":"3840x2160","codec":"H.264","storage":"S9+ native 4K microSD"})
  except Exception as e:
   if type(e).__name__!="OSError":problems.append("native_4k:"+type(e).__name__)
@@ -290,7 +365,7 @@ def main():
    group=str(m.get("scene_category","motion_other"))
    if group not in ("one_person","multiple_people","motion_other"):
     group="unreviewed"
-   thumb=None
+   thumb=None;thumb_revision=safe_thumbnail_revision(m)
    try:
     raw=adb("exec-out","cat",native_security+"/"+name+".thumb.jpg")
     if 4000<len(raw)<2200000 and raw[:3]==bytes([255,216,255]):
@@ -298,7 +373,7 @@ def main():
      dest.parent.mkdir(parents=True,exist_ok=True)
      if not dest.is_file() or dest.read_bytes()!=raw:
       t=dest.with_suffix(".jpg.partial");t.write_bytes(raw);os.replace(t,dest)
-     thumb="s9-phone-thumbs/"+dest.name
+     thumb="s9-phone-thumbs/"+dest.name;thumb_revision=hashlib.sha256(dest.read_bytes()).hexdigest()[:16]
    except Exception:pass
    when=datetime.datetime.fromtimestamp(int(name.split("_")[1].split(".")[0])/1000.0)
    rows.append({"name":name,"timestamp":when.strftime("%Y-%m-%d %H:%M"),
@@ -306,7 +381,7 @@ def main():
      "scene_category":group,"person_count":int(m.get("person_count",0)),
      **safe_native_detection_stats(m),
      **safe_capture_event_metadata(m,name),
-     "thumbnail":thumb,"resolution":"3840x2160","codec":"H.264",
+     "thumbnail":thumb,"thumbnail_revision":thumb_revision,"resolution":"3840x2160","codec":"H.264",
      "content_categories":m.get("categories",[]),
      **anonymous_clip_metadata(m),
      **safe_face_review_metadata(m),
