@@ -117,6 +117,9 @@ public final class CameraService extends Service {
  private volatile boolean historicalQueued=false;
  private volatile boolean faceBackfillQueued=false;
  private final Map<String,Integer> faceBackfillRetries=new ConcurrentHashMap<>();
+ private volatile boolean appearanceBackfillQueued=false;
+ private volatile long appearanceBackfillDone=0,appearanceBackfillErrors=0,lastAppearanceBackfillScan=0;
+ private final Map<String,Integer> appearanceBackfillRetries=new HashMap<>();
  private volatile boolean movementBackfillQueued=false;
  private final Map<String,Integer> movementBackfillRetries=new HashMap<>();
  private volatile long movementBackfillDone=0,movementBackfillErrors=0,lastMovementBackfillScan=0;
@@ -1127,6 +1130,78 @@ public final class CameraService extends Service {
    }});
   }catch(java.util.concurrent.RejectedExecutionException e){movementBackfillQueued=false;}
  }
+ /** At most one historic 4K appearance index per quiet S9+ maintenance pass.
+  * File reads, decode and TFLite reuse the existing serialized review worker.
+  * The original MP4 and previous classification/face snapshots are preserved.
+  */
+ private void maybeAppearanceBackfill(){
+  long now=SystemClock.elapsedRealtime();
+  if(!running||appearanceBackfillQueued||movementBackfillQueued||
+     faceBackfillQueued||historicalQueued||gardenPersonGateBusy||
+     now-lastAppearanceBackfillScan<120000L||
+     folder==null||reviewer==null||classifier==null||
+     !"watching".equals(mode)||temperature()>=335||
+     (lastMovementAt>0&&now-lastMovementAt<90000L)||
+     folder.getUsableSpace()<20L*1024*1024*1024)return;
+  appearanceBackfillQueued=true;
+  final File archive=folder;
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    try{
+     if(!running||!"watching".equals(mode)||temperature()>=335)return;
+     File[] manifests=archive.listFiles((d,n)->
+        n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
+     if(manifests==null)return;
+     Arrays.sort(manifests,Comparator.comparing(File::getName));
+     try(AppearanceSearchIndex index=new AppearanceSearchIndex(archive)){
+      for(File manifest:manifests){
+       if(!running||!"watching".equals(mode)||temperature()>=335||
+          gardenPersonGateBusy||(lastMovementAt>0&&
+          SystemClock.elapsedRealtime()-lastMovementAt<90000L))return;
+       if(manifest.length()<100||manifest.length()>28000)continue;
+       String name=manifest.getName().replace(".verified.json","");
+       if(appearanceBackfillRetries.getOrDefault(name,0)>=3)continue;
+       File video=new File(archive,name);
+       if(!video.isFile()||video.length()<100000||video.length()>800000000)continue;
+       try{
+        JSONObject meta;
+        try(InputStream in=new FileInputStream(manifest);
+            ByteArrayOutputStream out=new ByteArrayOutputStream()){
+         byte[] buffer=new byte[8192];int n;
+         while((n=in.read(buffer))>0){
+          out.write(buffer,0,n);
+          if(out.size()>28000)throw new IOException("appearance_manifest_too_large");
+         }
+         meta=new JSONObject(out.toString("UTF-8"));
+        }
+        if(AppearanceSearchIndex.VERSION.equals(meta.optString("appearance_search_version"))&&
+           index.hasClip(name))continue;
+        if(classifier.backfillAppearanceIndex(video,archive,name,meta)){
+         appearanceBackfillDone++;
+         Log.i(TAG,"S9_HSV_HISTORICAL_INDEX_OK "+name);
+        }else{
+         appearanceBackfillErrors++;
+         appearanceBackfillRetries.put(name,appearanceBackfillRetries.getOrDefault(name,0)+1);
+        }
+        return;
+       }catch(Exception e){
+        appearanceBackfillErrors++;
+        appearanceBackfillRetries.put(name,appearanceBackfillRetries.getOrDefault(name,0)+1);
+        Log.w(TAG,"appearance_historical_backfill_failed",e);
+        return;
+       }
+      }
+     }
+    }catch(Exception unavailable){
+     appearanceBackfillErrors++;
+     Log.w(TAG,"appearance_historical_index_unavailable",unavailable);
+    }finally{
+     lastAppearanceBackfillScan=SystemClock.elapsedRealtime();
+     appearanceBackfillQueued=false;
+    }
+   }});
+  }catch(RejectedExecutionException e){appearanceBackfillQueued=false;}
+ }
  // Never quarantine an existing person-negative original while testing a
  // detector whose false-negative rate is not independently established.
  // Original 4K MP4 files remain on microSD for manual review and recovery.
@@ -1215,6 +1290,7 @@ public final class CameraService extends Service {
    failure("stalled_YUV_camera",null);scheduleRecover();
   }
   maybeMovementBackfill();
+  maybeAppearanceBackfill();
   maybeHistoricalImport();
   maybeFaceBackfill();
   maybeGardenArchiveTriage();
@@ -1333,6 +1409,10 @@ public final class CameraService extends Service {
    d.put("movement_4k_backfill_errors",movementBackfillErrors);
    d.put("movement_4k_backfill_skipped_after_retries",movementBackfillRetries.size());
    d.put("movement_4k_backfill_queued",movementBackfillQueued);
+   d.put("appearance_backfill_queued",appearanceBackfillQueued);
+   d.put("appearance_backfill_completed",appearanceBackfillDone);
+   d.put("appearance_backfill_errors",appearanceBackfillErrors);
+   d.put("appearance_index_version",AppearanceSearchIndex.VERSION);
    d.put("face_backfill_completed",faceBackfillDone);
    d.put("face_deep_scanned",deepFaceScanned);
    d.put("face_deep_errors",deepFaceErrors);
