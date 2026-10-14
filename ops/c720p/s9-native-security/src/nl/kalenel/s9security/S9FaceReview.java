@@ -374,7 +374,7 @@ final class S9FaceReview implements AutoCloseable {
   manifest.put("face_rejected_looking_away_or_roll",rejectedPose);
   manifest.put("face_rejected_crop_geometry",rejectedCrop);
   manifest.put("face_rejected_dark_or_blurry",rejectedImageQuality);
-  manifest.put("face_embedding_model_state",!modelAttempted?"not_tested_no_usable_face":
+  manifest.put("face_model_state",!modelAttempted?"not_tested_no_usable_face":
       modelReady?"available_on_phone":"unavailable_on_phone");
   manifest.put("face_evidence_outcome",saved>0?"snapshot_candidates_saved":
       "face_review_failed".equals(status)?"review_processing_failed":
