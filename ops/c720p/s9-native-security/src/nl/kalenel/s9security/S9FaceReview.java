@@ -35,7 +35,8 @@ final class S9FaceReview implements AutoCloseable {
  private final List<Entry> unknown=new ArrayList<>();
  private Interpreter net;
  private String sha="",status="no_frontal_face_in_samples",error="";
- private int nextId=1,frames=0,detected=0,saved=0;
+ private int nextId=1,frames=0,detected=0,saved=0,personRoiSamples=0,fullFrameSamples=0;
+ private int rawDetectorHits=0,lowConfidenceOrSmall=0,rejectedPose=0,rejectedCrop=0,rejectedImageQuality=0;
  private boolean loaded=false,modelAttempted=false,modelReady=false;
  private static final class Entry {
   final String id; final float[] vector;
@@ -273,26 +274,58 @@ final class S9FaceReview implements AutoCloseable {
   writeIndex();
   return result.put("person_id",id).put("match_status","new_anonymous_candidate");
  }
- void sample(Bitmap frame,long ms){
+ void sample(Bitmap frame,long ms){sample(frame,ms,null);}
+ /** Isolated person detector ROI is cropped from original decoded 4K,
+  * before downscaling for Android FaceDetector. Frontal faces in distant
+  * garden recordings otherwise become only a few pixels wide.
+  * The ROI is NOT a body pose or gait model.
+  */
+ void sample(Bitmap frame,long ms,float[] detectedPerson){
   if(!FILE.matcher(clip).matches()||frames>=frameLimit||captures.length()>=MAX_CAPTURES)return;
   frames++;
-  Bitmap scaled=null,rgb=null;
+  Bitmap scaled=null,rgb=null,subject=frame;
+  int offsetX=0,offsetY=0;
   try{
-   int width=960,height=Math.max(2,(int)Math.round(frame.getHeight()*960.0/frame.getWidth())&~1);
-   scaled=Bitmap.createScaledBitmap(frame,width,height,true);
+   if(detectedPerson!=null&&detectedPerson.length==4){
+    boolean finite=true;
+    for(float v:detectedPerson)if(!Float.isFinite(v)||v<0||v>1)finite=false;
+    if(finite){
+     float t=detectedPerson[0],l=detectedPerson[1],b=detectedPerson[2],rr=detectedPerson[3];
+     if(b-t>.10f&&rr-l>.035f){
+      int width0=frame.getWidth(),height0=frame.getHeight();
+      float padX=(rr-l)*.22f,padY=(b-t)*.10f;
+      int x0=Math.max(0,(int)((l-padX)*width0));
+      int x1=Math.min(width0,(int)Math.ceil((rr+padX)*width0));
+      int y0=Math.max(0,(int)((t-padY)*height0));
+      // Focus on upper 62% of person rectangle, capturing head, hood and hats.
+      int y1=Math.min(height0,(int)Math.ceil((t+.62f*(b-t))*height0));
+      if(x1-x0>=90&&y1-y0>=90){
+       subject=Bitmap.createBitmap(frame,x0,y0,x1-x0,y1-y0);
+       offsetX=x0;offsetY=y0;personRoiSamples++;
+      }
+     }
+    }
+   }
+   if(subject==frame)fullFrameSamples++;
+   int width=960,height=Math.max(2,(int)Math.round(subject.getHeight()*960.0/subject.getWidth())&~1);
+   scaled=Bitmap.createScaledBitmap(subject,width,height,true);
    rgb=scaled.copy(Bitmap.Config.RGB_565,false);
    FaceDetector.Face[] faces=new FaceDetector.Face[MAX_FACES];
    int n=new FaceDetector(width,height,MAX_FACES).findFaces(rgb,faces);
    for(int i=0;i<n&&captures.length()<MAX_CAPTURES;i++){
-    FaceDetector.Face f=faces[i];if(f==null||f.confidence()<.65f||f.eyesDistance()<12)continue;
+    FaceDetector.Face f=faces[i];if(f==null)continue;
+    rawDetectorHits++;
+    if(f.confidence()<.65f||f.eyesDistance()<12){lowConfidenceOrSmall++;continue;}
     float yaw=f.pose(FaceDetector.Face.EULER_Y),roll=f.pose(FaceDetector.Face.EULER_Z);
-    if(Math.abs(yaw)>20||Math.abs(roll)>17)continue;
+    if(Math.abs(yaw)>20||Math.abs(roll)>17){rejectedPose++;continue;}
     PointF center=new PointF();f.getMidPoint(center);
-    int x=(int)(center.x*frame.getWidth()/width),y=(int)(center.y*frame.getHeight()/height);
-    int size=(int)(f.eyesDistance()*3.5*frame.getWidth()/width);
-    Bitmap face=crop(frame,x,y,size);if(face==null)continue;
+    int x=offsetX+(int)(center.x*subject.getWidth()/width);
+    int y=offsetY+(int)(center.y*subject.getHeight()/height);
+    int size=(int)(f.eyesDistance()*3.5*subject.getWidth()/width);
+    Bitmap face=crop(frame,x,y,size);
+    if(face==null){rejectedCrop++;continue;}
     try{
-     if(!usable(face))continue;
+     if(!usable(face)){rejectedImageQuality++;continue;}
      detected++;
      float[] emb=null;
      try{emb=vector(face);}catch(Exception ex){status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();}
@@ -319,14 +352,34 @@ final class S9FaceReview implements AutoCloseable {
     }finally{face.recycle();}
    }
   }catch(Exception e){error=e.getClass().getSimpleName();if(saved==0)status="face_review_failed";}
-  finally{if(rgb!=null)rgb.recycle();if(scaled!=null&&scaled!=frame)scaled.recycle();}
+  finally{
+   if(rgb!=null)rgb.recycle();
+   if(scaled!=null&&scaled!=subject)scaled.recycle();
+   if(subject!=frame)subject.recycle();
+  }
  }
  void publish(JSONObject manifest)throws Exception{
   manifest.put("face_review_version",VERSION);
   manifest.put("face_review_status",status);
   manifest.put("face_review_sampled_frames",frames);
+  manifest.put("face_detector_sampling_version","high_resolution_isolated_person_head_roi_v2");
+  manifest.put("face_person_head_roi_samples",personRoiSamples);
+  manifest.put("face_fullframe_samples",fullFrameSamples);
   manifest.put("face_frontal_candidates",detected);
   manifest.put("face_snapshots_saved",saved);
+  // Counts are classification evidence, not facial identity. In particular,
+  // zero snapshots is never treated as evidence that no person was present.
+  manifest.put("face_detector_raw_hits",rawDetectorHits);
+  manifest.put("face_rejected_confidence_or_size",lowConfidenceOrSmall);
+  manifest.put("face_rejected_looking_away_or_roll",rejectedPose);
+  manifest.put("face_rejected_crop_geometry",rejectedCrop);
+  manifest.put("face_rejected_dark_or_blurry",rejectedImageQuality);
+  manifest.put("face_model_state",!modelAttempted?"not_tested_no_usable_face":
+      modelReady?"available_on_phone":"unavailable_on_phone");
+  manifest.put("face_evidence_outcome",saved>0?"snapshot_candidates_saved":
+      "face_review_failed".equals(status)?"review_processing_failed":
+      rawDetectorHits==0?"no_face_detector_hit_in_sampled_frames":
+      "face_candidates_rejected_in_sampling");
   manifest.put("face_candidates",captures);
   manifest.put("face_review_identity_claim","similarity_suggestion_not_verified_identity");
   manifest.put("face_embedding_on_s9_only",true);

@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Never uploads video, records a false event, or writes untriggered SD media.
  */
 public final class GardenPreRoll {
- static final String VERSION="s9_on_phone_avc_memory_ring_v1";
+ static final String VERSION="s9_on_phone_avc_memory_ring_keyframe_7s_v3";
  static final int WIDTH=640,HEIGHT=480,FPS=24,BIT_RATE=1400000;
- static final long RING_US=7000000L,DESIRED_US=5000000L,MIN_US=550000L;
+ static final long RING_US=9000000L,DESIRED_US=6800000L,MIN_US=5500000L;
  private static final int MAX_BYTES=11000000;
  private final Object lock=new Object();
  private final ArrayDeque<Sample> compressed=new ArrayDeque<>();
@@ -157,9 +157,12 @@ public final class GardenPreRoll {
    long latest=packets.get(packets.size()-1).pts;
    long min=latest-DESIRED_US;
    int first=-1;
-   // Choose first keyframe at/after the nominal 5-second preroll.
+   // Retain the last keyframe BEFORE the desired 6.8-second start.
+   // Starting AFTER it discarded 2-5 seconds from the 7-second ring.
+   // If a cold ring cannot supply 5.5 seconds, omit its companion rather
+   // than saving misleading 0.5-1s pseudo-preroll.
    for(int i=0;i<packets.size();i++)
-    if(packets.get(i).pts>=min&&packets.get(i).key()){first=i;break;}
+    if(packets.get(i).pts<=min&&packets.get(i).key())first=i;
    if(first<0){
     for(int i=0;i<packets.size();i++)
      if(packets.get(i).key()){first=i;break;}

@@ -14,6 +14,12 @@ NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 TRACK_VERSION="sampled_box_tracklets_v1"
 COLOURS={"black","white","gray","red","orange","yellow","green","blue","purple_or_pink","brown","uncertain"}
 DIRECTIONS={"image_left","image_right","image_up","image_down","diagonal","stationary_or_uncertain","insufficient_samples"}
+def safe_image_track_metric(value,maximum):
+ """Finite bounded camera-image evidence, not physical speed, gait or identity."""
+ if isinstance(value,bool) or not isinstance(value,(float,int)):return None
+ value=float(value)
+ return round(value,3) if math.isfinite(value) and 0<=value<=maximum else None
+
 def anonymous_clip_metadata(manifest):
  status={"anonymous_tracking_status":"not_available_in_original_review",
          "anonymous_track_count":None,"anonymous_tracks":[]}
@@ -59,6 +65,13 @@ def anonymous_clip_metadata(manifest):
     "peak_detection_score":round(float(peak),3),"upper_clothing_colour":colour,
     "image_movement_direction":entry.get("image_movement_direction")
       if entry.get("image_movement_direction") in DIRECTIONS else "insufficient_samples",
+    "image_speed_body_heights_per_second":safe_image_track_metric(
+      entry.get("image_speed_body_heights_per_second"),8),
+    "image_path_straightness":safe_image_track_metric(
+      entry.get("image_path_straightness"),1),
+    "image_detector_box_aspect_ratio":safe_image_track_metric(
+      entry.get("image_detector_box_aspect_ratio"),6),
+    "movement_measurement_scope":"clip_scoped_2d_camera_image_not_physical_speed",
     "body_posture_status":"not_measured_no_pose_keypoints",
     "gait_cadence_status":"not_measurable_from_sampled_frames"})
    seen.add(index)
@@ -145,7 +158,16 @@ def safe_face_review_metadata(m):
  """Strictly allowlisted human-readable phone metadata. Never copy embeddings or JPEGs."""
  result={"face_review_status":"not_available_in_original_review",
          "face_review_sampled_frames":None,"face_snapshots_saved":0,"face_candidates":[],
-         "face_deep_review_version":None}
+         "face_deep_review_version":None,
+         "face_evidence_outcome":"not_reviewed",
+         "face_model_state":"not_tested_no_usable_face",
+         "face_detector_raw_hits":None,"face_rejected_confidence_or_size":None,
+         "face_rejected_looking_away_or_roll":None,
+         "face_rejected_crop_geometry":None,"face_rejected_dark_or_blurry":None,
+         "face_deep_detector_anchor_frames":None,
+         "face_deep_person_roi_anchors":None,
+         "face_deep_multiple_person_anchors":None,
+         "face_deep_multiscale_refinement_passes":None}
  if m.get("face_review_version")!="s9_face_review_v1":return result
  status=m.get("face_review_status")
  valid=("no_frontal_face_in_samples","face_embedding_unavailable_snapshots_only",
@@ -155,8 +177,30 @@ def safe_face_review_metadata(m):
  result["face_review_status"]=status if status in valid else "invalid_face_review_status"
  n=m.get("face_review_sampled_frames")
  if type(n) is int and 0<=n<=48:result["face_review_sampled_frames"]=n
- if m.get("face_deep_review_version")=="s9_onphone_36_samples_v1" and n==36:
-  result["face_deep_review_version"]="s9_onphone_36_samples_v1"
+ prior=m.get("face_deep_review_version")
+ if prior in ("s9_onphone_36_samples_v1","s9_onphone_36_samples_person_roi_v2") and n==36:
+  result["face_deep_review_version"]=prior
+ outcome=m.get("face_evidence_outcome")
+ if outcome in ("snapshot_candidates_saved","review_processing_failed",
+                "no_face_detector_hit_in_sampled_frames",
+                "face_candidates_rejected_in_sampling"):
+  result["face_evidence_outcome"]=outcome
+ else:
+  result["face_evidence_outcome"]="legacy_review_no_diagnostics"
+ model=m.get("face_model_state")
+ if model in ("not_tested_no_usable_face","available_on_phone","unavailable_on_phone"):
+  result["face_model_state"]=model
+ for key in ("face_detector_raw_hits","face_rejected_confidence_or_size",
+             "face_rejected_looking_away_or_roll","face_rejected_crop_geometry",
+             "face_rejected_dark_or_blurry"):
+  value=m.get(key)
+  if type(value) is int and 0<=value<=144:result[key]=value
+ if result["face_deep_review_version"]=="s9_onphone_36_samples_person_roi_v2":
+  for key in ("face_deep_detector_anchor_frames","face_deep_person_roi_anchors",
+              "face_deep_multiple_person_anchors",
+              "face_deep_multiscale_refinement_passes"):
+   value=m.get(key)
+   if type(value) is int and 0<=value<=12:result[key]=value
  rows=m.get("face_candidates")
  if not isinstance(rows,list) or len(rows)>8:return result
  out=[]

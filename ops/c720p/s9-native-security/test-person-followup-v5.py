@@ -16,7 +16,7 @@ class FollowupTests(unittest.TestCase):
   self.assertIn("evaluateGardenPersonAsync(safeSentinel);",cb)
   self.assertNotIn("startRecording();",cb.split("if(change &&",1)[1])
  def test_hybrid_gpu_gate_is_rate_limited_and_resists_reused_frames(self):
-  body=S.split("private void evaluateGardenPersonAsync(){",1)[1].split("private boolean rateAllowed",1)[0]
+  body=S.split("private void evaluateGardenPersonAsync(boolean sentinel){",1)[1].split("private boolean rateAllowed",1)[0]
   for required in ("now-gardenPersonGateLastAt<900","gardenPersonGateBusy","gardenGateExecutor.execute",
     "gardenGateClassifier.personEvidenceInGarden","gardenGateClassifier.lastPersonScoreAnywhere",
     "personTrackGate.offer(now,jpegAt,score,personBox,localCells)",

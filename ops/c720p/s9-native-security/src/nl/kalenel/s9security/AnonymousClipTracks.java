@@ -14,9 +14,24 @@ public final class AnonymousClipTracks {
  public static final class Track {
   public final int id; public final long firstMs; public long lastMs;
   public int samples; public float peakConfidence; public float[] firstBox,lastBox;
+  private double pathInBodyHeights=0,pathInImageUnits=0;
+  private int validMotionIntervals=0;
   public final Map<String,Integer> colourVotes=new LinkedHashMap<>();
   private Track(int n,long ms,Hit h){id=n;firstMs=ms;firstBox=h.box.clone();update(ms,h);}
   private void update(long ms,Hit h){
+   if(samples>0&&ms>lastMs){
+    double dt=(ms-lastMs)/1000.0;
+    double dx=(h.box[1]+h.box[3]-lastBox[1]-lastBox[3])*.5;
+    double dy=(h.box[0]+h.box[2]-lastBox[0]-lastBox[2])*.5;
+    double delta=Math.hypot(dx,dy);
+    double height=(h.box[2]-h.box[0]+lastBox[2]-lastBox[0])*.5;
+    double normalized=height>0.05?delta/height/dt:Double.POSITIVE_INFINITY;
+    if(dt>=.2&&dt<=5.5&&Double.isFinite(normalized)&&normalized<=8){
+     pathInBodyHeights+=delta/height;
+     pathInImageUnits+=delta;
+     validMotionIntervals++;
+    }
+   }
    lastMs=ms;samples++;peakConfidence=Math.max(peakConfidence,h.confidence);lastBox=h.box.clone();
    if(!"uncertain".equals(h.upperColour))
     colourVotes.put(h.upperColour,colourVotes.getOrDefault(h.upperColour,0)+1);
@@ -31,6 +46,29 @@ public final class AnonymousClipTracks {
    if(Math.abs(dx)>=1.3f*Math.abs(dy))return dx>0?"image_right":"image_left";
    if(Math.abs(dy)>=1.3f*Math.abs(dx))return dy>0?"image_down":"image_up";
    return "diagonal";
+  }
+  /** Camera-image displacement per apparent body height / second.
+   * NOT physical speed, stride, gait or identity: perspective remains unknown.
+   */
+  public Double imageSpeedBodyHeightsPerSecond(){
+   if(samples<3||validMotionIntervals<2||lastMs-firstMs<600)return null;
+   double v=pathInBodyHeights*1000/(lastMs-firstMs);
+   return Double.isFinite(v)&&v>=0&&v<=8?Math.round(v*1000)/1000.0:null;
+  }
+  /** Straightness of the 2D image trajectory, not a gait measurement. */
+  public Double imagePathStraightness(){
+   if(samples<3||validMotionIntervals<2||pathInImageUnits<.002)return null;
+   double dx=(lastBox[1]+lastBox[3]-firstBox[1]-firstBox[3])*.5;
+   double dy=(lastBox[0]+lastBox[2]-firstBox[0]-firstBox[2])*.5;
+   double v=Math.hypot(dx,dy)/pathInImageUnits;
+   return Double.isFinite(v)?Math.round(Math.max(0,Math.min(1,v))*1000)/1000.0:null;
+  }
+  /** Object-detector rectangle width divided by height, NOT body posture. */
+  public Double imageBoxAspectRatio(){
+   if(samples<3)return null;
+   double h=lastBox[2]-lastBox[0],w=lastBox[3]-lastBox[1];
+   if(h<.05||w<.02)return null;
+   return Math.round(w/h*1000)/1000.0;
   }
   public String postureAvailability(){return "not_measured_no_pose_keypoints";}
   public String colour(){

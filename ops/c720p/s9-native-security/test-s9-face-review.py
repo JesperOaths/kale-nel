@@ -190,8 +190,8 @@ class FaceReviewTests(unittest.TestCase):
   self.assertIn('METADATA_KEY_VIDEO_HEIGHT',k)
   # Scaled 960px only for face localization; final crop is from the original
   # decoded 4K frame, never from the reduced browser playback stream.
-  self.assertIn('scaled=Bitmap.createScaledBitmap(frame,width,height,true)',face)
-  self.assertIn('int x=(int)(center.x*frame.getWidth()/width)',face)
+  self.assertIn('scaled=Bitmap.createScaledBitmap(subject,width,height,true)',face)
+  self.assertIn('int x=offsetX+(int)(center.x*subject.getWidth()/width)',face)
   self.assertIn('Bitmap face=crop(frame,x,y,size)',face)
   self.assertNotIn('getFilesDir(),"1080',k)
   self.assertNotIn('ffmpeg',k)

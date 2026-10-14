@@ -286,6 +286,13 @@ public final class ClipClassifier {
     .put("peak_detection_score",Math.round(t.peakConfidence*1000)/1000.0)
     .put("upper_clothing_colour",t.colour())
     .put("image_movement_direction",t.imageDirection())
+    .put("image_speed_body_heights_per_second",t.imageSpeedBodyHeightsPerSecond()==null?
+      JSONObject.NULL:t.imageSpeedBodyHeightsPerSecond())
+    .put("image_path_straightness",t.imagePathStraightness()==null?
+      JSONObject.NULL:t.imagePathStraightness())
+    .put("image_detector_box_aspect_ratio",t.imageBoxAspectRatio()==null?
+      JSONObject.NULL:t.imageBoxAspectRatio())
+    .put("movement_measurement_scope","clip_scoped_2d_camera_image_not_physical_speed")
     .put("body_posture_status",t.postureAvailability())
     .put("gait_cadence_status","not_measurable_from_sampled_frames")
     .put("cross_recording_identity","not_attempted");
@@ -422,41 +429,93 @@ public final class ClipClassifier {
    .put("decision",frames<20?"uncertain_incomplete_samples":
       personFrames>0?"retain_possible_garden_person":"no_garden_person_evidence");
  }
- /** Older person-positive archive only: examine more temporal positions for a
-  * frontal face. 4K MP4 remains untouched, review happens entirely on S9+.
-  * A negative face scan means no suitable face in these samples, NOT no person.
+ /** Historical person-positive 4K face review. The old 36-frame scan used
+  * full-frame downscaling, losing distant faces. The v2 upgrade retries that
+  * *once*, even if v1 previously said no face, using isolated person-head
+  * ROIs on up to 12 detection anchors (never changing the source MP4).
+  * No crop/embedding is evidence that two clips belong to the same person.
   */
- public synchronized boolean deepFaceReview(File mp4,File folder,String name,JSONObject manifest)throws Exception{
-  if(!name.matches("motion_[0-9]{13}[.]mp4")||mp4==null||!mp4.isFile()||
-     !mp4.getParentFile().getCanonicalFile().equals(folder.getCanonicalFile())||
-     manifest.optInt("person_count",0)<=0||
+ static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_roi_v2";
+ static boolean deepFaceNeedsUpgrade(JSONObject manifest){
+  if(manifest==null||manifest.optInt("person_count",0)<=0||
      manifest.optInt("face_snapshots_saved",0)>0||
-     manifest.has("face_deep_review_version")||
+     !manifest.has("face_review_version"))return false;
+  String prior=manifest.optString("face_deep_review_version","");
+  return prior.isEmpty()||"s9_onphone_36_samples_v1".equals(prior);
+ }
+ public synchronized boolean deepFaceReview(File mp4,File folder,String name,JSONObject manifest)throws Exception{
+  if(mp4==null||folder==null||name==null||manifest==null||
+     !name.matches("motion_[0-9]{13}[.]mp4")||!mp4.isFile()||
+     !mp4.getParentFile().getCanonicalFile().equals(folder.getCanonicalFile())||
+     !deepFaceNeedsUpgrade(manifest)||
      !name.equals(manifest.optString("name"))||
+     manifest.optInt("width",0)!=3840||manifest.optInt("height",0)!=2160||
      mp4.length()!=manifest.optLong("bytes",-1))
    return false;
+  // The existing production scan is restricted to the older archive cohort.
   if(Long.parseLong(name.substring(7,20))>=1791687597000L)return false;
   final String fingerprint=manifest.optString("sha256","");
   if(fingerprint.length()!=64||!fingerprint.equalsIgnoreCase(digest(mp4)))
    throw new IOException("deep_face_original_sha_mismatch");
   MediaMetadataRetriever decoder=new MediaMetadataRetriever();
   final S9FaceReview faces=new S9FaceReview(app,folder,name,36);
-  int decoded=0;
+  int decoded=0,detectorAnchors=0,roiAnchors=0,ambiguousAnchors=0,refinementPasses=0;
   try{
    decoder.setDataSource(mp4.getAbsolutePath());
    long duration=Long.parseLong(decoder.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+   int width=Integer.parseInt(decoder.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));
+   int height=Integer.parseInt(decoder.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));
+   if(width!=3840||height!=2160)throw new IOException("deep_face_source_not_4k");
    if(duration<1000L||duration>180000L)throw new IOException("face_deep_unsupported_duration");
+   // One serial worker only, on S9+. Throttle expensive person inference to
+   // 12/36 frames. The other frames retain the original full-frame fallback.
+   init();
    for(int i=0;i<36;i++){
     long at=(long)(((i+0.5)/36.0)*duration*1000);
     Bitmap frame=decoder.getFrameAtTime(at,MediaMetadataRetriever.OPTION_CLOSEST);
     if(frame==null)continue;
-    try{faces.sample(frame,at/1000);decoded++;}finally{frame.recycle();}
+    try{
+     float[] isolated=null;
+     if(i%3==0){
+      detectorAnchors++;
+      List<Detection> hits=detect(frame);
+      boolean foundReliable=false;
+      for(Detection hit:hits)if("person".equals(hit.label)&&hit.score>=.50f){
+       foundReliable=true;break;
+      }
+      if(!foundReliable){
+       refinementPasses++;
+       hits=detectGardenPeopleMultiscale(frame);
+      }
+      int viable=0;
+      for(Detection hit:hits){
+       if(!"person".equals(hit.label)||hit.score<.35f||hit.box==null||
+          hit.box.length!=4)continue;
+       float[] box=hit.box;
+       if(box[2]-box[0]<=.10f||box[3]-box[1]<=.035f)continue;
+       viable++;
+       if(viable==1)isolated=box;
+      }
+      // Multiple people: do not crop the wrong person and lose the other
+      // faces. Use full-frame sampling until multi-person ROI review exists.
+      if(viable==1)roiAnchors++;
+      else {isolated=null;if(viable>1)ambiguousAnchors++;}
+     }
+     faces.sample(frame,at/1000,isolated);
+     decoded++;
+    }finally{frame.recycle();}
    }
-   // Only replace the manifest once all reads have completed and evidence
-   // has been recorded. Do not erase or re-encode the source recording.
+   if(decoded==0)throw new IOException("face_deep_zero_decoded_frames");
+   // Only commit metadata after successful reads. The recording and previous
+   // evidence are preserved. A no-face result cannot establish no-person.
    faces.publish(manifest);
-   manifest.put("face_deep_review_version","s9_onphone_36_samples_v1");
+   manifest.put("face_deep_review_version",DEEP_FACE_ROI_VERSION);
    manifest.put("face_deep_decoded_frames",decoded);
+   manifest.put("face_deep_detector_anchor_frames",detectorAnchors);
+   manifest.put("face_deep_person_roi_anchors",roiAnchors);
+   manifest.put("face_deep_multiple_person_anchors",ambiguousAnchors);
+   manifest.put("face_deep_multiscale_refinement_passes",refinementPasses);
+   manifest.put("face_deep_source","original_4k_microSD");
    manifest.put("face_deep_review_human_verified",false);
    manifest.put("face_deep_review_no_face_is_not_no_person",true);
    writeJson(new File(folder,name+".verified.json"),manifest);
@@ -643,7 +702,8 @@ public final class ClipClassifier {
      if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)
       outfit.add(bitmap,distinctPersonBoxes.get(0),(float)framePersonMax);
      anonymousTracks.addFrame(micros/1000,anonymousPeople);
-     if(p>0)faceReview.sample(bitmap,micros/1000);
+     if(p>0)faceReview.sample(bitmap,micros/1000,
+       p==1&&distinctPersonBoxes.size()==1?distinctPersonBoxes.get(0):null);
      if(p>=2)framesWithMultiplePeople++;
      if(p>0){
       strongPersonFrames++;
