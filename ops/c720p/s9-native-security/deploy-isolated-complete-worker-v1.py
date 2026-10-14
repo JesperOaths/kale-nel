@@ -69,8 +69,8 @@ def main():
  first=verified[0][1]
  if first.get("both_segments_decoded") is not True or first.get("original_4k_unchanged") is not True:
   raise RuntimeError("incomplete_acceptance_proof")
- unit=cmd("systemctl","--user","is-active","c720p-s9-joined-preroll-safe-upgrade.timer")
- if unit.strip()=="active":raise RuntimeError("unsafe_old_phone_ffmpeg_timer_active")
+ unit=subprocess.run(["systemctl","--user","is-active","c720p-s9-joined-preroll-safe-upgrade.timer"],capture_output=True,text=True,timeout=10)
+ if unit.stdout.strip()=="active":raise RuntimeError("unsafe_old_phone_ffmpeg_timer_active")
  with urllib.request.urlopen(URL,timeout=35) as response:body=response.read(17000)
  text=body.decode()
  if not all(term in text for term in ("JOINER_VERIFIED_PUBLISHED","live_recording_or_camera_health_changed",
