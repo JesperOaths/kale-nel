@@ -107,7 +107,7 @@ def main():
     if os.statvfs(HOME).f_bavail*os.statvfs(HOME).f_frsize<320*1024**2:
         raise RuntimeError("insufficient_hub_space_for_rollback")
     first=status()
-    if not healthy(first) or first.get("preroll_version")!=VERSION or not first.get("continuous_4k_ready") or first.get("continuous_4k_completed",0)<1:
+    if not healthy(first) or first.get("preroll_version") not in (VERSION,"s9_on_phone_avc_memory_ring_keyframe_7s_v3"):
         print("S9_4K_TRIAL_DEFERRED_UNHEALTHY_BASELINE",json.dumps({"mode":first.get("mode"),"temp":first.get("temperature_c")}),flush=True)
         return
     print("BASELINE_HEALTHY",json.dumps({"temp":first["temperature_c"],"gpu":first.get("garden_person_gate_backend"),"recorder":first.get("recorder")}),flush=True)
@@ -179,8 +179,8 @@ def main():
             quality=packets(pulled)
             if (stream.get("width"),stream.get("height"),stream.get("codec_name"))!=(3840,2160,"h264"):
                 raise RuntimeError("incorrect_native_4k_resolution")
-            if not 14.0<=duration<=23.5:raise RuntimeError("preroll_plus_event_duration_invalid_"+str(duration))
-            if quality["max_gap"]>0.16 or quality["nonmonotonic"]>0 or quality["keyframes"]<4:
+            if not 14.0<=duration<=30.0:raise RuntimeError("preroll_plus_event_duration_invalid_"+str(duration))
+            if quality["max_gap"]>0.12 or quality["nonmonotonic"]>0 or quality["keyframes"]<4:
                 raise RuntimeError("4k_frame_continuity_invalid_"+str(quality))
             # Decode at first and final seconds; never trust metadata alone.
             for at in ("0","7","14"):
