@@ -154,7 +154,7 @@ function sortByShirtBase(list){
   );
 }
 
-// Printify product IDs are Mongo ObjectIds; their first eight hex digits are
+// Source product IDs are Mongo ObjectIds; their first eight hex digits are
 // the immutable creation timestamp. UpdatedAt cannot be used for "newest":
 // editing the price or mockups of an old design would incorrectly move it first.
 function productCreatedMs(product){
