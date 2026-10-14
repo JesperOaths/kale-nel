@@ -623,6 +623,33 @@ public final class CameraService extends Service {
    },cameraHandler);
   }catch(Exception e){failure("recorder_prepare_failed",e);abortRecording();}
  }
+ private void finishContinuous4K(File clip,long durationMs,boolean diagnostic){
+  if(!validCompleted4K(clip)){
+   continuous4KFailures++;
+   failure("continuous_4k_final_validation_failed",null);
+   restoreLegacy4K("invalid_single_mp4");
+   return;
+  }
+  continuous4KCompleted++;
+  continuous4KLastResult="verified_native_4k_"+durationMs+"ms";
+  mode="watching";
+  if(diagnostic){
+   diagnosticPrerollClip=clip.getName();
+   diagnosticPrerollResult="single_native_4k_complete_"+durationMs+"ms";
+   diagnosticPrerollActive=false;
+   eventChain.reset();
+   Log.i(TAG,"CONTINUOUS_4K_TEST_MP4 "+clip.getName());
+   return;
+  }
+  completed++;
+  lastClip=clip.getName();
+  final CaptureContinuity.Segment segment=eventChain.stopped(
+      SystemClock.elapsedRealtime(),lastClip,"continuous_4k_event");
+  final long motionAtSave=motionEvents;
+  final String evidenceReason="continuous_native_4k_"+captureTier;
+  writeCaptureEvidenceAsync(clip,segment);
+  reviewer.submit(()->review(clip,evidenceReason,motionAtSave,segment));
+ }
  private void stopRecording(String reason){
   if(!"recording".equals(mode))return;
   mode="stopping";
