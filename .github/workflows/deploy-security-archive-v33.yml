@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-security-archive-v33.yml'
+      - 'ops/c720p/s9-native-security/deploy-archive-v33.py'
 permissions:
   contents: read
 jobs:
