@@ -59,11 +59,15 @@ def patch(proxy,page,source_proxy):
         new_proxy=proxy
     else:new_proxy=proxy.replace(ANCHOR,route+ANCHOR,1)
     ast.parse(new_proxy)
-    if INTRO not in page and LINK not in page:raise RuntimeError("tracks_page_template_changed")
     if LINK in page:tracks=page
     else:
-        if page.count(INTRO)!=1:raise RuntimeError("unexpected_tracks_header")
-        tracks=page.replace(INTRO,INTRO+LINK,1)
+        # Live Security can use the updated "Recording review" design instead
+        # of the old v7 "Tracks & clothing" header. Preserve either page.
+        head=page.find("<header>")
+        title=page.find("</h1>",head)
+        if head<0 or title<0 or title-head>700 or head>2000:
+            raise RuntimeError("unexpected_tracks_header")
+        tracks=page[:title+5]+LINK+page[title+5:]
     return new_proxy,tracks
 
 def atomic(target,text):
