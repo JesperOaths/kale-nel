@@ -213,6 +213,25 @@ def exact_file_stat(source):
     return (st.st_dev,st.st_ino,st.st_size,st.st_nlink,
             st.st_mtime_ns,st.st_ctime_ns)
 
+
+def phone_ready_with_recovery(attempts=5):
+    """Give live Camera2 a few seconds to recover after network copying."""
+    diagnostic = "unavailable"
+    for i in range(attempts):
+        try:
+            okay, status = phone_ready()
+            if okay:
+                return True, status
+            diagnostic = "unhealthy:mode=%s,temperature=%s,frame_age_ms=%s" % (
+                status.get("mode"),status.get("temperature_c"),
+                status.get("last_frame_age_ms"))
+        except Exception as exc:
+            diagnostic = type(exc).__name__
+        if i < attempts-1:
+            time.sleep(7)
+    return False, {"diagnostic":diagnostic}
+
+
 def offload_historical_apk(root,source):
     if (root.parent != BACKUP_ROOT or root.name not in HISTORICAL_APK_GENERATIONS
         or not source.is_file() or source.is_symlink() or source.stat().st_nlink != 1
@@ -225,9 +244,10 @@ def offload_historical_apk(root,source):
     rel = source.relative_to(root).as_posix()
     final = DEST+"/historical-apks/"+root.name+"/"+rel
     part = final+".part"
-    healthy,status = phone_ready()
+    healthy,status = phone_ready_with_recovery()
     if not healthy:
-        return {"source":str(source),"skipped":"phone_health_precheck"}
+        return {"source":str(source),"skipped":"phone_health_precheck",
+                "health":status.get("diagnostic")}
     adb("shell","mkdir","-p",final.rsplit("/",1)[0],timeout=30)
     if remote_exists(final):
         if remote_hash(final) != checksum:
@@ -242,9 +262,9 @@ def offload_historical_apk(root,source):
     if (exact_file_stat(source) != before or sha_file(source) != checksum
         or referenced_by_process(source) or referenced_by_process(root)):
         raise RuntimeError("local_apk_changed_during_transfer")
-    healthy,status = phone_ready()
+    healthy,status = phone_ready_with_recovery()
     if not healthy:
-        raise RuntimeError("phone_health_lost_after_transfer")
+        raise RuntimeError("phone_health_lost_after_transfer:"+str(status.get("diagnostic")))
     # Durable recovery manifest stored on hub before removing only this file.
     manifest = Path("/home/jespern/c720p-home-hub/reports/s9-archived-apks-20261014.jsonl")
     manifest.parent.mkdir(parents=True,exist_ok=True)
