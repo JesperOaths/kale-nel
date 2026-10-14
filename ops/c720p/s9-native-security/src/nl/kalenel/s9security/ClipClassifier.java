@@ -640,6 +640,103 @@ public final class ClipClassifier {
   writeJson(new File(folder,name+".verified.json"),manifest);
   return true;
  }
+ /**
+  * Rebuild only HSV evidence from a finalized historical native 4K MP4.
+  * Existing thumbnails, face evidence, tracking, original media and every
+  * other manifest field are retained verbatim. Serialized S9 reviewer only.
+  */
+ public synchronized boolean backfillAppearanceIndex(File mp4,File archive,
+                                                    String name,JSONObject manifest)throws Exception{
+  if(mp4==null||!mp4.isFile()||mp4.length()<100000||mp4.length()>800000000||
+     !name.matches("motion_[0-9]{13}[.]mp4")||
+     !name.equals(manifest.optString("name",""))||
+     manifest.optLong("bytes",-1)!=mp4.length())
+    return false;
+  MediaMetadataRetriever media=new MediaMetadataRetriever();
+  ArrayList<AppearanceSearchIndex.Observation> samples=new ArrayList<>();
+  long duration;
+  try{
+   media.setDataSource(mp4.getAbsolutePath());
+   if(!"3840".equals(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH))||
+      !"2160".equals(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)))
+    return false;
+   duration=Long.parseLong(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+   if(duration<1000||duration>180000)return false;
+   init();
+   int decoded=0;
+   int frames=(int)Math.min(8,Math.max(4,(duration+2499)/2500));
+   for(int i=0;i<frames;i++){
+    long offset=(long)((i+.5)*duration/frames);
+    Bitmap bitmap=media.getFrameAtTime(offset*1000,
+       MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+    if(bitmap==null)continue;
+    try{
+     decoded++;
+     List<Detection> hits=detect(bitmap);
+     ArrayList<float[]> people=new ArrayList<>();
+     float confidence=0;
+     for(Detection item:hits)
+      if("person".equals(item.label)&&item.score>=.65f&&item.box!=null){
+       boolean duplicate=false;
+       for(float[] found:people)
+        if(samePersonBox(found,item.box)){duplicate=true;break;}
+       if(!duplicate){people.add(item.box);confidence=Math.max(confidence,item.score);}
+      }
+     // Historical weak full-frame detections: bounded garden refinement,
+     // never a second continuous detector or replacement of existing review.
+     if(people.isEmpty()&&i%2==0){
+      for(Detection item:detectGardenPeopleMultiscale(bitmap)){
+       if(!"person".equals(item.label)||item.score<.65f)continue;
+       boolean duplicate=false;
+       for(float[] found:people)
+        if(samePersonBox(found,item.box)){duplicate=true;break;}
+       if(!duplicate){people.add(item.box);confidence=Math.max(confidence,item.score);}
+      }
+     }
+     if(people.size()==1&&confidence>=.65f){
+      float[] person=people.get(0);
+      float center=(person[1]+person[3])*.5f;
+      String zone=person[2]>=MotionGrid.markedTopAt(center)?
+        "front_garden":"background_street";
+      AppearanceSearchIndex.Observation upper=AppearanceSearchIndex.sample(
+        bitmap,person,offset,"upper_clothing",zone);
+      AppearanceSearchIndex.Observation lower=AppearanceSearchIndex.sample(
+        bitmap,person,offset,"lower_clothing",zone);
+      if(upper!=null)samples.add(upper);
+      if(lower!=null)samples.add(lower);
+     }
+     for(Detection item:hits){
+      if(item.score<.60f||item.box==null||!(
+           "car".equals(item.label)||"truck".equals(item.label)||
+           "bus".equals(item.label)||"motorcycle".equals(item.label)||
+           "bicycle".equals(item.label)))continue;
+      float[] vehicle=item.box;
+      float center=(vehicle[1]+vehicle[3])*.5f;
+      String zone=vehicle[2]>=MotionGrid.markedTopAt(center)?
+        "front_garden":"background_street";
+      AppearanceSearchIndex.Observation evidence=AppearanceSearchIndex.sample(
+         bitmap,vehicle,offset,"vehicle",zone);
+      if(evidence!=null)samples.add(evidence);
+     }
+    }finally{bitmap.recycle();}
+   }
+   if(decoded<2)return false;
+   try(AppearanceSearchIndex index=new AppearanceSearchIndex(archive)){
+    index.indexClip(name,duration,manifest.optString("scene_category","unreviewed"),samples);
+   }
+   manifest.put("appearance_search_version",AppearanceSearchIndex.VERSION);
+   manifest.put("appearance_search_status",samples.isEmpty()?
+     "indexed_no_qualifying_observations":"indexed_on_phone");
+   manifest.put("appearance_search_observations",samples.size());
+   manifest.put("appearance_search_historical_backfill",true);
+   manifest.put("appearance_search_decoded_frames",decoded);
+   manifest.put("appearance_search_source","original_4k_microSD");
+   manifest.put("appearance_search_claim","similar_visual_colours_not_identity");
+   writeJson(new File(archive,name+".verified.json"),manifest);
+   return true;
+  }finally{try{media.release();}catch(Exception ignored){}}
+ }
+
  public synchronized JSONObject process(File mp4, File folder, String name, String trigger, long motionEvents)throws Exception{
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
