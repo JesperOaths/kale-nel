@@ -14,6 +14,12 @@ NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 TRACK_VERSION="sampled_box_tracklets_v1"
 COLOURS={"black","white","gray","red","orange","yellow","green","blue","purple_or_pink","brown","uncertain"}
 DIRECTIONS={"image_left","image_right","image_up","image_down","diagonal","stationary_or_uncertain","insufficient_samples"}
+def safe_image_track_metric(value,maximum):
+ """Finite bounded camera-image evidence, not physical speed, gait or identity."""
+ if isinstance(value,bool) or not isinstance(value,(float,int)):return None
+ value=float(value)
+ return round(value,3) if math.isfinite(value) and 0<=value<=maximum else None
+
 def anonymous_clip_metadata(manifest):
  status={"anonymous_tracking_status":"not_available_in_original_review",
          "anonymous_track_count":None,"anonymous_tracks":[]}
@@ -59,6 +65,13 @@ def anonymous_clip_metadata(manifest):
     "peak_detection_score":round(float(peak),3),"upper_clothing_colour":colour,
     "image_movement_direction":entry.get("image_movement_direction")
       if entry.get("image_movement_direction") in DIRECTIONS else "insufficient_samples",
+    "image_speed_body_heights_per_second":safe_image_track_metric(
+      entry.get("image_speed_body_heights_per_second"),8),
+    "image_path_straightness":safe_image_track_metric(
+      entry.get("image_path_straightness"),1),
+    "image_detector_box_aspect_ratio":safe_image_track_metric(
+      entry.get("image_detector_box_aspect_ratio"),6),
+    "movement_measurement_scope":"clip_scoped_2d_camera_image_not_physical_speed",
     "body_posture_status":"not_measured_no_pose_keypoints",
     "gait_cadence_status":"not_measurable_from_sampled_frames"})
    seen.add(index)
