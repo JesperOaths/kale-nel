@@ -9,7 +9,7 @@ class Diagnostic(unittest.TestCase):
  def test_explicit_one_shot(self):
   for x in ('"preroll_diagnostic".equals(key)','"record_once".equals(value)',
             'diagnosticPrerollUsed=true','diagnosticPrerollActive=true',
-            'preRoll.cachedDurationMs()<3500','temperature()>=375',
+            'preRoll.cachedDurationMs()<4400','temperature()>=375',
             'folder.getUsableSpace()<15L*1024*1024*1024'):
    self.assertIn(x,S)
  def test_not_in_person_archive(self):
