@@ -269,20 +269,39 @@
     pump();
   }
 
+  let viewportObserver=null;
+  function stage(img){
+    if(!img||seen.has(img)||queued.has(img))return;
+    // Do not compete with gallery image downloads or run hundreds of expensive
+    // canvas transformations for invisible cards and clipped carousel slides.
+    if(viewportObserver)viewportObserver.observe(img);
+    else enqueue(img);
+  }
   function scan(root=document){
-    root.querySelectorAll?.('.mockup img').forEach(enqueue);
+    if(root.matches?.('.mockup img'))stage(root);
+    root.querySelectorAll?.('.mockup img').forEach(stage);
   }
 
   const boot=()=>{
-    // v869 deliberately starts every currently rendered product image immediately.
+    if('IntersectionObserver' in window){
+      viewportObserver=new IntersectionObserver(entries=>{
+        for(const entry of entries){
+          if(!entry.isIntersecting)continue;
+          viewportObserver.unobserve(entry.target);
+          enqueue(entry.target);
+        }
+      },{rootMargin:'300px 0px',threshold:0});
+    }
     scan(document);
-    const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
+    // Restrict mutation work to newly inserted gallery images. Image src
+    // rewrites are attribute changes and do not recursively schedule work.
+    const additions=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
       if(node.nodeType!==1)return;
-      if(node.matches?.('.mockup img'))enqueue(node);else scan(node);
+      scan(node);
     })));
-    observer.observe(document.body,{childList:true,subtree:true});
+    additions.observe(document.body,{childList:true,subtree:true});
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.BRUIS_TRANSPARENCY_V832=Object.freeze({allProductMockups:true,eager:true,maxConcurrent:MAX_CONCURRENT,cropsTransparentWhitespace:true,preservesWhiteGarments:true,tagViewIncluded:true,safeFallbackToOriginal:true,noOneSidedSpanBridge:true});
+  window.BRUIS_TRANSPARENCY_V832=Object.freeze({allProductMockups:true,eager:false,viewportPrioritized:true,maxConcurrent:MAX_CONCURRENT,cropsTransparentWhitespace:true,preservesWhiteGarments:true,tagViewIncluded:true,safeFallbackToOriginal:true,noOneSidedSpanBridge:true});
 })();
