@@ -12,7 +12,7 @@ class ReviewTests(unittest.TestCase):
   self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
   self.a='motion_1791933495875.mp4';self.b='motion_1791934137487.mp4'
   self.rows={self.a:{'name':self.a,'size':123456,'sd_verified':True,'person_count':0},self.b:{'name':self.b,'size':234567,'sd_verified':True,'person_count':2}}
-  self.patch=mock.patch.multiple(mod,STORE=self.root/'review.json',AUDIT=self.root/'audit.jsonl',FILE_LOCK=self.root/'review.lock',DRIVE_INDEX=self.root/'drive.json',_sd_rows=lambda:self.rows);self.patch.start()
+  self.patch=mock.patch.multiple(mod,STORE=self.root/'review.json',AUDIT=self.root/'audit.jsonl',FILE_LOCK=self.root/'review.lock',DRIVE_INDEX=self.root/'drive.json',APPROVAL=self.root/'approval.json',_sd_rows=lambda:self.rows);self.patch.start()
   mod.DRIVE_INDEX.write_text(json.dumps({'items':[{'remote_name':'saved_2026-10-12.mp4','camera':'new','state':'verified','size':345678,'md5':'a'*32}]}))
  def tearDown(self):self.patch.stop();self.temp.cleanup()
  def ref(self,name=None,source='sd'):

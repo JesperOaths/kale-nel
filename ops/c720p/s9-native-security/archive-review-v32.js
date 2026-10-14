@@ -26,7 +26,7 @@ const more=make('select');more.id='archiveBulkMoreV32';more.setAttribute('aria-l
 for(const [value,label]of [['','More actions…'],['no_people','Mark no people'],['uncertain','Mark unsure'],['clear','Remove verification'],['copy','Copy filenames']]){const o=make('option','',label);o.value=value;more.append(o)}
 more.addEventListener('change',async()=>{const action=more.value;more.value='';if(action==='copy')await copySelected();else if(action)await verify([...selected.values()],action)});actionLine.append(more,button('Delete selected','archiveBulkDeleteV32',removeSelected,'danger'));
 const cancel=button('Stop after this clip','archiveBulkCancelV32',()=>{cancelled=true;text(message,'Stopping after the current request…')});cancel.hidden=true;actionLine.append(cancel);
-const message=make('p','','Watch a recording, then verify Person or People. Matching waits until you tell the assistant “yes, done”.');message.id='archiveReviewMessageV32';message.setAttribute('role','status');
+const message=make('p','','Watch a recording, then verify Person or People. Only verified recordings are used in People & faces.');message.id='archiveReviewMessageV32';message.setAttribute('role','status');
 const summary=make('p');summary.id='archiveReviewSummaryV32';const results=make('pre');results.id='archiveBulkResultsV32';results.hidden=true;
 bar.append(line,actionLine,message,summary,results);
 const anchor=document.querySelector('.source-switch');if(anchor)anchor.after(bar);else document.querySelector('main')?.prepend(bar);
@@ -80,7 +80,7 @@ async function verify(items,label){
   }
  }catch(error){failures.push(error.message)}
  for(const source of new Set(items.map(x=>x.source)))await load(source);
- await finish((label==='clear'?'Verification removed from ': 'Verification saved for ')+done+' recording'+(done===1?'':'s')+(cancelled?' · stopped.':'.')+' People matching has not started.',failures);
+ await finish((label==='clear'?'Verification removed from ': 'Verification saved for ')+done+' recording'+(done===1?'':'s')+(cancelled?' · stopped.':'.')+' Your verified set is available in People & faces.',failures);
 }
 async function removeSelected(){
  if(busy||!selected.size)return;const items=[...selected.values()];

@@ -44,7 +44,7 @@ class Tests(unittest.TestCase):
         class Routed:
             def go(self):return self.path
         names=('s9_human_thumbnail_review','s9_drive_visitor_review','s9_native_camera_controls',
-               's9_archive_delete_v1','s9_person_folders_v31','s9_archive_review_v32')
+               's9_archive_delete_v1','s9_person_folders_v31','s9_archive_review_v32','s9_verified_people_v33')
         stubs={name:types.SimpleNamespace(install=lambda *args:args[1] if len(args)>1 else None) for name in names}
         with mock.patch.dict(sys.modules,stubs),mock.patch.object(mod,'rows',return_value={}),mock.patch.object(mod,'preview_rows',return_value={}):
             mod.install_local_sd(Routed)

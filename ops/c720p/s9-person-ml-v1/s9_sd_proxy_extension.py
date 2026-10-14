@@ -323,6 +323,8 @@ def install_local_sd(H):
  # Owner-verified entire recordings only; wait for the explicit matching phase.
  import s9_archive_review_v32
  s9_archive_review_v32.install(H,lambda:rows())
+ import s9_verified_people_v33
+ s9_verified_people_v33.install(H)
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:

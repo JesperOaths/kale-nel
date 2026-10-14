@@ -9,6 +9,7 @@ AUDIT=BASE/'state/s9-archive-recording-review-v32-audit.jsonl'
 FILE_LOCK=BASE/'state/s9-archive-recording-review-v32.lock'
 DRIVE_INDEX=BASE/'state/drive-security-archive.json'
 VERSION='archive_recording_review_v32'
+APPROVAL=BASE/'state/s9-verified-people-v33/approval.json'
 LABELS={'person','people','no_people','uncertain','clear'}
 SD_NAME=re.compile(r'(?:(?:motion|native4k)_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4\Z')
 DRIVE_NAME=re.compile(r'(?!.*[.][.])[A-Za-z0-9][A-Za-z0-9._-]{0,179}[.]mp4\Z')
@@ -21,7 +22,7 @@ def read_store():
  try:
   if STORE.stat().st_size>8000000:raise ValueError('too_large')
   data=json.loads(STORE.read_text())
-  if data.get('version')!=VERSION or data.get('workflow') not in ('awaiting_owner_done','owner_ready') or not isinstance(data.get('labels'),dict):raise ValueError('invalid')
+  if not isinstance(data,dict) or data.get('version')!=VERSION or data.get('workflow') not in ('awaiting_owner_done','owner_ready') or not isinstance(data.get('labels'),dict):raise ValueError('invalid')
   for key,item in data['labels'].items():
    if not isinstance(key,str) or not isinstance(item,dict) or item.get('label') not in LABELS-{'clear'} or not re.fullmatch('[a-f0-9]{64}',str(item.get('revision',''))):raise ValueError('invalid_label')
   return data
@@ -52,6 +53,11 @@ def atomic_save(data):
  finally:
   if os.path.exists(temp):os.unlink(temp)
 
+def matching_started():
+ try:
+  approval=json.loads(APPROVAL.read_text());return isinstance(approval,dict) and approval.get('version')=='verified_people_v33' and approval.get('owner_signal')=='yes, done'
+ except (OSError,ValueError,TypeError):return False
+
 def report(source='sd'):
  with LOCK:
   data=read_store()
@@ -62,10 +68,11 @@ def report(source='sd'):
    current=label.get('label') if label.get('revision')==token else None
    counts[current or 'unreviewed']+=1
    clips[name]={'source':source,'name':name,'revision':token,'label':current,'bytes':row['size']}
+  started=matching_started()
   return {'ok':True,'version':VERSION,'source':source,'scope':'human_verification_of_entire_recording',
-   'workflow':data['workflow'],'matching_started':False,'awaiting_owner_done':data['workflow']=='awaiting_owner_done',
+   'workflow':'verified_matching_enabled' if started else data['workflow'],'matching_started':started,'awaiting_owner_done':not started and data['workflow']=='awaiting_owner_done',
    'clips':clips,'counts':counts,'verified_people_clips':counts['person']+counts['people'],
-   'instructions':'Verify recordings in Archive, then tell the assistant yes, done. Matching has not started.'}
+   'instructions':'Review verified recordings in People & faces.' if started else 'Verify recordings in Archive, then tell the assistant yes, done. Matching has not started.'}
 
 def save_batch(items,label,human_confirmed):
  if not isinstance(label,str) or label not in LABELS or human_confirmed is not True:return 400,{'ok':False,'error':'explicit_human_verification_required'}
@@ -100,7 +107,8 @@ def save_batch(items,label,human_confirmed):
     os.chmod(AUDIT,0o600)
    except OSError:
     atomic_save(before);return 503,{'ok':False,'error':'review_storage_failed_no_changes_saved'}
- return 200,{'ok':True,'updated':len(checked),'label':None if label=='clear' else label,'workflow':data['workflow'],'matching_started':False}
+ started=matching_started()
+ return 200,{'ok':True,'updated':len(checked),'label':None if label=='clear' else label,'workflow':'verified_matching_enabled' if started else data['workflow'],'matching_started':started}
 
 def install(handler,sd_rows):
  global _sd_rows

@@ -63,8 +63,8 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 @media(max-width:750px){.source-switch{gap:6px;margin-bottom:12px}.source-switch button{flex:1;padding:9px;min-width:140px;font-size:12px}.drive-toolbar{margin-bottom:12px}#driveMonthSelect{flex:1}}
 </style>
 <script defer src="/local/frontyard-security-new/security-video-playback-v30.js?v=s9-prepended-player-v1-20261013"></script>
-<script defer src="/local/frontyard-security-new/archive-card-actions-v1.js?v=archive-review-v32-20261014"></script>
-<script defer src="/local/frontyard-security-new/archive-review-v32.js?v=archive-review-v32-20261014"></script>
+<script defer src="/local/frontyard-security-new/archive-card-actions-v1.js?v=verified-people-v33-20261014"></script>
+<script defer src="/local/frontyard-security-new/archive-review-v32.js?v=verified-people-v33-20261014"></script>
 <style id="s9-security-scroll-boundaries-v12">
 /* The iframe's actual client height, not its outer Home Assistant viewport. */
 html,body{height:100%!important;min-height:0!important;overflow:hidden!important}
@@ -150,7 +150,7 @@ async function play(r){const a=relay(),n=name(r),token=++playing;
 $('viewerTitle').textContent=formatDay(day(r))+' · '+time(r);
 $('playerState').textContent='Opening original S9+ video…';const v=$('video');v.pause();v.removeAttribute('src');v.load();
 if(!$('viewer').open)$('viewer').showModal();
-try{if(!a?.url)throw Error('relay');const src=await a.url('/new/saved/clip/'+encodeURIComponent(n));if(token!==playing)return;v.src=src;v.load();$('playerState').textContent='';}
+try{if(!a?.url)throw Error('relay');let src=await a.url('/new/saved/clip/'+encodeURIComponent(n));if(token!==playing)return;let complete=false;if(/^motion_[0-9]{13}\.mp4$/.test(n)&&a.fetch){try{const path='/new/saved/complete/'+encodeURIComponent(n);if((await a.fetch(path,{method:'HEAD',cache:'no-store'})).ok){src=await a.url(path);complete=true}}catch(_){}}if(token!==playing)return;v.src=src;v.load();$('playerState').textContent=complete?'Verified combined video · pre-event + event':'Original 4K · pre-event combined video unavailable';/* S9_VERIFIED_PREPEND_PLAYBACK_20261014 */}
 catch(_){if(token===playing)$('playerState').textContent='Recording unavailable';}}
 function dayBox(d,items,initial){const detail=create('details','day');detail.open=initial;const summary=create('summary');
 summary.append(create('span','date',formatDay(d)),create('span','summary-end',items.length+' clips'),create('span','arrow','⌄'));detail.append(summary);
@@ -202,6 +202,7 @@ async function drivePreview(img,r){
  };
  img.onload=()=>{img.dataset.drivePreviewReady='1';if(timer!==null)clearTimeout(timer)};
  img.onerror=()=>{img.removeAttribute('src');schedule()};
+ // The caller has now inserted this card into the connected Drive timeline.
  fetchPreview();
 }
 function driveCard(r){
@@ -214,7 +215,7 @@ function driveCard(r){
  btn.dataset.archiveSource='drive';btn.dataset.archiveName=driveVideoName(r);
 btn.dataset.archiveInfo=JSON.stringify({timestamp:r.timestamp,size:r.size,person_count:r.person_count,
  person_status:r.person_status,person_score:r.person_confidence,scene_category:r.person_status});
-btn.addEventListener('click',()=>playDrive(r));drivePreview(img,r);
+btn.addEventListener('click',()=>playDrive(r));
  return btn;
 }
 async function playDrive(r){
@@ -256,10 +257,11 @@ function renderDrive(){
   summary.append(create('span','date',formatDay(d)),create('span','summary-end',groups.get(d).length+' clips'),create('span','arrow','⌄'));
   details.append(summary);
   const cards=create('div','clips');details.append(cards);let loadedCards=false;
-  const populate=()=>{if(loadedCards)return;loadedCards=true;for(const r of groups.get(d))cards.append(driveCard(r))};
+  const populate=()=>{if(loadedCards)return;loadedCards=true;for(const r of groups.get(d)){const card=driveCard(r);cards.append(card);const img=card.querySelector('.picture img');if(img)drivePreview(img,r)}};
+   // DRIVE_THUMBNAILS_MOUNTED_BEFORE_FETCH_V2: connect details before images.
+  target.append(details);
   if(details.open)populate();
   details.addEventListener('toggle',()=>{if(details.open){driveOpenDays.add(d);populate()}else driveOpenDays.delete(d)});
-  target.append(details);
  }
  $('driveEmpty').hidden=dates.length>0;
  $('driveStatus').textContent=[...groups.values()].reduce((n,v)=>n+v.length,0)+' Google Drive recordings · '+dates.length+' dates';

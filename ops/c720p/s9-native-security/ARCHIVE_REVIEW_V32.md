@@ -1,5 +1,9 @@
 # Human verification before person matching
 
+**Later phase:** the owner subsequently said **“yes, done”**. The frozen set of
+41 human-verified clips is now handled by [V33](VERIFIED_PEOPLE_V33.md).
+The paused state and counts below describe the original verification rollout.
+
 Deployed on 14 October 2026. The current phase is **awaiting_owner_done**.
 The owner must review Archive recordings and then say **“yes, done”** in the
 assistant chat before any matching experiment or person-folder rebuild starts.
