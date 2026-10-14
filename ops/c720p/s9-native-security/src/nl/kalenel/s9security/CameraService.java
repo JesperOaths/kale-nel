@@ -684,6 +684,13 @@ public final class CameraService extends Service {
  }
  private void stopRecording(String reason){
   if(!"recording".equals(mode))return;
+  if(continuous4KTrial&&continuous4K!=null){
+   mode="stopping";
+   if(!continuous4K.stopEvent()){
+    continuous4KFailures++;restoreLegacy4K("stop_rejected");
+   }
+   return;
+  }
   mode="stopping";
   File candidate=finished,unfinished=partial;
   try{
