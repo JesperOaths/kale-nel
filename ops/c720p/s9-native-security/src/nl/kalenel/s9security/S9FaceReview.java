@@ -36,6 +36,7 @@ final class S9FaceReview implements AutoCloseable {
  private Interpreter net;
  private String sha="",status="no_frontal_face_in_samples",error="";
  private int nextId=1,frames=0,detected=0,saved=0,personRoiSamples=0,fullFrameSamples=0;
+ private int rawDetectorHits=0,lowConfidenceOrSmall=0,rejectedPose=0,rejectedCrop=0,rejectedImageQuality=0;
  private boolean loaded=false,modelAttempted=false,modelReady=false;
  private static final class Entry {
   final String id; final float[] vector;
@@ -312,16 +313,19 @@ final class S9FaceReview implements AutoCloseable {
    FaceDetector.Face[] faces=new FaceDetector.Face[MAX_FACES];
    int n=new FaceDetector(width,height,MAX_FACES).findFaces(rgb,faces);
    for(int i=0;i<n&&captures.length()<MAX_CAPTURES;i++){
-    FaceDetector.Face f=faces[i];if(f==null||f.confidence()<.65f||f.eyesDistance()<12)continue;
+    FaceDetector.Face f=faces[i];if(f==null)continue;
+    rawDetectorHits++;
+    if(f.confidence()<.65f||f.eyesDistance()<12){lowConfidenceOrSmall++;continue;}
     float yaw=f.pose(FaceDetector.Face.EULER_Y),roll=f.pose(FaceDetector.Face.EULER_Z);
-    if(Math.abs(yaw)>20||Math.abs(roll)>17)continue;
+    if(Math.abs(yaw)>20||Math.abs(roll)>17){rejectedPose++;continue;}
     PointF center=new PointF();f.getMidPoint(center);
     int x=offsetX+(int)(center.x*subject.getWidth()/width);
     int y=offsetY+(int)(center.y*subject.getHeight()/height);
     int size=(int)(f.eyesDistance()*3.5*subject.getWidth()/width);
-    Bitmap face=crop(frame,x,y,size);if(face==null)continue;
+    Bitmap face=crop(frame,x,y,size);
+    if(face==null){rejectedCrop++;continue;}
     try{
-     if(!usable(face))continue;
+     if(!usable(face)){rejectedImageQuality++;continue;}
      detected++;
      float[] emb=null;
      try{emb=vector(face);}catch(Exception ex){status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();}
@@ -363,6 +367,19 @@ final class S9FaceReview implements AutoCloseable {
   manifest.put("face_fullframe_samples",fullFrameSamples);
   manifest.put("face_frontal_candidates",detected);
   manifest.put("face_snapshots_saved",saved);
+  // Counts are classification evidence, not facial identity. In particular,
+  // zero snapshots is never treated as evidence that no person was present.
+  manifest.put("face_detector_raw_hits",rawDetectorHits);
+  manifest.put("face_rejected_confidence_or_size",lowConfidenceOrSmall);
+  manifest.put("face_rejected_looking_away_or_roll",rejectedPose);
+  manifest.put("face_rejected_crop_geometry",rejectedCrop);
+  manifest.put("face_rejected_dark_or_blurry",rejectedImageQuality);
+  manifest.put("face_embedding_model_state",!modelAttempted?"not_tested_no_usable_face":
+      modelReady?"available_on_phone":"unavailable_on_phone");
+  manifest.put("face_evidence_outcome",saved>0?"snapshot_candidates_saved":
+      "face_review_failed".equals(status)?"review_processing_failed":
+      rawDetectorHits==0?"no_face_detector_hit_in_sampled_frames":
+      "face_candidates_rejected_in_sampling");
   manifest.put("face_candidates",captures);
   manifest.put("face_review_identity_claim","similarity_suggestion_not_verified_identity");
   manifest.put("face_embedding_on_s9_only",true);
