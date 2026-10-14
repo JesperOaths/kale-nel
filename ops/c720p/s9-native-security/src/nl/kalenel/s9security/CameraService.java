@@ -95,9 +95,14 @@ public final class CameraService extends Service {
  private volatile boolean continuous4KTrial=false;
  private volatile String continuous4KLastResult="not_tested";
  private volatile long continuous4KCompleted=0,continuous4KFailures=0;
+ // Allow thermal cooldown to restore verified full-resolution history.
+ private long continuous4KRetryAfterMs=0;
+ private int continuous4KRecoveryAttempts=0;
  // One-shot, explicitly labelled on-phone validation clip. Never treated as
  // an ordinary person detection or indexed surveillance event.
  private boolean diagnosticPrerollActive=false,diagnosticPrerollUsed=false;
+ private boolean diagnosticTailProof=false;
+ private String continuous4KStopReason="";
  private volatile String diagnosticPrerollClip="",diagnosticPrerollResult="not_tested";
  private volatile long preRollLastFrameAt=0;
  private volatile boolean jpegBusy=false;
@@ -159,7 +164,8 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- private static final long QUIET_MS=8500,MAX_MS=120000,COOLDOWN_MS=0;
+ // End 10 seconds after the most recent accepted motion; continue capped events.
+ private static final long QUIET_MS=10000,MAX_MS=120000,COOLDOWN_MS=0;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
@@ -320,10 +326,8 @@ public final class CameraService extends Service {
      }
      if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
-      // A leaf or street reflection must not continuously extend an existing
-      // 4K clip. During recording use sustained coherent garden motion only.
-      // In watching mode accept lighter activity as a candidate for GPU
-      // confirmation, so quick pedestrians are still discoverable.
+      // Do not continually prolong a 4K clip because of occasional foliage,
+      // vehicle motion or sensor noise. High-quality garden motion extends.
       if(!"recording".equals(mode)||motion.strong){
        lastMovementAt=lastFrameAt;
        eventChain.evidence(lastFrameAt);
@@ -360,7 +364,7 @@ public final class CameraService extends Service {
      // Only a verified and explicitly promoted 4K recorder can resume on boot.
      boolean preferred=!pilotOnly&&getSharedPreferences("native",MODE_PRIVATE)
        .getBoolean("continuous_4k_production_enabled",false);
-     if(preferred&&temperature()<375&&folder!=null&&
+     if(preferred&&temperature()<382&&folder!=null&&
          folder.getUsableSpace()>15L*1024*1024*1024){
       Continuous4KEncoder candidate=new Continuous4KEncoder();
       try{
@@ -375,9 +379,16 @@ public final class CameraService extends Service {
        continuous4KLastResult="boot_fallback_"+ex.getClass().getSimpleName();
       }
      }else if(preferred){
-      getSharedPreferences("native",MODE_PRIVATE).edit()
-        .putBoolean("continuous_4k_production_enabled",false).commit();
-      continuous4KLastResult="boot_thermal_or_storage_fallback";
+      // Heat is transient, keep the verified full-4K preference. Storage
+      // exhaustion remains a hard safety failure that disables rearming.
+      if(folder!=null&&folder.getUsableSpace()>15L*1024*1024*1024){
+       continuous4KRetryAfterMs=SystemClock.elapsedRealtime()+20L*60L*1000L;
+       continuous4KLastResult="boot_cooling_wait_for_4k";
+      }else{
+       getSharedPreferences("native",MODE_PRIVATE).edit()
+         .putBoolean("continuous_4k_production_enabled",false).commit();
+       continuous4KLastResult="boot_storage_guard";
+      }
      }
      configurePreview();
     }
@@ -395,9 +406,17 @@ public final class CameraService extends Service {
  }
  private void restoreLegacy4K(String reason){
   continuous4KLastResult="fallback_"+reason;
-  // A failing or deliberately disabled 4K encoder MUST NOT restart on boot.
-  getSharedPreferences("native",MODE_PRIVATE).edit()
-    .putBoolean("continuous_4k_production_enabled",false).commit();
+  boolean thermalOnly=reason.startsWith("thermal_guard");
+  // Failed codecs remain disabled until explicitly re-verified. For a
+  // thermal-only fallback preserve the previous verified 4K preference.
+  if(thermalOnly&&getSharedPreferences("native",MODE_PRIVATE)
+       .getBoolean("continuous_4k_production_enabled",false)){
+   continuous4KRetryAfterMs=SystemClock.elapsedRealtime()+20L*60L*1000L;
+  }else{
+   getSharedPreferences("native",MODE_PRIVATE).edit()
+     .putBoolean("continuous_4k_production_enabled",false).commit();
+   continuous4KRetryAfterMs=0;
+  }
   continuous4KTrial=false;
   if(continuous4K!=null){continuous4K.close();continuous4K=null;}
   if(!pilotOnly&&preRoll==null)preRoll=new GardenPreRoll();
@@ -534,8 +553,6 @@ public final class CameraService extends Service {
      // The motion grid retains 5s of accepted cells. A marginal person
      // classification must overlap actual garden movement, not merely
      // coincide with an unrelated passing vehicle or moving shrub.
-     // High-confidence spatially moving people can be confirmed without
-     // a global motion vote by the independent person-track policy.
      int localCells=motion.recentMotionCellsInBox(personBox,SystemClock.elapsedRealtime());
      gardenPersonLastLocalMotionCells=localCells;
      GardenPersonTrackGate.Decision verdict=
@@ -631,6 +648,7 @@ public final class CameraService extends Service {
       }
      });
    if(!accepted){saveFallbackEvidence("continuous_4k_start_rejected");return;}
+   continuous4KStopReason="";
    noteRecordingStarted();
    lastStart=SystemClock.elapsedRealtime();lastRecordAt=lastStart;
    lastMovementAt=lastStart;eventChain.started(lastStart,System.currentTimeMillis());
@@ -638,7 +656,7 @@ public final class CameraService extends Service {
    Log.i(TAG,"START_NATIVE_CONTINUOUS_4K "+clip);
    if(diagnostic)cameraHandler.postDelayed(()->{
     if("recording".equals(mode))stopRecording("continuous_4k_diagnostic");
-   },9000);
+   },diagnosticTailProof?12500:9000);
    return;
   }
   frozenPreRoll=preRoll==null?null:preRoll.freeze();
@@ -700,6 +718,7 @@ public final class CameraService extends Service {
   continuous4KLastResult="verified_native_4k_"+durationMs+"ms";
   mode="watching";
   if(diagnostic){
+   diagnosticTailProof=false;
    diagnosticPrerollClip=clip.getName();
    diagnosticPrerollResult="single_native_4k_complete_"+durationMs+"ms";
    diagnosticPrerollActive=false;
@@ -709,16 +728,28 @@ public final class CameraService extends Service {
   }
   completed++;
   lastClip=clip.getName();
+  final String finishedReason=continuous4KStopReason.isEmpty()?"unknown_4k_stop":continuous4KStopReason;
+  continuous4KStopReason="";
   final CaptureContinuity.Segment segment=eventChain.stopped(
-      SystemClock.elapsedRealtime(),lastClip,"continuous_4k_event");
+      SystemClock.elapsedRealtime(),lastClip,finishedReason);
   final long motionAtSave=motionEvents;
   final String evidenceReason="continuous_native_4k_"+captureTier;
   writeCaptureEvidenceAsync(clip,segment);
   reviewer.submit(()->review(clip,evidenceReason,motionAtSave,segment));
+  // If motion continues at a safety cap, the same encoder's rolling
+  // full-4K ring supplies the next segment (overlap, not missing footage).
+  if(segment.autoResumeArmed)cameraHandler.postDelayed(()->{
+   if(!running||!"watching".equals(mode)||!continuous4KTrial||
+      continuous4K==null||!continuous4K.readyForEvent())return;
+   if(!eventChain.continuationReady(SystemClock.elapsedRealtime()))return;
+   segmentResumeAttempts++;
+   startRecording();
+  },250);
  }
  private void stopRecording(String reason){
   if(!"recording".equals(mode))return;
   if(continuous4KTrial&&continuous4K!=null){
+   continuous4KStopReason=reason;
    mode="stopping";
    if(!continuous4K.stopEvent()){
     continuous4KFailures++;restoreLegacy4K("stop_rejected");
@@ -1139,16 +1170,46 @@ public final class CameraService extends Service {
    gardenTriageQueued=false;
   }
  }
+ private void maybeRestoreCool4K(){
+  if(continuous4KTrial||pilotOnly||!"watching".equals(mode)||
+     !getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_4k_production_enabled",false)||
+     continuous4KRecoveryAttempts>=3)return;
+  long now=SystemClock.elapsedRealtime();
+  if(now<continuous4KRetryAfterMs||temperature()>350||folder==null||
+     folder.getUsableSpace()<15L*1024*1024*1024||camera==null||preview==null||
+     now-lastFrameAt>1500||now-lastMovementAt<30000||
+     gardenPersonCandidateUntil>now)return;
+  continuous4KRecoveryAttempts++;
+  continuous4KRetryAfterMs=now+20L*60L*1000L;
+  // Never disturb an ongoing event. Reconfigure the idle camera only.
+  closeSession();
+  Continuous4KEncoder candidate=new Continuous4KEncoder();
+  try{
+   candidate.start();continuous4K=candidate;continuous4KTrial=true;
+   if(preRoll!=null){preRoll.stop();preRoll=null;}
+   continuous4KLastResult="rearmed_after_thermal_cooldown";
+   configurePreview();
+  }catch(Throwable problem){
+   try{candidate.close();}catch(Throwable ignored){}
+   continuous4K=null;continuous4KTrial=false;
+   continuous4KFailures++;
+   restoreLegacy4K("codec_rearm_"+problem.getClass().getSimpleName());
+  }
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
   if("recording".equals(mode)&&n-lastStart>MAX_MS+8000)stopRecording("watchdog_cap");
-  if(continuous4KTrial&&continuous4K!=null&&
-    (continuous4K.error().length()>0||continuous4K.droppedOutputFrames()>0||temperature()>=395)){
-   failure("continuous_4k_trial_failed_health_guard",null);
-   if("watching".equals(mode))restoreLegacy4K("thermal_or_codec");
-   else if("recording".equals(mode))stopRecording("trial_health_guard");
-   else if("stopping".equals(mode))restoreLegacy4K("stopping_health_guard");
+  if(continuous4KTrial&&continuous4K!=null){
+   boolean codecBad=continuous4K.error().length()>0||continuous4K.droppedOutputFrames()>0;
+   boolean tooHot=temperature()>=395;
+   if(codecBad||tooHot){
+    failure("continuous_4k_trial_failed_health_guard",null);
+    String reason=codecBad?"codec_health_guard":"thermal_guard";
+    if("watching".equals(mode))restoreLegacy4K(reason);
+    else if("recording".equals(mode))stopRecording("trial_health_guard");
+    else if("stopping".equals(mode))restoreLegacy4K(reason+"_stopping");
+   }
   }
   if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
    failure("stalled_YUV_camera",null);scheduleRecover();
@@ -1157,6 +1218,7 @@ public final class CameraService extends Service {
   maybeHistoricalImport();
   maybeFaceBackfill();
   maybeGardenArchiveTriage();
+  maybeRestoreCool4K();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -1181,6 +1243,8 @@ public final class CameraService extends Service {
    d.put("continuous_4k_error",continuous4K==null?"":continuous4K.error());
    d.put("continuous_4k_completed",continuous4KCompleted);
    d.put("continuous_4k_failures",continuous4KFailures);
+   d.put("continuous_4k_recovery_attempts",continuous4KRecoveryAttempts);
+   d.put("continuous_4k_retry_after_ms",continuous4KRetryAfterMs);
    d.put("continuous_4k_last_result",continuous4KLastResult);
    d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
    d.put("preroll_ready",preRoll!=null&&preRoll.ready());
@@ -1235,6 +1299,11 @@ public final class CameraService extends Service {
     d.put("suppressed_video_without_stills",skippedRecordingsWithoutStill);
     d.put("post_record_cooldown_ms",COOLDOWN_MS);
     d.put("max_person_clip_ms",MAX_MS);
+    d.put("person_post_motion_hold_ms",QUIET_MS);
+    d.put("person_post_motion_remaining_ms","recording".equals(mode)?
+       Math.max(0,QUIET_MS-Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt)):JSONObject.NULL);
+    d.put("person_last_accepted_motion_age_ms",lastMovementAt<=0?
+       JSONObject.NULL:Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt));
     d.put("person_recording_extend_by_garden_motion",true);
    d.put("fallback_evidence_failed",fallbackEvidenceFailed);
    d.put("recovery_partials_finalized",recoveredPartials);
@@ -1369,14 +1438,16 @@ public final class CameraService extends Service {
     return response.put("ok",false).put("error","control_unavailable_during_recording_or_camera_transition");
    }
    if("preroll_diagnostic".equals(key)){
-     if(!"record_once".equals(value)||diagnosticPrerollUsed||diagnosticPrerollActive||
+     if(!("record_once".equals(value)||"record_tail_once".equals(value))||
+        diagnosticPrerollUsed||diagnosticPrerollActive||
         pilotOnly||(!(continuous4KTrial&&continuous4K!=null&&continuous4K.readyForEvent())&&
-        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<3500))||temperature()>=375||
+        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<4400))||temperature()>=("record_tail_once".equals(value)?382:375)||
         folder==null||folder.getUsableSpace()<15L*1024*1024*1024){
       return response.put("ok",false).put("error","diagnostic_prebuffer_not_ready_or_already_used");
      }
      diagnosticPrerollUsed=true;
      diagnosticPrerollActive=true;
+     diagnosticTailProof="record_tail_once".equals(value);
      diagnosticPrerollResult="starting";
      startRecording();
      if(!"starting".equals(mode)&&!"recording".equals(mode)){
@@ -1386,7 +1457,8 @@ public final class CameraService extends Service {
      return response.put("ok",true).put("mode",continuous4KTrial?
        "diagnostic_continuous_native_4k":"diagnostic_preroll_4k")
        .put("excluded_from_security_archive",true)
-       .put("requested_duration_ms",9000);
+       .put("requested_duration_ms",diagnosticTailProof?12500:9000)
+       .put("requested_post_motion_hold_ms",QUIET_MS);
     }
    if("continuous_4k_trial".equals(key)){
     if(!"enable".equals(value)&&!"disable".equals(value)&&!"promote".equals(value))
