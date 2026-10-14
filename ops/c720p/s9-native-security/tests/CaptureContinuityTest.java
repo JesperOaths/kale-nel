@@ -24,7 +24,8 @@ public final class CaptureContinuityTest {
   c.evidence(168000);
   CaptureContinuity.Segment x=c.stopped(170000,"motion_1791690190000.mp4","max_segment");
   ok(x.autoResumeArmed,"fresh max cap resumable");
-  ok(!c.continuationReady(180000),"expired event cannot resurrect");
+  ok(c.continuationReady(180000),"10s window is still valid after 30s motion-tail upgrade");
+  ok(!c.continuationReady(184000),"12s physical rejoin deadline expires");
   ok(!c.isContinuationPending(),"resume disarmed");
   CaptureContinuity isolated=new CaptureContinuity();
   isolated.evidence(100);isolated.started(200,1791690200000L);
