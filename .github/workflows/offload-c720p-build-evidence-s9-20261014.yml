@@ -1,0 +1,65 @@
+name: Offload stale C720P backups to S9 microSD
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/offload-stale-build-evidence-s9-20261014.py'
+      - 'ops/c720p/test-offload-stale-build-evidence-s9-20261014.py'
+      - '.github/workflows/offload-c720p-build-evidence-s9-20261014.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/offload-c720p-build-evidence-s9-20261014.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 ops/c720p/test-offload-stale-build-evidence-s9-20261014.py
+          python3 -m py_compile ops/c720p/offload-stale-build-evidence-s9-20261014.py
+  offload:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Run cool-only checksum guarded microSD transfer
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          file='ops/c720p/offload-stale-build-evidence-s9-20261014.py'
+          hash="$(sha256sum "$file" | cut -d' ' -f1)"
+          dest="/tmp/c720p-offload-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
+          cmd="curl -fSsL --max-time 35 '${uri}' -o '${dest}' && printf '%s  %s\n' '${hash}' '${dest}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${dest}'"
+          idem="c720p-offload-stale-${GITHUB_SHA:0:22}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-offload-build-evidence','maintenance',:'cmd',600,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "C720P_OFFLOAD_JOB=$id"
+          for i in $(seq 1 100); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 8500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'C720P_S9_OFFLOAD_VERIFIED' <<< "$output" || exit 1
+              echo 'C720P_OFFLOAD_VERIFICATION_RESULT_RECORDED'
+              exit 0
+            fi
+            sleep 6
+          done
+          exit 1
