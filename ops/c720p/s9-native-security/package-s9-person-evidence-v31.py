@@ -14,6 +14,9 @@ ORIG=BASE/"build/s9-native-security"
 DEPS=BASE/"build/s9-person-ml-v1/deps"
 OUT=BASE/"build/s9-person-evidence-v31"
 JAVA=Path("src/nl/kalenel/s9security")
+MERGE=Path('/tmp/s9-joined-preroll-v1')
+BASELINE=BASE/'build/s9-onphone-prepended-mp4-v1c/s9-prepended-v1c.apk'
+BASELINE_SHA='2175c265d63875340cb40eb97f5143f33f745bb949662afe263f3136a98ae3d0'
 MODIFIED=["CameraService.java","ClipClassifier.java","GardenPersonTrackGate.java"]
 EXPECTED_CERT="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
 def sha(raw):return hashlib.sha256(raw).hexdigest()
@@ -56,7 +59,16 @@ def main():
  sdk=androids[-1]
  jars=[DEPS/(name+".jar") for name in ["tensorflow-lite","tensorflow-lite-api",
                                     "tensorflow-lite-gpu","tensorflow-lite-gpu-api"]]
+ jars += [MERGE/'kit-classes.jar',MERGE/'exceptions.jar']
  if any(not f.is_file() for f in jars):raise RuntimeError("TFLite_dependency_missing")
+ if not BASELINE.is_file() or sha(BASELINE.read_bytes())!=BASELINE_SHA or cert(BASELINE)!=EXPECTED_CERT:
+  raise RuntimeError('verified_complete_video_baseline_missing')
+ with zipfile.ZipFile(BASELINE) as baseline:
+  retained={n:sha(baseline.read(n)) for n in baseline.namelist()
+            if n.startswith('lib/') or n in ('AndroidManifest.xml','classes2.dex')}
+  if len(retained)<14:raise RuntimeError('complete_video_native_libraries_missing')
+  if sha(baseline.read('classes2.dex'))!='da1ce6d5f025a01f6883474480b80fa65dd0eb51c5d222df8a760a611858be71':
+   raise RuntimeError('support_dex_changed')
  assets=("detect.tflite","face_embedding.tflite","labelmap.txt")
  with zipfile.ZipFile(ORIG/"s9-native-security.apk") as original:
   assetHashes={}
@@ -88,7 +100,7 @@ def main():
   if sha((stage/"assets/person_pose.tflite").read_bytes())!="cd7cc22fa946e5d146a7b98d496853e1923e22828d3972d579973f27f91bb105":raise RuntimeError("pose_model_sha_mismatch")
   classes=stage/"classes"
   shutil.rmtree(classes);classes.mkdir()
-  classpath=os.pathsep.join(map(str,[sdk,*jars]))
+  classpath=os.pathsep.join(map(str,[sdk,*jars,MERGE/'exceptions-common.jar']))
   run(["javac","-source","8","-target","8","-cp",classpath,
        "-d",str(classes),*map(str,sorted((stage/JAVA).glob("*.java")))],125)
   for name in MODIFIED:
@@ -117,23 +129,30 @@ def main():
        *map(str,jars)],150)
   if not (dex/"classes.dex").is_file():raise RuntimeError("dex_missing")
   unsigned=stage/"unsigned.apk"
-  run(["aapt","package","-f","-M",str(stage/"AndroidManifest.xml"),
-       "-I",str(sdk),"-A",str(stage/"assets"),"-F",str(unsigned)],70)
-  run(["aapt","add",str(unsigned),"classes.dex"],50,cwd=dex)
-  run(["aapt","add",str(unsigned),"lib/arm64-v8a/libtensorflowlite_jni.so",
-       "lib/arm64-v8a/libtensorflowlite_gpu_jni.so"],60,cwd=stage/"pkg")
+  with zipfile.ZipFile(BASELINE) as baseline,zipfile.ZipFile(unsigned,'w') as output:
+   for member in baseline.infolist():
+    if member.filename.startswith('META-INF/'):continue
+    output.writestr(member,(dex/'classes.dex').read_bytes() if member.filename=='classes.dex' else baseline.read(member.filename))
+   for name in ('person_pose.tflite','person_pose.sha256'):
+    output.write(stage/'assets'/name,'assets/'+name)
+  aligned=stage/'aligned.apk'
+  run(['zipalign','-f','4',str(unsigned),str(aligned)],60)
   signed=Path(td)/"s9-person-evidence-v31.apk"
   run(["apksigner","sign","--ks",str(key/"key.jks"),
        "--ks-key-alias","s9security","--ks-pass","file:"+str(key/"pass"),
-       "--out",str(signed),str(unsigned)],85)
+       "--out",str(signed),str(aligned)],85)
   if cert(signed)!=EXPECTED_CERT:raise RuntimeError("apk_signing_identity_changed")
-  if not 8*1024*1024<signed.stat().st_size<20*1024*1024:
+  if not 18*1024*1024<signed.stat().st_size<28*1024*1024:
    raise RuntimeError("apk_bad_size")
   with zipfile.ZipFile(signed) as z:
    for name,expected in assetHashes.items():
     if sha(z.read("assets/"+name))!=expected:
      raise RuntimeError("signed_asset_does_not_match_"+name)
    if len(z.read("classes.dex"))<20000:raise RuntimeError("empty_dex")
+   if any(sha(z.read(n))!=expected for n,expected in retained.items()):
+    raise RuntimeError('complete_video_support_asset_changed')
+   if not all(marker in z.read('classes.dex') for marker in (b'archive_recovery_queued',b'person_evidence_version',b'preroll_prepend_halted_after_failures')):
+    raise RuntimeError('combined_release_features_missing')
   # An atomic 10MB artifact is the only persistent new build; never modify
   # current 4K camera binaries, model files or production source tree.
   OUT.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -148,7 +167,7 @@ def main():
    os.replace(tmp,dst)
   meta={"commit":opts.commit,"apk":str(dst),"sha256":sha(dst.read_bytes()),
         "bytes":dst.stat().st_size,"signer_sha256":EXPECTED_CERT,
-        "model_sha256":assetHashes,"java_test":tested,
+        "model_sha256":assetHashes,"java_test":tested,"complete_video_baseline_sha256":BASELINE_SHA,"retained_native_and_support_sha256":retained,
         "pose_model_sha256":"cd7cc22fa946e5d146a7b98d496853e1923e22828d3972d579973f27f91bb105","pose_test":poseTested,"source_sha256":attestation,"install_performed":False,"staged_original_apk_unchanged":True}
   manifest=OUT/"release.json";manifest.write_text(json.dumps(meta,indent=2)+"\n")
   os.chmod(dst,0o600);os.chmod(manifest,0o600)

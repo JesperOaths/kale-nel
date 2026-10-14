@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
  */
 final class PhoneMediaRange {
  private static final Pattern PATH=Pattern.compile(
-   "^(GET|HEAD) /clip/(motion_[0-9]{13}[.]mp4(?:[.]preroll[.]mp4)?) HTTP/1[.][01]$");
+   "^(GET|HEAD) /clip/(motion_[0-9]{13}[.]mp4(?:[.](?:preroll|complete)[.]mp4)?) HTTP/1[.][01]$");
  private static final Pattern RANGE=Pattern.compile("bytes=([0-9]*)-([0-9]*)");
  private static final long MAX_BYTES=4L*1024*1024*1024;
  private static final int COPY_SIZE=65536;

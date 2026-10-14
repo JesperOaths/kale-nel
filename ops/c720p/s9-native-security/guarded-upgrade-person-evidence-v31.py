@@ -65,6 +65,10 @@ def wait_status(hybrid,timeout):
    if healthy(last) and last.get("frames",0)>=35:
     if not hybrid:return last
     if (last.get("person_evidence_version")=="s9_person_evidence_v31" and
+        last.get('archive_recovery_queued') is False and
+        last.get('preroll_prepend_enabled') is True and
+        last.get('preroll_prepend_halted_after_failures') is False and
+        last.get('preroll_version')=='s9_on_phone_avc_memory_ring_keyframe_preroll_v2' and
         last.get("garden_person_multiscale_version")=="garden_overlapping_person_tiles_v8" and
         last.get("garden_person_followup_version")=="hybrid_periodic_multiscale_v8" and
         last.get("garden_person_sentinel_checks",0)>=5 and
