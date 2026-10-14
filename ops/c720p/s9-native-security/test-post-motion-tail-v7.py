@@ -17,6 +17,7 @@ assert 'eventChain.continuationReady(SystemClock.elapsedRealtime())' in s
 assert '"record_tail_once".equals(value)' in s
 assert 'diagnosticTailProof?32000:9000' in s
 assert 'd.put("person_post_motion_hold_ms",QUIET_MS)' in s
+assert "MAX_REJOIN_MS=12000,MAX_RESUME_MS=30000" in (JAVA/"CaptureContinuity.java").read_text()
 assert 'd.put("person_post_motion_remaining_ms"' in s
 # Pure-Java continuity simulation: an actual 120s cap with recent accepted motion
 # arms the next segment; an expired or quiet-finished event does not.
@@ -36,6 +37,16 @@ with tempfile.TemporaryDirectory(prefix="s9-tail-tests-") as dir:
    chain.evidence(120600);
    CaptureContinuity.Segment quiet=chain.stopped(150601,"motion_1777777777500.mp4","quiet_end");
    if(quiet.autoResumeArmed||chain.continuationReady(150800))throw new AssertionError("quiet end rejoined");
+   CaptureContinuity tail=new CaptureContinuity();
+   tail.evidence(1000);tail.started(2000,1777777779000L);
+   tail.evidence(101000);
+   CaptureContinuity.Segment mid=tail.stopped(121000,"motion_1777777779000.mp4","max_segment");
+   if(!mid.autoResumeArmed||!tail.continuationReady(121400))throw new AssertionError("20s-tail-cap-should-continue");
+   CaptureContinuity stale=new CaptureContinuity();
+   stale.evidence(1000);stale.started(2000,1777777780000L);
+   stale.evidence(90000);
+   CaptureContinuity.Segment no=stale.stopped(121100,"motion_1777777780000.mp4","max_segment");
+   if(no.autoResumeArmed)throw new AssertionError("expired-31s-tail-should-stop");
    CaptureContinuity idle=new CaptureContinuity();
    idle.evidence(1000);idle.started(2000,1777777778000L);
    CaptureContinuity.Segment old=idle.stopped(121000,"motion_1777777778000.mp4","max_segment");
