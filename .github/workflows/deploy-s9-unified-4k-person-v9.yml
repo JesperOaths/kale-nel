@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cmd="systemctl --user disable --now s9-pedestrian-v9-cool-idle.timer c720p-s9-postmotion-v7r2-cutover.timer 2>/dev/null || true; systemctl --user is-active s9-pedestrian-v9-cool-idle.timer c720p-s9-postmotion-v7r2-cutover.timer || true"
+          cmd="systemctl --user disable --now s9-pedestrian-v9-cool-idle.timer c720p-s9-postmotion-v7r2-cutover.timer >/dev/null 2>&1 || true; for u in s9-pedestrian-v9-cool-idle.timer c720p-s9-postmotion-v7r2-cutover.timer; do if systemctl --user is-active --quiet \\$u; then echo obsolete_timer_still_active; exit 1; fi; done; echo OBSOLETE_TIMERS_DISARMED"
           id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-unified-disarm-old-${GITHUB_SHA:0:20}" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(
             'github-actions-s9-unified-disarm','maintenance',:'cmd',80,:'idem'
