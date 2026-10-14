@@ -47,7 +47,7 @@ assert.deepEqual(Array.from(ctx.pick(snapshot.products)).map(p => p.name),
   [...snapshot.products].sort((a,b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(p => p.name),
   'sorting all 63 products must remain alphabetical regardless of creation or price');
-assert.match(store, /const animalList = fullList[\\s\\S]*?\\.filter\\(isAnimalDesign\\)[\\s\\S]*?localeCompare/,
+assert.match(store, /const animalList = fullList[\s\S]*?\.filter\(isAnimalDesign\)[\s\S]*?localeCompare/,
   'animal design section must remain alphabetically sorted');
 assert.doesNotMatch(store, /productSortMode|data-shop-sort|price-asc/,
   'store must not support alternative sorting modes');
