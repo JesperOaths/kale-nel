@@ -7,7 +7,9 @@ package nl.kalenel.s9security;
  */
 public final class CaptureContinuity {
  public static final String VERSION="s9_logical_event_segments_v1";
- public static final long MAX_REJOIN_MS=12000,MAX_RESUME_MS=9000;
+ // Keep the logical event alive through the full post-motion tail when a
+ // physical 120-second recording segment reaches its file safety cap.
+ public static final long MAX_REJOIN_MS=12000,MAX_RESUME_MS=30000;
  private String eventId="";
  private int sequence=0;
  private long lastEventMs=-1, previousEndMs=-1, startedMs=-1;
