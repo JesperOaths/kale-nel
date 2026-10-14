@@ -62,8 +62,9 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 #driveEmpty{color:var(--soft);font-size:13px;padding:26px 0}
 @media(max-width:750px){.source-switch{gap:6px;margin-bottom:12px}.source-switch button{flex:1;padding:9px;min-width:140px;font-size:12px}.drive-toolbar{margin-bottom:12px}#driveMonthSelect{flex:1}}
 </style>
-<script defer src="/local/frontyard-security-new/security-video-playback-v30.js?v=security-v30-20261013"></script>
-<script defer src="/local/frontyard-security-new/archive-card-actions-v1.js?v=ARCHIVE_ACTIONS_V1B_20261012"></script>
+<script defer src="/local/frontyard-security-new/security-video-playback-v30.js?v=s9-prepended-player-v1-20261013"></script>
+<script defer src="/local/frontyard-security-new/archive-card-actions-v1.js?v=archive-review-v32-20261014"></script>
+<script defer src="/local/frontyard-security-new/archive-review-v32.js?v=archive-review-v32-20261014"></script>
 <style id="s9-security-scroll-boundaries-v12">
 /* The iframe's actual client height, not its outer Home Assistant viewport. */
 html,body{height:100%!important;min-height:0!important;overflow:hidden!important}
@@ -170,7 +171,7 @@ for(const d of values){const op=create('option','',formatMonth(d+'-01'));op.valu
 if(selectedMonth!=='all'&&!values.includes(selectedMonth))selectedMonth='all';sel.value=selectedMonth}
 async function refresh(){try{const a=relay();if(!a?.fetch)throw Error('relay');const res=await a.fetch('/new/api/saved',{cache:'no-store'});if(!res.ok)throw Error('status');const j=await res.json();
 if(!Array.isArray(j.events)||j.archive_mode!=='S9-microSD-only')throw Error('index');
-records=j.events.filter(x=>safe.test(name(x))&&day(x)).sort((a,b)=>name(b).localeCompare(name(a)));months();render()}
+records=j.events.filter(x=>safe.test(name(x))&&day(x)).sort((a,b)=>name(b).localeCompare(name(a)));months();render();window.dispatchEvent(new CustomEvent('archive-records-v32',{detail:{source:'sd'}}))}
 catch(_){$('status').textContent='Archive unavailable';if(!records.length){$('timeline').replaceChildren();$('empty').hidden=false}}}
 
 /* Historical Drive uses its own verified catalog and original signed clip routes. */
@@ -274,7 +275,7 @@ async function refreshDrive(){
   if(j.ok!==true||!Array.isArray(j.events)||j.archive_mode==='S9-microSD-only')throw Error('Drive catalog invalid');
   driveRecords=j.events.filter(r=>driveSafe.test(driveVideoName(r))&&!driveVideoName(r).includes('..')&&driveDate(r))
    .sort((a,b)=>String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
-  driveRendered=false;driveMonths();renderDrive();
+  driveRendered=false;driveMonths();renderDrive();window.dispatchEvent(new CustomEvent('archive-records-v32',{detail:{source:'drive'}}));
  }catch(err){
   $('driveStatus').textContent='Drive archive unavailable: '+String(err.message||'Connection failed');
   if(!driveRecords.length){
@@ -296,6 +297,7 @@ $('video').addEventListener('error',()=>{if($('viewer').open)$('playerState').te
 $('close').addEventListener('click',()=>$('viewer').close());
 $('viewer').addEventListener('close',()=>{++playing;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
+window.C720PArchiveRecordsV32={visible:source=>source==='drive'?driveRecords.filter(r=>driveMonth==='all'||driveDate(r).startsWith(driveMonth)):records.filter(r=>selectedMonth==='all'||day(r).startsWith(selectedMonth))};
 showSource('local');
 })();
 

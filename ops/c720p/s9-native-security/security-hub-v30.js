@@ -1,7 +1,7 @@
 /* SECURITY_HUB_V30: unified navigation and camera controls. */
 (()=>{'use strict';
-const $=id=>document.getElementById(id),asset='/local/frontyard-security-new/',version='v=person-folders-v31-20261014';
-const tabs=[['live','Live camera','◉'],['saved','Recordings','▣','security-review-v8.html?mode=today&'],['faces','People & faces','◎','security-face-folders-v22.html?'],['tracks','Tracks & movement','◇','security-tracks-v7.html?'],['evidence','Evidence & analytics','▤','security-review-v8.html?mode=evidence&'],['archive','Archive','▤','security-archive-v7.html?'],['camera','Camera controls','⚙']];
+const $=id=>document.getElementById(id),asset='/local/frontyard-security-new/',version='v=archive-review-v32-20261014';
+const tabs=[['live','Live camera','◉'],['saved','Recordings','▣','security-review-v8.html?mode=today&'],['faces','People & faces','◎','security-people-review-v32.html?'],['tracks','Tracks & movement','◇','security-tracks-v7.html?'],['evidence','Evidence & analytics','▤','security-review-v8.html?mode=evidence&'],['archive','Archive','▤','security-archive-v7.html?'],['camera','Camera controls','⚙']];
 let current='live',liveData=null,healthBusy=false,controlsBusy=false,controlGeneration=0;
 const create=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=String(txt);return n};
 const api=()=>window.C720PSecureRelay;
@@ -32,6 +32,7 @@ async function loadControls(){if(controlsBusy)return;controlsBusy=true;const gen
 for(const [id,label,icon,file]of tabs){const b=create('button');b.type='button';b.dataset.view=id;b.title=label;b.setAttribute('aria-controls',id==='camera'?'panel-controls':'panel-'+id);b.append(create('span','nav-icon',icon),create('span','',label));b.addEventListener('click',()=>show(id));$('s9v5-nav').append(b);if(file){const pane=create('section','pane');pane.id='panel-'+id;pane.hidden=true;const f=create('iframe');f.title=label;f.dataset.src=asset+file+version;pane.append(f);$('s9v5-stage').append(pane)}}
 $('home').addEventListener('click',()=>{const target='/c720p-hub/home';try{if(window.top===window)location.assign(target);else{window.top.history.pushState(null,'',target);window.top.dispatchEvent(new window.top.Event('location-changed'))}}catch(_){location.assign(target)}});
 $('retryControls').addEventListener('click',loadControls);$('refresh').addEventListener('click',()=>{refreshHealth();if(current==='camera')loadControls();else if(current==='live'){live(false);live(true)}else{const f=paneFor(current).querySelector('iframe');if(f)f.src=f.dataset.src}});
+window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.kind==='archive-review-open-v32'&&event.source===paneFor('faces').querySelector('iframe')?.contentWindow)show('archive')});
 document.addEventListener('visibilitychange',()=>{live(current==='live'&&!document.hidden);if(document.hidden)stopMedia(paneFor(current));else refreshHealth()});window.addEventListener('pagehide',()=>live(false));
 show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{if(current==='camera'&&!document.hidden&&!controlsBusy&&!$('cameraControls').contains(document.activeElement))loadControls()},15000);
 })();

@@ -162,6 +162,24 @@ def detection_metrics(row):
          "person_presence_percent":coverage,"duration_ms":duration,
          "review_backend":backend,"person_event_category":event,"thumbnail_revision":safe_thumbnail_revision(row),**safe_detection_timeline(row),**capture_event_metrics(row)}
 
+def bounded_face_counter(r,key,maximum):
+ value=r.get(key)
+ return value if type(value) is int and 0<=value<=maximum else None
+
+def safe_face_outcome(r):
+ value=r.get("face_evidence_outcome")
+ return value if value in (
+  "snapshot_candidates_saved","review_processing_failed",
+  "no_face_detector_hit_in_sampled_frames",
+  "face_candidates_rejected_in_sampling",
+  "legacy_review_no_diagnostics","not_reviewed") else "not_available"
+
+def safe_face_model_state(r):
+ value=r.get("face_model_state")
+ return value if value in (
+  "not_tested_no_usable_face","available_on_phone",
+  "unavailable_on_phone","not_available") else "not_available"
+
 def install_local_sd(H):
  original_handler=H.go
  def go(self):
@@ -205,6 +223,17 @@ def install_local_sd(H):
       "face_review_status":r.get("face_review_status","not_available_in_original_review"),
       "face_review_sampled_frames":r.get("face_review_sampled_frames"),
       "face_deep_review_version":r.get("face_deep_review_version"),
+      "face_evidence_outcome":safe_face_outcome(r),
+      "face_model_state":safe_face_model_state(r),
+      "face_detector_raw_hits":bounded_face_counter(r,"face_detector_raw_hits",144),
+      "face_rejected_confidence_or_size":bounded_face_counter(r,"face_rejected_confidence_or_size",144),
+      "face_rejected_looking_away_or_roll":bounded_face_counter(r,"face_rejected_looking_away_or_roll",144),
+      "face_rejected_crop_geometry":bounded_face_counter(r,"face_rejected_crop_geometry",144),
+      "face_rejected_dark_or_blurry":bounded_face_counter(r,"face_rejected_dark_or_blurry",144),
+      "face_deep_detector_anchor_frames":bounded_face_counter(r,"face_deep_detector_anchor_frames",12),
+      "face_deep_person_roi_anchors":bounded_face_counter(r,"face_deep_person_roi_anchors",12),
+      "face_deep_multiple_person_anchors":bounded_face_counter(r,"face_deep_multiple_person_anchors",12),
+      "face_deep_multiscale_refinement_passes":bounded_face_counter(r,"face_deep_multiscale_refinement_passes",12),
       "face_snapshots_saved":r.get("face_snapshots_saved",0),
       "face_candidates":r.get("face_candidates",[]),**detection_metrics(r)})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
@@ -246,9 +275,12 @@ def install_local_sd(H):
   # S9_JOINED_PREROLL_V1: read-only complete segment for indexed original.
   joined=re.fullmatch(r"/new/saved/complete/(motion_[0-9]{13}[.]mp4)",path)
   if joined:
-   original=joined.group(1);record=data.get(original)
+   clip_name=joined.group(1);record=data.get(clip_name)
    if record:
-    nm=original+".complete.mp4"
+    # S9_COMPLETE_RANGE_PROOF_V1: no unverified on-phone transcode is served.
+    from s9_merged_archive_stream_v1 import receipt as _s9_receipt, serve_complete as _s9_serve
+    if _s9_receipt(clip_name):return _s9_serve(self,clip_name)
+    nm=clip_name+".complete.mp4"
     try:
      req=urllib.request.Request("http://127.0.0.1:18808/clip/"+nm,method="HEAD")
      with urllib.request.urlopen(req,timeout=9) as response:
@@ -288,6 +320,9 @@ def install_local_sd(H):
  globals()['rows']=s9_archive_delete_v1.install(H,rows,SECURITY_SD,NATIVE_SD,SD)
  import s9_person_folders_v31
  s9_person_folders_v31.install(H,lambda:rows())
+ # Owner-verified entire recordings only; wait for the explicit matching phase.
+ import s9_archive_review_v32
+ s9_archive_review_v32.install(H,lambda:rows())
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:
