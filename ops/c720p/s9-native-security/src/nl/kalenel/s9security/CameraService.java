@@ -1603,6 +1603,47 @@ public final class CameraService extends Service {
      }
      try{Thread.sleep(75);}catch(InterruptedException e){return;}
     }
+   }else if(line.startsWith("GET /appearance/search?")){
+    // Loopback-only phone endpoint; no 4K decoding or biometric lookup.
+    // Hub exposure requires a separate authenticated allowlisted relay.
+    try{
+     if(line.length()>350||folder==null)throw new IllegalArgumentException("bad_search_request");
+     int split=line.indexOf(" HTTP/");
+     if(split<0)throw new IllegalArgumentException("bad_http_request");
+     android.net.Uri uri=android.net.Uri.parse(line.substring(4,split));
+     for(String key:uri.getQueryParameterNames())
+      if(!Arrays.asList("clip","category","zone","method","from_ms","until_ms","limit").contains(key))
+       throw new IllegalArgumentException("unsupported_filter");
+     String reference=uri.getQueryParameter("clip");
+     String category=uri.getQueryParameter("category");
+     String zone=uri.getQueryParameter("zone");
+     String method=uri.getQueryParameter("method");
+     if(method==null)method="bhattacharyya";
+     String start=uri.getQueryParameter("from_ms");
+     String end=uri.getQueryParameter("until_ms");
+     String bound=uri.getQueryParameter("limit");
+     Long fromMs=start==null?null:Long.valueOf(start);
+     Long untilMs=end==null?null:Long.valueOf(end);
+     int maximum=bound==null?20:Integer.parseInt(bound);
+     if(maximum<1||maximum>50)throw new IllegalArgumentException("invalid_limit");
+     JSONArray hits;
+     try(AppearanceSearchIndex index=new AppearanceSearchIndex(folder)){
+      hits=index.searchByClip(reference,category,zone,fromMs,untilMs,method,maximum);
+     }
+     JSONObject answer=new JSONObject().put("ok",true)
+       .put("index_version",AppearanceSearchIndex.VERSION)
+       .put("reference_clip",reference).put("category",category)
+       .put("appearance_only",true).put("verified_same_person",false)
+       .put("results",hits);
+     send(out,200,"application/json",answer.toString().getBytes("UTF-8"));
+    }catch(IllegalArgumentException invalid){
+     send(out,400,"application/json",
+       "{\\"ok\\":false,\\"error\\":\\"invalid_appearance_search_request\\"}".getBytes("UTF-8"));
+    }catch(Exception unavailable){
+     Log.w(TAG,"appearance_search_unavailable",unavailable);
+     send(out,503,"application/json",
+       "{\\"ok\\":false,\\"error\\":\\"appearance_index_unavailable\\"}".getBytes("UTF-8"));
+    }
    }else if(line.startsWith("GET /controls ")){
     try{send(out,200,"application/json",controlsStatus().toString().getBytes("UTF-8"));}
     catch(Exception e){send(out,503,"application/json","{\"ok\":false,\"error\":\"controls_unavailable\"}".getBytes("UTF-8"));}
