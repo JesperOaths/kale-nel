@@ -160,7 +160,7 @@ def safe_face_review_metadata(m):
          "face_review_sampled_frames":None,"face_snapshots_saved":0,"face_candidates":[],
          "face_deep_review_version":None,
          "face_evidence_outcome":"not_reviewed",
-         "face_embedding_model_state":"not_tested_no_usable_face",
+         "face_model_state":"not_tested_no_usable_face",
          "face_detector_raw_hits":None,"face_rejected_confidence_or_size":None,
          "face_rejected_looking_away_or_roll":None,
          "face_rejected_crop_geometry":None,"face_rejected_dark_or_blurry":None,
@@ -187,9 +187,9 @@ def safe_face_review_metadata(m):
   result["face_evidence_outcome"]=outcome
  else:
   result["face_evidence_outcome"]="legacy_review_no_diagnostics"
- model=m.get("face_embedding_model_state")
+ model=m.get("face_model_state")
  if model in ("not_tested_no_usable_face","available_on_phone","unavailable_on_phone"):
-  result["face_embedding_model_state"]=model
+  result["face_model_state"]=model
  for key in ("face_detector_raw_hits","face_rejected_confidence_or_size",
              "face_rejected_looking_away_or_roll","face_rejected_crop_geometry",
              "face_rejected_dark_or_blurry"):
