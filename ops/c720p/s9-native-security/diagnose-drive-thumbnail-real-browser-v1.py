@@ -19,7 +19,7 @@ def main():
  original=next((r for r in mod.get("json/list") if r.get("type")=="page" and "c720p-hub" in r.get("url","")),None)
  target=None;tab=None
  try:
-  target=browser.call("Target.createTarget",{"url":"http://localhost:8123/local/c720p-surveillance.html?v=drive-thumb-diag-20261014","background":True})["targetId"]
+  target=browser.call("Target.createTarget",{"url":"http://localhost:8123/local/c720p-surveillance.html?v=drive-thumb-mount-v2-real-browser-20261014","background":True})["targetId"]
   for i in range(45):
    row=next((r for r in mod.get("json/list") if r.get("id")==target),None)
    if row and row.get("webSocketDebuggerUrl"):
