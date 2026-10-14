@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Read-only C720P follow-up: root filesystem and specific major cache paths."""
+import json, os, pathlib, shutil, subprocess, time
+
+CHECK=[
+ ("tmp","/tmp",1),("home","/home/jespern",1),
+ ("hub","/home/jespern/c720p-home-hub",1),
+ ("hub_build","/home/jespern/c720p-home-hub/build",1),
+ ("hub_backups","/home/jespern/c720p-home-hub/backups",1),
+ ("user_cache","/home/jespern/.cache",1),
+ ("var","/var",1),("docker","/var/lib/docker",1),
+ ("containerd","/var/lib/containerd",1),
+ ("log","/var/log",1),
+ ("opt","/opt",1),("usr","/usr",1)
+]
+def limited_du(path,depth):
+ try:
+  p=subprocess.run(["nice","-n","15","ionice","-c","3","du","-x","-m",
+      "--max-depth="+str(depth),"--",path],capture_output=True,text=True,timeout=75)
+  parsed=[]
+  for line in p.stdout.splitlines():
+   if "\t" not in line:continue
+   size,name=line.split("\t",1)
+   if name!=path and name.startswith(path.rstrip("/")+"/"):
+    item=name[len(path.rstrip("/"))+1:]
+    if "/" not in item:
+     parsed.append({"name":item[:85],"mib":int(size)})
+  return {"state":"complete" if p.returncode==0 else "partial",
+       "top":sorted(parsed,key=lambda a:-a["mib"])[:18]}
+ except Exception as e:return {"state":type(e).__name__}
+r={"timestamp":time.time(),"mode":"read_only","dirs":{},"files":{}}
+for label,path,depth in CHECK:
+ if pathlib.Path(path).is_dir():r["dirs"][label]=limited_du(path,depth)
+for label,path in [("tmp","/tmp"),("var_log","/var/log"),
+   ("hub_build","/home/jespern/c720p-home-hub/build")]:
+ root=pathlib.Path(path)
+ if not root.is_dir():continue
+ entries=[]
+ for f in root.iterdir():
+  try:
+   if f.is_file() and not f.is_symlink():
+    s=f.stat()
+    entries.append({"name":f.name[:80],"mib":round(s.st_blocks*512/1048576,2),
+           "age_hours":round((time.time()-s.st_mtime)/3600,1)})
+  except OSError:continue
+ r["files"][label]=sorted(entries,key=lambda x:-x["mib"])[:20]
+for label,argv in [
+ ("df_inodes",["df","-i","/"]),("docker_df",["docker","system","df"]),
+ ("journal_usage",["journalctl","--disk-usage"])]:
+ try:
+  p=subprocess.run(argv,capture_output=True,text=True,timeout=18)
+  r[label]={"rc":p.returncode,"stdout":p.stdout[:1300]}
+ except Exception as e:r[label]={"error":type(e).__name__}
+d=shutil.disk_usage("/")
+r["root"]={"free_bytes":d.free,"used_bytes":d.used,"total_bytes":d.total}
+print("C720P_STORAGE_FOLLOWUP_V2 "+json.dumps(r,separators=(",",":"),sort_keys=True),flush=True)

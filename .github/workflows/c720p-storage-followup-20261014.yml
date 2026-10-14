@@ -1,0 +1,70 @@
+name: C720P storage follow-up audit
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/c720p-storage-followup-20261014.py'
+      - '.github/workflows/c720p-storage-followup-20261014.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/c720p-storage-followup-20261014.py'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 -m py_compile ops/c720p/c720p-storage-followup-20261014.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path("ops/c720p/c720p-storage-followup-20261014.py").read_text()
+          for bad in ("shutil.rmtree(", "unlink(", "os.remove(", "subprocess.Popen(", "shell=True", "os.replace("):
+              assert bad not in s,bad
+          print("READ_ONLY_AUDIT_VALID")
+          PY
+  inspect:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          src='ops/c720p/c720p-storage-followup-20261014.py'
+          digest="$(sha256sum "$src" | cut -d' ' -f1)"
+          path="/tmp/c720p-storage-followup-${GITHUB_SHA:0:12}.py"
+          origin="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+          cmd="curl -fSsL --max-time 30 '${origin}' -o '${path}' && printf '%s  %s\\n' '${digest}' '${path}' | sha256sum -c - >/dev/null && python3 '${path}'"
+          idem="c720p-storage-audit-${GITHUB_SHA:0:24}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v command="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-storage-audit','diagnostic',:'command',420,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "C720P_FOLLOWUP_JOB=$id"
+          for i in $(seq 1 42); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 24000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'C720P_STORAGE_FOLLOWUP_V2' <<< "$output" || exit 1
+              exit 0
+            fi
+            sleep 9
+          done
+          exit 1
