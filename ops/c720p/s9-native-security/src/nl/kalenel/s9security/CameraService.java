@@ -1322,8 +1322,8 @@ public final class CameraService extends Service {
    }
    if("preroll_diagnostic".equals(key)){
      if(!"record_once".equals(value)||diagnosticPrerollUsed||diagnosticPrerollActive||
-        pilotOnly||preRoll==null||!preRoll.ready()||
-        preRoll.cachedDurationMs()<3500||temperature()>=375||
+        pilotOnly||(!(continuous4KTrial&&continuous4K!=null&&continuous4K.readyForEvent())&&
+        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<3500))||temperature()>=375||
         folder==null||folder.getUsableSpace()<15L*1024*1024*1024){
       return response.put("ok",false).put("error","diagnostic_prebuffer_not_ready_or_already_used");
      }
@@ -1331,11 +1331,12 @@ public final class CameraService extends Service {
      diagnosticPrerollActive=true;
      diagnosticPrerollResult="starting";
      startRecording();
-     if(!"starting".equals(mode)){
+     if(!"starting".equals(mode)&&!"recording".equals(mode)){
       diagnosticPrerollActive=false;diagnosticPrerollResult="recording_start_guard_denied";
       return response.put("ok",false).put("error",diagnosticPrerollResult);
      }
-     return response.put("ok",true).put("mode","diagnostic_preroll_4k")
+     return response.put("ok",true).put("mode",continuous4KTrial?
+       "diagnostic_continuous_native_4k":"diagnostic_preroll_4k")
        .put("excluded_from_security_archive",true)
        .put("requested_duration_ms",9000);
     }
@@ -1525,6 +1526,7 @@ public final class CameraService extends Service {
   if("starting".equals(mode))Log.w(TAG,"SHUTDOWN_DURING_RECORDER_PREPARE_PARTIAL_PRESERVED");
   running=false;mode="stopped";
   if(preRoll!=null){preRoll.stop();preRoll=null;frozenPreRoll=null;}
+  if(continuous4K!=null){continuous4K.close();continuous4K=null;continuous4KTrial=false;}
   if(jpegEncoder!=null){jpegEncoder.shutdownNow();jpegEncoder=null;}
   jpegBusy=false;
   if(evidenceWriter!=null){evidenceWriter.shutdown();evidenceWriter=null;}
