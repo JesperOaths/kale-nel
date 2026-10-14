@@ -36,7 +36,7 @@ assert.ok(sortStart >= 0 && sortEnd > sortStart, 'new-arrival sorting functions 
 const ctx = { productSortMode: 'newest' };
 vm.createContext(ctx);
 vm.runInContext(store.slice(sortStart, sortEnd) +
-  '\\nthis.pick = sortProductsForDisplay; this.age = productCreatedMs;', ctx);
+  ';this.pick = sortProductsForDisplay; this.age = productCreatedMs;', ctx);
 const sample = snapshot.products.filter(p => mustShow.includes(p.name));
 const actual = Array.from(ctx.pick(sample));
 const expected = [...sample].sort((a, b) =>
@@ -54,7 +54,7 @@ const refresh = read('shop/live-catalog-refresh-v818.js');
 assert.match(html, /data-shop-sort/, 'storefront must expose the sorting control');
 assert.match(html, /20261014-live-63-r1/, 'HTML must cache-bust the new catalog snapshot');
 assert.match(html, /20261014-new-arrivals-r1/, 'HTML must cache-bust storefront logic/styles');
-assert.match(css, /\\.product-new-label/, 'new shirts need visible markers');
-assert.match(refresh, /checkCatalog\\(\\{ force: true \\}\\)/,
+assert.ok(css.includes('.product-new-label'), 'new shirts need visible markers');
+assert.ok(refresh.includes('checkCatalog({ force: true })'),
   'first page visit must immediately check the live catalog');
 console.log('Shop new-arrivals regression passed: ' + snapshot.products.length + ' products, ' + mustShow.length + ' restored shirts.');
