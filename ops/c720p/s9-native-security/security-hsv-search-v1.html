@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="no-referrer">
+<title>Security · Visual Search</title>
+<style>
+:root{color-scheme:dark;--bg:#0d1721;--pane:#162431;--border:#304552;--ink:#edf6fa;--sub:#a6bbc6;--accent:#79dbc8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Segoe UI",sans-serif}
+a{color:var(--accent)}button,select,input{font:inherit;color:inherit}
+button{cursor:pointer;border-radius:8px;background:#234a4b;border:1px solid #477675;padding:9px 15px}
+button:hover:not(:disabled){background:#2b5a57}
+button:disabled{opacity:.5;cursor:wait}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:14px 23px;border-bottom:1px solid var(--border)}
+h1{font-size:23px;letter-spacing:-.03em;margin:0}
+main{max-width:1450px;margin:auto;padding:18px 22px 50px}
+p{color:var(--sub);margin:4px 0 12px}
+.card{border:1px solid var(--border);background:var(--pane);border-radius:14px;overflow:hidden}
+.panel{padding:18px;margin-bottom:18px}
+h2{font-size:17px;margin:0 0 12px}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px}
+.filters label{display:flex;flex-direction:column;gap:5px;color:var(--sub);font-size:12px}
+.filters select,.filters input{width:100%;min-width:0;background:#0f1d29;border:1px solid #3b5361;padding:10px;border-radius:8px}
+.actions{margin-top:15px;display:flex;align-items:center;flex-wrap:wrap;gap:11px}
+.muted{color:var(--sub);font-size:12px}
+#status{min-height:24px;color:#b4d5d5}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,265px),1fr));gap:14px}
+.item{border:1px solid var(--border);background:var(--pane);border-radius:12px;overflow:hidden}
+.thumb{width:100%;aspect-ratio:16/9;object-fit:contain;display:block;background:#243642}
+.info{padding:12px;display:grid;gap:5px}
+.info b{font-size:13px;overflow-wrap:anywhere}
+.info small{color:var(--sub);font-size:12px}
+.score{font-variant-numeric:tabular-nums;color:#8de3cf;font-weight:700}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
+.row button{flex:1;font-size:12px;padding:8px}
+.empty{padding:25px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--sub)}
+dialog{background:#111e2b;border:1px solid var(--border);border-radius:14px;color:var(--ink);width:min(900px,96vw);max-height:95vh}
+dialog::backdrop{background:#02060cdd}
+dialog video{max-width:100%;width:100%;max-height:74vh;background:black}
+@media(max-width:650px){main{padding:12px}header{padding:11px}h1{font-size:20px}.panel{padding:12px}}
+</style></head>
+<body>
+<header><h1>Visual Search <span class="muted">· S9+ colour evidence</span></h1>
+<a href="/local/frontyard-security-new/security-tracks-v7.html" id="back">← Tracks & clothing</a></header>
+<main>
+<section class="card panel" aria-label="Appearance search controls">
+ <h2>Find recordings with similar colours</h2>
+ <p>Compare sampled clothing or vehicle regions from a selected recording. Results are visual similarities, <strong>not verified people or identities</strong>.</p>
+ <div class="filters">
+ <label>Reference recording<select id="reference" aria-label="Reference recording"><option value="">Loading recordings…</option></select></label>
+ <label>Object region<select id="category"><option value="upper_clothing">Upper clothing</option><option value="lower_clothing">Lower clothing</option><option value="vehicle">Vehicle body</option></select></label>
+ <label>Scene area<select id="zone"><option value="">All areas</option><option value="front_garden">Front garden</option><option value="background_street">Background street</option><option value="unspecified">Unspecified</option></select></label>
+ <label>Score metric<select id="metric"><option value="bhattacharyya">Bhattacharyya colour distance</option><option value="correlation">Histogram correlation</option></select></label>
+ <label>From<input id="from" type="datetime-local"></label>
+ <label>Until<input id="until" type="datetime-local"></label>
+ </div>
+ <div class="actions"><button id="search" type="button" disabled>Search visual appearance</button>
+ <button id="clear" type="button">Clear</button><span id="status" role="status" aria-live="polite">Connecting to camera archive…</span></div>
+</section>
+<section aria-labelledby="results-title"><h2 id="results-title">Matching recordings</h2>
+ <p class="muted" id="explanation">Choose a recorded clip as your colour reference. Older clips appear as the S9+ completes its low-priority 4K indexing.</p>
+ <div id="results" class="grid"><div class="empty">No search performed</div></div>
+</section>
+</main>
+<dialog id="viewer" aria-label="Security recording viewer">
+<div class="actions" style="justify-content:space-between;margin:0 0 10px"><strong id="video-title">Recording</strong><button id="close" type="button">Close</button></div>
+<video id="player" controls playsinline preload="metadata"></video><p id="player-state"></p>
+</dialog>
+<div style="position:fixed;bottom:3px;right:9px;color:#8299a5;pointer-events:none;font-size:10px">v817 · S9 HSV visual search v1</div>
+<script>
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const valid=/^motion_[0-9]{13}\.mp4$/;
+const state={clips:[],busy:false,generation:0};
+const relay=()=>{
+ if(window.C720PSecureRelay?.fetch && window.C720PSecureRelay?.url)return window.C720PSecureRelay;
+ try{if(window.parent!==window&&window.parent.location.origin===location.origin &&
+ window.parent.C720PSecureRelay?.fetch && window.parent.C720PSecureRelay?.url)
+  return window.parent.C720PSecureRelay;}catch(_){}
+ return null;
+};
+const format=name=>new Date(Number(name.slice(7,20))).toLocaleString("nl-NL",{
+ timeZone:"Europe/Amsterdam",year:"numeric",month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"
+});
+const el=(tag,className,content)=>{
+ const node=document.createElement(tag);if(className)node.className=className;
+ if(content!==undefined)node.textContent=String(content);return node;
+};
+function setStatus(message){$("status").textContent=message}
+function epoch(id){
+ const v=$(id).value;if(!v)return null;
+ const date=new Date(v).getTime();
+ if(!Number.isFinite(date))throw Error("Invalid time filter");
+ return String(date);
+}
+function card(match){
+ const clip=match.clip_name;
+ const item=el("article","item");
+ const image=el("img","thumb");image.alt="Recording thumbnail";image.loading="lazy";
+ const api=relay();
+ if(api?.url)api.url("/new/saved/snap/"+encodeURIComponent(clip+".thumb.jpg"))
+   .then(url=>{if(image.isConnected)image.src=url}).catch(()=>{});
+ item.append(image);
+ const info=el("div","info");
+ info.append(el("b","",format(clip)));
+ info.append(el("small","",clip));
+ info.append(el("div","score",(100*match.similarity).toFixed(1)+"% histogram resemblance"));
+ info.append(el("small","",match.zone.replaceAll("_"," ")+" · "+(match.offset_ms/1000).toFixed(1)+"s in clip"));
+ const buttons=el("div","row");
+ const play=el("button","","Play recording");play.type="button";
+ play.addEventListener("click",()=>openVideo(clip));
+ const use=el("button","","Use as reference");use.type="button";
+ use.addEventListener("click",()=>{$("reference").value=clip;window.scrollTo({top:0,behavior:"smooth"});});
+ buttons.append(play,use);info.append(buttons);item.append(info);return item;
+}
+async function openVideo(clip){
+ const api=relay(),video=$("player");
+ video.pause();video.removeAttribute("src");video.load();
+ $("video-title").textContent=format(clip);$("player-state").textContent="Loading recording…";
+ if(!$("viewer").open)$("viewer").showModal();
+ try{
+  if(!api?.url)throw Error("signed_relay_unavailable");
+  video.src=await api.url("/new/saved/clip/"+encodeURIComponent(clip));video.load();
+  $("player-state").textContent="";
+ }catch(_){$("player-state").textContent="Playback currently unavailable";}
+}
+async function loadArchive(){
+ try{
+  const api=relay();if(!api?.fetch)throw Error("signed_relay_unavailable");
+  const response=await api.fetch("/new/api/saved",{cache:"no-store"});
+  if(!response.ok)throw Error("archive_failed");
+  const data=await response.json();
+  if(data.archive_mode!=="S9-microSD-only"||!Array.isArray(data.events))throw Error("archive_contract");
+  state.clips=data.events.map(record=>String(record.clip_no||"")).filter(name=>valid.test(name)).sort().reverse();
+  const source=$("reference");source.replaceChildren();
+  const choose=el("option","","Choose a recording");choose.value="";source.append(choose);
+  for(const name of state.clips){
+   const option=el("option","",format(name)+" · "+name);
+   option.value=name;source.append(option);
+  }
+  $("search").disabled=!state.clips.length;
+  setStatus(state.clips.length+" recordings available · HSV index coverage may be partial");
+ }catch(_){setStatus("Authenticated archive unavailable. Recording continues independently.");}
+}
+async function search(){
+ if(state.busy)return;
+ const clip=$("reference").value;
+ if(!state.clips.includes(clip)){setStatus("Choose a reference recording first.");return;}
+ const api=relay();if(!api?.fetch){setStatus("Authenticated relay unavailable.");return;}
+ let fromMs,untilMs;
+ try{fromMs=epoch("from");untilMs=epoch("until");}catch(e){setStatus(e.message);return;}
+ if(fromMs!==null&&untilMs!==null&&Number(fromMs)>Number(untilMs)){
+  setStatus("The start time must be before the end time.");return;
+ }
+ state.busy=true;$("search").disabled=true;
+ const generation=++state.generation;
+ setStatus("Searching the phone's local colour index…");
+ try{
+  const query=new URLSearchParams({clip,category:$("category").value,
+    method:$("metric").value,limit:"50"});
+  if($("zone").value)query.set("zone",$("zone").value);
+  if(fromMs!==null)query.set("from_ms",fromMs);
+  if(untilMs!==null)query.set("until_ms",untilMs);
+  const response=await api.fetch("/new/api/appearance-search?"+query.toString(),{cache:"no-store"});
+  if(!response.ok)throw Error("Phone index or authenticated search endpoint unavailable");
+  const answer=await response.json();
+  if(answer.ok!==true||answer.appearance_only!==true||!Array.isArray(answer.results))
+   throw Error("Unexpected search response");
+  if(generation!==state.generation)return;
+  const validHits=answer.results.filter(hit=>valid.test(String(hit.clip_name||""))&&
+    state.clips.includes(hit.clip_name)&&Number.isFinite(hit.similarity)&&
+    hit.similarity>=0&&hit.similarity<=1&&hit.verified_same_person===false);
+  const target=$("results");target.replaceChildren();
+  if(!validHits.length)target.append(el("div","empty","No indexed clips matched this region or filter."));
+  for(const hit of validHits)target.append(card(hit));
+  setStatus(validHits.length+" matching recordings · visual resemblance only");
+  $("explanation").textContent="Ranked by deterministic colour-histogram similarity; scores are not identity probabilities. Up to 4,000 recent indexed observations are searched.";
+ }catch(error){
+  $("results").replaceChildren(el("div","empty",
+    "No search results yet. The S9+ appearance endpoint may not be installed or the reference clip is not yet indexed."));
+  setStatus(String(error.message||"Search unavailable"));
+ }finally{state.busy=false;$("search").disabled=!state.clips.length;}
+}
+$("search").addEventListener("click",search);
+$("clear").addEventListener("click",()=>{
+ ++state.generation;$("reference").value="";$("zone").value="";
+ $("from").value="";$("until").value="";
+ $("results").replaceChildren(el("div","empty","No search performed"));
+ setStatus("Cleared. Choose a reference recording.");});
+$("close").addEventListener("click",()=>$("viewer").close());
+$("viewer").addEventListener("close",()=>{const video=$("player");
+ video.pause();video.removeAttribute("src");video.load();});
+loadArchive();
+})();
+</script>
+</body></html>
