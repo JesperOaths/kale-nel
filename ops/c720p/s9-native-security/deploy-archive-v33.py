@@ -75,7 +75,9 @@ def main():
  shell=original[SHELL].decode()
  pattern=r'(security-archive-v7[.]html[?]v=)[A-Za-z0-9_-]+'
  shell,count=re.subn(pattern,lambda m:m.group(1)+VERSION,shell)
- if count!=1:raise RuntimeError('archive_shell_iframe_missing_or_ambiguous')
+ if count>1:raise RuntimeError('multiple_archive_shell_iframes')
+ # The latest Security navigation serves Archive separately and no longer
+ # embeds it in the old root shell. Do not require or mutate an absent iframe.
  changes={**srcs,ARCH:html.encode(),SHELL:shell.encode()}
  for p,b in srcs.items():
   if p.exists() and p.read_bytes()!=b:raise RuntimeError('new_asset_already_exists_with_other_bytes_'+p.name)
@@ -99,7 +101,8 @@ def main():
    if sha(get(uri))!=sha(b):raise RuntimeError('served_source_hash_mismatch_'+p.name)
   print('SECURITY_ARCHIVE_V33_LIVE_VERIFIED',json.dumps({
     'source_sha':ref,'ui':str(ARCH),'shell':str(SHELL),'assets':list(FILES),
-    'backup':str(dest),'original_recordings_changed':False,
+    'backup':str(dest),'root_iframe_cache_busted':bool(count),
+    'original_recordings_changed':False,
     'bulk_empty_response_handled':True,'delete_requires_confirmed_phone_file':True,
     'stale_card_removal_is_non_destructive':True},sort_keys=True),flush=True)
  except BaseException:
