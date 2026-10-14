@@ -291,9 +291,14 @@ function openFolder(id){
    for(const track of tracks.slice(0,4)){
     const direction=String(track.image_movement_direction||'insufficient_samples').replaceAll('_',' ');
     const colour=String(track.upper_clothing_colour||'uncertain').replaceAll('_',' ');
+    const measuredSpeed=Number(track.image_speed_body_heights_per_second);
+    const speed=track.image_speed_body_heights_per_second!=null&&Number.isFinite(measuredSpeed)&&
+      measuredSpeed>=0&&measuredSpeed<=8?' · image speed: '+measuredSpeed.toFixed(2)+' body-heights/s':'';
+    const path=track.image_path_straightness!=null&&Number.isFinite(Number(track.image_path_straightness))?
+      ' · image path straightness: '+Math.round(100*Number(track.image_path_straightness))+'%':'';
     body.append(el('small','',String(track.id||'Anonymous person')+
-      ' · '+colour+' clothing · movement: '+direction+
-      ' · posture: not measured · gait: not measurable from sampled frames'));
+      ' · '+colour+' clothing · image direction: '+direction+speed+path+
+      ' · posture: not measured · gait: no cadence model'));
    }
   }
   const play=el('button','','Play recording');play.type='button';
