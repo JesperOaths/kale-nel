@@ -49,20 +49,22 @@ def command(argv,timeout=35):
  return p.stdout.strip()
 
 def phone():
+ # Prefer Wi-Fi even while a USB cable is present. The surveillance location
+ # uses normal charging; C720P must never require the phone to be USB-tethered.
  rows=command(["adb","devices","-l"],12).splitlines()
- usb=[r.split()[0] for r in rows if " device " in r and
-      "model:SM_G965F" in r and "usb:" in r]
- if len(usb)==1:return usb[0]
  wifi=[r.split()[0] for r in rows if " device " in r and
        "model:SM_G965F" in r and r.startswith("192.168.178.250:5555")]
  if len(wifi)==1:return wifi[0]
- # Reattach only the already-authorized, pinned S9 Wi-Fi ADB endpoint.
+ # Attempt only the user's already authorized private Wi-Fi ADB endpoint.
  subprocess.run(["adb","connect","192.168.178.250:5555"],
    capture_output=True,text=True,timeout=9)
  rows=command(["adb","devices","-l"],12).splitlines()
  if any(r.startswith("192.168.178.250:5555") and
         " device " in r and "model:SM_G965F" in r for r in rows):
   return "192.168.178.250:5555"
+ usb=[r.split()[0] for r in rows if " device " in r and
+      "model:SM_G965F" in r and "usb:" in r]
+ if len(usb)==1:return usb[0]
  raise RuntimeError("authorized_S9_ADB_unavailable")
 
 def adb(serial,*parts,timeout=30):
@@ -258,7 +260,7 @@ def main():
    args.name in known and args.name+".preroll.mp4" in known and
    args.name+".complete.mp4" not in known) else []
  if args.dry_run:
-  print("JOINER_DRY_RUN",json.dumps({"eligible":len(files),
+  print("JOINER_DRY_RUN",json.dumps({"adb_serial":serial,"eligible":len(files),
    "next":[name for _,name in files[:5]],"existing_complete":len(
     [n for n in known if n.endswith(".complete.mp4")])}),flush=True)
   return 0
