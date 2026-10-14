@@ -123,10 +123,24 @@ def main():
         raise RuntimeError("unverified_face_model_change")
     if free_bytes()<320*1024**2:
         print("S9_PEDESTRIAN_V9_DEFERRED_LOW_DISK",flush=True);return
+    # Download the build scripts from the SAME immutable source revision.
+    # Do not assume the hub has a repo checkout or invoke mutable main.
+    tools_dir=HOME/"build/s9-person-motion-v9-source-tools"/ref
+    tools_dir.mkdir(parents=True,exist_ok=True)
+    for name in ("fetch-source.sh","compile-only.sh","package-only.sh"):
+        url="https://raw.githubusercontent.com/JesperOaths/kale-nel/"+ref+"/"+SOURCE+"/"+name
+        with urllib.request.urlopen(urllib.request.Request(url,headers={"User-Agent":"S9-gate-v9-pinned-release/1"}),timeout=45) as resp:
+            data=resp.read(50001)
+        if len(data)<80 or len(data)>50000 or not data.startswith(b"#!/usr/bin/env bash"):
+            raise RuntimeError("invalid_pinned_build_script_"+name)
+        dst=tools_dir/name
+        if dst.exists() and dst.read_bytes()!=data:
+            raise RuntimeError("build_script_digest_drift_"+name)
+        dst.write_bytes(data)
     # Compile/pin all twenty sources. No Camera2 interruption during building.
     build_env={**os.environ,"S9_SECURITY_REF":ref,"S9_FACE_MODEL_SHA256":REQUIRED_MODEL}
-    run(["bash",str(HOME/"repo/ops/c720p/s9-native-security/compile-only.sh")],timeout=240,env=build_env)
-    run(["bash",str(HOME/"repo/ops/c720p/s9-native-security/package-only.sh")],timeout=180,env=build_env)
+    run(["bash",str(tools_dir/"compile-only.sh")],timeout=240,env=build_env)
+    run(["bash",str(tools_dir/"package-only.sh")],timeout=180,env=build_env)
     apk=REPO_BUILD/"s9-native-security.apk"
     if not apk.is_file() or apk.stat().st_size<8_000_000:
         raise RuntimeError("compiled_apk_missing")
