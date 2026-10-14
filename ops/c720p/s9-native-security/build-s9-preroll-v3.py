@@ -57,24 +57,34 @@ def main():
   # Earlier disk cleanup removed JARs from the hub. Rehydrate the exact
   # 2.14.0 Maven Central TensorFlow AAR class files into RAM-backed scratch;
   # never restore disposable dependencies to the 21 GiB root filesystem.
-  cp=[];dependency_hashes={}
-  for part in ("tensorflow-lite","tensorflow-lite-api","tensorflow-lite-gpu","tensorflow-lite-gpu-api"):
+  # Parallel immutable downloads to prevent 19 sequential network stalls
+  # exhausting the management gateway's bounded build window.
+  from concurrent.futures import ThreadPoolExecutor
+  def download_dependency(part):
+   import io
    url="https://repo.maven.apache.org/maven2/org/tensorflow/"+part+"/2.14.0/"+part+"-2.14.0.aar"
-   with urllib.request.urlopen(url,timeout=75) as response:
+   with urllib.request.urlopen(url,timeout=45) as response:
     aar=response.read(16000001)
    if len(aar)<1000 or len(aar)>16000000:raise RuntimeError("unbounded_tensorflow_dependency_"+part)
-   import io
-   with zipfile.ZipFile(io.BytesIO(aar)) as package:
-    raw=package.read("classes.jar")
+   with zipfile.ZipFile(io.BytesIO(aar)) as package:raw=package.read("classes.jar")
    if len(raw)<1000 or len(raw)>12000000:raise RuntimeError("invalid_tensorflow_classes_"+part)
-   jar=p/(part+".jar");jar.write_bytes(raw);cp.append(jar)
-   dependency_hashes[part]={"version":"2.14.0","sha256":sha(aar),"classes_jar_sha256":sha(raw)}
+   return part,raw,{"version":"2.14.0","sha256":sha(aar),"classes_jar_sha256":sha(raw)}
+  parts=("tensorflow-lite","tensorflow-lite-api","tensorflow-lite-gpu","tensorflow-lite-gpu-api")
+  with ThreadPoolExecutor(max_workers=4) as pool:
+   downloaded=list(pool.map(download_dependency,parts))
+  cp=[];dependency_hashes={}
+  for part,raw,proof in downloaded:
+   jar=p/(part+".jar");jar.write_bytes(raw);cp.append(jar);dependency_hashes[part]=proof
   src=p/"src/nl/kalenel/s9security";src.mkdir(parents=True)
-  for item in JAVAS:
+  def download_java(item):
    url=("https://raw.githubusercontent.com/JesperOaths/kale-nel/"+REF+
         "/ops/c720p/s9-native-security/src/nl/kalenel/s9security/"+item+".java")
-   with urllib.request.urlopen(url,timeout=40) as r:raw=r.read(180000)
+   with urllib.request.urlopen(url,timeout=30) as r:raw=r.read(180000)
    if not (100<len(raw)<180000):raise RuntimeError("invalid_source_"+item)
+   return item,raw
+  with ThreadPoolExecutor(max_workers=6) as pool:
+   downloaded_java=list(pool.map(download_java,JAVAS))
+  for item,raw in downloaded_java:
    (src/(item+".java")).write_bytes(raw)
   assert "GardenJoinedClip" not in (src/"CameraService.java").read_text()
   assert "s9_on_phone_avc_memory_ring_keyframe_7s_v3" in (src/"GardenPreRoll.java").read_text()
