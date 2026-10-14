@@ -101,6 +101,8 @@ public final class CameraService extends Service {
  // One-shot, explicitly labelled on-phone validation clip. Never treated as
  // an ordinary person detection or indexed surveillance event.
  private boolean diagnosticPrerollActive=false,diagnosticPrerollUsed=false;
+ private boolean diagnosticTailProof=false;
+ private String continuous4KStopReason="";
  private volatile String diagnosticPrerollClip="",diagnosticPrerollResult="not_tested";
  private volatile long preRollLastFrameAt=0;
  private volatile boolean jpegBusy=false;
@@ -162,7 +164,8 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- private static final long QUIET_MS=8500,MAX_MS=120000,COOLDOWN_MS=0;
+ // End 10 seconds after the most recent accepted motion; continue capped events.
+ private static final long QUIET_MS=10000,MAX_MS=120000,COOLDOWN_MS=0;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
@@ -357,7 +360,7 @@ public final class CameraService extends Service {
      // Only a verified and explicitly promoted 4K recorder can resume on boot.
      boolean preferred=!pilotOnly&&getSharedPreferences("native",MODE_PRIVATE)
        .getBoolean("continuous_4k_production_enabled",false);
-     if(preferred&&temperature()<375&&folder!=null&&
+     if(preferred&&temperature()<382&&folder!=null&&
          folder.getUsableSpace()>15L*1024*1024*1024){
       Continuous4KEncoder candidate=new Continuous4KEncoder();
       try{
@@ -641,6 +644,7 @@ public final class CameraService extends Service {
       }
      });
    if(!accepted){saveFallbackEvidence("continuous_4k_start_rejected");return;}
+   continuous4KStopReason="";
    noteRecordingStarted();
    lastStart=SystemClock.elapsedRealtime();lastRecordAt=lastStart;
    lastMovementAt=lastStart;eventChain.started(lastStart,System.currentTimeMillis());
@@ -648,7 +652,7 @@ public final class CameraService extends Service {
    Log.i(TAG,"START_NATIVE_CONTINUOUS_4K "+clip);
    if(diagnostic)cameraHandler.postDelayed(()->{
     if("recording".equals(mode))stopRecording("continuous_4k_diagnostic");
-   },9000);
+   },diagnosticTailProof?12500:9000);
    return;
   }
   frozenPreRoll=preRoll==null?null:preRoll.freeze();
@@ -710,6 +714,7 @@ public final class CameraService extends Service {
   continuous4KLastResult="verified_native_4k_"+durationMs+"ms";
   mode="watching";
   if(diagnostic){
+   diagnosticTailProof=false;
    diagnosticPrerollClip=clip.getName();
    diagnosticPrerollResult="single_native_4k_complete_"+durationMs+"ms";
    diagnosticPrerollActive=false;
@@ -719,16 +724,28 @@ public final class CameraService extends Service {
   }
   completed++;
   lastClip=clip.getName();
+  final String finishedReason=continuous4KStopReason.isEmpty()?"unknown_4k_stop":continuous4KStopReason;
+  continuous4KStopReason="";
   final CaptureContinuity.Segment segment=eventChain.stopped(
-      SystemClock.elapsedRealtime(),lastClip,"continuous_4k_event");
+      SystemClock.elapsedRealtime(),lastClip,finishedReason);
   final long motionAtSave=motionEvents;
   final String evidenceReason="continuous_native_4k_"+captureTier;
   writeCaptureEvidenceAsync(clip,segment);
   reviewer.submit(()->review(clip,evidenceReason,motionAtSave,segment));
+  // If motion continues at a safety cap, the same encoder's rolling
+  // full-4K ring supplies the next segment (overlap, not missing footage).
+  if(segment.autoResumeArmed)cameraHandler.postDelayed(()->{
+   if(!running||!"watching".equals(mode)||!continuous4KTrial||
+      continuous4K==null||!continuous4K.readyForEvent())return;
+   if(!eventChain.continuationReady(SystemClock.elapsedRealtime()))return;
+   segmentResumeAttempts++;
+   startRecording();
+  },250);
  }
  private void stopRecording(String reason){
   if(!"recording".equals(mode))return;
   if(continuous4KTrial&&continuous4K!=null){
+   continuous4KStopReason=reason;
    mode="stopping";
    if(!continuous4K.stopEvent()){
     continuous4KFailures++;restoreLegacy4K("stop_rejected");
@@ -1278,6 +1295,11 @@ public final class CameraService extends Service {
     d.put("suppressed_video_without_stills",skippedRecordingsWithoutStill);
     d.put("post_record_cooldown_ms",COOLDOWN_MS);
     d.put("max_person_clip_ms",MAX_MS);
+    d.put("person_post_motion_hold_ms",QUIET_MS);
+    d.put("person_post_motion_remaining_ms","recording".equals(mode)?
+       Math.max(0,QUIET_MS-Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt)):JSONObject.NULL);
+    d.put("person_last_accepted_motion_age_ms",lastMovementAt<=0?
+       JSONObject.NULL:Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt));
     d.put("person_recording_extend_by_garden_motion",true);
    d.put("fallback_evidence_failed",fallbackEvidenceFailed);
    d.put("recovery_partials_finalized",recoveredPartials);
@@ -1406,14 +1428,16 @@ public final class CameraService extends Service {
     return response.put("ok",false).put("error","control_unavailable_during_recording_or_camera_transition");
    }
    if("preroll_diagnostic".equals(key)){
-     if(!"record_once".equals(value)||diagnosticPrerollUsed||diagnosticPrerollActive||
+     if(!("record_once".equals(value)||"record_tail_once".equals(value))||
+        diagnosticPrerollUsed||diagnosticPrerollActive||
         pilotOnly||(!(continuous4KTrial&&continuous4K!=null&&continuous4K.readyForEvent())&&
-        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<3500))||temperature()>=375||
+        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<4400))||temperature()>=("record_tail_once".equals(value)?382:375)||
         folder==null||folder.getUsableSpace()<15L*1024*1024*1024){
       return response.put("ok",false).put("error","diagnostic_prebuffer_not_ready_or_already_used");
      }
      diagnosticPrerollUsed=true;
      diagnosticPrerollActive=true;
+     diagnosticTailProof="record_tail_once".equals(value);
      diagnosticPrerollResult="starting";
      startRecording();
      if(!"starting".equals(mode)&&!"recording".equals(mode)){
@@ -1423,7 +1447,8 @@ public final class CameraService extends Service {
      return response.put("ok",true).put("mode",continuous4KTrial?
        "diagnostic_continuous_native_4k":"diagnostic_preroll_4k")
        .put("excluded_from_security_archive",true)
-       .put("requested_duration_ms",9000);
+       .put("requested_duration_ms",diagnosticTailProof?12500:9000)
+       .put("requested_post_motion_hold_ms",QUIET_MS);
     }
    if("continuous_4k_trial".equals(key)){
     if(!"enable".equals(value)&&!"disable".equals(value)&&!"promote".equals(value))

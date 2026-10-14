@@ -18,15 +18,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** Independent on-phone H.264 circular PRE-EVENT encoder.
  * Feeds 640x480 YUV from the same already-active Camera2 preview into a hardware
  * MediaCodec in an independent worker; original 4K MediaRecorder is unchanged.
- * Only compressed samples from the previous ~7 sec are kept in memory.
+ * Only compressed samples from the previous ~5 sec are kept in memory.
  * When a verified event triggers, its 4-6 sec preroll is frozen and then muxed
  * on-device as name.mp4.preroll.mp4 after the 4K segment completes.
  * Never uploads video, records a false event, or writes untriggered SD media.
  */
 public final class GardenPreRoll {
- static final String VERSION="s9_on_phone_avc_memory_ring_keyframe_7s_v3";
+ static final String VERSION="s9_on_phone_avc_memory_ring_keyframe_5s_v4";
  static final int WIDTH=640,HEIGHT=480,FPS=24,BIT_RATE=1400000;
- static final long RING_US=9000000L,DESIRED_US=6800000L,MIN_US=5500000L;
+ static final long RING_US=7000000L,DESIRED_US=5000000L,MIN_US=4400000L;
  private static final int MAX_BYTES=11000000;
  private final Object lock=new Object();
  private final ArrayDeque<Sample> compressed=new ArrayDeque<>();
@@ -157,9 +157,9 @@ public final class GardenPreRoll {
    long latest=packets.get(packets.size()-1).pts;
    long min=latest-DESIRED_US;
    int first=-1;
-   // Retain the last keyframe BEFORE the desired 6.8-second start.
+   // Retain the last keyframe BEFORE the desired 5-second start.
    // Starting AFTER it discarded 2-5 seconds from the 7-second ring.
-   // If a cold ring cannot supply 5.5 seconds, omit its companion rather
+   // If a cold ring cannot supply 4.4 seconds, omit its companion rather
    // than saving misleading 0.5-1s pseudo-preroll.
    for(int i=0;i<packets.size();i++)
     if(packets.get(i).pts<=min&&packets.get(i).key())first=i;

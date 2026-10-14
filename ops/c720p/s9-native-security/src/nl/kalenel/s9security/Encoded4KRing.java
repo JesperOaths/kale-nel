@@ -12,18 +12,18 @@ import java.util.List;
  * access units in RAM. It does not create files before an event.
  *
  * Immutable samples and monotonic PTS let a single MediaMuxer consume the
- * 7-second historical prefix and then continue with live packets from the
+ * 5-second historical prefix and then continue with live packets from the
  * SAME encoder, without a resolution conversion or reconfiguration gap.
  *
  * No Android dependency: deterministic JVM tests cover boundary behavior.
  */
 public final class Encoded4KRing {
  public static final int WIDTH=3840, HEIGHT=2160, FPS=30, BITRATE=24000000;
- public static final long HISTORY_US=9000000L;
- public static final long TARGET_US=7000000L;
- public static final long MIN_VALID_US=5500000L;
- public static final int MAX_BYTES=72*1024*1024;
- private static final int MAX_FRAMES=390;
+ public static final long HISTORY_US=7000000L;
+ public static final long TARGET_US=5000000L;
+ public static final long MIN_VALID_US=4400000L;
+ public static final int MAX_BYTES=48*1024*1024;
+ private static final int MAX_FRAMES=270;
 
  public static final class Sample {
   public final byte[] data;
