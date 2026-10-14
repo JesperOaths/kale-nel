@@ -22,13 +22,13 @@ def receipt(name):
  try:
   if p.is_file():
    d=json.loads(p.read_text())
-   if d.get("verified") and d.get("original_4k_unchanged") and (
+   if d.get("verified") and d.get("both_segments_decoded") and d.get("original_4k_unchanged") and (
     d.get("combined_name")==name+".complete.mp4") and (
     d.get("backend")=="bounded_c720p_isolated_worker"):
     return d
   if name=="motion_1791933495875.mp4" and PROOF.is_file():
    d=json.loads(PROOF.read_text())
-   if d.get("verified") and d.get("originals_untouched") and (
+   if d.get("verified") and d.get("both_segments_decoded") and d.get("originals_untouched") and (
     d.get("combined_path_on_phone","").endswith("/"+name+".complete.mp4")):
     return d
  except (ValueError,OSError):pass
