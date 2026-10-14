@@ -252,7 +252,7 @@ def offload_historical_apk(root,source):
         raise RuntimeError("manifest_is_symlink")
     with manifest.open("a",encoding="utf-8") as out:
         out.write(json.dumps({"source":str(source),"remote":final,
-                "sha256":checksum,"bytes":before[2]})+"\\n")
+                "sha256":checksum,"bytes":before[2]})+"\n")
         out.flush()
         os.fsync(out.fileno())
     source.unlink()
