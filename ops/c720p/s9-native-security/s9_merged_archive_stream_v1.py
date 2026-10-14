@@ -48,12 +48,28 @@ def digest(p):
  return h.hexdigest()
 
 def adb_phone():
- p=subprocess.run(["adb","devices","-l"],capture_output=True,text=True,timeout=12)
- if p.returncode:raise RuntimeError("adb_not_available")
- devices=[line.split()[0] for line in p.stdout.splitlines() if
-          " device " in line and "model:SM_G965F" in line and "usb:" in line]
- if len(devices)!=1:raise RuntimeError("authorized_s9_usb_unavailable")
- return devices[0]
+ """Use verified USB if present, otherwise the same authorized S9 over Wi-Fi.
+ ADB must identify the expected SM-G965F; never accept a different phone.
+ """
+ def inventory():
+  p=subprocess.run(["adb","devices","-l"],capture_output=True,text=True,timeout=12)
+  if p.returncode:raise RuntimeError("adb_not_available")
+  return p.stdout.splitlines()
+ rows=inventory()
+ usb=[line.split()[0] for line in rows if
+      " device " in line and "model:SM_G965F" in line and "usb:" in line]
+ if len(usb)==1:return usb[0]
+ wifi=[line.split()[0] for line in rows if
+       " device " in line and "model:SM_G965F" in line
+       and line.startswith("192.168.178.250:5555")]
+ if len(wifi)==1:return wifi[0]
+ subprocess.run(["adb","connect","192.168.178.250:5555"],
+    capture_output=True,text=True,timeout=10)
+ if any(line.startswith("192.168.178.250:5555") and
+        " device " in line and "model:SM_G965F" in line
+        for line in inventory()):
+  return "192.168.178.250:5555"
+ raise RuntimeError("authorized_s9_adb_unavailable")
 
 def prune(keep):
  files=[p for p in CACHE.glob("motion_*.complete.mp4")
