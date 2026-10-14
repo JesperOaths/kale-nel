@@ -359,7 +359,7 @@ public final class CameraService extends Service {
      camera=dev;recoveryCount=0;
      // Only a verified and explicitly promoted 4K recorder can resume on boot.
      boolean preferred=!pilotOnly&&getSharedPreferences("native",MODE_PRIVATE)
-       .getBoolean("continuous_4k_production_enabled",false);
+       .getBoolean("continuous_1080_production_enabled",false);
      if(preferred&&temperature()<382&&folder!=null&&
          folder.getUsableSpace()>15L*1024*1024*1024){
       Continuous4KEncoder candidate=new Continuous4KEncoder();
@@ -371,7 +371,7 @@ public final class CameraService extends Service {
        try{candidate.close();}catch(Throwable ignored){}
        continuous4KFailures++;continuous4KTrial=false;continuous4K=null;
        getSharedPreferences("native",MODE_PRIVATE).edit()
-         .putBoolean("continuous_4k_production_enabled",false).commit();
+         .putBoolean("continuous_1080_production_enabled",false).commit();
        continuous4KLastResult="boot_fallback_"+ex.getClass().getSimpleName();
       }
      }else if(preferred){
@@ -382,7 +382,7 @@ public final class CameraService extends Service {
        continuous4KLastResult="boot_cooling_wait_for_4k";
       }else{
        getSharedPreferences("native",MODE_PRIVATE).edit()
-         .putBoolean("continuous_4k_production_enabled",false).commit();
+         .putBoolean("continuous_1080_production_enabled",false).commit();
        continuous4KLastResult="boot_storage_guard";
       }
      }
@@ -406,11 +406,11 @@ public final class CameraService extends Service {
   // Failed codecs remain disabled until explicitly re-verified. For a
   // thermal-only fallback preserve the previous verified 4K preference.
   if(thermalOnly&&getSharedPreferences("native",MODE_PRIVATE)
-       .getBoolean("continuous_4k_production_enabled",false)){
+       .getBoolean("continuous_1080_production_enabled",false)){
    continuous4KRetryAfterMs=SystemClock.elapsedRealtime()+20L*60L*1000L;
   }else{
    getSharedPreferences("native",MODE_PRIVATE).edit()
-     .putBoolean("continuous_4k_production_enabled",false).commit();
+     .putBoolean("continuous_1080_production_enabled",false).commit();
    continuous4KRetryAfterMs=0;
   }
   continuous4KTrial=false;
@@ -711,12 +711,12 @@ public final class CameraService extends Service {
    return;
   }
   continuous4KCompleted++;
-  continuous4KLastResult="verified_native_4k_"+durationMs+"ms";
+  continuous4KLastResult="verified_native_1080_"+durationMs+"ms";
   mode="watching";
   if(diagnostic){
    diagnosticTailProof=false;
    diagnosticPrerollClip=clip.getName();
-   diagnosticPrerollResult="single_native_4k_complete_"+durationMs+"ms";
+   diagnosticPrerollResult="single_native_1080_complete_"+durationMs+"ms";
    diagnosticPrerollActive=false;
    eventChain.reset();
    Log.i(TAG,"CONTINUOUS_4K_TEST_MP4 "+clip.getName());
@@ -1168,7 +1168,7 @@ public final class CameraService extends Service {
  }
  private void maybeRestoreCool4K(){
   if(continuous4KTrial||pilotOnly||!"watching".equals(mode)||
-     !getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_4k_production_enabled",false)||
+     !getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_1080_production_enabled",false)||
      continuous4KRecoveryAttempts>=3)return;
   long now=SystemClock.elapsedRealtime();
   if(now<continuous4KRetryAfterMs||temperature()>350||folder==null||
@@ -1228,20 +1228,25 @@ public final class CameraService extends Service {
    d.put("mode",mode);d.put("native_4k_enabled",!pilotOnly);
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
-   d.put("recorder","camera2_3840x2160_h264");
-   d.put("preroll_version",continuous4KTrial?"continuous_native_4k_h264_ring_v1":GardenPreRoll.VERSION);
-   d.put("continuous_4k_trial_active",continuous4KTrial);
-   d.put("continuous_4k_production_persisted",getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_4k_production_enabled",false));
-   d.put("continuous_4k_ready",continuous4K!=null&&continuous4K.readyForEvent());
-   d.put("continuous_4k_buffered_ms",continuous4K==null?0:continuous4K.bufferedMs());
-   d.put("continuous_4k_buffer_bytes",continuous4K==null?0:continuous4K.bufferedBytes());
-   d.put("continuous_4k_dropped_output_frames",continuous4K==null?0:continuous4K.droppedOutputFrames());
-   d.put("continuous_4k_error",continuous4K==null?"":continuous4K.error());
-   d.put("continuous_4k_completed",continuous4KCompleted);
-   d.put("continuous_4k_failures",continuous4KFailures);
-   d.put("continuous_4k_recovery_attempts",continuous4KRecoveryAttempts);
-   d.put("continuous_4k_retry_after_ms",continuous4KRetryAfterMs);
-   d.put("continuous_4k_last_result",continuous4KLastResult);
+   d.put("recorder",continuous4KTrial?"camera2_1920x1080_h264":"camera2_3840x2160_h264");
+   d.put("preroll_version",continuous4KTrial?"continuous_native_1080_h264_ring_v1":GardenPreRoll.VERSION);
+    d.put("active_ring_width",continuous4KTrial?Encoded4KRing.WIDTH:640);
+    d.put("active_ring_height",continuous4KTrial?Encoded4KRing.HEIGHT:480);
+    d.put("active_ring_fps",continuous4KTrial?Encoded4KRing.FPS:24);
+    d.put("event_recording_resolution",continuous4KTrial?"1920x1080":"3840x2160");
+    d.put("single_encoder_no_resolution_jump",continuous4KTrial);
+   d.put("continuous_1080_trial_active",continuous4KTrial);
+   d.put("continuous_1080_production_persisted",getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_1080_production_enabled",false));
+   d.put("continuous_1080_ready",continuous4K!=null&&continuous4K.readyForEvent());
+   d.put("continuous_1080_buffered_ms",continuous4K==null?0:continuous4K.bufferedMs());
+   d.put("continuous_1080_buffer_bytes",continuous4K==null?0:continuous4K.bufferedBytes());
+   d.put("continuous_1080_dropped_output_frames",continuous4K==null?0:continuous4K.droppedOutputFrames());
+   d.put("continuous_1080_error",continuous4K==null?"":continuous4K.error());
+   d.put("continuous_1080_completed",continuous4KCompleted);
+   d.put("continuous_1080_failures",continuous4KFailures);
+   d.put("continuous_1080_recovery_attempts",continuous4KRecoveryAttempts);
+   d.put("continuous_1080_retry_after_ms",continuous4KRetryAfterMs);
+   d.put("continuous_1080_last_result",continuous4KLastResult);
    d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
    d.put("preroll_ready",preRoll!=null&&preRoll.ready());
    d.put("preroll_buffered_frames",preRoll==null?0:preRoll.cachedFrames());
@@ -1445,24 +1450,24 @@ public final class CameraService extends Service {
       return response.put("ok",false).put("error",diagnosticPrerollResult);
      }
      return response.put("ok",true).put("mode",continuous4KTrial?
-       "diagnostic_continuous_native_4k":"diagnostic_preroll_4k")
+       "diagnostic_continuous_native_1080":"diagnostic_preroll_4k")
        .put("excluded_from_security_archive",true)
        .put("requested_duration_ms",diagnosticTailProof?32000:9000)
        .put("requested_post_motion_hold_ms",QUIET_MS);
     }
-   if("continuous_4k_trial".equals(key)){
+   if("continuous_1080_trial".equals(key)){
     if(!"enable".equals(value)&&!"disable".equals(value)&&!"promote".equals(value))
      return response.put("ok",false).put("error","invalid_4k_trial_option");
     if("promote".equals(value)){
      if(!continuous4KTrial||continuous4K==null||!continuous4K.readyForEvent()||
         continuous4KCompleted<1||continuous4KFailures>0||
         continuous4K.droppedOutputFrames()!=0||temperature()>=375||
-        !continuous4KLastResult.startsWith("verified_native_4k_"))
+        !continuous4KLastResult.startsWith("verified_native_1080_"))
       return response.put("ok",false).put("error","4k_trial_not_verified_or_unhealthy");
      boolean stored=getSharedPreferences("native",MODE_PRIVATE).edit()
-       .putBoolean("continuous_4k_production_enabled",true).commit();
+       .putBoolean("continuous_1080_production_enabled",true).commit();
      return response.put("ok",stored).put("production_persisted",stored)
-       .put("hardware_4k_pre_event",true);
+       .put("hardware_1080_pre_event",true);
     }
     if("enable".equals(value)){
      if(pilotOnly||continuous4KTrial||temperature()>=375||folder==null||

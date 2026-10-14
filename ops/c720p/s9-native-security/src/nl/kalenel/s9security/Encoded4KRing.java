@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Pure-Java, bounded ring for compressed NATIVE 3840x2160 AVC frames.
+ * Pure-Java, bounded ring for compressed NATIVE 1920x1080 AVC frames.
  * Hardware MediaCodec owns the encoder; this class only retains encoded
  * access units in RAM. It does not create files before an event.
  *
@@ -18,11 +18,11 @@ import java.util.List;
  * No Android dependency: deterministic JVM tests cover boundary behavior.
  */
 public final class Encoded4KRing {
- public static final int WIDTH=3840, HEIGHT=2160, FPS=30, BITRATE=24000000;
+ public static final int WIDTH=1920, HEIGHT=1080, FPS=30, BITRATE=8000000;
  public static final long HISTORY_US=9000000L;
  public static final long TARGET_US=7000000L;
  public static final long MIN_VALID_US=5500000L;
- public static final int MAX_BYTES=72*1024*1024;
+ public static final int MAX_BYTES=32*1024*1024;
  private static final int MAX_FRAMES=390;
 
  public static final class Sample {
