@@ -1,0 +1,53 @@
+name: Security Archive Bulk Incident Readonly
+on:
+  push:
+    branches: [fix/security-archive-bulk-and-phone-status-20261014]
+    paths:
+      - '.github/workflows/diagnose-archive-bulk-20261014.yml'
+      - 'ops/c720p/s9-native-security/audit-archive-bulk-20261014.py'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate narrow read-only inspection
+        run: |
+          python3 -m py_compile ops/c720p/s9-native-security/audit-archive-bulk-20261014.py
+          ! grep -Eq "unlink\(|rmtree\(|\bDELETE\b|os.remove\(|\.write_text\(" ops/c720p/s9-native-security/audit-archive-bulk-20261014.py
+      - name: Query attached hub using authorized management queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          src='ops/c720p/s9-native-security/audit-archive-bulk-20261014.py'
+          sum="$(sha256sum "$src" | cut -d' ' -f1)"
+          dest="/tmp/s9-bulk-audit-${GITHUB_SHA:0:12}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+          cmd="curl -fSsL --max-time 40 '${url}' -o '${dest}' && printf '%s  %s\n' '${sum}' '${dest}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${dest}'"
+          idem="archive-bulk-audit-${GITHUB_SHA:0:22}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-archive-readonly','diagnostic',:'cmd',115,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "READONLY_INCIDENT_JOB=${id}"
+          for i in $(seq 1 20); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$status" == done\|* || "$status" == error\|* || "$status" == failed\|* ]]; then
+              stdout="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 25000)"
+              echo "$stdout"
+              [[ "$status" == 'done|0' ]] || exit 1
+              exit 0
+            fi
+            sleep 6
+          done
+          exit 1
