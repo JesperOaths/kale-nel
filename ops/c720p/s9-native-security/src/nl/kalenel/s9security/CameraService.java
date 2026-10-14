@@ -320,8 +320,14 @@ public final class CameraService extends Service {
      }
      if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
-      lastMovementAt=lastFrameAt;
-      eventChain.evidence(lastFrameAt);
+      // A leaf or street reflection must not continuously extend an existing
+      // 4K clip. During recording use sustained coherent garden motion only.
+      // In watching mode accept lighter activity as a candidate for GPU
+      // confirmation, so quick pedestrians are still discoverable.
+      if(!"recording".equals(mode)||motion.strong){
+       lastMovementAt=lastFrameAt;
+       eventChain.evidence(lastFrameAt);
+      }
       if(!pilotOnly&&"watching".equals(mode)){
        // Motion merely requests on-device person inference. Vehicles on the
        // road and non-person garden motion do not start new videos.
@@ -528,6 +534,8 @@ public final class CameraService extends Service {
      // The motion grid retains 5s of accepted cells. A marginal person
      // classification must overlap actual garden movement, not merely
      // coincide with an unrelated passing vehicle or moving shrub.
+     // High-confidence spatially moving people can be confirmed without
+     // a global motion vote by the independent person-track policy.
      int localCells=motion.recentMotionCellsInBox(personBox,SystemClock.elapsedRealtime());
      gardenPersonLastLocalMotionCells=localCells;
      GardenPersonTrackGate.Decision verdict=
@@ -1287,12 +1295,16 @@ public final class CameraService extends Service {
           "not_ready":gardenGateClassifier.gardenPersonMultiscaleVersion());
     d.put("garden_person_last_multiscale_passes",gardenGateClassifier==null?
           0:gardenGateClassifier.lastGardenInferencePasses());
+    d.put("garden_person_transport_conflicts_rejected",gardenGateClassifier==null?
+          0:gardenGateClassifier.lastGardenVehicleVetoes());
+    d.put("garden_person_requires_local_motion_or_spatial_translation",true);
+    d.put("garden_motion_strong_only_extends_recording",true);
     d.put("garden_person_sentinel_interval_ms",GARDEN_PERSON_SENTINEL_MS);
     d.put("garden_person_sentinel_checks",gardenPersonSentinelChecks);
     d.put("garden_person_sentinel_recordings",gardenPersonSentinelStarts);
     d.put("garden_person_inference_last_ms",gardenPersonInferenceLastMs);
     d.put("garden_person_inference_peak_ms",gardenPersonInferenceMaxMs);
-    d.put("garden_person_no_motion_requires_distinct_frames",3);
+    d.put("garden_person_no_motion_requires_distinct_frames",2);
     d.put("garden_person_candidate_window_ms",GARDEN_PERSON_CANDIDATE_MS);
     d.put("garden_person_motion_windows",gardenPersonMotionWindows);
     d.put("garden_person_followup_checks",gardenPersonFollowupChecks);
