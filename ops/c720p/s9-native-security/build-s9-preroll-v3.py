@@ -51,13 +51,25 @@ def main():
   original_main=sha(apk.read("classes.dex"))
  if not any(x.endswith("/libtensorflowlite_gpu_jni.so") for x in baseline):
   raise RuntimeError("baseline_gpu_library_missing")
- libs=HOME/"build/s9-person-ml-v1/deps"
- cp=[libs/(x+".jar") for x in
-   ("tensorflow-lite","tensorflow-lite-api","tensorflow-lite-gpu","tensorflow-lite-gpu-api")]
- if any(not p.is_file() for p in cp):raise RuntimeError("missing_pinned_tensorflow_libs")
  android=max(Path("/usr/lib/android-sdk/platforms").glob("*/android.jar"))
  with tempfile.TemporaryDirectory(prefix="s9-safe-roi-build-",dir="/tmp") as d:
-  p=Path(d);src=p/"src/nl/kalenel/s9security";src.mkdir(parents=True)
+  p=Path(d)
+  # Earlier disk cleanup removed JARs from the hub. Rehydrate the exact
+  # 2.14.0 Maven Central TensorFlow AAR class files into RAM-backed scratch;
+  # never restore disposable dependencies to the 21 GiB root filesystem.
+  cp=[];dependency_hashes={}
+  for part in ("tensorflow-lite","tensorflow-lite-api","tensorflow-lite-gpu","tensorflow-lite-gpu-api"):
+   url="https://repo.maven.apache.org/maven2/org/tensorflow/"+part+"/2.14.0/"+part+"-2.14.0.aar"
+   with urllib.request.urlopen(url,timeout=75) as response:
+    aar=response.read(16000001)
+   if len(aar)<1000 or len(aar)>16000000:raise RuntimeError("unbounded_tensorflow_dependency_"+part)
+   import io
+   with zipfile.ZipFile(io.BytesIO(aar)) as package:
+    raw=package.read("classes.jar")
+   if len(raw)<1000 or len(raw)>12000000:raise RuntimeError("invalid_tensorflow_classes_"+part)
+   jar=p/(part+".jar");jar.write_bytes(raw);cp.append(jar)
+   dependency_hashes[part]={"version":"2.14.0","sha256":sha(aar),"classes_jar_sha256":sha(raw)}
+  src=p/"src/nl/kalenel/s9security";src.mkdir(parents=True)
   for item in JAVAS:
    url=("https://raw.githubusercontent.com/JesperOaths/kale-nel/"+REF+
         "/ops/c720p/s9-native-security/src/nl/kalenel/s9security/"+item+".java")
@@ -128,7 +140,7 @@ def main():
      "face_roi":"high_resolution_isolated_person_head_roi_v2",
      "motion":"clip_scoped_2d_speed_and_straightness_no_pose_or_gait",
      "historical_face_review":"bounded_verified_4k_roi_v2",
-     "source_ref_immutable":True,"preroll_version":"s9_on_phone_avc_memory_ring_keyframe_7s_v3","min_saved_preroll_ms":5500,"baseline_apk_sha256":baseline_sha}
+     "tensorflow_dependencies":dependency_hashes,"source_ref_immutable":True,"preroll_version":"s9_on_phone_avc_memory_ring_keyframe_7s_v3","min_saved_preroll_ms":5500,"baseline_apk_sha256":baseline_sha}
   (TARGET/"release.json").write_text(json.dumps(result,indent=2)+"\n")
   print("S9_PREROLL_V3_SIGNED_STAGED",json.dumps(result),flush=True)
 if __name__=="__main__":main()
