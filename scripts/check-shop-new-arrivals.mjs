@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Prevent new Printify shirts from disappearing behind an outdated first-paint
-// catalog or an alphabetically sorted collection.
+// Keep the refreshed storefront catalog complete while preserving alphabetical
+// display order, with animal designs in their separate A-Z section.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -33,28 +33,33 @@ const store = read('shop/store.js');
 const sortStart = store.indexOf('function productCreatedMs(');
 const sortEnd = store.indexOf('async function loadLiveCatalog(', sortStart);
 assert.ok(sortStart >= 0 && sortEnd > sortStart, 'new-arrival sorting functions must exist');
-const ctx = { productSortMode: 'newest' };
+const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(store.slice(sortStart, sortEnd) +
   ';this.pick = sortProductsForDisplay; this.age = productCreatedMs;', ctx);
 const sample = snapshot.products.filter(p => mustShow.includes(p.name));
 const actual = Array.from(ctx.pick(sample));
-const expected = [...sample].sort((a, b) =>
-  parseInt(b.id.slice(0, 8), 16) - parseInt(a.id.slice(0, 8), 16));
-assert.deepEqual(actual.map(p => p.id), expected.map(p => p.id),
-  'newest-first must use creation timestamps, not recent edits');
-ctx.productSortMode = 'name';
-assert.deepEqual(Array.from(ctx.pick(sample)).map(p => p.name),
-  [...sample].map(p => p.name).sort((a,b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
-  'name sort must remain available');
+const expected = [...sample].sort((a,b) =>
+  a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+assert.deepEqual(actual.map(p => p.name), expected.map(p => p.name),
+  'restored botanical shirts must be sorted alphabetically, not newest-first');
+assert.deepEqual(Array.from(ctx.pick(snapshot.products)).map(p => p.name),
+  [...snapshot.products].sort((a,b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(p => p.name),
+  'sorting all 63 products must remain alphabetical regardless of creation or price');
+assert.match(store, /const animalList = fullList[\s\S]*?\.filter\(isAnimalDesign\)[\s\S]*?localeCompare/,
+  'animal design section must remain alphabetically sorted');
+assert.doesNotMatch(store, /productSortMode|data-shop-sort|price-asc/,
+  'store must not support alternative sorting modes');
 
 const html = read('shop/index.html');
 const css = read('shop/styles.css');
 const refresh = read('shop/live-catalog-refresh-v818.js');
-assert.match(html, /data-shop-sort/, 'storefront must expose the sorting control');
+assert.doesNotMatch(html, /data-shop-sort|Newest first|Price: low to high/,
+  'storefront must not expose a sorting control');
 assert.match(html, /20261014-live-63-r1/, 'HTML must cache-bust the new catalog snapshot');
-assert.match(html, /20261014-new-arrivals-r1/, 'HTML must cache-bust storefront logic/styles');
+assert.match(html, /20261014-alphabetical-r2/, 'HTML must cache-bust alphabetical storefront logic/styles');
 assert.ok(css.includes('.product-new-label'), 'new shirts need visible markers');
 assert.ok(refresh.includes('checkCatalog({ force: true })'),
   'first page visit must immediately check the live catalog');
-console.log('Shop new-arrivals regression passed: ' + snapshot.products.length + ' products, ' + mustShow.length + ' restored shirts.');
+console.log('Shop catalog A-Z regression passed: ' + snapshot.products.length + ' products, ' + mustShow.length + ' restored shirts.');

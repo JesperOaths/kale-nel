@@ -64,7 +64,6 @@ const ANIMAL_DESIGN_NAMES = new Set([
   'orchid mantis','pom-pom crab','pufferfish','seahorse','secretary bird','thorny devil'
 ]);
 let showAnimalDesigns = true;
-let productSortMode = 'newest';
 
 function isAnimalDesign(product){
   return ANIMAL_DESIGN_NAMES.has(String(product?.name || '').trim().toLowerCase());
@@ -173,12 +172,9 @@ function isNewArrival(product){
   return age >= -86400000 && age <= 21 * 86400000;
 }
 function sortProductsForDisplay(list){
-  return [...list].sort((a, b) => {
-    if(productSortMode === 'name') return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
-    if(productSortMode === 'price-asc') return a.price - b.price || String(a.name || '').localeCompare(String(b.name || ''));
-    if(productSortMode === 'price-desc') return b.price - a.price || String(a.name || '').localeCompare(String(b.name || ''));
-    return productCreatedMs(b) - productCreatedMs(a) || String(a.name || '').localeCompare(String(b.name || ''));
-  });
+  return [...list].sort((a, b) => String(a.name || '').localeCompare(
+    String(b.name || ''), undefined, { sensitivity: 'base' }
+  ));
 }
 
 async function loadLiveCatalog(timeoutMs = 5000){
@@ -513,21 +509,10 @@ function renderProducts(){
   const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
   const fullList = productsForCollection();
   const regularList = sortProductsForDisplay(fullList.filter(product => !isAnimalDesign(product)));
-  // Keep the separately requested Animals section, but apply the selected
-  // display ordering consistently in both sections.
+  // Keep animal designs in their separate section, alphabetically as before.
   const animalList = fullList
     .filter(isAnimalDesign)
-    .sort((a, b) => {
-      const byName = String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
-      if(productSortMode === 'name') return byName;
-      if(productSortMode === 'price-asc') return a.price - b.price || byName;
-      if(productSortMode === 'price-desc') return b.price - a.price || byName;
-      return productCreatedMs(b) - productCreatedMs(a) || byName;
-    });
-  const sortInput = qs('[data-shop-sort]');
-  if(sortInput) sortInput.value = productSortMode;
-  const countLabel = qs('[data-visible-count]');
-  if(countLabel) countLabel.textContent = `${fullList.length} design${fullList.length === 1 ? '' : 's'} in this collection`;
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
   qs('[data-collection-title]').textContent = collection.heading;
   updateShapeControls();
   updateAnimalFilterUi();
@@ -676,13 +661,6 @@ function closeCart(){
 }
 
 document.addEventListener('change', event => {
-  const sortInput = event.target.closest('[data-shop-sort]');
-  if(sortInput){
-    const next = String(sortInput.value || '');
-    productSortMode = ['newest', 'name', 'price-asc', 'price-desc'].includes(next) ? next : 'newest';
-    renderProducts();
-    return;
-  }
   const animalFilter = event.target.closest('[data-animal-filter]');
   if(!animalFilter) return;
   showAnimalDesigns = !!animalFilter.checked;
