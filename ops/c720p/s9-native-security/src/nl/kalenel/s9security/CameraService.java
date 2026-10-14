@@ -107,6 +107,7 @@ public final class CameraService extends Service {
  private volatile boolean recoveryQueued=false;
  private volatile boolean historicalQueued=false;
  private volatile boolean faceBackfillQueued=false;
+ private final Map<String,Integer> faceBackfillRetries=new ConcurrentHashMap<>();
  private volatile boolean movementBackfillQueued=false;
  private final Map<String,Integer> movementBackfillRetries=new HashMap<>();
  private volatile long movementBackfillDone=0,movementBackfillErrors=0,lastMovementBackfillScan=0;
@@ -846,6 +847,7 @@ public final class CameraService extends Service {
       if(manifest.length()<100||manifest.length()>28000)continue;
       String mp4name=manifest.getName().replace(".verified.json","");
       File video=new File(target,mp4name);
+      if(faceBackfillRetries.getOrDefault(mp4name,0)>=3)continue;
       if(!video.isFile()||video.length()<100000||video.length()>800000000)continue;
       try{
        byte[] bytes=new byte[(int)manifest.length()];
@@ -861,17 +863,34 @@ public final class CameraService extends Service {
        // Re-run only pre-v2 face-negative historical reviews. Successful
        // v2 no-face reviews are terminal for this sampler, not proof of absence.
        boolean deep=ClipClassifier.deepFaceNeedsUpgrade(meta)&&
+          meta.optInt("width",0)==3840&&meta.optInt("height",0)==2160&&
           Long.parseLong(mp4name.substring(7,20))<1791687597000L;
        if(!deep&&hasReview)continue;
        if(!mp4name.equals(meta.optString("name"))||meta.optLong("bytes",-1)!=video.length())continue;
        if(deep){
         try{
-         if(classifier.deepFaceReview(video,target,mp4name,meta))deepFaceScanned++;
-        }catch(Exception e){deepFaceErrors++;Log.w(TAG,"face_deep_review",e);}
-       }else if(review(video,"onphone_face_backfill",0))faceBackfillDone++;
-       else faceBackfillErrors++;
+         if(classifier.deepFaceReview(video,target,mp4name,meta)){
+          deepFaceScanned++;faceBackfillRetries.remove(mp4name);
+         }else{
+          deepFaceErrors++;
+          faceBackfillRetries.merge(mp4name,1,Integer::sum);
+         }
+        }catch(Exception e){
+         deepFaceErrors++;
+         faceBackfillRetries.merge(mp4name,1,Integer::sum);
+         Log.w(TAG,"face_deep_review",e);
+        }
+       }else if(review(video,"onphone_face_backfill",0)){
+        faceBackfillDone++;faceBackfillRetries.remove(mp4name);
+       }else{
+        faceBackfillErrors++;faceBackfillRetries.merge(mp4name,1,Integer::sum);
+       }
        return;
-      }catch(Exception e){faceBackfillErrors++;Log.w(TAG,"face_backfill_manifest_skip",e);}
+      }catch(Exception e){
+       faceBackfillErrors++;
+       faceBackfillRetries.merge(mp4name,1,Integer::sum);
+       Log.w(TAG,"face_backfill_manifest_skip",e);
+      }
      }
     }finally{
      lastFaceBackfillScan=SystemClock.elapsedRealtime();
@@ -1109,6 +1128,7 @@ public final class CameraService extends Service {
    d.put("face_backfill_completed",faceBackfillDone);
    d.put("face_deep_scanned",deepFaceScanned);
    d.put("face_deep_errors",deepFaceErrors);
+   d.put("face_backfill_retry_limited_clips",faceBackfillRetries.size());
    d.put("face_backfill_errors",faceBackfillErrors);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
    d.put("garden_person_gate_ready",gardenGateReady);
