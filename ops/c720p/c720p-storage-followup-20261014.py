@@ -81,4 +81,22 @@ for gen in HISTORICAL:
                 "link_count":st.st_nlink})
   except OSError:continue
 r["historical_apk_candidates"]=apks
+# Read-only S9 health diagnosis after high-volume microSD archive copying.
+try:
+ import urllib.request
+ with urllib.request.urlopen("http://127.0.0.1:18808/status",timeout=9) as response:
+  health=json.load(response)
+ r["phone_after_archive"]={
+  key:health.get(key) for key in (
+   "ok","mode","continuous_4k_ready","garden_person_gate_ready",
+   "garden_person_gate_backend","last_frame_age_ms","temperature_c",
+   "sd_free_bytes","recording_active","last_error",
+   "continuous_4k_buffered_ms"
+  )}
+except Exception as exc:r["phone_after_archive"]={"error":type(exc).__name__}
+try:
+ adb=subprocess.run(["adb","-s","192.168.178.250:5555","get-state"],
+  capture_output=True,text=True,timeout=8)
+ r["phone_adb"]={"exit_code":adb.returncode,"state":adb.stdout.strip()[:40]}
+except Exception as exc:r["phone_adb"]={"error":type(exc).__name__}
 print("C720P_STORAGE_FOLLOWUP_V2 "+json.dumps(r,separators=(",",":"),sort_keys=True),flush=True)
