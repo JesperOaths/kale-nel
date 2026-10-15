@@ -20,6 +20,7 @@ KNOWN_DETECTORS=frozenset((
     "garden_roi_gpu_two_frame_person_gate_v2",
     "person_spatial_motion_corroborated_v7",
     "person_multiscale_threeframe_static_v8",
+    "person_spatiotemporal_transport_v9",
 ))
 
 def _sensor_value(value,lowest,highest):
@@ -126,8 +127,8 @@ def from_phone(phone,now_ms=None):
 
 def read_report():
     with urllib.request.urlopen(_URL,timeout=5) as response:
-        blob=response.read(16001)
-        if response.status!=200 or len(blob)>16000:
+        blob=response.read(65537)
+        if response.status!=200 or len(blob)>65536:
             raise ValueError("unavailable_or_oversize_phone_status")
     return from_phone(json.loads(blob))
 

@@ -1,6 +1,8 @@
-import contextlib,copy,hashlib,importlib.util,json,sqlite3,tempfile,unittest
+import contextlib,copy,hashlib,importlib.util,json,sqlite3,tempfile,unittest,types,sys,re
+from unittest.mock import patch
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('visual',Path(__file__).with_name('s9_visual_review_v36.py'));v=importlib.util.module_from_spec(spec);spec.loader.exec_module(v)
+real_archive_verifications=v.archive_verifications
 def fixture():
  name='motion_1791998099688.mp4';digest='a'*64;hist=[1.0]+[0.0]*31
  def crop(kind):return {'name':name+'.t1.'+digest[:12]+'.1000.'+kind+'.jpg','bytes':1000,'sha256':'b'*64,'time_ms':1000,'source_box_pixels':[100,100,300,600],'width':200,'height':500,'resized':False,'quality':.5}
@@ -9,6 +11,8 @@ class ReviewTest(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent,prefix='.visual-tests-');assert Path(__file__).resolve().parent in Path(self.tmp.name).resolve().parents
   v.ROOT=Path(self.tmp.name)/'state';v.CACHE=Path(self.tmp.name)/'cache';self.meta=fixture();v.source_rows=lambda:{self.meta['name']:{'size':self.meta['bytes']}}
+  self.labels={self.meta['name']:{'label':'person','bytes':self.meta['bytes']}}
+  v.archive_verifications=lambda:{'ok':True,'clips':self.labels}
   self.save()
  def tearDown(self):self.tmp.cleanup()
  def save(self):v.atomic(v.ROOT/'catalog.json',{'items':{self.meta['name']:self.meta},'updated_at':'test'})
@@ -34,6 +38,7 @@ class ReviewTest(unittest.TestCase):
   self.assertEqual(v.report({'color':['red']})['total'],0)
  def test_manual_folder_survives_catalog_rebuild(self):
   key=next(iter(v.observations()));code,result=self.edit(action='create_folder',label='Resident review',note='Manually assigned');self.assertEqual(code,200)
+  self.edit(action='presence',presence='person',observations=[key])
   self.assertEqual(self.edit(action='assign',folder=result['folder'],observations=[key])[0],200)
   self.assertEqual(self.edit(action='annotate',observations=[key],note='Keep this view',label='My label',pinned=True)[0],200)
   self.save();review=v.report({})['items'][0]['review'];self.assertEqual(review['note'],'Keep this view');self.assertEqual(review['pinned'],1)
@@ -55,4 +60,54 @@ class ReviewTest(unittest.TestCase):
   self.meta['peak_simultaneous']=3;self.save();result=v.count_metrics(self.meta['name'],{'size':self.meta['bytes']});self.assertEqual(result['person_count'],1);self.assertEqual(result['scene_category'],'unreviewed')
  def test_no_arbitrary_query_keys(self):
   with self.assertRaises(ValueError):v.report({'embedding':['x']})
+ def test_unverified_clips_are_excluded(self):
+  self.labels.clear();self.assertEqual(v.report({})['total'],0);self.assertEqual(v.observations(),{})
+ def test_negative_uncertain_and_stale_verification_excluded(self):
+  for label in ('no_people','uncertain',None):
+   self.labels[self.meta['name']]['label']=label;self.assertEqual(v.report({})['total'],0)
+  self.labels[self.meta['name']]={'label':'people','bytes':self.meta['bytes']+1};self.assertEqual(v.report({})['total'],0)
+ def test_both_positive_labels_allowed(self):
+  for label in ('person','people'):
+   self.labels[self.meta['name']]['label']=label;self.assertEqual(v.report({})['total'],1)
+ def test_rejected_crop_hidden_and_restorable(self):
+  key=next(iter(v.observations()));self.assertEqual(self.edit(action='presence',presence='no_person',observations=[key])[0],200)
+  self.assertEqual(v.report({})['total'],0)
+  self.assertEqual(v.report({'presence':['no_person']})['items'][0]['presence'],'no_person')
+  self.assertEqual(self.edit(action='presence',presence='pending',observations=[key])[0],200)
+  self.assertEqual(v.report({})['total'],1)
+ def test_confirmation_does_not_assign_folder(self):
+  key=next(iter(v.observations()));self.edit(action='presence',presence='person',observations=[key])
+  item=v.report({'presence':['person']})['items'][0];self.assertIsNone(item['verified_group_id']);self.assertEqual(item['presence'],'person')
+ def test_revoked_recording_cannot_be_edited_or_cropped(self):
+  key=next(iter(v.observations()));name=self.meta['tracks'][0]['full_crop']['name'];self.labels.clear()
+  self.assertEqual(self.edit(action='presence',presence='person',observations=[key])[0],404)
+  with self.assertRaises(FileNotFoundError):v.crop_bytes(name)
+ def test_changed_extraction_resets_presence(self):
+  key=next(iter(v.observations()));self.edit(action='presence',presence='person',observations=[key]);self.meta['tracks'][0]['first_ms']=600;self.save()
+  self.assertEqual(v.report({})['items'][0]['presence'],'pending')
+  self.edit(action='annotate',observations=[key],note='rechecked note only');self.assertEqual(v.report({})['items'][0]['presence'],'pending')
+ def test_invalid_presence_rejected(self):
+  with self.assertRaises(ValueError):v.report({'presence':['identity']})
+  self.assertEqual(self.edit(action='presence',presence='identity',observations=[])[0],400)
+ def test_folder_assignment_requires_current_crop_confirmation(self):
+  key=next(iter(v.observations()));_,folder=self.edit(action='create_folder',label='Manual')
+  self.assertEqual(self.edit(action='assign',folder=folder['folder'],observations=[key])[0],409)
+  self.edit(action='presence',presence='no_person',observations=[key]);self.assertEqual(self.edit(action='assign',folder=folder['folder'],observations=[key])[0],409)
+ def test_schema_migration_preserves_labels_notes_and_folders(self):
+  with contextlib.closing(v.db()) as connection:
+   connection.execute('ALTER TABLE reviews DROP COLUMN presence');connection.execute("INSERT INTO folders VALUES('G1','Keep','Folder note','now')")
+   connection.execute("INSERT INTO reviews VALUES('view','signature','G1','Label','Keep note',1)");connection.commit()
+  with contextlib.closing(v.db()) as connection:
+   row=dict(connection.execute("SELECT * FROM reviews WHERE observation='view'").fetchone())
+   self.assertEqual((row['folder'],row['label'],row['note'],row['pinned'],row['presence']),('G1','Label','Keep note',1,'pending'))
+ def test_shared_registry_works_without_archive_handler_callback(self):
+  name=self.meta['name'];decision={'label':'person','revision':'current','human_confirmed':True}
+  fake=types.SimpleNamespace(SD_NAME=re.compile(r'motion_[0-9]{13}[.]mp4'),read_store=lambda:{'labels':{'sd:'+name:decision}},revision=lambda *args:'current')
+  v.source_rows=lambda:{name:{'size':self.meta['bytes'],'sd_verified':True}}
+  with patch.dict(sys.modules,{'s9_archive_review_v32':fake}):
+   self.assertEqual(real_archive_verifications()['clips'][name]['label'],'person')
+   decision['revision']='old';self.assertIsNone(real_archive_verifications()['clips'][name]['label'])
+   decision['revision']='current';decision['human_confirmed']=False;self.assertIsNone(real_archive_verifications()['clips'][name]['label'])
+   fake.read_store=lambda:None
+   with self.assertRaises(OSError):real_archive_verifications()
 if __name__=='__main__':unittest.main()

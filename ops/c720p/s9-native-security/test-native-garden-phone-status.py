@@ -6,6 +6,8 @@ import tempfile
 import unittest
 import shutil
 import subprocess
+import json
+from unittest.mock import patch
 
 HERE=Path(__file__).resolve().parent
 MODULE=HERE.parent/'s9-person-ml-v1'/'s9_phone_garden_status.py'
@@ -96,6 +98,27 @@ class Tests(unittest.TestCase):
             module.from_phone({**self.sample(),"ok":False},now_ms=999)
         with self.assertRaises(ValueError):
             module.from_phone({**self.sample(),"garden_person_gate_matches":8},now_ms=999)
+
+    def test_installed_v9_is_accepted_but_unknown_and_stale_are_not(self):
+        module=load(MODULE,'phone_watch_v9')
+        sample={**self.sample(),'motion_detector':'person_spatiotemporal_transport_v9'}
+        self.assertTrue(module.from_phone(sample)['ok'])
+        for changed in ({'motion_detector':'unknown'}, {'last_frame_age_ms':10000}):
+            with self.assertRaises(ValueError):module.from_phone({**sample,**changed})
+
+    def test_extended_status_has_bounded_size(self):
+        module=load(MODULE,'phone_watch_extended')
+        class Response:
+            status=200
+            def __init__(self,raw):self.raw=raw
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self,size):return self.raw[:size]
+        sample={**self.sample(),'extra_diagnostics':'x'*20000}
+        with patch.object(module.urllib.request,'urlopen',return_value=Response(json.dumps(sample).encode())):
+            self.assertTrue(module.read_report()['ok'])
+        with patch.object(module.urllib.request,'urlopen',return_value=Response(b'x'*70000)):
+            with self.assertRaises(ValueError):module.read_report()
 
     def test_python_source_does_no_video_or_image_processing(self):
         source=MODULE.read_text()

@@ -31,6 +31,11 @@ def db():
  CREATE TABLE IF NOT EXISTS folders(id TEXT PRIMARY KEY,label TEXT NOT NULL,note TEXT NOT NULL,created TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS reviews(observation TEXT PRIMARY KEY,signature TEXT NOT NULL,folder TEXT REFERENCES folders(id),label TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',pinned INTEGER NOT NULL DEFAULT 0);
  CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,at TEXT NOT NULL,action TEXT NOT NULL,payload TEXT NOT NULL);''')
+ if 'presence' not in {r[1] for r in connection.execute('PRAGMA table_info(reviews)')}:
+  try:connection.execute("ALTER TABLE reviews ADD COLUMN presence TEXT NOT NULL DEFAULT 'pending'")
+  except sqlite3.OperationalError:
+   if 'presence' not in {r[1] for r in connection.execute('PRAGMA table_info(reviews)')}:connection.close();raise
+  connection.commit()
  os.chmod(ROOT/'review.sqlite3',0o600);return connection
 def finite(value,low,high):return type(value) in (int,float) and math.isfinite(value) and low<=value<=high
 def histogram(value):
@@ -90,10 +95,29 @@ def sync():
  items={k:v for k,v in items.items() if k in rows and rows[k].get('size')==v.get('bytes')}
  atomic(ROOT/'catalog.json',{'version':VERSION,'updated_at':now(),'items':items,'last_sync_errors':errors})
  return {'ok':True,'indexed_clips':len(items),'new_clips':added,'errors':errors,'tracks':sum(len(x['tracks']) for x in items.values())}
+def archive_verifications():
+ """Use current file-bound owner decisions, never model labels or old snapshots."""
+ import s9_archive_review_v32 as archive
+ store=archive.read_store()
+ if store is None:raise OSError('archive_verification_unavailable')
+ # The LAN relay and archive service run in separate processes. The archive
+ # module's handler callback is initialized only in the latter; read the shared
+ # registry against current source rows instead of relying on that callback.
+ clips={}
+ for name,row in source_rows().items():
+  if not archive.SD_NAME.fullmatch(name) or row.get('sd_verified') is not True:continue
+  if type(row.get('size')) is not int or row['size']<=10000:continue
+  decision=store['labels'].get('sd:'+name,{})
+  valid=decision.get('human_confirmed') is True and decision.get('revision')==archive.revision('sd',name,row)
+  clips[name]={'label':decision.get('label') if valid else None,'bytes':row['size']}
+ return {'ok':True,'clips':clips}
+
 def observations():
- rows=source_rows();result={}
+ rows=source_rows();result={};approved=archive_verifications().get('clips',{})
  for name,meta in index().get('items',{}).items():
   if name not in rows or rows[name].get('size')!=meta.get('bytes'):continue
+  decision=approved.get(name,{})
+  if decision.get('label') not in ('person','people') or decision.get('bytes')!=meta.get('bytes'):continue
   try:validate(meta)
   except (ValueError,KeyError,TypeError):continue
   for track in meta['tracks']:
@@ -102,7 +126,7 @@ def observations():
    signature=hashlib.sha256(json.dumps([track['first_ms'],track['last_ms'],track['full_crop']['source_box_pixels']],separators=(',',':')).encode()).hexdigest()
    result[key]={**track,'observation':key,'signature':signature,'clip':name,'source_sha256':meta['sha256'],'recorded_ms':int(name[7:20]),'duration_ms':meta['duration_ms'],
     'source_resolution':'3840×2160','decoder':meta['decoder'],'repeated_simultaneous':meta['repeated_simultaneous'],'peak_simultaneous':meta['peak_simultaneous'],
-    'tracklet_count':meta['tracklet_count'],'video_path':'/new/saved/clip/'+name}
+    'tracklet_count':meta['tracklet_count'],'archive_label':decision['label'],'video_path':'/new/saved/clip/'+name}
  return result
 def count_metrics(name,row):
  """Overlay sampled count evidence without editing independent human labels."""
@@ -118,7 +142,7 @@ def count_metrics(name,row):
   'scene_category':category,'person_status':category,'person_event_category':'multiple_people_candidate' if repeated>=2 else 'possible_group_needs_frame_review' if peak>=2 else 'single_person_repeated_candidate' if repeated else 'no_person_model_detection'}
 def bhattacharyya(a,b):return max(0,min(1,1-sum(math.sqrt(x*y) for x,y in zip(a,b))))
 def report(query):
- permitted={'color','direction','entry_zone','exit_zone','from','to','folder','sort','reference','offset','limit'}
+ permitted={'color','direction','entry_zone','exit_zone','from','to','folder','sort','reference','offset','limit','presence'}
  if set(query)-permitted or any(len(v)!=1 or len(v[0])>100 for v in query.values()):raise ValueError('invalid_filters')
  q={k:v[0] for k,v in query.items()};all_items=observations();items=list(all_items.values())
  with contextlib.closing(db()) as connection:
@@ -131,6 +155,10 @@ def report(query):
   item['review']=review if valid else None;item['review_changed']=bool(review and not valid)
   item['previous_review']=review if review and not valid else None
   item['verified_group_id']=review['folder'] if valid else None
+  item['presence']=review['presence'] if valid else 'pending'
+ presence=q.get('presence','active')
+ if presence not in ('active','pending','person','no_person','all'):raise ValueError('invalid_presence_filter')
+ items=[r for r in items if (r['presence']!='no_person' if presence=='active' else True if presence=='all' else r['presence']==presence)]
  for field in ('direction','entry_zone','exit_zone'):
   if q.get(field):items=[r for r in items if r.get(field)==q[field]]
  if q.get('color'):items=[r for r in items if any(p.get('name')==q['color'] for field in ('upper_palette','lower_palette') for p in r.get(field,[]))]
@@ -150,17 +178,19 @@ def report(query):
  offset=int(q.get('offset',0));limit=int(q.get('limit',100))
  if not 0<=offset<=100000 or not 1<=limit<=200:raise ValueError('invalid_page')
  return {'ok':True,'version':VERSION,'revision':revision,'folders':folders,'total':len(items),'items':items[offset:offset+limit],
-  'indexed_clips':len(index().get('items',{})),'updated_at':index().get('updated_at'),'changed_reviews':stale,
+  'indexed_clips':len(index().get('items',{})),'eligible_clips':len({r['clip'] for r in all_items.values()}),
+  'verification_gate':'current_archive_person_or_people','updated_at':index().get('updated_at'),'changed_reviews':stale,
   'organization':'manual_only','sorting':'clothing_colour_distance_not_identity' if q.get('reference') else 'metadata','identity_matching':False}
 def edit(data):
- if not isinstance(data,dict) or set(data)-{'action','revision','human_confirmed','folder','label','note','pinned','observations'}:return 400,{'ok':False,'error':'invalid_fields'}
+ if not isinstance(data,dict) or set(data)-{'action','revision','human_confirmed','folder','label','note','pinned','observations','presence'}:return 400,{'ok':False,'error':'invalid_fields'}
  if data.get('human_confirmed') is not True or type(data.get('revision')) is not int:return 400,{'ok':False,'error':'explicit_manual_review_required'}
  action=data.get('action');label=data.get('label','');note=data.get('note','');keys=data.get('observations',[]);folder=data.get('folder')
- if action not in ('create_folder','edit_folder','assign','unassign','annotate'):return 400,{'ok':False,'error':'invalid_action'}
+ if action not in ('create_folder','edit_folder','assign','unassign','annotate','presence'):return 400,{'ok':False,'error':'invalid_action'}
+ if action=='presence' and data.get('presence') not in ('pending','person','no_person'):return 400,{'ok':False,'error':'invalid_presence'}
  if not isinstance(label,str) or len(label)>100 or not isinstance(note,str) or len(note)>2000 or type(data.get('pinned',False)) is not bool:return 400,{'ok':False,'error':'invalid_review_text'}
  if not isinstance(keys,list) or len(keys)>100 or len(set(keys))!=len(keys) or any(not isinstance(k,str) for k in keys):return 400,{'ok':False,'error':'invalid_selection'}
  current=observations()
- if action in ('assign','unassign','annotate') and (not keys or any(k not in current for k in keys)):return 404,{'ok':False,'error':'selected_track_unavailable'}
+ if action in ('assign','unassign','annotate','presence') and (not keys or any(k not in current for k in keys)):return 404,{'ok':False,'error':'selected_track_unavailable'}
  with contextlib.closing(db()) as connection:
   try:
    connection.execute('BEGIN IMMEDIATE')
@@ -173,9 +203,15 @@ def edit(data):
     connection.execute('UPDATE folders SET label=?,note=? WHERE id=?',(label.strip(),note,folder))
    else:
     if action=='assign' and not connection.execute('SELECT 1 FROM folders WHERE id=?',(folder,)).fetchone():return 404,{'ok':False,'error':'folder_unavailable'}
+    if action=='assign':
+     for key in keys:
+      saved=connection.execute('SELECT signature,presence FROM reviews WHERE observation=?',(key,)).fetchone()
+      if not saved or saved['signature']!=current[key]['signature'] or saved['presence']!='person':return 409,{'ok':False,'error':'confirm_person_visible_before_assigning'}
     for key in keys:
      connection.execute('INSERT OR IGNORE INTO reviews(observation,signature) VALUES(?,?)',(key,current[key]['signature']))
-     if action in ('assign','unassign'):connection.execute('UPDATE reviews SET signature=?,folder=? WHERE observation=?',(current[key]['signature'],folder if action=='assign' else None,key))
+     connection.execute("UPDATE reviews SET presence='pending' WHERE observation=? AND signature!=?",(key,current[key]['signature']))
+     if action=='presence':connection.execute('UPDATE reviews SET signature=?,presence=? WHERE observation=?',(current[key]['signature'],data['presence'],key))
+     elif action in ('assign','unassign'):connection.execute('UPDATE reviews SET signature=?,folder=? WHERE observation=?',(current[key]['signature'],folder if action=='assign' else None,key))
      else:connection.execute('UPDATE reviews SET signature=?,label=?,note=?,pinned=? WHERE observation=?',(current[key]['signature'],label,note,int(data.get('pinned',False)),key))
    connection.execute('INSERT INTO audit(at,action,payload) VALUES(?,?,?)',(now(),action,json.dumps(data,sort_keys=True)))
    connection.execute('UPDATE revision SET value=value+1');connection.commit()
