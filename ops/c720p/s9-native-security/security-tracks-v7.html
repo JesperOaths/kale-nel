@@ -1,199 +1,34 @@
 <!doctype html>
-<html lang="en"><head><script src="/gejast-auth-gate.js?v817"></script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta http-equiv="Cache-Control" content="no-store">
-<meta http-equiv="Referrer-Policy" content="no-referrer">
-<title>Security · Tracks</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recording review</title>
 <style>
-:root{color-scheme:dark;--bg:#0e151e;--panel:#131f2b;--raised:#1b2b39;--border:#2d414f;--ink:#eef5f8;--muted:#94acb9;--accent:#80dccc}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-button,input,select{font:inherit;color:inherit}button{cursor:pointer}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-#app{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
-header{height:73px;display:flex;align-items:center;justify-content:space-between;padding:16px 30px;border-bottom:1px solid #273947}
-h1{font-size:23px;font-weight:760;letter-spacing:-.04em;margin:0}#count{color:var(--muted);font-size:12px}
-.workspace{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0;overflow:hidden}
-aside{padding:26px 18px 28px 24px;border-right:1px solid #273947;overflow-y:auto;scrollbar-width:thin}
-.label{font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:.12em;color:#7999a9;margin:12px 0 12px}
-.segment{display:flex;flex-direction:column;gap:4px;margin:0 0 25px}
-.segment button{background:transparent;border:1px solid transparent;border-radius:9px;color:#c1d2da;text-align:left;padding:11px 12px}
-.segment button[aria-pressed=true]{background:#1c383d;color:#e3fff9;border-color:#385c5b}
-.segment button:hover:not([aria-pressed=true]){background:#192935}
-.colours{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
-.swatch{aspect-ratio:1;border:2px solid transparent;border-radius:10px;min-width:0;padding:0;background:var(--paint);box-shadow:inset 0 0 0 1px #ffffff33}
-.swatch[aria-pressed=true]{border-color:#ffffff;box-shadow:0 0 0 2px #6fdec6}
-.swatch[title="All colours"]{background:conic-gradient(#6ca5db,#da7171,#78b881,#f4d46a,#6ca5db)}
-.track-option{display:flex;align-items:center;gap:8px;margin-top:6px;color:#adc0cb;font-size:12px}
-.track-option input{accent-color:#7bdac5}
-.content{display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.toolbar{display:flex;align-items:center;gap:12px;flex:none;padding:18px 25px;border-bottom:1px solid #273947}
-.toolbar input,.toolbar select{background:#182938;border:1px solid #314854;border-radius:9px;padding:10px 12px;min-height:39px}
-.toolbar input{width:min(420px,100%);flex:1;min-width:90px}
-.toolbar select{max-width:190px}
-.results{min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain;padding:24px 25px 50px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));align-items:start;gap:19px}
-.card{border:1px solid #304451;background:var(--panel);border-radius:13px;overflow:hidden;min-width:0}
-.card:hover{border-color:#5d938d}
-.image{display:block;position:relative;aspect-ratio:16/9;background:#1e303d;overflow:hidden}
-.image img{width:100%;height:100%;object-fit:contain;object-position:center;position:relative}
-.image .fallback{display:grid;place-items:center;position:absolute;inset:0;color:#617e8d;font-size:35px}
-.card-body{padding:13px 15px 15px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.top b{font-weight:720;font-variant-numeric:tabular-nums;font-size:13px}
-.kind{font-size:10px;font-weight:650;color:#b6c9d2}
-.tracks{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0;min-height:26px}
-.track{background:#223846;border:1px solid #344f60;border-radius:7px;padding:5px 7px;display:inline-flex;align-items:center;gap:6px;font-size:11px}
-.colour-dot{width:9px;height:9px;border-radius:50%;background:var(--paint);display:inline-block;border:1px solid #ffffff55}
-.details{font-size:11px;color:var(--muted);min-height:18px}
-.open{margin-top:14px;width:100%;background:#1d3c43;color:#d8f8f0;border:1px solid #3b6462;padding:9px;border-radius:8px}
-.open:hover{background:#2c5156}
-#more:not([hidden]){display:block;margin:28px auto 0;background:#203844;border:1px solid #47616d;padding:11px 22px;border-radius:9px}
-#more[hidden],#noResults[hidden]{display:none!important}
-#noResults{padding:50px;text-align:center;color:var(--muted)}
-dialog{width:min(820px,94vw);max-height:88dvh;padding:15px;border:1px solid #3f5968;background:#12202c;color:var(--ink);border-radius:14px}
-dialog::backdrop{background:#03070cdb}
-.dialoghead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.dialoghead button{background:#263d4b;border:1px solid #496371;border-radius:8px;padding:7px 13px}
-video{display:block;width:100%;max-height:64dvh;background:black;border-radius:9px}
-#videoStatus{font-size:12px;color:var(--muted);margin-top:8px}
-::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:#0d1720}::-webkit-scrollbar-thumb{background:#405b68;border:2px solid #0d1720;border-radius:8px}
-@media(max-width:900px){.workspace{grid-template-columns:175px minmax(0,1fr)}aside{padding:16px 12px}.toolbar{padding:11px}.results{padding:12px}}
-@media(max-width:650px){header{height:60px;padding:12px 14px}h1{font-size:19px}.workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}aside{border-right:0;border-bottom:1px solid #273947;padding:8px 12px;overflow:visible}.segment{flex-direction:row;flex-wrap:wrap;gap:5px;margin:5px 0}.segment button{padding:6px 9px;font-size:11px}.label{margin:5px 0}.colours{display:flex;gap:6px;margin:7px 0}.swatch{width:26px;height:26px;flex:0 0 26px}.track-option{margin:4px 0 7px}.toolbar{flex-wrap:wrap;gap:7px}.toolbar input{flex-basis:100%}.grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:10px}}
-#movement{width:100%;padding:9px;background:#182938;border:1px solid #385361;border-radius:8px}.scope{font-size:11px;color:var(--muted);margin:10px 0 22px}.track-evidence{display:flex;flex-direction:column;gap:4px;width:100%}.track-jump{background:transparent;color:inherit;border:0;padding:0;text-align:left;cursor:pointer}.tracks{gap:13px}.track-jump:hover .track{border-color:var(--accent)}
-</style><script defer src="/local/frontyard-security-new/security-video-playback-v30.js?v=security-v30-20261013"></script>
-<style id="s9-security-scroll-boundaries-v12">
-html,body{height:100%!important;min-height:0!important;overflow:hidden!important}
-#app{box-sizing:border-box!important;height:100%!important;max-height:100%!important;min-height:0!important;overflow:hidden!important}
-.workspace,.content{min-height:0!important;max-height:100%!important}
-.results,aside{
- min-height:0!important;overscroll-behavior-y:contain!important;
- scrollbar-gutter:stable;scroll-padding-bottom:56px!important
-}
-.results{padding-bottom:max(58px,env(safe-area-inset-bottom))!important}
-aside{padding-bottom:max(36px,env(safe-area-inset-bottom))!important}
-</style>
-</head>
-<body>
-<div id="app"><header><h1>Movement observations</h1><span id="count">Loading…</span></header>
-<div class="workspace"><aside>
-<div class="label">Category</div>
-<div class="segment" id="categories">
-<button type="button" data-kind="all" aria-pressed="false">All recordings</button>
-<button type="button" data-kind="tracked" aria-pressed="true">With tracks</button>
-<button type="button" data-kind="people" aria-pressed="false">People</button>
-<button type="button" data-kind="group" aria-pressed="false">Groups</button>
-<button type="button" data-kind="vehicle" aria-pressed="false">Vehicles</button>
-<button type="button" data-kind="animal" aria-pressed="false">Animals</button>
+:root{color-scheme:dark;font:15px system-ui;background:#10151b;color:#e7edf4}*{box-sizing:border-box}body{margin:0;padding:20px;max-width:1600px;margin-inline:auto}h1{margin:0;font-size:25px}h2{font-size:19px}p{color:#aebdca;line-height:1.5}button,input,select,textarea{font:inherit;color:inherit;background:#192430;border:1px solid #405467;border-radius:8px;padding:9px}button{cursor:pointer}button:hover{border-color:#79c8c6}button:disabled{opacity:.45;cursor:default}label{display:grid;gap:5px;font-size:13px;color:#b9c8d6}header,.bar,.actions,.folders{display:flex;gap:10px;align-items:center;flex-wrap:wrap}header{justify-content:space-between}header p{margin:5px 0 15px}.bar{padding:14px;background:#161f29;border-radius:12px;margin-block:15px}.bar label{min-width:110px}.folders{margin-block:16px}.folder{border-color:#5c7a88}.folder[aria-pressed=true]{background:#254746}.drop{outline:2px dashed #8bdad3}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:15px}.card{background:#18222d;border:1px solid #304052;border-radius:12px;padding:13px}.card.selected{border-color:#8bdad3}.card header{align-items:start}.card .check{display:flex;align-items:center;gap:7px;font-size:14px}.crops{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-block:12px}.crop{padding:0;border:0;background:#10171d;overflow:hidden}.crop img{width:100%;height:220px;object-fit:contain;display:block}.crop span{display:block;font-size:12px;padding:5px}.facts{font-size:13px;color:#b9c8d6;line-height:1.65}.swatch{display:inline-block;width:13px;height:13px;border:1px solid #657786;border-radius:50%;margin-right:3px;vertical-align:middle}.palette{margin-bottom:5px}.badge{color:#87d9d0;font-size:12px}.note{white-space:pre-wrap;font-size:13px}.card .actions{margin-top:10px}.card .actions button{font-size:13px;padding:7px}.message{padding:12px;border-radius:8px;background:#20313a;margin-block:12px}#error{background:#462b2d;color:#ffd5d5}.empty{padding:32px;background:#18222d;border-radius:12px;text-align:center}dialog{background:#14202a;color:#e7edf4;border:1px solid #627e91;border-radius:14px;width:min(1050px,96vw);max-height:94vh}dialog::backdrop{background:#000b}dialog form{display:grid;gap:14px}dialog textarea{min-height:100px;resize:vertical}#editDialog{max-width:500px}video{width:100%;max-height:70vh;background:#000}.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}.compare img{height:320px;width:100%;object-fit:contain;background:#0a1118}a{color:#8edbd2}.footer{font-size:13px;margin:25px 0}.danger{color:#f1ba91}@media(max-width:650px){body{padding:12px}.bar label{flex:1;min-width:130px}.compare{grid-template-columns:1fr}.crop img{height:190px}}
+[hidden]{display:none!important}
+.selection-bar{position:sticky;top:0;z-index:5;border:1px solid #405467;box-shadow:0 4px 12px #0006}details{margin-block:12px}summary{cursor:pointer;color:#aebdca}.card header{font-size:13px}.card header>span{color:#e5be84}body{overflow-x:hidden}.folders button{min-height:44px}
+.folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin:24px 0}.folder-tile{padding:24px;text-align:left;min-height:150px;background:#182b35}.folder-tile strong{display:block;font-size:19px;margin:8px 0}.folder-tile small{display:block;color:#b9c8d6;margin:6px 0}.inbox{padding:22px;background:#18222d;border:1px solid #304052;border-radius:12px;margin-block:20px}.inbox p{max-width:800px}.timeline-group{grid-column:1/-1;min-width:0}.timeline-group>header{margin:18px 0;padding-bottom:12px;border-bottom:1px solid #304052}.timeline-group .card{margin-bottom:12px;display:grid;grid-template-columns:180px minmax(0,1fr);gap:10px 18px}.timeline-group .card>header,.timeline-group .card>.actions{grid-column:1/-1}.timeline-group .crops{grid-row:2/6;grid-column:1}.timeline-group .crop img{height:145px}.timeline-group .crops{display:block;margin:0}.timeline-band{background:#0a121a;height:10px;border-radius:6px;overflow:hidden;margin-block:12px}.timeline-band span{display:block;height:100%;background:#80dccc;border-radius:6px;min-width:3px}.work-nav{margin-block:15px}.evidence-badge{font-size:12px;color:#b8cbd8}.movement-only{display:none}body[data-mode=movement] .movement-only{display:block}body[data-mode=movement] .folder-tools{display:none!important}body[data-mode=movement] .grid{display:block}@media(max-width:650px){.timeline-group .card{display:block}.timeline-group .crops{max-width:180px}.selection-bar{position:static}}
+</style></head><body>
+<header><div><h1 id="workspaceTitle">Verified recording review</h1><p id="workspaceIntro">Only Archive recordings you marked Person / People. Confirm each crop before organising it.</p></div><button id="refresh">Refresh</button></header>
+<div id="error" class="message" role="alert" hidden></div><div id="status" role="status">Connecting to the Security hub…</div>
+<section id="folderHome" hidden><div class="inbox"><h2>Your review folders</h2><p>Folders contain crops you confirmed and assigned yourself. Give each folder a name when you know who is recorded.</p><div class="actions"><button id="openInbox">Open review inbox</button><button id="homeCreateFolder">New folder</button><button id="openWeakHome">Check weak detections</button></div></div><div id="folderCards" class="folder-grid"></div><p id="folderEmpty" hidden>No folders yet. Open the review inbox, confirm the crops containing people, then assign them to a folder.</p></section>
+<section id="workspace">
+<div class="actions work-nav"><button id="backFolders" class="folder-tools" hidden>Back to folders</button><span id="workspaceLabel"></span></div>
+<div class="bar">
+ <label>Detection evidence<select id="support"><option value="supported">Repeated observations + confirmed</option><option value="weak">Weak / isolated detections</option><option value="all">All detection evidence</option></select></label>
+ <label>Crop review<select id="presence"><option value="">Needs review + confirmed</option><option value="pending">Needs review</option><option value="person">Person confirmed</option><option value="no_person">Rejected</option><option value="all">All crops</option></select></label>
+ <label>Clothing colour<select id="color"><option value="">All colours</option><option>black</option><option>white</option><option>gray</option><option>red</option><option>orange</option><option>yellow</option><option>green</option><option>cyan</option><option>blue</option><option>purple</option><option>pink</option></select></label>
+ <label>Movement<select id="direction"><option value="">Any direction</option><option value="image_left">Image left</option><option value="image_right">Image right</option><option value="image_up">Image up</option><option value="image_down">Image down</option><option value="diagonal">Diagonal</option><option value="stationary_or_uncertain">Stationary / uncertain</option></select></label>
+ <label>Entry zone<select id="entry_zone"><option value="">Any zone</option><option value="garden_left">Garden left</option><option value="garden_middle">Garden middle</option><option value="garden_right">Garden right</option><option value="outside_garden">Outside garden</option></select></label>
+ <label>Exit zone<select id="exit_zone"><option value="">Any zone</option><option value="garden_left">Garden left</option><option value="garden_middle">Garden middle</option><option value="garden_right">Garden right</option><option value="outside_garden">Outside garden</option></select></label>
+ <label>From<input type="date" id="from"></label><label>Through<input type="date" id="to"></label>
+ <label>Order<select id="sort"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="sharpest">Clearest crop</option><option value="pinned">Pinned first</option></select></label>
+ <button id="clear">Clear filters</button>
 </div>
-<div class="label">Measured movement</div><select id="movement" aria-label="Filter measured movement"><option value="all">All movement</option><option value="measured">Measured directions</option><option value="moving_left_in_image">Left in image</option><option value="moving_right_in_image">Right in image</option><option value="moving_up_in_image">Up in image</option><option value="moving_down_in_image">Down in image</option><option value="stationary_or_uncertain">Stationary / uncertain</option><option value="insufficient_samples">Insufficient samples</option></select><p class="scope">Track numbers belong to one recording. Direction is measured in the camera image.</p><div class="label">Upper clothing</div>
-<div id="colours" class="colours"></div>
-<label class="track-option"><input id="reviewed" type="checkbox"> Scanned clips only</label>
-</aside>
-<div class="content"><div class="toolbar">
-<input id="search" type="search" placeholder="Search date, colour, clip, ID…" aria-label="Search recording observations" autocomplete="off">
-<select id="day" aria-label="Filter by day"><option value="all">All dates</option></select>
-<select id="order" aria-label="Sort records"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="tracks">Most tracks</option></select>
-</div>
-<div class="results" id="results"><div class="grid" id="grid"></div><div id="noResults" hidden>No matching recordings</div><button id="more" type="button" hidden>Show more</button></div>
-</div></div></div>
-<dialog id="viewer" aria-label="Original camera clip"><div class="dialoghead"><strong id="videoTitle">S9+ recording</strong><button type="button" id="close">Close</button></div><video id="video" controls playsinline preload="metadata"></video><div id="videoStatus"></div></dialog>
-<script id="s9v7-tracks-script">
-(()=>{
-'use strict';
-const $=id=>document.getElementById(id);
-const valid=/^(?:(?:motion|native4k)_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4$/;
-const palette={black:'#252d34',white:'#edf2f7',gray:'#98a5af',red:'#d76f6a',orange:'#de9a59',yellow:'#e9d36e',green:'#6ab587',blue:'#70a9d7',purple_or_pink:'#b88ecb',brown:'#aa8162'};
-const make=(tag,cls,txt)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(txt!==undefined)el.textContent=String(txt);return el};
-const relay=()=>{if(window.C720PSecureRelay?.fetch&&window.C720PSecureRelay?.url)return window.C720PSecureRelay;
-try{if(window.parent!==window&&window.parent.location.origin===location.origin&&window.parent.C720PSecureRelay?.fetch)return window.parent.C720PSecureRelay}catch(_){}return null};
-const fmtColour=c=>String(c||'unknown').replaceAll('_',' ');
-const isReviewed=r=>['sampled_tracks_available','none_detected_in_sampled_frames'].includes(r.anonymous_tracking_status);
-const trackCount=r=>Array.isArray(r.anonymous_tracks)?r.anonymous_tracks.length:Number(r.anonymous_track_count)||0;
-const stamp=r=>{const match=/^(?:motion|native4k)_([0-9]{13})/.exec(r.clip_no);return match?Number(match[1]):null};
-const dayOf=r=>{const n=stamp(r);if(n===null)return String(r.clip_no).slice(4,14);const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(n));const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day};
-const timeOf=r=>stamp(r)!==null?new Date(stamp(r)).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit'}):String(r.clip_no).slice(15,20).replace('-',':');
-const directions={moving_left_in_image:'Left in image',moving_right_in_image:'Right in image',moving_up_in_image:'Up in image',moving_down_in_image:'Down in image',stationary_or_uncertain:'Stationary / uncertain',insufficient_samples:'Insufficient samples'};
-const category=r=>{const g=String(r.scene_category||'').toLowerCase(),tags=Array.isArray(r.content_categories)?r.content_categories.map(String):[];
-if(g==='multiple_people'||Number(r.person_count)>1)return 'Group';
-if(Number(r.person_count)>0||g==='one_person')return 'Person';
-if(g.includes('vehicle')||tags.includes('vehicle'))return 'Vehicle';if(g.includes('animal')||tags.includes('animal'))return 'Animal';return 'Motion'};
-const matchesKind=r=>{const k=state.kind;if(k==='all')return true;if(k==='tracked')return trackCount(r)>0;if(k==='people')return Number(r.person_count)>0;if(k==='group')return category(r)==='Group';if(k==='vehicle')return category(r)==='Vehicle';if(k==='animal')return category(r)==='Animal';return true};
-const state={all:[],movement:'all',kind:'tracked',colour:'all',day:'all',reviewed:false,query:'',order:'new',limit:48,busy:false};
-let playerToken=0;
-async function thumbnail(img,r){try{const api=relay();if(api?.url)img.src=await api.url('/new/saved/snap/'+encodeURIComponent(r.clip_no+'.thumb.jpg')+(r.thumbnail_revision?'?rev='+encodeURIComponent(r.thumbnail_revision):''))}catch(_){
-img.src='/local/frontyard-security-new/s9-phone-thumbs/'+encodeURIComponent(r.clip_no)+'.thumb.jpg'}}
-function colourPill(track){const c=String(track.upper_clothing_colour||'');const name=String(track.id||'');
-const el=make('span','track');const dot=make('i','colour-dot');dot.style.setProperty('--paint',palette[c]||'#677b88');el.append(dot,make('span','',name+' · '+fmtColour(c)));return el}
-function card(r){const el=make('article','card'),pic=make('div','image'),img=make('img');img.loading='lazy';img.decoding='async';img.alt='Scene preview';img.onerror=()=>img.remove();
-pic.append(make('div','fallback','▣'),img);el.append(pic);
-const body=make('div','card-body'),head=make('div','top'),c=category(r);
-head.append(make('b','',dayOf(r)+' · '+timeOf(r)),make('span','kind',c));body.append(head);
-const wrap=make('div','tracks'),tracks=Array.isArray(r.anonymous_tracks)?r.anonymous_tracks:[];
-for(const track of tracks.slice(0,9))if(/^Person (?:[1-9]|[1-5][0-9]|6[0-4])$/.test(String(track.id||''))){
- const item=make('div','track-evidence'),jump=make('button','track-jump');jump.type='button';jump.append(colourPill(track));jump.setAttribute('aria-label','Play '+track.id+' observation');jump.addEventListener('click',()=>play(r,Number(track.first_sample_ms)||0));item.append(jump);
- const confidence=Number(track.peak_detection_score);item.append(make('span','details',(directions[track.image_movement_direction]||'Movement not measured')+' · '+(Number(track.sample_count)||0)+' samples'+(Number.isFinite(confidence)?' · '+Math.round(confidence*100)+'% peak score':'')));
- const a=Number(track.first_sample_ms),b=Number(track.last_sample_ms);if(Number.isFinite(a)&&Number.isFinite(b))item.append(make('span','details',(a/1000).toFixed(1)+'–'+(b/1000).toFixed(1)+'s in recording'));wrap.append(item)}
-if(!wrap.children.length)wrap.append(make('span','kind',isReviewed(r)?'No tracks in sampled frames':'Awaiting track scan'));
-body.append(wrap);
-const stats=make('div','details',(r.person_count!=null?'Peak '+Number(r.person_count)+' person candidates':'Person count unavailable')+' · '+(r.sampled_frames!=null?Number(r.sampled_frames)+' sampled frames':'Sample count unavailable'));
-body.append(stats);
-const open=make('button','open','Play clip');open.type='button';open.addEventListener('click',()=>play(r));body.append(open);
-el.append(body);thumbnail(img,r);return el}
-function matches(r){if(!matchesKind(r))return false;if(state.reviewed&&!isReviewed(r))return false;
-if(state.day!=='all'&&dayOf(r)!==state.day)return false;
-const tracks=Array.isArray(r.anonymous_tracks)?r.anonymous_tracks:[];
-if(state.movement!=='all'&&!tracks.some(t=>state.movement==='measured'?/^moving_(left|right|up|down)_in_image$/.test(t.image_movement_direction||''):t.image_movement_direction===state.movement))return false;
-if(state.colour!=='all'&&!tracks.some(t=>t.upper_clothing_colour===state.colour))return false;
-if(state.query){const q=[r.clip_no,dayOf(r),r.timestamp,r.scene_category,...tracks.map(t=>[t.id,t.upper_clothing_colour].join(' '))].join(' ').toLowerCase();
-if(!q.includes(state.query))return false}
-return true}
-function render(){let entries=state.all.filter(matches);
-const chronological=(a,b)=>dayOf(a).localeCompare(dayOf(b))||timeOf(a).localeCompare(timeOf(b))||a.clip_no.localeCompare(b.clip_no);
-entries.sort((a,b)=>state.order==='tracks'?trackCount(b)-trackCount(a)||chronological(b,a):state.order==='old'?chronological(a,b):chronological(b,a));
-const grid=$('grid');grid.replaceChildren();
-const visible=Math.min(entries.length,Math.max(0,state.limit));
-for(const r of entries.slice(0,visible))grid.append(card(r));
-const remaining=Math.max(0,entries.length-visible);
-$('more').hidden=remaining===0;
-$('more').textContent=remaining?('Show next '+Math.min(48,remaining)+' · '+remaining+' remaining'):'';
-$('noResults').hidden=entries.length!==0;
-$('count').textContent=entries.length+' recordings · '+entries.reduce((n,r)=>n+trackCount(r),0)+' clip-scoped tracks';
-}
-function resetFilteredScroll(){const scroller=$('results');if(scroller)scroller.scrollTop=0}
-function dayOptions(){const select=$('day'),days=[...new Set(state.all.map(dayOf))].sort().reverse();select.replaceChildren();
-const all=make('option','','All dates');all.value='all';select.append(all);
-for(const d of days){const opt=make('option','',d);opt.value=d;select.append(opt)}
-if(!days.includes(state.day))state.day='all';select.value=state.day}
-async function play(r,startMs=0){const api=relay(),token=++playerToken,v=$('video');v.pause();v.removeAttribute('src');v.load();$('videoTitle').textContent=dayOf(r)+' · '+timeOf(r);
-$('videoStatus').textContent='Loading…';if(!$('viewer').open)$('viewer').showModal();
-try{if(!api?.url)throw Error('relay');const signed=await api.url('/new/saved/clip/'+encodeURIComponent(r.clip_no));if(token!==playerToken)return;v.addEventListener('loadedmetadata',()=>{if(token===playerToken&&startMs>0&&Number.isFinite(v.duration))v.currentTime=Math.min(startMs/1000,Math.max(0,v.duration-.1))},{once:true});v.src=signed;v.load();$('videoStatus').textContent=''}
-catch(_){if(token===playerToken)$('videoStatus').textContent='Recording unavailable'}}
-async function reload(){if(state.busy)return;state.busy=true;
-try{const api=relay();if(!api?.fetch)throw Error('relay');const resp=await api.fetch('/new/api/saved',{cache:'no-store'});
-if(!resp.ok)throw Error('not_found');const j=await resp.json();if(!Array.isArray(j.events)||j.archive_mode!=='S9-microSD-only')throw Error('index');
-state.all=j.events.filter(r=>valid.test(String(r.clip_no||'')));dayOptions();render()}
-catch(_){$('count').textContent='Archive unavailable';if(!state.all.length)$('noResults').hidden=false}
-finally{state.busy=false}}
-const colours=$('colours'),all=make('button','swatch');all.type='button';all.title='All colours';all.setAttribute('aria-label','All clothing colours');all.setAttribute('aria-pressed','true');all.dataset.colour='all';colours.append(all);
-for(const [name,paint] of Object.entries(palette)){const el=make('button','swatch');el.type='button';el.title=fmtColour(name);el.setAttribute('aria-label',fmtColour(name));el.setAttribute('aria-pressed','false');el.dataset.colour=name;el.style.setProperty('--paint',paint);colours.append(el)}
-colours.addEventListener('click',e=>{const b=e.target.closest('button[data-colour]');if(!b)return;state.colour=b.dataset.colour;state.limit=48;resetFilteredScroll();
-for(const x of colours.querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));render()});
-$('categories').addEventListener('click',e=>{const b=e.target.closest('button[data-kind]');if(!b)return;state.kind=b.dataset.kind;state.limit=48;resetFilteredScroll();
-for(const x of $('categories').querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));render()});
-$('reviewed').addEventListener('change',e=>{state.reviewed=e.target.checked;state.limit=48;resetFilteredScroll();render()});
-$('movement').addEventListener('change',e=>{state.movement=e.target.value;state.limit=48;resetFilteredScroll();render()});
-$('day').addEventListener('change',e=>{state.day=e.target.value;state.limit=48;resetFilteredScroll();render()});
-$('order').addEventListener('change',e=>{state.order=e.target.value;render()});
-$('search').addEventListener('input',e=>{state.query=e.target.value.toLowerCase().trim().slice(0,100);state.limit=48;resetFilteredScroll();render()});
-$('more').addEventListener('click',()=>{state.limit+=48;render()});
-$('close').addEventListener('click',()=>$('viewer').close());
-$('viewer').addEventListener('close',()=>{++playerToken;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
-reload();
-})();
-
-const GEJAST_PAGE_VERSION='v817';
-</script>
-<div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#647c89;font-size:10px;pointer-events:none">v817 - Made by Bruis</div>
-<script src="./security-gpu-launcher-v1.js?v=S9_GPU_PLAYER_V1_20261012"></script>
-</body></html>
+<div class="folders folder-tools" id="folders" aria-label="Manual review folders"></div>
+<div class="bar selection-bar"><span id="selection">0 selected</span><button id="selectPage">Select this page</button><button id="clearSelection">Clear selection</button><button id="compare" disabled>Compare two</button><select id="destination" class="folder-tools" aria-label="Folder for selected tracks"></select><button id="assign" class="folder-tools" disabled>Assign selected</button><button id="unassign" class="folder-tools" disabled>Remove from folder</button><button id="annotate" disabled>Label / note / pin</button><button id="confirmPeople" class="folder-tools" disabled>Person visible</button><button id="rejectCrops" disabled>Not a person</button><button id="createFolder" class="folder-tools">New folder</button><button id="editFolder" class="folder-tools" hidden>Edit folder</button></div>
+<div id="reference" class="message" hidden></div><div id="grid" class="grid"></div><div id="empty" class="empty" hidden></div>
+<div class="actions" style="margin-top:15px"><button id="previous" disabled>Previous page</button><span id="page"></span><button id="next" disabled>Next page</button></div>
+</section>
+<p id="reviewFooter" class="footer">Colour sorting compares clothing pixels. Lighting, occlusion and changing clothes affect the results. Track numbers apply only within one recording; folders and labels are assigned manually. Counts describe sampled concurrent detections, not unique people. Upper-region crops are review images; no biometric matching runs in this workbench.</p>
+<dialog id="viewer"><header><h2 id="videoTitle">Original recording</h2><button id="closeVideo">Close</button></header><p id="videoStatus"></p><video id="video" controls playsinline preload="metadata"></video></dialog>
+<dialog id="comparison"><header><h2>Compare selected views</h2><button id="closeComparison">Close</button></header><div id="compareGrid" class="compare"></div></dialog>
+<dialog id="editDialog"><form id="editForm"><h2 id="editTitle"></h2><label>Name / label<input id="editLabel" maxlength="100"></label><label>Notes<textarea id="editNote" maxlength="2000"></textarea></label><label id="pinLabel" style="display:flex;align-items:center"><input type="checkbox" id="editPinned"> Pin selected views</label><div class="actions"><button id="saveEdit" type="submit">Save</button><button id="cancelEdit" type="button">Cancel</button></div></form></dialog>
+<script src="visual-review-v36.js?v=37a"></script><script defer src="security-embedded-shell-v37.js?v=37a"></script></body></html>

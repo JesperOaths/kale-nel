@@ -9,7 +9,7 @@ PHONE='192.168.178.250:5555'
 SD='/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K'
 VERSION='original_4k_visual_attributes_v36'
 CLIP=re.compile(r'motion_[0-9]{13}[.]mp4\Z')
-CROP=re.compile(r'motion_[0-9]{13}[.]mp4[.]t[1-9][0-9]?[.][a-f0-9]{12}[.][0-9]{1,9}[.](?:full|upper)[.]jpg\Z')
+CROP=re.compile(r'motion_[0-9]{13}[.]mp4[.]t[1-9][0-9]?[.][a-f0-9]{12}[.](?:v37[.])?[0-9]{1,9}[.](?:full|upper)[.]jpg\Z')
 ORIGINS={'http://'+h+':8123' for h in ('192.168.178.141','jesper-hub','jesper-hub.local','localhost','127.0.0.1','homeassistant.local')}
 INTENT='manual-attributes-v36'
 CROP_READS=threading.BoundedSemaphore(2)
@@ -73,28 +73,45 @@ def index():
   if path.stat().st_size>24000000:raise ValueError('catalog_too_large')
   return json.loads(path.read_text())
  except (OSError,ValueError):return {'items':{},'updated_at':None}
+def publish_queue():
+ """Send only current human-verified file references; never media or embeddings."""
+ approved=archive_verifications()['clips']
+ clips=[{'name':name,'bytes':row['bytes'],'human_verified':True} for name,row in sorted(approved.items(),reverse=True)
+        if CLIP.fullmatch(name) and row.get('label') in ('person','people')][:128]
+ payload={'version':'owner_verified_4k_review_v37','issued_ms':int(time.time()*1000),'clips':clips}
+ path=ROOT/'phone-work-queue.json';atomic(path,payload)
+ destination=SD+'/visual-review-queue-v37.json'
+ subprocess.run(['adb','-s',PHONE,'push',str(path),destination+'.stage'],capture_output=True,check=True,timeout=20)
+ subprocess.run(['adb','-s',PHONE,'shell','mv',destination+'.stage',destination],capture_output=True,check=True,timeout=10)
+ return len(clips)
+
 def sync():
  """Pull bounded JSON only. Decoding and visual inference remain on S9+."""
  old=index();items=old.get('items',{});rows=source_rows();errors=0;added=0
- result=subprocess.run(['adb','-s',PHONE,'shell','ls',SD+'/*.visual-v36.json'],capture_output=True,text=True,timeout=15)
+ queued=publish_queue()
+ result=subprocess.run(['adb','-s',PHONE,'shell','sha256sum',SD+'/*.visual-v36.json'],capture_output=True,text=True,timeout=20)
  if result.returncode and not 'No such file' in result.stderr:raise OSError('phone_unavailable')
- paths=[]
+ paths={}
  for line in result.stdout.splitlines():
-  name=line.strip().removeprefix(SD+'/').removesuffix('.visual-v36.json')
-  if CLIP.fullmatch(name) and name in rows:paths.append(name)
- for name in sorted(paths,reverse=True):
-  if name in items and items[name].get('bytes')==rows[name].get('size'):continue
+  pieces=line.split(None,1)
+  if len(pieces)!=2 or not re.fullmatch('[a-f0-9]{64}',pieces[0]):continue
+  name=pieces[1].strip().removeprefix(SD+'/').removesuffix('.visual-v36.json')
+  if CLIP.fullmatch(name) and name in rows:paths[name]=pieces[0]
+ approved=archive_verifications()['clips']
+ for name in sorted(paths,key=lambda name:(approved.get(name,{}).get('label') in ('person','people'),name),reverse=True):
+  if name in items and items[name].get('bytes')==rows[name].get('size') and items[name].get('_sidecar_sha256')==paths[name]:continue
   if added>=8:break
   try:
    raw=subprocess.run(['adb','-s',PHONE,'exec-out','cat',SD+'/'+name+'.visual-v36.json'],capture_output=True,timeout=20,check=True).stdout
    if len(raw)>500000:raise ValueError('sidecar_too_large')
+   if hashlib.sha256(raw).hexdigest()!=paths[name]:raise ValueError('sidecar_changed_during_read')
    meta=validate(json.loads(raw))
    if meta['bytes']!=rows[name].get('size'):raise ValueError('source_size_mismatch')
-   items[name]=meta;added+=1
+   meta['_sidecar_sha256']=paths[name];items[name]=meta;added+=1
   except (ValueError,KeyError,TypeError,subprocess.SubprocessError):errors+=1
  items={k:v for k,v in items.items() if k in rows and rows[k].get('size')==v.get('bytes')}
  atomic(ROOT/'catalog.json',{'version':VERSION,'updated_at':now(),'items':items,'last_sync_errors':errors})
- return {'ok':True,'indexed_clips':len(items),'new_clips':added,'errors':errors,'tracks':sum(len(x['tracks']) for x in items.values())}
+ return {'ok':True,'indexed_clips':len(items),'new_clips':added,'errors':errors,'queued_verified_clips':queued,'tracks':sum(len(x['tracks']) for x in items.values())}
 def archive_verifications():
  """Use current file-bound owner decisions, never model labels or old snapshots."""
  import s9_archive_review_v32 as archive
@@ -136,13 +153,18 @@ def count_metrics(name,row):
  except (ValueError,TypeError,KeyError):return {}
  repeated,peak=meta['repeated_simultaneous'],meta['peak_simultaneous']
  if type(repeated) is not int or type(peak) is not int or not 0<=repeated<=peak<=10:return {}
- category='multiple_people' if repeated>=2 else 'unreviewed' if peak>=2 else 'one_person' if repeated else 'motion_other'
+ repeated=min(repeated,sum(temporally_supported(track) for track in meta['tracks']))
+ category='multiple_people' if repeated>=2 else 'one_person' if repeated else 'unreviewed' if peak else 'motion_other'
  return {'person_count':repeated,'person_peak_simultaneous':peak,'person_repeated_simultaneous':repeated,
   'person_count_version':meta['count_version'],'person_count_is_unique_identities':False,
-  'scene_category':category,'person_status':category,'person_event_category':'multiple_people_candidate' if repeated>=2 else 'possible_group_needs_frame_review' if peak>=2 else 'single_person_repeated_candidate' if repeated else 'no_person_model_detection'}
+  'scene_category':category,'person_status':category,'person_event_category':'multiple_people_candidate' if repeated>=2 else 'single_person_repeated_candidate' if repeated else 'possible_group_needs_frame_review' if peak>=2 else 'single_frame_person_candidate' if peak else 'no_person_model_detection'}
+
+def temporally_supported(track):
+ samples=track.get('samples',0);first=track.get('first_ms');last=track.get('last_ms')
+ return type(samples) is int and samples>=2 and finite(first,0,125000) and finite(last,0,125000) and last-first>=500
 def bhattacharyya(a,b):return max(0,min(1,1-sum(math.sqrt(x*y) for x,y in zip(a,b))))
 def report(query):
- permitted={'color','direction','entry_zone','exit_zone','from','to','folder','sort','reference','offset','limit','presence'}
+ permitted={'color','direction','entry_zone','exit_zone','from','to','folder','sort','reference','offset','limit','presence','support','clip'}
  if set(query)-permitted or any(len(v)!=1 or len(v[0])>100 for v in query.values()):raise ValueError('invalid_filters')
  q={k:v[0] for k,v in query.items()};all_items=observations();items=list(all_items.values())
  with contextlib.closing(db()) as connection:
@@ -156,6 +178,19 @@ def report(query):
   item['previous_review']=review if review and not valid else None
   item['verified_group_id']=review['folder'] if valid else None
   item['presence']=review['presence'] if valid else 'pending'
+  item['temporal_support']=temporally_supported(item)
+  item['evidence_status']='temporally_supported_candidate' if item['temporal_support'] else 'single_frame_candidate' if item.get('samples',0)<2 else 'short_span_candidate'
+ for f in folders:
+  assigned=[r for r in items if r['verified_group_id']==f['id'] and r['presence']=='person']
+  f['views']=len(assigned);f['clips']=len({r['clip'] for r in assigned})
+ confirmed=sum(r['presence']=='person' for r in items);pending=sum(r['presence']=='pending' for r in items)
+ support=q.get('support','supported')
+ if support not in ('supported','weak','all'):raise ValueError('invalid_support_filter')
+ weak=sum(not r['temporal_support'] and r['presence']!='person' for r in items)
+ if support!='all':items=[r for r in items if (r['temporal_support'] or r['presence']=='person')==(support=='supported')]
+ if q.get('clip'):
+  if not CLIP.fullmatch(q['clip']):raise ValueError('invalid_clip_filter')
+  items=[r for r in items if r['clip']==q['clip']]
  presence=q.get('presence','active')
  if presence not in ('active','pending','person','no_person','all'):raise ValueError('invalid_presence_filter')
  items=[r for r in items if (r['presence']!='no_person' if presence=='active' else True if presence=='all' else r['presence']==presence)]
@@ -180,6 +215,7 @@ def report(query):
  return {'ok':True,'version':VERSION,'revision':revision,'folders':folders,'total':len(items),'items':items[offset:offset+limit],
   'indexed_clips':len(index().get('items',{})),'eligible_clips':len({r['clip'] for r in all_items.values()}),
   'verification_gate':'current_archive_person_or_people','updated_at':index().get('updated_at'),'changed_reviews':stale,
+  'weak_views_held':weak,'candidate_views':len(all_items),'confirmed_views':confirmed,'pending_views':pending,
   'organization':'manual_only','sorting':'clothing_colour_distance_not_identity' if q.get('reference') else 'metadata','identity_matching':False}
 def edit(data):
  if not isinstance(data,dict) or set(data)-{'action','revision','human_confirmed','folder','label','note','pinned','observations','presence'}:return 400,{'ok':False,'error':'invalid_fields'}

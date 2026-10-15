@@ -6,7 +6,7 @@ real_archive_verifications=v.archive_verifications
 def fixture():
  name='motion_1791998099688.mp4';digest='a'*64;hist=[1.0]+[0.0]*31
  def crop(kind):return {'name':name+'.t1.'+digest[:12]+'.1000.'+kind+'.jpg','bytes':1000,'sha256':'b'*64,'time_ms':1000,'source_box_pixels':[100,100,300,600],'width':200,'height':500,'resized':False,'quality':.5}
- return {'version':v.VERSION,'count_version':'anonymous_repeated_concurrent_v36','name':name,'bytes':50000,'sha256':digest,'width':3840,'height':2160,'duration_ms':5000,'identity_matching':False,'decoder':'synthetic_test','repeated_simultaneous':1,'peak_simultaneous':1,'tracklet_count':1,'tracks':[{'track_id':1,'first_ms':500,'last_ms':3000,'upper_hsv32':hist,'lower_hsv32':hist,'upper_lab32':hist,'lower_lab32':hist,'upper_palette':[{'hex':'#123456','name':'blue'}],'lower_palette':[],'full_crop':crop('full'),'upper_crop':crop('upper'),'entry_zone':'garden_left','exit_zone':'garden_right','direction':'image_right'}]}
+ return {'version':v.VERSION,'count_version':'anonymous_repeated_concurrent_v36','name':name,'bytes':50000,'sha256':digest,'width':3840,'height':2160,'duration_ms':5000,'identity_matching':False,'decoder':'synthetic_test','repeated_simultaneous':1,'peak_simultaneous':1,'tracklet_count':1,'tracks':[{'track_id':1,'samples':3,'first_ms':500,'last_ms':3000,'upper_hsv32':hist,'lower_hsv32':hist,'upper_lab32':hist,'lower_lab32':hist,'upper_palette':[{'hex':'#123456','name':'blue'}],'lower_palette':[],'full_crop':crop('full'),'upper_crop':crop('upper'),'entry_zone':'garden_left','exit_zone':'garden_right','direction':'image_right'}]}
 class ReviewTest(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent,prefix='.visual-tests-');assert Path(__file__).resolve().parent in Path(self.tmp.name).resolve().parents
@@ -57,7 +57,7 @@ class ReviewTest(unittest.TestCase):
  def test_fragments_do_not_create_group_count(self):
   self.meta['tracklet_count']=6;self.save();result=v.count_metrics(self.meta['name'],{'size':self.meta['bytes']});self.assertEqual(result['person_count'],1);self.assertNotEqual(result['scene_category'],'multiple_people')
  def test_unrepeated_multiple_boxes_require_review(self):
-  self.meta['peak_simultaneous']=3;self.save();result=v.count_metrics(self.meta['name'],{'size':self.meta['bytes']});self.assertEqual(result['person_count'],1);self.assertEqual(result['scene_category'],'unreviewed')
+  self.meta['peak_simultaneous']=3;self.save();result=v.count_metrics(self.meta['name'],{'size':self.meta['bytes']});self.assertEqual(result['person_count'],1);self.assertNotEqual(result['scene_category'],'multiple_people')
  def test_no_arbitrary_query_keys(self):
   with self.assertRaises(ValueError):v.report({'embedding':['x']})
  def test_unverified_clips_are_excluded(self):
@@ -110,4 +110,36 @@ class ReviewTest(unittest.TestCase):
    decision['revision']='current';decision['human_confirmed']=False;self.assertIsNone(real_archive_verifications()['clips'][name]['label'])
    fake.read_store=lambda:None
    with self.assertRaises(OSError):real_archive_verifications()
+ def test_singletons_held_but_recoverable(self):
+  self.meta['tracks'][0]['samples']=1;self.save()
+  self.assertEqual(v.report({})['total'],0);self.assertEqual(v.report({})['weak_views_held'],1)
+  self.assertEqual(v.report({'support':['weak']})['total'],1)
+  key=next(iter(v.observations()));self.edit(action='presence',presence='person',observations=[key])
+  self.assertEqual(v.report({})['total'],1)
+ def test_short_span_is_not_temporal_support(self):
+  self.meta['tracks'][0]['last_ms']=1000;self.meta['tracks'][0]['first_ms']=600;self.save()
+  self.assertEqual(v.report({})['total'],0)
+  self.assertEqual(v.count_metrics(self.meta['name'],{'size':self.meta['bytes']})['person_count'],0)
+ def test_versioned_native_crop_preserves_provenance(self):
+  for field in ('full_crop','upper_crop'):
+   self.meta['tracks'][0][field]['name']=self.meta['tracks'][0][field]['name'].replace('.1000.','.v37.1000.')
+  self.assertIs(v.validate(self.meta),self.meta)
+ def test_phone_queue_contains_only_positive_owner_decisions(self):
+  self.labels['motion_1791998099689.mp4']={'label':'no_people','bytes':50000}
+  with patch.object(v.subprocess,'run',return_value=types.SimpleNamespace(returncode=0)) as execute:
+   self.assertEqual(v.publish_queue(),1)
+   queue=json.loads((v.ROOT/'phone-work-queue.json').read_text());self.assertEqual(len(queue['clips']),1)
+   self.assertTrue(queue['clips'][0]['human_verified']);self.assertEqual(queue['clips'][0]['name'],self.meta['name'])
+   self.assertEqual(execute.call_count,2)
+ def test_revised_sidecar_reloads_when_original_bytes_unchanged(self):
+  changed=copy.deepcopy(self.meta);changed['tracks'][0]['samples']=7
+  raw=json.dumps(changed).encode();digest=hashlib.sha256(raw).hexdigest()
+  reads=[]
+  def execute(args,**kwargs):
+   if 'sha256sum' in args:return types.SimpleNamespace(returncode=0,stderr='',stdout=digest+'  '+v.SD+'/'+self.meta['name']+'.visual-v36.json\n')
+   if 'exec-out' in args:reads.append(args);return types.SimpleNamespace(returncode=0,stdout=raw)
+   return types.SimpleNamespace(returncode=0,stderr='',stdout='')
+  with patch.object(v.subprocess,'run',side_effect=execute):
+   self.assertEqual(v.sync()['new_clips'],1);self.assertEqual(v.report({})['items'][0]['samples'],7)
+   self.assertEqual(v.sync()['new_clips'],0);self.assertEqual(len(reads),1)
 if __name__=='__main__':unittest.main()

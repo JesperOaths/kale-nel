@@ -10,8 +10,10 @@ def replace_once(text,old,new):
  if text.count(old)!=1:raise ValueError('source_contract_changed:'+old[:70])
  return text.replace(old,new,1)
 
-def prepare(stage):
+def prepare(stage,*,temporal=False):
  here=Path(__file__).resolve().parent;src=stage/'src/nl/kalenel/s9security'
+ if not temporal and 'ClipReviewSchedule' in (here/'src/nl/kalenel/s9security/VisualAttributeReview.java').read_text(encoding='utf-8'):
+  raise ValueError('current_sources_require_prepare_temporal_phone_v37')
  baseline=json.loads((here/'visual-phone-v36-base-sources.json').read_text(encoding='utf-8'))
  for name,digest in baseline['sources'].items():
   if hashlib.sha256((src/name).read_bytes()).hexdigest()!=digest:raise ValueError('not_fresh_pinned_v11_source:'+name)

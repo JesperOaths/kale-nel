@@ -13,7 +13,6 @@ import java.util.function.BooleanSupplier;
 /** Deterministic scene attributes and clip-local tracks. No identity model. */
 public final class VisualAttributeReview {
  public static final String VERSION="original_4k_visual_attributes_v36";
- private static final int MAX_FRAMES=16;
  private static final class Evidence {
   final float[] hsvUpper=new float[32],hsvLower=new float[32];
   final float[] labUpper=new float[32],labLower=new float[32];
@@ -99,24 +98,26 @@ public final class VisualAttributeReview {
   File folder=video.getParentFile(),crops=new File(folder,"VisualCrops");
   if(!crops.isDirectory()&&!crops.mkdir())throw new IOException("visual_crop_directory_unavailable");
   MediaMetadataRetriever media=new MediaMetadataRetriever();AnonymousClipTracks tracks=new AnonymousClipTracks();
-  Map<Integer,Evidence> evidence=new LinkedHashMap<>();int decoded=0;String decoderBackend="";
+  Map<Integer,Evidence> evidence=new LinkedHashMap<>();int decoded=0;String decoderBackend="";long lastDecoded=-1;
   try{
    media.setDataSource(video.getAbsolutePath());
    int w=Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));
    int h=Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));
    long duration=Long.parseLong(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
    if(w!=3840||h!=2160||duration<1000||duration>125000)throw new IOException("source_is_not_original_4k");
-   int samples=(int)Math.min(MAX_FRAMES,Math.max(8,(duration+749)/750));
+   ClipReviewSchedule schedule=new ClipReviewSchedule(duration);
    try(Native4KFrames hardware=new Native4KFrames(video)){
-    for(int n=0;n<samples;n++){
+    while(schedule.hasNext()){
      if(!safe.getAsBoolean()||SystemClock.elapsedRealtime()-started>65000)throw new IOException("visual_review_yielded_to_capture_or_thermal_guard");
-     long requested=(long)((n+.5)*duration/samples);Bitmap frame=null;long at=requested;
+     long requested=schedule.next();if(requested<=lastDecoded)continue;Bitmap frame=null;long at=requested;
      try{
       Native4KFrames.Frame nativeFrame=hardware.frame(requested*1000,safe);frame=nativeFrame.bitmap;at=nativeFrame.ptsUs/1000;decoderBackend=hardware.decoderName();
       if(frame==null)continue;
       if(frame.getWidth()!=w||frame.getHeight()!=h)throw new IOException("decoded_frame_not_native_4k");
-      if(at<=lastTime(tracks))continue;
+      if(at<=lastDecoded)continue;lastDecoded=at;
       List<AnonymousClipTracks.Hit> hits=classifier.visualPeople(frame);tracks.addFrame(at,hits);decoded++;
+      boolean fresh=false;for(AnonymousClipTracks.Track t:tracks.tracks())if(t.lastMs==at&&t.samples==1){fresh=true;break;}
+      if(fresh)schedule.followUp(at);
       for(AnonymousClipTracks.Track track:tracks.tracks())if(track.lastMs==at){
        Evidence e=evidence.get(track.id);if(e==null){e=new Evidence();evidence.put(track.id,e);}
        float[] box=track.lastBox;
@@ -137,7 +138,7 @@ public final class VisualAttributeReview {
        double central=1-Math.min(1,Math.hypot((box[1]+box[3])*.5-.5,(box[0]+box[2])*.5-.5));
        double clipped=box[0]<.005||box[1]<.005||box[2]>.995||box[3]>.995?.5:1;
        double quality=(.6*sharp/(sharp+150)+.25*size+.15*central)*clipped;
-       String prefix=video.getName()+".t"+track.id+"."+digest.substring(0,12)+"."+at;
+       String prefix=video.getName()+".t"+track.id+"."+digest.substring(0,12)+".v37."+at;
        if(quality>e.best){
         e.full=crop(frame,bounds,crops,prefix+".full.jpg",at,sharp,quality);
         e.best=quality;
@@ -156,6 +157,8 @@ public final class VisualAttributeReview {
    for(AnonymousClipTracks.Track t:tracks.tracks()){
     Evidence e=evidence.get(t.id);if(e==null)continue;
     summaries.put(new JSONObject().put("track_id",t.id).put("first_ms",t.firstMs).put("last_ms",t.lastMs).put("samples",t.samples)
+     .put("evidence_status",t.evidenceStatus()).put("temporal_support",t.temporalSupport())
+     .put("detector_mean_score",t.meanConfidence()).put("detector_peak_score",t.peakConfidence)
      .put("upper_hsv32",array(norm(e.hsvUpper))).put("lower_hsv32",array(norm(e.hsvLower)))
      .put("upper_lab32",array(norm(e.labUpper))).put("lower_lab32",array(norm(e.labLower)))
      .put("upper_palette",palette(e.paletteUpper)).put("lower_palette",palette(e.paletteLower))
@@ -170,6 +173,8 @@ public final class VisualAttributeReview {
      .put("full_crop",e.full).put("upper_crop",e.upper));
    }
    JSONObject result=new JSONObject().put("version",VERSION).put("name",video.getName()).put("bytes",length).put("sha256",digest)
+    .put("sampling_version",ClipReviewSchedule.VERSION).put("followup_frame_requests",schedule.additionalRequests())
+    .put("temporal_support_is_human_confirmation",false)
     .put("width",w).put("height",h).put("duration_ms",duration).put("decoded_native_frames",decoded).put("decoder",decoderBackend)
     .put("processed_on","SM-G965F").put("timestamp_basis","decoded_frame_presentation_timestamp")
     .put("elapsed_ms",SystemClock.elapsedRealtime()-started)
@@ -177,6 +182,14 @@ public final class VisualAttributeReview {
     .put("repeated_simultaneous",tracks.repeatedConcurrentPeople()).put("tracklet_count",tracks.appearances())
     .put("count_is_sampled_lower_bound",true).put("identity_matching",false).put("tracks",summaries);
    File sidecar=new File(folder,video.getName()+".visual-v36.json");
+   File backup=new File(folder,video.getName()+".visual-v36.before-temporal-v37.json");
+   if(sidecar.isFile()&&!backup.exists()){
+    File temp=new File(folder,backup.getName()+".partial");
+    try(InputStream in=new FileInputStream(sidecar);FileOutputStream out=new FileOutputStream(temp)){
+     byte[] b=new byte[8192];int n;while((n=in.read(b))>0)out.write(b,0,n);out.getFD().sync();
+    }
+    if(!temp.renameTo(backup))throw new IOException("prior_visual_review_backup_failed");
+   }
    ClipClassifier.writeJson(sidecar,result);
    File verified=new File(folder,video.getName()+".verified.json");
    if(verified.isFile()&&verified.length()<128000){
@@ -191,5 +204,4 @@ public final class VisualAttributeReview {
    }return result;
   }finally{media.release();}
  }
- private static long lastTime(AnonymousClipTracks tracks){long last=-1;for(AnonymousClipTracks.Track t:tracks.tracks())last=Math.max(last,t.lastMs);return last;}
 }

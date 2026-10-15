@@ -4,7 +4,7 @@ import java.util.*;
 
 /** Clip-scoped, anonymous person tracklets; never links different videos. */
 public final class AnonymousClipTracks {
- public static final String COUNT_VERSION="anonymous_repeated_concurrent_v36";
+ public static final String COUNT_VERSION="anonymous_temporal_support_v37";
  public static final class Hit {
   public final float[] box; public final float confidence; public final String upperColour;
   public Hit(float[] b,float c,String colour) {
@@ -17,6 +17,7 @@ public final class AnonymousClipTracks {
   public int samples; public float peakConfidence; public float[] firstBox,lastBox;
   private double pathInBodyHeights=0,pathInImageUnits=0;
   private int validMotionIntervals=0;
+  private double confidenceSum=0;
   private float[] previousBox;private long previousMs;
   public final Map<String,Integer> colourVotes=new LinkedHashMap<>();
   private Track(int n,long ms,Hit h){id=n;firstMs=ms;firstBox=h.box.clone();update(ms,h);}
@@ -35,10 +36,14 @@ public final class AnonymousClipTracks {
     }
    }
    if(samples>0){previousBox=lastBox.clone();previousMs=lastMs;}
-   lastMs=ms;samples++;peakConfidence=Math.max(peakConfidence,h.confidence);lastBox=h.box.clone();
+   lastMs=ms;samples++;confidenceSum+=h.confidence;peakConfidence=Math.max(peakConfidence,h.confidence);lastBox=h.box.clone();
    if(!"uncertain".equals(h.upperColour))
     colourVotes.put(h.upperColour,colourVotes.getOrDefault(h.upperColour,0)+1);
   }
+  /** Repeated detector evidence only; never a human-presence confirmation. */
+  public boolean temporalSupport(){return samples>=2&&lastMs-firstMs>=500;}
+  public double meanConfidence(){return samples==0?0:confidenceSum/samples;}
+  public String evidenceStatus(){return temporalSupport()?"temporally_supported_candidate":samples==1?"single_frame_candidate":"short_span_candidate";}
   /** Camera-image movement only, never walking cadence or cross-video identity. */
   public String imageDirection(){
    if(samples<3||lastMs-firstMs<600)return "insufficient_samples";
@@ -199,10 +204,11 @@ public final class AnonymousClipTracks {
   * Fragmented sightings never increase this count. This is a sampled lower
   * bound, not a count of unique identities or a no-person guarantee. */
  public int repeatedConcurrentPeople(){
-  int best=peakConcurrent>0?1:0;
+  int best=0;for(Track track:tracks)if(track.temporalSupport()){best=1;break;}
   for(int[] group:observedGroups)for(int mask=1;mask<(1<<group.length);mask++){
    int count=Integer.bitCount(mask);if(count<=best)continue;
    boolean supported=true;
+   for(int i=0;i<group.length;i++)if((mask&(1<<i))!=0&&!tracks.get(group[i]-1).temporalSupport()){supported=false;break;}
    for(int i=0;i<group.length&&supported;i++)if((mask&(1<<i))!=0)
     for(int j=i+1;j<group.length;j++)if((mask&(1<<j))!=0){
      long[] s=pairSupport.get(pairKey(group[i],group[j]));
