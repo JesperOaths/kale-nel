@@ -29,4 +29,37 @@ report={"total_clips":len(clips),
         "category_counts":dict(categories),
         "original_videos_deleted":False,
         "privacy":"metadata_aggregate_only"}
+# Inspect only local catalog METADATA (never any MP4, image or person identity).
+index=Path("/opt/homeassistant/config/www/frontyard-security-new/s9-phone-events.json")
+if index.is_file():
+ rows=json.loads(index.read_text()).get("phone_recordings",[])
+ samples=collections.Counter();peaks=collections.Counter();spans=collections.Counter()
+ excluded=collections.Counter();reviewed=collections.Counter()
+ repeat=collections.Counter()
+ for r in rows:
+  for t in r.get("anonymous_tracks",[]):
+   if not isinstance(t,dict):continue
+   n=t.get("sample_count")
+   if type(n) is int:
+    samples[str(n) if n<5 else "5+"]+=1
+   peak=t.get("peak_detection_score")
+   if type(peak) in (int,float):
+    peaks["<.70" if peak<.70 else ".70-.79" if peak<.80 else ".80-.89" if peak<.90 else ">=.90"]+=1
+   a=t.get("first_sample_ms");b=t.get("last_sample_ms")
+   if type(a) is int and type(b) is int:
+    span=b-a
+    spans["<.6s" if span<600 else ".6-1.5s" if span<1500 else ">=1.5s"]+=1
+  for t in r.get("person_track_excluded_reasons",[]):
+   if isinstance(t,dict):excluded[str(t.get("reason"))]+=1
+  for t in r.get("person_track_review_reasons",[]):
+   if isinstance(t,dict):reviewed[str(t.get("reason"))]+=1
+  n=r.get("person_detected_frames_050")
+  if type(n) is int:
+   repeat["0" if n==0 else "1" if n==1 else "2" if n==2 else "3+"]+=1
+ report["raw_track_sample_bins"]=dict(samples)
+ report["raw_track_peak_bins"]=dict(peaks)
+ report["raw_track_span_bins"]=dict(spans)
+ report["catalog_rejection_reasons"]=dict(excluded)
+ report["catalog_review_reasons"]=dict(reviewed)
+ report["person_positive_frame_bins"]=dict(repeat)
 print("S9_TRACKS_V25_AGGREGATE_AUDIT "+json.dumps(report,sort_keys=True),flush=True)
