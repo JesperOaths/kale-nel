@@ -35,6 +35,22 @@ r["s3"]["iptables_list"]=adb("shell","iptables","-L","INPUT","-n",limit=800)
 r["s3"]["has_su"]=adb("shell","which","su",limit=150)
 r["s3"]["installed_motion_package"]=adb("shell","dumpsys","package","nl.kalenel.s3motion",limit=2500)
 r["s3"]["recent_motion_logs"]=adb("logcat","-d","-s","S3MOTION:I","*:S",limit=5000)
+# Verify S3 reachability without requiring a working ADB connection.
+r["s3_network"]={
+ "ping":run(["ping","-c","2","-W","2","192.168.178.47"],limit=350,timeout=9),
+ "neighbour":run(["ip","neigh","show","to","192.168.178.47"],limit=250,timeout=4),
+}
+for f in [pathlib.Path("/opt/homeassistant/config/www/s3-motion-health.json"),
+          pathlib.Path("/home/jespern/c720p-home-hub/state/s3-motion-health.json")]:
+ try:
+  h=json.loads(f.read_text())
+  r["s3_health_file"]={k:h.get(k) for k in (
+   "checked_at_utc","healthy","motion_analysis_active",
+   "camera_heartbeat_age_seconds","camera_frames_since_app_start",
+   "warnings","privacy_lock","wifi_adb_listening",
+   "last_motion_event_utc_in_log")}
+  break
+ except Exception:pass
 r["hub_listeners"]=run(["ss","-lnt"],limit=5500)
 r["hub_firewall"]=run(["sudo","-n","iptables","-S"],limit=2000)
 r["source"]={
