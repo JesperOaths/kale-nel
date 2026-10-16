@@ -10,6 +10,7 @@ import {
 } from "./fulfillment-routing.mjs";
 import {
   applyPrintifyVatReserveEurCents,
+  bruisClassicStandardMarginCentsForSize,
   dynamicShirtRetailEurCents,
   fxAuditSnapshot,
   marginEurCentsForSize,
@@ -434,7 +435,7 @@ Deno.serve(async (req: Request) => {
             freshVariant?.cost,
             fx,
             variantSize,
-            MARGIN_CENTS,
+            bruisClassicStandardMarginCentsForSize(variantSize),
             LARGE_SIZE_MARGIN_CENTS,
           )
         : isShirtProduct(freshProduct)
