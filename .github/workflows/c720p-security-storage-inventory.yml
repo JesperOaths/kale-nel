@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'ops/c720p/s9-native-security/security-storage-readonly-inventory.py'
+      - '.github/workflows/c720p-security-storage-inventory.yml'
 permissions:
   contents: read
 jobs:
