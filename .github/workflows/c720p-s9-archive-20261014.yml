@@ -23,6 +23,17 @@ jobs:
       - run: |
           python3 -m py_compile ops/c720p/offload-stale-build-evidence-s9-ram-v2.py
           python3 ops/c720p/test-offload-stale-build-evidence-s9-ram-v2.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('ops/c720p/offload-stale-build-evidence-s9-ram-v2.py').read_text()
+          candidates=s.split('HISTORICAL_APK_GENERATIONS = (',1)[1].split(')',1)[0]
+          assert '"s9-detection-review-v38"' in candidates
+          assert '"s9-detection-review-v39"' in candidates
+          assert '"s9-night-detection-v41"' not in candidates
+          assert 'active == checksum' in s
+          assert 'remote_hash(final) != checksum' in s
+          print('S9_ARCHIVE_HISTORIC_APK_SAFETY_SCOPE_PASS')
+          PY
   migrate:
     needs: validate
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
