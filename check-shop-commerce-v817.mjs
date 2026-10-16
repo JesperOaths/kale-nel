@@ -203,7 +203,7 @@ assert.match(checkoutEdge, /country === "US" && phone\.replace\(\/\\D\/g, ""\)\.
 assert.match(checkoutEdge, /function cachedShopId/, 'checkout must resolve current per-product Printify shop ids');
 assert.match(deliveryPreviewEdge, /function cachedShopId/, 'delivery preview must resolve current per-product Printify shop ids');
 assert.match(checkoutEdge, /validation_only/, 'checkout must expose a non-ordering production validation path');
-assert.match(catalogEdge, /gildanRouteSafeCostCeilings/, 'catalog must price Gildan variants against the most expensive approved hybrid provider');
+assert.match(catalogEdge, /function canonicalLiveShirtCostByVariant/, 'catalog must use account-priced live costs without historical fixed provider snapshots');
 assert.match(catalogEdge, /dynamicShirtRetailEurCents/, 'catalog must price account-discounted live cost');
 assert.match(checkoutEdge, /dynamicShirtRetailEurCents/, 'checkout must recheck fresh account production cost');
 assert.deepEqual(CLASSIC_SHIRT_RETAIL_CENTS, { S:2400, M:2400, L:2400, XL:2400, '2XL':2600, '3XL':3000, '4XL':3000, '5XL':3000 });
