@@ -80,7 +80,10 @@ class SafeArchiveTests(unittest.TestCase):
                         impl.index("source.unlink()"))
         self.assertIn("phone_ready_with_recovery()", impl)
         self.assertIn("stat().st_nlink != 1", impl)
-        self.assertIn('"s9-visual-attributes-v36"' not in str(module.HISTORICAL_APK_GENERATIONS), (True,))
+        self.assertIn("s9-visual-attributes-v36",module.HISTORICAL_APK_GENERATIONS)
+        self.assertIn("s9-temporal-review-v37",module.HISTORICAL_APK_GENERATIONS)
+        self.assertNotIn("s9-night-detection-v41",module.HISTORICAL_APK_GENERATIONS)
+        self.assertIn("identical_to_installed_camera",impl)
 
     def test_old_build_guard_requires_inactive_old_regular_files(self):
         from unittest.mock import patch
