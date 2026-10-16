@@ -42,6 +42,9 @@ class TestNightControlRelay(unittest.TestCase):
       "native_camera_night_mode_not_ready_no_changes",
       "saved_archive", "no_camera_commands_sent"):
    if phrase!="saved_archive":self.assertIn(phrase,text)
+  self.assertIn("data=r.read(2_000_001)",text)
+  self.assertIn('camera_metadata_response_too_large',text)
+  self.assertNotIn("r.read(150000)",text)
   for banned in ("adb install","am force-stop","cameraControls.select(",
                  "shutil.rmtree(", "shell=True", "eval("):
    self.assertNotIn(banned,text)
