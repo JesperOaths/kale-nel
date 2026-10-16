@@ -1,0 +1,91 @@
+name: S9 Native Night Controls V19
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-s9-night-controls-v19.yml'
+      - 'ops/c720p/s9-native-security/deploy-s9-night-controls-v19.py'
+      - 'ops/c720p/s9-native-security/test-s9-night-controls-v19.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-s9-night-controls-v19.yml'
+      - 'ops/c720p/s9-native-security/deploy-s9-night-controls-v19.py'
+  workflow_run:
+    workflows:
+      - 'S9 V27 face rescue · verified original-4K DEX contract'
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s9-private-night-controls-v19
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check private relay safety contracts
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-night-controls-v19.py
+          python3 ops/c720p/s9-native-security/test-s9-night-controls-v19.py
+
+  deploy:
+    needs: validate
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+       github.repository == 'JesperOaths/kale-nel') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == 'JesperOaths/kale-nel' &&
+       github.repository == 'JesperOaths/kale-nel')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Publish narrow, rollback-protected local night camera controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'Private management access unavailable'; exit 1; }
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          src="ops/c720p/s9-native-security/deploy-s9-night-controls-v19.py"
+          digest="$(sha256sum "$src" | cut -d' ' -f1)"
+          [[ "$digest" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+          target="/tmp/s9-night-controls-v19-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 35 '${url}' -o '${target}' && printf '%s  %s\n' '${digest}' '${target}' | sha256sum -c - >/dev/null && python3 '${target}'"
+          idem="s9-night-controls-v19-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-night-control-v19','deployment',:'cmd',270,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_NIGHT_CONTROL_JOB=$job"
+          for i in $(seq 1 60); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 8000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_NIGHT_CONTROLS_V19_VERIFIED' <<< "$output" || exit 1
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Night-control deployment still pending'; exit 1
