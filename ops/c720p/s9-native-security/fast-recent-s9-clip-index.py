@@ -163,6 +163,10 @@ def main():
         # Re-read immediately before atomic write to avoid using a stale
         # index if the slow full scanner finished during these few ADB calls.
         latest=json.loads(INDEX.read_text())
+        if latest!=source:
+            # A concurrent full-catalog rebuild may have newer scan evidence.
+            # Never replace its rows using our prior index snapshot.
+            changed=[]
         next_index=update_index(latest,added+changed)
         if not next_index["phone_recordings"]:raise RuntimeError("unsafe_empty_index")
         target=INDEX.with_name(INDEX.name+".s9-fast-tmp")
