@@ -63,7 +63,7 @@ def metrics(pixels:bytes)->dict:
  for y in range(4,86,2):
   for x in range(4,156,2):
    i=y*160+x
-   // Use a two-pixel stride to avoid silently skipping aligned vertical edges.
+   # Use a two-pixel stride to avoid silently skipping aligned vertical edges.
    acc+=abs(pixels[i]-pixels[i+2])+abs(pixels[i]-pixels[i+320]);n+=2
  return {"mean":round(sum(pixels)/len(pixels),2),
          "p10":pct(.10),"p50":pct(.50),"p90":pct(.90),
