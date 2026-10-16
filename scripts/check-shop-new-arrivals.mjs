@@ -57,7 +57,7 @@ const css = read('shop/styles.css');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 assert.doesNotMatch(html, /data-shop-sort|Newest first|Price: low to high/,
   'storefront must not expose a sorting control');
-assert.match(html, /20261014-live-63-r1/, 'HTML must cache-bust the new catalog snapshot');
+assert.match(html, /20261016-bruis-23-euro-r1/, 'HTML must cache-bust the €23 snapshot without removing alphabetical catalog');
 assert.match(html, /20261014-alphabetical-r2/, 'HTML must cache-bust alphabetical storefront logic/styles');
 assert.ok(css.includes('.product-new-label'), 'new shirts need visible markers');
 assert.ok(refresh.includes('checkCatalog({ force: true })'),
