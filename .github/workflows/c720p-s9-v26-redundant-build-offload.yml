@@ -24,7 +24,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           s=Path('ops/c720p/s9-native-security/offload-redundant-v26-build-apks.py').read_text()
-          for x in ("s9-face-recall-v26/installed-before-v26.apk",
+          for x in ("build/s9-face-recall-v26", "installed-before-v26.apk",
                     "installed-before-v26-*.apk", "release.json",
                     "EXPECTED_V26", "remote_archive_verify_failed",
                     "source.unlink()", "digest(protected[0])!=old_digest"):
