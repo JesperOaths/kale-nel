@@ -27,7 +27,11 @@ def digest(b):
 def request(port,path,timeout=9):
  with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}",timeout=timeout) as r:
   if r.status!=200:raise RuntimeError("status_http_not_ok")
-  return json.loads(r.read(150000))
+  # S9 archive lists may exceed 150KB even at 136 recorded clips.
+  # Read the complete bounded response, never parse a truncated JSON prefix.
+  data=r.read(2_000_001)
+  if len(data)>2_000_000:raise RuntimeError("camera_metadata_response_too_large")
+  return json.loads(data)
 
 def service(command,unit):
  p=subprocess.run(["systemctl","--user",command,unit],
