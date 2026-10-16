@@ -46,6 +46,14 @@ assert "if(reliableForEmbedding)" in face
 assert 'face_review_identity_claim","similarity_suggestion_not_verified_identity"' in face
 assert 'face_embedding_on_s9_only",true' in face
 assert "s9-face-recall-v27" in build and "saved_current_camera_apk_not_identical_to_installed" in build
+assert 'TARGET=Path("/dev/shm/s9-face-recall-v27")' in build
+assert 'BASE=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")' in build
+assert 'hub_disk_below_240MiB_refuse_ram_stage_build' in build
+assert 'ram_stage_below_110MiB_refuse_build' in build
+assert 'RELEASE=Path("/dev/shm/s9-face-recall-v27/release.json")' in install
+assert 'baseline=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")' in install
+assert 'insufficient_disk_for_durable_rollback_and_210MiB_reserve' in install
+assert install.index('insufficient_free_disk_after_rollback_persisted') < install.index('changed=True')
 assert '"AppearanceSearchIndex","Boot"' in build
 assert '"AppearanceSearchIndex" in JAVAS' in build
 assert "models_native_and_manifest_preserved" in build and "APK_SIGNER_CHANGED" in build
