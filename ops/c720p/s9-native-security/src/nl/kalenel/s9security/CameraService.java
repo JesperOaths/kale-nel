@@ -986,7 +986,7 @@ public final class CameraService extends Service {
   long now=SystemClock.elapsedRealtime();
   if(!running||faceBackfillQueued||now-lastFaceBackfillScan<60000||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||movementBackfillQueued||temperature()>=350||gardenPersonGateBusy||
+     !"watching".equals(mode)||movementBackfillQueued||temperature()>=370||gardenPersonGateBusy||
      (lastMovementAt>0&&now-lastMovementAt<45000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   faceBackfillQueued=true;
@@ -994,12 +994,12 @@ public final class CameraService extends Service {
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=350)return;
+     if(!running||!"watching".equals(mode)||temperature()>=370)return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
-     Arrays.sort(manifests,Comparator.comparing(File::getName));
+     Arrays.sort(manifests,(a,b)->b.getName().compareTo(a.getName()));
      for(File manifest:manifests){
-      if(!running||!"watching".equals(mode)||temperature()>=350)return;
+      if(!running||!"watching".equals(mode)||temperature()>=370)return;
       if(manifest.length()<100||manifest.length()>28000)continue;
       String mp4name=manifest.getName().replace(".verified.json","");
       File video=new File(target,mp4name);
@@ -1011,16 +1011,15 @@ public final class CameraService extends Service {
         int off=0;while(off<bytes.length){int n=in.read(bytes,off,bytes.length-off);if(n<0)throw new EOFException();off+=n;}
        }
        JSONObject meta=new JSONObject(new String(bytes,"UTF-8"));
-       if(meta.optInt("person_count",0)<=0)continue;
-       // Historical MP4s with person evidence get a second deeper on-device
-       // face-only review, rather than marking "no face in 12 frames" final.
-       // New-era clips stay on their standard real-time review path.
+       // A model-negative clip can still contain a real person or a visible face.
+       // The v3 review independently examines the original 4K evidence.
+
+       // All verified 4K clips with no usable face snapshot are eligible,
+       // including new clips, multi-person clips and model-negative clips.
+       // v3 runs once per clip and never overwrites confirmed face evidence.
        boolean hasReview=meta.has("face_review_version");
-       // Re-run only pre-v2 face-negative historical reviews. Successful
-       // v2 no-face reviews are terminal for this sampler, not proof of absence.
        boolean deep=ClipClassifier.deepFaceNeedsUpgrade(meta)&&
-          meta.optInt("width",0)==3840&&meta.optInt("height",0)==2160&&
-          Long.parseLong(mp4name.substring(7,20))<1791687597000L;
+          meta.optInt("width",0)==3840&&meta.optInt("height",0)==2160;
        if(!deep&&hasReview)continue;
        if(!mp4name.equals(meta.optString("name"))||meta.optLong("bytes",-1)!=video.length())continue;
        if(deep){
