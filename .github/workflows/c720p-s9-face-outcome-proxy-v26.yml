@@ -1,0 +1,77 @@
+name: S9 V26 face evidence diagnostics proxy
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
+      - 'ops/c720p/s9-native-security/test-s9-face-outcome-proxy-v26.py'
+      - '.github/workflows/c720p-s9-face-outcome-proxy-v26.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
+      - '.github/workflows/c720p-s9-face-outcome-proxy-v26.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 ops/c720p/s9-native-security/test-s9-face-outcome-proxy-v26.py
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-face-ui-v26.py
+  publish:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+      - name: Publish face-crop review folders and diagnostics, with archive rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          installer="ops/c720p/s9-native-security/deploy-s9-face-ui-v26.py"
+          catalog="ops/c720p/s9-person-ml-v1/local-sd-catalog.py"
+          proxy="ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
+          face="ops/c720p/s9-native-security/security-face-folders-v22.html"
+          ihash="$(sha256sum "$installer" | cut -d' ' -f1)"
+          chash="$(sha256sum "$catalog" | cut -d' ' -f1)"
+          phash="$(sha256sum "$proxy" | cut -d' ' -f1)"
+          fhash="$(sha256sum "$face" | cut -d' ' -f1)"
+          dest="/tmp/s9-face-v26-catalog-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${installer}"
+          cmd="curl -fSsL --max-time 35 '${uri}' -o '${dest}' && printf '%s  %s\\n' '${ihash}' '${dest}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${dest}' --ref '${GITHUB_SHA}' --catalog-sha '${chash}' --proxy-sha '${phash}' --face-sha '${fhash}'"
+          idem="s9-face-v26-catalog-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-face-v26-catalog','deployment',:'cmd',470,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "FACE_CATALOG_V26_JOB=$id"
+          for i in $(seq 1 85); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 9500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_FACE_RECALL_V26_CATALOG_DEPLOY_PASS' <<< "$output" || exit 1
+              echo "S9_FACE_V26_CATALOG_LIVE"
+              exit 0
+            fi
+            sleep 7
+          done
+          exit 1

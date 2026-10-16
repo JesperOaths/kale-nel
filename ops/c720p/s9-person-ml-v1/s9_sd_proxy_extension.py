@@ -232,6 +232,20 @@ def install_local_sd(H):
       "face_review_status":r.get("face_review_status","not_available_in_original_review"),
       "face_review_sampled_frames":r.get("face_review_sampled_frames"),
       "face_deep_review_version":r.get("face_deep_review_version"),
+      # The local catalog already checks all status enums and bounds numeric
+      # diagnostics. Expose these human-readable results, never embeddings.
+      "face_evidence_outcome":r.get("face_evidence_outcome","not_reviewed"),
+      "face_model_state":r.get("face_model_state","not_tested_no_usable_face"),
+      "face_detector_raw_hits":r.get("face_detector_raw_hits"),
+      "face_rejected_confidence_or_size":r.get("face_rejected_confidence_or_size"),
+      "face_rejected_looking_away_or_roll":r.get("face_rejected_looking_away_or_roll"),
+      "face_rejected_crop_geometry":r.get("face_rejected_crop_geometry"),
+      "face_rejected_dark_or_blurry":r.get("face_rejected_dark_or_blurry"),
+      "face_deep_detector_anchor_frames":r.get("face_deep_detector_anchor_frames"),
+      "face_deep_person_roi_anchors":r.get("face_deep_person_roi_anchors"),
+      "face_deep_multiple_person_anchors":r.get("face_deep_multiple_person_anchors"),
+      "face_deep_tiled_scene_samples":r.get("face_deep_tiled_scene_samples"),
+      "face_deep_second_person_roi_samples":r.get("face_deep_second_person_roi_samples"),
       "face_snapshots_saved":r.get("face_snapshots_saved",0),
       "face_candidates":r.get("face_candidates",[]),**detection_metrics(r)})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
