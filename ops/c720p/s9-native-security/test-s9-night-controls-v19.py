@@ -23,7 +23,8 @@ class TestNightControlRelay(unittest.TestCase):
 
  def test_existing_authenticated_relay_only_gets_night_mode(self):
   original=('SECURITY_NATIVE_CAMERA2_RELAY_V18\n'
-   "if d['key'] not in ('zoom','exposure_ev','torch','focus','recording_rotation','garden_zone'):return self.empty(400)\n")
+   'def check(d,self):\n'
+   " if d['key'] not in ('zoom','exposure_ev','torch','focus','recording_rotation','garden_zone'):return self.empty(400)\n")
   patched=module.updated_source(module.LAN,original.encode())
   self.assertIn(b"'night_mode')",patched)
   self.assertIn(b"SECURITY_NATIVE_CAMERA2_RELAY_V18",patched)
