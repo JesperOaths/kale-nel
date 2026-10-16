@@ -182,7 +182,7 @@ def main():
    if not all(any(w.encode() in package.read(n) for n in package.namelist() if n.startswith("classes") and n.endswith(".dex")) for w in
      ["high_resolution_isolated_person_head_roi_v2",
       "image_speed_body_heights_per_second",
-      "s9_onphone_36_samples_person_roi_v2", "face_evidence_outcome"]):
+      "s9_onphone_36_samples_person_or_tile_v3", "face_evidence_outcome"]):
     raise RuntimeError("new_camera_evidence_unavailable")
   if not any(b"s9_on_phone_avc_memory_ring_keyframe_5s_v4" in d.read_bytes() for d in outputs):
    raise RuntimeError("preroll_v4_dex_marker_missing")

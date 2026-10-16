@@ -44,6 +44,9 @@ assert "s9-face-recall-v26" in build and "saved_current_camera_apk_not_identical
 assert '"AppearanceSearchIndex","Boot"' in build
 assert '"AppearanceSearchIndex" in JAVAS' in build
 assert "models_native_and_manifest_preserved" in build and "APK_SIGNER_CHANGED" in build
+assert '"s9_onphone_36_samples_person_or_tile_v3", "face_evidence_outcome"' in build
+assert '"s9_onphone_36_samples_person_roi_v2", "face_evidence_outcome"' not in build
+
 assert 'S9_FACE_RECALL_V26_ROLLBACK_VERIFIED' in install
 assert 'originals.issubset(nowclips)' in install
 assert 'S9_FACE_RECALL_V26_DEVICE_VERIFIED' in install
