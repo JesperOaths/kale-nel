@@ -19,6 +19,13 @@ class ReviewTest(unittest.TestCase):
  def revision(self):return v.report({})['revision']
  def edit(self,**kw):return v.edit({'revision':self.revision(),'human_confirmed':True,**kw})
  def test_valid_original(self):self.assertIs(v.validate(self.meta),self.meta)
+ def test_route_registration_is_idempotent_without_auth_downgrade(self):
+  class Handler:
+   def go(self):pass
+   def do_POST(self):pass
+  v.install(Handler,external=True);installed=Handler.go;v.install(Handler,external=True)
+  self.assertIs(Handler.go,installed)
+  with self.assertRaises(ValueError):v.install(Handler,external=False)
  def test_reject_upscaled(self):
   self.meta['width']=1920
   with self.assertRaises(ValueError):v.validate(self.meta)

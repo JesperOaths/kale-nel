@@ -2,6 +2,7 @@
 import contextlib,datetime,hashlib,json,math,os,re,sqlite3,subprocess,tempfile,threading,time
 from pathlib import Path
 from urllib.parse import urlsplit,parse_qs
+from types import SimpleNamespace
 BASE=Path('/home/jespern/c720p-home-hub')
 ROOT=BASE/'state/s9-visual-attributes-v36'
 CACHE=Path('/tmp/s9-visual-crops-v36')
@@ -126,7 +127,8 @@ def archive_verifications():
   if type(row.get('size')) is not int or row['size']<=10000:continue
   decision=store['labels'].get('sd:'+name,{})
   valid=decision.get('human_confirmed') is True and decision.get('revision')==archive.revision('sd',name,row)
-  clips[name]={'label':decision.get('label') if valid else None,'bytes':row['size']}
+  digest=row.get('sha256')
+  clips[name]={'label':decision.get('label') if valid else None,'bytes':row['size'],'source_sha256':digest if isinstance(digest,str) and re.fullmatch('[a-f0-9]{64}',digest) else None}
  return {'ok':True,'clips':clips}
 
 def observations():
@@ -142,7 +144,7 @@ def observations():
    key='V'+hashlib.sha256(identity.encode()).hexdigest()[:24]
    signature=hashlib.sha256(json.dumps([track['first_ms'],track['last_ms'],track['full_crop']['source_box_pixels']],separators=(',',':')).encode()).hexdigest()
    result[key]={**track,'observation':key,'signature':signature,'clip':name,'source_sha256':meta['sha256'],'recorded_ms':int(name[7:20]),'duration_ms':meta['duration_ms'],
-    'source_resolution':'3840×2160','decoder':meta['decoder'],'repeated_simultaneous':meta['repeated_simultaneous'],'peak_simultaneous':meta['peak_simultaneous'],
+    'source_bytes':meta['bytes'],'source_resolution':'3840×2160','decoder':meta['decoder'],'repeated_simultaneous':meta['repeated_simultaneous'],'peak_simultaneous':meta['peak_simultaneous'],
     'tracklet_count':meta['tracklet_count'],'archive_label':decision['label'],'video_path':'/new/saved/clip/'+name}
  return result
 def count_metrics(name,row):
@@ -170,10 +172,12 @@ def attribute_bucket(item):
  tags=colours+[item.get('entry_zone','unknown'),item.get('exit_zone','unknown')]
  key='A'+hashlib.sha256(json.dumps(tags,separators=(',',':')).encode()).hexdigest()[:16]
  return key,(' / '.join(colours)+' · '+tags[2].replace('_',' ')+' → '+tags[3].replace('_',' '))
-def report(query):
- permitted={'color','direction','entry_zone','exit_zone','from','to','folder','sort','reference','offset','limit','presence','support','clip','attribute_set'}
- if set(query)-permitted or any(len(v)!=1 or len(v[0])>100 for v in query.values()):raise ValueError('invalid_filters')
- q={k:v[0] for k,v in query.items()};all_items=observations();items=list(all_items.values())
+def folder_backend():
+ return SimpleNamespace(db=db,now=now,review_context=review_context,index=index,archive_verifications=archive_verifications,
+  validate=validate,VERSION=VERSION,CLIP=CLIP,finite=finite,bhattacharyya=bhattacharyya)
+
+def review_context():
+ all_items=observations();items=list(all_items.values())
  with contextlib.closing(db()) as connection:
   revision=connection.execute('SELECT value FROM revision').fetchone()[0]
   folders=[dict(r) for r in connection.execute('SELECT * FROM folders ORDER BY created,id')]
@@ -187,6 +191,15 @@ def report(query):
   item['presence']=review['presence'] if valid else 'pending'
   item['temporal_support']=temporally_supported(item)
   item['evidence_status']='temporally_supported_candidate' if item['temporal_support'] else 'single_frame_candidate' if item.get('samples',0)<2 else 'short_span_candidate'
+ return all_items,items,revision,folders,stale
+
+def report(query):
+ if 'workflow' in query:
+  import s9_folder_review_v40 as folders
+  return folders.report(query,folder_backend())
+ permitted={'color','direction','entry_zone','exit_zone','from','to','folder','sort','reference','offset','limit','presence','support','clip','attribute_set'}
+ if set(query)-permitted or any(len(v)!=1 or len(v[0])>100 for v in query.values()):raise ValueError('invalid_filters')
+ q={k:v[0] for k,v in query.items()};all_items,items,revision,folders,stale=review_context()
  for f in folders:
   assigned=[r for r in items if r['verified_group_id']==f['id'] and r['presence']=='person']
   f['views']=len(assigned);f['clips']=len({r['clip'] for r in assigned})
@@ -241,6 +254,9 @@ def report(query):
   'weak_views_held':weak,'candidate_views':len(all_items),'confirmed_views':confirmed,'pending_views':pending,
   'organization':'manual_only','sorting':'clothing_colour_distance_not_identity' if q.get('reference') else 'metadata','identity_matching':False}
 def edit(data):
+ if isinstance(data,dict) and data.get('action') in ('seed_folder','approve_clip','reject_clip','restore_clip','skip_clip','restore_inbox_clip'):
+  import s9_folder_review_v40 as folders
+  return folders.edit(data,folder_backend())
  if not isinstance(data,dict) or set(data)-{'action','revision','human_confirmed','folder','label','note','pinned','observations','presence'}:return 400,{'ok':False,'error':'invalid_fields'}
  if data.get('human_confirmed') is not True or type(data.get('revision')) is not int:return 400,{'ok':False,'error':'explicit_manual_review_required'}
  action=data.get('action');label=data.get('label','');note=data.get('note','');keys=data.get('observations',[]);folder=data.get('folder')
@@ -282,6 +298,9 @@ def crop_bytes(name):
  for item in observations().values():
   for field in ('full_crop','upper_crop'):
    if item[field]['name']==name:evidence=item[field]
+ if evidence is None:
+  import s9_folder_review_v40 as folders
+  evidence=next((crop for crop in folders.saved_crops(folder_backend()) if crop['name']==name),None)
  if evidence is None:raise FileNotFoundError('crop_not_in_current_catalog')
  CACHE.mkdir(parents=True,exist_ok=True,mode=0o700);path=CACHE/evidence['sha256']
  if path.is_file():raw=path.read_bytes()
@@ -298,6 +317,9 @@ def crop_bytes(name):
   path.write_bytes(raw);os.chmod(path,0o600)
  return raw
 def install(handler,external=False):
+ if '_s9_visual_review_external' in handler.__dict__:
+  if handler._s9_visual_review_external!=external:raise ValueError('visual_review_auth_mode_mismatch')
+  return
  previous_get,previous_post=handler.go,handler.do_POST
  def permitted(self):return self.authorized() if external else self.client_address[0] in ('127.0.0.1','::1')
  def reply(self,code,data):
@@ -329,4 +351,5 @@ def install(handler,external=False):
   except (ValueError,TypeError,KeyError):return reply(self,400,{'ok':False,'error':'invalid_review_request'})
   except (OSError,sqlite3.Error):return reply(self,503,{'ok':False,'error':'review_store_unavailable'})
  handler.go=get;handler.do_POST=post
+ handler._s9_visual_review_external=external
 if __name__=='__main__':print(json.dumps(sync()))

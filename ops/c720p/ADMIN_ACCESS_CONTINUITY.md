@@ -1,5 +1,38 @@
 # Authorized administrative access: continuity runbook
 
+## Current People & faces workflow — 16 October 2026, V40a
+
+The People page now uses `people-folders-v40.html/js`, served through the
+existing People aliases and Archive review entry. UI cache is
+`manual-folders-v40a-20261016`. It has one recording per card, explicit green
+Approve/red Reject controls, persistent clip folders, rejected/approved tabs
+and reversible decisions. Folder suggestions use clothing HSV histograms only;
+there is no automatic biometric same-person grouping or identity training.
+The first folder/example is seeded by the owner's explicit approval.
+
+Approvals/rejections are keyed to original recording name and SHA-256, with
+pinned review snapshots; detector/track changes do not silently change them.
+Schema changes are additive. Do not overwrite the current review database
+when rolling back UI/source after the owner starts reviewing.
+
+Previous Security assets, consistent SQLite state and catalog are preserved
+under `backups/s9-folder-review-v40/20261016T192043Z/`, with subsequent change
+manifests beneath it. Receipts are
+`state/s9-visual-attributes-v36/folder-review-v40-{release,verification}.json`.
+See `s9-native-security/FOLDER_REVIEW_V40.md` for recovery and packaging.
+Fifty-one catalog/workflow tests, four playback lifecycle tests and twenty
+live acceptance checks passed. Production folders/actions remained zero at
+acceptance; browser approval tests used an isolated synthetic database.
+
+The regenerated local archive entry point omitted its old review registration.
+Routes now mount from the existing `s9_hub_playback.install` initializer,
+preserving auth mode. Registration is idempotent and refuses downgrade. Both
+8794 and 8795 answer the folder API. Preserve that hook during maintenance.
+The unrelated independently restored Tracks page was preserved as found.
+
+Phone APK/recording remain V39 (details below): direct SSH/ADB routes, native
+4K capture, original recordings and Archive verifications are unchanged.
+
 ## Current S9+ security checkpoint — 16 October 2026
 
 Direct `ssh c720p` and direct ADB `192.168.178.250:5555` remain the working

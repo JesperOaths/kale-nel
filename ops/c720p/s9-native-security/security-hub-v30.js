@@ -1,6 +1,6 @@
 /* SECURITY_HUB_V30: unified navigation and camera controls. */
 (()=>{'use strict';
-const $=id=>document.getElementById(id),asset='/local/frontyard-security-new/',version='v=detection-review-v39b-20261016';
+const $=id=>document.getElementById(id),asset='/local/frontyard-security-new/',version='v=manual-folders-v40a-20261016';
 const tabs=[['live','Live camera','◉'],['saved','Recordings','▣','security-review-v8.html?mode=today&'],['faces','People & faces','◎','security-people-v33.html?'],['tracks','Tracks & movement','◇','security-tracks-v7.html?'],['evidence','Evidence & analytics','▤','security-review-v8.html?mode=evidence&'],['archive','Archive','▤','security-archive-v7.html?v=drive-thumb-mount-v2&'],['camera','Camera controls','⚙']];
 let current='live',liveData=null,healthBusy=false,controlsBusy=false,controlGeneration=0;
 const create=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=String(txt);return n};
