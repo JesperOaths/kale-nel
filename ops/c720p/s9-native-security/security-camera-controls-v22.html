@@ -47,9 +47,9 @@ window.GEJAST_PAGE_VERSION='v817';
 (()=>{
 'use strict';
 const $=x=>document.getElementById(x);
-const keys=['zoom','exposure_ev','focus','torch'];
-const names={zoom:'Zoom',exposure_ev:'Exposure (EV)',focus:'Focus',torch:'Torch'};
-const descriptions={zoom:'Digital camera zoom',exposure_ev:'Adjust the sensor exposure',focus:'Autofocus mode',torch:'Built-in light'};
+const keys=['night_mode','zoom','exposure_ev','focus','torch'];
+const names={night_mode:'Night vision',zoom:'Zoom',exposure_ev:'Exposure (EV)',focus:'Focus',torch:'Torch'};
+const descriptions={night_mode:'Auto boosts native Camera2 sensor exposure at night. On forces night exposure; Off keeps normal exposure.',zoom:'Digital camera zoom',exposure_ev:'Manual exposure offset',focus:'Autofocus mode',torch:'Built-in light'};
 let current=null,loading=false;
 function relay(){
  try{
