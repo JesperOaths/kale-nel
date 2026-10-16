@@ -1,0 +1,75 @@
+name: S9 V26 redundant build APK microSD offload
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offload-redundant-v26-build-apks.py'
+      - '.github/workflows/c720p-s9-v26-redundant-build-offload.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offload-redundant-v26-build-apks.py'
+      - '.github/workflows/c720p-s9-v26-redundant-build-offload.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/offload-redundant-v26-build-apks.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('ops/c720p/s9-native-security/offload-redundant-v26-build-apks.py').read_text()
+          for x in ("s9-face-recall-v26/installed-before-v26.apk",
+                    "installed-before-v26-*.apk", "release.json",
+                    "EXPECTED_V26", "remote_archive_verify_failed",
+                    "source.unlink()", "digest(protected[0])!=old_digest"):
+            assert x in s,x
+          for forbidden in ('rm -rf','apt-get','rmtree(', 'adb("install"', 'force-stop'):
+            assert forbidden not in s,forbidden
+          print('S9_REDUNDANT_BUILD_OFFLOAD_SAFETY_PASS')
+          PY
+  offload:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          if ! command -v psql >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; fi
+          src='ops/c720p/s9-native-security/offload-redundant-v26-build-apks.py'
+          sha="$(sha256sum "$src"|cut -d' ' -f1)"
+          tmp="/tmp/s9-v26-build-offload-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+          command="curl -fSsL --max-time 30 '${uri}' -o '${tmp}' && printf '%s  %s\\n' '${sha}' '${tmp}' | sha256sum -c - >/dev/null && python3 '${tmp}'"
+          idem="s9-v26-build-offload-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v command="$command" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-v26-duplicate-build-offload','maintenance',:'command',350,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_V26_REDUNDANT_OFFLOAD_JOB=$id"
+          for i in $(seq 1 55); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 9500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_V26_REDUNDANT_BUILD_OFFLOAD' <<< "$output"
+              exit 0
+            fi
+            sleep 7
+          done
+          exit 1
