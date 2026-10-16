@@ -50,23 +50,6 @@ def proc_uses(path):
     except(OSError,PermissionError):pass
   except(OSError,PermissionError):pass
  return False
-def put_remote(src,dest,want):
- adb("shell","mkdir","-p",REMOTE,timeout=30)
- try:
-  existing=adb("shell","sha256sum",dest,timeout=30).split()[0]
-  if existing!=want:raise RuntimeError("remote_conflicting_file")
-  return
- except RuntimeError:
-  # Only continue if remote file does not exist.
-  if adb("shell","test","-e",dest,timeout=20)=="":pass
-  # exit status of test -e is nonzero for missing; handled below.
- staged=dest+".part"
- adb("push",str(src),staged,timeout=180)
- if adb("shell","sha256sum",staged).split()[0]!=want:
-  raise RuntimeError("temporary_transfer_hash_mismatch")
- adb("shell","mv",staged,dest,timeout=30)
- if adb("shell","sha256sum",dest).split()[0]!=want:
-  raise RuntimeError("remote_final_hash_mismatch")
 def remote_exists(path):
  p=subprocess.run(["adb","-s",SERIAL,"shell","test","-f",path],
                   capture_output=True,timeout=15)
@@ -112,8 +95,9 @@ def main():
     raise RuntimeError("remote_staging_checksum_error")
    adb("shell","mv",part,dest)
   if adb("shell","sha256sum",dest).split()[0]!=want:raise RuntimeError("remote_archive_verify_failed")
-  if not healthy() or not source.exists() or digest(source)!=want or
-      source.stat().st_mtime_ns!=metadata.st_mtime_ns or proc_uses(source):
+  if not (healthy() and source.exists() and digest(source)==want
+      and source.stat().st_mtime_ns==metadata.st_mtime_ns
+      and not proc_uses(source)):
    raise RuntimeError("camera_or_source_changed_during_archive")
   with REPORT.open("a",encoding="utf-8") as output:
    output.write(json.dumps({"old":str(source),"microSD":dest,
