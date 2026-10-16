@@ -27,7 +27,7 @@ class Tests(unittest.TestCase):
         self.assertIn('CaptureResult.SENSOR_SENSITIVITY',text)
         self.assertIn('s.setRepeatingRequest(r.build(),sensorTelemetry,cameraHandler)',text)
         self.assertIn('s.setRepeatingRequest(b.build(),sensorTelemetry,cameraHandler)',text)
-        self.assertEqual(text.count('session.setRepeatingRequest(activeCameraRequest.build(),sensorTelemetry,cameraHandler)'),2)
+        self.assertEqual(text.count('session.setRepeatingRequest(activeCameraRequest.build(),sensorTelemetry,cameraHandler)'),4)
         for key in ('sensor_result_fps','sensor_exposure_ms','sensor_frame_duration_ms',
                     'sensor_iso','sensor_ae_state','sensor_ae_target_fps_min',
                     'sensor_ae_target_fps_max','sensor_lowlight_long_exposure'):
