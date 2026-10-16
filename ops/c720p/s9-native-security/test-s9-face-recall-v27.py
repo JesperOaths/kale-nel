@@ -48,12 +48,19 @@ assert 'face_embedding_on_s9_only",true' in face
 assert "s9-face-recall-v27" in build and "saved_current_camera_apk_not_identical_to_installed" in build
 assert 'TARGET=Path("/dev/shm/s9-face-recall-v27")' in build
 assert 'BASE=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")' in build
-assert 'hub_disk_below_240MiB_refuse_ram_stage_build' in build
+assert 'hub_disk_below_210MiB_refuse_ram_stage_build' in build
 assert 'ram_stage_below_110MiB_refuse_build' in build
 assert 'RELEASE=Path("/dev/shm/s9-face-recall-v27/release.json")' in install
 assert 'baseline=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")' in install
-assert 'insufficient_disk_for_durable_rollback_and_210MiB_reserve' in install
-assert install.index('insufficient_free_disk_after_rollback_persisted') < install.index('changed=True')
+assert 'BACK="/storage/9C33-6BBD/c720p-offloaded-build-evidence-20261014/v27-exact-rollback"' in install
+assert 'rollback_microSD_staged_checksum_mismatch' in install
+assert 'rollback_microSD_final_checksum_mismatch' in install
+assert 'rollback_checksum_changed' in install
+assert 'insufficient_hub_disk_210MiB_reserve' in install
+assert install.index('rollback_microSD_final_checksum_mismatch') < install.index('changed=True')
+assert install.index('insufficient_free_disk_after_microSD_rollback') < install.index('changed=True')
+assert 'adb("install","-r","-g",str(baseline)' in install
+assert 'shutil.copy2(baseline' not in install
 assert '"AppearanceSearchIndex","Boot"' in build
 assert '"AppearanceSearchIndex" in JAVAS' in build
 assert "models_native_and_manifest_preserved" in build and "APK_SIGNER_CHANGED" in build
