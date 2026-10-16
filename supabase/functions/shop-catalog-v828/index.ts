@@ -677,7 +677,8 @@ function mediaFor(product: any) {
 }
 function publicProduct(product: any, fx: any, shopId: number, shop: any, routeSafeCostCeilings: Map<string, number>) {
   const variants = (Array.isArray(product?.variants) ? product.variants : [])
-    .filter((variant: any) => isPublicVariant(product, variant))
+    .filter((variant: any) => isPublicVariant(product, variant)
+      && Number.isFinite(Number(variant?.cost)) && Number(variant?.cost) > 0)
     .map((variant: any) => {
       const canonicalRouteCost = Number(routeSafeCostCeilings.get(String(variant?.id || "")) || 0);
       const routeSafeRawUsdCost = String(product?.blueprint_id || "") === "6"
