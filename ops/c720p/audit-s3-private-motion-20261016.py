@@ -28,6 +28,13 @@ r["s3"]={
  "tcp_listeners":adb("shell","netstat","-lnt",limit=4500),
  "packages":adb("shell","pm","list","packages","-3",limit=1100),
 }
+r["s3"]["shell_identity"]=adb("shell","id",limit=300)
+r["s3"]["android_sdk"]=adb("shell","getprop","ro.build.version.sdk",limit=100)
+r["s3"]["root_flag"]=adb("shell","getprop","ro.secure",limit=100)
+r["s3"]["iptables_list"]=adb("shell","iptables","-L","INPUT","-n",limit=800)
+r["s3"]["has_su"]=adb("shell","which","su",limit=150)
+r["s3"]["installed_motion_package"]=adb("shell","dumpsys","package","nl.kalenel.s3motion",limit=2500)
+r["s3"]["recent_motion_logs"]=adb("logcat","-d","-s","S3MOTION:I","*:S",limit=5000)
 r["hub_listeners"]=run(["ss","-lnt"],limit=5500)
 r["hub_firewall"]=run(["sudo","-n","iptables","-S"],limit=2000)
 r["source"]={
@@ -51,6 +58,7 @@ try:
    clean.append(line[:240])
   return "\n".join(clean[:95])[:4800]
  r["automation_living"]=slice_id("c720p_frontcam_motion_living_lamp_v1")
+ r["automation_bedroom"]=slice_id("c720p_s3_bedroom_spots_v1")
  r["automation_identifiers"]=[v.strip() for v in t.splitlines()
    if re.match(r"\s*- id:",v) and re.search(r"c720p|s3|bedroom|spots|motion",v,re.I)][:65]
  r["automation_timeout_lines"]=[v.strip()[:160] for v in t.splitlines()
@@ -61,6 +69,8 @@ for svc in ["c720p-frontcam-motion-living-lamp.service","c720p-s3-motion-health.
 s=H/"state/frontcam-motion-living-lamp.json"
 try:
  d=json.loads(s.read_text())
+ r["s3_source_motion"]=lines(H/"build/s3-onphone/src/nl/kalenel/s3motion/MotionActivity.java",
+   r"^[^/]*(?:threshold|contrast|frameDiff|delta|motion|dark|exposure|brightness|blackFrames|nightState|LUX_|MOVEMENT|CAMERA_)",110)
  r["frontcam_state"]={k:d.get(k) for k in (
   "version","ok","mode","updated_at","ambient_luminance","night_shape_gate_v17",
   "camera_failures","night_shape_gate_ok","normal_motion_v18","dark_confirmed")}
