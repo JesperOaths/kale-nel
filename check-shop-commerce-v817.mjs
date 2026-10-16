@@ -171,6 +171,14 @@ assert.ok(snapshotMatch,'generated catalog snapshot payload must remain parseabl
 const snapshot=JSON.parse(snapshotMatch[1]);
 assert.ok(Array.isArray(snapshot.products)&&snapshot.products.length>=20,'last-good snapshot must contain a useful complete storefront surface');
 assert.equal(snapshot.source,'shop_catalog_cache_v828','last-good snapshot provenance must point to the authoritative v828 cache');
+for (const shirt of snapshot.products.filter(product => String(product.baseKey)==='6')) {
+  const expected={S:23,M:23,L:23,XL:23,'2XL':23,'3XL':25,'4XL':26,'5XL':26};
+  for (const variant of shirt.variants) {
+    assert.equal(variant.price, expected[String(variant.size).toUpperCase()], 'offline shirt price must match the €23 baseline plus large-size margin protection');
+  }
+  assert.equal(shirt.price,23,'offline visible shirt price must start at €23');
+}
+assert.match(index,/catalog-last-good\.js\?v=20261016-bruis-23-euro-r1/,'customer browsers must refresh the updated fallback price snapshot');
 assert.match(store, /baseLabel:\s*publicBaseLabel\(raw\.baseLabel, baseKey\)/, 'storefront must sanitize supplier base labels before display');
 assert.match(store, /function publicBaseLabel\(value, baseKey\)/, 'storefront must retain customer-facing base-label sanitizer');
 assert.doesNotMatch(index, /Gildan|Comfort Colors/i, 'public shop HTML must not expose third-party T-shirt branding');
