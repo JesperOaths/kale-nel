@@ -37,11 +37,11 @@ def main():
  # require 1.3GiB on the root volume when /tmp is an independent tmpfs.
  free=os.statvfs(HOME)
  scratch=os.statvfs("/tmp")
- # The signed APK and byte-identical baseline are RAM-staged. Do not duplicate
- # them on the constrained C720P system disk; the installer separately
- # reserves and persists the exact rollback before stopping the camera.
- if free.f_bavail*free.f_frsize<240*1024**2:
-  raise RuntimeError("hub_disk_below_240MiB_refuse_ram_stage_build")
+ # The immutable signed APK and baseline are RAM staged. The installer
+ # preserves a SHA-verified copy of the exact rollback on S9 microSD before
+ # stopping the camera, instead of duplicating APKs on C720P root.
+ if free.f_bavail*free.f_frsize<210*1024**2:
+  raise RuntimeError("hub_disk_below_210MiB_refuse_ram_stage_build")
  ram_stage=os.statvfs("/dev/shm")
  if ram_stage.f_bavail*ram_stage.f_frsize<110*1024**2:
   raise RuntimeError("ram_stage_below_110MiB_refuse_build")
