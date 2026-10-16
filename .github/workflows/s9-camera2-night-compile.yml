@@ -1,0 +1,52 @@
+name: S9 Camera2 night exposure isolated build
+
+on:
+  pull_request:
+    paths:
+      - "ops/c720p/s9-native-security/src/nl/kalenel/s9security/**"
+      - "ops/c720p/s9-native-security/test-native-camera-controls.py"
+      - "ops/c720p/s9-person-ml-v1/s9_native_camera_controls.py"
+      - ".github/workflows/s9-camera2-night-compile.yml"
+  push:
+    paths:
+      - "ops/c720p/s9-native-security/src/nl/kalenel/s9security/**"
+      - "ops/c720p/s9-native-security/test-native-camera-controls.py"
+      - "ops/c720p/s9-person-ml-v1/s9_native_camera_controls.py"
+      - ".github/workflows/s9-camera2-night-compile.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  native-android-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Validate native control protocol and night exposure contracts
+        run: |
+          python3 ops/c720p/s9-native-security/test-native-camera-controls.py
+          python3 ops/c720p/s9-native-security/test-phone-sensor-telemetry.py
+      - name: Compile complete phone app against Android SDK and TFLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          ANDROID_JAR="$(find "$SDK_ROOT/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$ANDROID_JAR"
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+          mkdir -p "$WORK/lib" "$WORK/classes"
+          for part in tensorflow-lite tensorflow-lite-api tensorflow-lite-gpu tensorflow-lite-gpu-api; do
+            curl -fLsS --retry 2 --max-time 60 \
+              "https://repo.maven.apache.org/maven2/org/tensorflow/$part/2.14.0/$part-2.14.0.aar" \
+              -o "$WORK/lib/$part.aar"
+            unzip -p "$WORK/lib/$part.aar" classes.jar > "$WORK/lib/$part.jar"
+            test -s "$WORK/lib/$part.jar"
+          done
+          CLASSPATH="$ANDROID_JAR:$WORK/lib/tensorflow-lite.jar:$WORK/lib/tensorflow-lite-api.jar:$WORK/lib/tensorflow-lite-gpu.jar:$WORK/lib/tensorflow-lite-gpu-api.jar"
+          javac -source 8 -target 8 -cp "$CLASSPATH" -d "$WORK/classes" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/*.java
+          test -s "$WORK/classes/nl/kalenel/s9security/CameraControls.class"
+          test -s "$WORK/classes/nl/kalenel/s9security/CameraService.class"
+          echo "S9_CAMERA2_NIGHT_ISOLATED_COMPILE_OK"
