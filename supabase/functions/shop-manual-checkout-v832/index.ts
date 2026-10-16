@@ -424,6 +424,9 @@ Deno.serve(async (req: Request) => {
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
+      if (!Number.isFinite(Number(freshVariant?.cost)) || Number(freshVariant.cost) <= 0) {
+        throw new Error("Live production cost is unavailable. Please retry checkout later.");
+      }
       const color = colorFromVariant(freshProduct, freshVariant) || "White";
       const variantSize = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
       let unit = String(freshProduct?.blueprint_id || "") === "6"
