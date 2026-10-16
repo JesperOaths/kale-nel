@@ -474,13 +474,15 @@ public final class ClipClassifier {
   * ROIs on up to 12 detection anchors (never changing the source MP4).
   * No crop/embedding is evidence that two clips belong to the same person.
   */
- static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_roi_v2";
+ static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v3";
  static boolean deepFaceNeedsUpgrade(JSONObject manifest){
-  if(manifest==null||manifest.optInt("person_count",0)<=0||
-     manifest.optInt("face_snapshots_saved",0)>0||
-     !manifest.has("face_review_version"))return false;
-  String prior=manifest.optString("face_deep_review_version","");
-  return prior.isEmpty()||"s9_onphone_36_samples_v1".equals(prior);
+  if(manifest==null||manifest.optInt("face_snapshots_saved",0)>0||
+     !"s9_face_review_v1".equals(manifest.optString("face_review_version","")))
+   return false;
+  // A negative 12-frame person model result is NOT proof the recording is
+  // empty. Retry also person-model-negative 4K clips once with a denser,
+  // scene-tiled face search. Preserve prior metadata/recordings.
+  return !DEEP_FACE_ROI_VERSION.equals(manifest.optString("face_deep_review_version",""));
  }
  public synchronized boolean deepFaceReview(File mp4,File folder,String name,JSONObject manifest)throws Exception{
   if(mp4==null||folder==null||name==null||manifest==null||
@@ -491,14 +493,14 @@ public final class ClipClassifier {
      manifest.optInt("width",0)!=3840||manifest.optInt("height",0)!=2160||
      mp4.length()!=manifest.optLong("bytes",-1))
    return false;
-  // The existing production scan is restricted to the older archive cohort.
-  if(Long.parseLong(name.substring(7,20))>=1791687597000L)return false;
+  // Verified 4K recordings of ANY age are eligible for one guarded v3 pass.
   final String fingerprint=manifest.optString("sha256","");
   if(fingerprint.length()!=64||!fingerprint.equalsIgnoreCase(digest(mp4)))
    throw new IOException("deep_face_original_sha_mismatch");
   MediaMetadataRetriever decoder=new MediaMetadataRetriever();
-  final S9FaceReview faces=new S9FaceReview(app,folder,name,36);
+  final S9FaceReview faces=new S9FaceReview(app,folder,name,48);
   int decoded=0,detectorAnchors=0,roiAnchors=0,ambiguousAnchors=0,refinementPasses=0;
+  int tiledFallbacks=0,secondPersonSamples=0;
   try{
    decoder.setDataSource(mp4.getAbsolutePath());
    long duration=Long.parseLong(decoder.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
@@ -514,7 +516,8 @@ public final class ClipClassifier {
     Bitmap frame=decoder.getFrameAtTime(at,MediaMetadataRetriever.OPTION_CLOSEST);
     if(frame==null)continue;
     try{
-     float[] isolated=null;
+     // 12 detector anchors / 36 decoded positions. Do not require a
+     // previous positive frame, which is exactly how misses were missed.
      if(i%3==0){
       detectorAnchors++;
       List<Detection> hits=detect(frame);
@@ -526,21 +529,33 @@ public final class ClipClassifier {
        refinementPasses++;
        hits=detectGardenPeopleMultiscale(frame);
       }
-      int viable=0;
+      ArrayList<float[]> people=new ArrayList<>();
       for(Detection hit:hits){
        if(!"person".equals(hit.label)||hit.score<.35f||hit.box==null||
           hit.box.length!=4)continue;
        float[] box=hit.box;
-       if(box[2]-box[0]<=.10f||box[3]-box[1]<=.035f)continue;
-       viable++;
-       if(viable==1)isolated=box;
+       if(box[2]-box[0]<=.07f||box[3]-box[1]<=.018f)continue;
+       boolean duplicate=false;
+       for(float[] old:people)if(boxIoU(old,box)>.45f){duplicate=true;break;}
+       if(!duplicate&&people.size()<2)people.add(box);
       }
-      // Multiple people: do not crop the wrong person and lose the other
-      // faces. Use full-frame sampling until multi-person ROI review exists.
-      if(viable==1)roiAnchors++;
-      else {isolated=null;if(viable>1)ambiguousAnchors++;}
+      if(!people.isEmpty()){
+       roiAnchors++;
+       faces.sample(frame,at/1000,people.get(0));
+       if(people.size()>1){
+        ambiguousAnchors++;
+        secondPersonSamples++;
+        faces.sample(frame,at/1000,people.get(1));
+       }
+      }else{
+       // No confident body box: instead of losing distant faces in a
+       // 3840->960 full-frame shrink, scan alternating original-4K halves.
+       faces.sampleSceneTile(frame,at/1000,(i/3)%2!=0);
+       tiledFallbacks++;
+      }
+     }else{
+      faces.sample(frame,at/1000,null);
      }
-     faces.sample(frame,at/1000,isolated);
      decoded++;
     }finally{frame.recycle();}
    }
@@ -554,6 +569,9 @@ public final class ClipClassifier {
    manifest.put("face_deep_person_roi_anchors",roiAnchors);
    manifest.put("face_deep_multiple_person_anchors",ambiguousAnchors);
    manifest.put("face_deep_multiscale_refinement_passes",refinementPasses);
+   manifest.put("face_deep_tiled_scene_samples",tiledFallbacks);
+   manifest.put("face_deep_second_person_roi_samples",secondPersonSamples);
+   manifest.put("face_deep_source_frame_samples",decoded);
    manifest.put("face_deep_source","original_4k_microSD");
    manifest.put("face_deep_review_human_verified",false);
    manifest.put("face_deep_review_no_face_is_not_no_person",true);

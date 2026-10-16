@@ -112,7 +112,7 @@ final class S9FaceReview implements AutoCloseable {
     int vd=((d>>16)&255)+((d>>8)&255)+(d&255);
     sum+=v/3.0; contrast+=(Math.abs(v-vr)+Math.abs(v-vd))/3.0;
    }
-   return sum>10000&&sum<235000&&contrast>8500; // reject extremely dark/flat crops
+   return sum>7400&&sum<235000&&contrast>6500; // v26: retain dim but structurally visible face candidates
   }finally{if(mini!=b)mini.recycle();}
  }
  private float[] vector(Bitmap face)throws Exception{
@@ -274,6 +274,21 @@ final class S9FaceReview implements AutoCloseable {
   writeIndex();
   return result.put("person_id",id).put("match_status","new_anonymous_candidate");
  }
+ /** A half-width original-4K tile preserves twice the apparent face pixels
+  * of a 960px full-frame scan when the person detector missed the subject.
+  * No face identity is asserted; original video remains on microSD.
+  */
+ void sampleSceneTile(Bitmap frame,long ms,boolean right){
+  if(frame==null||frame.getWidth()<400||frame.getHeight()<200)return;
+  int mid=frame.getWidth()/2;
+  int x=right?mid:0;
+  int w=right?frame.getWidth()-mid:mid;
+  Bitmap tile=null;
+  try{
+   tile=Bitmap.createBitmap(frame,x,0,w,frame.getHeight());
+   sample(tile,ms,null);
+  }finally{if(tile!=null)tile.recycle();}
+ }
  void sample(Bitmap frame,long ms){sample(frame,ms,null);}
  /** Isolated person detector ROI is cropped from original decoded 4K,
   * before downscaling for Android FaceDetector. Frontal faces in distant
@@ -291,7 +306,7 @@ final class S9FaceReview implements AutoCloseable {
     for(float v:detectedPerson)if(!Float.isFinite(v)||v<0||v>1)finite=false;
     if(finite){
      float t=detectedPerson[0],l=detectedPerson[1],b=detectedPerson[2],rr=detectedPerson[3];
-     if(b-t>.10f&&rr-l>.035f){
+     if(b-t>.07f&&rr-l>.018f){
       int width0=frame.getWidth(),height0=frame.getHeight();
       float padX=(rr-l)*.22f,padY=(b-t)*.10f;
       int x0=Math.max(0,(int)((l-padX)*width0));
@@ -315,9 +330,9 @@ final class S9FaceReview implements AutoCloseable {
    for(int i=0;i<n&&captures.length()<MAX_CAPTURES;i++){
     FaceDetector.Face f=faces[i];if(f==null)continue;
     rawDetectorHits++;
-    if(f.confidence()<.65f||f.eyesDistance()<12){lowConfidenceOrSmall++;continue;}
+    if(f.confidence()<.58f||f.eyesDistance()<9){lowConfidenceOrSmall++;continue;}
     float yaw=f.pose(FaceDetector.Face.EULER_Y),roll=f.pose(FaceDetector.Face.EULER_Z);
-    if(Math.abs(yaw)>20||Math.abs(roll)>17){rejectedPose++;continue;}
+    if(Math.abs(yaw)>28||Math.abs(roll)>22){rejectedPose++;continue;}
     PointF center=new PointF();f.getMidPoint(center);
     int x=offsetX+(int)(center.x*subject.getWidth()/width);
     int y=offsetY+(int)(center.y*subject.getHeight()/height);
@@ -327,9 +342,18 @@ final class S9FaceReview implements AutoCloseable {
     try{
      if(!usable(face)){rejectedImageQuality++;continue;}
      detected++;
+     // Lower-confidence/off-axis facial images may be useful for manual
+     // inspection, but must NEVER be used for automatic biometric linking.
+     final boolean reliableForEmbedding=f.confidence()>=.70f&&
+         f.eyesDistance()>=14&&Math.abs(yaw)<=18&&Math.abs(roll)<=15;
      float[] emb=null;
-     try{emb=vector(face);}catch(Exception ex){status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();}
+     if(reliableForEmbedding){
+      try{emb=vector(face);}catch(Exception ex){
+       status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();
+      }
+     }
      JSONObject match=assign(emb);
+     if(!reliableForEmbedding)match.put("face_crop_requires_manual_review",true);
      String id=match.optString("person_id","pending_"+(detected));
      String safe=id.replaceAll("[^A-Za-z0-9_-]","_");
      File outDir=new File(sd,"FaceSnapshots");

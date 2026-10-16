@@ -1,0 +1,154 @@
+name: S9 on-device original-4K face rescue V26
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/build-s9-face-recall-v26.py'
+      - 'ops/c720p/s9-native-security/deploy-s9-face-recall-v26.py'
+      - 'ops/c720p/s9-native-security/test-s9-face-recall-v26.py'
+      - 'ops/c720p/s9-native-security/deploy-s9-face-ui-v26.py'
+      - 'ops/c720p/s9-native-security/security-face-folders-v22.html'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/S9FaceReview.java'
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
+      - '.github/workflows/deploy-s9-face-recall-v26.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-s9-face-recall-v26.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-face-recall-v26-install
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check immutable build and rollback invariants
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-s9-face-recall-v26.py
+          python3 -m py_compile ops/c720p/s9-native-security/build-s9-face-recall-v26.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-face-recall-v26.py ops/c720p/s9-native-security/deploy-s9-face-ui-v26.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py
+          grep -Fq 's9_onphone_36_samples_person_or_tile_v3' ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java
+          grep -Fq 'QUIET_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
+          grep -Fq 'lastAcceptedEncodedPtsUs' ops/c720p/s9-native-security/src/nl/kalenel/s9security/Continuous4KEncoder.java
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 44
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install PostgreSQL client for authorized C720P management gateway
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo "Management access unavailable"; exit 1; }
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+      - name: Build signed face-rescue code against the exact installed Camera2 APK (no install)
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='ops/c720p/s9-native-security/build-s9-face-recall-v26.py'
+          digest="$(sha256sum "$file" | cut -d' ' -f1)"
+          dest="/tmp/s9-face-recall-v26-build-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
+          cmd="curl -fSsL --max-time 40 '${uri}' -o '${dest}' && printf '%s  %s\n' '${digest}' '${dest}' | sha256sum -c - >/dev/null && S9_FACE_RECALL_V26_REF='${GITHUB_SHA}' /usr/bin/python3 '${dest}'"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-face-recall-v26-build-${GITHUB_SHA:0:22}" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-face-recall-v26-build','deployment',:'cmd',770,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "UNIFIED_BUILD_JOB=$id"
+          for n in $(seq 1 96); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 9500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_FACE_RECALL_V26_SIGNED_STAGED' <<< "$output" || exit 1
+              exit 0
+            fi
+            sleep 7
+          done
+          echo 'Build not complete during bounded window; camera unchanged.'
+          exit 1
+      - name: Guarded original 4K/GPU live verification and exact APK rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='ops/c720p/s9-native-security/deploy-s9-face-recall-v26.py'
+          digest="$(sha256sum "$file" | cut -d' ' -f1)"
+          dest="/tmp/s9-face-recall-v26-install-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
+          cmd="curl -fSsL --max-time 40 '${uri}' -o '${dest}' && printf '%s  %s\n' '${digest}' '${dest}' | sha256sum -c - >/dev/null && S9_FACE_RECALL_V26_REF='${GITHUB_SHA}' /usr/bin/python3 '${dest}'"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-face-recall-v26-install-${GITHUB_SHA:0:22}" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-face-recall-v26-install','deployment',:'cmd',750,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "UNIFIED_INSTALL_JOB=$id"
+          for n in $(seq 1 98); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 15000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_FACE_RECALL_V26_DEVICE_VERIFIED' <<< "$output" || {
+                echo 'Installation not verified, no success claim'; exit 1;
+              }
+              echo 'S9_FACE_RECALL_V26_ACTIVE_AND_VERIFIED'
+              exit 0
+            fi
+            sleep 7
+          done
+          echo 'Upgrade outcome still pending; verify phone before making claims.'
+          exit 1
+
+      - name: Publish face-crop review folders and diagnostics, with archive rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          installer="ops/c720p/s9-native-security/deploy-s9-face-ui-v26.py"
+          catalog="ops/c720p/s9-person-ml-v1/local-sd-catalog.py"
+          proxy="ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
+          face="ops/c720p/s9-native-security/security-face-folders-v22.html"
+          ihash="$(sha256sum "$installer" | cut -d' ' -f1)"
+          chash="$(sha256sum "$catalog" | cut -d' ' -f1)"
+          phash="$(sha256sum "$proxy" | cut -d' ' -f1)"
+          fhash="$(sha256sum "$face" | cut -d' ' -f1)"
+          dest="/tmp/s9-face-v26-catalog-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${installer}"
+          cmd="curl -fSsL --max-time 35 '${uri}' -o '${dest}' && printf '%s  %s\\n' '${ihash}' '${dest}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${dest}' --ref '${GITHUB_SHA}' --catalog-sha '${chash}' --proxy-sha '${phash}' --face-sha '${fhash}'"
+          idem="s9-face-v26-catalog-${GITHUB_SHA:0:22}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-face-v26-catalog','deployment',:'cmd',470,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "FACE_CATALOG_V26_JOB=$id"
+          for i in $(seq 1 85); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 9500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_FACE_RECALL_V26_CATALOG_DEPLOY_PASS' <<< "$output" || exit 1
+              echo "S9_FACE_V26_CATALOG_LIVE"
+              exit 0
+            fi
+            sleep 7
+          done
+          exit 1
+
