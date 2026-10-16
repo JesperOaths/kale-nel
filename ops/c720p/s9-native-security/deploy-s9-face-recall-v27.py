@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Guarded S9+ 4K face rescue V26 install, exact current APK rollback."""
+"""Guarded S9+ 4K V27 install; persistent checksum-verified microSD rollback."""
 from pathlib import Path
 import datetime,hashlib,json,os,re,subprocess,time,urllib.request,zipfile
 ROOT=Path("/home/jespern/c720p-home-hub")
 RELEASE=Path("/dev/shm/s9-face-recall-v27/release.json")
-BACK=ROOT/"backups/s9-face-recall-v27"
+BACK="/storage/9C33-6BBD/c720p-offloaded-build-evidence-20261014/v27-exact-rollback"
 SERIAL="192.168.178.250:5555"
 PACKAGE="nl.kalenel.s9security"
 SIGNER="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
@@ -76,10 +76,10 @@ def main():
   if not any(VERSION.encode() in new.read(n) for n in new.namelist() if n.startswith("classes") and n.endswith(".dex")):
    raise RuntimeError("new_face_rescue_code_not_signed")
  free=os.statvfs(str(ROOT))
- # Stage lives in tmpfs; allow installation only if a durable, signed,
- # byte-identical rollback copy can be persisted while leaving 210 MiB free.
- if free.f_bavail*free.f_frsize<210*1024**2+baseline.stat().st_size+8*1024**2:
-  raise RuntimeError("insufficient_disk_for_durable_rollback_and_210MiB_reserve")
+ # APK staging is tmpfs, while exact persistent rollback is protected on
+ # S9 microSD. Require 210 MiB of hub root space without duplicate APKs.
+ if free.f_bavail*free.f_frsize<210*1024**2:
+  raise RuntimeError("insufficient_hub_disk_210MiB_reserve")
  if adb("shell","getprop","ro.product.model",sec=20).strip()!="SM-G965F":
   raise RuntimeError("unexpected_phone")
  refresh()
@@ -94,15 +94,28 @@ def main():
  if len(paths)!=1:raise RuntimeError("current_installed_package_ambiguous")
  installed=adb("shell","sha256sum",paths[0],sec=25).split()[0]
  if installed!=sha(baseline):raise RuntimeError("on_phone_apk_changed_since_build")
- BACK.mkdir(mode=0o700,parents=True,exist_ok=True)
- old=BACK/("installed-before-v26-"+datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")+".apk")
- if old.exists():raise RuntimeError("rollback_destination_collision")
- import shutil;shutil.copy2(baseline,old)
- signer(old)
- if sha(old)!=installed:raise RuntimeError("rollback_integrity_failed")
+ # The exact prior APK must be durable and readable over ADB even after
+ # this installer exits. Use the S9 microSD instead of the C720P's full root.
+ # The local RAM copy stays available for immediate rollback during the job.
+ if not re.fullmatch(r"[a-f0-9]{64}",installed):
+  raise RuntimeError("invalid_installed_apk_checksum")
+ if status().get("sd_free_bytes",0)<20*1024**3:
+  raise RuntimeError("insufficient_microSD_for_rollback_reserve")
+ old=BACK+"/installed-before-v27-"+datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")+".apk"
+ staged=old+".part"
+ adb("shell","mkdir","-p",BACK,sec=25)
+ if "1" == adb("shell","sh","-c","test -e "+old+" && echo 1 || echo 0",sec=15).strip():
+  raise RuntimeError("rollback_destination_collision")
+ adb("push",str(baseline),staged,sec=150)
+ if adb("shell","sha256sum",staged,sec=45).split()[0]!=installed:
+  raise RuntimeError("rollback_microSD_staged_checksum_mismatch")
+ adb("shell","mv",staged,old,sec=30)
+ if adb("shell","sha256sum",old,sec=45).split()[0]!=installed:
+  raise RuntimeError("rollback_microSD_final_checksum_mismatch")
+ # Recheck C720P root after the phone copy and before stopping the camera.
  persisted=os.statvfs(str(ROOT))
  if persisted.f_bavail*persisted.f_frsize<210*1024**2:
-  raise RuntimeError("insufficient_free_disk_after_rollback_persisted")
+  raise RuntimeError("insufficient_free_disk_after_microSD_rollback")
  changed=False
  try:
   latest=status()
@@ -125,7 +138,8 @@ def main():
    raise RuntimeError("archived_recordings_disappeared")
   report={"installed":True,"on_phone_v26":True,
      "camera_4k_gpu_healthy":True,"archive_clips_preserved":len(nowclips),
-     "new_apk_sha256":sha(signed),"exact_rollback_apk":str(old),
+     "new_apk_sha256":sha(signed),"exact_rollback_apk":old,
+     "rollback_medium":"S9_microSD_checksum_verified",
      "face_review_version":VERSION,
      "temperature_c":current.get("temperature_c"),
      "original_videos_changed":False,
@@ -135,7 +149,9 @@ def main():
   if changed:
    try:
     adb("shell","am","force-stop",PACKAGE,sec=26)
-    if "Success" not in adb("install","-r","-g",str(old),sec=230):
+    if sha(baseline)!=installed or adb("shell","sha256sum",old,sec=45).split()[0]!=installed:
+     raise RuntimeError("rollback_checksum_changed")
+    if "Success" not in adb("install","-r","-g",str(baseline),sec=230):
      raise RuntimeError("rollback_install_no_success")
     start()
     prior=wait(seconds=170)
