@@ -182,7 +182,7 @@ async function loadLiveCatalog(timeoutMs = 5000){
   const timeout = window.setTimeout(() => controller.abort(), Math.max(1500, Number(timeoutMs || 5000)));
   try {
     const response = await fetch(LIVE_CATALOG_URL, {
-      cache: 'default',
+      cache: 'no-store',
       signal: controller.signal,
       mode: 'cors',
       credentials: 'omit'
@@ -242,19 +242,22 @@ function staticCatalogSnapshot(){
     .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0));
 }
 async function loadCatalog(){
-  // The deployment-generated snapshot is the deterministic first-paint source.
-  // It must win over an older browser cache and it never depends on Supabase.
-  const staticProducts = staticCatalogSnapshot();
-  if(staticProducts.length){
-    saveLastGoodCatalog(staticProducts);
-    return { products: staticProducts, source: 'static-snapshot' };
-  }
-  const cachedProducts = readLastGoodCatalog();
-  if(cachedProducts.length){
-    return { products: sortByShirtBase(cachedProducts), source: 'cache' };
-  }
+  // Printify's server-side catalog is authoritative: a generated snapshot must
+  // never hide newly published products merely because it loaded first.
   const liveProducts = await refreshLiveCatalog(1);
   if(liveProducts.length) return { products: liveProducts, source: 'live' };
+
+  // On outages, keep the newest already-seen catalog rather than resetting it
+  // to an older deployment snapshot. Checkout independently validates stock.
+  const cachedProducts = readLastGoodCatalog();
+  const staticProducts = staticCatalogSnapshot();
+  const snapshotAt = Date.parse(String(window.BRUIS_CATALOG_LAST_GOOD?.generatedAt || '')) || 0;
+  let cacheSavedAt = 0;
+  try { cacheSavedAt = Number(JSON.parse(localStorage.getItem(catalogCacheKey) || 'null')?.savedAt || 0); } catch {}
+  if(cachedProducts.length && (!staticProducts.length || cacheSavedAt > snapshotAt)){
+    return { products: sortByShirtBase(cachedProducts), source: 'cache' };
+  }
+  if(staticProducts.length) return { products: staticProducts, source: 'static-snapshot' };
   const staleProducts = readLastGoodCatalog({ allowExpired: true });
   return { products: sortByShirtBase(staleProducts), source: staleProducts.length ? 'stale-cache' : 'unavailable' };
 }
