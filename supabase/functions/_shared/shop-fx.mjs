@@ -194,6 +194,10 @@ export function retailEurCentsFromUsdCostAfterVat(
  * reserve and also ensure at least the requested EUR contribution survives
  * 21% VAT on the customer-facing shirt price.
  */
+// Bruis customer price floor: S-2XL currently €23. Keep higher prices for
+// expensive/larger sizes, and keep automatic cost-based increases above it.
+export const MINIMUM_CLASSIC_SHIRT_RETAIL_EUR_CENTS = 2300;
+
 export function dynamicShirtRetailEurCents(
   rawUsdCents,
   snapshotOrRate,
@@ -207,7 +211,7 @@ export function dynamicShirtRetailEurCents(
   if (!Number.isFinite(cost) || cost <= 0) throw new Error("Missing live shirt production cost");
   const supplierVatAllowance = applyPrintifyVatReserveEurCents(cost, vatBps) + margin;
   const retailVatAllowance = Math.ceil((cost + margin) * 121 / 100);
-  return Math.ceil(Math.max(supplierVatAllowance, retailVatAllowance) / 100) * 100;
+  return Math.max(MINIMUM_CLASSIC_SHIRT_RETAIL_EUR_CENTS, Math.ceil(Math.max(supplierVatAllowance, retailVatAllowance) / 100) * 100);
 }
 
 export const CLASSIC_SHIRT_RETAIL_CENTS = Object.freeze({
