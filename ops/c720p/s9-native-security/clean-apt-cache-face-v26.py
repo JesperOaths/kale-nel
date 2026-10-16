@@ -39,9 +39,9 @@ def main():
  result["cached_deb_allocated_mib"]=round(sum(debs)/1048576,1)
  result["camera_pre"]=health()
  if a.apply:
-  ps=subprocess_checked(["ps","-eo","comm="],15)
-  if ps[0]:raise RuntimeError("apt_process_inventory_failed")
-  running={n.strip() for n in ps[1].splitlines()}
+  ps=subprocess.run(["ps","-eo","comm="],capture_output=True,text=True,timeout=15)
+  if ps.returncode:raise RuntimeError("apt_process_inventory_failed")
+  running={n.strip() for n in ps.stdout.splitlines()}
   if {"apt","apt-get","aptitude","dpkg","unattended-upgr","dpkg-deb"}.intersection(running):
    raise RuntimeError("package_manager_currently_active")
   # /usr/bin/apt-get clean only discards downloaded package archives.
