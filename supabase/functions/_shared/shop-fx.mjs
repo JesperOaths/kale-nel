@@ -194,6 +194,18 @@ export function retailEurCentsFromUsdCostAfterVat(
  * reserve and also ensure at least the requested EUR contribution survives
  * 21% VAT on the customer-facing shirt price.
  */
+// Bruis classic shirts: adjust CONTRIBUTION margins rather than fixing retail
+// prices. At current live Premium supplier costs this yields €23 for S–2XL.
+// Pricing can still increase if costs rise or Premium is discontinued.
+export const BRUIS_CLASSIC_STANDARD_MARGIN_CENTS = 760;
+export const BRUIS_CLASSIC_2XL_MARGIN_CENTS = 600;
+export function bruisClassicStandardMarginCentsForSize(rawSize) {
+  const normalized = String(rawSize ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  return normalized === "2XL"
+    ? BRUIS_CLASSIC_2XL_MARGIN_CENTS
+    : BRUIS_CLASSIC_STANDARD_MARGIN_CENTS;
+}
+
 export function dynamicShirtRetailEurCents(
   rawUsdCents,
   snapshotOrRate,
