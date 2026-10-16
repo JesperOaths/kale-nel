@@ -277,7 +277,7 @@ def validate_result(result,verified,descriptor=None):
   "drive_read_only":True,"source_preserved_in_drive":True,"attempts":1,
  }
 
-def clean_import_copy(key):
+def clean_import_copy(key,rescan_v28=False):
  """Only remove the disposable staging copy after trusted catalog reconciliation."""
  if not SAFE_ID.fullmatch(key):raise ValueError("invalid_cleanup_key")
  base=INBOX+"/history_"+key
@@ -285,7 +285,14 @@ def clean_import_copy(key):
  for name in (base+".mp4",base+".mp4.verified.json",
               base+".mp4.thumb.jpg",base+".ready.json"):
   phone("rm","-f",name,timeout=12)
- phone("mv",base+".result.json",base+".ack.json",timeout=12)
+ # Preserve the previous GPU audit acknowledgment when reviewing the same clip again.
+  # A fresh v28 result gets its own independent acknowledgment file.
+ destination=base+(".v28.ack.json" if rescan_v28 else ".ack.json")
+ if rescan_v28:
+  existing=phone("ls","-1",INBOX,timeout=12).splitlines()
+  if "history_"+key+".v28.ack.json" in existing:
+   raise RuntimeError("v28_ack_already_exists_refuse_overwrite")
+ phone("mv",base+".result.json",destination,timeout=12)
 
 def collect():
  m=cpu_catalog()
@@ -338,7 +345,7 @@ def collect():
         "classification":entry["category"],"backend":entry["review_backend"],
         "progress":cat["summary"]["processed"],"source_preserved":True}))
   # Clean imported TEMPORARY phone copy only after the catalog lock was released.
-  clean_import_copy(entry["clip_id"])
+  clean_import_copy(entry["clip_id"],rescan_v28=ready.get("review_request_version")==RECHECK_VERSION)
  print("S9_HISTORY_COLLECT_COMPLETE",accepted)
 
 def cycle(rescan_v28=False):
