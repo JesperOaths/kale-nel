@@ -1,0 +1,84 @@
+name: Build and guard-install S3 low-light motion V9
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/install-s3-dark-motion-v9-20261016.py'
+      - '.github/workflows/c720p-s3-dark-motion-v9-20261016.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/install-s3-dark-motion-v9-20261016.py'
+      - '.github/workflows/c720p-s3-dark-motion-v9-20261016.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s3-motion-v9-install
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/install-s3-dark-motion-v9-20261016.py
+          python3 - <<'PY'
+          import importlib.util
+          p='ops/c720p/install-s3-dark-motion-v9-20261016.py'
+          s=importlib.util.spec_from_file_location('s3v9',p)
+          m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+          old='APP_START '+m.VERSION_OLD+'\nboolean candidate=!exposure && '+m.CANDIDATE_OLD+'\nboolean exposure=Math.abs(shift)>20 || fraction>.52f\nif(dark && hitCount>=3 && recent>=2)postMotion(session,sequence);'
+          changed=m.patch(old)
+          assert m.CANDIDATE_NEW in changed
+          assert m.VERSION_NEW in changed
+          assert 'hitCount>=3 && recent>=2' in changed
+          assert 'Math.abs(shift)>20 || fraction>.52f' in changed
+          assert 'ServerSocket' not in changed
+          assert 'fraction>(dark ? .015f : .025f)' in changed
+          print('S3_V9_DARK_THRESHOLD_TESTS_PASS')
+          PY
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          src='ops/c720p/install-s3-dark-motion-v9-20261016.py'
+          sha="$(sha256sum "$src" | cut -d' ' -f1)"
+          dest="/tmp/s3-dark-v9-${GITHUB_SHA:0:12}.py"
+          origin="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+          cmd="curl -fSsL --max-time 30 '${origin}' -o '${dest}' && printf '%s  %s\\n' '${sha}' '${dest}' | sha256sum -c - >/dev/null && python3 '${dest}' --apply"
+          idem="s3-low-light-v9-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v command="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s3-motion-v9','maintenance',:'command',620,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S3_V9_JOB=$id"
+          for i in $(seq 1 92); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 10000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]]
+              grep -q 'S3_DARK_MOTION_V9' <<< "$output"
+              exit 0
+            fi
+            sleep 7
+          done
+          exit 1
