@@ -94,6 +94,41 @@ def new_records(index, remote_names, helpers):
         added.append(row_from_manifest(name,m,size,thumbnail,helpers))
     return added
 
+def recent_existing_face_updates(index,latest_manifest_names,phone_video_names,helpers,limit=8):
+    """Incremental V26 sidecar refresh, no MP4 decode, images or identities read.
+
+    The S9+ edits verified JSON after a historical 4K face rescue. These clips
+    are already in the index, so the old new-clip-only fast timer ignored them
+    until a 4-hour full scan. Check only the most recently touched manifests.
+    """
+    records=index.get("phone_recordings",[])
+    prior={row.get("name"):row for row in records
+           if isinstance(row,dict) and VIDEO.fullmatch(str(row.get("name","")))}
+    updates=[]
+    checked=0
+    for suffix in latest_manifest_names:
+        if not suffix.endswith(".verified.json"):continue
+        name=suffix[:-len(".verified.json")]
+        if not VIDEO.fullmatch(name) or name not in prior or name not in phone_video_names:
+            continue
+        if checked>=limit:break
+        checked+=1
+        old=prior[name]
+        if old.get("sd_verified") is not True:continue
+        size=old.get("size")
+        if type(size) is not int or not 100000<size<800000000:continue
+        try:
+            raw=adb("exec-out","cat",FOLDER+"/"+suffix,limit=28000,timeout=16)
+            manifest=json.loads(raw)
+            if manifest.get("bytes")!=size:continue
+            fresh=row_from_manifest(name,manifest,size,old.get("thumbnail"),helpers)
+            merged=dict(old)
+            merged.update(fresh)
+            if merged!=old:updates.append(merged)
+        except (OSError,RuntimeError,subprocess.TimeoutExpired,ValueError,TypeError,json.JSONDecodeError):
+            continue
+    return updates
+
 def update_index(existing,added):
     if not added:return existing
     out=dict(existing)
@@ -117,13 +152,18 @@ def main():
         source=json.loads(INDEX.read_text())
         if source.get("storage_policy")!="local_microSD":raise RuntimeError("wrong_archive_mode")
         added=new_records(source,listing,helpers)
-        if not added:
-            print("S9_FAST_INDEX_NO_NEW_CLIPS",flush=True)
+        # Existing recordings gain deep face-review JSON long after the MP4
+        # is saved. Refresh up to eight recent sidecars per minute, retaining
+        # all other rows, custom evidence and original source media.
+        recent=adb("shell","ls","-1t",FOLDER,limit=500000,timeout=16).decode().splitlines()
+        changed=recent_existing_face_updates(source,recent,set(listing),helpers)
+        if not added and not changed:
+            print("S9_FAST_INDEX_NO_NEW_CLIPS_OR_FACE_UPDATES",flush=True)
             return
         # Re-read immediately before atomic write to avoid using a stale
         # index if the slow full scanner finished during these few ADB calls.
         latest=json.loads(INDEX.read_text())
-        next_index=update_index(latest,added)
+        next_index=update_index(latest,added+changed)
         if not next_index["phone_recordings"]:raise RuntimeError("unsafe_empty_index")
         target=INDEX.with_name(INDEX.name+".s9-fast-tmp")
         target.write_text(json.dumps(next_index,indent=2)+"\n")
@@ -131,6 +171,7 @@ def main():
         os.replace(target,INDEX)
         print("S9_FAST_INDEX_ADDED",len(added),[r["name"] for r in added],flush=True)
         print("S9_FAST_INDEX_TOTAL",len(next_index["phone_recordings"]),flush=True)
+        print("S9_FAST_FACE_METADATA_REFRESH",len(changed),flush=True)
 
 if __name__=="__main__":
     main()
