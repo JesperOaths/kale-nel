@@ -27,7 +27,9 @@ SOURCES = (
 )
 TARGETS = (
     ("security-face-folders-v22.html", "viewer"),
-    ("face-appearances.html", "playerDialog"),
+    # The live People & Faces V40 template uses #viewer. The legacy template
+    # held #playerDialog; detect the currently installed identifier at runtime.
+    ("face-appearances.html", "viewer"),
 )
 
 
@@ -95,6 +97,14 @@ def self_test():
         assert "s9-security-scroll-boundaries-v12" in patched
         assert patched == patch(patched, style, dialog_id)
         assert "overflow-y:auto!important" in patched
+        if dialog_id == "playerDialog":
+            # Simulate the newer V40 People & Faces page, which renamed the
+            # dialog and its heading but still uses native video controls.
+            live_style = style.replace("#playerDialog", "#viewer").replace(
+                "#viewer .modal-head", "#viewer header")
+            simulated = base.replace('id="playerDialog"', 'id="viewer"').replace(
+                '<div class="modal-head">', '<header>').replace('</strong><button', '</strong><button')
+            assert patch(simulated, live_style, "viewer").count(MARK) == 1
     print("FACE_PLAYER_SCROLL_V1_SELF_TEST_PASS", flush=True)
 
 
@@ -119,7 +129,6 @@ def main():
     original = {}
     metadata = {}
     for i, ((filename, dialog_id), (target_file, target_dialog)) in enumerate(zip(SOURCES, TARGETS)):
-        assert dialog_id == target_dialog
         url = GITHUB + args.ref + "/" + SRC + filename
         with urllib.request.urlopen(url, timeout=30) as response:
             data = response.read(130000)
@@ -133,7 +142,19 @@ def main():
         metadata[target] = target.stat()
         if not (5000 <= len(original[target]) <= 250000):
             raise RuntimeError("unexpected_live_view_size:" + target_file)
-        modified = patch(original[target].decode("utf-8"), style, dialog_id).encode("utf-8")
+        live = original[target].decode("utf-8")
+        # A newer deployed V40 face view is intentionally not replaced by the
+        # repository's earlier template. Adapt only the scoped CSS selector.
+        live_id = target_dialog
+        if target_file == "face-appearances.html" and 'id="playerDialog"' in live:
+            live_id = "playerDialog"
+        if live_id != dialog_id:
+            style = style.replace("#" + dialog_id, "#" + live_id)
+            # V40 uses a native <header> rather than the legacy modal-head div.
+            if 'class="modal-head"' not in live:
+                style = style.replace("#" + live_id + " .modal-head",
+                                      "#" + live_id + " header")
+        modified = patch(live, style, live_id).encode("utf-8")
         updated[target] = modified
 
     changed = [path for path in updated if updated[path] != original[path]]
