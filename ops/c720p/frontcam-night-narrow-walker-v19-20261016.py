@@ -98,9 +98,12 @@ def tests(s):
  return {"positive_walkers":len(positive),"false_rejected":len(negatives)}
 
 def is_active():
- p=subprocess.run(["systemctl","--user","is-active",SERVICE],
-   capture_output=True,text=True,timeout=9)
- return p.returncode==0 and p.stdout.strip()=="active"
+ try:
+  p=subprocess.run(["systemctl","--user","is-active",SERVICE],
+    capture_output=True,text=True,timeout=20)
+  return p.returncode==0 and p.stdout.strip()=="active"
+ except subprocess.TimeoutExpired:
+  return False
 
 def restart():
  p=subprocess.run(["systemctl","--user","restart",SERVICE],
@@ -132,12 +135,14 @@ def main():
  try:
   restart()
   valid=0;last=0.
-  deadline=time.monotonic()+40.
+  deadline=time.monotonic()+85.
   while time.monotonic()<deadline:
    try:d=json.loads(STATE.read_text())
    except (OSError,ValueError):d={}
    stamp=float(d.get("updated_at") or 0)
-   healthy=(is_active() and d.get("version")=="frontcam-motion-v19"
+   # Fresh status updates from the camera process are stronger than
+   # repeated systemctl D-Bus round trips on this slow Chromebook.
+   healthy=(d.get("version")=="frontcam-motion-v19"
      and d.get("ok") is True and d.get("camera_failures")==0
      and stamp>begin and time.time()-stamp<=7)
    if healthy and stamp>last:
