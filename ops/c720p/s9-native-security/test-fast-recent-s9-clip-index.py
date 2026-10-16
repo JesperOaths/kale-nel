@@ -79,6 +79,12 @@ class FastIndexTests(unittest.TestCase):
   self.assertEqual(module.recent_existing_face_updates(
     index,[name+".verified.json"],set(),FaceHelpers),[])
 
+ def test_guarded_fast_index_deployer_uses_real_helper_contract(self):
+  d=Path(__file__).with_name("deploy-fast-face-v26.py").read_text()
+  self.assertIn('b"recent_existing_face_updates"',d)
+  self.assertIn('b"safe_face_review_metadata"',d)
+  self.assertNotIn('b"face_deep_review_version" not in updated',d)
+
  def test_no_camera_decoding_or_modification(self):
   raw=M.read_text()
   self.assertIn('adb("shell","ls","-1",FOLDER',raw)
