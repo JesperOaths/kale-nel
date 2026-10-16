@@ -228,6 +228,9 @@ def safe_face_review_metadata(m):
          "face_evidence_outcome":"not_reviewed",
          "face_model_state":"not_tested_no_usable_face",
          "face_detector_raw_hits":None,"face_rejected_confidence_or_size":None,
+         "face_rejected_low_confidence":None,
+         "face_rejected_small_face":None,
+         "face_manual_review_rescue_candidates":None,
          "face_rejected_looking_away_or_roll":None,
          "face_rejected_crop_geometry":None,"face_rejected_dark_or_blurry":None,
          "face_deep_detector_anchor_frames":None,
@@ -246,7 +249,7 @@ def safe_face_review_metadata(m):
  n=m.get("face_review_sampled_frames")
  if type(n) is int and 0<=n<=48:result["face_review_sampled_frames"]=n
  prior=m.get("face_deep_review_version")
- if (prior in ("s9_onphone_36_samples_v1","s9_onphone_36_samples_person_roi_v2") and n==36) or (prior=="s9_onphone_36_samples_person_or_tile_v3" and type(n) is int and 1<=n<=48):
+ if (prior in ("s9_onphone_36_samples_v1","s9_onphone_36_samples_person_roi_v2") and n==36) or (prior in ("s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4") and type(n) is int and 1<=n<=48):
   result["face_deep_review_version"]=prior
  outcome=m.get("face_evidence_outcome")
  if outcome in ("snapshot_candidates_saved","review_processing_failed",
@@ -259,17 +262,19 @@ def safe_face_review_metadata(m):
  if model in ("not_tested_no_usable_face","available_on_phone","unavailable_on_phone"):
   result["face_model_state"]=model
  for key in ("face_detector_raw_hits","face_rejected_confidence_or_size",
+             "face_rejected_low_confidence","face_rejected_small_face",
+             "face_manual_review_rescue_candidates",
              "face_rejected_looking_away_or_roll","face_rejected_crop_geometry",
              "face_rejected_dark_or_blurry"):
   value=m.get(key)
   if type(value) is int and 0<=value<=144:result[key]=value
- if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_roi_v2","s9_onphone_36_samples_person_or_tile_v3"):
+ if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_roi_v2","s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4"):
   for key in ("face_deep_detector_anchor_frames","face_deep_person_roi_anchors",
               "face_deep_multiple_person_anchors",
               "face_deep_multiscale_refinement_passes"):
    value=m.get(key)
    if type(value) is int and 0<=value<=12:result[key]=value
-  if result["face_deep_review_version"]=="s9_onphone_36_samples_person_or_tile_v3":
+  if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4"):
    for key in ("face_deep_tiled_scene_samples","face_deep_second_person_roi_samples"):
     value=m.get(key)
     if type(value) is int and 0<=value<=12:result[key]=value
