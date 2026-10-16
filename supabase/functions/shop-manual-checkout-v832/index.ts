@@ -10,6 +10,7 @@ import {
 } from "./fulfillment-routing.mjs";
 import {
   applyPrintifyVatReserveEurCents,
+  dynamicShirtRetailEurCents,
   fxAuditSnapshot,
   marginEurCentsForSize,
   PRINTIFY_SOURCE_CURRENCY,
@@ -423,10 +424,13 @@ Deno.serve(async (req: Request) => {
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
+      if (!Number.isFinite(Number(freshVariant?.cost)) || Number(freshVariant.cost) <= 0) {
+        throw new Error("Live production cost is unavailable. Please retry checkout later.");
+      }
       const color = colorFromVariant(freshProduct, freshVariant) || "White";
       const variantSize = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
-      const unit = String(freshProduct?.blueprint_id || "") === "6"
-        ? stableClassicShirtRetailEurCents(
+      let unit = String(freshProduct?.blueprint_id || "") === "6"
+        ? dynamicShirtRetailEurCents(
             freshVariant?.cost,
             fx,
             variantSize,
@@ -445,6 +449,15 @@ Deno.serve(async (req: Request) => {
               marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
             );
       if (!unit) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
+      // Keep checkout consistent with the recently synchronized public catalog
+      // for the canonical shared-size shirt price, while immediately raising
+      // the price if Printify reports a cost increase since that refresh.
+      if (String(freshProduct?.blueprint_id || "") === "6") {
+        const advertisedCents = Math.round(Number(cachedVariant?.price || 0) * 100);
+        if (Number.isFinite(advertisedCents) && advertisedCents > 0) {
+          unit = Math.max(unit, advertisedCents);
+        }
+      }
       const size = isToteProduct(freshProduct) ? `${color} handles` : variantSize;
       subtotalCents += unit * qty;
       authoritative.push({
@@ -497,28 +510,19 @@ Deno.serve(async (req: Request) => {
           ),
         });
       }
-      if (String(freshProduct?.blueprint_id || "") === "6") {
-        // Keep checkout on the same canonical provider-pair basis as the public
-        // catalog. Route rows store both sides of the provider pair; using those
-        // snapshots prevents identical shirts from repricing based on which
-        // provider happened to be the source product.
-        const routeSnapshotCosts = itemProviderRoutes.flatMap((route: any) => [
-          Number(route?.source_cost_usd_cents || 0),
-          Number(route?.target_cost_usd_cents || 0),
-        ]).filter((value: number) => Number.isFinite(value) && value > 0);
-        const routeSafeRawUsdCost = routeSnapshotCosts.length
-          ? Math.max(...routeSnapshotCosts)
-          : Math.max(...candidates.map((candidate: any) => Number(candidate?.source_cost_cents || 0)));
-        const routeSafeUnit = stableClassicShirtRetailEurCents(
-          routeSafeRawUsdCost,
-          fx,
-          variantSize,
-          MARGIN_CENTS,
-          LARGE_SIZE_MARGIN_CENTS,
-        );
-        if (routeSafeUnit > unit) {
-          subtotalCents += (routeSafeUnit - unit) * qty;
-          authoritative[authoritative.length - 1].unit_price_cents = routeSafeUnit;
+      if (isShirtProduct(freshProduct)) {
+        // Do not route a discounted sale to a more expensive production
+        // provider if that would violate the agreed after-VAT margin.
+        // Providers lacking a trustworthy positive cost are excluded.
+        for (let i = candidates.length - 1; i >= 1; i--) {
+          const candidate = candidates[i];
+          const rawCost = Number(candidate?.source_cost_cents);
+          if (!Number.isFinite(rawCost) || rawCost <= 0) {
+            candidates.splice(i, 1);
+            continue;
+          }
+          const required = dynamicShirtRetailEurCents(rawCost, fx, variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS);
+          if (required > unit) candidates.splice(i, 1);
         }
       }
       candidateGroups.push(candidates);
