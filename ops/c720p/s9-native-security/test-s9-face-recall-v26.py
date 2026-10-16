@@ -41,6 +41,8 @@ assert "if(reliableForEmbedding)" in face
 assert 'face_review_identity_claim","similarity_suggestion_not_verified_identity"' in face
 assert 'face_embedding_on_s9_only",true' in face
 assert "s9-face-recall-v26" in build and "saved_current_camera_apk_not_identical_to_installed" in build
+assert '"AppearanceSearchIndex","Boot"' in build
+assert '"AppearanceSearchIndex" in JAVAS' in build
 assert "models_native_and_manifest_preserved" in build and "APK_SIGNER_CHANGED" in build
 assert 'S9_FACE_RECALL_V26_ROLLBACK_VERIFIED' in install
 assert 'originals.issubset(nowclips)' in install
