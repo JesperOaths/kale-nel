@@ -29,6 +29,9 @@ public final class CameraService extends Service {
  private ImageReader preview;
  private MediaRecorder recorder;
  private CameraControls cameraControls;
+ private long nightLightingCandidateAt=0,nightLastLightingCheck=0,nightChanges=0;
+ private static final float NIGHT_ENTER_LUMA=72f,NIGHT_EXIT_LUMA=165f;
+ private static final long NIGHT_ENTER_HOLD_MS=4000L,NIGHT_EXIT_HOLD_MS=22000L;
  private CaptureRequest.Builder activeCameraRequest;
  private final MotionGrid motion=new MotionGrid();
  private final CaptureContinuity eventChain=new CaptureContinuity();
@@ -281,6 +284,10 @@ public final class CameraService extends Service {
    }
    if(cameraId.isEmpty())throw new IOException("camera_has_no_3840_2160_30fps_profile");
    cameraControls=new CameraControls(manager.getCameraCharacteristics(cameraId));
+   // Auto night is the default. User-selected on/off is retained across boots.
+   String storedNight=getSharedPreferences("native",MODE_PRIVATE).getString("night_mode","auto");
+   try{cameraControls.select("night_mode",storedNight);}
+   catch(IllegalArgumentException unsupported){cameraControls.select("night_mode","auto");}
    String region=getSharedPreferences("native",MODE_PRIVATE).getString("garden_zone","near");
    motion.setGardenZone(MotionGrid.validGardenZone(region)?region:"near");
    preview=ImageReader.newInstance(640,480,ImageFormat.YUV_420_888,3);
@@ -324,6 +331,7 @@ public final class CameraService extends Service {
       }
      }
      boolean change=motion.analyze(frame);
+     maybeApplyAutoNight(lastFrameAt);
      if(temporaryTest&&!pilotStarted&&frames>12&&"watching".equals(mode)){
       pilotStarted=true;startRecording();
      }
@@ -1363,6 +1371,10 @@ public final class CameraService extends Service {
    d.put("sensor_ae_target_fps_min",sensorAeMinFps>0?sensorAeMinFps:null);
    d.put("sensor_ae_target_fps_max",sensorAeMaxFps>0?sensorAeMaxFps:null);
    d.put("sensor_lowlight_long_exposure",sensorExposureMs>=45f);
+   d.put("night_mode",cameraControls==null?"unavailable":cameraControls.nightMode());
+   d.put("night_active",cameraControls!=null&&cameraControls.nightActive());
+   d.put("night_luminance",Math.round(motion.lighting*10d)/10d);
+   d.put("night_auto_switches",nightChanges);
    d.put("motion_rate_suppressed",suppressedByRate);
    d.put("recording_rate_max_per_hour",MAX_4K_CLIPS_PER_HOUR);
    d.put("recording_rate_standard_per_hour",RecordingRate.BASE_PER_HOUR);
@@ -1512,6 +1524,45 @@ public final class CameraService extends Service {
    result.put("controls",options);
   return result;
  }
+ /** Switch true Camera2 AE bias on the camera handler; no player-side filtering.
+  * Hysteresis excludes transient headlights and resets motion voting after
+  * a real sensor exposure change. Never changes an active recording request.
+  */
+ private void maybeApplyAutoNight(long now){
+  if(cameraControls==null||activeCameraRequest==null||session==null||
+      !"watching".equals(mode)||!"auto".equals(cameraControls.nightMode())){
+   nightLightingCandidateAt=0;return;
+  }
+  if(now-nightLastLightingCheck<1000L)return;
+  nightLastLightingCheck=now;
+  double luminance=motion.lighting;
+  if(!Double.isFinite(luminance)||luminance<5)return;
+  boolean wasNight=cameraControls.nightActive();
+  boolean needsChange=wasNight
+      ? luminance>NIGHT_EXIT_LUMA&&sensorIso>0&&sensorIso<500
+      : luminance<NIGHT_ENTER_LUMA;
+  if(!needsChange){nightLightingCandidateAt=0;return;}
+  if(nightLightingCandidateAt==0){nightLightingCandidateAt=now;return;}
+  long hold=wasNight?NIGHT_EXIT_HOLD_MS:NIGHT_ENTER_HOLD_MS;
+  if(now-nightLightingCandidateAt<hold)return;
+  try{
+   cameraControls.setAutoNightActive(!wasNight);
+   cameraControls.apply(activeCameraRequest);
+   session.setRepeatingRequest(activeCameraRequest.build(),sensorTelemetry,cameraHandler);
+   nightChanges++;
+   Log.i(TAG,"AUTO_NIGHT_EXPOSURE "+(cameraControls.nightActive()?"ON":"OFF")+
+     " luminance="+Math.round(luminance)+" iso="+sensorIso);
+   motion.resetForCameraControl();
+   cameraControlSettleUntil=now+3000L;
+  }catch(Exception error){
+   cameraControls.setAutoNightActive(wasNight);
+   Log.w(TAG,"auto_night_ae_update_rejected",error);
+   try{
+    cameraControls.apply(activeCameraRequest);
+    session.setRepeatingRequest(activeCameraRequest.build(),sensorTelemetry,cameraHandler);
+   }catch(Exception restoreError){Log.w(TAG,"night_exposure_restore_failed",restoreError);}
+  }finally{nightLightingCandidateAt=0;}
+ }
  private JSONObject updateControl(String key,String value)throws Exception {
   FutureTask<JSONObject> job=new FutureTask<>(()->{
    JSONObject response=new JSONObject();
@@ -1612,6 +1663,12 @@ public final class CameraService extends Service {
     cameraControls.select(key,value);
     cameraControls.apply(activeCameraRequest);
     session.setRepeatingRequest(activeCameraRequest.build(),sensorTelemetry,cameraHandler);
+    if("night_mode".equals(key)){
+     if(!getSharedPreferences("native",MODE_PRIVATE).edit()
+        .putString("night_mode",cameraControls.nightMode()).commit())
+      throw new IllegalStateException("night_mode_persistence_failed");
+     nightLightingCandidateAt=0;
+    }
     // Refresh the motion model after a deliberate camera setting change.
     // Without this reset a changed crop/torch/exposure can look like an intruder.
     motion.resetForCameraControl();
