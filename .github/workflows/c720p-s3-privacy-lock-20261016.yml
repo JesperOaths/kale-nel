@@ -27,7 +27,7 @@ jobs:
           s=Path('ops/c720p/harden-s3-bedroom-privacy-20261016.py').read_text()
           assert s.index('if not camera():raise RuntimeError("motion_camera_lost_after_disabling_old_apps")') < s.index('command=run(["adb","-s",ADB,"usb"]')
           assert s.index('report["adb_port_closed_verified"]=closed') < s.index('state_write(True,')
-          assert s.index('if not closed:') < s.index('state_write(True,')
+          assert s.index('if not closed or not report["S3_wifi_reachable_after"]:') < s.index('state_write(True,')
           assert 'pm","disable-user"' in s and 'com.pas.webcam.pro' in s
           assert 'nl.kalenel.s3motion' in s
           assert 'adb shell getprop' not in s
