@@ -764,18 +764,31 @@ function applyInitialCatalog(result){
   }
 }
 const synchronousStaticCatalog = staticCatalogSnapshot();
-if(synchronousStaticCatalog.length){
-  saveLastGoodCatalog(synchronousStaticCatalog);
-  applyInitialCatalog({ products:synchronousStaticCatalog, source:'static-snapshot-sync' });
+const synchronousCachedCatalog = readLastGoodCatalog();
+const snapshotGeneratedAt = Date.parse(String(window.BRUIS_CATALOG_LAST_GOOD?.generatedAt || '')) || 0;
+let cachedAt = 0;
+try { cachedAt = Number(JSON.parse(localStorage.getItem(catalogCacheKey) || 'null')?.savedAt || 0); } catch {}
+const preferCachedCatalog = synchronousCachedCatalog.length && cachedAt > snapshotGeneratedAt;
+const initialCatalog = preferCachedCatalog ? sortByShirtBase(synchronousCachedCatalog) : synchronousStaticCatalog;
+const initialSource = preferCachedCatalog ? 'cache-sync' : 'static-snapshot-sync';
+
+if(initialCatalog.length){
+  // Preserve instant first paint without letting the snapshot block a live read.
+  applyInitialCatalog({ products:initialCatalog, source:initialSource });
+  void loadCatalog().then(result => {
+    if(result?.source === 'live' && result.products?.length){
+      replaceCatalogFromLive(result.products);
+      renderCart();
+    }
+  }).catch(() => {});
 }else{
   loadCatalog().then(applyInitialCatalog).catch(()=>{
     applyInitialCatalog({products:readLastGoodCatalog({allowExpired:true}),source:'stale-cache'});
   });
 }
 
-// The generated static snapshot is intentionally a complete first-paint source.
-// It is rendered synchronously before any Supabase request; background reconciliation
-// may update it later but cannot block or blank the initial storefront.
+// A verified live read starts immediately even when the initial snapshot paints
+// synchronously. The snapshot is only a temporary fallback, never authoritative.
 
 document.addEventListener('click', event => {
   const open = event.target.closest('[data-open-size-guide]');
