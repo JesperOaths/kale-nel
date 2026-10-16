@@ -514,10 +514,12 @@ Deno.serve(async (req: Request) => {
         for (let i = candidates.length - 1; i >= 1; i--) {
           const candidate = candidates[i];
           const rawCost = Number(candidate?.source_cost_cents);
-          const required = dynamicShirtRetailEurCents(rawCost, fx, variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS);
-          if (!Number.isFinite(rawCost) || rawCost <= 0 || required > unit) {
+          if (!Number.isFinite(rawCost) || rawCost <= 0) {
             candidates.splice(i, 1);
+            continue;
           }
+          const required = dynamicShirtRetailEurCents(rawCost, fx, variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS);
+          if (required > unit) candidates.splice(i, 1);
         }
       }
       candidateGroups.push(candidates);
