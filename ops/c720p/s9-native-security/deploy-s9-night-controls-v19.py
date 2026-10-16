@@ -154,6 +154,19 @@ def main():
   if not after.get("ok") or not after.get("native_4k_enabled"):
    raise RuntimeError("camera_health_changed")
   clips=verify_archive(n)
+  # Read sensor evidence only. No changes to exposure are sent by this relay.
+  exposure=after.get("sensor_exposure_ms")
+  luminance=after.get("night_luminance")
+  night_selected=options["night_mode"]["value"]
+  native_controls=controls(18808,"/controls")
+  effective=native_controls.get("night_effective_ev")
+  if not isinstance(after.get("night_active"),bool):
+   raise RuntimeError("night_exposure_active_state_missing")
+  if after.get("night_mode")!=night_selected:
+   raise RuntimeError("relay_night_mode_mismatch")
+  if (after.get("night_active") and isinstance(effective,(int,float))
+      and effective<=0 and native_controls.get("night_ev_supported") is True):
+   raise RuntimeError("night_exposure_sensor_bias_unapplied")
   for unit in (PROXY_UNIT,LAN_UNIT):
    if service("is-active",unit)!="active":
     raise RuntimeError("relay_not_active")
@@ -161,6 +174,11 @@ def main():
    "night_control_value":options["night_mode"]["value"],
    "allowed":options["night_mode"]["available"],
    "native_mode":after.get("mode"),"night_active":after.get("night_active"),
+   "night_luminance":luminance,"night_effective_ev":effective,
+   "night_ev_supported":native_controls.get("night_ev_supported"),
+   "sensor_exposure_ms":exposure,"sensor_iso":after.get("sensor_iso"),
+   "sensor_result_fps":after.get("sensor_result_fps"),
+   "night_auto_switches":after.get("night_auto_switches"),
    "sd_archive_clips":clips,"no_camera_commands_sent":True,
    "backups":{p.name:str(saved[p]) for p in saved},
    "changed":[p.name for p in changed]},sort_keys=True),flush=True)
