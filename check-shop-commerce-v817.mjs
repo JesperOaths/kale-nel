@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { applyPrintifyVatReserveEurCents, dynamicShirtRetailEurCents, CLASSIC_SHIRT_RETAIL_CENTS, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
+import { applyPrintifyVatReserveEurCents, dynamicShirtRetailEurCents, MINIMUM_CLASSIC_SHIRT_RETAIL_EUR_CENTS, CLASSIC_SHIRT_RETAIL_CENTS, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(path, 'utf8');
@@ -207,10 +207,19 @@ assert.match(catalogEdge, /function canonicalLiveShirtCostByVariant/, 'catalog m
 assert.match(catalogEdge, /dynamicShirtRetailEurCents/, 'catalog must price account-discounted live cost');
 assert.match(checkoutEdge, /dynamicShirtRetailEurCents/, 'checkout must recheck fresh account production cost');
 assert.deepEqual(CLASSIC_SHIRT_RETAIL_CENTS, { S:2400, M:2400, L:2400, XL:2400, '2XL':2600, '3XL':3000, '4XL':3000, '5XL':3000 });
+assert.equal(MINIMUM_CLASSIC_SHIRT_RETAIL_EUR_CENTS, 2300, 'canonical shirt minimum must match Bruis €23 request');
+assert.equal(dynamicShirtRetailEurCents(1194, 0.888651915, 'S'), 2300, 'standard S shirt must be €23');
+assert.equal(dynamicShirtRetailEurCents(1194, 0.888651915, 'M'), 2300, 'standard M shirt must be €23');
+assert.equal(dynamicShirtRetailEurCents(1194, 0.888651915, 'XL'), 2300, 'standard XL shirt must be €23');
+assert.equal(dynamicShirtRetailEurCents(1439, 0.888651915, '2XL'), 2300, '2XL must be €23 at current expensive design cost');
+assert.equal(dynamicShirtRetailEurCents(1525, 0.888651915, '3XL'), 2500, '3XL must retain seven-euro margin');
+assert.equal(dynamicShirtRetailEurCents(1561, 0.888651915, '4XL'), 2600, '4XL must retain seven-euro margin');
+assert.equal(dynamicShirtRetailEurCents(1563, 0.888651915, '5XL'), 2600, '5XL must retain seven-euro margin');
+
 assert.equal(dynamicShirtRetailEurCents(1500, 0.88, 'M', 500, 700), 2300, 'live standard cost must set the whole-euro price');
-assert.equal(dynamicShirtRetailEurCents(1200, 0.88, 'M', 500, 700), 1900, 'a verified lower Premium cost must lower price');
+assert.equal(dynamicShirtRetailEurCents(1200, 0.88, 'M', 500, 700), 2300, 'Premium savings must not lower the requested €23 floor');
 assert.equal(dynamicShirtRetailEurCents(2300, 0.88, 'M', 500, 700), 3100, 'an upstream production increase must raise price');
-assert.equal(dynamicShirtRetailEurCents(1200, 0.88, '4XL', 500, 700), 2200, '3XL+ keeps seven-euro target');
+assert.equal(dynamicShirtRetailEurCents(1200, 0.88, '4XL', 500, 700), 2300, 'low-cost 4XL must meet both the €23 floor and seven-euro margin');
 assert.throws(() => dynamicShirtRetailEurCents(0, 0.88, 'M'), /Missing live shirt production cost/);
 assert.match(checkoutEdge, /advertisedCents/, 'checkout must not undercut recent canonical catalog price');
 assert.match(catalogEdge, /Number\(variant\?\.cost\) > 0/, 'missing-cost items must never publish an invented €5 retail price');
