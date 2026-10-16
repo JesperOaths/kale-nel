@@ -274,6 +274,21 @@ final class S9FaceReview implements AutoCloseable {
   writeIndex();
   return result.put("person_id",id).put("match_status","new_anonymous_candidate");
  }
+ /** A half-width original-4K tile preserves twice the apparent face pixels
+  * of a 960px full-frame scan when the person detector missed the subject.
+  * No face identity is asserted; original video remains on microSD.
+  */
+ void sampleSceneTile(Bitmap frame,long ms,boolean right){
+  if(frame==null||frame.getWidth()<400||frame.getHeight()<200)return;
+  int mid=frame.getWidth()/2;
+  int x=right?mid:0;
+  int w=right?frame.getWidth()-mid:mid;
+  Bitmap tile=null;
+  try{
+   tile=Bitmap.createBitmap(frame,x,0,w,frame.getHeight());
+   sample(tile,ms,null);
+  }finally{if(tile!=null)tile.recycle();}
+ }
  void sample(Bitmap frame,long ms){sample(frame,ms,null);}
  /** Isolated person detector ROI is cropped from original decoded 4K,
   * before downscaling for Android FaceDetector. Frontal faces in distant
@@ -291,7 +306,7 @@ final class S9FaceReview implements AutoCloseable {
     for(float v:detectedPerson)if(!Float.isFinite(v)||v<0||v>1)finite=false;
     if(finite){
      float t=detectedPerson[0],l=detectedPerson[1],b=detectedPerson[2],rr=detectedPerson[3];
-     if(b-t>.10f&&rr-l>.035f){
+     if(b-t>.07f&&rr-l>.018f){
       int width0=frame.getWidth(),height0=frame.getHeight();
       float padX=(rr-l)*.22f,padY=(b-t)*.10f;
       int x0=Math.max(0,(int)((l-padX)*width0));
