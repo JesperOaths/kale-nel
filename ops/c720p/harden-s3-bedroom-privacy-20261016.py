@@ -38,9 +38,12 @@ def port_open():
  except OSError:return False
 
 def camera():
- rc,out,_=adb("shell","dumpsys","media.camera",timeout=18)
- if rc:return False
- return "Client Package Name: "+MOTION in out.split("Prior client events",1)[0]
+ try:
+  p=subprocess.run(["adb","-s",ADB,"shell","dumpsys","media.camera"],
+    capture_output=True,text=True,timeout=18)
+  if p.returncode:return False
+  return "Client Package Name: "+MOTION in p.stdout.split("Prior client events",1)[0]
+ except Exception:return False
 
 def frames():
  rc,_,_=adb("get-state",timeout=9)
