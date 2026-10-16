@@ -184,6 +184,32 @@ export function retailEurCentsFromUsdCostAfterVat(
   return Math.max(minimum, Math.ceil((vatInclusiveCost + margin) / 100) * 100);
 }
 
+
+/**
+ * Live account-cost pricing for every shirt size.
+ *
+ * Printify returns the account's currently applicable per-variant cost. In
+ * particular, never subtract a guessed Premium percentage: discounts vary by
+ * SKU and subscription status. Preserve the configured 27% supplier/VAT
+ * reserve and also ensure at least the requested EUR contribution survives
+ * 21% VAT on the customer-facing shirt price.
+ */
+export function dynamicShirtRetailEurCents(
+  rawUsdCents,
+  snapshotOrRate,
+  rawSize,
+  standardMarginEurCents = 500,
+  largeSizeMarginEurCents = 700,
+  vatBps = PRINTIFY_VAT_RESERVE_BPS,
+) {
+  const margin = marginEurCentsForSize(rawSize, standardMarginEurCents, largeSizeMarginEurCents);
+  const cost = usdCentsToEurCents(rawUsdCents, snapshotOrRate);
+  if (!Number.isFinite(cost) || cost <= 0) throw new Error("Missing live shirt production cost");
+  const supplierVatAllowance = applyPrintifyVatReserveEurCents(cost, vatBps) + margin;
+  const retailVatAllowance = Math.ceil((cost + margin) * 121 / 100);
+  return Math.ceil(Math.max(supplierVatAllowance, retailVatAllowance) / 100) * 100;
+}
+
 export const CLASSIC_SHIRT_RETAIL_CENTS = Object.freeze({
   S: 2400,
   M: 2400,
