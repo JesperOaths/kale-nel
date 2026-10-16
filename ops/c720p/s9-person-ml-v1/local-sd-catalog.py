@@ -305,6 +305,7 @@ def safe_face_review_metadata(m):
    snap=None;size=None;digest=None
   out.append({"person_id":key,"candidate_name":label,"match_status":status,
     "time_ms":ms,"cosine_similarity":round(score,3) if score is not None else None,
+    "face_crop_requires_manual_review":row.get("face_crop_requires_manual_review") is True,
     "snapshot_on_s9":snap is not None,
     "snapshot_name":snap,"snapshot_size":size,"snapshot_sha256":digest})
  result["face_candidates"]=out
