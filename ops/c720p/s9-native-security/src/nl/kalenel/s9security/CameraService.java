@@ -1536,7 +1536,9 @@ public final class CameraService extends Service {
   if(now-nightLastLightingCheck<1000L)return;
   nightLastLightingCheck=now;
   double luminance=motion.lighting;
-  if(!Double.isFinite(luminance)||luminance<5)return;
+  // A nearly black (0..4 YUV) garden is precisely when the sensor needs
+  // a stronger night AE bias. Reject missing/uninitialized observations only.
+  if(frames<12||!Double.isFinite(luminance)||luminance<0)return;
   boolean wasNight=cameraControls.nightActive();
   boolean needsChange=wasNight
       ? luminance>NIGHT_EXIT_LUMA&&sensorIso>0&&sensorIso<500
