@@ -2,7 +2,9 @@
 import importlib.util,json,hashlib,sys
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
-def prepare(stage):
+def prepare(stage,*,current=False):
+ if not current and 'NightPersonGate' in (HERE/'src/nl/kalenel/s9security/GardenCandidateBank.java').read_text(encoding='utf-8'):
+  raise ValueError('current_sources_require_prepare_night_phone_v41')
  spec=importlib.util.spec_from_file_location('v38',HERE/'prepare-detection-phone-v38.py');base=importlib.util.module_from_spec(spec);spec.loader.exec_module(base);base.prepare(stage,current=True)
  src=stage/'src/nl/kalenel/s9security';p=src/'ClipClassifier.java';t=p.read_text()
  t=base.once(t,'     if(!wholeFramePerson){','     { // Inspect all garden regions even when one person is already detected.')

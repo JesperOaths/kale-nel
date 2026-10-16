@@ -110,6 +110,17 @@ class Tests(unittest.TestCase):
         module=load(MODULE,'phone_watch_multicandidate')
         self.assertTrue(module.from_phone({**self.sample(),'motion_detector':'person_multicandidate_transport_v38'})['ok'])
 
+    def test_night_detector_preserves_observed_policy(self):
+        module=load(MODULE,'phone_watch_night_v41')
+        report=module.from_phone({**self.sample(),'motion_detector':'night_temporal_transport_v41',
+            'garden_person_night_active':True,'garden_person_gate_required_positive_frames':3,
+            'garden_person_night_rejected':17,'garden_person_local_motion_max_age_ms':1200})
+        self.assertTrue(report['night_detection_active'])
+        self.assertEqual(report['person_required_observations'],3)
+        self.assertEqual(report['person_without_motion_requires_frames'],3)
+        self.assertEqual(report['night_rejected_observations'],17)
+        self.assertEqual(report['person_motion_evidence_max_age_ms'],1200)
+
     def test_extended_status_has_bounded_size(self):
         module=load(MODULE,'phone_watch_extended')
         class Response:

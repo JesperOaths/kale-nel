@@ -22,6 +22,7 @@ KNOWN_DETECTORS=frozenset((
     "person_multiscale_threeframe_static_v8",
     "person_spatiotemporal_transport_v9",
     "person_multicandidate_transport_v38",
+    "night_temporal_transport_v41",
 ))
 
 def _sensor_value(value,lowest,highest):
@@ -80,6 +81,10 @@ def from_phone(phone,now_ms=None):
       "motion_coherent_cells":phone.get("coherent_cells"),
       "garden_zone":phone.get("garden_zone","unknown"),
       "detector_version":phone.get("motion_detector"),
+      "night_detection_active":phone.get("garden_person_night_active") is True,
+      "person_required_observations":_sensor_value(phone.get("garden_person_gate_required_positive_frames"),2,5),
+      "night_rejected_observations":_sensor_value(phone.get("garden_person_night_rejected"),0,1000000000),
+      "person_motion_evidence_max_age_ms":_sensor_value(phone.get("garden_person_local_motion_max_age_ms"),0,5000),
       "detector_multiscale_version":phone.get("garden_person_multiscale_version"),
       "detector_inference_passes":_sensor_value(
           phone.get("garden_person_last_multiscale_passes"),0,4),
@@ -92,7 +97,8 @@ def from_phone(phone,now_ms=None):
       "person_gpu_inference_ms":_sensor_value(
           phone.get("garden_person_inference_last_ms"),0,60000),
       "person_without_motion_requires_frames":_sensor_value(
-          phone.get("garden_person_no_motion_requires_distinct_frames"),2,5),
+          phone.get("garden_person_gate_required_positive_frames",
+                    phone.get("garden_person_no_motion_requires_distinct_frames")),2,5),
       "auto_quarantine_model_negative_enabled":
           phone.get("garden_archive_auto_quarantine_enabled") is True,
       "roi_mask_version":phone.get("garden_roi_mask_version"),

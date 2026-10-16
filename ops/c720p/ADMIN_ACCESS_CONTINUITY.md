@@ -1,5 +1,31 @@
 # Authorized administrative access: continuity runbook
 
+## Current S9+ night detector — 16 October 2026, V41
+
+Installed APK SHA-256:
+`cb46726931e46cd40088188d05828f0ac1e8f15cc68f3ab6077c12e5b14ce1bf`.
+Live policy is `night_temporal_transport_v41`: measured-luma hysteresis,
+three independent observations with coherent translation, fresh local motion
+and tighter same-object vehicle conflicts at night. Daytime behavior and the
+V39 native 4K review schedule are preserved. All inference runs on the S9+.
+
+Use `stage-night-phone-v41.py` / `prepare-night-phone-v41.py`; old preparation
+entry points refuse current sources. See `s9-native-security/NIGHT_DETECTION_V41.md`
+for tests, exact source reproduction, rollback and limitations. Receipts are
+`build/s9-night-detection-v41/{release,deployment}.json` and
+`state/s9-visual-attributes-v36/night-v41-verification.json`.
+
+The preceding V39 APK is retained at
+`backups/s9-night-detection-v41/before-20261016T203425Z.apk` and in the operator
+workspace. Current and preceding APKs have verified operator copies. Five
+obsolete build outputs were relocated to verified operator storage and RAM;
+their mapping is `build/retained-operator-builds-v41.json`. Baseline V11,
+rollback APKs, original media and manual state remain intact.
+
+People folders/UI remain V40a below. The status adapter accepts V41 and reports
+its active night policy; its new hash intentionally supersedes the adapter
+entry in the historical V40 manifest. Preserve the review registration hook.
+
 ## Current People & faces workflow — 16 October 2026, V40a
 
 The People page now uses `people-folders-v40.html/js`, served through the
@@ -30,10 +56,11 @@ preserving auth mode. Registration is idempotent and refuses downgrade. Both
 8794 and 8795 answer the folder API. Preserve that hook during maintenance.
 The unrelated independently restored Tracks page was preserved as found.
 
-Phone APK/recording remain V39 (details below): direct SSH/ADB routes, native
+At V40 acceptance the phone APK was V39 (historical details below); V41 above
+is now installed. Direct SSH/ADB routes, native
 4K capture, original recordings and Archive verifications are unchanged.
 
-## Current S9+ security checkpoint — 16 October 2026
+## Previous S9+ security checkpoint — 16 October 2026, V39
 
 Direct `ssh c720p` and direct ADB `192.168.178.250:5555` remain the working
 routes. The maintenance agent and Home Assistant remain independent of the
