@@ -4,10 +4,10 @@ import postgres from "npm:postgres@3.4.7";
 import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
-const CACHE_FRESH_MS = 60 * 60_000;
-const REFRESH_LEASE_MS = 10 * 60_000;
-const REFRESH_FAILURE_COOLDOWN_MS = 30 * 60_000;
-const MEMORY_ROW_TTL_MS = 30 * 60_000;
+const CACHE_FRESH_MS = 5 * 60_000;
+const REFRESH_LEASE_MS = 3 * 60_000;
+const REFRESH_FAILURE_COOLDOWN_MS = 5 * 60_000;
+const MEMORY_ROW_TTL_MS = 60_000;
 let memoryCatalogRow: any = null;
 let memoryCatalogLoadedAt = 0;
 const MAX_PAGES = 100;
@@ -118,7 +118,7 @@ function cors(req: Request) {
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Max-Age": "86400",
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=1800",
+    "Cache-Control": "public, max-age=60, s-maxage=60, stale-while-revalidate=120",
   };
 }
 

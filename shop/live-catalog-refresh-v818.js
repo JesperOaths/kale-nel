@@ -8,8 +8,8 @@
 
   // Render the generated catalog immediately, then reconcile its product list
   // against the authoritative Printify cache after first paint and while browsing.
-  // One request per browser every 20 minutes maximum; hidden tabs do not poll.
-  const SHARED_MIN_REFRESH_MS = 20 * 60 * 1000;
+  // Recheck at most every five minutes per browser; hidden tabs do not poll.
+  const SHARED_MIN_REFRESH_MS = 5 * 60 * 1000;
   const SHARED_CHECK_KEY = 'bruisCatalogLiveCheckAtV4';
   const SHARED_OWNER_KEY = 'bruisCatalogLiveCheckOwnerV4';
   const TAB_ID = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
@@ -135,6 +135,7 @@
     if(!claimSharedRefresh(now, force)) return;
     checking = true;
     lastCheckedAt = now;
+    let succeeded = false;
     try {
       if(!lastSignature && Array.isArray(products) && products.length){
         lastSignature = stableSignature(products);
@@ -142,6 +143,7 @@
 
       const live = await loadLiveCatalog();
       if(!Array.isArray(live) || !live.length) return;
+      succeeded = true;
       const signature = stableSignature(live);
 
       if(!lastSignature){
@@ -157,6 +159,16 @@
     } catch {
       // Keep the already-rendered catalog. A later visibility check retries.
     } finally {
+      if(!succeeded){
+        // Network errors should not block every tab for another five minutes.
+        lastCheckedAt = 0;
+        try {
+          if(localStorage.getItem(SHARED_OWNER_KEY) === TAB_ID){
+            localStorage.removeItem(SHARED_CHECK_KEY);
+            localStorage.removeItem(SHARED_OWNER_KEY);
+          }
+        } catch {}
+      }
       checking = false;
     }
   }
@@ -176,7 +188,7 @@
 
   window.BRUIS_LIVE_CATALOG_REFRESH_V818 = Object.freeze({
     refreshNow: () => checkCatalog(),
-    mode: 'static-first-automatic-20m-r9'
+    mode: 'live-first-automatic-5m-r10'
   });
   window.addEventListener('storage', event => {
     if(event.key !== catalogCacheKey || !event.newValue) return;

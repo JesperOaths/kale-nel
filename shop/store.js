@@ -182,7 +182,7 @@ async function loadLiveCatalog(timeoutMs = 5000){
   const timeout = window.setTimeout(() => controller.abort(), Math.max(1500, Number(timeoutMs || 5000)));
   try {
     const response = await fetch(LIVE_CATALOG_URL, {
-      cache: 'default',
+      cache: 'no-store',
       signal: controller.signal,
       mode: 'cors',
       credentials: 'omit'
@@ -242,19 +242,22 @@ function staticCatalogSnapshot(){
     .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0));
 }
 async function loadCatalog(){
-  // The deployment-generated snapshot is the deterministic first-paint source.
-  // It must win over an older browser cache and it never depends on Supabase.
-  const staticProducts = staticCatalogSnapshot();
-  if(staticProducts.length){
-    saveLastGoodCatalog(staticProducts);
-    return { products: staticProducts, source: 'static-snapshot' };
-  }
-  const cachedProducts = readLastGoodCatalog();
-  if(cachedProducts.length){
-    return { products: sortByShirtBase(cachedProducts), source: 'cache' };
-  }
+  // The server-side catalog is authoritative: a generated snapshot must
+  // never hide newly published products merely because it loaded first.
   const liveProducts = await refreshLiveCatalog(1);
   if(liveProducts.length) return { products: liveProducts, source: 'live' };
+
+  // On outages, keep the newest already-seen catalog rather than resetting it
+  // to an older deployment snapshot. Checkout independently validates stock.
+  const cachedProducts = readLastGoodCatalog();
+  const staticProducts = staticCatalogSnapshot();
+  const snapshotAt = Date.parse(String(window.BRUIS_CATALOG_LAST_GOOD?.generatedAt || '')) || 0;
+  let cacheSavedAt = 0;
+  try { cacheSavedAt = Number(JSON.parse(localStorage.getItem(catalogCacheKey) || 'null')?.savedAt || 0); } catch {}
+  if(cachedProducts.length && (!staticProducts.length || cacheSavedAt > snapshotAt)){
+    return { products: sortByShirtBase(cachedProducts), source: 'cache' };
+  }
+  if(staticProducts.length) return { products: staticProducts, source: 'static-snapshot' };
   const staleProducts = readLastGoodCatalog({ allowExpired: true });
   return { products: sortByShirtBase(staleProducts), source: staleProducts.length ? 'stale-cache' : 'unavailable' };
 }
@@ -761,18 +764,31 @@ function applyInitialCatalog(result){
   }
 }
 const synchronousStaticCatalog = staticCatalogSnapshot();
-if(synchronousStaticCatalog.length){
-  saveLastGoodCatalog(synchronousStaticCatalog);
-  applyInitialCatalog({ products:synchronousStaticCatalog, source:'static-snapshot-sync' });
+const synchronousCachedCatalog = readLastGoodCatalog();
+const snapshotGeneratedAt = Date.parse(String(window.BRUIS_CATALOG_LAST_GOOD?.generatedAt || '')) || 0;
+let cachedAt = 0;
+try { cachedAt = Number(JSON.parse(localStorage.getItem(catalogCacheKey) || 'null')?.savedAt || 0); } catch {}
+const preferCachedCatalog = synchronousCachedCatalog.length && cachedAt > snapshotGeneratedAt;
+const initialCatalog = preferCachedCatalog ? sortByShirtBase(synchronousCachedCatalog) : synchronousStaticCatalog;
+const initialSource = preferCachedCatalog ? 'cache-sync' : 'static-snapshot-sync';
+
+if(initialCatalog.length){
+  // Preserve instant first paint without letting the snapshot block a live read.
+  applyInitialCatalog({ products:initialCatalog, source:initialSource });
+  void loadCatalog().then(result => {
+    if(result?.source === 'live' && result.products?.length){
+      replaceCatalogFromLive(result.products);
+      renderCart();
+    }
+  }).catch(() => {});
 }else{
   loadCatalog().then(applyInitialCatalog).catch(()=>{
     applyInitialCatalog({products:readLastGoodCatalog({allowExpired:true}),source:'stale-cache'});
   });
 }
 
-// The generated static snapshot is intentionally a complete first-paint source.
-// It is rendered synchronously before any Supabase request; background reconciliation
-// may update it later but cannot block or blank the initial storefront.
+// A verified live read starts immediately even when the initial snapshot paints
+// synchronously. The snapshot is only a temporary fallback, never authoritative.
 
 document.addEventListener('click', event => {
   const open = event.target.closest('[data-open-size-guide]');
