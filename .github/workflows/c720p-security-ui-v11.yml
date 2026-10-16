@@ -27,9 +27,14 @@ jobs:
           from pathlib import Path
           a=Path('ops/c720p/s9-native-security/security-tracks-v7.html').read_text()
           b=Path('ops/c720p/s9-native-security/deploy-security-ui-v11.py').read_text()
-          for x in ('#more[hidden]','Math.max(0,entries.length-visible)',
-                    'resetFilteredScroll();',"'person':'people'"):
-           assert x in a,x
+          if 's9v25-tracks-script' in a:
+           for x in ('Tracks & movements','metricClips','metricReview',
+                     'person_tracks','Needs review','data-version-watermark'):
+            assert x in a,x
+          else:
+           for x in ('#more[hidden]','Math.max(0,entries.length-visible)',
+                     'resetFilteredScroll();',"'person':'people'"):
+            assert x in a,x
           assert "name==='camera'?'controls':name" in b
           assert "d.camera_temperature_c" in b
           assert "s9v5-rail-sd" in b
