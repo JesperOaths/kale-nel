@@ -305,6 +305,8 @@ def offload_historical_apk(root,source):
 # Old reproducible Android experiment output. The live native-security
 # source, active detector, and current visual-attributes release are excluded.
 HISTORIC_BUILDS = (
+    # Retired V11 build artifact only; V26 installed camera and rollback excluded.
+    "s9-unified-4k-person-v11",
     "s9-5s10s-v9", "s9-5s10s-v10", "s9-garden-hybrid-v8",
     "s9-face-model-evaluation", "s9-person-ml-v1",
     "s9-frame-metrics-stage", "s9-detector-benchmark",
