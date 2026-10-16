@@ -81,9 +81,14 @@ def main():
          "irreversible_without_physical_recovery":True,
          "legitimate_camera_package_preserved":True,"camera_frames_copied":False,
          "disabled_packages":[]}
- if not port_open():
-  report["status"]="adb_port_already_closed"
-  print("S3_PRIVACY_PORT_LOCK "+json.dumps(report),flush=True);return
+ # A single TCP test may fail during Wi-Fi power-save while an authenticated
+ # ADB session is still alive. That is NOT evidence of an intentionally closed
+ # debugger. Prefer an actual ADB state check before proceeding.
+ adb_rc,adb_state,_=adb("get-state",timeout=12)
+ report["adb_connected_before"]=adb_rc==0 and adb_state.strip()=="device"
+ report["port_listening_before"]=port_open()
+ if not report["adb_connected_before"]:
+  raise RuntimeError("S3_not_available_for_authenticated_privacy_cutover")
  if not camera():raise RuntimeError("S3_camera_not_active_preflight")
  before=frames()
  if before is None:raise RuntimeError("S3_heartbeat_unavailable")
@@ -118,9 +123,15 @@ def main():
   if not port_open():
    closed=True
    break
+ # A delayed reconnect can reopen TCP/5555. Test after a settling
+ # interval, and separately confirm the phone still responds on Wi-Fi.
+ time.sleep(9)
+ closed=closed and not port_open()
  report["adb_port_closed_verified"]=closed
- if not closed:
-  raise RuntimeError("S3_ADB_TCP_5555_STILL_ACCESSIBLE")
+ ping=run(["ping","-c","2","-W","2",S3],timeout=8)
+ report["S3_wifi_reachable_after"]=ping[0]==0
+ if not closed or not report["S3_wifi_reachable_after"]:
+  raise RuntimeError("S3_ADB_NOT_SECURELY_CLOSED_WHILE_WIFI_ACTIVE")
  # Stop the old ADB-dependent diagnostic poll; it would otherwise show a
  # false failure every five minutes. Motion triggers remain on S3->HA webhook.
  pause=run(["systemctl","--user","disable","--now",TIMER],timeout=28)
