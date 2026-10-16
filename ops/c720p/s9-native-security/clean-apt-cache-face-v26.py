@@ -42,8 +42,23 @@ def main():
   ps=subprocess.run(["ps","-eo","comm="],capture_output=True,text=True,timeout=15)
   if ps.returncode:raise RuntimeError("apt_process_inventory_failed")
   running={n.strip() for n in ps.stdout.splitlines()}
-  if {"apt","apt-get","aptitude","dpkg","unattended-upgr","dpkg-deb"}.intersection(running):
-   raise RuntimeError("package_manager_currently_active")
+  blocking={"apt","apt-get","aptitude","dpkg","dpkg-deb"}.intersection(running)
+  if blocking:
+   raise RuntimeError("package_manager_currently_active:"+",".join(sorted(blocking)))
+  if "unattended-upgr" in running:
+   # The unattended-upgrade daemon may idle for hours. Allow cleanup only
+   # when none of the actual package manager locks are held. apt-get clean
+   # independently acquires the APT archive lock before deleting anything.
+   locks=["/var/lib/dpkg/lock","/var/lib/dpkg/lock-frontend",
+          "/var/lib/apt/lists/lock","/var/cache/apt/archives/lock"]
+   if not pathlib.Path("/usr/bin/fuser").is_file():
+    raise RuntimeError("cannot_verify_idle_unattended_upgrades")
+   for lock in locks:
+    p=subprocess.run(["sudo","-n","/usr/bin/fuser","-s",lock],
+                     capture_output=True,timeout=12)
+    if p.returncode!=1:
+     raise RuntimeError("package_manager_lock_busy_or_unverifiable:"+pathlib.Path(lock).name)
+   result["unattended_upgrades_daemon"]="running_without_apt_or_dpkg_locks"
   # /usr/bin/apt-get clean only discards downloaded package archives.
   # It does not uninstall, upgrade, or reconfigure software.
   rc,output,error=subprocess_checked(["sudo","-n","/usr/bin/apt-get","clean"],95)
