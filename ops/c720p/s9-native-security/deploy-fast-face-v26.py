@@ -39,7 +39,7 @@ def main():
   updated=res.read(140000)
  if not 5000<len(updated)<140000 or sha(updated)!=a.sha:
   raise RuntimeError("download_digest_mismatch")
- if b"recent_existing_face_updates" not in updated or b"face_deep_review_version" not in updated:
+ if b"recent_existing_face_updates" not in updated or b"safe_face_review_metadata" not in updated:
   raise RuntimeError("missing_v26_sidecar_contract")
  original=BIN.read_bytes()
  if b"S9_FAST_INDEX_TOTAL" not in original:raise RuntimeError("unexpected_live_fast_index")
