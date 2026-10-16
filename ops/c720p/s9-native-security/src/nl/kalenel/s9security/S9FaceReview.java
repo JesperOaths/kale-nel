@@ -37,6 +37,7 @@ final class S9FaceReview implements AutoCloseable {
  private String sha="",status="no_frontal_face_in_samples",error="";
  private int nextId=1,frames=0,detected=0,saved=0,personRoiSamples=0,fullFrameSamples=0;
  private int rawDetectorHits=0,lowConfidenceOrSmall=0,rejectedPose=0,rejectedCrop=0,rejectedImageQuality=0;
+ private int rejectedLowConfidence=0,rejectedSmallFace=0,manualRescueCandidates=0;
  private boolean loaded=false,modelAttempted=false,modelReady=false;
  private static final class Entry {
   final String id; final float[] vector;
@@ -330,7 +331,11 @@ final class S9FaceReview implements AutoCloseable {
    for(int i=0;i<n&&captures.length()<MAX_CAPTURES;i++){
     FaceDetector.Face f=faces[i];if(f==null)continue;
     rawDetectorHits++;
-    if(f.confidence()<.58f||f.eyesDistance()<9){lowConfidenceOrSmall++;continue;}
+    // V27: permit borderline FACE CROPS for human review only; only the
+    // high-confidence path below is eligible for any similarity calculation.
+    // Keep separate rejection evidence to distinguish score from resolution.
+    if(f.confidence()<.49f){lowConfidenceOrSmall++;rejectedLowConfidence++;continue;}
+    if(f.eyesDistance()<7){lowConfidenceOrSmall++;rejectedSmallFace++;continue;}
     float yaw=f.pose(FaceDetector.Face.EULER_Y),roll=f.pose(FaceDetector.Face.EULER_Z);
     if(Math.abs(yaw)>28||Math.abs(roll)>22){rejectedPose++;continue;}
     PointF center=new PointF();f.getMidPoint(center);
@@ -353,7 +358,10 @@ final class S9FaceReview implements AutoCloseable {
       }
      }
      JSONObject match=assign(emb);
-     if(!reliableForEmbedding)match.put("face_crop_requires_manual_review",true);
+     if(!reliableForEmbedding){
+      match.put("face_crop_requires_manual_review",true);
+      manualRescueCandidates++;
+     }
      String id=match.optString("person_id","pending_"+(detected));
      String safe=id.replaceAll("[^A-Za-z0-9_-]","_");
      File outDir=new File(sd,"FaceSnapshots");
@@ -395,6 +403,9 @@ final class S9FaceReview implements AutoCloseable {
   // zero snapshots is never treated as evidence that no person was present.
   manifest.put("face_detector_raw_hits",rawDetectorHits);
   manifest.put("face_rejected_confidence_or_size",lowConfidenceOrSmall);
+  manifest.put("face_rejected_low_confidence",rejectedLowConfidence);
+  manifest.put("face_rejected_small_face",rejectedSmallFace);
+  manifest.put("face_manual_review_rescue_candidates",manualRescueCandidates);
   manifest.put("face_rejected_looking_away_or_roll",rejectedPose);
   manifest.put("face_rejected_crop_geometry",rejectedCrop);
   manifest.put("face_rejected_dark_or_blurry",rejectedImageQuality);
