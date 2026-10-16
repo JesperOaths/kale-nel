@@ -170,9 +170,16 @@ HISTORICAL_APK_GENERATIONS = (
     "s9-face-roi-movement-v1", "smooth-video", "s9-5s10s-v9",
     "s9-continuous4k-v4", "s9-preroll-v3", "s9-person-evidence-v31",
     "s9-prepended-v1c-one-time",
+    # Retired V36-V39 review experiments; V40/V41/latest camera and its
+    # immediate rollback are intentionally excluded.
+    "s9-visual-attributes-v36",
+    "s9-temporal-review-v37",
+    "s9-detection-review-v38",
+    "s9-detection-review-v39",
+    "s9-face-roi-movement-v2",
 )
 MAX_HISTORICAL_APK_BYTES = 290 * 1024**2
-HISTORICAL_APK_AGE_SECONDS = 8 * 3600
+HISTORICAL_APK_AGE_SECONDS = 4 * 3600
 
 def historical_apk_candidates():
     """Single-linked, old, conventionally named APKs only."""
@@ -241,6 +248,15 @@ def offload_historical_apk(root,source):
         return {"source":str(source),"skipped":"process_reference"}
     before = exact_file_stat(source)
     checksum = sha_file(source)
+    # Never offload the byte-identical APK currently installed on the S9+.
+    packages = adb("shell", "pm", "path", "nl.kalenel.s9security", timeout=24)
+    installed = [x.partition(":")[2].strip() for x in packages.splitlines()
+                 if x.startswith("package:") and x.endswith("base.apk")]
+    if len(installed) != 1:
+        return {"source":str(source),"skipped":"installed_camera_path_unverifiable"}
+    active = remote_hash(installed[0])
+    if active == checksum:
+        return {"source":str(source),"skipped":"identical_to_installed_camera"}
     rel = source.relative_to(root).as_posix()
     final = DEST+"/historical-apks/"+root.name+"/"+rel
     part = final+".part"
