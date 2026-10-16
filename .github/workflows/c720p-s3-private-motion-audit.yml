@@ -1,0 +1,70 @@
+name: C720P S3 privacy and darkness audit
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/audit-s3-private-motion-20261016.py'
+      - '.github/workflows/c720p-s3-private-motion-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/audit-s3-private-motion-20261016.py'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 -m py_compile ops/c720p/audit-s3-private-motion-20261016.py
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path("ops/c720p/audit-s3-private-motion-20261016.py").read_text()
+          for bad in ("shutil.rmtree(", "unlink(", "os.remove(", "shell=True", "subprocess.Popen(", "adb shell input keyevent", "rm -rf"):
+              assert bad not in source, bad
+          print("READ_ONLY_AUDIT_OK")
+          PY
+  inspect:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          src='ops/c720p/audit-s3-private-motion-20261016.py'
+          digest="$(sha256sum "$src" | cut -d' ' -f1)"
+          file="/tmp/s3-private-motion-audit-${GITHUB_SHA:0:12}.py"
+          origin="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+          cmd="curl -fSsL --max-time 30 '${origin}' -o '${file}' && printf '%s  %s\\n' '${digest}' '${file}' | sha256sum -c - >/dev/null && python3 '${file}'"
+          idem="s3-private-motion-audit-${GITHUB_SHA:0:23}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v command="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s3-private-motion','diagnostic',:'command',280,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "C720P_S3_AUDIT_JOB=$id"
+          for i in $(seq 1 48); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 31000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]]
+              grep -q S3_PRIVACY_MOTION_AUDIT_V1 <<< "$output"
+              exit 0
+            fi
+            sleep 7
+          done
+          exit 1
