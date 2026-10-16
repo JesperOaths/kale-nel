@@ -16,6 +16,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-s9-face-recall-v27.yml'
+      - 'ops/c720p/s9-native-security/build-s9-face-recall-v27.py'
+      - 'ops/c720p/s9-native-security/deploy-s9-face-recall-v27.py'
 permissions:
   contents: read
 concurrency:
