@@ -86,13 +86,13 @@ class FaceBackfillV2Regression(unittest.TestCase):
 
  def test_android_backfill_respects_original_and_one_time_version(self):
   text=self.classifier
-  self.assertIn('DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_roi_v2"',text)
-  self.assertIn('"s9_onphone_36_samples_v1".equals(prior)',text)
+  self.assertIn('DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v3"',text)
+  self.assertIn('return !DEEP_FACE_ROI_VERSION.equals',text)
   self.assertIn("return prior.isEmpty()",text)
   self.assertIn('manifest.optInt("width",0)!=3840',text)
   self.assertIn('manifest.optInt("height",0)!=2160',text)
   self.assertIn('fingerprint.equalsIgnoreCase(digest(mp4))',text)
-  self.assertIn("if(i%3==0)",text)
+  self.assertIn("if(i%3==0)",text)\n  self.assertIn("faces.sampleSceneTile(frame,at/1000",text)\n  self.assertNotIn("Long.parseLong(name.substring(7,20))>=1791687597000L",text)
   self.assertIn("faces.sample(frame,at/1000,isolated)",text)
   self.assertIn('if(decoded==0)throw new IOException',text)
   self.assertIn('writeJson(new File(folder,name+".verified.json"),manifest)',text)
