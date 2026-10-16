@@ -195,6 +195,20 @@ def install_local_sd(H):
     if track_status!="sampled_tracks_available":tracks=[]
     tracks=[t for t in tracks if isinstance(t,dict) and
       isinstance(t.get("id"),str) and re.fullmatch(r"Person (?:[1-9]|[1-5][0-9]|6[0-4])",t["id"])]
+    # Only the V25 independently corroborated clip-local candidates may be
+    # shown as people in Tracks & Movements. Raw detector fragments stay as
+    # metadata for forensic review, never as verified person identities.
+    evidence_version=r.get("person_track_evidence_version")
+    person_tracks=r.get("person_tracks",[]) if evidence_version=="corroborated_person_tracklets_v25" else []
+    if not isinstance(person_tracks,list) or len(person_tracks)>64:person_tracks=[]
+    person_tracks=[t for t in person_tracks if isinstance(t,dict) and
+      isinstance(t.get("id"),str) and
+      re.fullmatch(r"Person (?:[1-9]|[1-5][0-9]|6[0-4])",t["id"]) and
+      t.get("evidence_label")=="corroborated_person_candidate"]
+    if evidence_version!="corroborated_person_tracklets_v25":person_tracks=[]
+    def bounded_count(name):
+     x=r.get(name,0)
+     return x if type(x) is int and 0<=x<=64 else 0
     events.append({"camera":"new","clip_no":name,"timestamp":r.get("timestamp"),"reason":"S9+ microSD local recording",
       "method":"s9-microSD","remote_name":name,"snapshot_name":(name+".thumb.jpg" if r.get("thumbnail") else None),
       "size":r.get("size"),"person_status":r.get("scene_category","unreviewed"),
@@ -204,6 +218,15 @@ def install_local_sd(H):
       "anonymous_track_count":len(tracks) if track_status=="sampled_tracks_available" else
         (0 if track_status=="none_detected_in_sampled_frames" else None),
       "anonymous_tracks":tracks,
+      "person_track_evidence_version":evidence_version if evidence_version=="corroborated_person_tracklets_v25" else None,
+      "person_tracks":person_tracks,
+      "person_track_count":len(person_tracks),
+      "person_track_review_count":bounded_count("person_track_review_count"),
+      "rejected_object_track_count":bounded_count("rejected_object_track_count"),
+      "person_track_review_reasons":r.get("person_track_review_reasons",[])[:64] if isinstance(r.get("person_track_review_reasons"),list) else [],
+      "duration_ms":r.get("duration_ms"),
+      "person_detected_frames_050":r.get("person_detected_frames_050"),
+
       "anonymous_id_scope":"clip_only_never_across_recordings",
       "movement_evidence_scope":"camera_image_only_not_gait_identity",
       "face_review_status":r.get("face_review_status","not_available_in_original_review"),
