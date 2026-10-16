@@ -1,4 +1,4 @@
-name: S9 on-device original-4K face rescue V26
+name: S9 on-device original-4K face rescue V26 · guarded disk-recovered retry
 on:
   pull_request:
     paths:
@@ -60,7 +60,7 @@ jobs:
           dest="/tmp/s9-face-recall-v26-build-${GITHUB_SHA:0:12}.py"
           uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
           cmd="curl -fSsL --max-time 40 '${uri}' -o '${dest}' && printf '%s  %s\n' '${digest}' '${dest}' | sha256sum -c - >/dev/null && S9_FACE_RECALL_V26_REF='${GITHUB_SHA}' /usr/bin/python3 '${dest}'"
-          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-face-recall-v26-build-${GITHUB_SHA:0:22}" <<'SQL'
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-face-recall-v26-build-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(
             'github-actions-s9-face-recall-v26-build','deployment',:'cmd',770,:'idem'
           );
@@ -90,7 +90,7 @@ jobs:
           dest="/tmp/s9-face-recall-v26-install-${GITHUB_SHA:0:12}.py"
           uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${file}"
           cmd="curl -fSsL --max-time 40 '${uri}' -o '${dest}' && printf '%s  %s\n' '${digest}' '${dest}' | sha256sum -c - >/dev/null && S9_FACE_RECALL_V26_REF='${GITHUB_SHA}' /usr/bin/python3 '${dest}'"
-          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-face-recall-v26-install-${GITHUB_SHA:0:22}" <<'SQL'
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="s9-face-recall-v26-install-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(
             'github-actions-s9-face-recall-v26-install','deployment',:'cmd',750,:'idem'
           );
@@ -130,7 +130,7 @@ jobs:
           dest="/tmp/s9-face-v26-catalog-${GITHUB_SHA:0:12}.py"
           uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${installer}"
           cmd="curl -fSsL --max-time 35 '${uri}' -o '${dest}' && printf '%s  %s\\n' '${ihash}' '${dest}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${dest}' --ref '${GITHUB_SHA}' --catalog-sha '${chash}' --proxy-sha '${phash}' --face-sha '${fhash}'"
-          idem="s9-face-v26-catalog-${GITHUB_SHA:0:22}"
+          idem="s9-face-v26-catalog-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
           id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(
             'github-actions-s9-face-v26-catalog','deployment',:'cmd',470,:'idem');
