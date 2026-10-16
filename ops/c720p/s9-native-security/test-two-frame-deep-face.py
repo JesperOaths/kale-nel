@@ -26,13 +26,13 @@ class Contract(unittest.TestCase):
  def test_native_deep_review_is_bounded_and_does_not_reencode(self):
   deep=CLASSIFIER.split('boolean deepFaceReview(',1)[1].split('public synchronized JSONObject process(',1)[0]
   for required in ('deepFaceNeedsUpgrade(manifest)',
-                   '1791687597000L','fingerprint.equalsIgnoreCase(digest(mp4))',
-                   'i<36','MediaMetadataRetriever.OPTION_CLOSEST','new S9FaceReview(app,folder,name,36)',
+                   'sampleSceneTile','fingerprint.equalsIgnoreCase(digest(mp4))',
+                   'i<36','MediaMetadataRetriever.OPTION_CLOSEST','new S9FaceReview(app,folder,name,48)',
                    'face_deep_review_version','face_deep_review_no_face_is_not_no_person'):
    self.assertIn(required,deep)
   self.assertIn('manifest.optInt("person_count",0)<=0',CLASSIFIER)
-  self.assertIn('"s9_onphone_36_samples_v1".equals(prior)',CLASSIFIER)
-  self.assertIn('return prior.isEmpty()',CLASSIFIER)
+  self.assertIn('s9_onphone_36_samples_person_or_tile_v3',CLASSIFIER)
+  self.assertIn('return !DEEP_FACE_ROI_VERSION.equals',CLASSIFIER)
   self.assertNotIn('MediaRecorder',deep)
   self.assertNotIn('.delete(',deep)
   self.assertNotIn('mp4.renameTo',deep)
