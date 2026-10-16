@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { applyPrintifyVatReserveEurCents, dynamicShirtRetailEurCents, CLASSIC_SHIRT_RETAIL_CENTS, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
+import { applyPrintifyVatReserveEurCents, bruisClassicStandardMarginCentsForSize, dynamicShirtRetailEurCents, CLASSIC_SHIRT_RETAIL_CENTS, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(path, 'utf8');
@@ -207,6 +207,21 @@ assert.match(catalogEdge, /function canonicalLiveShirtCostByVariant/, 'catalog m
 assert.match(catalogEdge, /dynamicShirtRetailEurCents/, 'catalog must price account-discounted live cost');
 assert.match(checkoutEdge, /dynamicShirtRetailEurCents/, 'checkout must recheck fresh account production cost');
 assert.deepEqual(CLASSIC_SHIRT_RETAIL_CENTS, { S:2400, M:2400, L:2400, XL:2400, '2XL':2600, '3XL':3000, '4XL':3000, '5XL':3000 });
+
+const classicMargin = bruisClassicStandardMarginCentsForSize;
+assert.equal(classicMargin('M'),760);
+assert.equal(classicMargin('XL'),760);
+assert.equal(classicMargin('2XL'),600);
+assert.equal(classicMargin('3XL'),760,'3XL+ is still governed by the separate €7 large-size margin');
+const expectedCurrentPrices = { S:2300, M:2300, L:2300, XL:2300, '2XL':2300, '3XL':2500, '4XL':2600, '5XL':2600 };
+const currentCostUsdCents = { S:1278, M:1278, L:1278, XL:1278, '2XL':1439, '3XL':1525, '4XL':1561, '5XL':1563 };
+for (const [size, expectedPrice] of Object.entries(expectedCurrentPrices)) {
+  assert.equal(dynamicShirtRetailEurCents(currentCostUsdCents[size],0.888651915,size,classicMargin(size),700),expectedPrice,'live-cost shirt margin must price '+size+' correctly');
+}
+assert.ok(dynamicShirtRetailEurCents(2200,0.888651915,'M',classicMargin('M'),700)>2300,'supplier increases must increase checkout price instead of freezing retail');
+assert.match(catalogEdge,/bruisClassicStandardMarginCentsForSize\(sizeFrom\(product, variant\)/,'catalog must use the new classic shirt margins');
+assert.match(checkoutEdge,/bruisClassicStandardMarginCentsForSize\(variantSize\)/,'checkout must apply exactly the same size margin');
+
 assert.equal(dynamicShirtRetailEurCents(1500, 0.88, 'M', 500, 700), 2300, 'live standard cost must set the whole-euro price');
 assert.equal(dynamicShirtRetailEurCents(1200, 0.88, 'M', 500, 700), 1900, 'a verified lower Premium cost must lower price');
 assert.equal(dynamicShirtRetailEurCents(2300, 0.88, 'M', 500, 700), 3100, 'an upstream production increase must raise price');
