@@ -24,15 +24,17 @@ class Tests(unittest.TestCase):
   results={"ok":True,"mode":"watching","controls":{
    "zoom":{"available":["1.0","2.0","300.0"],"value":"2.0"},
    "torch":{"available":["off","on"],"value":"off"},
+   "night_mode":{"available":["auto","on","off","unsafe"],"value":"auto"},
    "recording_rotation":{"available":["auto","0","90","180","270","45"],"value":"auto"},
    "garden_zone":{"available":["strict","near","wide","all","road"],"value":"near"},
    "intrusive_legacy_camera_control":{"available":["anything"],"value":"anything"}}}
   with mock.patch.object(self.a,"local",return_value=(200,results)):
    h=self.H("/new/camera-controls");h.go()
   self.assertEqual(h.status,200)
-  self.assertEqual(sorted(h.data["controls"]),["garden_zone","recording_rotation","torch","zoom"])
+  self.assertEqual(sorted(h.data["controls"]),["garden_zone","night_mode","recording_rotation","torch","zoom"])
   self.assertEqual(h.data["controls"]["recording_rotation"]["available"],["auto","0","90","180","270"])
   self.assertEqual(h.data["controls"]["zoom"]["available"],["1.0","2.0"])
+  self.assertEqual(h.data["controls"]["night_mode"]["available"],["auto","on","off"])
  def test_explicit_intent_body_options_and_origin(self):
   body=json.dumps({"key":"zoom","value":"2.0"}).encode()
   h={"Content-Type":"application/json","Content-Length":str(len(body))}
@@ -47,6 +49,16 @@ class Tests(unittest.TestCase):
   body=json.dumps({"key":"torch","value":"reboot"}).encode()
   h["Content-Length"]=str(len(body))
   x=self.H("/new/camera-control",body,h);x.do_POST();self.assertEqual(x.status,400)
+  # Explicit night selection traverses only the authenticated 2-step relay.
+  for target in ("auto","on","off"):
+   night=json.dumps({"key":"night_mode","value":target}).encode()
+   h["Content-Length"]=str(len(night))
+   with mock.patch.object(self.a,"local",return_value=(200,{"ok":True,"value":target})):
+    x=self.H("/new/camera-control",night,h);x.do_POST()
+   self.assertEqual(x.status,200)
+  bad_night=json.dumps({"key":"night_mode","value":"manual_iso_10000"}).encode()
+  h["Content-Length"]=str(len(bad_night))
+  x=self.H("/new/camera-control",bad_night,h);x.do_POST();self.assertEqual(x.status,400)
   # A playback/display hint is allowed only at exact quarter turns.
   rotation=json.dumps({"key":"recording_rotation","value":"270"}).encode()
   h["Content-Length"]=str(len(rotation))
@@ -111,4 +123,14 @@ class Tests(unittest.TestCase):
   self.assertIn('votes.clear()',grid)
   self.assertIn('motion=false;strong=false',grid)
   self.assertNotIn('MediaRecorder',cls)
+  self.assertIn('"night_mode".equals(key)',cls)
+  self.assertIn('CaptureRequest.CONTROL_AE_MODE_ON',cls)
+  self.assertIn('effectiveExposureSteps()',cls)
+  self.assertIn('cameraControls.setAutoNightActive(!wasNight)',source)
+  self.assertIn('NIGHT_ENTER_HOLD_MS=4000L',source)
+  self.assertIn('NIGHT_EXIT_HOLD_MS=22000L',source)
+  self.assertIn('"night_mode"', (ROOT/'security-camera-controls-v22.html').read_text())
+  self.assertNotIn('builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE',cls)
+  self.assertIn('recorder.setVideoSize(3840,2160)',source)
+  self.assertIn('recorder.setVideoFrameRate(30)',source)
 if __name__=="__main__":unittest.main(verbosity=2)
