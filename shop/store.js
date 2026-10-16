@@ -85,14 +85,6 @@ let cart = readCartSafe();
 const qs = sel => document.querySelector(sel);
 const qsa = sel => [...document.querySelectorAll(sel)];
 const wholeEuro = value => Math.ceil(Math.max(0, Number(value || 0)) - 1e-9);
-const CLASSIC_SHIRT_PRICE_BY_SIZE = Object.freeze({
-  S:24, M:24, L:24, XL:24, '2XL':26, '3XL':30, '4XL':30, '5XL':30
-});
-const classicShirtPrice = (baseKey, size, fallback) => {
-  if(String(baseKey || '') !== '6') return wholeEuro(fallback);
-  const key = String(size || '').trim().toUpperCase().replace(/\s+/g, '');
-  return CLASSIC_SHIRT_PRICE_BY_SIZE[key] ?? wholeEuro(fallback);
-};
 const money = value => `€${wholeEuro(value)}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80) || 'product';
@@ -126,7 +118,7 @@ function normalizeProduct(raw){
   const variants = Array.isArray(raw.variants)
     ? raw.variants.map(variant => ({
         ...variant,
-        price: classicShirtPrice(baseKey, variant?.size, variant?.price)
+        price: wholeEuro(variant?.price)
       }))
     : [];
   const variantPrices = variants.map(variant => Number(variant?.price || 0)).filter(price => price > 0);
