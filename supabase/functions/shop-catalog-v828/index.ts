@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import postgres from "npm:postgres@3.4.7";
-import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents } from "../_shared/shop-fx.mjs";
+import { dynamicShirtRetailEurCents, fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 5 * 60_000;
@@ -582,59 +582,24 @@ function isPublicVariant(product: any, variant: any) {
   return !color || /^white$/i.test(color);
 }
 
-async function gildanRouteSafeCostCeilings(supabase: any, entries: any[]) {
-  // Blueprint 6 is one garment family. Pricing must therefore be canonical by
-  // variant/size, not by the historical source provider attached to a design.
-  // Approved route rows contain both provider cost snapshots, so the same pair
-  // produces the same safe cost whichever direction a product was created in.
-  const liveFallbackByVariant = new Map<string, number[]>();
+function canonicalLiveShirtCostByVariant(entries: any[]) {
+  // A shared shirt/size gets one price across designs. Use the highest *live*
+  // account-priced source cost for that SKU, never legacy provider snapshots.
+  // This lets Premium savings lower the price while keeping every currently
+  // published design above its fulfillment-cost floor.
+  const safeCost = new Map<string, number>();
   for (const entry of Array.isArray(entries) ? entries : []) {
     const product = entry?.product;
     if (String(product?.blueprint_id || "") !== "6") continue;
     for (const variant of Array.isArray(product?.variants) ? product.variants : []) {
       if (!isPublicVariant(product, variant)) continue;
-      const variantId = String(variant?.id || "");
+      const key = String(variant?.id || "");
       const cost = Math.round(Number(variant?.cost));
-      if (!variantId || !Number.isFinite(cost) || cost <= 0) continue;
-      const costs = liveFallbackByVariant.get(variantId) || [];
-      costs.push(cost);
-      liveFallbackByVariant.set(variantId, costs);
+      if (!key || !Number.isFinite(cost) || cost <= 0) continue;
+      safeCost.set(key, Math.max(safeCost.get(key) || 0, cost));
     }
   }
-
-  const ceilings = new Map<string, number>();
-  const { data: routes, error } = await supabase
-    .from("shop_provider_routes_v1")
-    .select("source_variant_id,source_cost_usd_cents,target_cost_usd_cents")
-    .eq("approved", true)
-    .eq("source_blueprint_id", 6);
-
-  if (!error) {
-    for (const route of Array.isArray(routes) ? routes : []) {
-      const variantId = String(route?.source_variant_id || "");
-      if (!variantId) continue;
-      const sourceSnapshot = Math.round(Number(route?.source_cost_usd_cents));
-      const targetSnapshot = Math.round(Number(route?.target_cost_usd_cents));
-      const safe = Math.max(
-        Number.isFinite(sourceSnapshot) ? sourceSnapshot : 0,
-        Number.isFinite(targetSnapshot) ? targetSnapshot : 0,
-      );
-      if (safe > Number(ceilings.get(variantId) || 0)) ceilings.set(variantId, safe);
-    }
-  } else {
-    console.warn("Canonical classic-shirt route costs unavailable", error.message);
-  }
-
-  // Only use live product costs as a fallback when no approved provider pair is
-  // known for that variant. Use the median so product provenance cannot create
-  // design-specific pricing drift.
-  for (const [variantId, costs] of liveFallbackByVariant) {
-    if (ceilings.has(variantId) || !costs.length) continue;
-    const sorted = [...costs].sort((a, b) => a - b);
-    const median = sorted[Math.floor((sorted.length - 1) / 2)];
-    if (Number.isFinite(median) && median > 0) ceilings.set(variantId, median);
-  }
-  return ceilings;
+  return safeCost;
 }
 
 function variantDisplayLabel(product: any, variant: any) {
@@ -726,7 +691,7 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any, routeSa
       label: variantDisplayLabel(product, variant),
       color: colorFrom(product, variant),
       price: (String(product?.blueprint_id || "") === "6"
-        ? stableClassicShirtRetailEurCents(
+        ? dynamicShirtRetailEurCents(
             routeSafeRawUsdCost,
             fx,
             sizeFrom(product, variant) || variantDisplayLabel(product, variant),
@@ -783,7 +748,7 @@ async function buildCatalog(supabase: any) {
   const token = await resolveToken(supabase);
   const fx = await resolveUsdEurRateDirect();
   const account = await loadAccountProducts(token);
-  const routeSafeCostCeilings = await gildanRouteSafeCostCeilings(supabase, account.entries);
+  const routeSafeCostCeilings = canonicalLiveShirtCostByVariant(account.entries);
 
   const cleanProducts = account.entries
     .filter((entry: any) => {
