@@ -211,14 +211,16 @@ assert.deepEqual(CLASSIC_SHIRT_RETAIL_CENTS, { S:2400, M:2400, L:2400, XL:2400, 
 const classicMargin = bruisClassicStandardMarginCentsForSize;
 assert.equal(classicMargin('M'),760);
 assert.equal(classicMargin('XL'),760);
-assert.equal(classicMargin('2XL'),600);
+assert.equal(classicMargin('2XL'),650);
 assert.equal(classicMargin('3XL'),760,'3XL+ is still governed by the separate €7 large-size margin');
-const expectedCurrentPrices = { S:2300, M:2300, L:2300, XL:2300, '2XL':2300, '3XL':2500, '4XL':2600, '5XL':2600 };
+const expectedCurrentPrices = { S:2300, M:2300, L:2300, XL:2300, '2XL':2400, '3XL':2500, '4XL':2600, '5XL':2600 };
 const currentCostUsdCents = { S:1278, M:1278, L:1278, XL:1278, '2XL':1439, '3XL':1525, '4XL':1561, '5XL':1563 };
 for (const [size, expectedPrice] of Object.entries(expectedCurrentPrices)) {
   assert.equal(dynamicShirtRetailEurCents(currentCostUsdCents[size],0.888651915,size,classicMargin(size),700),expectedPrice,'live-cost shirt margin must price '+size+' correctly');
 }
 assert.ok(dynamicShirtRetailEurCents(2200,0.888651915,'M',classicMargin('M'),700)>2300,'supplier increases must increase checkout price instead of freezing retail');
+assert.ok(expectedCurrentPrices['2XL'] > expectedCurrentPrices.XL, '2XL must carry a surcharge above S–XL');
+assert.ok(expectedCurrentPrices['3XL'] > expectedCurrentPrices['2XL'], '3XL must remain dearer than 2XL');
 assert.match(catalogEdge,/bruisClassicStandardMarginCentsForSize\(sizeFrom\(product, variant\)/,'catalog must use the new classic shirt margins');
 assert.match(checkoutEdge,/bruisClassicStandardMarginCentsForSize\(variantSize\)/,'checkout must apply exactly the same size margin');
 
