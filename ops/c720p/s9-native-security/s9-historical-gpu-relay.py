@@ -27,6 +27,7 @@ PHONE="192.168.178.250:5555"
 INBOX="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/HistoricalDriveInbox"
 SAFE_ID=re.compile(r"[a-f0-9]{64}\Z")
 MAX_BYTES=650*1024*1024
+RECHECK_VERSION="v28_s9_gpu_historical_person_review_v1"
 APP_STATUS="http://127.0.0.1:18808/status"
 
 def wait_for_catalog_lock(lock,seconds=200):
@@ -110,7 +111,40 @@ def normalize_gpu_input(original,target):
   raise RuntimeError("normalization_decode_validation_failed")
  return hashlib.sha256(target.read_bytes()).hexdigest()
 
-def stage_one():
+def v28_candidates(verified,stored):
+ """Reanalyse only independently verified Drive originals; never old deleted items."""
+ selected=[]
+ for key,source in verified.items():
+  previous=stored.get(key,{})
+  rereview=previous.get("v28_person_recheck",{})
+  if rereview.get("status")=="classified" or int(rereview.get("attempts",0))>=3:
+   continue
+  selected.append(source)
+ # Stable order with a mix of S3 and outdoor clips; source still validates by hash.
+ selected.sort(key=lambda x:(x["camera"]!="s3",-x["legacy_person_score"],x["remote_name"]))
+ return selected
+
+def merge_v28_recheck(catalog,entry):
+ """Keep old 180 CPU classifications byte-for-byte except an additive v28 field."""
+ key=entry["clip_id"]
+ prior=catalog["items"].get(key)
+ if not isinstance(prior,dict) or prior.get("status")!="classified":
+  raise ValueError("v28_cannot_replace_missing_baseline")
+ row=dict(prior)
+ if row.get("camera")!=entry["camera"] or row.get("remote_name")!=entry["remote_name"]:
+  raise ValueError("v28_baseline_source_mismatch")
+ review={k:entry[k] for k in ("status","category","person_score","person_frame_count",
+    "sampled_frames","possible_person_frame_count","max_simultaneous_person_boxes",
+    "vehicle_score","animal_score","review_backend","model_sha256",
+    "original_source_sha256","analysis_input_preprocessing","processed_at_utc")}
+ review.update(version=RECHECK_VERSION,human_review="pending",
+    identity_status="not_verified",source_media="verified_read_only_google_drive",
+    note="person_detection_not_face_identification")
+ row["v28_person_recheck"]=review
+ catalog["items"][key]=row
+ return review
+
+def stage_one(rescan_v28=False):
  import urllib.request
  with urllib.request.urlopen(APP_STATUS,timeout=9) as res:
   status=json.load(res)
@@ -123,11 +157,12 @@ def stage_one():
  with m.LOCK.open("a") as lock:
   wait_for_catalog_lock(lock)
   verified=m.original_verified()
-  options=m.sorted_candidates(verified,m.read_catalog()["items"])
-  # CPU runner takes the beginning. Pilot the opposite end to avoid contention.
-  source=options[-1] if options else None
+  rows=m.read_catalog()["items"]
+  options=v28_candidates(verified,rows) if rescan_v28 else m.sorted_candidates(verified,rows)
+  # V28 visits verified, previously classified originals; ordinary mode unchanged.
+  source=options[0] if rescan_v28 and options else options[-1] if options else None
  if source is None:
-  print("S9_HISTORY_NO_REMAINING_RECORDINGS")
+  print("S9_HISTORY_V28_COMPLETE" if rescan_v28 else "S9_HISTORY_NO_REMAINING_RECORDINGS")
   return
  key=source["clip_id"]
  if not SAFE_ID.fullmatch(key):raise RuntimeError("invalid_source_clip_id")
@@ -157,6 +192,7 @@ def stage_one():
    "source":"verified_historical_google_drive",
    "requires_gpu_or_cpu_on_phone":True,
    "identity_claim":"none","original_drive_read_only":True}
+  if rescan_v28:meta["review_request_version"]=RECHECK_VERSION
   ready=folder/"ready.json"
   ready.write_text(json.dumps(meta,separators=(",",":"),sort_keys=True))
   execute(["adb","-s",PHONE,"push",str(ready),destination+".ready.json.partial"],25)
@@ -164,7 +200,8 @@ def stage_one():
  print("S9_HISTORY_STAGED",json.dumps({"clip_id_prefix":key[:12],
         "size":source["size"],"gpu_input_bytes":gpu_input_bytes,
         "source_camera":source["camera"],
-        "native_archive_touched":False,"cloud_writes":False}))
+        "native_archive_touched":False,"cloud_writes":False,
+        "review":RECHECK_VERSION if rescan_v28 else "ordinary"}))
 
 def category_from_phone(result):
  event=result.get("person_event_category")
@@ -268,27 +305,43 @@ def collect():
    verified=m.original_verified()
    entry=validate_result(result,verified,ready)
    cat=m.read_catalog()
-   prev=cat["items"].get(entry["clip_id"],{})
-   if prev.get("status")=="classified":
-    print("S9_HISTORY_ALREADY_CLASSIFIED",entry["clip_id"][:12])
+   if ready.get("review_request_version")==RECHECK_VERSION:
+    old=cat["items"].get(entry["clip_id"],{})
+    if old.get("v28_person_recheck",{}).get("status")=="classified":
+     print("S9_HISTORY_V28_ALREADY_CLASSIFIED",entry["clip_id"][:12])
+    else:
+     review=merge_v28_recheck(cat,entry)
+     cat["updated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
+     cat["summary"]=m.create_stats(cat,verified)
+     m.write_catalog(cat)
+     accepted+=1
+     print("S9_HISTORY_V28_PERSON_RECHECK_MERGED",json.dumps({
+        "clip_id_prefix":entry["clip_id"][:12],
+        "person_category":review["category"],"backend":review["review_backend"],
+        "old_category":old.get("category"),"baseline_preserved":True,
+        "cloud_writes":False}))
    else:
-    cat["items"][entry["clip_id"]]=entry
-    # Preserve the CPU catalog's global model fingerprint. Each phone row has its own.
-    cat["updated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
-    cat["summary"]=m.create_stats(cat,verified)
-    cat["private_metadata_only"]=True
-    cat["media_saved_on_hub"]=False
-    cat["biometric_identification"]=False
-    m.write_catalog(cat)
-    accepted+=1
-    print("S9_HISTORY_MERGED",json.dumps({"clip_id_prefix":entry["clip_id"][:12],
-       "classification":entry["category"],"backend":entry["review_backend"],
-       "progress":cat["summary"]["processed"],"source_preserved":True}))
+    prev=cat["items"].get(entry["clip_id"],{})
+    if prev.get("status")=="classified":
+     print("S9_HISTORY_ALREADY_CLASSIFIED",entry["clip_id"][:12])
+    else:
+     cat["items"][entry["clip_id"]]=entry
+     # Preserve original global model fingerprint; each phone row has its own.
+     cat["updated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
+     cat["summary"]=m.create_stats(cat,verified)
+     cat["private_metadata_only"]=True
+     cat["media_saved_on_hub"]=False
+     cat["biometric_identification"]=False
+     m.write_catalog(cat)
+     accepted+=1
+     print("S9_HISTORY_MERGED",json.dumps({"clip_id_prefix":entry["clip_id"][:12],
+        "classification":entry["category"],"backend":entry["review_backend"],
+        "progress":cat["summary"]["processed"],"source_preserved":True}))
   # Clean imported TEMPORARY phone copy only after the catalog lock was released.
   clean_import_copy(entry["clip_id"])
  print("S9_HISTORY_COLLECT_COMPLETE",accepted)
 
-def cycle():
+def cycle(rescan_v28=False):
  import urllib.request
  try:
   with urllib.request.urlopen(APP_STATUS,timeout=9) as res:status=json.load(res)
@@ -300,7 +353,7 @@ def cycle():
   return
  execute(["adb","-s",PHONE,"shell","mkdir","-p",INBOX],20)
  collect()
- try:stage_one()
+ try:stage_one(rescan_v28=rescan_v28)
  except RuntimeError as error:
   if str(error) in ("phone_camera_not_idle_or_cool","phone_historical_worker_not_installed",
                      "hub_disk_space_guard","historical_catalog_busy_retry_next_timer"):
@@ -313,7 +366,11 @@ if __name__=="__main__":
  group.add_argument("--stage-one",action="store_true")
  group.add_argument("--collect",action="store_true")
  group.add_argument("--cycle",action="store_true")
+ group.add_argument("--cycle-v28",action="store_true")
+ group.add_argument("--stage-one-v28",action="store_true")
  options=parser.parse_args()
  if options.stage_one:stage_one()
  elif options.collect:collect()
+ elif options.stage_one_v28:stage_one(rescan_v28=True)
+ elif options.cycle_v28:cycle(rescan_v28=True)
  else:cycle()
