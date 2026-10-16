@@ -213,6 +213,8 @@ assert.equal(dynamicShirtRetailEurCents(2300, 0.88, 'M', 500, 700), 3100, 'an up
 assert.equal(dynamicShirtRetailEurCents(1200, 0.88, '4XL', 500, 700), 2200, '3XL+ keeps seven-euro target');
 assert.throws(() => dynamicShirtRetailEurCents(0, 0.88, 'M'), /Missing live shirt production cost/);
 assert.match(checkoutEdge, /advertisedCents/, 'checkout must not undercut recent canonical catalog price');
+assert.match(catalogEdge, /Number\(variant\?\.cost\) > 0/, 'missing-cost items must never publish an invented €5 retail price');
+assert.match(checkoutEdge, /Live production cost is unavailable/, 'checkout must fail closed when Printify omits the actual cost');
 assert.match(routingSource, /currentProviderCost/, 'approved alternate provider must use live account costs');
 assert.equal(stableClassicShirtRetailEurCents(1693, 0.8851124093, 'M', 500, 700), 2400, 'minor FX movement must not push standard classic shirts from €24 to €25');
 assert.equal(stableClassicShirtRetailEurCents(1864, 0.8851124093, '2XL', 500, 700), 2600, '2XL classic shirts must remain €26 at current provider-pair cost');
