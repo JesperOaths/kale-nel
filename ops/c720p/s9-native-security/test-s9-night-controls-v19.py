@@ -12,9 +12,9 @@ spec.loader.exec_module(module)
 
 class TestNightControlRelay(unittest.TestCase):
  def test_existing_native_camera_proxy_only_gets_night_mode(self):
-  original=('VALUES={"zoom":re.compile(r"1\\\\Z"),\n'
-   '        "recording_rotation":re.compile(r"(?:auto|0|90|180|270)\\\\Z"),\n'
-   '        "garden_zone":re.compile(r"(?:strict|near|wide|all)\\\\Z")}\n')
+  original=('VALUES={"zoom":re.compile(r"1\\Z"),\n'
+   '        "recording_rotation":re.compile(r"(?:auto|0|90|180|270)\\Z"),\n'
+   '        "garden_zone":re.compile(r"(?:strict|near|wide|all)\\Z")}\n')
   patched=module.updated_source(module.PROXY,original.encode())
   self.assertIn(b'"night_mode":re.compile',patched)
   self.assertEqual(module.updated_source(module.PROXY,patched),patched)
