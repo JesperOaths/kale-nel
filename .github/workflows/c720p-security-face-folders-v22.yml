@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/security-face-folders-v22.html'
+      - 'ops/c720p/s9-native-security/face-appearances.html.txt'
+      - 'ops/c720p/s9-native-security/deploy-face-player-scroll-v1.py'
       - 'ops/c720p/s9-native-security/security-camera-controls-v22.html'
       - 'ops/c720p/s9-native-security/deploy-drive-person-review-relay-v22.py'
       - 'ops/c720p/s9-native-security/deploy-independent-security-views-v22.py'
@@ -27,6 +29,22 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile ops/c720p/s9-native-security/deploy-drive-person-review-relay-v22.py ops/c720p/s9-native-security/deploy-independent-security-views-v22.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-face-player-scroll-v1.py
+          python3 ops/c720p/s9-native-security/deploy-face-player-scroll-v1.py --self-test
+          node - <<'JS'
+          const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+          for (const file of ['security-face-folders-v22.html','face-appearances.html.txt']) {
+            const html=fs.readFileSync('ops/c720p/s9-native-security/'+file,'utf8');
+            assert.match(html, /<style id="s9-face-player-scroll-v1">/);
+            assert.match(html, /position:fixed!important/);
+            assert.match(html, /overflow-y:auto!important/);
+            assert.match(html, /max-height:calc\(100dvh - 24px\)!important/);
+            for(const m of html.matchAll(/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g)) {
+              if(m[1].trim())new vm.Script(m[1],{filename:file});
+            }
+          }
+          console.log('FACE_DIALOG_LAYOUT_SYNTAX_PASS');
+          JS
           node - <<'JS'
           const fs=require('fs'),vm=require('vm'),assert=require('assert');
           const dir='ops/c720p/s9-native-security/';
