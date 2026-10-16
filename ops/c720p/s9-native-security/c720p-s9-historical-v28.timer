@@ -1,0 +1,13 @@
+[Unit]
+Description=Low-duty historical Drive review on S9+ when camera is idle
+
+[Timer]
+OnBootSec=10min
+OnUnitInactiveSec=7min
+RandomizedDelaySec=60
+AccuracySec=1min
+Persistent=false
+Unit=c720p-s9-historical-v28.service
+
+[Install]
+WantedBy=timers.target

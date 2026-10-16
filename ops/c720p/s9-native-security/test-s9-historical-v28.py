@@ -63,5 +63,8 @@ class Tests(unittest.TestCase):
   self.assertIn('m.write_catalog(cat)',script)
   self.assertNotIn("rclone delete",script)
   self.assertNotIn("rclone move",script)
+  self.assertIn('mark_v28_failed_source(error)',script)
+  self.assertIn('attempts=int(before.get("attempts",0))+1',script)
+  self.assertIn('int(rereview.get("attempts",0))>=3',script)
 
 if __name__=="__main__":unittest.main(verbosity=2)
