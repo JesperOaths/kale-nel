@@ -89,8 +89,8 @@ def report(query,b):
  allowed={'workflow','folder','tab','offset','limit','distance','weak','route','clip'}
  if set(query)-allowed or any(len(v)!=1 or len(v[0])>100 for v in query.values()):raise ValueError('invalid_folder_filters')
  q={k:v[0] for k,v in query.items()};folder=q.get('folder','');tab=q.get('tab','suggestions' if folder else 'inbox')
- if q.get('workflow')!=WORKFLOW or tab not in ('inbox','all','skipped','approved','suggestions','rejected'):raise ValueError('invalid_folder_view')
- if bool(folder)!=(tab in ('approved','suggestions','rejected')):raise ValueError('folder_view_mismatch')
+ if q.get('workflow')!=WORKFLOW or tab not in ('inbox','all','skipped','approved','suggestions','rejected','assign'):raise ValueError('invalid_folder_view')
+ if bool(folder)!=(tab in ('approved','suggestions','rejected','assign')):raise ValueError('folder_view_mismatch')
  offset=int(q.get('offset',0));limit=int(q.get('limit',24));distance=float(q.get('distance',.35))
  if not 0<=offset<=100000 or not 1<=limit<=100 or not b.finite(distance,0,1):raise ValueError('invalid_folder_page')
  if q.get('weak','0') not in ('0','1') or q.get('route','0') not in ('0','1'):raise ValueError('invalid_folder_filter')
@@ -101,7 +101,7 @@ def report(query,b):
  skipped={(r['clip'],r['source_sha256']) for r in skips if r['item']}
  membership={}
  for record in approved:membership.setdefault((record['clip'],record['source_sha256']),[]).append(record['folder'])
- refs=[];suggestions=[]
+ refs=[];suggestions=[];assignments=[]
  for f in folders:
   records=[r for r in ledger if r['folder']==f['id']];examples=[r['item'] for r in records if r['decision']=='approved' and r['item']]
   decided={(r['clip'],r['source_sha256']) for r in records}
@@ -109,9 +109,12 @@ def report(query,b):
   ranked=group_clips(candidates,examples,b,weak=q.get('weak')=='1',route=q.get('route')=='1',distance=distance) if examples else []
   f.update(approved_clips=sum(r['decision']=='approved' for r in records),available_approved_clips=len(examples),suggested_clips=len(ranked),rejected_clips=sum(r['decision']=='rejected' for r in records),
    unavailable_clips=sum(not r['item'] for r in records),previews=[r['full_crop'] for r in examples[:3]])
-  if f['id']==folder:refs=examples;suggestions=ranked
+  if f['id']==folder:
+   refs=examples;suggestions=ranked
+   if tab=='assign':assignments=group_clips(candidates,[],b)
  if folder:
-  if tab=='suggestions':result=suggestions
+  if tab=='assign':result=assignments
+  elif tab=='suggestions':result=suggestions
   else:result=[dict(r['item'],decision=r['decision']) for r in ledger if r['folder']==folder and r['decision']==('approved' if tab=='approved' else 'rejected') and r['item']]
  else:
   if tab=='skipped':result=[dict(r['item'],decision='skipped') for r in skips if r['item']]

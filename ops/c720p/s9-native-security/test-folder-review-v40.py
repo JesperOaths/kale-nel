@@ -14,6 +14,30 @@ class FolderReviewTests(unittest.TestCase):
   return self.v.edit({**data,'action':action,'revision':self.report()['revision'],'human_confirmed':True,**fields})
  def seed(self):
   code,result=self.action('seed_folder',label='Person #1',note='Chosen manually');self.assertEqual(code,200);return result['folder']
+ def test_manual_assign_view_includes_other_colours_without_auto_assignment(self):
+  folder=self.seed();self.add_clip(1,'red')
+  self.assertEqual(self.report(folder=folder,tab='suggestions',distance=0)['total'],0)
+  before=self.report()['revision'];report=self.report(folder=folder,tab='assign')
+  self.assertEqual(report['total'],1);self.assertEqual(report['revision'],before)
+  self.assertEqual(report['items'][0]['memberships'],[])
+  self.assertFalse(report['auto_assignments']);self.assertFalse(report['identity_matching'])
+ def test_assign_rejection_is_folder_scoped_and_survives_reload(self):
+  folder=self.seed();self.add_clip(1,'red');item=self.report(folder=folder,tab='assign')['items'][0]
+  self.assertEqual(self.action('reject_clip',item,folder=folder)[0],200)
+  self.assertEqual(self.report(folder=folder,tab='assign')['total'],0)
+  self.assertEqual(self.report(folder=folder,tab='rejected')['total'],1)
+  self.assertEqual(self.report(tab='inbox')['total'],1)
+  with contextlib.closing(self.v.db()) as c:self.assertEqual(c.execute('SELECT count(*) FROM inbox_skips_v40').fetchone()[0],0)
+  self.assertEqual(self.action('restore_clip',item,folder=folder)[0],200)
+  self.assertEqual(self.report(folder=folder,tab='assign')['total'],1)
+ def test_assign_approval_is_kept_after_fresh_report(self):
+  folder=self.seed();self.add_clip(1,'red');item=self.report(folder=folder,tab='assign')['items'][0]
+  self.assertEqual(self.action('approve_clip',item,folder=folder)[0],200)
+  self.assertEqual(self.report(folder=folder,tab='approved')['total'],2)
+  self.assertEqual(self.report(folder=folder,tab='assign')['total'],0)
+  self.assertEqual(self.report(tab='inbox')['total'],0)
+ def test_assign_view_requires_an_explicit_folder(self):
+  with self.assertRaises(ValueError):self.report(tab='assign')
  def add_clip(self,n,colour='blue'):
   meta=copy.deepcopy(self.meta);meta['name']='motion_'+str(1791998099688+n)+'.mp4'
   for track in meta['tracks']:

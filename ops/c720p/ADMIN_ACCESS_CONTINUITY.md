@@ -1,6 +1,28 @@
 # Authorized administrative access: continuity runbook
 
-## Current S9+ night detector — 16 October 2026, V41
+## Current People & faces layout — 17 October 2026, V42b
+
+`people-folders-v42.html/js` now opens a folder overview. Inside each folder,
+approved reference clips sit beside pending clips with green Approve/red Reject
+controls. Add clips uses the folder-scoped `tab=assign`; rejection there affects
+that folder while leaving the recording available to other folders. All
+assignment remains manual; suggestions compare clothing HSV only.
+
+UI cache is `folder-first-v42b-20261017`. People aliases, Archive entry and hub
+entry links were updated. Nineteen folder tests and seven final live groups
+passed. Existing one folder/three decisions, all nine verified clips and their
+catalog were preserved. Backups and exact hashes are in
+`state/s9-visual-attributes-v36/folder-first-v42b-release.json` and
+`backups/s9-folder-first-v42/`. See `s9-native-security/FOLDER_FIRST_V42.md`.
+
+**Camera observation at V42:** the installed phone app had independently changed
+to SHA `0f5a65985a817f8e998afc3c63355bdc3b3613893d2bf3fb7a243655f6a1c8bd`,
+reporting `person_spatiotemporal_transport_v9`, 30.02 fps and zero dropped
+frames. V42 preserved it. V41 below is a previous verified deployment, not the
+current installed APK. Reconcile concurrent camera deployments before changing
+the phone; do not overwrite an unexpected APK with the historical installer.
+
+## Previous verified S9+ night detector — 16 October 2026, V41
 
 Installed APK SHA-256:
 `cb46726931e46cd40088188d05828f0ac1e8f15cc68f3ab6077c12e5b14ce1bf`.
@@ -22,11 +44,11 @@ obsolete build outputs were relocated to verified operator storage and RAM;
 their mapping is `build/retained-operator-builds-v41.json`. Baseline V11,
 rollback APKs, original media and manual state remain intact.
 
-People folders/UI remain V40a below. The status adapter accepts V41 and reports
+At that checkpoint, People folders/UI remained V40a below. The status adapter accepts V41 and reports
 its active night policy; its new hash intentionally supersedes the adapter
 entry in the historical V40 manifest. Preserve the review registration hook.
 
-## Current People & faces workflow — 16 October 2026, V40a
+## Previous People & faces workflow — 16 October 2026, V40a
 
 The People page now uses `people-folders-v40.html/js`, served through the
 existing People aliases and Archive review entry. UI cache is
