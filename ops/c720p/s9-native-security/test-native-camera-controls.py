@@ -129,7 +129,7 @@ class Tests(unittest.TestCase):
   self.assertIn('cameraControls.setAutoNightActive(!wasNight)',source)
   self.assertIn('NIGHT_ENTER_HOLD_MS=4000L',source)
   self.assertIn('NIGHT_EXIT_HOLD_MS=22000L',source)
-  self.assertIn('"night_mode"', (ROOT/'security-camera-controls-v22.html').read_text())
+  self.assertIn("'night_mode'", (ROOT/'security-camera-controls-v22.html').read_text())
   self.assertNotIn('builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE',cls)
   self.assertIn('recorder.setVideoSize(3840,2160)',source)
   self.assertIn('recorder.setVideoFrameRate(30)',source)
