@@ -84,7 +84,7 @@ assert.doesNotMatch(store, /CLASSIC_SHIRT_PRICE_BY_SIZE/, 'client must never ove
 assert.match(store, /price: wholeEuro\(variant\?\.price\)/, 'client must render server account-priced variants');
 assert.match(store, /price: baseKey === '6' && variantPrices\.length \? Math\.min/, 'classic-shirt card price must derive from normalized canonical variant prices');
 assert.doesNotMatch(store, /bruisCatalogLastGoodV1/, 'old browser catalog cache key must not remain active');
-assert.match(index, /catalog-last-good\.js\?v=20261002-stable-pricing-r8/, 'fallback catalog asset must be cache-busted after canonical pricing repair');
+assert.match(index, /catalog-last-good\.js\?v=20261016-bruis-23-euro-r1/, 'fallback catalog must publish the revised €23 price snapshot');
 assert.match(index, /store\.js\?v=20261016-premium-cost-r2/, 'store runtime must publish the new server-priced revision');
 assert.match(index, /live-catalog-refresh-v818\.js\?v=20261016-auto-5m-r10/, 'shop must publish the automatic low-frequency catalogue reconciliation revision');
 assert.match(refresh, /__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__/, 'live catalog reconciliation must remain singleton-guarded inside a tab');
