@@ -142,11 +142,14 @@ export function validateDirectProviderRoute(route, country, sourceProduct, sourc
   // Account-priced live provider cost takes precedence over the pre-Premium
   // approved route snapshot. Never apply a guessed 20% discount or use a
   // stale low snapshot if the current provider reports a higher cost.
+  // A route may include extra print positions not represented by the base
+  // provider catalog variant, so retain the approved snapshot as a safety floor.
   const currentProviderCost = Math.round(Number(providerVariant?.cost));
   const snapshotCost = Math.round(Number(route?.target_cost_usd_cents));
-  const cost = Number.isFinite(currentProviderCost) && currentProviderCost > 0
-    ? currentProviderCost
-    : (Number.isFinite(snapshotCost) && snapshotCost > 0 ? snapshotCost : 0);
+  const cost = Math.max(
+    Number.isFinite(currentProviderCost) && currentProviderCost > 0 ? currentProviderCost : 0,
+    Number.isFinite(snapshotCost) && snapshotCost > 0 ? snapshotCost : 0,
+  );
   if (!Number.isFinite(cost) || cost <= 0) return { ok: false, reason: "target_cost_snapshot_unavailable" };
   return {
     ok: true,
