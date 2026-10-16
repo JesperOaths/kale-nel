@@ -16,7 +16,7 @@ PACKAGE="nl.kalenel.s9security"
 TARGET=HOME/"build/s9-face-recall-v26"
 KEY=Path("/home/jespern/.config/s9-native-security-sign")
 FINGERPRINT="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
-JAVAS=("AnonymousClipTracks","Boot","CameraActivity","CameraControls",
+JAVAS=("AnonymousClipTracks","AppearanceSearchIndex","Boot","CameraActivity","CameraControls",
  "CameraOrientation","CameraService","CaptureContinuity","ClipClassifier",
  "EventFrameRanker","GardenArchiveTriage","GardenPersonTrackGate",
  "GardenPreRoll","Continuous4KEncoder","Encoded4KRing","HistoricalImportWorker","MotionGrid","OutfitEvidence",
@@ -106,6 +106,8 @@ def main():
   assert "high_resolution_isolated_person_head_roi_v2" in (src/"S9FaceReview.java").read_text()
   assert "imageSpeedBodyHeightsPerSecond" in (src/"AnonymousClipTracks.java").read_text()
   assert "s9_onphone_36_samples_person_or_tile_v3" in (src/"ClipClassifier.java").read_text()
+  assert "AppearanceSearchIndex" in JAVAS
+  assert (src/"AppearanceSearchIndex.java").is_file()
   assert "faceBackfillRetries" in (src/"CameraService.java").read_text()
   assert "sampleSceneTile(frame" in (src/"ClipClassifier.java").read_text()
   assert "sampleSceneTile(Bitmap frame" in (src/"S9FaceReview.java").read_text()
