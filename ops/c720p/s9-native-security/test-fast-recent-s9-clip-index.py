@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """No camera required: ensure incremental S9 archive indexing preserves old rows."""
 import importlib.util
+import json
+from unittest.mock import patch
 from pathlib import Path
 import unittest
 M=Path(__file__).with_name("fast-recent-s9-clip-index.py")
@@ -45,6 +47,37 @@ class FastIndexTests(unittest.TestCase):
                      (m,0),({**m,"bytes":100},100)):
    with self.assertRaises(ValueError):
     module.row_from_manifest(name,bad,actual,None,Helpers)
+
+ def test_modified_known_4k_clip_reconciles_face_review_without_dropping_data(self):
+  name="motion_1791739041453.mp4"
+  old={"name":name,"timestamp":"2026-10-12 12:00","size":34691209,
+       "sd_verified":True,"thumbnail":"s9-phone-thumbs/example.jpg",
+       "face_snapshots_saved":0,"face_deep_review_version":None,
+       "human_review_note":"keep unchanged"}
+  index={"storage_policy":"local_microSD","phone_recordings":[old]}
+  meta={"name":name,"bytes":34691209,"sha256":"a"*64,
+        "width":3840,"height":2160,"person_count":0,
+        "face_review_version":"s9_face_review_v1",
+        "face_deep_review_version":"s9_onphone_36_samples_person_or_tile_v3",
+        "face_review_sampled_frames":48}
+  class FaceHelpers(Helpers):
+   @staticmethod
+   def safe_face_review_metadata(m):
+    return {"face_deep_review_version":m.get("face_deep_review_version"),
+            "face_review_sampled_frames":m.get("face_review_sampled_frames")}
+  with patch.object(module,"adb",return_value=json.dumps(meta).encode()) as mocked:
+   updates=module.recent_existing_face_updates(
+    index,[name+".verified.json"],{name},FaceHelpers,limit=8)
+  self.assertEqual(mocked.call_count,1)
+  self.assertEqual(len(updates),1)
+  self.assertEqual(updates[0]["face_deep_review_version"],"s9_onphone_36_samples_person_or_tile_v3")
+  self.assertEqual(updates[0]["human_review_note"],"keep unchanged")
+  self.assertEqual(updates[0]["thumbnail"],old["thumbnail"])
+  newer=module.update_index(index,updates)
+  self.assertEqual(len(newer["phone_recordings"]),1)
+  self.assertIsNone(index["phone_recordings"][0]["face_deep_review_version"])
+  self.assertEqual(module.recent_existing_face_updates(
+    index,[name+".verified.json"],set(),FaceHelpers),[])
 
  def test_no_camera_decoding_or_modification(self):
   raw=M.read_text()
