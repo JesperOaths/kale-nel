@@ -1,0 +1,114 @@
+name: C720P guarded low-light and lamp timer tune
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/set-camera-owned-light-timers-20261016.py'
+      - 'ops/c720p/frontcam-night-narrow-walker-v19-20261016.py'
+      - '.github/workflows/c720p-motion-light-tune-20261016.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/set-camera-owned-light-timers-20261016.py'
+      - 'ops/c720p/frontcam-night-narrow-walker-v19-20261016.py'
+      - '.github/workflows/c720p-motion-light-tune-20261016.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-motion-lamp-guard
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/set-camera-owned-light-timers-20261016.py
+          python3 -m py_compile ops/c720p/frontcam-night-narrow-walker-v19-20261016.py
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          def mod(file,name):
+              spec=importlib.util.spec_from_file_location(name,file)
+              item=importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(item)
+              return item
+          t=mod('ops/c720p/set-camera-owned-light-timers-20261016.py','timers')
+          living=t.LIVING+'''
+            - action: timer.start
+              data:
+                duration: "00:05:00"
+            - action: timer.start
+              data:
+                duration: "00:05:00"
+          '''+t.LIVING_END
+          bedroom=t.BEDROOM+'''
+            - action: input_boolean.turn_on
+              target:
+                entity_id: input_boolean.c720p_s3_bedroom_camera_owned
+            - action: timer.start
+              data:
+                duration: "00:05:00"
+            - action: timer.start
+              data:
+                duration: "00:05:00"
+          '''+t.BEDROOM_END
+          living=living.replace(t.LIVING, t.LIVING+'\n  input_boolean.c720p_living_camera_owned',1)
+          fixed,already=t.patch(living+'\n'+bedroom)
+          assert not already
+          assert fixed.count('duration: "00:10:00"')==2
+          assert fixed.count('duration: "00:05:00"')==2
+          assert t.patch(fixed)[1]
+          f=mod('ops/c720p/frontcam-night-narrow-walker-v19-20261016.py','frontcam')
+          example=f.NEW+'\n# return {"mode":"normal","delta":12,"changed":0.30,"contour":60.0,"confirm":2}\n# night_motion_source_ok(source,in_transition_guard)\n'
+          assert f.tests(example)=={"positive_walkers":4,"false_rejected":7}
+          print('MOTION_TIMER_GUARDS_PASS')
+          PY
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          for src in ops/c720p/set-camera-owned-light-timers-20261016.py ops/c720p/frontcam-night-narrow-walker-v19-20261016.py; do
+            digest="$(sha256sum "$src" | cut -d' ' -f1)"
+            name="$(basename "$src")"
+            dest="/tmp/${name%.py}-${GITHUB_SHA:0:12}.py"
+            origin="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+            cmd="curl -fSsL --max-time 30 '${origin}' -o '${dest}' && printf '%s  %s\\n' '${digest}' '${dest}' | sha256sum -c - >/dev/null && python3 '${dest}' --apply"
+            idem="motion-tune-${GITHUB_SHA:0:20}-${name}-${GITHUB_RUN_ATTEMPT}"
+            id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v command="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-camera-motion','maintenance',:'command',650,:'idem');
+          SQL
+            )"
+            [[ "$id" =~ ^[0-9]+$ ]]
+            echo "C720P_TUNE_JOB=$id FILE=$name"
+            finished=0
+            for i in $(seq 1 90); do
+              state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+              if [[ "$state" == done\|* || "$state" == error\|* ]]; then
+                output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 14000)"
+                echo "$output"
+                [[ "$state" == 'done|0' ]] || exit 1
+                finished=1
+                break
+              fi
+              sleep 7
+            done
+            [[ "$finished" == 1 ]] || exit 1
+          done
