@@ -112,7 +112,7 @@ final class S9FaceReview implements AutoCloseable {
     int vd=((d>>16)&255)+((d>>8)&255)+(d&255);
     sum+=v/3.0; contrast+=(Math.abs(v-vr)+Math.abs(v-vd))/3.0;
    }
-   return sum>10000&&sum<235000&&contrast>8500; // reject extremely dark/flat crops
+   return sum>7400&&sum<235000&&contrast>6500; // v26: retain dim but structurally visible face candidates
   }finally{if(mini!=b)mini.recycle();}
  }
  private float[] vector(Bitmap face)throws Exception{
@@ -330,9 +330,9 @@ final class S9FaceReview implements AutoCloseable {
    for(int i=0;i<n&&captures.length()<MAX_CAPTURES;i++){
     FaceDetector.Face f=faces[i];if(f==null)continue;
     rawDetectorHits++;
-    if(f.confidence()<.65f||f.eyesDistance()<12){lowConfidenceOrSmall++;continue;}
+    if(f.confidence()<.58f||f.eyesDistance()<9){lowConfidenceOrSmall++;continue;}
     float yaw=f.pose(FaceDetector.Face.EULER_Y),roll=f.pose(FaceDetector.Face.EULER_Z);
-    if(Math.abs(yaw)>20||Math.abs(roll)>17){rejectedPose++;continue;}
+    if(Math.abs(yaw)>28||Math.abs(roll)>22){rejectedPose++;continue;}
     PointF center=new PointF();f.getMidPoint(center);
     int x=offsetX+(int)(center.x*subject.getWidth()/width);
     int y=offsetY+(int)(center.y*subject.getHeight()/height);
@@ -342,9 +342,18 @@ final class S9FaceReview implements AutoCloseable {
     try{
      if(!usable(face)){rejectedImageQuality++;continue;}
      detected++;
+     // Lower-confidence/off-axis facial images may be useful for manual
+     // inspection, but must NEVER be used for automatic biometric linking.
+     final boolean reliableForEmbedding=f.confidence()>=.70f&&
+         f.eyesDistance()>=14&&Math.abs(yaw)<=18&&Math.abs(roll)<=15;
      float[] emb=null;
-     try{emb=vector(face);}catch(Exception ex){status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();}
+     if(reliableForEmbedding){
+      try{emb=vector(face);}catch(Exception ex){
+       status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();
+      }
+     }
      JSONObject match=assign(emb);
+     if(!reliableForEmbedding)match.put("face_crop_requires_manual_review",true);
      String id=match.optString("person_id","pending_"+(detected));
      String safe=id.replaceAll("[^A-Za-z0-9_-]","_");
      File outDir=new File(sd,"FaceSnapshots");
