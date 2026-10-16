@@ -233,7 +233,9 @@ def safe_face_review_metadata(m):
          "face_deep_detector_anchor_frames":None,
          "face_deep_person_roi_anchors":None,
          "face_deep_multiple_person_anchors":None,
-         "face_deep_multiscale_refinement_passes":None}
+         "face_deep_multiscale_refinement_passes":None,
+         "face_deep_tiled_scene_samples":None,
+         "face_deep_second_person_roi_samples":None}
  if m.get("face_review_version")!="s9_face_review_v1":return result
  status=m.get("face_review_status")
  valid=("no_frontal_face_in_samples","face_embedding_unavailable_snapshots_only",
@@ -244,7 +246,7 @@ def safe_face_review_metadata(m):
  n=m.get("face_review_sampled_frames")
  if type(n) is int and 0<=n<=48:result["face_review_sampled_frames"]=n
  prior=m.get("face_deep_review_version")
- if prior in ("s9_onphone_36_samples_v1","s9_onphone_36_samples_person_roi_v2") and n==36:
+ if (prior in ("s9_onphone_36_samples_v1","s9_onphone_36_samples_person_roi_v2") and n==36) or (prior=="s9_onphone_36_samples_person_or_tile_v3" and type(n) is int and 1<=n<=48):
   result["face_deep_review_version"]=prior
  outcome=m.get("face_evidence_outcome")
  if outcome in ("snapshot_candidates_saved","review_processing_failed",
@@ -261,12 +263,16 @@ def safe_face_review_metadata(m):
              "face_rejected_dark_or_blurry"):
   value=m.get(key)
   if type(value) is int and 0<=value<=144:result[key]=value
- if result["face_deep_review_version"]=="s9_onphone_36_samples_person_roi_v2":
+ if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_roi_v2","s9_onphone_36_samples_person_or_tile_v3"):
   for key in ("face_deep_detector_anchor_frames","face_deep_person_roi_anchors",
               "face_deep_multiple_person_anchors",
               "face_deep_multiscale_refinement_passes"):
    value=m.get(key)
    if type(value) is int and 0<=value<=12:result[key]=value
+  if result["face_deep_review_version"]=="s9_onphone_36_samples_person_or_tile_v3":
+   for key in ("face_deep_tiled_scene_samples","face_deep_second_person_roi_samples"):
+    value=m.get(key)
+    if type(value) is int and 0<=value<=12:result[key]=value
  rows=m.get("face_candidates")
  if not isinstance(rows,list) or len(rows)>8:return result
  out=[]
