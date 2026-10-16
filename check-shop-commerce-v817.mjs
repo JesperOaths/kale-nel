@@ -84,7 +84,7 @@ assert.match(store, /S:24, M:24, L:24, XL:24, '2XL':26, '3XL':30, '4XL':30, '5XL
 assert.match(store, /price: baseKey === '6' && variantPrices\.length \? Math\.min/, 'classic-shirt card price must derive from normalized canonical variant prices');
 assert.doesNotMatch(store, /bruisCatalogLastGoodV1/, 'old browser catalog cache key must not remain active');
 assert.match(index, /catalog-last-good\.js\?v=20261002-stable-pricing-r8/, 'fallback catalog asset must be cache-busted after canonical pricing repair');
-assert.match(index, /store\.js\?v=20261016-printify-live-first-r1/, 'store runtime must publish the resilient deterministic static-first revision');
+assert.match(index, /store\.js\?v=20261016-live-first-r1/, 'store runtime must publish the resilient deterministic static-first revision');
 assert.match(index, /live-catalog-refresh-v818\.js\?v=20261016-auto-5m-r10/, 'shop must publish the automatic low-frequency catalogue reconciliation revision');
 assert.match(refresh, /__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__/, 'live catalog reconciliation must remain singleton-guarded inside a tab');
 assert.match(refresh, /mode: 'live-first-automatic-5m-r10'/, 'public storefront should reconcile catalogue changes automatically');
@@ -705,7 +705,7 @@ assert.match(refresh, /SHARED_MIN_REFRESH_MS\s*=\s*5\s*\*\s*60\s*\*\s*1000/, 'au
 assert.match(refresh, /SHARED_CHECK_KEY/, 'automatic catalog refreshes must coordinate across tabs rather than multiplying work');
 assert.doesNotMatch(refresh, /checkCatalog\(true\)/, 'no public path may bypass the shared refresh floor');
 assert.match(catalogEdge, /CACHE_FRESH_MS\s*=\s*5\s*\*\s*60_000/, 'server catalog freshness window must keep a valid catalog off the critical refresh path for five minutes');
-assert.match(catalogEdge, /REFRESH_FAILURE_COOLDOWN_MS\s*=\s*30\s*\*\s*60_000/, 'failed upstream refreshes must back off for one minute instead of retrying on every stale request');
+assert.match(catalogEdge, /REFRESH_FAILURE_COOLDOWN_MS\s*=\s*5\s*\*\s*60_000/, 'failed upstream refreshes must back off for five minutes instead of retrying on every stale request');
 assert.match(catalogEdge, /refreshFailureCooldown/, 'catalog scheduling must expose and honor failed-refresh cooldown state');
 assert.match(catalogEdge, /MEMORY_ROW_TTL_MS\s*=\s*60_000/, 'catalog Edge Function must keep the large JSONB row in-isolate for one minute');
 assert.match(catalogEdge, /if\(memoryCatalogRow && Date\.now\(\)-memoryCatalogLoadedAt < MEMORY_ROW_TTL_MS\) return memoryCatalogRow/, 'warm Edge isolates must avoid repeatedly reading the same large catalog row');
