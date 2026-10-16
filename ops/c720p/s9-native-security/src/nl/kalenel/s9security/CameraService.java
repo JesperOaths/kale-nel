@@ -1390,6 +1390,8 @@ public final class CameraService extends Service {
    d.put("historical_import_last_error_type",lastHistoricalError);
    d.put("historical_import_queued",historicalQueued);
    d.put("face_review_engine","s9_native_face_review_v1");
+   d.put("face_deep_rescue_version","s9_onphone_36_samples_person_or_tile_v3");
+   d.put("face_deep_review_misses_are_not_no_person",true);
    d.put("face_backfill_queued",faceBackfillQueued);
     d.put("garden_archive_triage_version","onphone_24frame_reversible_quarantine_v1");
    d.put("garden_archive_auto_quarantine_enabled",GARDEN_AUTO_QUARANTINE_ENABLED);
