@@ -177,6 +177,12 @@ HISTORICAL_APK_GENERATIONS = (
     "s9-detection-review-v38",
     "s9-detection-review-v39",
     "s9-face-roi-movement-v2",
+    # Old confirmed inactive generations; current V40/V41 APKs remain local.
+    "s9-unified-4k-person-v11",
+    "s9-person-spatial-candidate",
+    "s9-person-hybrid-v8",
+    "s9-preroll-v9",
+    "s9-diagnostic-preroll",
 )
 MAX_HISTORICAL_APK_BYTES = 290 * 1024**2
 HISTORICAL_APK_AGE_SECONDS = 4 * 3600
