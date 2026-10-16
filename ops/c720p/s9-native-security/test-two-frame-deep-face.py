@@ -30,7 +30,10 @@ class Contract(unittest.TestCase):
                    'i<36','MediaMetadataRetriever.OPTION_CLOSEST','new S9FaceReview(app,folder,name,48)',
                    'face_deep_review_version','face_deep_review_no_face_is_not_no_person'):
    self.assertIn(required,deep)
-  self.assertNotIn('manifest.optInt("person_count",0)<=0',deep)
+  # The later movement-only backfill still has a legitimate person-count gate;
+  # constrain this assertion to the 4K face-rescue method itself.
+  self.assertNotIn('manifest.optInt("person_count",0)<=0',
+                   deep.split('backfillMovementEvidence',1)[0])
   self.assertIn('s9_onphone_36_samples_person_or_tile_v4',CLASSIFIER)
   self.assertIn('return !DEEP_FACE_ROI_VERSION.equals',CLASSIFIER)
   self.assertNotIn('MediaRecorder',deep)
