@@ -139,12 +139,14 @@ export function validateDirectProviderRoute(route, country, sourceProduct, sourc
   }
   const printAreas = directOrderPrintAreas(sourceProduct, sourceVariant?.id);
   if (!printAreas) return { ok: false, reason: "source_artwork_not_order_reusable" };
-  // target_cost_usd_cents is already the approved provider cost snapshot.
-  // Do not add the historical source→target delta to today's source cost again:
-  // that double-counts provider drift and can change retail prices solely based
-  // on which provider a design was originally attached to.
+  // Account-priced live provider cost takes precedence over the pre-Premium
+  // approved route snapshot. Never apply a guessed 20% discount or use a
+  // stale low snapshot if the current provider reports a higher cost.
+  const currentProviderCost = Math.round(Number(providerVariant?.cost));
   const snapshotCost = Math.round(Number(route?.target_cost_usd_cents));
-  const cost = Number.isFinite(snapshotCost) ? snapshotCost : 0;
+  const cost = Number.isFinite(currentProviderCost) && currentProviderCost > 0
+    ? currentProviderCost
+    : (Number.isFinite(snapshotCost) && snapshotCost > 0 ? snapshotCost : 0);
   if (!Number.isFinite(cost) || cost <= 0) return { ok: false, reason: "target_cost_snapshot_unavailable" };
   return {
     ok: true,
