@@ -242,7 +242,7 @@ function staticCatalogSnapshot(){
     .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0));
 }
 async function loadCatalog(){
-  // Printify's server-side catalog is authoritative: a generated snapshot must
+  // The server-side catalog is authoritative: a generated snapshot must
   // never hide newly published products merely because it loaded first.
   const liveProducts = await refreshLiveCatalog(1);
   if(liveProducts.length) return { products: liveProducts, source: 'live' };
