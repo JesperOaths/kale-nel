@@ -1,0 +1,27 @@
+name: S9 historical V28 archival person re-review
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/s9-historical-gpu-relay.py'
+      - 'ops/c720p/s9-native-security/test-s9-historical-gpu-relay.py'
+      - 'ops/c720p/s9-native-security/test-s9-historical-v28.py'
+      - '.github/workflows/c720p-s9-historical-v28.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/s9-historical-gpu-relay.py'
+      - 'ops/c720p/s9-native-security/test-s9-historical-v28.py'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate old archive contracts and additive V28 results
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/s9-historical-gpu-relay.py
+          python3 ops/c720p/s9-native-security/test-s9-historical-gpu-relay.py
+          python3 ops/c720p/s9-native-security/test-s9-historical-v28.py
