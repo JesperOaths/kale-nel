@@ -158,7 +158,7 @@ def patch_recordings(html):
 
 def validate_template(html,kind):
  if len(html)<5000 or html.count('</head>')!=1 or html.count('</body>')!=1:raise ValueError("invalid_"+kind+"_template")
- if f'id="s9v7-{kind}-script"' not in html or 'C720PSecureRelay' not in html or '/new/api/saved' not in html:raise ValueError("unsigned_"+kind)
+ if (not any(m in html for m in (['id="s9v7-tracks-script"','id="s9v25-tracks-script"'] if kind=="tracks" else [f'id="s9v7-{kind}-script"'])) or 'C720PSecureRelay' not in html or '/new/api/saved' not in html):raise ValueError("unsigned_"+kind)
  if '/new/saved/clip/' not in html:raise ValueError("missing_video_contract")
 
 def build(root,source):
