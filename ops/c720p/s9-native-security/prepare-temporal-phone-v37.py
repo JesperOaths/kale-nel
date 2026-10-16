@@ -2,7 +2,9 @@
 import importlib.util,json,hashlib,shutil,sys
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
-def prepare(stage):
+def prepare(stage,*,current=False):
+ if not current and 'native_4k_dense_' in (HERE/'src/nl/kalenel/s9security/ClipReviewSchedule.java').read_text(encoding='utf-8'):
+  raise ValueError('current_sources_require_prepare_detection_phone_v39')
  spec=importlib.util.spec_from_file_location('v36',HERE/'prepare-visual-phone-v36.py');base=importlib.util.module_from_spec(spec);spec.loader.exec_module(base)
  base.prepare(stage,temporal=True);src=stage/'src/nl/kalenel/s9security'
  for name in ('ClipReviewSchedule','VisualReviewQueue'):

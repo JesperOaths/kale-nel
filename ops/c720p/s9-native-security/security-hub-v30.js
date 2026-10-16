@@ -1,6 +1,6 @@
 /* SECURITY_HUB_V30: unified navigation and camera controls. */
 (()=>{'use strict';
-const $=id=>document.getElementById(id),asset='/local/frontyard-security-new/',version='v=temporal-review-v37a-20261015';
+const $=id=>document.getElementById(id),asset='/local/frontyard-security-new/',version='v=detection-review-v39b-20261016';
 const tabs=[['live','Live camera','◉'],['saved','Recordings','▣','security-review-v8.html?mode=today&'],['faces','People & faces','◎','security-people-v33.html?'],['tracks','Tracks & movement','◇','security-tracks-v7.html?'],['evidence','Evidence & analytics','▤','security-review-v8.html?mode=evidence&'],['archive','Archive','▤','security-archive-v7.html?v=drive-thumb-mount-v2&'],['camera','Camera controls','⚙']];
 let current='live',liveData=null,healthBusy=false,controlsBusy=false,controlGeneration=0;
 const create=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=String(txt);return n};
@@ -16,9 +16,9 @@ function show(id){if(!tabs.some(t=>t[0]===id))return;current=id;$('s9v5-shell').
  live(id==='live'&&!document.hidden);if(id==='camera'){loadControls();diagnostics()}
 }
 function diagnostics(){const d=liveData||{},s=d.camera_sensor||{},root=$('diagnostics');root.replaceChildren();const rows=[['Recorder',d.camera_mode||'Not available'],['Native recording',d.native_4k_enabled===true?'4K enabled':d.native_4k_enabled===false?'4K disabled':'Not reported'],['Person detector',d.person_inference_ready===true?'Active on S9+':d.person_inference_ready===false?'Not ready':'Not reported'],['Sensor cadence',Number(s.fps)>0?Number(s.fps).toFixed(1)+' fps':'Not measured'],['Exposure',s.exposure_ms!=null?Number(s.exposure_ms).toFixed(1)+' ms':'Not measured'],['Battery temperature',d.camera_temperature_c!=null?Number(d.camera_temperature_c).toFixed(1)+' °C':'Not reported'],['Sample age',d.last_sample_age_ms!=null?Math.round(Number(d.last_sample_age_ms)/1000)+' seconds':'Not reported']];
- for(const [label,value]of rows)root.append(create('dt','',label),create('dd','',value));}
-async function refreshHealth(){if(healthBusy||document.hidden)return;healthBusy=true;const el=$('cameraHealth');try{if(!api()?.fetch)throw Error('connection');const r=await api().fetch('/new/api/live-person-watch',{cache:'no-store'});if(!r.ok)throw Error('status');const d=await r.json();const age=Number(d.last_sample_age_ms);if(!d.ok||!['watching','recording'].includes(d.camera_mode)||(d.last_sample_age_ms!=null&&(!Number.isFinite(age)||age>45000||age<0)))throw Error('stale');liveData=d;el.textContent=d.camera_mode==='recording'?'S9+ recording':'S9+ watching';el.dataset.state='ok';if(current==='camera')diagnostics()}
- catch(_){liveData=null;el.textContent='Camera status unavailable';el.dataset.state='error';if(current==='camera')diagnostics()}
+ for(const target of [root,$('liveDiagnostics')]){target.replaceChildren();for(const [label,value]of rows)target.append(create('dt','',label),create('dd','',value));}}
+async function refreshHealth(){if(healthBusy||document.hidden)return;healthBusy=true;const el=$('cameraHealth');try{if(!api()?.fetch)throw Error('connection');const r=await api().fetch('/new/api/live-person-watch',{cache:'no-store'});if(!r.ok)throw Error('status');const d=await r.json();const age=Number(d.last_sample_age_ms);if(!d.ok||!['watching','recording'].includes(d.camera_mode)||(d.last_sample_age_ms!=null&&(!Number.isFinite(age)||age>45000||age<0)))throw Error('stale');liveData=d;el.textContent=d.camera_mode==='recording'?'S9+ recording':'S9+ watching';el.dataset.state='ok';if(current==='camera'||current==='live')diagnostics()}
+ catch(_){liveData=null;el.textContent='Camera status unavailable';el.dataset.state='error';if(current==='camera'||current==='live')diagnostics()}
  finally{healthBusy=false}}
 const labels={zoom:['Zoom','Camera magnification'],exposure_ev:['Exposure compensation','Brightness adjustment in EV'],focus:['Focus','Automatic focus mode'],torch:['Camera light','Phone torch']};
 function display(key,value){if(key==='zoom')return value+'×';if(key==='exposure_ev')return (Number(value)>0?'+':'')+value+' EV';if(key==='torch')return value==='on'?'On':'Off';if(key==='focus')return value==='continuous'?'Continuous autofocus':'Autofocus';return String(value)}
@@ -37,5 +37,6 @@ $('retryControls').addEventListener('click',loadControls);$('refresh').addEventL
 window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.kind==='archive-review-open-v32'&&event.source===paneFor('faces').querySelector('iframe')?.contentWindow)show('archive')});
 document.addEventListener('visibilitychange',()=>{live(current==='live'&&!document.hidden);if(document.hidden)stopMedia(paneFor(current));else refreshHealth()});window.addEventListener('pagehide',()=>live(false));
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.data?.kind!=='security-tab-ready-v37')return;for(const [key] of tabs){const f=paneFor(key).querySelector('iframe');if(f?.contentWindow===event.source){embeddedTabs.add(f);event.source.postMessage({kind:'security-tab-visibility-v37',active:key===current},location.origin)}}});
+$('panel-live').tabIndex=0;$('liveRecordings').onclick=()=>show('saved');$('liveSettings').onclick=()=>show('camera');
 show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{if(current==='camera'&&!document.hidden&&!controlsBusy&&!$('cameraControls').contains(document.activeElement))loadControls()},15000);
 })();

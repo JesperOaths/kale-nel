@@ -17,7 +17,7 @@ public final class TemporalReviewTest {
     long at=schedule.next();check(at>last&&at>=0&&at<duration,"strict chronological requests within clip");
     last=at;n++;schedule.followUp(at);
    }
-   check(n<=28&&schedule.additionalRequests()<=12,"bounded decode and followup workload");
+   check(n<=40&&schedule.additionalRequests()<=8,"bounded decode and followup workload");
   }
   ClipReviewSchedule schedule=new ClipReviewSchedule(20000);long first=schedule.next();schedule.followUp(first);
   check(schedule.next()==first+220,"new candidate receives a nearby native frame check");

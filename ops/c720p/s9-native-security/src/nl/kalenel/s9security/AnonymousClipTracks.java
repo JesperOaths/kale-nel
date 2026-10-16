@@ -4,7 +4,7 @@ import java.util.*;
 
 /** Clip-scoped, anonymous person tracklets; never links different videos. */
 public final class AnonymousClipTracks {
- public static final String COUNT_VERSION="anonymous_temporal_support_v37";
+ public static final String COUNT_VERSION="anonymous_small_candidate_v39";
  public static final class Hit {
   public final float[] box; public final float confidence; public final String upperColour;
   public Hit(float[] b,float c,String colour) {
@@ -125,7 +125,10 @@ public final class AnonymousClipTracks {
    if(h==null||!Float.isFinite(h.confidence)||h.confidence<.5f||h.confidence>1)continue;
    boolean good=true;
    for(float v:h.box)if(!Float.isFinite(v)||v<0||v>1){good=false;break;}
-   if(good&&h.box[2]>h.box[0]&&h.box[3]>h.box[1]&&area(h.box)>=.004f)sorted.add(h);
+   // 0.4% discarded distant people even when the detector was confident.
+   // Retain boxes down to ~3,700 native pixels; temporal evidence and human
+   // confirmation remain separate from this numerical noise floor.
+   if(good&&h.box[2]>h.box[0]&&h.box[3]>h.box[1]&&area(h.box)>=.00045f)sorted.add(h);
   }
   sorted.sort((a,b)->Float.compare(b.confidence,a.confidence));
   List<Hit> result=new ArrayList<>();

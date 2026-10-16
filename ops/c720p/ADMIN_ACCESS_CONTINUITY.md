@@ -1,5 +1,35 @@
 # Authorized administrative access: continuity runbook
 
+## Current S9+ security checkpoint — 16 October 2026
+
+Direct `ssh c720p` and direct ADB `192.168.178.250:5555` remain the working
+routes. The maintenance agent and Home Assistant remain independent of the
+phone app. No S3 relay or credential change was needed.
+
+Installed phone APK: **V39**, SHA-256
+`c8bddd3812964ce161cf5027d766303752bf0f45ba1aaf2c457ff2a3d9f75228`.
+Live detector policy is `person_multicandidate_transport_v38`, review sampling
+is `native_4k_dense_small_people_v39`, and the UI cache is
+`detection-review-v39b-20261016`. Use the pinned-source
+`prepare-detection-phone-v39.py`; older V37/V38 preparation entry points now
+refuse current sources. Do not deploy the branch's historical recorder classes.
+
+All nine currently owner-verified Person / People clips finished native 4K
+reprocessing on the S9+: 287 frames, 39 temporally supported candidate views
+and 39 weak views. These are **candidates, not confirmed people or identities**.
+The inbox includes weak views. Cross-recording colour/scene sets are temporary
+manual comparison aids; no biometric matching or automatic folder assignment
+was added. Existing production manual state remained zero folders/actions.
+
+Sixteen final live checks passed. Native recording remained approximately
+30 fps, with zero dropped output frames and zero review errors. Originals
+retained their hashes. Full details, backup paths, source reproduction and
+verification commands are in `s9-native-security/DETECTION_REVIEW_V39.md`.
+Durable receipts are `build/s9-detection-review-v39/{release,deployment}.json`
+and `state/s9-visual-attributes-v36/detection-{hub-v39-release,pipeline-v39-verification}.json`.
+The exact APK is also retained in the operator workspace because it was built
+in RAM scratch to protect the hub's limited root storage.
+
 **Operator requirement:** Preserve at least one **verified, authorized administrative route** for every managed device, website, connected service, and project. Prefer two viable access routes wherever possible. Never retire the final working route to improve security. Apply security changes with rollback and proof of continued operation.
 
 **Working preference:** Be autonomous, proactive, thorough and decisive in normal operations. Discover and try permitted connected tools before asking the owner to intervene; contact them only when access or a consequential decision cannot be resolved through authorized means. This preference never overrides actual permission boundaries or safety controls.

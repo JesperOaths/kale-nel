@@ -112,18 +112,39 @@ class ReviewTest(unittest.TestCase):
    with self.assertRaises(OSError):real_archive_verifications()
  def test_singletons_held_but_recoverable(self):
   self.meta['tracks'][0]['samples']=1;self.save()
-  self.assertEqual(v.report({})['total'],0);self.assertEqual(v.report({})['weak_views_held'],1)
+  self.assertEqual(v.report({})['total'],1);self.assertEqual(v.report({})['weak_views_held'],1)
+  self.assertEqual(v.report({'support':['supported']})['total'],0)
   self.assertEqual(v.report({'support':['weak']})['total'],1)
   key=next(iter(v.observations()));self.edit(action='presence',presence='person',observations=[key])
   self.assertEqual(v.report({})['total'],1)
  def test_short_span_is_not_temporal_support(self):
   self.meta['tracks'][0]['last_ms']=1000;self.meta['tracks'][0]['first_ms']=600;self.save()
-  self.assertEqual(v.report({})['total'],0)
+  self.assertEqual(v.report({})['total'],1)
+  self.assertFalse(v.report({})['items'][0]['temporal_support'])
   self.assertEqual(v.count_metrics(self.meta['name'],{'size':self.meta['bytes']})['person_count'],0)
  def test_versioned_native_crop_preserves_provenance(self):
-  for field in ('full_crop','upper_crop'):
-   self.meta['tracks'][0][field]['name']=self.meta['tracks'][0][field]['name'].replace('.1000.','.v37.1000.')
-  self.assertIs(v.validate(self.meta),self.meta)
+  for version in ('v37','v38','v39'):
+   meta=fixture()
+   for field in ('full_crop','upper_crop'):meta['tracks'][0][field]['name']=meta['tracks'][0][field]['name'].replace('.1000.','.'+version+'.1000.')
+   self.assertIs(v.validate(meta),meta)
+ def test_attribute_comparison_sets_never_create_or_assign_folders(self):
+  second=copy.deepcopy(self.meta);second['name']='motion_1791998099788.mp4'
+  for field in ('full_crop','upper_crop'):second['tracks'][0][field]['name']=second['tracks'][0][field]['name'].replace(self.meta['name'],second['name'])
+  rows={m['name']:{'size':m['bytes']} for m in (self.meta,second)};v.source_rows=lambda:rows
+  self.labels[second['name']]={'label':'people','bytes':second['bytes']}
+  v.atomic(v.ROOT/'catalog.json',{'items':{m['name']:m for m in (self.meta,second)}})
+  report=v.report({});self.assertEqual(len(report['attribute_sets']),1);group=report['attribute_sets'][0]
+  self.assertEqual((group['clips'],group['views']),(2,2));self.assertEqual(report['folders'],[])
+  self.assertTrue(all(r['verified_group_id'] is None for r in v.report({'attribute_set':[group['id']]})['items']))
+  with contextlib.closing(v.db()) as c:self.assertEqual(c.execute('select count(*) from audit').fetchone()[0],0)
+  self.assertEqual(v.report({})['coverage']['verified_positive_clips'],2)
+  key=report['items'][0]['observation'];self.edit(action='presence',presence='person',observations=[key])
+  _,folder=self.edit(action='create_folder',label='Manual selection');self.edit(action='assign',folder=folder['folder'],observations=[key])
+  self.assertEqual(v.report({'attribute_set':[group['id']]})['total'],1)
+  self.assertEqual(v.report({'folder':[folder['folder']]})['total'],1)
+  self.labels[second['name']]['label']='no_people';self.assertEqual(v.report({})['attribute_sets'],[])
+ def test_invalid_attribute_set_is_rejected(self):
+  with self.assertRaises(ValueError):v.report({'attribute_set':['../../private']})
  def test_phone_queue_contains_only_positive_owner_decisions(self):
   self.labels['motion_1791998099689.mp4']={'label':'no_people','bytes':50000}
   with patch.object(v.subprocess,'run',return_value=types.SimpleNamespace(returncode=0)) as execute:

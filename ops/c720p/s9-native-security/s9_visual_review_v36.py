@@ -9,7 +9,7 @@ PHONE='192.168.178.250:5555'
 SD='/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K'
 VERSION='original_4k_visual_attributes_v36'
 CLIP=re.compile(r'motion_[0-9]{13}[.]mp4\Z')
-CROP=re.compile(r'motion_[0-9]{13}[.]mp4[.]t[1-9][0-9]?[.][a-f0-9]{12}[.](?:v37[.])?[0-9]{1,9}[.](?:full|upper)[.]jpg\Z')
+CROP=re.compile(r'motion_[0-9]{13}[.]mp4[.]t[1-9][0-9]?[.][a-f0-9]{12}[.](?:v3[789][.])?[0-9]{1,9}[.](?:full|upper)[.]jpg\Z')
 ORIGINS={'http://'+h+':8123' for h in ('192.168.178.141','jesper-hub','jesper-hub.local','localhost','127.0.0.1','homeassistant.local')}
 INTENT='manual-attributes-v36'
 CROP_READS=threading.BoundedSemaphore(2)
@@ -163,8 +163,15 @@ def temporally_supported(track):
  samples=track.get('samples',0);first=track.get('first_ms');last=track.get('last_ms')
  return type(samples) is int and samples>=2 and finite(first,0,125000) and finite(last,0,125000) and last-first>=500
 def bhattacharyya(a,b):return max(0,min(1,1-sum(math.sqrt(x*y) for x,y in zip(a,b))))
+
+def attribute_bucket(item):
+ """Exact clothing/scene tags only; no identity inference or assignments."""
+ colours=[next((p['name'] for p in item.get(field,[]) if p.get('name')),'unknown') for field in ('upper_palette','lower_palette')]
+ tags=colours+[item.get('entry_zone','unknown'),item.get('exit_zone','unknown')]
+ key='A'+hashlib.sha256(json.dumps(tags,separators=(',',':')).encode()).hexdigest()[:16]
+ return key,(' / '.join(colours)+' · '+tags[2].replace('_',' ')+' → '+tags[3].replace('_',' '))
 def report(query):
- permitted={'color','direction','entry_zone','exit_zone','from','to','folder','sort','reference','offset','limit','presence','support','clip'}
+ permitted={'color','direction','entry_zone','exit_zone','from','to','folder','sort','reference','offset','limit','presence','support','clip','attribute_set'}
  if set(query)-permitted or any(len(v)!=1 or len(v[0])>100 for v in query.values()):raise ValueError('invalid_filters')
  q={k:v[0] for k,v in query.items()};all_items=observations();items=list(all_items.values())
  with contextlib.closing(db()) as connection:
@@ -183,8 +190,18 @@ def report(query):
  for f in folders:
   assigned=[r for r in items if r['verified_group_id']==f['id'] and r['presence']=='person']
   f['views']=len(assigned);f['clips']=len({r['clip'] for r in assigned})
+  f['previews']=[{'full_crop':r['full_crop'],'clip':r['clip']} for r in sorted(assigned,key=lambda x:-x['full_crop']['quality'])[:3]]
+ sets={}
+ for item in items:
+  key,label=attribute_bucket(item);item['attribute_set']=key
+  if item['presence']=='no_person' or item['verified_group_id']:continue
+  group=sets.setdefault(key,{'id':key,'label':label,'views':0,'clips':set(),'previews':[]})
+  group['views']+=1;group['clips'].add(item['clip'])
+  if len(group['previews'])<3:group['previews'].append({'full_crop':item['full_crop'],'clip':item['clip']})
+ attribute_sets=[{**g,'clips':len(g['clips'])} for g in sets.values() if len(g['clips'])>=2]
+ attribute_sets.sort(key=lambda g:(-g['clips'],-g['views'],g['id']))
  confirmed=sum(r['presence']=='person' for r in items);pending=sum(r['presence']=='pending' for r in items)
- support=q.get('support','supported')
+ support=q.get('support','all')
  if support not in ('supported','weak','all'):raise ValueError('invalid_support_filter')
  weak=sum(not r['temporal_support'] and r['presence']!='person' for r in items)
  if support!='all':items=[r for r in items if (r['temporal_support'] or r['presence']=='person')==(support=='supported')]
@@ -198,6 +215,9 @@ def report(query):
   if q.get(field):items=[r for r in items if r.get(field)==q[field]]
  if q.get('color'):items=[r for r in items if any(p.get('name')==q['color'] for field in ('upper_palette','lower_palette') for p in r.get(field,[]))]
  if q.get('folder'):items=[r for r in items if (r['verified_group_id'] or 'unreviewed')==q['folder']]
+ if q.get('attribute_set'):
+  if not re.fullmatch(r'A[a-f0-9]{16}',q['attribute_set']):raise ValueError('invalid_attribute_set')
+  items=[r for r in items if r['attribute_set']==q['attribute_set'] and not r['verified_group_id']]
  for field,sign in (('from',1),('to',-1)):
   if q.get(field):
    boundary=int(q[field]);items=[r for r in items if sign*(r['recorded_ms']-boundary)>=0]
@@ -212,7 +232,10 @@ def report(query):
  else:items.sort(key=lambda r:(-r['recorded_ms'],r['track_id']))
  offset=int(q.get('offset',0));limit=int(q.get('limit',100))
  if not 0<=offset<=100000 or not 1<=limit<=200:raise ValueError('invalid_page')
- return {'ok':True,'version':VERSION,'revision':revision,'folders':folders,'total':len(items),'items':items[offset:offset+limit],
+ approved=archive_verifications()['clips'];processed=index().get('items',{})
+ positive=[name for name,row in approved.items() if row['label'] in ('person','people')]
+ return {'ok':True,'version':VERSION,'revision':revision,'folders':folders,'attribute_sets':attribute_sets,'total':len(items),'items':items[offset:offset+limit],
+  'coverage':{'archive_clips':len(approved),'verified_positive_clips':len(positive),'processed_verified_clips':sum(name in processed and processed[name].get('bytes')==approved[name]['bytes'] for name in positive),'verified_without_candidates':sum(name in processed and not processed[name]['tracks'] for name in positive)},
   'indexed_clips':len(index().get('items',{})),'eligible_clips':len({r['clip'] for r in all_items.values()}),
   'verification_gate':'current_archive_person_or_people','updated_at':index().get('updated_at'),'changed_reviews':stale,
   'weak_views_held':weak,'candidate_views':len(all_items),'confirmed_views':confirmed,'pending_views':pending,

@@ -106,6 +106,10 @@ class Tests(unittest.TestCase):
         for changed in ({'motion_detector':'unknown'}, {'last_frame_age_ms':10000}):
             with self.assertRaises(ValueError):module.from_phone({**sample,**changed})
 
+    def test_multicandidate_detector_is_accepted(self):
+        module=load(MODULE,'phone_watch_multicandidate')
+        self.assertTrue(module.from_phone({**self.sample(),'motion_detector':'person_multicandidate_transport_v38'})['ok'])
+
     def test_extended_status_has_bounded_size(self):
         module=load(MODULE,'phone_watch_extended')
         class Response:

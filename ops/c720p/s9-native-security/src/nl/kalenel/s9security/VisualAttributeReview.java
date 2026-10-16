@@ -138,7 +138,7 @@ public final class VisualAttributeReview {
        double central=1-Math.min(1,Math.hypot((box[1]+box[3])*.5-.5,(box[0]+box[2])*.5-.5));
        double clipped=box[0]<.005||box[1]<.005||box[2]>.995||box[3]>.995?.5:1;
        double quality=(.6*sharp/(sharp+150)+.25*size+.15*central)*clipped;
-       String prefix=video.getName()+".t"+track.id+"."+digest.substring(0,12)+".v37."+at;
+       String prefix=video.getName()+".t"+track.id+"."+digest.substring(0,12)+".v39."+at;
        if(quality>e.best){
         e.full=crop(frame,bounds,crops,prefix+".full.jpg",at,sharp,quality);
         e.best=quality;
@@ -182,7 +182,7 @@ public final class VisualAttributeReview {
     .put("repeated_simultaneous",tracks.repeatedConcurrentPeople()).put("tracklet_count",tracks.appearances())
     .put("count_is_sampled_lower_bound",true).put("identity_matching",false).put("tracks",summaries);
    File sidecar=new File(folder,video.getName()+".visual-v36.json");
-   File backup=new File(folder,video.getName()+".visual-v36.before-temporal-v37.json");
+   File backup=new File(folder,video.getName()+".visual-v36.before-small-people-v39.json");
    if(sidecar.isFile()&&!backup.exists()){
     File temp=new File(folder,backup.getName()+".partial");
     try(InputStream in=new FileInputStream(sidecar);FileOutputStream out=new FileOutputStream(temp)){

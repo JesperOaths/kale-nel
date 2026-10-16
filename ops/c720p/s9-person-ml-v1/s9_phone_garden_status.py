@@ -21,6 +21,7 @@ KNOWN_DETECTORS=frozenset((
     "person_spatial_motion_corroborated_v7",
     "person_multiscale_threeframe_static_v8",
     "person_spatiotemporal_transport_v9",
+    "person_multicandidate_transport_v38",
 ))
 
 def _sensor_value(value,lowest,highest):
