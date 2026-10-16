@@ -52,7 +52,7 @@ def wait(version=None,seconds=165):
     return s
   except Exception:pass
   time.sleep(3)
- raise RuntimeError("camera_4k_gpu_health_or_v26_not_verified")
+ raise RuntimeError("camera_4k_gpu_health_or_v27_not_verified")
 def archive():
  with urllib.request.urlopen("http://127.0.0.1:8795/new/api/saved",timeout=35) as r:d=json.load(r)
  if d.get("archive_mode")!="S9-microSD-only":raise RuntimeError("archive_mode_mismatch")
@@ -136,7 +136,7 @@ def main():
   nowclips=archive()
   if not originals.issubset(nowclips):
    raise RuntimeError("archived_recordings_disappeared")
-  report={"installed":True,"on_phone_v26":True,
+  report={"installed":True,"on_phone_v27":True,
      "camera_4k_gpu_healthy":True,"archive_clips_preserved":len(nowclips),
      "new_apk_sha256":sha(signed),"exact_rollback_apk":old,
      "rollback_medium":"S9_microSD_checksum_verified",
