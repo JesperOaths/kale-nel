@@ -155,7 +155,7 @@ assert.match(store, /label:\s*'Normal'/);
 assert.match(index, /image-lightbox-v832\.js/);
 assert.match(index, /live-catalog-refresh-v818\.js\?v=20261016-auto-5m-r10/, 'storefront must publish the automatic static-first catalog reconciler');
 assert.doesNotMatch(index, /catalog-data\.js/, 'retired hand-maintained catalog-data fallback must not load');
-assert.match(index, /catalog-last-good\.js\?v=20261002-stable-pricing-r8/, 'storefront must preload the current generated last-known-good catalog before store.js');
+assert.match(index, /catalog-last-good\.js\?v=20261016-bruis-23-euro-r1/, 'storefront must preload the current €23 fallback catalog before store.js');
 assert.match(store, /shop-catalog-v828/, 'storefront must retain the live Printify-backed catalog authority');
 assert.match(store, /source: 'static-snapshot'/, 'generated catalog snapshot must remain an offline fallback');
 assert.doesNotMatch(store, /result\?\.source === 'cache'[\s\S]*?refreshLiveCatalog/, 'initial render must not immediately hit Supabase for a valid browser cache');
