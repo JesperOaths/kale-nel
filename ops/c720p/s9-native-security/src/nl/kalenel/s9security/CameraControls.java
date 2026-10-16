@@ -26,6 +26,12 @@ final class CameraControls {
  private int exposureSteps=0;
  private boolean torch=false;
  private boolean autoFocus=false;
+ // Night mode adjusts the actual Camera2 AE target for preview and 4K video.
+ // It does not fake luminance in the web player or switch the recording codec.
+ private String nightMode="auto";
+ private boolean nightActive=false;
+ private static final float NIGHT_BOOST_EV=2f;
+
 
  CameraControls(CameraCharacteristics info) {
   Rect r=info.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
@@ -71,6 +77,11 @@ final class CameraControls {
   if(!ev.contains(String.valueOf(Math.round(exposureSteps*compensationStep))))
    ev.add(String.valueOf(Math.round(exposureSteps*compensationStep)));
   o.put("exposure_ev",option(String.valueOf(Math.round(exposureSteps*compensationStep)),ev));
+  o.put("night_mode",option(nightMode,java.util.Arrays.asList("auto","on","off")));
+  o.put("night_active",nightActive);
+  o.put("night_effective_ev",Math.round(effectiveExposureSteps()*compensationStep*100f)/100f);
+  o.put("night_ev_supported",compensation.getUpper()>0);
+
   if(torchSupported)o.put("torch",option(torch?"on":"off",java.util.Arrays.asList("off","on")));
   if(continuousSupported && autoFocusSupported)
    o.put("focus",option(autoFocus?"auto":"continuous",java.util.Arrays.asList("continuous","auto")));
@@ -90,6 +101,12 @@ final class CameraControls {
    int steps=Math.round(ev/compensationStep);
    if(!compensation.contains(steps))throw new IllegalArgumentException("exposure_unsupported");
    exposureSteps=steps;
+  }else if("night_mode".equals(key)){
+   if(!"auto".equals(raw)&&!"on".equals(raw)&&!"off".equals(raw))
+    throw new IllegalArgumentException("invalid_night_mode");
+   nightMode=raw;
+   if("on".equals(raw))nightActive=true;
+   else if("off".equals(raw))nightActive=false;
   }else if("torch".equals(key)){
    if(!torchSupported)throw new IllegalArgumentException("torch_unsupported");
    if(!raw.equals("off")&&!raw.equals("on"))throw new IllegalArgumentException("torch_value_invalid");
@@ -100,6 +117,19 @@ final class CameraControls {
    autoFocus=raw.equals("auto");
   }else throw new IllegalArgumentException("unknown_camera_control");
  }
+ String nightMode(){return nightMode;}
+ boolean nightActive(){return nightActive;}
+ int effectiveExposureSteps(){
+  int extra=nightActive?Math.max(0,Math.round(NIGHT_BOOST_EV/compensationStep)):0;
+  long desired=(long)exposureSteps+extra;
+  return (int)Math.max(compensation.getLower(),Math.min(compensation.getUpper(),desired));
+ }
+ /** Auto night is changed only by the single serialized cameraHandler. */
+ boolean setAutoNightActive(boolean active){
+  if(!"auto".equals(nightMode)||nightActive==active)return false;
+  nightActive=active;
+  return true;
+ }
  void apply(CaptureRequest.Builder builder){
   builder.set(CaptureRequest.CONTROL_AF_MODE,autoFocus?
     CaptureRequest.CONTROL_AF_MODE_AUTO:CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO);
@@ -109,7 +139,10 @@ final class CameraControls {
   w=Math.max(2,w&~1);h=Math.max(2,h&~1);
   int x=sensor.left+((sensor.width()-w)/2),y=sensor.top+((sensor.height()-h)/2);
   builder.set(CaptureRequest.SCALER_CROP_REGION,new Rect(x,y,x+w,y+h));
-  builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION,exposureSteps);
+  // Keep AE active so exposure compensation controls sensor capture,
+  // even with a TEMPLATE_RECORD request. Never force a slower FPS range.
+  builder.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
+  builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION,effectiveExposureSteps());
   if(torchSupported)builder.set(CaptureRequest.FLASH_MODE,torch?
     CaptureRequest.FLASH_MODE_TORCH:CaptureRequest.FLASH_MODE_OFF);
  }
