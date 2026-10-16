@@ -1,0 +1,80 @@
+name: S9 Night Image Quality V1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-s9-night-image-quality-v1.yml'
+      - 'ops/c720p/s9-native-security/audit-night-image-quality-v1.py'
+      - 'ops/c720p/s9-native-security/test-night-image-quality-v1.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-s9-night-image-quality-v1.yml'
+      - 'ops/c720p/s9-native-security/audit-night-image-quality-v1.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s9-night-image-quality-v1
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate read-only image-statistics probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/audit-night-image-quality-v1.py
+          python3 ops/c720p/s9-native-security/test-night-image-quality-v1.py
+
+  probe:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check S9 actual preview detail via audited private management job
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'No authorized management connection'; exit 1; }
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          src='ops/c720p/s9-native-security/audit-night-image-quality-v1.py'
+          digest="$(sha256sum "$src" | cut -d' ' -f1)"
+          [[ "$digest" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+          stage="/tmp/s9-night-quality-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 35 '${uri}' -o '${stage}' && printf '%s  %s\n' '${digest}' '${stage}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${stage}'"
+          idem="s9-night-image-quality-v1-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-night-image-v1','diagnostic',:'cmd',200,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_NIGHT_IMAGE_QUALITY_JOB=$job"
+          for i in $(seq 1 55); do
+            row="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n 1)"
+            if [[ "$row" == done\|* || "$row" == error\|* || "$row" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 5000)"
+              echo "$output"
+              [[ "$row" == 'done|0' ]] || exit 1
+              grep -q 'S9_NIGHT_IMAGE_QUALITY_V1' <<< "$output"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo 'S9 numerical preview audit did not complete in this window'
+          exit 1
