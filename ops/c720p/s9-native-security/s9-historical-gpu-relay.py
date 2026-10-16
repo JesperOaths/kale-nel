@@ -144,6 +144,34 @@ def merge_v28_recheck(catalog,entry):
  catalog["items"][key]=row
  return review
 
+def mark_v28_failed_source(error):
+ """A corrupt/missing verified source must not stall the entire local queue."""
+ module=cpu_catalog()
+ with module.LOCK.open("a") as lock:
+  wait_for_catalog_lock(lock)
+  verified=module.original_verified()
+  cat=module.read_catalog()
+  options=v28_candidates(verified,cat["items"])
+  if not options:return None
+  item=options[0]
+  key=item["clip_id"]
+  old=cat["items"].get(key)
+  if not isinstance(old,dict) or old.get("status")!="classified":return None
+  row=dict(old)
+  before=row.get("v28_person_recheck") or {}
+  attempts=int(before.get("attempts",0))+1
+  row["v28_person_recheck"]={
+   "version":RECHECK_VERSION,"status":"error","attempts":attempts,
+   "error_type":type(error).__name__,
+   "identity_status":"not_verified","source_media":"verified_read_only_google_drive",
+   "human_review":"pending",
+   "last_attempt_utc":datetime.datetime.now(datetime.timezone.utc).isoformat()}
+  cat["items"][key]=row
+  cat["updated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
+  module.write_catalog(cat)
+  return {"clip_id_prefix":key[:12],"attempts":attempts,"retry_limit":3,
+          "error_type":type(error).__name__}
+
 def stage_one(rescan_v28=False):
  import urllib.request
  with urllib.request.urlopen(APP_STATUS,timeout=9) as res:
@@ -365,6 +393,9 @@ def cycle(rescan_v28=False):
   if str(error) in ("phone_camera_not_idle_or_cool","phone_historical_worker_not_installed",
                      "hub_disk_space_guard","historical_catalog_busy_retry_next_timer"):
    print("S9_HISTORY_DEFERRED",str(error))
+  elif rescan_v28:
+   evidence=mark_v28_failed_source(error)
+   print("S9_HISTORY_V28_SOURCE_RETRY",json.dumps(evidence or {"error":type(error).__name__}))
   else:raise
 
 if __name__=="__main__":
