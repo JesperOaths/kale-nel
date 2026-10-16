@@ -90,8 +90,10 @@ def main():
  restored=False
  try:
   if quality.state().get("mode")!="watching":raise RuntimeError("recording_started_before_test")
-  set_ev("1")
+  # Attempt restoration even when the phone accepts the change but the
+  # response is lost in transit.
   after_set=True
+  set_ev("1")
   time.sleep(3.2)
   if controls().get("night_effective_ev",0)<2.8:
    raise RuntimeError("plus_three_ev_not_reached")
