@@ -36,7 +36,7 @@ def sha(data):
 
 
 def extract_style(source, marker=MARK):
-    pattern = r'<style id="' + re.escape(marker) + r'">[\\s\\S]*?</style>'
+    pattern = r'<style id="' + re.escape(marker) + r'">(?s:.*?)</style>'
     found = re.findall(pattern, source)
     if len(found) != 1:
         raise RuntimeError("missing_or_duplicate_player_layout_style")
@@ -52,7 +52,7 @@ def patch(source, style, dialog_id):
         raise RuntimeError("html_structure_unrecognized")
     if source.count('id="' + dialog_id + '"') != 1 or source.count("controls playsinline") < 1:
         raise RuntimeError("video_dialog_contract_missing")
-    pattern = r'<style id="' + re.escape(MARK) + r'">[\\s\\S]*?</style>'
+    pattern = r'<style id="' + re.escape(MARK) + r'">(?s:.*?)</style>'
     original = re.findall(pattern, source)
     if len(original) > 1:
         raise RuntimeError("duplicate_installed_player_style")
