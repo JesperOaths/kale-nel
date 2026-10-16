@@ -164,6 +164,10 @@ def main():
  report["free_after_bytes"]=shutil.disk_usage("/").free
  report["net_freed_bytes"]=report["free_after_bytes"]-before
  report["camera_healthy_after"]=phone_health()
+ # Report V27's disk readiness without changing camera APKs or touching
+ # non-cache files. The guarded V27 builder still enforces its own floor.
+ report["v27_ram_stage_disk_min_mib"]=210
+ report["v27_ram_stage_disk_ready"]=report["free_after_bytes"]>=210*1024**2
  report["status"]="finished"
  print("C720P_CHROMIUM_CACHE_GUARD "+json.dumps(report,sort_keys=True),flush=True)
 
