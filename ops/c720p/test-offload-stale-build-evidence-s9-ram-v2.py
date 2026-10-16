@@ -119,6 +119,8 @@ class SafeArchiveTests(unittest.TestCase):
                         body.index("shutil.rmtree(folder)"))
         self.assertIn("phone_ready_with_recovery()",body)
         self.assertNotIn("s9-native-security",module.HISTORIC_BUILDS)
+        self.assertIn("s9-unified-4k-person-v11",module.HISTORIC_BUILDS)
+        self.assertNotIn("s9-face-recall-v26",module.HISTORIC_BUILDS)
         self.assertNotIn("s9-visual-attributes-v36",module.HISTORIC_BUILDS)
 
 if __name__ == "__main__":
