@@ -1,0 +1,12 @@
+[Unit]
+Description=V28 S9+ historical Drive person re-review (read-only originals)
+Documentation=https://github.com/JesperOaths/kale-nel
+ConditionPathExists=/home/jespern/c720p-home-hub/bin/s9-historical-gpu-relay.py
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9-historical-gpu-relay.py --cycle-v28
+WorkingDirectory=/home/jespern/c720p-home-hub
+TimeoutStartSec=600
+Nice=10
+IOSchedulingClass=idle
