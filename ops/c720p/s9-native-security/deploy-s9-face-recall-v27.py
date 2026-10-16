@@ -3,7 +3,7 @@
 from pathlib import Path
 import datetime,hashlib,json,os,re,subprocess,time,urllib.request,zipfile
 ROOT=Path("/home/jespern/c720p-home-hub")
-RELEASE=ROOT/"build/s9-face-recall-v27/release.json"
+RELEASE=Path("/dev/shm/s9-face-recall-v27/release.json")
 BACK=ROOT/"backups/s9-face-recall-v27"
 SERIAL="192.168.178.250:5555"
 PACKAGE="nl.kalenel.s9security"
@@ -62,7 +62,7 @@ def main():
  if not RELEASE.is_file():raise RuntimeError("signed_release_missing")
  m=json.loads(RELEASE.read_text())
  signed=Path(m.get("apk",""))
- baseline=Path(ROOT/"build/s9-face-recall-v27/installed-before-v26.apk")
+ baseline=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")
  if m.get("source_sha")!=REF or m.get("historical_face_review")!="bounded_verified_4k_face_tiles_v4":
   raise RuntimeError("wrong_version_or_source")
  if not signed.is_file() or not baseline.is_file() or sha(signed)!=m.get("sha256") or sha(baseline)!=m.get("baseline_apk_sha256"):
@@ -76,7 +76,10 @@ def main():
   if not any(VERSION.encode() in new.read(n) for n in new.namelist() if n.startswith("classes") and n.endswith(".dex")):
    raise RuntimeError("new_face_rescue_code_not_signed")
  free=os.statvfs(str(ROOT))
- if free.f_bavail*free.f_frsize<210*1024**2:raise RuntimeError("hub_disk_too_full")
+ # Stage lives in tmpfs; allow installation only if a durable, signed,
+ # byte-identical rollback copy can be persisted while leaving 210 MiB free.
+ if free.f_bavail*free.f_frsize<210*1024**2+baseline.stat().st_size+8*1024**2:
+  raise RuntimeError("insufficient_disk_for_durable_rollback_and_210MiB_reserve")
  if adb("shell","getprop","ro.product.model",sec=20).strip()!="SM-G965F":
   raise RuntimeError("unexpected_phone")
  refresh()
@@ -97,6 +100,9 @@ def main():
  import shutil;shutil.copy2(baseline,old)
  signer(old)
  if sha(old)!=installed:raise RuntimeError("rollback_integrity_failed")
+ persisted=os.statvfs(str(ROOT))
+ if persisted.f_bavail*persisted.f_frsize<210*1024**2:
+  raise RuntimeError("insufficient_free_disk_after_rollback_persisted")
  changed=False
  try:
   latest=status()

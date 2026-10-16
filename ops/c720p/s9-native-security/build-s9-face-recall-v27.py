@@ -10,10 +10,10 @@ from pathlib import Path
 import hashlib,json,os,re,shutil,subprocess,tempfile,urllib.request,zipfile
 HOME=Path("/home/jespern/c720p-home-hub")
 REF=os.environ.get("S9_FACE_RECALL_V27_REF","")
-BASE=HOME/"build/s9-face-recall-v27/installed-before-v26.apk"
+BASE=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")
 SERIAL="192.168.178.250:5555"
 PACKAGE="nl.kalenel.s9security"
-TARGET=HOME/"build/s9-face-recall-v27"
+TARGET=Path("/dev/shm/s9-face-recall-v27")
 KEY=Path("/home/jespern/.config/s9-native-security-sign")
 FINGERPRINT="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
 JAVAS=("AnonymousClipTracks","AppearanceSearchIndex","Boot","CameraActivity","CameraControls",
@@ -37,8 +37,14 @@ def main():
  # require 1.3GiB on the root volume when /tmp is an independent tmpfs.
  free=os.statvfs(HOME)
  scratch=os.statvfs("/tmp")
- if free.f_bavail*free.f_frsize<280*1024**2:
-  raise RuntimeError("hub_disk_below_280MiB_refuse_build")
+ # The signed APK and byte-identical baseline are RAM-staged. Do not duplicate
+ # them on the constrained C720P system disk; the installer separately
+ # reserves and persists the exact rollback before stopping the camera.
+ if free.f_bavail*free.f_frsize<240*1024**2:
+  raise RuntimeError("hub_disk_below_240MiB_refuse_ram_stage_build")
+ ram_stage=os.statvfs("/dev/shm")
+ if ram_stage.f_bavail*ram_stage.f_frsize<110*1024**2:
+  raise RuntimeError("ram_stage_below_110MiB_refuse_build")
  if scratch.f_bavail*scratch.f_frsize<650*1024**2:
   raise RuntimeError("tmpfs_below_650MiB_refuse_build")
  # Preserve the EXACT installed, signed camera APK for a byte-for-byte

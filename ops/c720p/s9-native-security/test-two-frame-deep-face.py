@@ -30,8 +30,11 @@ class Contract(unittest.TestCase):
                    'i<36','MediaMetadataRetriever.OPTION_CLOSEST','new S9FaceReview(app,folder,name,48)',
                    'face_deep_review_version','face_deep_review_no_face_is_not_no_person'):
    self.assertIn(required,deep)
-  self.assertIn('manifest.optInt("person_count",0)<=0',CLASSIFIER)
-  self.assertIn('s9_onphone_36_samples_person_or_tile_v3',CLASSIFIER)
+  # The later movement-only backfill still has a legitimate person-count gate;
+  # constrain this assertion to the 4K face-rescue method itself.
+  self.assertNotIn('manifest.optInt("person_count",0)<=0',
+                   deep.split('backfillMovementEvidence',1)[0])
+  self.assertIn('s9_onphone_36_samples_person_or_tile_v4',CLASSIFIER)
   self.assertIn('return !DEEP_FACE_ROI_VERSION.equals',CLASSIFIER)
   self.assertNotIn('MediaRecorder',deep)
   self.assertNotIn('.delete(',deep)
@@ -40,7 +43,7 @@ class Contract(unittest.TestCase):
  def test_backfill_stays_on_phone_only_when_idle_and_cool(self):
   part=SOURCE.split('private void maybeFaceBackfill(){',1)[1].split('private void maybeGardenArchiveTriage(){',1)[0]
   for required in ('now-lastFaceBackfillScan<60000','gardenPersonGateBusy',
-                   'now-lastMovementAt<45000L','temperature()>=350',
+                   'now-lastMovementAt<45000L','temperature()>=370',
                    'folder.getUsableSpace()<20L*1024*1024*1024',
                    'classifier.deepFaceReview','faceBackfillQueued=false'):
    self.assertIn(required,part)
