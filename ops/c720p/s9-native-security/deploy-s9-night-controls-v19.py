@@ -16,8 +16,8 @@ LAN=HOME/"bin/c720p-lan-camera-relay.py"
 BACKUP=HOME/"backups/s9-auto-night-controls-v19"
 PROXY_UNIT="c720p-drive-security-archive.service"
 LAN_UNIT="c720p-lan-camera-relay.service"
-APP_ANCHOR='        "recording_rotation":re.compile(r"(?:auto|0|90|180|270)\\Z"),'
-APP_ADD='        "night_mode":re.compile(r"(?:auto|on|off)\\Z"),\n'
+APP_ANCHOR='VALUES={'
+APP_ADD='VALUES={"night_mode":re.compile(r"(?:auto|on|off)\\Z"),'
 LAN_OLD="('zoom','exposure_ev','torch','focus','recording_rotation','garden_zone')"
 LAN_NEW="('zoom','exposure_ev','torch','focus','recording_rotation','garden_zone','night_mode')"
 
@@ -60,7 +60,7 @@ def updated_source(path,raw):
    raise RuntimeError("camera_proxy_shape_changed")
   if APP_ADD in old:return raw
   if old.count(APP_ANCHOR)!=1:raise RuntimeError("camera_proxy_night_anchor_changed")
-  patched=old.replace(APP_ANCHOR,APP_ADD+APP_ANCHOR,1)
+  patched=old.replace(APP_ANCHOR,APP_ADD,1)
  elif path==LAN:
   if "SECURITY_NATIVE_CAMERA2_RELAY_V18" not in old:
    raise RuntimeError("authenticated_LAN_relay_v18_missing")
