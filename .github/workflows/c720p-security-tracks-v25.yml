@@ -1,0 +1,110 @@
+name: C720P Tracks & Movements V25
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/AnonymousClipTracks.java'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java'
+      - 'ops/c720p/s9-native-security/security-tracks-v7.html'
+      - 'ops/c720p/s9-native-security/deploy-tracks-review-v25.py'
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
+      - 'ops/c720p/s9-native-security/test-person-tracks-v25.py'
+      - '.github/workflows/c720p-security-tracks-v25.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-tracks-review-v25.py'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-security-tracks-v25
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate movement scope and browser scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-tracks-review-v25.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
+          python3 ops/c720p/s9-native-security/test-person-tracks-v25.py
+          testdir="$(mktemp -d)"
+          trap 'rm -rf "$testdir"' EXIT
+          javac -d "$testdir" ops/c720p/s9-native-security/src/nl/kalenel/s9security/AnonymousClipTracks.java ops/c720p/s9-native-security/tests/AnonymousClipTracksTest.java
+          java -cp "$testdir" nl.kalenel.s9security.AnonymousClipTracksTest
+          node - <<'JS'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const src=fs.readFileSync('ops/c720p/s9-native-security/security-tracks-v7.html','utf8');
+          for(const field of ['metricClips','person_tracks','Needs review','metricReview','metricExcluded']){
+            assert(src.includes(field),field);
+          }
+          for(const match of src.matchAll(/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g)){
+            if(match[1].trim())new vm.Script(match[1]);
+          }
+          console.log('S9_PERSON_TRACKS_V25_UI_SOURCE_PASS');
+          JS
+          python3 - <<'PY'
+          from pathlib import Path
+          pkg=Path('ops/c720p/s9-native-security/deploy-tracks-review-v25.py').read_text()
+          for marker in ('S9_PERSON_TRACKS_V25_DEPLOY_PASS','S9_PERSON_TRACKS_V25_ROLLED_BACK',
+                         'immutable_commit_required','recordings_missing_after_index_update',
+                         'original_recordings_changed'):
+              assert marker in pkg,marker
+          print('S9_PERSON_TRACKS_V25_ROLLBACK_CONTRACT_PASS')
+          PY
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Publish movement catalog and review UI on C720P with rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          dir="ops/c720p/s9-native-security"
+          installer="$dir/deploy-tracks-review-v25.py"
+          catalog="ops/c720p/s9-person-ml-v1/local-sd-catalog.py"
+          proxy="ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
+          tracks="$dir/security-tracks-v7.html"
+          ihash="$(sha256sum "$installer"|cut -d' ' -f1)"
+          chash="$(sha256sum "$catalog"|cut -d' ' -f1)"
+          phash="$(sha256sum "$proxy"|cut -d' ' -f1)"
+          thash="$(sha256sum "$tracks"|cut -d' ' -f1)"
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ && "$ihash" =~ ^[a-f0-9]{64}$ ]]
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${installer}"
+          tmp="/tmp/security-tracks-v25-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 30 '${url}' -o '${tmp}' && printf '%s  %s\\n' '${ihash}' '${tmp}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${tmp}' --ref '${GITHUB_SHA}' --catalog-sha '${chash}' --proxy-sha '${phash}' --tracks-sha '${thash}'"
+          idem="security-tracks-v25-${GITHUB_SHA:0:24}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+           'github-actions-security-tracks-v25','deployment',:'cmd',250,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_PERSON_TRACKS_V25_JOB=$id"
+          for i in $(seq 1 43); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 8500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_PERSON_TRACKS_V25_DEPLOY_PASS' <<< "$output" || exit 1
+              echo "S9_PERSON_TRACKS_V25_HUB_DEPLOYMENT_VERIFIED"
+              exit 0
+            fi
+            sleep 8
+          done
+          exit 1

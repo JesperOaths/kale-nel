@@ -1,179 +1,302 @@
 <!doctype html>
-<html lang="en"><head><script src="/gejast-auth-gate.js?v817"></script>
+<html lang="en">
+<head>
+<script src="/gejast-auth-gate.js?v817"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta http-equiv="Cache-Control" content="no-store">
-<meta http-equiv="Referrer-Policy" content="no-referrer">
-<title>Security · Tracks</title>
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta http-equiv="Cache-Control" content="no-store"><meta http-equiv="Referrer-Policy" content="no-referrer">
+<title>Security · Tracks & movements</title>
 <style>
-:root{color-scheme:dark;--bg:#0e151e;--panel:#131f2b;--raised:#1b2b39;--border:#2d414f;--ink:#eef5f8;--muted:#94acb9;--accent:#80dccc}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-button,input,select{font:inherit;color:inherit}button{cursor:pointer}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-#app{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
-header{height:73px;display:flex;align-items:center;justify-content:space-between;padding:16px 30px;border-bottom:1px solid #273947}
-h1{font-size:23px;font-weight:760;letter-spacing:-.04em;margin:0}#count{color:var(--muted);font-size:12px}
-.workspace{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0;overflow:hidden}
-aside{padding:26px 18px 28px 24px;border-right:1px solid #273947;overflow-y:auto;scrollbar-width:thin}
-.label{font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:.12em;color:#7999a9;margin:12px 0 12px}
-.segment{display:flex;flex-direction:column;gap:4px;margin:0 0 25px}
-.segment button{background:transparent;border:1px solid transparent;border-radius:9px;color:#c1d2da;text-align:left;padding:11px 12px}
-.segment button[aria-pressed=true]{background:#1c383d;color:#e3fff9;border-color:#385c5b}
-.segment button:hover:not([aria-pressed=true]){background:#192935}
-.colours{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
-.swatch{aspect-ratio:1;border:2px solid transparent;border-radius:10px;min-width:0;padding:0;background:var(--paint);box-shadow:inset 0 0 0 1px #ffffff33}
-.swatch[aria-pressed=true]{border-color:#ffffff;box-shadow:0 0 0 2px #6fdec6}
-.swatch[title="All colours"]{background:conic-gradient(#6ca5db,#da7171,#78b881,#f4d46a,#6ca5db)}
-.track-option{display:flex;align-items:center;gap:8px;margin-top:6px;color:#adc0cb;font-size:12px}
-.track-option input{accent-color:#7bdac5}
-.content{display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.toolbar{display:flex;align-items:center;gap:12px;flex:none;padding:18px 25px;border-bottom:1px solid #273947}
-.toolbar input,.toolbar select{background:#182938;border:1px solid #314854;border-radius:9px;padding:10px 12px;min-height:39px}
-.toolbar input{width:min(420px,100%);flex:1;min-width:90px}
-.toolbar select{max-width:190px}
-.results{min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain;padding:24px 25px 50px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));align-items:start;gap:19px}
-.card{border:1px solid #304451;background:var(--panel);border-radius:13px;overflow:hidden;min-width:0}
-.card:hover{border-color:#5d938d}
-.image{display:block;position:relative;aspect-ratio:16/9;background:#1e303d;overflow:hidden}
-.image img{width:100%;height:100%;object-fit:contain;object-position:center;position:relative}
-.image .fallback{display:grid;place-items:center;position:absolute;inset:0;color:#617e8d;font-size:35px}
-.card-body{padding:13px 15px 15px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.top b{font-weight:720;font-variant-numeric:tabular-nums;font-size:13px}
-.kind{font-size:10px;font-weight:650;color:#b6c9d2}
-.tracks{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0;min-height:26px}
-.track{background:#223846;border:1px solid #344f60;border-radius:7px;padding:5px 7px;display:inline-flex;align-items:center;gap:6px;font-size:11px}
-.colour-dot{width:9px;height:9px;border-radius:50%;background:var(--paint);display:inline-block;border:1px solid #ffffff55}
-.details{font-size:11px;color:var(--muted);min-height:18px}
-.open{margin-top:14px;width:100%;background:#1d3c43;color:#d8f8f0;border:1px solid #3b6462;padding:9px;border-radius:8px}
-.open:hover{background:#2c5156}
-#more:not([hidden]){display:block;margin:28px auto 0;background:#203844;border:1px solid #47616d;padding:11px 22px;border-radius:9px}
-#more[hidden],#noResults[hidden]{display:none!important}
-#noResults{padding:50px;text-align:center;color:var(--muted)}
-dialog{width:min(820px,94vw);max-height:88dvh;padding:15px;border:1px solid #3f5968;background:#12202c;color:var(--ink);border-radius:14px}
-dialog::backdrop{background:#03070cdb}
-.dialoghead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.dialoghead button{background:#263d4b;border:1px solid #496371;border-radius:8px;padding:7px 13px}
-video{display:block;width:100%;max-height:64dvh;background:black;border-radius:9px}
+:root{color-scheme:dark;--bg:#0b141c;--card:#13232e;--soft:#172c39;--border:#2a4554;--text:#f0f8fa;--muted:#9bb7c4;--accent:#82dfc9;--yellow:#e8c588}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font:14px/1.42 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);background:var(--bg)}
+button,select,input{font:inherit;color:inherit}button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #a6fff0;outline-offset:2px}
+[hidden]{display:none!important}
+#app{height:100dvh;display:flex;flex-direction:column;min-height:0}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,2.1vw,35px);border-bottom:1px solid var(--border);flex:none}
+.kicker{font-size:10px;text-transform:uppercase;color:var(--accent);letter-spacing:.14em;font-weight:800}
+h1{font-size:24px;line-height:1.1;letter-spacing:-.04em;margin:4px 0}
+.sub{margin:4px 0 0;color:var(--muted);font-size:12px}
+#sync{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+main{min-height:0;overflow:auto;overscroll-behavior:contain;padding:17px clamp(16px,2.1vw,35px) 42px}
+.overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:13px}
+.metric{background:linear-gradient(145deg,#172a35,#101f29);border:1px solid var(--border);border-radius:12px;padding:13px 16px;min-width:0}
+.metric strong{display:block;font-size:28px;font-weight:780;line-height:1.05;font-variant-numeric:tabular-nums}
+.metric span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+.metric small{display:block;font-size:11px;color:#7fa3b2;margin-top:3px}
+.metric.emphasis{border-color:#337769;background:linear-gradient(145deg,#193b3b,#102729)}
+.metric.emphasis strong{color:#a3fbe1}
+.summary{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;border:1px solid #365461;background:#142733;padding:11px 14px;border-radius:11px;margin:0 0 14px;font-size:12px;color:#bbd4db}
+.summary b{color:#eef8f8}
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:13px}
+.tabs{display:flex;gap:5px;padding:4px;background:#142633;border:1px solid #324857;border-radius:11px;flex-wrap:wrap}
+.tabs button{border:0;background:none;padding:8px 12px;border-radius:7px;font-size:12px;color:#bbd0d9}
+.tabs button[aria-pressed=true]{background:#285550;color:#eefffb;font-weight:750}
+.filters .spacer{flex:1}
+.filters select,.filters input{min-height:37px;background:#152b38;border:1px solid #345264;border-radius:8px;padding:7px 10px;font-size:12px}
+.filters input{width:min(280px,100%);flex:0 1 280px}
+.list-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:4px 0 11px}
+.list-heading h2{margin:0;font-size:16px;letter-spacing:-.02em}
+.list-heading span{font-size:12px;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:9px}
+.entry{display:grid;grid-template-columns:160px minmax(0,1fr) auto;gap:16px;align-items:center;background:var(--card);border:1px solid #2e4a59;border-radius:12px;padding:10px 14px;min-height:113px}
+.entry:hover{border-color:#568579}
+.preview{position:relative;width:160px;height:90px;background:#213a45;border-radius:8px;overflow:hidden;display:grid;place-items:center;color:#80a5b4;font-size:23px}
+.preview img{position:absolute;width:100%;height:100%;object-fit:contain;inset:0}
+.entry-main{min-width:0}
+.line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.when{font-size:15px;font-weight:760;font-variant-numeric:tabular-nums}
+.status{border:1px solid #45656d;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:780;letter-spacing:.03em;color:#c4e8df}
+.status.review{color:#f7dba6;border-color:#765e3d}
+.status.other{color:#a6c0cf;border-color:#435869}
+.short{margin:7px 0 0;font-size:13px;color:#e1eff1;overflow-wrap:anywhere}
+.evidence{color:var(--muted);font-size:11px;margin-top:6px}
+.evidence strong{color:#d8f1ef;font-weight:650}
+.people{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.person-pill{font-size:11px;border:1px solid #355561;background:#203746;padding:4px 7px;border-radius:6px;display:flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:99px;border:1px solid #fffc;display:inline-block}
+.entry-actions{display:flex;gap:7px;align-items:center}
+.action{border:1px solid #41756e;background:#1e4a48;border-radius:8px;color:#eafff8;padding:9px 13px;white-space:nowrap;font-size:12px;font-weight:700}
+.action.alt{background:#203341;border-color:#426170;color:#c5dfe9}
+.action:hover{background:#31645b}
+.trackdetail{grid-column:2/4;border-top:1px solid #344d59;padding:11px 1px 4px}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.detail-card{border:1px solid #355463;border-radius:8px;background:#172e3a;padding:10px;font-size:12px;color:#c9dee5}
+.detail-card b{font-size:13px;color:#f0f8f9}
+.detail-card p{margin:5px 0 0;color:#a9c4ce;font-size:11px}
+.pathbar{height:5px;background:#365260;border-radius:5px;margin:9px 0}
+.pathbar i{display:block;height:100%;background:#7fcebc;border-radius:5px}
+.empty{border:1px dashed #426271;background:#132630;border-radius:11px;padding:35px 20px;color:#b6cdd4;text-align:center;line-height:1.6}
+#more{display:block;margin:17px auto;border:1px solid #466675;border-radius:9px;background:#1d3a48;padding:10px 20px}
+.footnote{font-size:11px;color:#86a2af;margin:18px 0}
+dialog{width:min(850px,95vw);max-height:90dvh;background:#142531;color:var(--text);border:1px solid #4e7180;border-radius:12px;padding:14px}
+dialog::backdrop{background:#02060bd9}
+.dialog-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
+.dialog-head button{background:#263f4c;border:1px solid #476371;border-radius:7px;padding:7px 13px}
+video{display:block;width:100%;max-height:60dvh;background:black;border-radius:9px}
 #videoStatus{font-size:12px;color:var(--muted);margin-top:8px}
-::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:#0d1720}::-webkit-scrollbar-thumb{background:#405b68;border:2px solid #0d1720;border-radius:8px}
-@media(max-width:900px){.workspace{grid-template-columns:175px minmax(0,1fr)}aside{padding:16px 12px}.toolbar{padding:11px}.results{padding:12px}}
-@media(max-width:650px){header{height:60px;padding:12px 14px}h1{font-size:19px}.workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}aside{border-right:0;border-bottom:1px solid #273947;padding:8px 12px;overflow:visible}.segment{flex-direction:row;flex-wrap:wrap;gap:5px;margin:5px 0}.segment button{padding:6px 9px;font-size:11px}.label{margin:5px 0}.colours{display:flex;gap:6px;margin:7px 0}.swatch{width:26px;height:26px;flex:0 0 26px}.track-option{margin:4px 0 7px}.toolbar{flex-wrap:wrap;gap:7px}.toolbar input{flex-basis:100%}.grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:10px}}
-</style><script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
+[data-version-watermark]{position:fixed;bottom:4px;right:10px;color:#6d8a97;font-size:10px;pointer-events:none}
+@media(max-width:1050px){.overview{grid-template-columns:repeat(2,1fr)}.entry{grid-template-columns:128px minmax(0,1fr) auto;gap:10px}.preview{width:128px;height:78px}.entry-actions{flex-direction:column}}
+@media(max-width:700px){header{padding:13px 14px}h1{font-size:21px}.overview{gap:7px}.metric{padding:10px}.metric strong{font-size:23px}main{padding:12px}.entry{grid-template-columns:100px minmax(0,1fr);padding:9px;gap:10px}.preview{width:100px;height:72px}.entry-actions{grid-column:1/3;flex-direction:row}.entry-actions .action{flex:1}.trackdetail{grid-column:1/3}.filters .spacer{display:none}.filters input{flex:1 1 100%}.summary{display:block}.line{gap:5px}.when{font-size:13px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+<script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
 </head>
 <body>
-<div id="app"><header><h1>Tracks & clothing</h1><span id="count">Loading…</span></header>
-<div class="workspace"><aside>
-<div class="label">Category</div>
-<div class="segment" id="categories">
-<button type="button" data-kind="all" aria-pressed="true">All recordings</button>
-<button type="button" data-kind="tracked" aria-pressed="false">With tracks</button>
-<button type="button" data-kind="people" aria-pressed="false">People</button>
-<button type="button" data-kind="group" aria-pressed="false">Groups</button>
-<button type="button" data-kind="vehicle" aria-pressed="false">Vehicles</button>
-<button type="button" data-kind="animal" aria-pressed="false">Animals</button>
+<div id="app">
+<header>
+ <div><div class="kicker">SECURITY / MOVEMENT EVIDENCE</div><h1>Tracks & movements</h1>
+ <p class="sub">Person candidates only · one recording at a time · no identity matching</p></div>
+ <span id="sync" role="status" aria-live="polite">Loading archive…</span>
+</header>
+<main>
+ <section class="overview" aria-label="Movement overview">
+  <div class="metric emphasis"><strong id="metricClips">—</strong><span>Clips with supported people</span><small>Repeated person evidence</small></div>
+  <div class="metric"><strong id="metricTracks">—</strong><span>Person tracklets</span><small>Clip-scoped, not unique visitors</small></div>
+  <div class="metric"><strong id="metricReview">—</strong><span>Needs review</span><small>Uncertain or incomplete evidence</small></div>
+  <div class="metric"><strong id="metricExcluded">—</strong><span>Non-person / rejected</span><small>Not counted as people</small></div>
+ </section>
+ <section class="summary" id="explanation"><span><b>How to read this page:</b> A track is an estimated person-shaped object repeatedly detected inside one video. Direction is movement across the camera image, not a physical route. Items needing review are deliberately excluded from person totals.</span></section>
+ <section class="filters" aria-label="Clip filters">
+  <div class="tabs" id="viewTabs" role="group" aria-label="Evidence status">
+   <button type="button" data-view="people" aria-pressed="true">Person evidence</button>
+   <button type="button" data-view="review" aria-pressed="false">Needs review</button>
+   <button type="button" data-view="all" aria-pressed="false">All recordings</button>
+  </div>
+  <div class="spacer"></div>
+  <select id="day" aria-label="Recording date"><option value="all">All dates</option></select>
+  <select id="order" aria-label="Sort recordings"><option value="new">Newest first</option><option value="old">Oldest first</option></select>
+  <input type="search" id="search" placeholder="Search a clip or date…" aria-label="Search clips" autocomplete="off">
+ </section>
+ <div class="list-heading"><h2 id="sectionTitle">Person evidence</h2><span id="matches">—</span></div>
+ <div class="list" id="results" aria-live="polite"></div>
+ <div class="empty" id="empty" hidden></div>
+ <button type="button" id="more" hidden>Show more</button>
+ <p class="footnote">Automated detection is not human verification. Counts reflect sampled frames, not continuous identity tracking. Weak object-like detections remain available under Needs review or All recordings. Original 4K clips are preserved on S9+ microSD.</p>
+</main>
 </div>
-<div class="label">Upper clothing</div>
-<div id="colours" class="colours"></div>
-<label class="track-option"><input id="reviewed" type="checkbox"> Scanned clips only</label>
-</aside>
-<div class="content"><div class="toolbar">
-<input id="search" type="search" placeholder="Search date, colour, clip, ID…" aria-label="Search recording observations" autocomplete="off">
-<select id="day" aria-label="Filter by day"><option value="all">All dates</option></select>
-<select id="order" aria-label="Sort records"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="tracks">Most tracks</option></select>
-</div>
-<div class="results" id="results"><div class="grid" id="grid"></div><div id="noResults" hidden>No matching recordings</div><button id="more" type="button" hidden>Show more</button></div>
-</div></div></div>
-<dialog id="viewer" aria-label="Original camera clip"><div class="dialoghead"><strong id="videoTitle">S9+ recording</strong><button type="button" id="close">Close</button></div><video id="video" controls playsinline preload="metadata"></video><div id="videoStatus"></div></dialog>
-<script id="s9v7-tracks-script">
+<dialog id="viewer" aria-label="Watch original recording">
+ <div class="dialog-head"><strong id="videoTitle">Original recording</strong><button type="button" id="close">Close</button></div>
+ <video id="video" playsinline controls preload="metadata"></video><div id="videoStatus"></div>
+</dialog>
+<script id="s9v25-tracks-script">
 (()=>{
-'use strict';
+"use strict";
 const $=id=>document.getElementById(id);
-const valid=/^motion_[0-9]{13}[.]mp4$/;
-const palette={black:'#252d34',white:'#edf2f7',gray:'#98a5af',red:'#d76f6a',orange:'#de9a59',yellow:'#e9d36e',green:'#6ab587',blue:'#70a9d7',purple_or_pink:'#b88ecb',brown:'#aa8162'};
-const make=(tag,cls,txt)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(txt!==undefined)el.textContent=String(txt);return el};
-const relay=()=>{if(window.C720PSecureRelay?.fetch&&window.C720PSecureRelay?.url)return window.C720PSecureRelay;
-try{if(window.parent!==window&&window.parent.location.origin===location.origin&&window.parent.C720PSecureRelay?.fetch)return window.parent.C720PSecureRelay}catch(_){}return null};
-const fmtColour=c=>String(c||'unknown').replaceAll('_',' ');
-const isReviewed=r=>['sampled_tracks_available','none_detected_in_sampled_frames'].includes(r.anonymous_tracking_status);
-const trackCount=r=>Array.isArray(r.anonymous_tracks)?r.anonymous_tracks.length:Number(r.anonymous_track_count)||0;
-const dayOf=r=>{const ms=Number(String(r.clip_no||'').slice(7,20));const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms));const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day};
-const timeOf=r=>new Date(Number(r.clip_no.slice(7,20))).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit'});
-const category=r=>{const g=String(r.scene_category||'').toLowerCase(),tags=Array.isArray(r.content_categories)?r.content_categories.map(String):[];
-if(g==='multiple_people'||Number(r.person_count)>1)return 'Group';
-if(Number(r.person_count)>0||g==='one_person')return 'Person';
-if(g.includes('vehicle')||tags.includes('vehicle'))return 'Vehicle';if(g.includes('animal')||tags.includes('animal'))return 'Animal';return 'Motion'};
-const matchesKind=r=>{const k=state.kind;if(k==='all')return true;if(k==='tracked')return trackCount(r)>0;if(k==='people')return Number(r.person_count)>0;if(k==='group')return category(r)==='Group';if(k==='vehicle')return category(r)==='Vehicle';if(k==='animal')return category(r)==='Animal';return true};
-const state={all:[],kind:'all',colour:'all',day:'all',reviewed:false,query:'',order:'new',limit:48,busy:false};
-let playerToken=0;
-async function thumbnail(img,r){try{const api=relay();if(api?.url)img.src=await api.url('/new/saved/snap/'+encodeURIComponent(r.clip_no+'.thumb.jpg'))}catch(_){
-img.src='/local/frontyard-security-new/s9-phone-thumbs/'+encodeURIComponent(r.clip_no)+'.thumb.jpg'}}
-function colourPill(track){const c=String(track.upper_clothing_colour||'');const name=String(track.id||'');
-const el=make('span','track');const dot=make('i','colour-dot');dot.style.setProperty('--paint',palette[c]||'#677b88');el.append(dot,make('span','',name.replace('Person ','P')+' · '+fmtColour(c)));return el}
-function card(r){const el=make('article','card'),pic=make('div','image'),img=make('img');img.loading='lazy';img.decoding='async';img.alt='Clip preview';
-pic.append(make('div','fallback','▣'),img);el.append(pic);
-const body=make('div','card-body'),head=make('div','top'),c=category(r);
-head.append(make('b','',dayOf(r)+' · '+timeOf(r)),make('span','kind',c));body.append(head);
-const wrap=make('div','tracks'),tracks=Array.isArray(r.anonymous_tracks)?r.anonymous_tracks:[];
-for(const track of tracks.slice(0,9))if(/^Person (?:[1-9]|[1-5][0-9]|6[0-4])$/.test(String(track.id||'')))wrap.append(colourPill(track));
-if(!wrap.children.length)wrap.append(make('span','kind',isReviewed(r)?'No tracks in sampled frames':'Awaiting track scan'));
-body.append(wrap);
-const stats=make('div','details',(Number(r.person_count)||0)+' '+((Number(r.person_count)||0)===1?'person':'people')+' max · '+(Number(r.sampled_frames)||0)+' sampled frames');
-body.append(stats);
-const open=make('button','open','Play clip');open.type='button';open.addEventListener('click',()=>play(r));body.append(open);
-el.append(body);thumbnail(img,r);return el}
-function matches(r){if(!matchesKind(r))return false;if(state.reviewed&&!isReviewed(r))return false;
-if(state.day!=='all'&&dayOf(r)!==state.day)return false;
-const tracks=Array.isArray(r.anonymous_tracks)?r.anonymous_tracks:[];
-if(state.colour!=='all'&&!tracks.some(t=>t.upper_clothing_colour===state.colour))return false;
-if(state.query){const q=[r.clip_no,dayOf(r),r.timestamp,r.scene_category,...tracks.map(t=>[t.id,t.upper_clothing_colour].join(' '))].join(' ').toLowerCase();
-if(!q.includes(state.query))return false}
-return true}
-function render(){let entries=state.all.filter(matches);
-entries.sort((a,b)=>state.order==='tracks'?trackCount(b)-trackCount(a)||b.clip_no.localeCompare(a.clip_no):
-state.order==='old'?a.clip_no.localeCompare(b.clip_no):b.clip_no.localeCompare(a.clip_no));
-const grid=$('grid');grid.replaceChildren();
-const visible=Math.min(entries.length,Math.max(0,state.limit));
-for(const r of entries.slice(0,visible))grid.append(card(r));
-const remaining=Math.max(0,entries.length-visible);
-$('more').hidden=remaining===0;
-$('more').textContent=remaining?('Show next '+Math.min(48,remaining)+' · '+remaining+' remaining'):'';
-$('noResults').hidden=entries.length!==0;
-$('count').textContent=entries.length+' clips';
+const clipOK=/^motion_[0-9]{13}[.]mp4$/;
+const palette={black:'#303943',white:'#e9f3f5',gray:'#9caab5',red:'#d27473',orange:'#dca25c',yellow:'#e0cd78',green:'#74b896',blue:'#7aaed4',purple_or_pink:'#b59acf',brown:'#a78a72'};
+const DIR={image_left:'← Left across image',image_right:'→ Right across image',image_up:'↑ Toward top of image',image_down:'↓ Toward bottom of image',diagonal:'↗ Diagonal image movement',stationary_or_uncertain:'No clear direction',insufficient_samples:'Direction unavailable'};
+const el=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=String(text);return x};
+const relay=()=>{if(window.C720PSecureRelay?.fetch&&window.C720PSecureRelay?.url)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.location.origin===location.origin&&window.parent.C720PSecureRelay?.fetch)return window.parent.C720PSecureRelay}catch(_){}return null};
+const stamp=r=>Number(String(r.clip_no).slice(7,20));
+const dateOf=r=>new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(stamp(r)));
+const dayOf=r=>{const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(stamp(r)));const x=Object.fromEntries(parts.map(p=>[p.type,p.value]));return x.year+'-'+x.month+'-'+x.day};
+const tracks=r=>r.person_track_evidence_version==='corroborated_person_tracklets_v25'&&Array.isArray(r.person_tracks)?r.person_tracks:[];
+const count=r=>tracks(r).length;
+const reviewed=r=>r.person_track_evidence_version==='corroborated_person_tracklets_v25';
+const rawTracks=r=>Array.isArray(r.anonymous_tracks)?r.anonymous_tracks.length:0;
+const unknown=r=>!reviewed(r)&&rawTracks(r)>0;
+const needsReview=r=>(Number(r.person_track_review_count)||0)>0||unknown(r)||(!count(r)&&Number(r.person_count)>0&&!reviewed(r));
+const excluded=r=>(Number(r.rejected_object_track_count)||0)>0||(!count(r)&&!needsReview(r)&&rawTracks(r)>0);
+const state={all:[],view:'people',day:'all',order:'new',query:'',limit:32,loading:false,error:false};
+let videoToken=0;
+function summary(){
+ const personClips=state.all.filter(r=>count(r)>0);
+ const totalTracks=personClips.reduce((n,r)=>n+count(r),0);
+ const reviewClips=state.all.filter(needsReview);
+ const exclusionClips=state.all.filter(excluded);
+ $('metricClips').textContent=personClips.length;
+ $('metricTracks').textContent=totalTracks;
+ $('metricReview').textContent=reviewClips.length;
+ $('metricExcluded').textContent=exclusionClips.length;
+ $('sync').textContent=state.all.length+' recordings indexed';
 }
-function resetFilteredScroll(){const scroller=$('results');if(scroller)scroller.scrollTop=0}
-function dayOptions(){const select=$('day'),days=[...new Set(state.all.map(dayOf))].sort().reverse();select.replaceChildren();
-const all=make('option','','All dates');all.value='all';select.append(all);
-for(const d of days){const opt=make('option','',d);opt.value=d;select.append(opt)}
-if(!days.includes(state.day))state.day='all';select.value=state.day}
-async function play(r){const api=relay(),token=++playerToken,v=$('video');v.pause();v.removeAttribute('src');v.load();$('videoTitle').textContent=dayOf(r)+' · '+timeOf(r);
-$('videoStatus').textContent='Loading…';if(!$('viewer').open)$('viewer').showModal();
-try{if(!api?.url)throw Error('relay');const signed=await api.url('/new/saved/clip/'+encodeURIComponent(r.clip_no));if(token!==playerToken)return;v.src=signed;v.load();$('videoStatus').textContent=''}
-catch(_){if(token===playerToken)$('videoStatus').textContent='Recording unavailable'}}
-async function reload(){if(state.busy)return;state.busy=true;
-try{const api=relay();if(!api?.fetch)throw Error('relay');const resp=await api.fetch('/new/api/saved',{cache:'no-store'});
-if(!resp.ok)throw Error('not_found');const j=await resp.json();if(!Array.isArray(j.events)||j.archive_mode!=='S9-microSD-only')throw Error('index');
-state.all=j.events.filter(r=>valid.test(String(r.clip_no||'')));dayOptions();render()}
-catch(_){$('count').textContent='Archive unavailable';if(!state.all.length)$('noResults').hidden=false}
-finally{state.busy=false}}
-const colours=$('colours'),all=make('button','swatch');all.type='button';all.title='All colours';all.setAttribute('aria-label','All clothing colours');all.setAttribute('aria-pressed','true');all.dataset.colour='all';colours.append(all);
-for(const [name,paint] of Object.entries(palette)){const el=make('button','swatch');el.type='button';el.title=fmtColour(name);el.setAttribute('aria-label',fmtColour(name));el.setAttribute('aria-pressed','false');el.dataset.colour=name;el.style.setProperty('--paint',paint);colours.append(el)}
-colours.addEventListener('click',e=>{const b=e.target.closest('button[data-colour]');if(!b)return;state.colour=b.dataset.colour;state.limit=48;resetFilteredScroll();
-for(const x of colours.querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));render()});
-$('categories').addEventListener('click',e=>{const b=e.target.closest('button[data-kind]');if(!b)return;state.kind=b.dataset.kind;state.limit=48;resetFilteredScroll();
-for(const x of $('categories').querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));render()});
-$('reviewed').addEventListener('change',e=>{state.reviewed=e.target.checked;state.limit=48;resetFilteredScroll();render()});
-$('day').addEventListener('change',e=>{state.day=e.target.value;state.limit=48;resetFilteredScroll();render()});
+function status(r){
+ if(count(r))return ['Repeated person evidence',''];
+ if(needsReview(r))return ['Review required','review'];
+ return ['No supported person track','other'];
+}
+function statusText(r){
+ if(count(r))return count(r)+(count(r)===1?' person tracklet':' person tracklets')+' · '+(Number(r.person_detected_frames_050)||0)+' detector-positive sampled frames';
+ if(needsReview(r))return reviewed(r)?'Person/object label uncertain; excluded from person count':'Tracking evidence unavailable; do not assume a person';
+ if(excluded(r))return 'Object-like or short detector fragments excluded from person tracks';
+ return r.anonymous_tracking_status==='none_detected_in_sampled_frames'?'No person track found in sampled frames':'No substantiated person evidence in this recording';
+}
+function thumb(img,r){
+ const api=relay();
+ if(!api?.url)return;
+ api.url('/new/saved/snap/'+encodeURIComponent(r.clip_no+'.thumb.jpg'))
+ .then(src=>{if(img.isConnected)img.src=src}).catch(()=>{
+   if(img.isConnected)img.src='/local/frontyard-security-new/s9-phone-thumbs/'+encodeURIComponent(r.clip_no)+'.thumb.jpg';
+ });
+}
+function details(rec){
+ const wrap=el('section','trackdetail');
+ const title=el('div','evidence');
+ title.textContent='Sampling evidence · each movement track exists only within this clip';
+ wrap.append(title);
+ const grid=el('div','detail-grid');
+ const people=tracks(rec);
+ if(!people.length){
+   const card=el('div','detail-card');
+   card.append(el('b','',needsReview(rec)?'Why this is not counted as a person':'No corroborated person track'));
+   const reason=Array.isArray(rec.person_track_review_reasons)?rec.person_track_review_reasons.map(x=>x.reason).join(', '):'';
+   card.append(el('p','',reason.replaceAll('_',' ')||'More independently corroborated person detections are required. Raw motion never establishes a person.'));
+   grid.append(card);
+ }else for(const t of people){
+   const card=el('div','detail-card'),identifier=String(t.id||'Temporary track');
+   card.append(el('b','',identifier+' · '+(DIR[t.image_movement_direction]||'Direction not measured')));
+   const meta=el('p','','Samples: '+Number(t.sample_count||0)+' · peak model score: '+Math.round(Number(t.peak_detection_score||0)*100)+'% · colour: '+String(t.upper_clothing_colour||'uncertain').replaceAll('_',' '));
+   card.append(meta);
+   const duration=Number(rec.duration_ms)||0;
+   if(duration>0){
+     const bar=el('div','pathbar'),fill=el('i');
+     const start=Math.min(100,100*Math.max(0,Number(t.first_sample_ms)||0)/duration);
+     const end=Math.min(100,100*Math.max(0,Number(t.last_sample_ms)||0)/duration);
+     fill.style.marginLeft=start+'%';fill.style.width=Math.max(1,end-start)+'%';
+     bar.append(fill);bar.title='Observed sample interval within this recording';card.append(bar);
+   }
+   card.append(el('p','','Movement direction is based on image coordinates only; speed, walking style and real-world position are not established.'));
+   grid.append(card);
+ }
+ wrap.append(grid);
+ return wrap;
+}
+function renderCard(r){
+ const article=el('article','entry');
+ const image=el('div','preview','▧'),img=el('img');img.loading='lazy';img.decoding='async';img.alt='Recording scene thumbnail';img.addEventListener('error',()=>img.remove(),{once:true});image.append(img);
+ const main=el('div','entry-main'),header=el('div','line'),st=status(r);
+ header.append(el('strong','when',dateOf(r)),el('span','status '+st[1],st[0]));main.append(header);
+ main.append(el('div','short',count(r)?'Likely person movement · '+(count(r)>1?'multiple track fragments':'single tracked candidate'):statusText(r)));
+ if(count(r)){
+  const tags=el('div','people');
+  for(const t of tracks(r).slice(0,4)){
+   const pill=el('span','person-pill'),c=String(t.upper_clothing_colour||''),dot=el('i','dot');
+   dot.style.background=palette[c]||'#78929e';pill.append(dot,el('span','',String(t.id||'Track')+' · '+(DIR[t.image_movement_direction]||'Direction unavailable')));tags.append(pill);
+  }
+  if(count(r)>4)tags.append(el('span','person-pill','+'+(count(r)-4)+' more'));main.append(tags);
+ }
+ main.append(el('div','evidence',statusText(r)));
+ const actions=el('div','entry-actions');
+ const play=el('button','action','Play video'),expand=el('button','action alt','Evidence ▾');
+ play.type='button';expand.type='button';expand.setAttribute('aria-expanded','false');
+ play.addEventListener('click',()=>openClip(r));
+ expand.addEventListener('click',()=>{
+  const detail=article.querySelector('.trackdetail');
+  if(detail){detail.remove();expand.setAttribute('aria-expanded','false');expand.textContent='Evidence ▾'}
+  else{article.append(details(r));expand.setAttribute('aria-expanded','true');expand.textContent='Hide evidence ▴'}
+ });
+ actions.append(play,expand);article.append(image,main,actions);thumb(img,r);return article;
+}
+function matched(r){
+ if(state.view==='people'&&!count(r))return false;
+ if(state.view==='review'&&!needsReview(r))return false;
+ if(state.day!=='all'&&dayOf(r)!==state.day)return false;
+ if(state.query&&![r.clip_no,dayOf(r),dateOf(r),...tracks(r).map(t=>[t.id,t.image_movement_direction,t.upper_clothing_colour].join(' '))].join(' ').toLowerCase().includes(state.query))return false;
+ return true;
+}
+function render(){
+ const rows=state.all.filter(matched).sort((a,b)=>state.order==='old'?stamp(a)-stamp(b):stamp(b)-stamp(a));
+ $('sectionTitle').textContent=state.view==='people'?'Person movement evidence':state.view==='review'?'Needs human review':'All recorded motion';
+ $('matches').textContent=rows.length+' matching recordings';
+ const results=$('results');results.replaceChildren();
+ for(const record of rows.slice(0,state.limit))results.append(renderCard(record));
+ $('more').hidden=rows.length<=state.limit;
+ $('more').textContent='Show more · '+(rows.length-state.limit)+' remaining';
+ $('empty').hidden=rows.length>0;
+ if(!rows.length)$('empty').textContent=state.error?'Could not load the secured recording index. Your existing videos have not been changed.':
+ state.view==='people'?'No corroborated person tracks found for this filter. Check “Needs review” for uncertain detections.':
+ state.view==='review'?'No recordings need person-track review in this selection.':'No recordings match the selected filters.';
+}
+function dates(){
+ const d=$('day');const old=state.day;d.replaceChildren();
+ const first=el('option','','All dates');first.value='all';d.append(first);
+ const days=[...new Set(state.all.map(dayOf))].sort().reverse();
+ for(const day of days){const o=el('option','',day);o.value=day;d.append(o)}
+ state.day=days.includes(old)?old:'all';d.value=state.day;
+}
+async function openClip(rec){
+ const dialog=$('viewer'),video=$('video'),token=++videoToken;
+ video.pause();video.removeAttribute('src');video.load();
+ $('videoTitle').textContent=dateOf(rec)+' · 4K original';
+ $('videoStatus').textContent='Loading secured recording…';
+ if(!dialog.open)dialog.showModal();
+ try{
+  const api=relay();if(!api?.url)throw Error('secure-relay-unavailable');
+  const url=await api.url('/new/saved/clip/'+encodeURIComponent(rec.clip_no));
+  if(videoToken!==token)return;video.src=url;video.load();$('videoStatus').textContent='';
+ }catch(_){if(videoToken===token)$('videoStatus').textContent='The recording could not be loaded through the secure relay.'}
+}
+async function load(){
+ if(state.loading)return;state.loading=true;
+ try{
+  const api=relay();if(!api?.fetch)throw Error('secured relay unavailable');
+  const response=await api.fetch('/new/api/saved',{cache:'no-store'});
+  if(!response.ok)throw Error('catalog unavailable');
+  const payload=await response.json();
+  if(payload.archive_mode!=='S9-microSD-only'||!Array.isArray(payload.events))throw Error('unexpected index format');
+  state.all=payload.events.filter(r=>clipOK.test(String(r.clip_no||'')));
+  state.error=false;dates();summary();render();
+ }catch(_){state.error=true;$('sync').textContent='Secured archive unavailable';render()}
+ finally{state.loading=false}
+}
+$('viewTabs').addEventListener('click',e=>{
+ const b=e.target.closest('button[data-view]');if(!b)return;
+ state.view=b.dataset.view;state.limit=32;
+ for(const x of $('viewTabs').querySelectorAll('button'))x.setAttribute('aria-pressed',String(b===x));
+ render();
+});
+$('day').addEventListener('change',e=>{state.day=e.target.value;state.limit=32;render()});
 $('order').addEventListener('change',e=>{state.order=e.target.value;render()});
-$('search').addEventListener('input',e=>{state.query=e.target.value.toLowerCase().trim().slice(0,100);state.limit=48;resetFilteredScroll();render()});
-$('more').addEventListener('click',()=>{state.limit+=48;render()});
+$('search').addEventListener('input',e=>{state.query=e.target.value.toLowerCase().trim().slice(0,100);state.limit=32;render()});
+$('more').addEventListener('click',()=>{state.limit+=32;render()});
 $('close').addEventListener('click',()=>$('viewer').close());
-$('viewer').addEventListener('close',()=>{++playerToken;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
+$('viewer').addEventListener('close',()=>{++videoToken;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
-reload();
+load();
 })();
-
 const GEJAST_PAGE_VERSION='v817';
 </script>
-<div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#647c89;font-size:10px;pointer-events:none">v817 - Made by Bruis</div>
+<div data-version-watermark>v817 · Tracks redesign v25 · Made by Bruis</div>
 </body></html>

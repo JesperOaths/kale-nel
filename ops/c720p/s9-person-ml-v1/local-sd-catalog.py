@@ -20,6 +20,71 @@ def safe_image_track_metric(value,maximum):
  value=float(value)
  return round(value,3) if math.isfinite(value) and 0<=value<=maximum else None
 
+PERSON_TRACK_REVIEW_VERSION="corroborated_person_tracklets_v25"
+
+def classify_person_track_evidence(manifest,tracks):
+ """Cautious clip-level person evidence. Preserve original metadata for review.
+
+ No one-frame object, contradictory non-person event or unsupported 2D box
+ becomes a displayed person track. This DOES NOT assert verified identity.
+ Original MP4s and on-phone manifests are never changed.
+ """
+ positive={"single_person_repeated_candidate","multiple_people_candidate"}
+ ambiguous={"possible_group_needs_frame_review","possible_person_below_standard_threshold",
+            "single_frame_person_candidate"}
+ category=manifest.get("person_event_category")
+ labels=manifest.get("categories")
+ labels={str(x).lower() for x in labels} if isinstance(labels,list) else set()
+ frame_hits=manifest.get("person_frames_at_050")
+ if isinstance(frame_hits,bool) or not isinstance(frame_hits,int):frame_hits=None
+ count=manifest.get("person_count")
+ if isinstance(count,bool) or not isinstance(count,int):count=0
+ confirmed=[]
+ review=[]
+ rejected=[]
+ object_tags=bool(labels.intersection({"animal","vehicle","car","bus","truck","bicycle",
+                                       "motorcycle","cat","dog","bird"}))
+ for track in tracks:
+  samples=track["sample_count"]
+  peak=track["peak_detection_score"]
+  elapsed=track["last_sample_ms"]-track["first_sample_ms"]
+  aspect=track.get("image_detector_box_aspect_ratio")
+  reason=None
+  if samples<3 or elapsed<600 or peak<.70:
+   reason="short_or_weak_detector_fragment"
+  elif aspect is not None and not .18<=aspect<=1.25:
+   reason="implausible_person_box_shape"
+  elif count<1 or category=="no_person_model_detection":
+   reason="no_person_classification_support"
+  elif category in ambiguous or category not in positive:
+   reason="person_classification_needs_review"
+  elif frame_hits is None or frame_hits<2:
+   reason="missing_repeated_frame_support"
+  elif object_tags and frame_hits<3:
+   reason="person_and_object_labels_conflict"
+  if reason is None:
+   confirmed.append({**track,"evidence_label":"corroborated_person_candidate"})
+  elif reason in ("short_or_weak_detector_fragment",
+                  "implausible_person_box_shape",
+                  "no_person_classification_support"):
+   rejected.append({"temporary_track_id":track["temporary_track_id"],
+                    "reason":reason})
+  else:
+   review.append({"temporary_track_id":track["temporary_track_id"],
+                  "reason":reason})
+ return {"person_track_evidence_version":PERSON_TRACK_REVIEW_VERSION,
+         "person_tracks":confirmed,
+         "person_track_count":len(confirmed),
+         "person_track_review_count":len(review),
+         "rejected_object_track_count":len(rejected),
+         "person_track_review_reasons":review,
+         "person_track_excluded_reasons":rejected,
+         "person_tracking_review_status":(
+             "corroborated_person_candidate" if confirmed else
+             "needs_review" if review else
+             "rejected_unsubstantiated_fragments" if rejected else
+             "no_person_tracks_in_sampled_frames")}
+
 def anonymous_clip_metadata(manifest):
  status={"anonymous_tracking_status":"not_available_in_original_review",
          "anonymous_track_count":None,"anonymous_tracks":[]}
@@ -81,7 +146,8 @@ def anonymous_clip_metadata(manifest):
  except (ValueError,TypeError,OverflowError):
   return {**status,"anonymous_tracking_status":"invalid_tracking_manifest"}
  return {"anonymous_tracking_status":"sampled_tracks_available" if tracks else "none_detected_in_sampled_frames",
-         "anonymous_track_count":len(tracks),"anonymous_tracks":tracks}
+         "anonymous_track_count":len(tracks),"anonymous_tracks":tracks,
+         **classify_person_track_evidence(manifest,tracks)}
 
 def safe_native_detection_stats(manifest):
  """Whitelisted, non-biometric detection provenance from S9 signed manifests."""
