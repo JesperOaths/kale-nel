@@ -1,4 +1,4 @@
-name: S9 on-device original-4K face rescue V26 · guarded disk-recovered retry
+name: S9 V26 original-4K face rescue · full Java dependency repair
 on:
   pull_request:
     paths:
@@ -34,6 +34,7 @@ jobs:
           python3 -m py_compile ops/c720p/s9-native-security/build-s9-face-recall-v26.py
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-face-recall-v26.py ops/c720p/s9-native-security/deploy-s9-face-ui-v26.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py
           grep -Fq 's9_onphone_36_samples_person_or_tile_v3' ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java
+          grep -Fq 'AppearanceSearchIndex","Boot"' ops/c720p/s9-native-security/build-s9-face-recall-v26.py
           grep -Fq 'QUIET_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
           grep -Fq 'lastAcceptedEncodedPtsUs' ops/c720p/s9-native-security/src/nl/kalenel/s9security/Continuous4KEncoder.java
   deploy:
