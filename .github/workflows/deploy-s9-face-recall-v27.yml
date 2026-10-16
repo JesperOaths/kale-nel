@@ -1,5 +1,6 @@
 name: S9 V27 face rescue · verified original-4K DEX contract
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/build-s9-face-recall-v27.py'
@@ -42,7 +43,7 @@ jobs:
           grep -Fq 'lastAcceptedEncodedPtsUs' ops/c720p/s9-native-security/src/nl/kalenel/s9security/Continuous4KEncoder.java
   deploy:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
     runs-on: ubuntu-latest
     timeout-minutes: 44
     env:
