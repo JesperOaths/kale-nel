@@ -701,13 +701,13 @@ assert.match(directMigration, /security definer/i);
 
 assert.doesNotMatch(refresh, /const POLL_MS\s*=/, 'active storefront must not restore its old high-frequency polling');
 assert.match(refresh, /startAutomaticReconciliation/, 'storefront should start a bounded post-paint catalog reconciliation');
-assert.match(refresh, /SHARED_MIN_REFRESH_MS\s*=\s*20\s*\*\s*60\s*\*\s*1000/, 'automatic and explicit reconciliation must share a twenty-minute cross-tab floor');
+assert.match(refresh, /SHARED_MIN_REFRESH_MS\s*=\s*5\s*\*\s*60\s*\*\s*1000/, 'automatic and explicit reconciliation must share a five-minute cross-tab floor');
 assert.match(refresh, /SHARED_CHECK_KEY/, 'automatic catalog refreshes must coordinate across tabs rather than multiplying work');
 assert.doesNotMatch(refresh, /checkCatalog\(true\)/, 'no public path may bypass the shared refresh floor');
-assert.match(catalogEdge, /CACHE_FRESH_MS\s*=\s*60\s*\*\s*60_000/, 'server catalog freshness window must keep a valid catalog off the critical refresh path for one hour');
-assert.match(catalogEdge, /REFRESH_FAILURE_COOLDOWN_MS\s*=\s*30\s*\*\s*60_000/, 'failed upstream refreshes must back off for thirty minutes instead of retrying on every stale request');
+assert.match(catalogEdge, /CACHE_FRESH_MS\s*=\s*5\s*\*\s*60_000/, 'server catalog freshness window must keep a valid catalog off the critical refresh path for five minutes');
+assert.match(catalogEdge, /REFRESH_FAILURE_COOLDOWN_MS\s*=\s*30\s*\*\s*60_000/, 'failed upstream refreshes must back off for one minute instead of retrying on every stale request');
 assert.match(catalogEdge, /refreshFailureCooldown/, 'catalog scheduling must expose and honor failed-refresh cooldown state');
-assert.match(catalogEdge, /MEMORY_ROW_TTL_MS\s*=\s*30\s*\*\s*60_000/, 'catalog Edge Function must keep the large JSONB row in-isolate for thirty minutes');
+assert.match(catalogEdge, /MEMORY_ROW_TTL_MS\s*=\s*60_000/, 'catalog Edge Function must keep the large JSONB row in-isolate for one minute');
 assert.match(catalogEdge, /if\(memoryCatalogRow && Date\.now\(\)-memoryCatalogLoadedAt < MEMORY_ROW_TTL_MS\) return memoryCatalogRow/, 'warm Edge isolates must avoid repeatedly reading the same large catalog row');
 assert.match(catalogEdge, /if\(memoryCatalogRow\) return memoryCatalogRow/, 'a previously loaded catalog must remain an availability fallback when PostgREST\/direct DB is under pressure');
 assert.match(catalogEdge, /max-age=60, s-maxage=60, stale-while-revalidate=120/, 'public catalog responses must permit browser/shared-cache reuse and stale-while-revalidate');
