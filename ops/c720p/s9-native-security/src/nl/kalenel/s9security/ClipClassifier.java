@@ -474,7 +474,7 @@ public final class ClipClassifier {
   * ROIs on up to 12 detection anchors (never changing the source MP4).
   * No crop/embedding is evidence that two clips belong to the same person.
   */
- static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v3";
+ static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v4";
  static boolean deepFaceNeedsUpgrade(JSONObject manifest){
   if(manifest==null||manifest.optInt("face_snapshots_saved",0)>0||
      !"s9_face_review_v1".equals(manifest.optString("face_review_version","")))
