@@ -1,0 +1,87 @@
+name: S9 Recorded Night View V1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-s9-recorded-night-view-v1.yml'
+      - 'ops/c720p/s9-native-security/s9-recording-night-view-v1.js'
+      - 'ops/c720p/s9-native-security/deploy-s9-recording-night-view-v1.py'
+      - 'ops/c720p/s9-native-security/test-recording-night-view-v1.py'
+      - 'ops/c720p/s9-native-security/test-recording-night-view-dom-v1.js'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-s9-recorded-night-view-v1.yml'
+      - 'ops/c720p/s9-native-security/s9-recording-night-view-v1.js'
+      - 'ops/c720p/s9-native-security/deploy-s9-recording-night-view-v1.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s9-recorded-night-view-v1
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify original-evidence playback and scoped installer
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-recording-night-view-v1.py
+          python3 ops/c720p/s9-native-security/test-recording-night-view-v1.py
+          node --check ops/c720p/s9-native-security/s9-recording-night-view-v1.js
+          node ops/c720p/s9-native-security/test-recording-night-view-dom-v1.js
+
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Publish video-display-only recorded night enhancement
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'Private hub access unavailable'; exit 1; }
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          root="ops/c720p/s9-native-security"
+          pythonfile="$root/deploy-s9-recording-night-view-v1.py"
+          jsfile="$root/s9-recording-night-view-v1.js"
+          check="$(sha256sum "$pythonfile" | cut -d' ' -f1)"
+          jssha="$(sha256sum "$jsfile" | cut -d' ' -f1)"
+          [[ "$check" =~ ^[a-f0-9]{64}$ && "$jssha" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${pythonfile}"
+          stage="/tmp/s9-recorded-night-${GITHUB_SHA:0:12}.py"
+          command="curl -fSsL --max-time 40 '${url}' -o '${stage}' && printf '%s  %s\n' '${check}' '${stage}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${stage}' --ref '${GITHUB_SHA}' --js-sha '${jssha}'"
+          idem="s9-recorded-night-view-v1-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$command" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-recorded-night-v1','deployment',:'cmd',230,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_RECORDED_NIGHT_DEPLOY_JOB=$job"
+          for i in $(seq 1 65); do
+            row="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n 1)"
+            if [[ "$row" == done\|* || "$row" == error\|* || "$row" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 7500)"
+              echo "$output"
+              [[ "$row" == 'done|0' ]] || exit 1
+              grep -q 'S9_RECORDED_NIGHT_VIEW_V1_VERIFIED' <<< "$output" || exit 1
+              exit 0
+            fi
+            sleep 4
+          done
+          echo 'Recorded night-view publish not completed in check window'
+          exit 1
