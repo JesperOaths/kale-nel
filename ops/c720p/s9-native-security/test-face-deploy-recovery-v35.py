@@ -19,10 +19,10 @@ class FaceDeployRecoveryV35(unittest.TestCase):
   self.assertIn('adb("shell","sha256sum",old',rollback)
   self.assertIn('adb("shell","sha256sum",restored[0]',rollback)
   self.assertIn('if len(restored)!=1',rollback)
-  self.assertIn('"restored_sha256":installed',rollback)
+  self.assertIn('"restored_sha256":restored_sha',rollback)
   self.assertNotIn('sha(old)',rollback) # old is a remote Android path
-  self.assertIn('rollback_apk_restored_camera_status_unverified',rollback)
-  self.assertIn('thermal_cooldown_may_remain',rollback)
+  self.assertIn('rollback_apk_digest_mismatch',rollback)
+  self.assertIn('"original_apk_restored":True',rollback)
  def test_no_archive_or_face_identity_modifications(self):
   self.assertNotIn('os.unlink(',INSTALL)
   self.assertNotIn('shutil.rmtree(',INSTALL)
