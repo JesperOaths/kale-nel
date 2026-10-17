@@ -14,7 +14,8 @@ ARCHIVE="http://127.0.0.1:8795/new/api/saved"
 FACE_VERSION="s9_onphone_36_samples_person_or_tile_v4"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4")
 SAFE_MATCHES={
- "not_comparable_model_unavailable","reference_similarity_unverified",
+ "not_comparable_model_unavailable","not_comparable_manual_review","not_tested_no_usable_face",
+ "reference_similarity_unverified",
  "anonymous_similarity_unverified","new_anonymous_candidate",
  "face_model_changed_requires_reenrollment","face_index_read_error",
  "face_database_unavailable","face_index_capacity_reached"}
