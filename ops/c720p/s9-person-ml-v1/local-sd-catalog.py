@@ -225,6 +225,7 @@ def safe_face_review_metadata(m):
  result={"face_review_status":"not_available_in_original_review",
          "face_review_sampled_frames":None,"face_snapshots_saved":0,"face_candidates":[],
          "face_deep_review_version":None,
+         "face_crop_geometry_version":None,
          "face_evidence_outcome":"not_reviewed",
          "face_model_state":"not_tested_no_usable_face",
          "face_detector_raw_hits":None,"face_rejected_confidence_or_size":None,
@@ -247,6 +248,8 @@ def safe_face_review_metadata(m):
    "review_complete_unverified_matches","face_model_changed_requires_reenrollment",
    "face_index_read_error")
  result["face_review_status"]=status if status in valid else "invalid_face_review_status"
+ if m.get("face_crop_geometry_version")=="face_crop_geometry_v2_padded_manual":
+  result["face_crop_geometry_version"]="face_crop_geometry_v2_padded_manual"
  n=m.get("face_review_sampled_frames")
  if type(n) is int and 0<=n<=48:result["face_review_sampled_frames"]=n
  prior=m.get("face_deep_review_version")
