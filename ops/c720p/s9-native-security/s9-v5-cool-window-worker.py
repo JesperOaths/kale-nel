@@ -173,7 +173,7 @@ def tick(stage_only=False):
    state_write(st)
    report("already_v5_running",camera_4k_ready=True)
    return
-  if not healthy(phone) and not (stage_only and stage_eligible(phone)):
+  if not healthy(phone) and not stage_eligible(phone):
    report("deferred_camera_not_ready",mode=phone.get("mode"),
           continuous_4k_ready=phone.get("continuous_4k_ready"),
           temperature_c=phone.get("temperature_c"),
@@ -209,6 +209,13 @@ def tick(stage_only=False):
   if stage_only:
    report("stage_only_complete",camera_unchanged=True,
           continuous_4k_was_ready=phone.get("continuous_4k_ready"),
+          temperature_c=phone.get("temperature_c"))
+   return
+  # The recurring C720P timer should ALSO stage during thermal fallback,
+  # but can never enter the actual installer until full native 4K is ready.
+  if not healthy(phone):
+   report("staged_waiting_for_4k_encoder",camera_unchanged=True,
+          continuous_4k_ready=phone.get("continuous_4k_ready"),
           temperature_c=phone.get("temperature_c"))
    return
   try:
