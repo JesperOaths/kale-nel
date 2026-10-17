@@ -2,6 +2,7 @@
 """Read-only proof of the installed S9 camera APK. Does not change the phone."""
 import json
 import re
+from pathlib import Path
 import subprocess
 import urllib.request
 
@@ -34,6 +35,44 @@ def status():
  if len(raw)>180000:raise RuntimeError("status_too_large")
  return json.loads(raw)
 
+def deployment_state():
+ root=Path("/home/jespern/c720p-home-hub")
+ config=root/"etc/s9-face-v5-cool-window-v1.json"
+ worker=root/"state/s9-face-v5-cool-window-v1.json"
+ result={"timer_enabled":False,"source_ref":None,
+         "worker_state":"unavailable","signed_stage":"not_verified"}
+ try:
+  c=json.loads(config.read_text())
+  ref=c.get("ref","")
+  if not re.fullmatch(r"[0-9a-f]{40}",ref):return result
+  result["source_ref"]=ref[:12]
+  if worker.is_file():
+   state=json.loads(worker.read_text())
+   if state.get("ref")==ref:
+    result["worker_state"]=str(state.get("status","unknown"))[:45]
+  release=Path("/dev/shm/s9-face-recall-v27")/ref[:12]/"release.json"
+  if release.is_file():
+   data=json.loads(release.read_text())
+   if data.get("source_sha")==ref and re.fullmatch(r"[0-9a-f]{64}",str(data.get("sha256",""))):
+    result["signed_stage"]=data["sha256"]
+ except (OSError,ValueError,TypeError):
+  pass
+ proc=subprocess.run(["systemctl","--user","is-active","c720p-s9-face-v5-cool-window.timer"],
+     capture_output=True,text=True,timeout=12)
+ result["timer_enabled"]=proc.returncode==0 and proc.stdout.strip()=="active"
+ try:
+  log=subprocess.run(["journalctl","--user","-u","c720p-s9-face-v5-cool-window.service",
+       "-n","30","--no-pager","-o","cat"],capture_output=True,text=True,timeout=15)
+  for line in reversed(log.stdout.splitlines()):
+   if "S9_V5_COOL_WINDOW " not in line:continue
+   event=json.loads(line.split("S9_V5_COOL_WINDOW ",1)[1]).get("event")
+   if isinstance(event,str) and re.fullmatch(r"[a-z_]{2,65}",event):
+    result["last_worker_event"]=event
+    break
+ except (OSError,ValueError,TypeError,subprocess.TimeoutExpired):
+  pass
+ return result
+
 def summary(sha,phone):
  return {"installed_apk_sha256":sha,
   "matches_full_archive_v5_candidate":sha==CANDIDATE,
@@ -45,7 +84,7 @@ def summary(sha,phone):
   "face_scan_completed_since_camera_start":phone.get("face_deep_scanned"),
   "face_scan_errors_since_camera_start":phone.get("face_deep_errors"),
   "camera_temperature_c":phone.get("temperature_c"),
-  "read_only":True}
+  "read_only":True,"deployment":deployment_state()}
 
 if __name__=="__main__":
  print("S9_RELEASE_PROOF "+json.dumps(summary(apk_sha(),status()),sort_keys=True))
