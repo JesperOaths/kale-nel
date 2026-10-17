@@ -1,0 +1,31 @@
+name: S9 People & Faces V45 real workspace
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.html'
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/test-people-v45.js'
+      - 'ops/c720p/s9-native-security/deploy-people-v45.py'
+      - '.github/workflows/c720p-s9-people-v45.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.html'
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/test-people-v45.js'
+      - '.github/workflows/c720p-s9-people-v45.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Exercise real UI and secure review actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ops/c720p/s9-native-security/security-people-v45.js
+          node ops/c720p/s9-native-security/test-people-v45.js
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-people-v45.py
