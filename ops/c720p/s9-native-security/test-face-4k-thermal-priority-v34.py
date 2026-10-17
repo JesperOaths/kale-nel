@@ -9,9 +9,9 @@ class Thermal4KPriority(unittest.TestCase):
   self.assertIn('getBoolean("continuous_4k_production_enabled",false)',logic)
   self.assertIn('!continuous4KTrial||continuous4K==null||!continuous4K.readyForEvent()',logic)
   self.assertIn('return batteryTenths<FACE_BACKFILL_WITH_4K_MAX_TENTHS_C;',logic)
-  self.assertIn('FACE_BACKFILL_WITH_4K_MAX_TENTHS_C=360',SERVICE)
-  self.assertIn('FACE_BACKFILL_MAX_TEMP_TENTHS_C=390',SERVICE)
-  self.assertLess(360,395)
+  self.assertIn('FACE_BACKFILL_WITH_4K_MAX_TENTHS_C=415',SERVICE)
+  self.assertIn('FACE_BACKFILL_MAX_TEMP_TENTHS_C=420',SERVICE)
+  self.assertLess(415,420)
  def test_every_worker_gate_uses_dynamic_thermal_check(self):
   code=SERVICE.split("private void maybeFaceBackfill(){",1)[1].split("Offloaded archived-video retention review.",1)[0]
   self.assertEqual(code.count('!faceBackfillThermallyAllowed()'),3)
@@ -21,7 +21,7 @@ class Thermal4KPriority(unittest.TestCase):
   self.assertIn('reviewer.execute(new Runnable()',code)
  def test_camera_recovery_original_guard_preserved(self):
   s=SERVICE.split("private void maybeRestoreCool4K(){",1)[1].split("private void watchdog(){",1)[0]
-  self.assertIn('now<continuous4KRetryAfterMs||temperature()>=375',s)
+  self.assertIn('now<continuous4KRetryAfterMs||temperature()>=405',s)
   self.assertIn('continuous4KRecoveryAttempts>=3',s)
   self.assertIn('continuous4KLastResult="rearmed_after_thermal_cooldown"',s)
 if __name__=="__main__":unittest.main(verbosity=2)
