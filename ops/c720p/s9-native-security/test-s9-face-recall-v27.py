@@ -45,7 +45,7 @@ assert 'face_shadow_review_version' in face
 assert 'shadowEmbeddingTrials==0' in face
 assert 'shadow=null' in face
 assert 'JSONObject match=assign(emb)' in face
-assert 'face_shadow_embeddings_persisted' in face
+assert 'face_shadow_vectors_persisted' in face
 assert "face_crop_requires_manual_review" in face
 assert "reliableForEmbedding" in face
 assert "if(reliableForEmbedding)" in face
@@ -105,18 +105,18 @@ assert res["face_manual_review_rescue_candidates"]==3
 shadow={"face_review_version":"s9_face_review_v1",
         "face_review_status":"review_complete_unverified_matches",
         "face_shadow_review_version":"s9_shadow_model_probe_v1",
-        "face_shadow_embedding_trials":1,
-        "face_shadow_embedding_successful":1,
-        "face_shadow_embedding_failed":0,
+        "face_shadow_model_trials":1,
+        "face_shadow_model_succeeded":1,
+        "face_shadow_model_failed":0,
         "face_shadow_matches_created":0,
-        "face_shadow_embeddings_persisted":False,
+        "face_shadow_vectors_persisted":False,
         "face_candidates":[{"match_status":"not_comparable_manual_review",
                             "time_ms":1000}]}
 out=module.safe_face_review_metadata(shadow)
-assert out["face_shadow_embedding_trials"]==1
-assert out["face_shadow_embedding_successful"]==1
+assert out["face_shadow_model_trials"]==1
+assert out["face_shadow_model_succeeded"]==1
 assert out["face_shadow_matches_created"]==0
-assert out["face_shadow_embeddings_persisted"] is False
+assert out["face_shadow_vectors_persisted"] is False
 assert out["face_candidates"][0]["match_status"]=="not_comparable_manual_review"
 assert "embedding" not in out["face_candidates"][0]
 assert "face_embedding" not in res
