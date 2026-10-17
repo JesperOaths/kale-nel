@@ -114,7 +114,9 @@ def audit(phone,archive):
   "source_original_4k_clips":len(clips),"v5_reviewed":pipeline["v5_reviewed"],
   "legacy_review_preserved_with_snapshots":pipeline["legacy_review_preserved_with_snapshots"],
   "reviewed_or_protected":pipeline["v5_reviewed"]+pipeline["legacy_review_preserved_with_snapshots"],
+  # Legacy crops are protected, but still require the current V5 tile review.
   "awaiting_latest_4k_face_pass":pipeline["awaiting_4k_face_review"],
+  "remaining_current_v5_face_pass":len(clips)-pipeline["v5_reviewed"],
   "clips_with_face_crops":pipeline["clips_with_crops"],
   "cropped_faces_visible_in_hub":snapshots,
   "clipped_face_detections_rejected":pipeline["detected_but_unusable_face"],
