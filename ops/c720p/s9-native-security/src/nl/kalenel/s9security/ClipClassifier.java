@@ -476,7 +476,7 @@ public final class ClipClassifier {
   */
  static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5";
  static boolean deepFaceNeedsUpgrade(JSONObject manifest){
-  if(manifest==null||manifest.optInt("face_snapshots_saved",0)>0||
+  if(manifest==null||
      !"s9_face_review_v1".equals(manifest.optString("face_review_version","")))
    return false;
   // A negative 12-frame person model result is NOT proof the recording is
