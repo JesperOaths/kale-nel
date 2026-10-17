@@ -146,6 +146,7 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
  assert.equal(byId('casePicker').open,false);
  byId('casesTab').handlers.click();
  assert.equal(byId('casesSection').hidden,false);
+ byId('caseBack').handlers.click();
  const saved=byId('caseFolders').children.find(e=>containsText(e,'CASE-0001'));
  assert(saved,'Newly created private case should be listed');
  saved.handlers.click();
