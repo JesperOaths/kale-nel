@@ -2,12 +2,14 @@ name: S9 V26 face evidence diagnostics proxy
 on:
   pull_request:
     paths:
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
       - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
       - 'ops/c720p/s9-native-security/test-s9-face-outcome-proxy-v26.py'
       - '.github/workflows/c720p-s9-face-outcome-proxy-v26.yml'
   push:
     branches: [main]
     paths:
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
       - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
       - '.github/workflows/c720p-s9-face-outcome-proxy-v26.yml'
 permissions:
