@@ -30,7 +30,9 @@ def evaluate(summary):
   "original_4k_recordings":total,
   "current_version_scanned":v5,
   "older_face_crops_preserved_not_current_scanned":preserved,
-  "pending_latest_scan":pending,
+  # Every older preserved crop also awaits V5; pending alone omits these clips.
+  "pending_latest_scan":pending+preserved,
+  "pending_without_preserved_crops":pending,
   "installed_version_matches_target":running==expected,
   "current_camera_4k_ready":summary["camera_4k_ready"],
   "phone_face_deep_errors":errors,
