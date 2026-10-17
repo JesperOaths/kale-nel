@@ -82,10 +82,34 @@ def audit(phone,archive):
     if not face.get("face_crop_requires_manual_review") and not face.get("face_crop_padded_context_only"):
      strict_pairs+=1
    elif state=="new_anonymous_candidate":weak+=1
- if not phone.get("native_4k_enabled") or not phone.get("continuous_4k_ready"):
-  raise RuntimeError("native_4k_unhealthy")
+ camera_ready=phone.get("native_4k_enabled") is True and phone.get("continuous_4k_ready") is True
+ known_thermal_fallback=(
+   phone.get("native_4k_enabled") is True and
+   phone.get("mode")=="watching" and
+   phone.get("continuous_4k_ready") is False and
+   phone.get("continuous_4k_last_result")=="fallback_thermal_guard" and
+   phone.get("continuous_4k_production_persisted") is True and
+   phone.get("preroll_ready") is True and
+   isinstance(phone.get("preroll_buffered_ms"),int) and
+   phone["preroll_buffered_ms"]>=4000)
+ if not camera_ready and not known_thermal_fallback:
+  raise RuntimeError("unknown_4k_fault_or_camera_unhealthy")
+ never_reviewed=sum(not clip.get("face_deep_review_version") and
+                    int(clip.get("face_snapshots_saved") or 0)==0 for clip in clips)
+ prior_scanned_no_crops=sum(clip.get("face_deep_review_version") not in (None,"",FACE_VERSION)
+                            and int(clip.get("face_snapshots_saved") or 0)==0 for clip in clips)
+ current_version=str(phone.get("face_deep_rescue_version") or "not_reported")
  return {
   "camera_ok":True,"camera_mode":phone.get("mode"),
+  "camera_4k_ready":camera_ready,
+  "known_thermal_fallback":known_thermal_fallback,
+  "face_scan_safe_to_resume_now":bool(camera_ready and phone.get("mode")=="watching" and
+   phone.get("face_backfill_queued") is not True and
+   isinstance(phone.get("temperature_c"),(int,float)) and
+   phone.get("temperature_c")<36),
+  "installed_face_review_version":current_version,
+  "never_deep_reviewed":never_reviewed,
+  "older_scanned_no_face_crops":prior_scanned_no_crops,
   "current_face_review_version":FACE_VERSION,
   "source_original_4k_clips":len(clips),"v5_reviewed":pipeline["v5_reviewed"],
   "legacy_review_preserved_with_snapshots":pipeline["legacy_review_preserved_with_snapshots"],
