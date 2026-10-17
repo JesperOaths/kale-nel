@@ -178,9 +178,19 @@ def stage_one(rescan_v28=False):
   status=json.load(res)
  if status.get("historical_gpu_import_version")!="isolated_drive_import_v1":
   raise RuntimeError("phone_historical_worker_not_installed")
- if not status.get("ok") or status.get("mode")!="watching" or \
-    float(status.get("temperature_c",100))>=37:
+ # Staging transfers one small derivative to microSD; it performs no
+ # on-phone inference. Android's maybeHistoricalImport() still requires <37 C,
+ # so prepare ahead at <39 C and let the phone analyze only once cool.
+ if not status.get("ok") or status.get("mode")!="watching":
   raise RuntimeError("phone_camera_not_idle_or_cool")
+ if not status.get("continuous_4k_ready"):
+  raise RuntimeError("phone_4k_not_ready_for_staging")
+ temperature=float(status.get("temperature_c",100))
+ if temperature>=39:
+  raise RuntimeError("phone_too_hot_even_for_staging")
+ if int(status.get("sd_free_bytes") or 0)<20*1024**3:
+  raise RuntimeError("phone_staging_sd_reserve_guard")
+
  m=cpu_catalog()
  with m.LOCK.open("a") as lock:
   wait_for_catalog_lock(lock)
@@ -225,6 +235,10 @@ def stage_one(rescan_v28=False):
   ready.write_text(json.dumps(meta,separators=(",",":"),sort_keys=True))
   execute(["adb","-s",PHONE,"push",str(ready),destination+".ready.json.partial"],25)
   phone("mv",destination+".ready.json.partial",destination+".ready.json",timeout=12)
+ if temperature>=37:
+  print("S9_HISTORY_STAGED_WAITING_FOR_SAFE_PHONE_INFERENCE",json.dumps({
+   "requires_phone_temperature_below_c":37,"max_staging_temperature_c":39,
+   "staged_one_input_only":True,"recording_unmodified":True}))
  print("S9_HISTORY_STAGED",json.dumps({"clip_id_prefix":key[:12],
         "size":source["size"],"gpu_input_bytes":gpu_input_bytes,
         "source_camera":source["camera"],
@@ -391,6 +405,8 @@ def cycle(rescan_v28=False):
  try:stage_one(rescan_v28=rescan_v28)
  except RuntimeError as error:
   if str(error) in ("phone_camera_not_idle_or_cool","phone_historical_worker_not_installed",
+                     "phone_4k_not_ready_for_staging","phone_too_hot_even_for_staging",
+                     "phone_staging_sd_reserve_guard",
                      "hub_disk_space_guard","historical_catalog_busy_retry_next_timer"):
    print("S9_HISTORY_DEFERRED",str(error))
   elif rescan_v28:
