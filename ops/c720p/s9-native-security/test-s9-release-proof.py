@@ -44,6 +44,26 @@ class ReleaseProofTests(TestCase):
                "pinned_stage_manifest_present","last_event_source_ref"):
    self.assertIn(name,source)
 
+ def test_installer_blockers_do_not_change_camera(self):
+  phone={"ok":True,"mode":"watching","native_4k_enabled":True,
+   "continuous_4k_ready":True,"continuous_4k_error":"",
+   "continuous_4k_dropped_output_frames":0,"garden_person_gate_backend":"gpu",
+   "temperature_c":38.5,"sd_free_bytes":50*1024**3,
+   "last_frame_age_ms":50,"person_last_accepted_motion_age_ms":90000,
+   "face_backfill_queued":False,"historical_import_queued":False}
+  clean=m.restart_guard_observations(phone)
+  self.assertTrue(clean["observed_restart_idle"])
+  self.assertTrue(clean["diagnostic_only"])
+  hot=dict(phone,temperature_c=41.2)
+  busy=dict(phone,historical_import_queued=True,face_backfill_queued=True)
+  moving=dict(phone,person_last_accepted_motion_age_ms=34000)
+  self.assertIn("battery_above_restart_guard_or_unavailable",
+                m.restart_guard_observations(hot)["observed_blockers"])
+  self.assertEqual(m.restart_guard_observations(busy)["observed_blockers"],
+      ["face_review_active","historical_import_active"])
+  self.assertIn("person_motion_recent",
+                m.restart_guard_observations(moving)["observed_blockers"])
+  self.assertFalse(m.restart_guard_observations({})["observed_restart_idle"])
  def test_no_camera_restarts_or_media_access(self):
   src=P.read_text()
   for banned in ("force-stop","install -r","rm -rf","/new/api/saved",
