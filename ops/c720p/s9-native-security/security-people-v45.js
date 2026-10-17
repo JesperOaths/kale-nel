@@ -60,7 +60,8 @@ function mediaForFace(f){
 function badge(media,text){media.append(elt('span',text,'corner'))}
 function fields(item){return Object.fromEntries(['clip','source_sha256','observation','signature'].map(k=>[k,item[k]]))}
 async function loadView(){
- if(state.busy||state.loading)return;
+ if(state.busy)return;
+ // Latest request wins. View switches must not inherit the old tab's response.
  state.loading=true;const token=++state.serial;alertText('');
  const q=new URLSearchParams({workflow:'clip_folders_v40',tab:state.tab,
   offset:String(state.offset),limit:String(state.limit)});
@@ -152,7 +153,8 @@ function openApproval(item){
  $('approvalPreview').replaceChildren(imageFor(item.full_crop,'Clip to review'));
  const select=$('approvalFolder');select.replaceChildren();
  select.add(new Option('Create a new folder',''));
- for(const f of (state.doc?.folders||[]))if(isSaved(f))select.add(new Option(f.label,f.id));
+ for(const f of (state.doc?.folders||[]))if(isSaved(f)||f.id===state.folder)
+  select.add(new Option(f.automatic_appearance_group?'Manually keep in '+f.label:f.label,f.id));
  $('approvalLabel').value='';
  if(state.folder)select.value=state.folder;
  $('newLabel').hidden=!!select.value;
@@ -254,6 +256,17 @@ function renderMetrics(){
  }else $('scanStatus').textContent='Historical person review is not yet available.';
 }
 function renderOverview(){
+ const flagged=savedFolders().filter(f=>num(f.approvals_needing_person_recheck)>0);
+ const reviewAlerts=$('reviewAlerts');reviewAlerts.replaceChildren();
+ for(const f of flagged.slice(0,3)){
+  const count=num(f.approvals_needing_person_recheck);
+  const summary=elt('div','', 'recheck-row');
+  const body=elt('div');body.append(elt('strong',f.label+' · '+count+' previously kept '+(count===1?'clip needs':'clips need')+' rechecking'),
+   elt('small','The latest person scan did not support the prior result. Review the original recordings.'));
+  summary.append(body,control('Inspect originals →',()=>openFolder(f.id,'approved'),'secondary'));
+  reviewAlerts.append(summary);
+ }
+ reviewAlerts.hidden=flagged.length===0;
  const host=$('reviewPreview');host.replaceChildren();
  const preview=state.doc?.items||[];
  for(const item of preview.slice(0,4))host.append(reviewItem(item,true));
@@ -290,8 +303,12 @@ function renderFolder(){
  const f=actualFolder();
  if(!f){alertText('This folder is no longer available');return}
  $('folderTitle').textContent=f.label;
- $('folderDescription').textContent=num(f.approved_clips)+' approved · '+
-  num(f.suggested_clips)+' appearance suggestions · manual review required';
+ $('folderDescription').textContent=num(f.approved_clips)+' saved recording links · '+
+  num(f.suggested_clips)+' appearance suggestions'+
+  (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need person rechecking':'');
+ $('folderRecheck').hidden=!num(f.approvals_needing_person_recheck);
+ $('folderRecheck').textContent=num(f.approvals_needing_person_recheck)+
+  ' saved clip(s) need rechecking against the original recording; a previous approval is not a current detector confirmation.';
  $('folderMode').value=state.tab;
  const suggestions=state.tab==='suggestions';
  for(const id of ['distanceLabel','weakLabel','routeLabel'])$(id).hidden=!suggestions;
