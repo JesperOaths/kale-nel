@@ -1,0 +1,35 @@
+name: Drive V28 person recheck visibility contracts
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_drive_visitor_review.py'
+      - 'ops/c720p/s9-native-security/patch-drive-visitor-review-ui.py'
+      - 'ops/c720p/s9-native-security/test-drive-visitor-review.py'
+      - 'ops/c720p/s9-native-security/deploy-s9-drive-v28-review.py'
+      - '.github/workflows/drive-v28-person-review-visibility.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/drive-v28-person-review-visibility.yml'
+      - 'ops/c720p/s9-person-ml-v1/s9_drive_visitor_review.py'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Compile review, UI patch and guarded deployment sources
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            ops/c720p/s9-person-ml-v1/s9_drive_visitor_review.py \
+            ops/c720p/s9-native-security/patch-drive-visitor-review-ui.py \
+            ops/c720p/s9-native-security/deploy-s9-drive-v28-review.py
+      - name: Verify baseline preservation, human-review boundary and UI
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-drive-visitor-review.py
+          grep -Fq 'v28_review_progress' ops/c720p/s9-person-ml-v1/s9_drive_visitor_review.py
+          grep -Fq 'No person identity verified' ops/c720p/s9-native-security/patch-drive-visitor-review-ui.py

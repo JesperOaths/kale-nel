@@ -53,7 +53,9 @@ function render(data){
  host.querySelector('.s9-drive-summary').textContent=
    'Classified '+(progress.processed||0)+' / '+(progress.eligible||0)+
    ' verified old clips · '+(progress.remaining||0)+' remaining · '+
-   (data.reviewed_single_person_links||0)+' human-confirmed visitor links.';
+   (data.reviewed_single_person_links||0)+' human-confirmed visitor links.'+
+   ' · New S9+ rechecks: '+(data.v28_review_progress?.completed||0)+' / '+
+   (data.v28_review_progress?.eligible||0)+' verified Drive clips.';
  const list=host.querySelector('.s9-drive-records');
  list.replaceChildren();
  const all=Array.isArray(data.clips)?data.clips:[];
@@ -70,6 +72,22 @@ function render(data){
   card.append(txt('small',(row.category||'unknown')+' · '+(row.visitor_id||'No verified visitor ID')));
   card.append(txt('small',validPeak ? 'Peak person-detection score: '+Math.round(peak*100)+'% (uncalibrated)' : 'Peak person-detection score: not measured'));
   card.append(txt('small',validPercent ? 'Person detected in '+percent.toFixed(1)+'% of sampled frames at 0.50 threshold ('+row.person_detected_frames_050+'/'+row.sampled_frames+'); not continuous coverage' : 'Sampled-frame person presence: not measured'));
+  const newer=row.v28_phone_review;
+  if(newer && newer.review_status==='not_human_verified' && newer.sampled_video_only===true){
+   const score=Number(newer.person_score),presence=Number(newer.person_presence_percent);
+   const measured=Number.isFinite(score)&&score>=0&&score<=1 &&
+     Number.isFinite(presence)&&presence>=0&&presence<=100;
+   card.append(txt('small','NEW S9+ sampled recheck · '+String(newer.category||'uncertain')+
+     ' · Original classification retained'));
+   if(measured)card.append(txt('small','S9+ saw a person in '+presence.toFixed(1)+
+     '% of '+String(newer.sampled_frames||0)+' sampled frames; peak detector score '+
+     Math.round(score*100)+'% (uncalibrated, NOT a probability of identity)'));
+   if(newer.category!==row.category)
+    card.append(txt('small','Old and new classifications differ — review the original video.'));
+   card.append(txt('small','Analysis used a reduced-size sample, not every frame. No person identity verified.'));
+  }else{
+   card.append(txt('small','S9+ historical recheck pending; older classification shown above.'));
+  }
   const possible=Array.isArray(row.possible_same_outfit_clips)?row.possible_same_outfit_clips:[];
   if(possible.length){
    card.append(txt('small','Possible repeat outfit — NOT confirmed as the same person:'));
