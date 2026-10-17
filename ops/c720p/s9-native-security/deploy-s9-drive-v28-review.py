@@ -19,7 +19,7 @@ ITEMS={
 }
 
 def digest(data):
- return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\\0"+data).hexdigest()
+ return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\0"+data).hexdigest()
 
 def api(path):
  with urllib.request.urlopen("http://127.0.0.1:8795"+path,timeout=23) as response:
@@ -117,8 +117,8 @@ def main():
    if not after or "v28_review_progress" not in after:
     raise RuntimeError("review_api_did_not_publish_v28")
    progress=after["v28_review_progress"]
-   if not after.get("ok") or int(after.get("processed",0))<int(before.get("processed",0)) or \\
-      progress.get("eligible",0)<int(before.get("processed",0)) or \\
+   if not after.get("ok") or int(after.get("processed",0))<int(before.get("processed",0)) or \
+      progress.get("eligible",0)<int(before.get("processed",0)) or \
       progress.get("completed",0)<1 or progress.get("no_auto_identity") is not True:
     raise RuntimeError("review_progress_or_manual_safeguard_regression")
    refreshed=api("/new/api/saved")
