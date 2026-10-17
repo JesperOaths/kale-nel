@@ -35,6 +35,25 @@ def status():
  if len(raw)>180000:raise RuntimeError("status_too_large")
  return json.loads(raw)
 
+def state_summary(pinned_ref,state):
+ """A completed PRIOR release is not a completion receipt for this APK."""
+ result={"worker_record_exists":True,"worker_ref_matches_pin":False,
+         "worker_state":"unavailable"}
+ if not isinstance(state,dict):return result
+ recorded=state.get("ref")
+ status=state.get("status")
+ if isinstance(recorded,str) and re.fullmatch(r"[0-9a-f]{40}",recorded):
+  result["worker_state_source_ref"]=recorded[:12]
+ result["worker_ref_matches_pin"]=recorded==pinned_ref
+ allowed=("waiting","complete","installing","needs_manual_recovery")
+ if status in allowed:
+  if result["worker_ref_matches_pin"]:
+   result["worker_state"]=status
+  else:
+   result["worker_state"]="stale_other_revision"
+   result["previous_worker_state"]=status
+ return result
+
 def deployment_state():
  root=Path("/home/jespern/c720p-home-hub")
  config=root/"etc/s9-face-v5-cool-window-v1.json"
@@ -48,14 +67,7 @@ def deployment_state():
   result["source_ref"]=ref[:12]
   if worker.is_file():
    state=json.loads(worker.read_text())
-   recorded_ref=state.get("ref","")
-   result["worker_record_exists"]=True
-   result["worker_ref_matches_pin"]=recorded_ref==ref
-   if isinstance(recorded_ref,str) and re.fullmatch(r"[0-9a-f]{40}",recorded_ref):
-    result["worker_state_source_ref"]=recorded_ref[:12]
-   recorded_state=state.get("status","unknown")
-   if recorded_state in ("waiting","complete","installing","needs_manual_recovery"):
-    result["worker_state"]=recorded_state
+   result.update(state_summary(ref,state))
   else:
    result["worker_record_exists"]=False
   release=Path("/dev/shm/s9-face-recall-v27")/ref[:12]/"release.json"
