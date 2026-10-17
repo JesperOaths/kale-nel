@@ -11,7 +11,7 @@ import urllib.request
 
 PHONE="http://127.0.0.1:18808/status"
 ARCHIVE="http://127.0.0.1:8795/new/api/saved"
-FACE_VERSION="s9_onphone_36_samples_person_or_tile_v4"
+FACE_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4")
 SAFE_MATCHES={
  "not_comparable_model_unavailable","not_comparable_manual_review","not_tested_no_usable_face",

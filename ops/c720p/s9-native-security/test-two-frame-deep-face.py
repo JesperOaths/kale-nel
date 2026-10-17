@@ -34,7 +34,7 @@ class Contract(unittest.TestCase):
   # constrain this assertion to the 4K face-rescue method itself.
   self.assertNotIn('manifest.optInt("person_count",0)<=0',
                    deep.split('backfillMovementEvidence',1)[0])
-  self.assertIn('s9_onphone_36_samples_person_or_tile_v4',CLASSIFIER)
+  self.assertIn('s9_onphone_36_samples_overlapping_tiles_v5',CLASSIFIER)
   self.assertIn('return !DEEP_FACE_ROI_VERSION.equals',CLASSIFIER)
   self.assertNotIn('MediaRecorder',deep)
   self.assertNotIn('.delete(',deep)

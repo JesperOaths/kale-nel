@@ -12,7 +12,8 @@ ui=(root/"security-face-folders-v22.html").read_text()
 build=(root/"build-s9-face-recall-v26.py").read_text()
 install=(root/"deploy-s9-face-recall-v26.py").read_text()
 assert ('DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v3"' in classification or
-        'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v4"' in classification)
+        'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v4"' in classification
+        or 'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"' in classification)
 scope=classification.split('static boolean deepFaceNeedsUpgrade(',1)[1].split("public synchronized boolean deepFaceReview",1)[0]
 assert 'person_count' not in scope
 assert 'face_snapshots_saved' in scope
@@ -28,7 +29,8 @@ assert 'writeJson(new File(folder,name+".verified.json"),manifest)' in deep
 scope=service.split("private void maybeFaceBackfill(){",1)[1].split("Offloaded archived-video retention review",1)[0]
 assert 'if(meta.optInt("person_count",0)<=0)continue;' not in scope
 assert "faceBackfillQueued" in scope
-assert "temperature()>=370" in scope
+assert "temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C" in scope
+assert "FACE_BACKFILL_MAX_TEMP_TENTHS_C=390" in service
 assert "gardenPersonGateBusy" in scope
 assert '"watching".equals(mode)' in scope
 assert "now-lastMovementAt<45000L" in scope
@@ -51,7 +53,7 @@ assert '"s9_onphone_36_samples_person_roi_v2", "face_evidence_outcome"' not in b
 assert 'S9_FACE_RECALL_V26_ROLLBACK_VERIFIED' in install
 assert 'originals.issubset(nowclips)' in install
 assert 'S9_FACE_RECALL_V26_DEVICE_VERIFIED' in install
-assert "Face images · review needed" in ui
+assert "Face images · manual review" in ui
 assert "unverifiedCrops" in ui and "C720PSecureRelay" in ui
 spec=importlib.util.spec_from_file_location("catalog",catalog)
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)

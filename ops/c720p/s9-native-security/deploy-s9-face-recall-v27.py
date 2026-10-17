@@ -10,7 +10,7 @@ BACK="/storage/9C33-6BBD/c720p-offloaded-build-evidence-20261014/v27-exact-rollb
 SERIAL="192.168.178.250:5555"
 PACKAGE="nl.kalenel.s9security"
 SIGNER="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
-VERSION="s9_onphone_36_samples_person_or_tile_v4"
+VERSION="s9_onphone_36_samples_overlapping_tiles_v5"
 BASE="http://127.0.0.1:18808"
 def run(a,sec=45):
  p=subprocess.run(a,capture_output=True,text=True,timeout=sec)

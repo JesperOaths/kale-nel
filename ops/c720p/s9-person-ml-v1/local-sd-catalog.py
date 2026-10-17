@@ -259,7 +259,7 @@ def safe_face_review_metadata(m):
  n=m.get("face_review_sampled_frames")
  if type(n) is int and 0<=n<=48:result["face_review_sampled_frames"]=n
  prior=m.get("face_deep_review_version")
- if (prior in ("s9_onphone_36_samples_v1","s9_onphone_36_samples_person_roi_v2") and n==36) or (prior in ("s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4") and type(n) is int and 1<=n<=48):
+ if (prior in ("s9_onphone_36_samples_v1","s9_onphone_36_samples_person_roi_v2") and n==36) or (prior in ("s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4","s9_onphone_36_samples_overlapping_tiles_v5") and type(n) is int and 1<=n<=48):
   result["face_deep_review_version"]=prior
  outcome=m.get("face_evidence_outcome")
  if outcome in ("snapshot_candidates_saved","review_processing_failed",
@@ -286,13 +286,13 @@ def safe_face_review_metadata(m):
              "face_rejected_insufficient_native_eye_detail"):
   value=m.get(key)
   if type(value) is int and 0<=value<=144:result[key]=value
- if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_roi_v2","s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4"):
+ if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_roi_v2","s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4","s9_onphone_36_samples_overlapping_tiles_v5"):
   for key in ("face_deep_detector_anchor_frames","face_deep_person_roi_anchors",
               "face_deep_multiple_person_anchors",
               "face_deep_multiscale_refinement_passes"):
    value=m.get(key)
    if type(value) is int and 0<=value<=12:result[key]=value
-  if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4"):
+  if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4","s9_onphone_36_samples_overlapping_tiles_v5"):
    for key in ("face_deep_tiled_scene_samples","face_deep_second_person_roi_samples"):
     value=m.get(key)
     if type(value) is int and 0<=value<=12:result[key]=value

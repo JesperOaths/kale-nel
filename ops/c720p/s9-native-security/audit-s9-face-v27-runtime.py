@@ -5,7 +5,7 @@ import json
 import urllib.request
 
 OLD_VERSION="s9_onphone_36_samples_person_or_tile_v3"
-ACTIVE_VERSION="s9_onphone_36_samples_person_or_tile_v4"
+ACTIVE_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"
 GEOMETRY_VERSION="face_crop_geometry_v2_padded_manual"
 GEOMETRY_COUNTS=("face_detector_raw_hits","face_rejected_crop_geometry","face_rejected_insufficient_native_eye_detail","face_crop_padded_manual_count","face_snapshots_saved","face_rejected_dark_or_blurry")
 COUNTERS=(
@@ -32,7 +32,7 @@ def report(records,phone):
            str(r.get("clip_no","")).startswith("motion_")]
  versions=collections.Counter(str(r.get("face_deep_review_version") or "not_reviewed") for r in included)
  groups={}
- for version in (OLD_VERSION,ACTIVE_VERSION):
+ for version in (OLD_VERSION,"s9_onphone_36_samples_person_or_tile_v4",ACTIVE_VERSION):
   rows=[r for r in included if r.get("face_deep_review_version")==version]
   sums={key:sum(valid_int(r.get(key)) for r in rows) for key in COUNTERS}
   groups[version]={

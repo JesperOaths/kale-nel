@@ -112,7 +112,7 @@ def main():
   assert "MIN_US=4400000L" in (src/"GardenPreRoll.java").read_text()
   assert "high_resolution_isolated_person_head_roi_v2" in (src/"S9FaceReview.java").read_text()
   assert "imageSpeedBodyHeightsPerSecond" in (src/"AnonymousClipTracks.java").read_text()
-  assert "s9_onphone_36_samples_person_or_tile_v4" in (src/"ClipClassifier.java").read_text()
+  assert "s9_onphone_36_samples_overlapping_tiles_v5" in (src/"ClipClassifier.java").read_text()
   assert "AppearanceSearchIndex" in JAVAS
   assert (src/"AppearanceSearchIndex.java").is_file()
   assert "faceBackfillRetries" in (src/"CameraService.java").read_text()
@@ -192,7 +192,7 @@ def main():
    if not all(any(w.encode() in package.read(n) for n in package.namelist() if n.startswith("classes") and n.endswith(".dex")) for w in
      ["high_resolution_isolated_person_head_roi_v2",
       "image_speed_body_heights_per_second",
-      "s9_onphone_36_samples_person_or_tile_v4", "face_evidence_outcome",
+      "s9_onphone_36_samples_overlapping_tiles_v5", "face_evidence_outcome",
       "face_crop_geometry_v2_padded_manual"]):
     raise RuntimeError("new_camera_evidence_unavailable")
   if not any(b"s9_on_phone_avc_memory_ring_keyframe_5s_v4" in d.read_bytes() for d in outputs):

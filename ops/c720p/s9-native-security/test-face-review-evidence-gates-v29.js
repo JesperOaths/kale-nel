@@ -26,13 +26,13 @@ for(const face of [
  ])assert.equal(check(face),null,'unverified or invalid face cannot become linked candidate');
 const count=new Function('records','clipOK','return (function evidenceSummary(records){'+summary.slice(0,summary.lastIndexOf('}'))+'})(records);');
 const clips=[
- {clip_no:'motion_1792000000000.mp4',face_deep_review_version:'s9_onphone_36_samples_person_or_tile_v4',face_model_state:'available_on_phone',face_candidates:[{},{}]},
+ {clip_no:'motion_1792000000000.mp4',face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_model_state:'available_on_phone',face_candidates:[{},{}]},
  {clip_no:'motion_1792000000001.mp4',face_deep_review_version:'s9_onphone_36_samples_person_or_tile_v3',face_model_state:'not_tested_no_usable_face',face_candidates:[]},
  {clip_no:'motion_1792000000002.mp4',face_model_state:'unavailable_on_phone'},
- {clip_no:'bad.mp4',face_deep_review_version:'s9_onphone_36_samples_person_or_tile_v4',face_candidates:[{},{}]}
+ {clip_no:'bad.mp4',face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[{},{}]}
 ];
 assert.deepEqual(count(clips,/^motion_[0-9]{13}[.]mp4$/),{total:3,reviewed:1,pending:2,models:1,notTested:1,faces:2,shadow:0});
-assert.match(script,/rec\.face_deep_review_version!=='s9_onphone_36_samples_person_or_tile_v4'/);
+assert.match(script,/rec\.face_deep_review_version!=='s9_onphone_36_samples_overlapping_tiles_v5'/);
 assert.match(script,/Number\(rec\.face_detector_raw_hits\)>0/);
 assert.match(script,/new Set\(g\.entries\.map\(e=>e\.key\)\)\.size/);
 assert.match(source,/id="facePipelineStatus"/);

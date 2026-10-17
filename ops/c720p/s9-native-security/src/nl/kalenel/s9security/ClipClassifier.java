@@ -474,7 +474,7 @@ public final class ClipClassifier {
   * ROIs on up to 12 detection anchors (never changing the source MP4).
   * No crop/embedding is evidence that two clips belong to the same person.
   */
- static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v4";
+ static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5";
  static boolean deepFaceNeedsUpgrade(JSONObject manifest){
   if(manifest==null||manifest.optInt("face_snapshots_saved",0)>0||
      !"s9_face_review_v1".equals(manifest.optString("face_review_version","")))
@@ -510,7 +510,7 @@ public final class ClipClassifier {
    if(width!=3840||height!=2160)throw new IOException("deep_face_source_not_4k");
    if(duration<1000L||duration>180000L)throw new IOException("face_deep_unsupported_duration");
    // One serial worker only, on S9+. Throttle expensive person inference to
-   // 12/36 frames. The other frames retain the original full-frame fallback.
+   // 12/36 frames. Other frames sample overlapping original-4K tiles.
    init();
    for(int i=0;i<36;i++){
     long at=(long)(((i+0.5)/36.0)*duration*1000);
@@ -549,13 +549,16 @@ public final class ClipClassifier {
         faces.sample(frame,at/1000,people.get(1));
        }
       }else{
-       // No confident body box: instead of losing distant faces in a
-       // 3840->960 full-frame shrink, scan alternating original-4K halves.
+       // Without a person box, scan overlapping original 4K tiles rather
+       // than shrinking a distant face into an unreliable full-scene pixel.
        faces.sampleSceneTile(frame,at/1000,(i/3)%2!=0);
        tiledFallbacks++;
       }
      }else{
-      faces.sample(frame,at/1000,null);
+      // In v4 these 24 frames were downscaled full-scene scans. Alternate
+      // both overlapping tiles at full native source detail instead.
+      faces.sampleSceneTile(frame,at/1000,(i%2)!=0);
+      tiledFallbacks++;
      }
      decoded++;
     }finally{frame.recycle();}
