@@ -408,6 +408,12 @@ function renderFolders(){
   if(pictured)signedPicture(cover,pictured);
  }
 }
+function saveCaseButton(entry){
+ const btn=el('button','','Save to review case');btn.type='button';
+ btn.disabled=!state.caseAvailable;
+ btn.addEventListener('click',()=>reviewToCase(entry));
+ return btn;
+}
 function renderEvidence(){
  $('detail').hidden=true;$('folderSection').hidden=false;
  const all=[...state.sd.filter(r=>clipOK.test(String(r.clip_no||''))&&Number(r.person_count)>0).map(r=>item('sd',r)),
@@ -417,12 +423,15 @@ function renderEvidence(){
    reviewIndex.get(e.key)?.category||''].join(' ').toLowerCase().includes(needle));
  const selected=filtered.slice(0,state.page*36),host=$('folders');host.replaceChildren();
  for(const entry of selected){
-  const card=el('button','folder');card.type='button';card.setAttribute('aria-label','Play '+entry.source+' clip from '+stamp(entry));
+  const card=el('article','folder');
   const cover=el('div','cover');cover.append(el('span','glyph','▣'),el('span','tag',entry.source==='drive'?'HISTORICAL DRIVE':'S9+ MICROSD'));
   const body=el('div','folder-body');body.append(el('strong','folder-title',stamp(entry)),
    el('span','folder-meta',String(reviewIndex.get(entry.key)?.category||entry.rec.category||'Person evidence · face unverified').replaceAll('_',' ')));
-  const foot=el('div','folder-footer');foot.append(el('span','',entry.source==='drive'?'Archived recording':'Local camera clip'),el('b','','Play ›'));
-  card.append(cover,body,foot);card.addEventListener('click',()=>openClip(entry));host.append(card);
+  const play=el('button','','Play original video');play.type='button';
+  play.addEventListener('click',()=>openClip(entry));body.append(play);
+  if(entry.source==='sd')body.append(saveCaseButton(entry));
+  const foot=el('div','folder-footer');foot.append(el('span','',entry.source==='drive'?'Archived recording':'Local camera clip'));
+  card.append(cover,body,foot);host.append(card);
   signedPicture(cover,entry);
  }
  if(!selected.length)host.append(el('p','empty','No matching historical or local person evidence.'));
@@ -556,6 +565,7 @@ function showCoarseColourFallback(reference,category,host,status){
    el('small','','Metadata category only · no precise histogram comparison'),
    el('small','','Identity unverified · unrelated people may wear the same colour'));
   open.type='button';open.addEventListener('click',()=>openClip(entry));body.append(open);
+   body.append(saveCaseButton(entry));
   card.append(pic,body);host.append(card);signedPicture(pic,entry);
  }
  return true;
@@ -601,6 +611,7 @@ async function runAppearanceSearch(){
      el('small','','Image area: '+String(hit.zone||'unspecified').slice(0,40)),
      el('small','','Same-person status: not verified'));
    open.type='button';open.addEventListener('click',()=>openClip(entry));body.append(open);
+   body.append(saveCaseButton(entry));
    card.append(pic,body);host.append(card);signedPicture(pic,entry);
   }
  }catch(_){
