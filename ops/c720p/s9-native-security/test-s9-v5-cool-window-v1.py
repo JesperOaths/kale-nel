@@ -56,6 +56,18 @@ class LocalCoolWindow(unittest.TestCase):
    with mock.patch.object(m,"run_release_script",side_effect=AssertionError("installer_called")):
     m.tick()
    self.assertFalse(m.STATE.exists())
+ def test_stage_only_allowed_during_4k_thermal_fallback_never_installs(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   _,mocks=self.setup_mocks(tmp,39.0,stage_ready=False)
+   fallback=phone(39.0)
+   fallback["continuous_4k_ready"]=False
+   fallback["continuous_4k_last_result"]="fallback_thermal_guard"
+   with mock.patch.object(m,"camera_status",return_value=fallback),mock.patch.object(
+       m,"prepared",side_effect=[False,True]),mock.patch.object(
+       m,"run_release_script",return_value="S9_FACE_RECALL_V27_SIGNED_STAGED") as scripts:
+    m.tick(stage_only=True)
+   self.assertEqual([c.args[1] for c in scripts.call_args_list],["build"])
+   self.assertFalse(m.STATE.exists())
  def test_real_motion_defers_even_when_cool(self):
   with tempfile.TemporaryDirectory() as tmp:
    self.setup_mocks(tmp,34.1)
