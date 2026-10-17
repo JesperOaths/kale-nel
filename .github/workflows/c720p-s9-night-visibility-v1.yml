@@ -1,0 +1,84 @@
+name: S9 Night Visibility V1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-s9-night-visibility-v1.yml'
+      - 'ops/c720p/s9-native-security/s9-night-visibility-v1.js'
+      - 'ops/c720p/s9-native-security/deploy-s9-night-visibility-v1.py'
+      - 'ops/c720p/s9-native-security/test-s9-night-visibility-v1.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-s9-night-visibility-v1.yml'
+      - 'ops/c720p/s9-native-security/s9-night-visibility-v1.js'
+      - 'ops/c720p/s9-native-security/deploy-s9-night-visibility-v1.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s9-night-visibility-v1
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate enhancement source and scoped rollback
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-night-visibility-v1.py
+          python3 ops/c720p/s9-native-security/test-s9-night-visibility-v1.py
+          node --check ops/c720p/s9-native-security/s9-night-visibility-v1.js
+
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Deploy checksum-verified night visibility controls to Home Assistant
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'Private management connection unavailable'; exit 1; }
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          dir='ops/c720p/s9-native-security'
+          script="$dir/deploy-s9-night-visibility-v1.py"
+          ui="$dir/s9-night-visibility-v1.js"
+          script_sha="$(sha256sum "$script" | cut -d' ' -f1)"
+          ui_sha="$(sha256sum "$ui" | cut -d' ' -f1)"
+          [[ "$script_sha" =~ ^[a-f0-9]{64}$ && "$ui_sha" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          source="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${script}"
+          file="/tmp/s9-night-visibility-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 40 '${source}' -o '${file}' && printf '%s  %s\n' '${script_sha}' '${file}' | sha256sum -c - >/dev/null && python3 '${file}' --ref '${GITHUB_SHA}' --js-sha '${ui_sha}'"
+          idem="s9-night-visibility-v1-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-night-visibility-v1','deployment',:'cmd',220,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_NIGHT_VISIBILITY_DEPLOY_JOB=$job"
+          for i in $(seq 1 62); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              result="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 7000)"
+              echo "$result"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_NIGHT_VISIBILITY_V1_APPLIED' <<< "$result" || exit 1
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Night visibility rollout did not finish in time'; exit 1
