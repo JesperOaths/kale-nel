@@ -51,7 +51,13 @@ def empty():
  return {"version":1,"revision":0,"next_id":1,"cases":{}}
 
 def validated_store():
- doc=disk_json(STORE,empty())
+ if STORE.exists():
+  try:
+   doc=json.loads(STORE.read_text(encoding="utf-8"))
+  except (OSError,ValueError,UnicodeError):
+   raise RuntimeError("case_registry_corrupted_refuse_overwrite")
+  if not isinstance(doc,dict):raise RuntimeError("case_registry_not_an_object")
+ else:doc=empty()
  if (doc.get("version")!=1 or type(doc.get("revision")) is not int
       or not 0<=doc["revision"]<=10000000
       or type(doc.get("next_id")) is not int
@@ -156,6 +162,8 @@ def mutate(data):
   if case is None:return 404,{"ok":False,"error":"case_not_found"}
   if action in ("create","add"):
    if case["state"]!="open":return 409,{"ok":False,"error":"case_closed"}
+   if sum(len(c["clips"]) for c in work["cases"].values())>=MAX_LINKS and name not in case["clips"]:
+    return 409,{"ok":False,"error":"registry_link_limit_reached"}
    if len(case["clips"])>=MAX_CASE_CLIPS and name not in case["clips"]:
     return 409,{"ok":False,"error":"case_full"}
    if any(name in c["clips"] for k,c in work["cases"].items() if k!=ident):
