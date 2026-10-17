@@ -133,6 +133,10 @@ def main():
    current=status()
    if not healthy(current) or current.get("face_deep_rescue_version")!=VERSION:
     raise RuntimeError("4k_gpu_camera_burnin_failed")
+  # Verify actual installed APK exposes new read-only optical evidence.
+  if not isinstance(current.get("sensor_lens_apertures_supported"),list) or (
+       not isinstance(current.get("sensor_lens_aperture_result_available"),bool)):
+   raise RuntimeError("s9_night_optical_telemetry_not_installed")
   nowclips=archive()
   if not originals.issubset(nowclips):
    raise RuntimeError("archived_recordings_disappeared")
@@ -142,6 +146,10 @@ def main():
      "rollback_medium":"S9_microSD_checksum_verified",
      "face_review_version":VERSION,
      "temperature_c":current.get("temperature_c"),
+     "night_mode":current.get("night_mode"),
+     "active_aperture_f_number":current.get("sensor_lens_aperture_f_number"),
+     "aperture_result_available":current.get("sensor_lens_aperture_result_available"),
+     "supported_apertures":current.get("sensor_lens_apertures_supported"),
      "original_videos_changed":False,
      "face_detection_accuracy_yet_measured":False}
   print("S9_FACE_RECALL_V27_DEVICE_VERIFIED "+json.dumps(report,sort_keys=True),flush=True)
