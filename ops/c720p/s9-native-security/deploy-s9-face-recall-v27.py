@@ -122,6 +122,11 @@ def main():
   latest=status()
   if not healthy(latest) or latest.get("recorded")!=settle.get("recorded"):
    print("S9_V27_FACE_RESCUE_DEFERRED_EVENT",flush=True);return
+  # Restarting a live continuous 4K codec above its 35 C rearm
+  # threshold can strand it in thermal fallback for twenty minutes.
+  # Do not interrupt a healthy encoder merely to upgrade archive review.
+  if float(latest.get("temperature_c",100))>34.5:
+   print("S9_V27_FACE_RESCUE_DEFERRED_4K_RESTART_THERMAL_GUARD",flush=True);return
   changed=True
   adb("shell","am","force-stop",PACKAGE,sec=28)
   if "Success" not in adb("install","-r","-g",str(signed),sec=230):
@@ -163,9 +168,27 @@ def main():
     if "Success" not in adb("install","-r","-g",str(baseline),sec=230):
      raise RuntimeError("rollback_install_no_success")
     start()
-    prior=wait(seconds=170)
+    # Original restart can temporarily enter 4K thermal fallback even when
+    # the exact APK has already been restored. Verify the on-phone package
+    # SHA rather than requiring immediate continuous-4K rearm.
+    restored_path=adb("shell","pm","path",PACKAGE,sec=30).splitlines()
+    restored=[line.partition(":")[2].strip() for line in restored_path
+              if line.startswith("package:") and line.endswith("base.apk")]
+    if len(restored)!=1 or adb("shell","sha256sum",restored[0],sec=35).split()[0]!=installed:
+     raise RuntimeError("rollback_installed_apk_checksum_mismatch")
+    prior=None
+    for _ in range(12):
+     try:
+      refresh()
+      observed=status()
+      if observed.get("ok") is True and observed.get("mode") in ("watching","starting") and observed.get("native_4k_enabled") is True:
+       prior=observed;break
+     except Exception:pass
+     time.sleep(3)
+    if prior is None:raise RuntimeError("rollback_apk_restored_camera_status_unverified")
     print("S9_FACE_RECALL_V27_ROLLBACK_VERIFIED "+json.dumps({
-      "restored_sha256":sha(old),"camera_4k_gpu_healthy":healthy(prior),
+      "restored_sha256":installed,"camera_4k_gpu_healthy":healthy(prior),
+      "camera_mode":prior.get("mode"),"thermal_cooldown_may_remain":not healthy(prior),
       "failure":type(err).__name__}),flush=True)
    except BaseException as rb:
     print("S9_FACE_RECALL_V27_ROLLBACK_REQUIRES_ATTENTION "+type(rb).__name__,flush=True)
