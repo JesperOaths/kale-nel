@@ -72,6 +72,26 @@ class FaceReviewTests(unittest.TestCase):
   self.assertIsNone(result["face_review_sampled_frames"])
   self.assertIsNone(result["face_deep_review_version"])
 
+ def test_full_v5_tile_counts_are_not_truncated_by_legacy_limit(self):
+  record={"face_review_version":"s9_face_review_v1",
+   "face_review_status":"no_frontal_face_in_samples",
+   "face_review_sampled_frames":36,
+   "face_deep_review_version":"s9_onphone_36_samples_overlapping_tiles_v5",
+   "face_deep_tiled_scene_samples":29,
+   "face_deep_second_person_roi_samples":5,
+   "face_candidates":[]}
+  result=self.catalog.safe_face_review_metadata(record)
+  self.assertEqual(result["face_deep_tiled_scene_samples"],29)
+  self.assertEqual(result["face_deep_second_person_roi_samples"],5)
+  record["face_deep_tiled_scene_samples"]=37
+  record["face_deep_second_person_roi_samples"]=13
+  result=self.catalog.safe_face_review_metadata(record)
+  self.assertIsNone(result["face_deep_tiled_scene_samples"])
+  self.assertIsNone(result["face_deep_second_person_roi_samples"])
+  record["face_deep_tiled_scene_samples"]=True
+  result=self.catalog.safe_face_review_metadata(record)
+  self.assertIsNone(result["face_deep_tiled_scene_samples"])
+
  def test_api_has_labels_only(self):
   class Handler:
    def __init__(self):
