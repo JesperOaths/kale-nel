@@ -47,7 +47,9 @@ class Overlapping4KFaceTiles(unittest.TestCase):
   assert 'if(decoded==0)throw new IOException("face_deep_zero_decoded_frames")' in cls
   assert 'new S9FaceReview(app,folder,name,48)' in cls
   assert 'if(frame==null||frame.getWidth()<400||frame.getHeight()<200)return' in java
-  assert 'frames>=frameLimit||captures.length()>=MAX_CAPTURES' in java
+  assert 'frames>=frameLimit)return;' in java
+  assert 'captures.length()<captureAllowance' in java
+  assert 'Math.min(MAX_CAPTURES' in java
   for invalid in ("Files.delete(","mp4.delete()","mp4.renameTo(","outputVideos.add("):
    self.assertNotIn(invalid,cls.split('public synchronized boolean deepFaceReview(',1)[1].split('backfillMovementEvidence',1)[0])
 
