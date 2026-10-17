@@ -545,12 +545,14 @@ async function runAppearanceSearch(){
 function setTab(which){
  state.view=which;state.page=1;
  $('moreEvidence').hidden=which!=='history';
- for(const [id,name] of [['foldersTab','folders'],['historyTab','history'],['timelineTab','timeline']]){
+ for(const [id,name] of [['foldersTab','folders'],['historyTab','history'],['appearanceTab','appearance'],['timelineTab','timeline']]){
   $(id).setAttribute('aria-selected',String(which===name));
  }
  $('summary').hidden=which==='timeline';
  $('disclaimer').hidden=which==='timeline';
- $('folderSection').hidden=which==='timeline';
+ $('folderSection').hidden=which==='timeline'||which==='appearance';
+ $('appearanceSection').hidden=which!=='appearance';
+ if(which!=='appearance')++state.appearanceRequest;
  $('detail').hidden=true;$('legacyView').hidden=which!=='timeline';
  if(which==='timeline'){
   if(!$('legacyView').src){
@@ -559,7 +561,7 @@ function setTab(which){
    $('legacyView').src=$('legacyView').dataset.src;
   }
  }else{
-  if(which==='history')renderEvidence();else renderFolders();
+  if(which==='history')renderEvidence();else if(which==='folders')renderFolders();
  }
 }
 async function refresh(){
@@ -574,7 +576,7 @@ async function refresh(){
  $('driveCount').textContent=String(state.drive.length);
  $('s9PersonCount').textContent=String(state.sd.filter(x=>Number(x.person_count)>0).length);
  $('verifiedCount').textContent=String(new Set(state.reviews.map(x=>x.visitor_id).filter(x=>/^VIS-[0-9]{4,6}$/.test(String(x)))).size);
- buildFolders();state.ready=true;
+ buildFolders();fillAppearanceReferences();state.ready=true;
  if(state.view==='history')renderEvidence();else if(state.view==='folders')renderFolders();
  const failed=tasks.filter(t=>t.status!=='fulfilled').length;
  $('sync').textContent=(failed?'Partial index · '+failed+' source unavailable':'Archive connected')+' · '+state.reviews.length+' classified Drive clips';
@@ -585,6 +587,8 @@ $('search').addEventListener('input',e=>{state.filter=String(e.target.value||'')
 $('moreEvidence').addEventListener('click',()=>{state.page++;renderEvidence()});
 $('foldersTab').addEventListener('click',()=>setTab('folders'));
 $('historyTab').addEventListener('click',()=>setTab('history'));
+$('appearanceTab').addEventListener('click',()=>setTab('appearance'));
+$('appearanceGo').addEventListener('click',runAppearanceSearch);
 $('timelineTab').addEventListener('click',()=>setTab('timeline'));
 $('back').addEventListener('click',()=>{state.selected=null;renderFolders()});
 $('closeVideo').addEventListener('click',()=>$('viewer').close());
