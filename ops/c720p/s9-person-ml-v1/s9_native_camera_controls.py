@@ -52,7 +52,7 @@ def install(H):
      if current in allowed:
       options[key]={"value":current,"available":allowed}
     self.js(200,{"ok":bool(d.get("ok")),"camera":"new","source":"S9_Camera2_native",
-       "can_change_while_recording":False,"mode":d.get("mode"),"controls":options})
+       "can_change_while_recording":False,"mode":d.get("mode"),"night_active":d["controls"].get("night_active") if isinstance(d["controls"].get("night_active"),bool) else None,"controls":options})
    except Exception:
     self.js(503,{"ok":False,"error":"native_camera_controls_unavailable"})
    return
