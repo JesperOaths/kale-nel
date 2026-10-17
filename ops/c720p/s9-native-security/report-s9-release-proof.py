@@ -91,6 +91,44 @@ def deployment_state():
   pass
  return result
 
+def restart_guard_observations(phone):
+ # Diagnostic reflection of existing preflight conditions. This never
+ # bypasses the installer's independent fresh camera-status checks.
+ blocked=[]
+ if phone.get("ok") is not True or phone.get("mode")!="watching":
+  blocked.append("camera_not_watching")
+ if phone.get("native_4k_enabled") is not True or phone.get("continuous_4k_ready") is not True:
+  blocked.append("4k_not_healthy")
+ if phone.get("garden_person_gate_backend")!="gpu":
+  blocked.append("gpu_person_gate_not_ready")
+ if phone.get("continuous_4k_error") not in (None,""):
+  blocked.append("4k_encoder_error")
+ if phone.get("continuous_4k_dropped_output_frames")!=0:
+  blocked.append("4k_dropped_frames")
+ for key,label in (
+    ("face_backfill_queued","face_review_active"),
+    ("movement_4k_backfill_queued","movement_review_active"),
+    ("historical_import_queued","historical_import_active"),
+    ("appearance_backfill_queued","appearance_review_active"),
+    ("garden_archive_triage_queued","garden_triage_active"),
+    ("garden_person_gate_busy","person_gate_busy")):
+  if phone.get(key) is True: blocked.append(label)
+ temp=phone.get("temperature_c")
+ if type(temp) not in (float,int) or not 0<=temp<=40.5:
+  blocked.append("battery_above_restart_guard_or_unavailable")
+ free=phone.get("sd_free_bytes")
+ if type(free) is not int or free<20*1024**3:
+  blocked.append("sd_reserve_unavailable")
+ frame_age=phone.get("last_frame_age_ms")
+ if type(frame_age) not in (int,float) or not 0<=frame_age<2600:
+  blocked.append("fresh_camera_frame_unavailable")
+ motion=phone.get("person_last_accepted_motion_age_ms")
+ if type(motion) in (int,float) and 0<=motion<90000:
+  blocked.append("person_motion_recent")
+ return {"observed_blockers":blocked,
+  "observed_restart_idle":len(blocked)==0,
+  "diagnostic_only":True}
+
 def summary(sha,phone):
  deployment=deployment_state()
  staged=deployment.get("signed_stage")
@@ -110,6 +148,7 @@ def summary(sha,phone):
   "face_scan_completed_since_camera_start":phone.get("face_deep_scanned"),
   "face_scan_errors_since_camera_start":phone.get("face_deep_errors"),
   "camera_temperature_c":phone.get("temperature_c"),
+  "restart_preflight_observation":restart_guard_observations(phone),
   "read_only":True,"deployment":deployment}
 
 if __name__=="__main__":
