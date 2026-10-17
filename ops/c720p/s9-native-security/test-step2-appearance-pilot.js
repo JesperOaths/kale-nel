@@ -69,7 +69,8 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
  await flush();await flush();
  assert.equal(byId('facesCount').textContent,'0');
  // Coarse colour evidence works with ZERO usable face embeddings.
- assert(byId('folders').children.some(e=>e.children.some(c=>c.textContent==='Upper clothing · blue')),
+ const containsText=(node,text)=>node.textContent===text||node.children.some(child=>containsText(child,text));
+ assert(byId('folders').children.some(e=>containsText(e,'Upper clothing · blue')),
   'Blue clothing evidence folder should exist without any face match');
  byId('appearanceTab').handlers.click();
  assert.equal(byId('appearanceSection').hidden,false);
