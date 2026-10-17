@@ -110,6 +110,7 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <div class="stat"><strong id="s9PersonCount">—</strong><span>MicroSD clips with person evidence</span></div>
 </section>
 <p class="note" id="disclaimer">Person detection does not establish facial identity. Face-similarity groupings are suggestions only; distinct people must not be merged without reviewing the recordings. No real names are inferred. Body movement folders show image direction only; they do not identify a person or measure walking cadence.</p>
+<section id="facePipelineStatus" class="note" role="status" aria-live="polite">Checking S9+ original-4K face-analysis coverage…</section>
 <section id="folderSection">
 <div class="toolbar"><h2>Folders</h2><input id="search" type="search" placeholder="Filter folders and recordings…" aria-label="Search folders"><button id="reload" type="button">Refresh</button></div>
 <div class="folders" id="folders" aria-live="polite"><div class="empty">Loading person and face evidence…</div></div>
@@ -164,25 +165,68 @@ function s9Faces(){
 function group(id,title,subtitle,kind,entries,verified){
  return {id,title,subtitle,kind,entries,verified:!!verified};
 }
+// A model suggestion is NEVER sufficient to confirm identity. Suppress all
+// similarity IDs from padded/inspection-only crops. Separate new anonymous
+// faces from corroboration suggestions rather than merging them in the UI.
+function comparisonCandidate(face){
+ if(!face||face.face_crop_requires_manual_review===true||
+     face.face_crop_padded_context_only===true)return null;
+ if(!['anonymous_similarity_unverified','reference_similarity_unverified']
+     .includes(String(face.match_status||'')))return null;
+ const id=String(face.person_id||'');
+ if(!idOK.test(id))return null;
+ if(face.match_status==='reference_similarity_unverified'&&!id.startsWith('known_candidate_'))return null;
+ if(face.match_status==='anonymous_similarity_unverified'&&!id.startsWith('unknown_'))return null;
+ return id;
+}
+function evidenceSummary(records){
+ const clips=records.filter(x=>clipOK.test(String(x.clip_no||'')));
+ const valid=clips.filter(x=>x.face_deep_review_version==='s9_onphone_36_samples_person_or_tile_v4');
+ const models=clips.filter(x=>x.face_model_state==='available_on_phone').length;
+ const notTested=clips.filter(x=>x.face_model_state==='not_tested_no_usable_face').length;
+ const faces=clips.reduce((n,r)=>n+(Array.isArray(r.face_candidates)?r.face_candidates.length:0),0);
+ const pending=clips.length-valid.length;
+ return {total:clips.length,reviewed:valid.length,pending,models,notTested,faces};
+}
+function renderFacePipelineSummary(){
+ const summary=evidenceSummary(state.sd);
+ const node=$('facePipelineStatus');
+ if(!node)return;
+ node.textContent='S9+ original 4K face reviews: '+summary.reviewed+'/'+summary.total+
+  ' recordings using the current review version · '+summary.pending+
+  ' awaiting upgrade · '+summary.faces+' inspected face crops · '+
+  summary.models+' recordings tested with a local embedding model ('+
+  summary.notTested+' never reached a usable face test). '+
+  'Unverified matches are suggestions only. Original recordings and all identity templates remain on the phone.';
+}
 function buildFolders(){
  const folders=[],faceIndex=new Map(),unverifiedCrops=[],visit=new Map(),driveCategories=new Map();
  for(const f of s9Faces()){
-  if(!f.id){unverifiedCrops.push(item('sd',f.rec,f.face));continue;}
-  let a=faceIndex.get(f.id);if(!a){a=[];faceIndex.set(f.id,a)}a.push(item('sd',f.rec,f.face));
+  const id=comparisonCandidate(f.face);
+  if(!id){unverifiedCrops.push(item('sd',f.rec,f.face));continue;}
+  let a=faceIndex.get(id);if(!a){a=[];faceIndex.set(id,a)}a.push(item('sd',f.rec,f.face));
  }
  if(unverifiedCrops.length)folders.push(group('face:manual-review',
-  'Face images · review needed',
-  'Face crops without a reliable identity suggestion · original videos available',
+  'Face images · manual review',
+  'First-seen, padded or otherwise unverified face crops · original videos available',
   'face-review',unverifiedCrops,false));
  let k=1;
  for(const [id,records] of faceIndex){
   folders.push(group('face:'+id,'Suggested face '+String(k++).padStart(2,'0'),
-   'On-device similarity · unverified','face',records,false));
+   'On-device comparison only · unverified · '+new Set(records.map(x=>x.key)).size+' unique clips',
+  'face',records,false));
  }
- const sdUnmatched=state.sd.filter(rec=>clipOK.test(String(rec.clip_no||''))&&Number(rec.person_count)>0 &&
+ const sdUnmatched=state.sd.filter(rec=>clipOK.test(String(rec.clip_no||''))&&
+  (Number(rec.person_count)>0||Number(rec.face_detector_raw_hits)>0)&&
   !(Array.isArray(rec.face_candidates)&&rec.face_candidates.some(f=>imageOK.test(String(f.snapshot_name||'')))));
  if(sdUnmatched.length)folders.push(group('sd:pending','S9+ · faces not captured',
-  'Person candidates awaiting usable face evidence','pending',sdUnmatched.map(rec=>item('sd',rec)),false));
+  'Possible people or raw face hits without usable face evidence · original videos available',
+  'pending',sdUnmatched.map(rec=>item('sd',rec)),false));
+ const notReviewed=state.sd.filter(rec=>clipOK.test(String(rec.clip_no||''))&&
+  rec.face_deep_review_version!=='s9_onphone_36_samples_person_or_tile_v4');
+ if(notReviewed.length)folders.push(group('sd:scan-pending','S9+ · deep face scan pending',
+  'Recordings not yet reviewed by the current original-4K face pass · no absence-of-person claim',
+  'pending',notReviewed.map(rec=>item('sd',rec)),false));
  const lookup=new Map(state.drive.map(r=>[String(r.remote_name||''),r]));
  for(const review of state.reviews){
   const name=String(review.remote_name||'');
@@ -281,7 +325,8 @@ function renderFolders(){
   cover.append(el('span','tag',g.verified?'MANUALLY LINKED':g.kind==='face'?'FACE SUGGESTION':g.kind==='face-review'?'MANUAL REVIEW':'PENDING FACE'));
   const body=el('div','folder-body');
   body.append(el('strong','folder-title',g.title),el('span','folder-meta',g.subtitle));
-  const foot=el('div','folder-footer');foot.append(el('span','',g.entries.length+' recordings'),el('b','','›'));
+  const uniqueClips=new Set(g.entries.map(e=>e.key)).size;
+  const foot=el('div','folder-footer');foot.append(el('span','',uniqueClips+' recordings · '+g.entries.length+' evidence items'),el('b','','›'));
   b.append(cover,body,foot);
   b.addEventListener('click',()=>openFolder(g.id));
   $('folders').append(b);
@@ -314,7 +359,8 @@ function openFolder(id){
  const g=state.folders.find(x=>x.id===id);if(!g)return;
  state.selected=id;$('folderSection').hidden=true;$('detail').hidden=false;
  $('detailTitle').textContent=g.title;
- $('detailInfo').textContent=g.entries.length+' recordings · '+g.subtitle+'. Source originals preserved.';
+ $('detailInfo').textContent=new Set(g.entries.map(e=>e.key)).size+' recordings · '+g.entries.length+
+  ' review items · '+g.subtitle+'. Source originals preserved.';
  const records=$('records');records.replaceChildren();
  const entries=[...g.entries].sort((a,b)=>stamp(b).localeCompare(stamp(a)));
  for(const e of entries){
@@ -413,6 +459,7 @@ async function refresh(){
  state.drive=Array.isArray(drive?.events)?drive.events:[];
  state.reviews=Array.isArray(review?.clips)?review.clips:[];
  $('facesCount').textContent=String(s9Faces().length);
+ renderFacePipelineSummary();
  $('driveCount').textContent=String(state.drive.length);
  $('s9PersonCount').textContent=String(state.sd.filter(x=>Number(x.person_count)>0).length);
  $('verifiedCount').textContent=String(new Set(state.reviews.map(x=>x.visitor_id).filter(x=>/^VIS-[0-9]{4,6}$/.test(String(x)))).size);
