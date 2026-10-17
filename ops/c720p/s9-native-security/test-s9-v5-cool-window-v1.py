@@ -111,6 +111,19 @@ class LocalCoolWindow(unittest.TestCase):
        m,"run_release_script",side_effect=AssertionError("installer_called")):
     m.tick()
    self.assertFalse(m.STATE.exists())
+ def test_all_archive_workers_block_an_apk_restart(self):
+  # No bypass when face, movement, historical, appearance or triage work owns SD.
+  for flag in ("face_backfill_queued","movement_4k_backfill_queued",
+               "historical_import_queued","appearance_backfill_queued",
+               "garden_archive_triage_queued"):
+   with self.subTest(worker=flag), tempfile.TemporaryDirectory() as tmp:
+    self.setup_mocks(tmp,34.2)
+    busy=phone(34.2);busy[flag]=True
+    self.assertFalse(m.idle(busy))
+    with mock.patch.object(m,"camera_status",return_value=busy),mock.patch.object(
+         m,"run_release_script",side_effect=AssertionError("must_not_install")):
+     m.tick()
+    self.assertFalse(m.STATE.exists())
  def test_pending_install_state_never_retries_after_crash(self):
   with tempfile.TemporaryDirectory() as tmp:
    self.setup_mocks(tmp,33.9)
@@ -149,7 +162,7 @@ class LocalCoolWindow(unittest.TestCase):
  def test_c720p_timer_is_local_not_chatgpt_task(self):
   src=INSTALLER.read_text()
   for mark in ('systemctl","--user","enable","--now"',
-               'OnUnitInactiveSec=20min','Persistent=true',
+               'OnUnitInactiveSec=5min','Persistent=true',
                'NoNewPrivileges=yes','S9_V5_LOCAL_TIMER_VERIFIED'):
    self.assertIn(mark,src)
 
