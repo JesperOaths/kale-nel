@@ -6,6 +6,8 @@ import urllib.request
 
 OLD_VERSION="s9_onphone_36_samples_person_or_tile_v3"
 ACTIVE_VERSION="s9_onphone_36_samples_person_or_tile_v4"
+GEOMETRY_VERSION="face_crop_geometry_v2_padded_manual"
+GEOMETRY_COUNTS=("face_detector_raw_hits","face_rejected_crop_geometry","face_rejected_insufficient_native_eye_detail","face_crop_padded_manual_count","face_snapshots_saved","face_rejected_dark_or_blurry")
 COUNTERS=(
  "face_detector_raw_hits",
  "face_rejected_low_confidence",
@@ -41,13 +43,23 @@ def report(records,phone):
    "outcomes":dict(collections.Counter(str(r.get("face_evidence_outcome") or "unspecified") for r in rows)),
    "counters":sums,
   }
+ geometry={}
+ for geom in ("old_or_unreported",GEOMETRY_VERSION):
+  rows=[r for r in included if (GEOMETRY_VERSION if r.get("face_crop_geometry_version")==GEOMETRY_VERSION else "old_or_unreported")==geom]
+  geometry[geom]={
+   "clips":len(rows),
+   "clips_with_snapshots":sum(valid_int(r.get("face_snapshots_saved"))>0 for r in rows),
+   "totals":{key:sum(valid_int(r.get(key)) for r in rows) for key in GEOMETRY_COUNTS},
+  }
  return {
   "archive_clips":len(included),
   "versions":dict(versions),
   "review_groups":groups,
+  "geometry_groups":geometry,
   "remaining_v27":sum(r.get("face_deep_review_version")!=ACTIVE_VERSION for r in included),
   "native_face_backfill_errors":valid_int(phone.get("face_deep_errors")),
   "native_face_backfill_since_restart":valid_int(phone.get("face_deep_scanned")),
+  "installed_geometry_version":GEOMETRY_VERSION if phone.get("face_crop_geometry_version")==GEOMETRY_VERSION else "old_or_unreported",
   "camera_mode":str(phone.get("mode") or "unknown")[:30],
   "temperature_c":phone.get("temperature_c"),
   "no_identity_data_collected":True,
