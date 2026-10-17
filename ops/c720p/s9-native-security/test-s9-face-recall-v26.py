@@ -30,7 +30,7 @@ scope=service.split("private void maybeFaceBackfill(){",1)[1].split("Offloaded a
 assert 'if(meta.optInt("person_count",0)<=0)continue;' not in scope
 assert "faceBackfillQueued" in scope
 assert "!faceBackfillThermallyAllowed()" in scope
-assert "FACE_BACKFILL_MAX_TEMP_TENTHS_C=390" in service
+assert "FACE_BACKFILL_MAX_TEMP_TENTHS_C=420" in service
 assert "gardenPersonGateBusy" in scope
 assert '"watching".equals(mode)' in scope
 assert "now-lastMovementAt<45000L" in scope
