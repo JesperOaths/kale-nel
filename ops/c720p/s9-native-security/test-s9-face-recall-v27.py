@@ -27,7 +27,7 @@ assert 'writeJson(new File(folder,name+".verified.json"),manifest)' in deep
 scope=service.split("private void maybeFaceBackfill(){",1)[1].split("Offloaded archived-video retention review",1)[0]
 assert 'if(meta.optInt("person_count",0)<=0)continue;' not in scope
 assert "faceBackfillQueued" in scope
-assert "temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C" in scope
+assert "!faceBackfillThermallyAllowed()" in scope
 assert "FACE_BACKFILL_MAX_TEMP_TENTHS_C=390" in service
 assert "gardenPersonGateBusy" in scope
 assert '"watching".equals(mode)' in scope
