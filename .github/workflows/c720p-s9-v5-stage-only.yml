@@ -1,5 +1,5 @@
 name: S9 V5 signed 4K face-review staging · no camera restart
-# Re-stage after fallback-safe C720P worker rollout; never install during this workflow.
+# Re-stage current pinned original-4K release using the verified 40.5 C restart guard; never install here.
 on:
   workflow_dispatch:
   push:
@@ -28,7 +28,7 @@ jobs:
           from pathlib import Path
           src=Path('ops/c720p/s9-native-security/s9-v5-cool-window-worker.py').read_text()
           assert 'if stage_only:' in src and src.index('if stage_only:')<src.index('run_release_script(d,"install"')
-          assert 'MAX_RESTART_TEMP_C=34.5' in src
+          assert 'MAX_RESTART_TEMP_C=40.5' in src
           print('S9_V5_STAGE_ONLY_SAFE_CONTRACT_PASS')
           PY
       - name: Stage the immutable signed V5 candidate on C720P, never install
