@@ -57,7 +57,10 @@ class Tests(unittest.TestCase):
  def test_prefetch_never_weakens_phone_inference_thermal_guard(self):
   script=(HERE/"s9-historical-gpu-relay.py").read_text()
   stage=script.split("def stage_one(",1)[1].split("def category_from_phone(",1)[0]
-  self.assertIn("if temperature>=39:",stage)
+  self.assertIn("if temperature>=42:",stage)
+  self.assertIn('status.get("application_battery_temperature_max_c")==42.0',stage)
+  self.assertIn("phone_inference_limit=42.0",stage)
+  self.assertIn("else 37.0",stage)
   self.assertIn("phone_staging_sd_reserve_guard",stage)
   self.assertIn("phone_4k_not_ready_for_staging",stage)
   self.assertIn("S9_HISTORY_STAGED_WAITING_FOR_SAFE_PHONE_INFERENCE",stage)
