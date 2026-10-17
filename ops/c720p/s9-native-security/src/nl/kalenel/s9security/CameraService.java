@@ -262,7 +262,7 @@ public final class CameraService extends Service {
  }
  private int temperature(){
   Intent battery=registerReceiver(null,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-  return battery==null?0:battery.getIntExtra("temperature",0);
+  return battery==null?420:battery.getIntExtra("temperature",420);
  }
  private void prepare(){
   try{
@@ -1360,6 +1360,8 @@ public final class CameraService extends Service {
    d.put("continuous_4k_recovery_attempts",continuous4KRecoveryAttempts);
    d.put("continuous_4k_retry_after_ms",continuous4KRetryAfterMs);
    d.put("continuous_4k_rearm_temperature_below_c",40.5);
+   d.put("application_battery_temperature_max_c",42.0);
+   d.put("face_review_4k_temperature_below_c",41.5);
    d.put("continuous_4k_last_result",continuous4KLastResult);
    d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
    d.put("preroll_ready",preRoll!=null&&preRoll.ready());
