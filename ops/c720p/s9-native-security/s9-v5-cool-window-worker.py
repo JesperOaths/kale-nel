@@ -111,7 +111,12 @@ def stage_eligible(s):
    s.get("last_frame_age_ms",99999)<2600)
 
 def idle(s):
- if s.get("face_backfill_queued") is True or s.get("movement_4k_backfill_queued") is True:
+ # All phone-side historical/metadata passes share the camera and SD stack.
+ # A queued pass is not a safe APK-restart window, even if 4K looks healthy.
+ if any(s.get(key) is True for key in (
+     "face_backfill_queued", "movement_4k_backfill_queued",
+     "historical_import_queued", "appearance_backfill_queued",
+     "garden_archive_triage_queued")):
   return False
  if s.get("garden_person_gate_busy") is True: return False
  if s.get("mode")!="watching": return False
@@ -214,7 +219,13 @@ def tick(stage_only=False):
           cooldown_4k_retry_ms=phone.get("continuous_4k_retry_after_ms"))
    return
   if not idle(phone):
-   report("deferred_motion_or_background_work")
+   # Only non-biometric booleans: useful for diagnosing a missed install window.
+   report("deferred_motion_or_background_work",
+          face_review_busy=phone.get("face_backfill_queued") is True,
+          movement_review_busy=phone.get("movement_4k_backfill_queued") is True,
+          historical_import_busy=phone.get("historical_import_queued") is True,
+          appearance_review_busy=phone.get("appearance_backfill_queued") is True,
+          garden_triage_busy=phone.get("garden_archive_triage_queued") is True)
    return
   try:
    ready=prepared(d)
