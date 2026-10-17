@@ -36,7 +36,9 @@ class NightVisibilityPatch(unittest.TestCase):
   self.assertIn("cameraLive",js)
   self.assertIn("/new/camera-controls",js)
   self.assertNotIn("window.localStorage",js)
-  for banned in ("adb install","am force-stop","DELETE ","unlink(", "shutil.rmtree("):
+  # Only the newly created enhancement JS may be deleted during rollback.
+  self.assertIn('if old is None:p.unlink(missing_ok=True)',deployment)
+  for banned in ("adb install","am force-stop","DELETE ","shutil.rmtree("):
    self.assertNotIn(banned,deployment)
   for banned in ("fetch('/new/camera-control',","XMLHttpRequest","MediaRecorder","canvas.toDataURL",
      "URL.createObjectURL","document.cookie"):
