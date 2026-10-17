@@ -25,7 +25,7 @@ TARGETS={
 }
 EXPECTED={
  "html":"7441197308b4af48171188e34f497a9f73ae8c5bd4b92305aa2d72b0cac0601b",
- "app":"3abeaeaca1c8e6dfd4e470c6be01cf8d4d328a3e29be5f0d1f7cf3863cbde3b",
+ "app":"3abeaeaca1c8e6dfd4e470c6be01cf8d4d328a3e29be5f0d1f7cf3863cbde3b3",
  "hub":"6b0435c006edf81d3de6b3cec8c7526f95780839259a936123d5ddef7563657c"
 }
 MARK="s9-real-people-faces-v43"
