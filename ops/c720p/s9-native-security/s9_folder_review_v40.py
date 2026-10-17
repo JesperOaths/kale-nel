@@ -1,7 +1,7 @@
 """Human-approved clip folders; optional clothing-colour catalog search only.
 
-No identity estimates, biometric features, automatic folder assignments, or
-identity training. Approvals pin a source-bound review image and recording.
+No identity estimates, biometric features or identity training. Optional
+automatic clothing groups contain pending clips only. Approvals remain manual.
 """
 import contextlib,hashlib,json,os,sqlite3
 
@@ -95,6 +95,13 @@ def report(query,b):
  if not 0<=offset<=100000 or not 1<=limit<=100 or not b.finite(distance,0,1):raise ValueError('invalid_folder_page')
  if q.get('weak','0') not in ('0','1') or q.get('route','0') not in ('0','1'):raise ValueError('invalid_folder_filter')
  all_items,items,revision,folders,ledger,skips,scope,catalog=state(b)
+ appearance_ids=set();appearance_candidates=[]
+ if getattr(b,'auto_appearance_groups',False):
+  import s9_appearance_groups_v43 as appearances
+  if appearances.sync(b,items,ledger,skips,scope,catalog):
+   all_items,items,revision,folders,ledger,skips,scope,catalog=state(b)
+  appearance_ids,appearance_candidates,current_revision=appearances.read(b)
+  if current_revision!=revision:all_items,items,revision,folders,ledger,skips,scope,catalog=state(b)
  if folder and not any(f['id']==folder for f in folders):raise ValueError('folder_unavailable')
  approved=[r for r in ledger if r['decision']=='approved' and r['item']]
  occupied={(r['clip'],r['source_sha256']) for r in approved}
@@ -107,8 +114,16 @@ def report(query,b):
   decided={(r['clip'],r['source_sha256']) for r in records}
   candidates=[r for r in items if (r['clip'],r['source_sha256']) not in decided|occupied|skipped]
   ranked=group_clips(candidates,examples,b,weak=q.get('weak')=='1',route=q.get('route')=='1',distance=distance) if examples else []
+  automatic=f['id'] in appearance_ids
+  if automatic:
+   proposed={(r['clip'],r['source_sha256']) for r in appearance_candidates if r['folder']==f['id']}
+   pending=group_clips([r for r in candidates if (r['clip'],r['source_sha256']) in proposed],[],b)
+   # Persisted pending membership remains reviewable even before a first
+   # approval; no prediction becomes an approved folder membership.
+   ranked=pending+[r for r in ranked if (r['clip'],r['source_sha256']) not in proposed]
+  f['automatic_appearance_group']=automatic
   f.update(approved_clips=sum(r['decision']=='approved' for r in records),available_approved_clips=len(examples),suggested_clips=len(ranked),rejected_clips=sum(r['decision']=='rejected' for r in records),
-   unavailable_clips=sum(not r['item'] for r in records),previews=[r['full_crop'] for r in examples[:3]])
+   unavailable_clips=sum(not r['item'] for r in records),previews=[r['full_crop'] for r in (examples[:3] or (ranked[:3] if automatic else []))])
   if f['id']==folder:
    refs=examples;suggestions=ranked
    if tab=='assign':assignments=group_clips(candidates,[],b)
@@ -127,6 +142,7 @@ def report(query,b):
  return {'ok':True,'workflow':WORKFLOW,'revision':revision,'folders':folders,'folder':folder,'tab':tab,'items':result[offset:offset+limit],
   'total':len(result),'reference_examples':refs[:4],'profile_examples':len(refs),'identity_matching':False,'organization':'explicit_human_approval',
   'suggestion_basis':'clothing_hsv_distance_only','auto_assignments':False,'coverage':{'verified_clips':len(positive),'processed_clips':sum(n in catalog for n in positive)},
+  'automatic_appearance_groups':len(appearance_ids),'automatic_approvals':False,
   'inbox_clips':len(group_clips([r for r in items if (r['clip'],r['source_sha256']) not in occupied|skipped],[],b))}
 
 def edit(data,b):

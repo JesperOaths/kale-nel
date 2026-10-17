@@ -174,7 +174,8 @@ def attribute_bucket(item):
  return key,(' / '.join(colours)+' · '+tags[2].replace('_',' ')+' → '+tags[3].replace('_',' '))
 def folder_backend():
  return SimpleNamespace(db=db,now=now,review_context=review_context,index=index,archive_verifications=archive_verifications,
-  validate=validate,VERSION=VERSION,CLIP=CLIP,finite=finite,bhattacharyya=bhattacharyya)
+  validate=validate,VERSION=VERSION,CLIP=CLIP,finite=finite,bhattacharyya=bhattacharyya,
+  auto_appearance_groups=(ROOT/'appearance-groups-v43-enabled.json').is_file())
 
 def review_context():
  all_items=observations();items=list(all_items.values())

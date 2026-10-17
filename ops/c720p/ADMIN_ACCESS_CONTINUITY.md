@@ -1,6 +1,32 @@
 # Authorized administrative access: continuity runbook
 
-## Current People & faces layout — 17 October 2026, V42b
+## Current appearance folders — 17 October 2026, V43
+
+Automatic **provisional clothing-colour groups** are enabled by
+`state/s9-visual-attributes-v36/appearance-groups-v43-enabled.json`.
+Three groups initially contain 3, 2 and 1 unapproved clips. The existing
+Jesper folder and three approved clips were preserved. Generated folders can
+be named manually; every approval/rejection remains an explicit human action.
+No biometric identity matching, inferred person names or automatic approvals.
+
+The engine is `s9_appearance_groups_v43.py`; it compares upper/lower HSV only,
+persists proposals in additive tables and discovers new eligible clips during
+folder refresh. UI cache is `appearance-folders-v43-20261017`. Nine new and
+nineteen existing workflow tests, plus eight live groups, passed. See
+`s9-native-security/APPEARANCE_GROUPS_V43.md` for scope and recovery.
+
+The Home Assistant Security iframe URL was refreshed from V40a to V43 to
+avoid its month-long static-page cache. Only that view's URL changed; HA
+restarted successfully. Private HA configuration backup:
+`/config/.storage/lovelace.c720p_hub.before-security-entry-v43-20261017T014654Z`.
+
+Receipt: `state/s9-visual-attributes-v36/appearance-groups-v43-release.json`.
+Backup: `backups/s9-appearance-groups-v43/20261017T004551Z/`.
+Never restore its SQLite snapshot over later human decisions. The separately
+added root-entry night-visibility script was preserved. Camera software was
+not changed; reconcile independent phone deployments before any APK update.
+
+## Previous People & faces layout — 17 October 2026, V42b
 
 `people-folders-v42.html/js` now opens a folder overview. Inside each folder,
 approved reference clips sit beside pending clips with green Approve/red Reject
