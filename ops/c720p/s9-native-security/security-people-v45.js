@@ -148,15 +148,15 @@ function selectPane(pane){
  }
 }
 function openApproval(item){
- if(state.folder){return action({action:'approve_clip',folder:state.folder,...fields(item)},
-  ()=>notification('Clip approved and kept in this folder.'))}
  state.approvalItem=item;
  $('approvalPreview').replaceChildren(imageFor(item.full_crop,'Clip to review'));
  const select=$('approvalFolder');select.replaceChildren();
  select.add(new Option('Create a new folder',''));
  for(const f of (state.doc?.folders||[]))if(isSaved(f))select.add(new Option(f.label,f.id));
  $('approvalLabel').value='';
- $('newLabel').hidden=false;
+ if(state.folder)select.value=state.folder;
+ $('newLabel').hidden=!!select.value;
+ $('approvalConfirmed').checked=false;
  $('approvalDialog').showModal();
 }
 function dismiss(item){
@@ -392,6 +392,7 @@ $('approvalForm').addEventListener('submit',async e=>{
  e.preventDefault();const item=state.approvalItem;if(!item)return;
  const id=$('approvalFolder').value;
  const label=$('approvalLabel').value.trim();
+ if(!$('approvalConfirmed').checked){alertText('Confirm that you reviewed the original recording before keeping it.');return}
  if(!id&&(!label||label.length>100)){alertText('Enter a name for the new folder.');return}
  const ok=await action(id?{action:'approve_clip',folder:id,...fields(item)}:
   {action:'seed_folder',folder:'',label,...fields(item)},result=>{
