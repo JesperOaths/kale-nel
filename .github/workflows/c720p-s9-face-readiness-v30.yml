@@ -1,0 +1,80 @@
+name: S9 face recognition pipeline readiness V30
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-s9-face-readiness-v30.yml'
+      - 'ops/c720p/s9-native-security/audit-face-pipeline-v30.py'
+      - 'ops/c720p/s9-native-security/test-face-pipeline-v30.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-s9-face-readiness-v30.yml'
+      - 'ops/c720p/s9-native-security/audit-face-pipeline-v30.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s9-face-readiness-v30
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate original-4K face analysis metrics and privacy isolation
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/audit-face-pipeline-v30.py
+          python3 ops/c720p/s9-native-security/test-face-pipeline-v30.py
+
+  audit:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read live on-phone recognition readiness via private management gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          path="ops/c720p/s9-native-security/audit-face-pipeline-v30.py"
+          hash="$(sha256sum "$path" | cut -d' ' -f1)"
+          [[ "$hash" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${path}"
+          staged="/tmp/s9-face-readiness-v30-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 35 '${uri}' -o '${staged}' && printf '%s  %s\n' '${hash}' '${staged}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${staged}'"
+          idem="s9-face-readiness-v30-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-face-readiness-v30','diagnostic',:'cmd',165,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_FACE_READINESS_V30_JOB=$job"
+          for i in $(seq 1 50); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 10500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_FACE_PIPELINE_V30_AUDIT' <<< "$output"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Model readiness outcome still unverified'
+          exit 1
