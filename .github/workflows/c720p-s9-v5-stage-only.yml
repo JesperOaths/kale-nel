@@ -1,5 +1,5 @@
 name: S9 V5 signed 4K face-review staging · no camera restart
-# Re-stage after the source-pinned C720P worker update. Stage-only may build while face/historical archive workers are busy; it never installs.
+# Re-stage the current pinned guarded-idle-poll worker release; stage-only must never install or stop Camera2.
 on:
   workflow_dispatch:
   push:
