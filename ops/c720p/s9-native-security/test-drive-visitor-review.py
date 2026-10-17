@@ -104,6 +104,44 @@ class Tests(unittest.TestCase):
   self.assertIsNone(by_id[self.key3]["person_presence_percent"])
   self.assertNotIn("face_embeddings",json.dumps(result))
 
+ def test_v28_review_preserves_baseline_and_excludes_unverified(self):
+  m=self.m
+  doc=json.loads(m.CAT.read_text())
+  original=dict(doc["items"][self.key1])
+  review={"version":m.V28_VERSION,"status":"classified",
+    "source_media":"verified_read_only_google_drive",
+    "identity_status":"not_verified",
+    "category":"multiple_people_candidate","person_score":.78,
+    "sampled_frames":12,"person_frame_count":6,
+    "review_backend":"gpu",
+    "private_face_embeddings":[0.1,0.2]}
+  doc["items"][self.key1]["v28_person_recheck"]=review
+  doc["items"][self.key2]["v28_person_recheck"]=dict(review,source_media="invalid")
+  m.CAT.write_text(json.dumps(doc))
+  report=m.report()
+  self.assertEqual(report["v28_review_progress"]["completed"],1)
+  self.assertEqual(report["v28_review_progress"]["eligible"],3)
+  self.assertEqual(report["v28_review_progress"]["remaining"],2)
+  first=next(x for x in report["clips"] if x["clip_id"]==self.key1)
+  self.assertEqual(first["category"],original["category"])
+  self.assertEqual(first["v28_phone_review"]["category"],"multiple_people_candidate")
+  self.assertEqual(first["v28_phone_review"]["person_presence_percent"],50.0)
+  self.assertTrue(first["v28_phone_review"]["sampled_video_only"])
+  self.assertNotIn("private_face_embeddings",json.dumps(report))
+  self.assertNotIn("face_embeddings",json.dumps(report))
+
+ def test_v28_rejects_bad_bounds_and_unsupported_versions(self):
+  m=self.m
+  good={"version":m.V28_VERSION,"status":"classified",
+    "source_media":"verified_read_only_google_drive","identity_status":"not_verified",
+    "category":"single_person_event_candidate","person_score":.70,
+    "sampled_frames":12,"person_frame_count":5,"review_backend":"cpu"}
+  self.assertIsNotNone(m.safe_v28_review({"v28_person_recheck":good}))
+  for invalid in (dict(good,person_score=1.2),dict(good,person_frame_count=13),
+    dict(good,version="untrusted"),dict(good,identity_status="verified"),
+    dict(good,person_score=True),dict(good,sampled_frames=0)):
+   self.assertIsNone(m.safe_v28_review({"v28_person_recheck":invalid}))
+
  def test_idempotent_ui_and_no_media(self):
   p=load(PATCH,"review_patch_test")
   before='<html><script id="c720p-s9-phone-clips-ui-v1"></script></body></html>'
@@ -113,6 +151,8 @@ class Tests(unittest.TestCase):
   self.assertNotEqual(stale,after)
   self.assertEqual(p.patch(stale),after)
   self.assertIn("manual-confirmed-visitor-v1",after)
+  self.assertIn("NEW S9+ sampled recheck",after)
+  self.assertIn("S9+ historical recheck pending",after)
   self.assertIn("person",after)
   with self.assertRaises(ValueError):p.patch("<html></body></html>")
   doc=(HERE/"drive-person-batch-catalog.py").read_text()
