@@ -34,7 +34,8 @@ const clips=[
 ];
 assert.deepEqual(count(clips,/^motion_[0-9]{13}[.]mp4$/),{total:4,reviewed:1,legacyProtected:1,olderNoCrop:1,neverReviewed:1,pending:2,models:1,notTested:1,faces:2,shadow:0});
 assert.match(script,/rec\.face_deep_review_version!=='s9_onphone_36_samples_overlapping_tiles_v5'/);
-assert.match(script,/!\(Number\(rec\.face_snapshots_saved\)>0\)/);
+assert.doesNotMatch(script,/!\(Number\(rec\.face_snapshots_saved\)>0\)/,
+ 'Legacy saved snapshots do not exempt an original 4K clip from V5 replay');
 assert.match(script,/Older reviews with saved face crops/);
 assert.match(script,/Never deep-scanned/);
 assert.match(script,/Scanning is paused when the phone is too warm/);
