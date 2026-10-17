@@ -8,6 +8,7 @@ on:
       - 'ops/c720p/s9-native-security/test-s9-face-recall-v27.py'
       - 'ops/c720p/s9-native-security/test-face-overlap-v33.py'
       - 'ops/c720p/s9-native-security/test-face-backfill-coverage-v35.py'
+      - 'ops/c720p/s9-native-security/test-face-deploy-recovery-v35.py'
       - 'ops/c720p/s9-native-security/test-face-pipeline-v30.py'
       - 'ops/c720p/s9-native-security/audit-face-pipeline-v30.py'
       - 'ops/c720p/s9-native-security/test-face-4k-thermal-priority-v34.py'
@@ -42,6 +43,7 @@ jobs:
           python3 ops/c720p/s9-native-security/test-s9-face-geometry-v271.py
           python3 ops/c720p/s9-native-security/test-face-overlap-v33.py
           python3 ops/c720p/s9-native-security/test-face-backfill-coverage-v35.py
+          python3 ops/c720p/s9-native-security/test-face-deploy-recovery-v35.py
           python3 ops/c720p/s9-native-security/test-face-pipeline-v30.py
           python3 ops/c720p/s9-native-security/test-face-4k-thermal-priority-v34.py
           python3 -m py_compile ops/c720p/s9-native-security/build-s9-face-recall-v27.py
