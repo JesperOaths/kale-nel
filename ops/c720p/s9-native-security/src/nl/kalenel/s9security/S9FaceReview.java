@@ -285,15 +285,15 @@ final class S9FaceReview implements AutoCloseable {
   writeIndex();
   return result.put("person_id",id).put("match_status","new_anonymous_candidate");
  }
- /** A half-width original-4K tile preserves twice the apparent face pixels
-  * of a 960px full-frame scan when the person detector missed the subject.
-  * No face identity is asserted; original video remains on microSD.
+ /** Overlapping 4K left/right tiles retain distant face detail.
+  * A 60%-width tile covers the midpoint so a face is not cut across halves.
+  * This only improves localization, never identity verification.
   */
  void sampleSceneTile(Bitmap frame,long ms,boolean right){
   if(frame==null||frame.getWidth()<400||frame.getHeight()<200)return;
-  int mid=frame.getWidth()/2;
-  int x=right?mid:0;
-  int w=right?frame.getWidth()-mid:mid;
+  int width=frame.getWidth();
+  int w=Math.min(width,Math.max(400,(int)Math.ceil(width*.60)));
+  int x=right?width-w:0;
   Bitmap tile=null;
   try{
    tile=Bitmap.createBitmap(frame,x,0,w,frame.getHeight());
