@@ -111,7 +111,7 @@ class HistoricalGpuReviewTests(unittest.TestCase):
   self.assertIn("classified_pending_hub_ack",text)
   camera=(HERE/"src/nl/kalenel/s9security/CameraService.java").read_text()
   self.assertIn("new HistoricalImportWorker(",camera)
-  self.assertIn('temperature()>=370',camera)
+  self.assertIn('temperature()>=420',camera)
   self.assertIn('reviewer.execute(new Runnable()',camera)
   self.assertNotIn('new File(appStorage,"Security4K")',text)
  def test_relay_only_writes_explicit_copy_and_metadata(self):
