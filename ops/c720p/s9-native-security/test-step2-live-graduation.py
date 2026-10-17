@@ -26,6 +26,14 @@ class Step2(unittest.TestCase):
   self.assertEqual(status["status"],"not_complete")
   self.assertFalse(status["automatic_identity_grouping_authorized"])
   self.assertTrue(status["signed_release_installed"])
+  self.assertFalse(status["installer_timer_active"])
+  self.release["deployment"].update(timer_enabled=True,
+      last_worker_event="deferred_motion_or_background_work",
+      worker_state="waiting",worker_ref_matches_pin=True)
+  status=mod.summarize(self.release,self.face,self.pairs)
+  self.assertTrue(status["installer_timer_active"])
+  self.assertEqual(status["installer_last_event"],"deferred_motion_or_background_work")
+  self.assertTrue(status["installer_state_ref_matches_current"])
  def test_missing_ground_truth_disables_identity_even_if_camera_healthy(self):
   self.pairs={"reason":"verified_labels_unavailable"}
   output=mod.summarize(self.release,self.face,self.pairs)
