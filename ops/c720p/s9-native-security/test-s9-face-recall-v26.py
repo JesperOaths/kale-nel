@@ -12,7 +12,8 @@ ui=(root/"security-face-folders-v22.html").read_text()
 build=(root/"build-s9-face-recall-v26.py").read_text()
 install=(root/"deploy-s9-face-recall-v26.py").read_text()
 assert ('DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v3"' in classification or
-        'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v4"' in classification)
+        'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v4"' in classification
+        or 'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"' in classification)
 scope=classification.split('static boolean deepFaceNeedsUpgrade(',1)[1].split("public synchronized boolean deepFaceReview",1)[0]
 assert 'person_count' not in scope
 assert 'face_snapshots_saved' in scope
