@@ -100,6 +100,8 @@ def main():
   out["entry"]=prior["entry"][0]
  else:
   out["entry"]=update(entry,ENTRY_OLD,ENTRY_NEW,"entry").encode("utf-8")
+ if OLD.encode() in out["hub"] or (ENTRY_OLD+'"').encode() in out["entry"]:
+  raise RuntimeError("old_route_retained_in_staged_assets")
  if args.dry_run:
   print("S9_PEOPLE_V45_LIVE_ROUTE_DRY_RUN_PASS "+json.dumps({
    "source_ref":args.ref,"originals":len(old_clips),
@@ -131,7 +133,7 @@ def main():
    b=get(url)
    if digest(b)!=digest(out[k]):raise RuntimeError("HA_not_serving_new_version_"+k)
    served[k]=digest(b)[:16]
-  if OLD.encode() in out["hub"] or ENTRY_OLD.encode() in out["entry"]:
+  if OLD.encode() in out["hub"] or (ENTRY_OLD+'"').encode() in out["entry"]:
    raise RuntimeError("old_route_retained")
   new_clips=archive()
   if not old_clips.issubset(new_clips):raise RuntimeError("archive_records_disappeared")
