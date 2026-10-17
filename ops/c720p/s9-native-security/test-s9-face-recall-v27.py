@@ -74,7 +74,8 @@ assert 'S9_FACE_RECALL_V27_DEVICE_VERIFIED' in install
 assert 'face_rejected_low_confidence' in catalog.read_text()
 assert 'face_rejected_small_face' in catalog.read_text()
 assert 'face_manual_review_rescue_candidates' in catalog.read_text()
-assert "Face images · review needed" in ui
+assert "Face images · manual review" in ui
+assert "facePipelineStatus" in ui and "comparisonCandidate(face)" in ui
 assert "unverifiedCrops" in ui and "C720PSecureRelay" in ui
 spec=importlib.util.spec_from_file_location("catalog",catalog)
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
