@@ -1031,7 +1031,9 @@ public final class CameraService extends Service {
      if(!running||!"watching".equals(mode)||!faceBackfillThermallyAllowed())return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
-     Arrays.sort(manifests,(a,b)->b.getName().compareTo(a.getName()));
+     // Work oldest verified recordings first. New motion clips must never
+     // continually preempt the outstanding original-4K review backlog.
+     Arrays.sort(manifests,(a,b)->a.getName().compareTo(b.getName()));
      for(File manifest:manifests){
       if(!running||!"watching".equals(mode)||!faceBackfillThermallyAllowed())return;
       if(manifest.length()<100||manifest.length()>28000)continue;
