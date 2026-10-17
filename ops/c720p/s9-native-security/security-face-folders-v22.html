@@ -230,7 +230,7 @@ const clipOK=/^motion_[0-9]{13}[.]mp4$/;
 const driveOK=/^[A-Za-z0-9._-]{1,180}[.]mp4$/i;
 const imageOK=/^[A-Za-z0-9._-]{1,200}[.]jpg$/i;
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_-]{1,55})$/;
-const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1,appearanceRequest:0,cases:[],caseRevision:0,caseAvailable:false,caseSelection:null,caseTargetClip:null,caseBusy:false};
+const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1,facePage:1,appearanceRequest:0,cases:[],caseRevision:0,caseAvailable:false,caseSelection:null,caseTargetClip:null,caseBusy:false};
 const relay=()=>{if(window.C720PSecureRelay)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.C720PSecureRelay)return window.parent.C720PSecureRelay}catch(_){}return null};
 async function get(path){
  const r=relay();if(!r?.fetch)throw Error('Authenticated relay missing');
@@ -435,59 +435,125 @@ function stamp(entry){
  }
  return String(entry.rec.timestamp||entry.rec.uploaded_at||'Historical Drive clip').slice(0,24);
 }
-function renderFolders(){
- $('detail').hidden=true;$('folderSection').hidden=false;
- $('folders').replaceChildren();
- const needle=state.filter,groups=state.folders.filter(g=>
-  !needle||[g.title,g.subtitle,...g.entries.slice(0,10).map(x=>x.key)].join(' ').toLowerCase().includes(needle));
- if(!groups.length){
-  $('folders').append(el('p','empty',state.ready?'No folders match this search. A face cannot be grouped until a usable crop or a reviewed visitor link exists.':'Loading…'));
-  return;
- }
- for(const g of groups){
-  const b=el('button','folder');b.type='button';b.setAttribute('aria-label','Open '+g.title+' · '+g.entries.length+' recordings');
-  const cover=el('div','cover');cover.append(el('span','glyph',g.kind==='face'?'◉':'▤'));
-  cover.append(el('span','tag',g.verified?'MANUALLY LINKED':g.kind==='face'?'FACE SUGGESTION':g.kind==='face-review'?'MANUAL REVIEW':'PENDING FACE'));
-  const body=el('div','folder-body');
-  body.append(el('strong','folder-title',g.title),el('span','folder-meta',g.subtitle));
-  const uniqueClips=new Set(g.entries.map(e=>e.key)).size;
-  const foot=el('div','folder-footer');foot.append(el('span','',uniqueClips+' recordings · '+g.entries.length+' evidence items'),el('b','','›'));
-  b.append(cover,body,foot);
-  b.addEventListener('click',()=>openFolder(g.id));
-  $('folders').append(b);
-  const pictured=g.entries.find(x=>thumb(x));
-  if(pictured)signedPicture(cover,pictured);
- }
+// One recording can contain multiple people and face crops. These are evidence
+// cards, not automatically generated person/identity folders.
+function needsFaceReview(rec){
+ return clipOK.test(String(rec.clip_no||''))&&
+ (Number(rec.person_count)>0||Number(rec.face_detector_raw_hits)>0)&&
+ !(Array.isArray(rec.face_candidates)&&rec.face_candidates.some(f=>imageOK.test(String(f.snapshot_name||''))));
+}
+function personEvidence(rec){
+ return Number(rec.person_count)>0||Number(rec.face_detector_raw_hits)>0||
+  (Array.isArray(rec.face_candidates)&&rec.face_candidates.length>0);
 }
 function saveCaseButton(entry){
- const btn=el('button','','Save to review case');btn.type='button';
+ const btn=el('button','','Save to case');btn.type='button';
  btn.disabled=!state.caseAvailable;
  btn.addEventListener('click',()=>reviewToCase(entry));
  return btn;
 }
-function renderEvidence(){
- $('detail').hidden=true;$('folderSection').hidden=false;
- const all=[...state.sd.filter(r=>clipOK.test(String(r.clip_no||''))&&Number(r.person_count)>0).map(r=>item('sd',r)),
-   ...state.drive.filter(r=>driveOK.test(String(r.remote_name||''))).map(r=>item('drive',r))];
- const reviewIndex=new Map(state.reviews.map(r=>[String(r.remote_name||''),r]));
- const needle=state.filter,filtered=all.filter(e=>!needle||[e.key,e.source,stamp(e),
-   reviewIndex.get(e.key)?.category||''].join(' ').toLowerCase().includes(needle));
- const selected=filtered.slice(0,state.page*36),host=$('folders');host.replaceChildren();
- for(const entry of selected){
-  const card=el('article','folder');
-  const cover=el('div','cover');cover.append(el('span','glyph','▣'),el('span','tag',entry.source==='drive'?'HISTORICAL DRIVE':'S9+ MICROSD'));
-  const body=el('div','folder-body');body.append(el('strong','folder-title',stamp(entry)),
-   el('span','folder-meta',String(reviewIndex.get(entry.key)?.category||entry.rec.category||'Person evidence · face unverified').replaceAll('_',' ')));
-  const play=el('button','','Play original video');play.type='button';
-  play.addEventListener('click',()=>openClip(entry));body.append(play);
-  if(entry.source==='sd')body.append(saveCaseButton(entry));
-  const foot=el('div','folder-footer');foot.append(el('span','',entry.source==='drive'?'Archived recording':'Local camera clip'));
-  card.append(cover,body,foot);host.append(card);
-  signedPicture(cover,entry);
+function evidenceCard(entry,tag,description,{compare=false}={}){
+ const card=el('article','pf-evidence'),media=el('div','pf-media'),
+  body=el('div','pf-content'),actions=el('div','pf-action-row');
+ media.append(el('span','','Original recording'));
+ media.append(el('span','pf-tag',tag));
+ body.append(el('strong','',stamp(entry)),
+  el('span','pf-meta',description));
+ const play=el('button','','Play video');play.type='button';
+ play.addEventListener('click',()=>openClip(entry));actions.append(play);
+ if(entry.source==='sd'){
+  if(compare){
+   const go=el('button','','Compare');go.type='button';
+   go.addEventListener('click',()=>{setTab('appearance');
+    $('appearanceReference').value=entry.key;runAppearanceSearch()});
+   actions.append(go);
+  }
+  actions.append(saveCaseButton(entry));
  }
- if(!selected.length)host.append(el('p','empty','No matching historical or local person evidence.'));
- $('moreEvidence').hidden=selected.length>=filtered.length;
- $('moreEvidence').textContent='Show more recordings · '+(filtered.length-selected.length)+' remaining';
+ body.append(actions);card.append(media,body);
+ signedPicture(media,entry);
+ return card;
+}
+function orderedFaces(){
+ return s9Faces().sort((a,b)=>String(b.rec.clip_no).localeCompare(String(a.rec.clip_no)));
+}
+function faceEvidenceCard(f){
+ const entry=item('sd',f.rec,f.face);
+ const suggested=comparisonCandidate(f.face)!==null;
+ return evidenceCard(entry,suggested?'COMPARISON CLUE':'FACE IMAGE',
+  (suggested?'On-phone suggestion · ':'Human inspection only · ')+
+   'Captured from original 4K · no identity established',{compare:true});
+}
+function renderFolders(){
+ // Overview deliberately shows only actionable and recent evidence.
+ // No unassigned, unknown-person, direction or colour dumping-ground folders.
+ $('detail').hidden=true;$('folderSection').hidden=false;
+ const queue=$('reviewQueue');queue.replaceChildren();
+ const pending=state.sd.filter(needsFaceReview).sort((a,b)=>
+   String(b.clip_no).localeCompare(String(a.clip_no)));
+ if(!pending.length){
+  queue.append(el('p','empty','No outstanding face-image review items in the current archive. New evidence will appear here.'));
+ }else{
+  for(const rec of pending.slice(0,8)){
+   const reason=Number(rec.face_detector_raw_hits)>0?
+     'Face candidates observed, but no usable crop saved':
+     'Possible person · no face image saved yet';
+   queue.append(evidenceCard(item('sd',rec),'REVIEW',reason,{compare:false}));
+  }
+ }
+ const gallery=$('folders');gallery.replaceChildren();
+ const faces=orderedFaces();
+ if(!faces.length){
+  gallery.append(el('p','empty','No face images are available yet. The S9+ continues reviewing original 4K recordings.'));
+ }else for(const f of faces.slice(0,8))gallery.append(faceEvidenceCard(f));
+}
+function renderFaces(){
+ $('detail').hidden=true;
+ const all=orderedFaces(),needle=String($('faceSearch').value||'').toLowerCase().trim().slice(0,140);
+ const kind=$('faceFilter').value;
+ const filtered=all.filter(f=>{
+  if(needle&&![f.rec.clip_no,stamp(item('sd',f.rec))].join(' ').toLowerCase().includes(needle))return false;
+  const suggested=comparisonCandidate(f.face)!==null;
+  return kind==='suggested'?suggested:kind==='manual'?!suggested:true;
+ });
+ $('faceTotal').textContent=filtered.length+' saved images';
+ const host=$('faceGallery');host.replaceChildren();
+ for(const f of filtered.slice(0,state.facePage*36))host.append(faceEvidenceCard(f));
+ if(!filtered.length)host.append(el('p','empty','No saved face images match this filter. Try All captured images.'));
+ const remaining=Math.max(0,filtered.length-state.facePage*36);
+ $('moreFaces').hidden=remaining===0;
+ $('moreFaces').textContent='Show more face images · '+remaining+' remaining';
+}
+function renderEvidence(){
+ $('detail').hidden=true;
+ const sel=$('recordFilter').value,needle=String($('search').value||'').toLowerCase().trim().slice(0,140);
+ const local=state.sd.filter(x=>clipOK.test(String(x.clip_no||''))).map(x=>item('sd',x));
+ const drive=state.drive.filter(x=>driveOK.test(String(x.remote_name||''))).map(x=>item('drive',x));
+ const all=[...local,...drive];
+ const filtered=all.filter(entry=>{
+  const r=entry.rec,faces=Array.isArray(r.face_candidates)&&r.face_candidates.length>0;
+  if(sel==='person'&&!(entry.source==='sd'&&personEvidence(r)||
+      entry.source==='drive'&&/person|group/i.test(String(r.person_status||r.category||''))))return false;
+  if(sel==='faces'&&!(entry.source==='sd'&&faces))return false;
+  if(sel==='review'&&!(entry.source==='sd'&&needsFaceReview(r)))return false;
+  if(sel==='drive'&&entry.source!=='drive')return false;
+  if(needle&&![entry.key,stamp(entry),entry.source,String(r.scene_category||'')].join(' ').toLowerCase().includes(needle))return false;
+  return true;
+ }).sort((a,b)=>stamp(b).localeCompare(stamp(a)));
+ $('recordCount').textContent=filtered.length+' recordings match';
+ const host=$('browseGrid');host.replaceChildren();
+ for(const entry of filtered.slice(0,state.page*36)){
+  const r=entry.rec,faces=Array.isArray(r.face_candidates)?r.face_candidates.length:0;
+  const desc=entry.source==='drive'?'Historical Drive · original recording':
+   faces?'Face images: '+faces+' · original 4K':
+   needsFaceReview(r)?'Face review needed · original 4K':
+   personEvidence(r)?'Person evidence · original 4K':'Original 4K recording';
+  host.append(evidenceCard(entry,entry.source==='drive'?'DRIVE':faces?'FACES':needsFaceReview(r)?'REVIEW':'S9+',desc,{compare:entry.source==='sd'}));
+ }
+ if(!filtered.length)host.append(el('p','empty','No recordings match these filters. Try All recordings.'));
+ const remaining=Math.max(0,filtered.length-state.page*36);
+ $('moreEvidence').hidden=remaining===0;
+ $('moreEvidence').textContent='Show more recordings · '+remaining+' remaining';
 }
 function openFolder(id){
  const g=state.folders.find(x=>x.id===id);if(!g)return;
