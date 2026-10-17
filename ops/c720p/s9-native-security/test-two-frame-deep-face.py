@@ -43,10 +43,11 @@ class Contract(unittest.TestCase):
  def test_backfill_stays_on_phone_only_when_idle_and_cool(self):
   part=SOURCE.split('private void maybeFaceBackfill(){',1)[1].split('private void maybeGardenArchiveTriage(){',1)[0]
   for required in ('now-lastFaceBackfillScan<60000','gardenPersonGateBusy',
-                   'now-lastMovementAt<45000L','temperature()>=370',
+                   'now-lastMovementAt<45000L','temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C',
                    'folder.getUsableSpace()<20L*1024*1024*1024',
                    'classifier.deepFaceReview','faceBackfillQueued=false'):
    self.assertIn(required,part)
+  self.assertIn('FACE_BACKFILL_MAX_TEMP_TENTHS_C=390',SOURCE)
   self.assertNotIn('gardenGateExecutor.execute',part)
   self.assertNotIn('http',part)
  def test_no_irreversible_auto_cleanup(self):
