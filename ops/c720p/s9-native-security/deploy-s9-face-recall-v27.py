@@ -160,6 +160,12 @@ def main():
   if not isinstance(current.get("sensor_lens_apertures_supported"),list) or (
        not isinstance(current.get("sensor_lens_aperture_result_available"),bool)):
    raise RuntimeError("s9_night_optical_telemetry_not_installed")
+  # The signed V5 APK must expose the agreed battery policy from the
+  # *running* Android service, not merely embed it in the DEX file.
+  if (current.get("application_battery_temperature_max_c")!=42.0 or
+      current.get("continuous_4k_rearm_temperature_below_c")!=40.5 or
+      current.get("face_review_4k_temperature_below_c")!=41.5):
+   raise RuntimeError("installed_s9_42c_battery_policy_not_verified")
   nowclips=archive()
   if not originals.issubset(nowclips):
    raise RuntimeError("archived_recordings_disappeared")
