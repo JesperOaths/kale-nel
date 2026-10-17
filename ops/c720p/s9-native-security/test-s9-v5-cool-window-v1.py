@@ -127,9 +127,18 @@ class LocalCoolWindow(unittest.TestCase):
  def test_true_live_v5_short_circuits_install(self):
   with tempfile.TemporaryDirectory() as tmp:
    self.setup_mocks(tmp,33.8,version=m.VERSION)
-   with mock.patch.object(m,"run_release_script",side_effect=AssertionError("already_v5")):
+   with mock.patch.object(m,"installed_release_matches",return_value=True),mock.patch.object(
+       m,"run_release_script",side_effect=AssertionError("already_v5")):
     m.tick()
    self.assertEqual(json.loads(m.STATE.read_text())["status"],"complete")
+ def test_old_v5_version_alone_does_not_prove_new_signed_apk(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   self.setup_mocks(tmp,34.0,version=m.VERSION)
+   with mock.patch.object(m,"installed_release_matches",return_value=False),mock.patch.object(
+       m,"run_release_script",return_value="S9_V27_FACE_RESCUE_DEFERRED_IDLE") as runner:
+    m.tick()
+   self.assertEqual([x.args[1] for x in runner.call_args_list],["install"])
+   self.assertEqual(json.loads(m.STATE.read_text())["status"],"waiting")
  def test_guarded_original_installer_hard_limits(self):
   s=(HERE/"deploy-s9-face-recall-v27.py").read_text()
   self.assertIn('DEFERRED_4K_RESTART_THERMAL_GUARD',s)

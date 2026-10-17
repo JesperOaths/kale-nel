@@ -63,7 +63,7 @@ def audit(phone,archive):
   statuses[str(clip.get("face_model_state") or "unknown")]+=1
   if clip.get("face_model_state")=="available_on_phone":model_ready_clips+=1
   crops=clip.get("face_candidates")
-  if not isinstance(crops,list) or len(crops)>8:
+  if not isinstance(crops,list) or len(crops)>16:
    raise RuntimeError("sanitized_face_candidate_shape_changed")
   snapshots+=len(crops)
   if len(crops)>0:pipeline["clips_with_crops"]+=1
@@ -106,7 +106,7 @@ def audit(phone,archive):
   "face_scan_safe_to_resume_now":bool(camera_ready and phone.get("mode")=="watching" and
    phone.get("face_backfill_queued") is not True and
    isinstance(phone.get("temperature_c"),(int,float)) and
-   phone.get("temperature_c")<36),
+   phone.get("temperature_c")<min(41.5,float(phone.get("face_review_4k_temperature_below_c",41.5)))),
   "installed_face_review_version":current_version,
   "never_deep_reviewed":never_reviewed,
   "older_scanned_no_face_crops":prior_scanned_no_crops,

@@ -297,7 +297,7 @@ def safe_face_review_metadata(m):
     value=m.get(key)
     if type(value) is int and 0<=value<=12:result[key]=value
  rows=m.get("face_candidates")
- if not isinstance(rows,list) or len(rows)>8:return result
+ if not isinstance(rows,list) or len(rows)>16:return result
  out=[]
  for row in rows:
   if not isinstance(row,dict):continue

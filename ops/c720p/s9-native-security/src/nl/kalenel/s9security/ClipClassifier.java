@@ -476,7 +476,7 @@ public final class ClipClassifier {
   */
  static final String DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5";
  static boolean deepFaceNeedsUpgrade(JSONObject manifest){
-  if(manifest==null||manifest.optInt("face_snapshots_saved",0)>0||
+  if(manifest==null||
      !"s9_face_review_v1".equals(manifest.optString("face_review_version","")))
    return false;
   // A negative 12-frame person model result is NOT proof the recording is
@@ -566,7 +566,31 @@ public final class ClipClassifier {
    if(decoded==0)throw new IOException("face_deep_zero_decoded_frames");
    // Only commit metadata after successful reads. The recording and previous
    // evidence are preserved. A no-face result cannot establish no-person.
+   // V5 full-archive replay must NEVER replace older face evidence with an
+   // empty result. Preserve the verified historical candidate metadata and
+   // append up to eight new, differently-named snapshots if they are found.
+   JSONArray prior=manifest.optJSONArray("face_candidates");
+   int priorSaved=manifest.optInt("face_snapshots_saved",0);
+   if(priorSaved<0||priorSaved>8||
+      (priorSaved>0&&(prior==null||prior.length()!=priorSaved)))
+    throw new IOException("historical_face_snapshot_manifest_inconsistent");
    faces.publish(manifest);
+   if("face_review_failed".equals(manifest.optString("face_review_status")))
+    throw new IOException("face_deep_frame_processing_failed");
+   JSONArray fresh=manifest.optJSONArray("face_candidates");
+   int newSaved=manifest.optInt("face_snapshots_saved",0);
+   if(newSaved<0||newSaved>8||fresh==null||fresh.length()!=newSaved)
+    throw new IOException("new_face_snapshot_manifest_inconsistent");
+   if(priorSaved>0){
+    JSONArray combined=new JSONArray();
+    for(int j=0;j<prior.length();j++)combined.put(prior.get(j));
+    for(int j=0;j<fresh.length();j++)combined.put(fresh.get(j));
+    manifest.put("face_candidates",combined);
+    manifest.put("face_snapshots_saved",combined.length());
+    manifest.put("face_evidence_outcome","snapshot_candidates_saved");
+   }
+   manifest.put("face_deep_prior_snapshots_preserved",priorSaved);
+   manifest.put("face_deep_new_snapshots_added",newSaved);
    manifest.put("face_deep_review_version",DEEP_FACE_ROI_VERSION);
    manifest.put("face_deep_decoded_frames",decoded);
    manifest.put("face_deep_detector_anchor_frames",detectorAnchors);

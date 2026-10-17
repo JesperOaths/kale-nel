@@ -20,8 +20,8 @@ class Tests(unittest.TestCase):
   self.assertIn('b.getWidth()-side,x-side/2',FACE)
   self.assertIn('b.getHeight()-side,y-(int)(side*.43)',FACE)
   self.assertNotIn('b.getWidth()-1,x-size/2',FACE)
- def test_replay_only_clips_with_no_previous_saved_snapshot(self):
-  self.assertIn('manifest.optInt("face_snapshots_saved",0)>0',CLASSIFIER)
+ def test_saved_snapshots_survive_full_archive_replay(self):
+  self.assertIn('face_deep_prior_snapshots_preserved',CLASSIFIER)
   self.assertIn('S9FaceReview.GEOMETRY_VERSION.equals(manifest.optString("face_crop_geometry_version",""))',CLASSIFIER)
   self.assertIn('face_crop_geometry_version",GEOMETRY_VERSION',FACE)
  def test_build_and_status_marker(self):

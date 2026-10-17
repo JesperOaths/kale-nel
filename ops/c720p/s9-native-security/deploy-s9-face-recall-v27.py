@@ -140,6 +140,11 @@ def main():
   latest=status()
   if not safe_preflight(latest) or latest.get("recorded")!=settle.get("recorded"):
    print("S9_V27_FACE_RESCUE_DEFERRED_EVENT",flush=True);return
+  # Do not interrupt a background 4K sidecar or JPEG evidence write.
+  if (latest.get("face_backfill_queued") is True or
+      latest.get("movement_4k_backfill_queued") is True or
+      latest.get("historical_import_queued") is True):
+   print("S9_V27_FACE_RESCUE_DEFERRED_BACKGROUND_ARCHIVE_REVIEW",flush=True);return
   # 42 C battery maximum, with 1.5 C restart headroom. Never force a
   # hot restart, interrupt events, or bypass original APK rollback.
   if float(latest.get("temperature_c",100))>40.5:

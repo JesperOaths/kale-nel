@@ -14,7 +14,8 @@ install=(root/"deploy-s9-face-recall-v27.py").read_text()
 assert 'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"' in classification
 scope=classification.split('static boolean deepFaceNeedsUpgrade(',1)[1].split("public synchronized boolean deepFaceReview",1)[0]
 assert 'person_count' not in scope
-assert 'face_snapshots_saved' in scope
+assert 'face_deep_review_version' in scope
+assert 'face_deep_prior_snapshots_preserved' in classification
 assert 'return !DEEP_FACE_ROI_VERSION.equals' in scope
 deep=classification.split("public synchronized boolean deepFaceReview(",1)[1].split("backfillMovementEvidence",1)[0]
 assert "face_deep_tiled_scene_samples" in deep
