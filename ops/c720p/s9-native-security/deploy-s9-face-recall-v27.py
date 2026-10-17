@@ -162,11 +162,28 @@ def main():
      raise RuntimeError("rollback_checksum_changed")
     if "Success" not in adb("install","-r","-g",str(baseline),sec=230):
      raise RuntimeError("rollback_install_no_success")
+    # Independently verify which APK Android actually installed. A healthy
+    # video preview is not proof of the exact original signed binary.
+    restored_paths=adb("shell","pm","path",PACKAGE,sec=25).splitlines()
+    restored=[line.partition(":")[2].strip() for line in restored_paths
+      if line.startswith("package:") and line.endswith("base.apk")]
+    if len(restored)!=1:raise RuntimeError("rollback_installed_path_ambiguous")
+    restored_sha=adb("shell","sha256sum",restored[0],sec=35).split()[0]
+    if restored_sha!=installed:raise RuntimeError("rollback_apk_digest_mismatch")
     start()
-    prior=wait(seconds=170)
+    # The APK checksum is authoritative even if the camera needs additional
+    # cooldown after restart. Report those two outcomes separately.
+    try:
+     prior=wait(seconds=170)
+     camera_healthy=healthy(prior)
+    except Exception:
+     camera_healthy=False
     print("S9_FACE_RECALL_V27_ROLLBACK_VERIFIED "+json.dumps({
-      "restored_sha256":sha(old),"camera_4k_gpu_healthy":healthy(prior),
+      "restored_sha256":restored_sha,"camera_4k_gpu_healthy":camera_healthy,
+      "original_apk_restored":True,
       "failure":type(err).__name__}),flush=True)
+    if not camera_healthy:
+     print("S9_FACE_RECALL_V27_ROLLBACK_CAMERA_HEALTH_UNVERIFIED",flush=True)
    except BaseException as rb:
     print("S9_FACE_RECALL_V27_ROLLBACK_REQUIRES_ATTENTION "+type(rb).__name__,flush=True)
   raise
