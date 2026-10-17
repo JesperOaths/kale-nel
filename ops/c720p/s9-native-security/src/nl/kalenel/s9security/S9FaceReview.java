@@ -40,6 +40,9 @@ final class S9FaceReview implements AutoCloseable {
  private int rawDetectorHits=0,lowConfidenceOrSmall=0,rejectedPose=0,rejectedCrop=0,rejectedImageQuality=0;
  private int rejectedLowConfidence=0,rejectedSmallFace=0,manualRescueCandidates=0;
  private int paddedManualCrops=0,rejectedInsufficientNativeEyeDetail=0;
+ // At most one inference per reviewed clip on a borderline-but-real face.
+ // The shadow vector is discarded immediately: never index, match, or export it.
+ private int shadowEmbeddingTrials=0,shadowEmbeddingSucceeded=0,shadowEmbeddingFailed=0;
  private boolean loaded=false,modelAttempted=false,modelReady=false;
  private static final class Entry {
   final String id; final float[] vector;
@@ -246,7 +249,9 @@ final class S9FaceReview implements AutoCloseable {
  }
  private JSONObject assign(float[] embedding)throws Exception{
   JSONObject result=new JSONObject();
-  if(embedding==null)return result.put("match_status","not_comparable_model_unavailable");
+  if(embedding==null)return result.put("match_status",
+    modelReady?"not_comparable_manual_review":
+    modelAttempted?"not_comparable_model_unavailable":"not_tested_no_usable_face");
   readIndex();
   if(status.equals("face_model_changed_requires_reenrollment")||
      status.equals("face_index_read_error"))
@@ -369,6 +374,23 @@ final class S9FaceReview implements AutoCloseable {
       try{emb=vector(face);}catch(Exception ex){
        status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();
       }
+     }else if(shadowEmbeddingTrials==0&&!contextPadded&&
+         f.confidence()>=.58f&&f.eyesDistance()>=10f&&
+         Math.abs(yaw)<=22&&Math.abs(roll)<=18&&
+         originalEyeSpan>=14f&&estimatedSize>=70){
+      // Shadow inference confirms the installed model can process a real crop.
+      // Borderline photos must never generate a known/unknown identity match.
+      shadowEmbeddingTrials++;
+      try{
+       float[] shadow=vector(face);
+       if(shadow!=null)shadowEmbeddingSucceeded++;
+       else shadowEmbeddingFailed++;
+       // Explicitly discard the result without calling assign(shadow).
+       shadow=null;
+      }catch(Exception ex){
+       shadowEmbeddingFailed++;
+       error=ex.getClass().getSimpleName();
+      }
      }
      JSONObject match=assign(emb);
      if(!reliableForEmbedding){
@@ -430,6 +452,12 @@ final class S9FaceReview implements AutoCloseable {
   manifest.put("face_crop_padded_manual_count",paddedManualCrops);
   manifest.put("face_rejected_insufficient_native_eye_detail",rejectedInsufficientNativeEyeDetail);
   manifest.put("face_rejected_dark_or_blurry",rejectedImageQuality);
+  manifest.put("face_shadow_review_version","s9_shadow_model_probe_v1");
+  manifest.put("face_shadow_embedding_trials",shadowEmbeddingTrials);
+  manifest.put("face_shadow_embedding_successful",shadowEmbeddingSucceeded);
+  manifest.put("face_shadow_embedding_failed",shadowEmbeddingFailed);
+  manifest.put("face_shadow_embeddings_persisted",false);
+  manifest.put("face_shadow_matches_created",0);
   manifest.put("face_model_state",!modelAttempted?"not_tested_no_usable_face":
       modelReady?"available_on_phone":"unavailable_on_phone");
   manifest.put("face_evidence_outcome",saved>0?"snapshot_candidates_saved":
