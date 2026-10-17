@@ -1,0 +1,70 @@
+name: S9 V5 signed 4K face-review staging · no camera restart
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-s9-v5-stage-only.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-v5-stage-no-restart
+  cancel-in-progress: false
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Verify that stage-only cannot install, restart, or touch clips
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-s9-v5-cool-window-v1.py
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('ops/c720p/s9-native-security/s9-v5-cool-window-worker.py').read_text()
+          assert 'if stage_only:' in src and src.index('if stage_only:')<src.index('run_release_script(d,"install"')
+          assert 'MAX_RESTART_TEMP_C=34.5' in src
+          print('S9_V5_STAGE_ONLY_SAFE_CONTRACT_PASS')
+          PY
+      - name: Stage the immutable signed V5 candidate on C720P, never install
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL" || exit 1
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          # The script already exists on C720P, installed with checksum and
+          # persistent local timer by the preceding successful V5 bootstrap.
+          cmd="/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9-v5-cool-window-worker.py --stage-only"
+          idem="s9-v5-stage-only-$GITHUB_SHA-$GITHUB_RUN_ATTEMPT"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-v5-stage-only','deployment',:'cmd',900,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_V5_STAGE_ONLY_JOB=$id"
+          for i in $(seq 1 125); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 6500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              if grep -q '"event": "stage_only_complete"' <<< "$output"; then
+                echo 'V5 candidate signed and staged; S9 camera unchanged'
+                exit 0
+              fi
+              if grep -Eq '"event": "(deferred_|already_v5_running|terminal_state)' <<< "$output"; then
+                echo 'Staging correctly deferred, or the final version is already running'
+                exit 0
+              fi
+              echo 'Stage not explicitly verified'
+              exit 1
+            fi
+            sleep 8
+          done
+          echo 'Stage-only job not complete during bounded verification'
+          exit 1
