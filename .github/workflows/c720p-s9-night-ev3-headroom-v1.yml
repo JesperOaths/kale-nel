@@ -1,0 +1,83 @@
+name: S9 Night EV3 Headroom V1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-s9-night-ev3-headroom-v1.yml'
+      - 'ops/c720p/s9-native-security/probe-night-ev3-headroom-v1.py'
+      - 'ops/c720p/s9-native-security/test-night-ev3-headroom-v1.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-s9-night-ev3-headroom-v1.yml'
+      - 'ops/c720p/s9-native-security/probe-night-ev3-headroom-v1.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s9-night-ev3-headroom-v1
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify temporary-exposure rollback and read-only image metrics
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/probe-night-ev3-headroom-v1.py
+          python3 ops/c720p/s9-native-security/test-night-ev3-headroom-v1.py
+          python3 ops/c720p/s9-native-security/test-night-image-quality-v1.py
+
+  sample:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Reversible sensor exposure headroom test through private management
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          base="ops/c720p/s9-native-security"
+          probe="$base/probe-night-ev3-headroom-v1.py"
+          audit="$base/audit-night-image-quality-v1.py"
+          hprobe="$(sha256sum "$probe" | cut -d' ' -f1)"
+          haudit="$(sha256sum "$audit" | cut -d' ' -f1)"
+          [[ "$hprobe" =~ ^[a-f0-9]{64}$ && "$haudit" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          root="/tmp/s9-ev3-probe-${GITHUB_SHA:0:12}"
+          remote="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${base}"
+          cmd="mkdir -p '${root}' && curl -fSsL --max-time 35 '${remote}/audit-night-image-quality-v1.py' -o '${root}/audit-night-image-quality-v1.py' && printf '%s  %s\n' '${haudit}' '${root}/audit-night-image-quality-v1.py' | sha256sum -c - >/dev/null && curl -fSsL --max-time 35 '${remote}/probe-night-ev3-headroom-v1.py' -o '${root}/probe-night-ev3-headroom-v1.py' && printf '%s  %s\n' '${hprobe}' '${root}/probe-night-ev3-headroom-v1.py' | sha256sum -c - >/dev/null && /usr/bin/python3 '${root}/probe-night-ev3-headroom-v1.py'"
+          idem="s9-night-ev3-headroom-v1-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-night-ev3-v1','diagnostic',:'cmd',250,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_NIGHT_EV3_PROBE_JOB=$id"
+          for i in $(seq 1 68); do
+            row="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$row" == done\|* || "$row" == error\|* || "$row" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 5500)"
+              echo "$output"
+              [[ "$row" == 'done|0' ]] || exit 1
+              grep -q 'S9_NIGHT_EV3_HEADROOM_V1' <<< "$output" || exit 1
+              exit 0
+            fi
+            sleep 4
+          done
+          echo 'EV3 bounded comparison did not complete; inspect phone exposure'
+          exit 1
