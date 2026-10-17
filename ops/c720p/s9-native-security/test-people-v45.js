@@ -87,6 +87,18 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(posts[0].payload.folder,'G123');
  assert.equal(posts[0].payload.human_confirmed,true);
  assert.equal(posts[0].opts.headers['X-S9-Visual-Review-Intent'],'manual-attributes-v36');
+ // Starting a new folder must open its approved recordings, not a broken
+ // folder-only inbox view.
+ keep=scan(el('reviewPreview'),'✓ Keep');
+ keep.handlers.click();
+ el('approvalFolder').value='';
+ el('approvalLabel').value='New reviewed visitor';
+ el('approvalConfirmed').checked=true;
+ await el('approvalForm').handlers.submit({preventDefault(){}});
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(posts[1].payload.action,'seed_folder');
+ assert.equal(el('folderView').hidden,false);
+ assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
  panes[1].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false);

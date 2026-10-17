@@ -397,7 +397,10 @@ $('approvalForm').addEventListener('submit',async e=>{
  const ok=await action(id?{action:'approve_clip',folder:id,...fields(item)}:
   {action:'seed_folder',folder:'',label,...fields(item)},result=>{
    notification('Recording kept in the chosen folder.');
-   if(result.folder)state.folder=result.folder;
+   if(!id&&result.folder){
+    state.folder=result.folder;state.pane='folder';state.tab='approved';state.offset=0;
+    $('folderMode').value='approved';selectPane('folder');
+   }
  });
  if(ok)$('approvalDialog').close();
 });
