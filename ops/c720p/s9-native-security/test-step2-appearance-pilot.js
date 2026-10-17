@@ -96,10 +96,21 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
 (async()=>{
  await flush();await flush();
  assert.equal(byId('facesCount').textContent,'0');
- // Coarse colour evidence works with ZERO usable face embeddings.
+ // The overview prioritizes unresolved video evidence rather than building
+ // misleading folders from colour labels or arbitrary motion directions.
  const containsText=(node,text)=>node.textContent===text||node.children.some(child=>containsText(child,text));
- assert(byId('folders').children.some(e=>containsText(e,'Upper clothing · blue')),
-  'Blue clothing evidence folder should exist without any face match');
+ assert.equal(byId('reviewQueue').children.length,2);
+ assert.equal(byId('folders').children.length,1); // informative empty face-gallery state
+ assert(!containsText(byId('folders'),'Upper clothing · blue'),'No automatic colour-person folders');
+ byId('queueBrowse').handlers.click();
+ assert.equal(byId('recordingsSection').hidden,false);
+ assert.equal(byId('browseGrid').children.length,2);
+ byId('facesTab').handlers.click();
+ assert.equal(byId('facesSection').hidden,false);
+ assert.equal(byId('faceGallery').children.length,1);
+ byId('foldersTab').handlers.click();
+ byId('queueFaces').handlers.click();
+ assert.equal(byId('facesSection').hidden,false);
  byId('appearanceTab').handlers.click();
  assert.equal(byId('appearanceSection').hidden,false);
  byId('appearanceReference').value=clipA;
@@ -128,10 +139,9 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
  // CASE folder, with confirmed intent and a reversible link.
  const findControl=(node,text)=>node.textContent===text&&typeof node.handlers.click==='function'?
    node:node.children.map(child=>findControl(child,text)).find(Boolean);
- const blue=byId('folders').children.find(e=>containsText(e,'Upper clothing · blue'));
- assert(blue,'Expected a recorded coarse-clothing evidence folder');
- blue.handlers.click();
- const save=findControl(byId('records'),'Save to review case');
+ const review=byId('reviewQueue').children[0];
+ assert(review,'Expected an actionable item in the overview');
+ const save=findControl(review,'Save to case');
  assert(save,'Manual case action missing from original clip detail');
  save.handlers.click();
  assert.equal(byId('casePicker').open,true);
