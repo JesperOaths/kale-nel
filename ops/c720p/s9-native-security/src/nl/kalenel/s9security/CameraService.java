@@ -1265,12 +1265,15 @@ public final class CameraService extends Service {
    gardenTriageQueued=false;
   }
  }
+ // Keep the full 20-minute cooldown and below-37.5 C rearm guard.
+ // The old below-35.0 C threshold prevented self-recovery on an otherwise
+ // healthy permanently powered S9+, despite identical manual enable safety.
  private void maybeRestoreCool4K(){
   if(continuous4KTrial||pilotOnly||!"watching".equals(mode)||
      !getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_4k_production_enabled",false)||
      continuous4KRecoveryAttempts>=3)return;
   long now=SystemClock.elapsedRealtime();
-  if(now<continuous4KRetryAfterMs||temperature()>350||folder==null||
+  if(now<continuous4KRetryAfterMs||temperature()>=375||folder==null||
      folder.getUsableSpace()<15L*1024*1024*1024||camera==null||preview==null||
      now-lastFrameAt>1500||now-lastMovementAt<30000||
      gardenPersonCandidateUntil>now)return;
@@ -1341,6 +1344,7 @@ public final class CameraService extends Service {
    d.put("continuous_4k_failures",continuous4KFailures);
    d.put("continuous_4k_recovery_attempts",continuous4KRecoveryAttempts);
    d.put("continuous_4k_retry_after_ms",continuous4KRetryAfterMs);
+   d.put("continuous_4k_rearm_temperature_below_c",37.5);
    d.put("continuous_4k_last_result",continuous4KLastResult);
    d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
    d.put("preroll_ready",preRoll!=null&&preRoll.ready());
