@@ -438,9 +438,7 @@ final class S9FaceReview implements AutoCloseable {
      // A usable saved crop contradicts "no frontal face in samples" even
      // when the image is inspection-only and no model inference was allowed.
      // Retain specific embedding/index errors instead of hiding them.
-     if("no_frontal_face_in_samples".equals(status)||
-        (modelReady&&!status.equals("face_model_changed_requires_reenrollment")&&
-         !status.equals("face_index_read_error")))
+     if("no_frontal_face_in_samples".equals(status))
       status="review_complete_unverified_matches";
     }finally{face.recycle();}
    }
