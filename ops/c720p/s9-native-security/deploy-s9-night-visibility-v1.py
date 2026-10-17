@@ -81,8 +81,8 @@ def main():
  previous_count=archive()
  if not PAGE.is_file() or PAGE.is_symlink():
   raise RuntimeError("live_page_missing_or_symlinked")
- if not JS.parent.is_dir() or JS.parent.is_symlink():
-  raise RuntimeError("UI_assets_directory_invalid")
+ if not JS.parent.is_dir() or JS.parent.is_symlink() or JS.is_symlink():
+  raise RuntimeError("UI_assets_directory_or_target_invalid")
  current=PAGE.read_bytes()
  if len(current)>50000:raise RuntimeError("unexpected_main_page_size")
  revised=patch(current.decode("utf-8"),args.ref).encode("utf-8")
