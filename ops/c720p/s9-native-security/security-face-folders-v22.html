@@ -100,28 +100,79 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
   #viewer .modal-head{top:-8px}
 }
 </style>
+
+<style id="s9-people-faces-unified-v2">
+:root{--pf-surface:#122637;--pf-quiet:#9fb8c7;--pf-border:#355263;--pf-highlight:#77e0cc}
+.pf-header{margin-bottom:12px}.pf-head-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pf-tabs{position:sticky;top:0;z-index:5;background:#0b141ef2;padding:13px 0 14px;backdrop-filter:blur(10px);border-bottom:1px solid #3d5664;margin-bottom:12px}
+.pf-tabs button{white-space:nowrap;min-height:42px}
+.pf-help{font-size:12px;margin:0 0 13px;color:#bad0d9}
+.pf-diagnostics{margin:0 0 18px;padding:10px 14px;border:1px solid #304a59;border-radius:10px;color:#acc3d0;font-size:12px}
+.pf-diagnostics summary{cursor:pointer;font-weight:650}
+.pf-diagnostics div{line-height:1.75;margin-top:9px}
+.pf-section-heading{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:16px 0 15px}
+.pf-section-heading h2{font-size:20px;margin:0 0 3px}.pf-section-heading p{font-size:13px}.pf-section-heading button{flex-shrink:0}
+.pf-section-heading.pf-after{margin-top:29px}
+.pf-eyebrow{display:block;font-size:10px;font-weight:800;letter-spacing:.11em;color:#82decc;margin-bottom:3px}
+.pf-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,265px),1fr));gap:14px;align-items:stretch}
+.pf-queue{grid-template-columns:repeat(auto-fill,minmax(min(100%,278px),1fr))}
+.pf-evidence{min-width:0;border:1px solid var(--pf-border);border-radius:13px;overflow:hidden;background:var(--pf-surface);display:flex;flex-direction:column}
+.pf-evidence:hover{border-color:#72a6a9}
+.pf-evidence .pf-media{height:158px;background:linear-gradient(135deg,#1b3d4c,#10202f);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;color:#a7bcca;font-size:13px}
+.pf-evidence .pf-media img{height:100%;width:100%;object-fit:cover;display:block}
+.pf-evidence .pf-content{padding:13px;display:flex;flex:1;flex-direction:column;gap:7px}
+.pf-evidence .pf-content strong{font-size:14px;line-height:1.35}
+.pf-evidence .pf-meta{color:#a4c0cf;font-size:12px;overflow-wrap:anywhere}
+.pf-evidence .pf-action-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
+.pf-evidence button{padding:8px 10px;min-height:38px;flex:1;font-size:12px}
+.pf-evidence .pf-tag{position:absolute;z-index:1;top:8px;left:8px;border-radius:6px;background:#0b1822e8;padding:4px 8px;color:#e2f4f7;font-size:10px;font-weight:700}
+.pf-filters{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin:14px 0 19px}
+.pf-filters label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#b4ced7}
+.pf-filters input,.pf-filters select{padding:10px 11px;min-height:42px;border:1px solid #405f71;border-radius:8px;color:#eff9fb;background:#102332;font:inherit}
+.pf-filters input{width:min(370px,83vw)}
+.pf-browser-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:0 0 12px;font-size:12px;color:#a5bdc9}
+.pf-more{margin:18px auto 4px;display:block}
+#recordingsSection[hidden],#facesSection[hidden],#timelineSection[hidden]{display:none!important}
+#legacyView{height:max(620px,calc(100dvh - 270px))}
+@media(max-width:640px){.pf-gallery,.pf-queue{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.pf-evidence .pf-media{height:120px}.pf-evidence .pf-content{padding:10px}.pf-evidence .pf-action-row{flex-direction:column;gap:6px}.pf-tabs{position:static;gap:5px}.pf-tabs button{padding:8px 10px;flex:1}.pf-section-heading h2{font-size:18px}}
+@media(max-width:380px){.pf-gallery,.pf-queue{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-<header><div><div class="kicker">S9+ · historical Drive · anonymous evidence</div><h1>People &amp; face folders</h1><p>Browse face-similarity suggestions, manually verified visitor folders and person evidence.</p></div><span id="sync" class="pill" role="status" aria-live="polite">Connecting to archive…</span></header>
-<nav class="tabs" aria-label="People and faces views">
-<button id="foldersTab" type="button" aria-selected="true">Face folders</button>
-<button id="historyTab" type="button" aria-selected="false">All person evidence</button>
-<button id="appearanceTab" type="button" aria-selected="false">Appearance search</button>
-<button id="casesTab" type="button" aria-selected="false">Reviewed cases</button>
-<button id="timelineTab" type="button" aria-selected="false">Detailed evidence timeline</button>
+<header class="pf-header"><div><div class="kicker">Security / S9+ camera evidence</div><h1>People &amp; faces</h1><p>Find a recording, inspect captured faces, or collect related events for review.</p></div><div class="pf-head-actions"><span id="sync" class="pill" role="status" aria-live="polite">Connecting to archive…</span><button id="reload" type="button">↻ Refresh</button></div></header>
+<nav class="tabs pf-tabs" aria-label="People and faces views">
+<button id="foldersTab" type="button" aria-selected="true">Overview</button>
+<button id="facesTab" type="button" aria-selected="false">Face images</button>
+<button id="historyTab" type="button" aria-selected="false">Recordings</button>
+<button id="appearanceTab" type="button" aria-selected="false">Compare appearance</button>
+<button id="casesTab" type="button" aria-selected="false">Saved cases</button>
 </nav>
-<section id="summary" class="stats" aria-label="Evidence totals">
-<div class="stat"><strong id="facesCount">—</strong><span>Saved face crops</span></div>
-<div class="stat"><strong id="verifiedCount">—</strong><span>Manually linked visitor folders</span></div>
-<div class="stat"><strong id="driveCount">—</strong><span>Verified historical Drive clips</span></div>
-<div class="stat"><strong id="s9PersonCount">—</strong><span>MicroSD clips with person evidence</span></div>
+<section id="summary" class="stats pf-summary" aria-label="Archive overview">
+<div class="stat"><strong id="s9PersonCount">—</strong><span>S9+ clips with person evidence</span></div>
+<div class="stat"><strong id="facesCount">—</strong><span>Face images to inspect</span></div>
+<div class="stat"><strong id="verifiedCount">—</strong><span>Manually reviewed cases</span></div>
+<div class="stat"><strong id="driveCount">—</strong><span>Historical Drive clips</span></div>
 </section>
-<p class="note" id="disclaimer">Person detection does not establish facial identity. Face-similarity groupings are suggestions only; distinct people must not be merged without reviewing the recordings. No real names are inferred. Body movement folders show image direction only; they do not identify a person or measure walking cadence.</p>
-<section id="facePipelineStatus" class="note" role="status" aria-live="polite">Checking S9+ original-4K face-analysis coverage…</section>
-<section id="folderSection">
-<div class="toolbar"><h2>Folders</h2><input id="search" type="search" placeholder="Filter folders and recordings…" aria-label="Search folders"><button id="reload" type="button">Refresh</button></div>
-<div class="folders" id="folders" aria-live="polite"><div class="empty">Loading person and face evidence…</div></div>
-<button id="moreEvidence" type="button" hidden style="display:block;margin:17px auto">Show more</button>
+<p class="pf-help" id="disclaimer">A face image or similar clothing is <strong>evidence to review, not proof of identity</strong>. Nothing in this view automatically identifies or links people.</p>
+<details class="pf-diagnostics"><summary>Analysis coverage and diagnostics</summary><div id="facePipelineStatus" role="status" aria-live="polite">Checking original 4K face-analysis coverage…</div></details>
+<section id="folderSection" aria-label="People and faces overview">
+<div class="pf-section-heading"><div><span class="pf-eyebrow">FOCUS</span><h2>Review next</h2><p>Recordings showing possible people, but without a usable face image yet.</p></div><button id="queueBrowse" type="button">Browse recordings →</button></div>
+<div class="pf-gallery pf-queue" id="reviewQueue" aria-live="polite"></div>
+<div class="pf-section-heading pf-after"><div><span class="pf-eyebrow">RECENT EVIDENCE</span><h2>Latest face images</h2><p>Individual crops grouped by recording, never automatically by person.</p></div><button id="queueFaces" type="button">View all face images →</button></div>
+<div class="pf-gallery" id="folders" aria-live="polite"><div class="empty">Loading face images…</div></div>
+</section>
+<section id="facesSection" hidden aria-label="Face snapshot review">
+<div class="pf-section-heading"><div><span class="pf-eyebrow">VISUAL REVIEW</span><h2>Face images</h2><p>Review each captured face in the context of its original 4K recording.</p></div><span id="faceTotal" class="pill"></span></div>
+<div class="pf-filters"><label for="faceSearch">Find a recording<input id="faceSearch" type="search" placeholder="Search date or clip ID…" aria-label="Search face images"></label><label for="faceFilter">Show<select id="faceFilter"><option value="all">All captured images</option><option value="manual">Needs manual review</option><option value="suggested">Has comparison suggestion</option></select></label></div>
+<div id="faceGallery" class="pf-gallery" aria-live="polite"></div>
+<button id="moreFaces" type="button" hidden class="pf-more">Show more face images</button>
+</section>
+<section id="recordingsSection" hidden aria-label="Video recording browser">
+<div class="pf-section-heading"><div><span class="pf-eyebrow">ALL VIDEO EVIDENCE</span><h2>Recordings</h2><p>Search the entire archive without empty or unassigned folders.</p></div><button id="timelineTab" type="button">Detailed timeline ↗</button></div>
+<div class="pf-filters"><label for="search">Find recording<input id="search" type="search" placeholder="Filter by clip, date, camera…" aria-label="Find video evidence"></label><label for="recordFilter">Show<select id="recordFilter"><option value="person">Person evidence</option><option value="faces">Clips with face images</option><option value="review">Needs face review</option><option value="all">All recordings</option><option value="drive">Drive archive</option></select></label></div>
+<div class="pf-browser-head"><span id="recordCount" role="status" aria-live="polite">Loading recordings…</span><span>Most recent first</span></div>
+<div id="browseGrid" class="pf-gallery" aria-live="polite"></div>
+<button id="moreEvidence" type="button" hidden class="pf-more">Show more recordings</button>
 </section>
 <section id="appearanceSection" hidden aria-label="Read-only appearance comparison pilot">
 <h2>Appearance search · visual evidence only</h2>
@@ -149,10 +200,10 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 </div>
 </section>
 <section id="detail" class="detail" hidden>
-<div class="detail-top"><button id="back" type="button">← All folders</button><div><h2 id="detailTitle"></h2><p id="detailInfo"></p></div></div>
+<div class="detail-top"><button id="back" type="button">← Overview</button><div><h2 id="detailTitle"></h2><p id="detailInfo"></p></div></div>
 <div class="records" id="records"></div>
 </section>
-<iframe id="legacyView" title="Detailed face evidence timeline" data-src="/local/frontyard-security-new/face-appearances.html?v=faces-v19" loading="lazy" hidden></iframe>
+<section id="timelineSection" hidden><div class="pf-section-heading"><h2>Detailed evidence timeline</h2><button id="timelineBack" type="button">← Back to recordings</button></div><iframe id="legacyView" title="Detailed evidence timeline" data-src="/local/frontyard-security-new/face-appearances.html?v=faces-v19" loading="lazy"></iframe></section>
 <dialog id="casePicker" aria-label="Add reviewed evidence to case">
 <div class="modal-head"><strong>Save video to a private review case</strong><button id="casePickerClose" type="button">Close</button></div>
 <p id="casePickerRecording"></p>
