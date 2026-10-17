@@ -27,13 +27,32 @@ class FaceAuditV30Tests(unittest.TestCase):
       "match_status":"not_comparable_model_unavailable",
       "face_crop_padded_context_only":True}])]
   result=module.audit(CAMERA,{"archive_mode":"S9-microSD-only","events":rows})
-  self.assertEqual(result["v4_reviewed"],2)
+  self.assertEqual(result["v5_reviewed"],2)
+  self.assertEqual(result["legacy_review_preserved_with_snapshots"],0)
+  self.assertEqual(result["reviewed_or_protected"],2)
   self.assertEqual(result["awaiting_latest_4k_face_pass"],1)
   self.assertEqual(result["clips_confirming_model_available"],2)
   self.assertEqual(result["comparisons_eligible_for_review_grouping"],1)
   self.assertEqual(result["inspection_only_face_crops"],1)
   self.assertEqual(result["cropped_faces_visible_in_hub"],2)
   self.assertFalse(result["named_identity_automatically_verified"])
+ def test_legacy_snapshots_are_protected_not_permanently_pending(self):
+  rows=[
+    clip(0,face_deep_review_version=None,face_snapshots_saved=1,
+      face_candidates=[{"match_status":"not_comparable_manual_review",
+                        "face_crop_requires_manual_review":True}]),
+    clip(1,face_deep_review_version="s9_onphone_36_samples_person_or_tile_v4",
+      face_snapshots_saved=1,
+      face_candidates=[{"match_status":"not_tested_no_usable_face"}]),
+    clip(2,face_deep_review_version="s9_onphone_36_samples_person_or_tile_v4"),
+    clip(3)]
+  result=module.audit(CAMERA,{"archive_mode":"S9-microSD-only","events":rows})
+  self.assertEqual(result["source_original_4k_clips"],4)
+  self.assertEqual(result["v5_reviewed"],0)
+  self.assertEqual(result["legacy_review_preserved_with_snapshots"],2)
+  self.assertEqual(result["reviewed_or_protected"],2)
+  self.assertEqual(result["awaiting_latest_4k_face_pass"],2)
+  self.assertEqual(result["inspection_only_face_crops"],1)
  def test_never_accepts_embeddings_on_hub(self):
   for name in ("embedding","face_embedding","descriptor","biometric_template","embedding_vector"):
    with self.subTest(name=name):
