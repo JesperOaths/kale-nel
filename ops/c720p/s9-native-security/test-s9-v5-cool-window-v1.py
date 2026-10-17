@@ -135,10 +135,10 @@ class LocalCoolWindow(unittest.TestCase):
   with tempfile.TemporaryDirectory() as tmp:
    self.setup_mocks(tmp,34.0,version=m.VERSION)
    with mock.patch.object(m,"installed_release_matches",return_value=False),mock.patch.object(
-       m,"run_release_script",side_effect=AssertionError("must_not_claim_complete")):
-    with self.assertRaisesRegex(AssertionError,"must_not_claim_complete"):
-     m.tick()
-   self.assertFalse(m.STATE.exists())
+       m,"run_release_script",return_value="S9_V27_FACE_RESCUE_DEFERRED_IDLE") as runner:
+    m.tick()
+   self.assertEqual([x.args[1] for x in runner.call_args_list],["install"])
+   self.assertEqual(json.loads(m.STATE.read_text())["status"],"waiting")
  def test_guarded_original_installer_hard_limits(self):
   s=(HERE/"deploy-s9-face-recall-v27.py").read_text()
   self.assertIn('DEFERRED_4K_RESTART_THERMAL_GUARD',s)
