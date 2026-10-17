@@ -490,6 +490,8 @@ function openFolder(id){
     setTab('appearance');$('appearanceReference').value=e.key;runAppearanceSearch();
    });
    body.append(compare);
+   const save=el('button','','Save to review case');save.type='button';
+   save.disabled=!state.caseAvailable;save.addEventListener('click',()=>reviewToCase(e));body.append(save);
   }
   card.append(pic,body);records.append(card);signedPicture(pic,e);
  }
@@ -742,7 +744,8 @@ async function caseWrite(payload){
   status.textContent='Case update not saved: '+String(err.message||err).slice(0,120)+
    '. Reload case data before trying another change.';
   await reloadCases();
- }finally{state.caseBusy=false;$('casePickerSave').disabled=false}
+ }finally{state.caseBusy=false;$('casePickerSave').disabled=false;
+  if(state.view==='cases'&&state.caseAvailable)renderCaseFolders();}
 }
 function saveCasePicker(){
  const clip=state.caseTargetClip,id=$('caseTarget').value,checked=$('caseConfirmed').checked;
@@ -758,13 +761,14 @@ function saveCasePicker(){
 function setTab(which){
  state.view=which;state.page=1;
  $('moreEvidence').hidden=which!=='history';
- for(const [id,name] of [['foldersTab','folders'],['historyTab','history'],['appearanceTab','appearance'],['timelineTab','timeline']]){
+ for(const [id,name] of [['foldersTab','folders'],['historyTab','history'],['appearanceTab','appearance'],['casesTab','cases'],['timelineTab','timeline']]){
   $(id).setAttribute('aria-selected',String(which===name));
  }
  $('summary').hidden=which==='timeline';
  $('disclaimer').hidden=which==='timeline';
  $('folderSection').hidden=which==='timeline'||which==='appearance';
  $('appearanceSection').hidden=which!=='appearance';
+ $('casesSection').hidden=which!=='cases';
  if(which!=='appearance'){
   ++state.appearanceRequest;$('appearanceGo').disabled=false;
  }
@@ -776,7 +780,7 @@ function setTab(which){
    $('legacyView').src=$('legacyView').dataset.src;
   }
  }else{
-  if(which==='history')renderEvidence();else if(which==='folders')renderFolders();
+  if(which==='history')renderEvidence();else if(which==='folders')renderFolders();else if(which==='cases')renderCaseFolders();
  }
 }
 async function refresh(){
@@ -792,6 +796,7 @@ async function refresh(){
  $('s9PersonCount').textContent=String(state.sd.filter(x=>Number(x.person_count)>0).length);
  $('verifiedCount').textContent=String(new Set(state.reviews.map(x=>x.visitor_id).filter(x=>/^VIS-[0-9]{4,6}$/.test(String(x)))).size);
  buildFolders();fillAppearanceReferences();state.ready=true;
+ await reloadCases();
  if(state.view==='history')renderEvidence();else if(state.view==='folders')renderFolders();
  const failed=tasks.filter(t=>t.status!=='fulfilled').length;
  $('sync').textContent=(failed?'Partial index · '+failed+' source unavailable':'Archive connected')+' · '+state.reviews.length+' classified Drive clips';
@@ -803,6 +808,10 @@ $('moreEvidence').addEventListener('click',()=>{state.page++;renderEvidence()});
 $('foldersTab').addEventListener('click',()=>setTab('folders'));
 $('historyTab').addEventListener('click',()=>setTab('history'));
 $('appearanceTab').addEventListener('click',()=>setTab('appearance'));
+$('casesTab').addEventListener('click',()=>setTab('cases'));
+$('caseBack').addEventListener('click',()=>{state.caseSelection=null;renderCaseFolders()});
+$('casePickerSave').addEventListener('click',saveCasePicker);
+$('casePickerClose').addEventListener('click',()=>$('casePicker').close());
 $('appearanceGo').addEventListener('click',runAppearanceSearch);
 $('timelineTab').addEventListener('click',()=>setTab('timeline'));
 $('back').addEventListener('click',()=>{state.selected=null;renderFolders()});
