@@ -53,8 +53,10 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     reference_examples:tab==='suggestions'?[item]:[]})};
   }
   if(p==='/new/api/saved')return {ok:true,json:async()=>({archive_mode:'S9-microSD-only',events:[
-   {clip_no:clip,face_candidates:[{snapshot_name:'motion_1792200000000__pending_1__6365_0.jpg',time_ms:6365,
-    face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'}]}]})};
+   {clip_no:clip,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',
+    face_candidates:[{snapshot_name:'motion_1792200000000__pending_1__6365_0.jpg',time_ms:6365,
+    face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
+    {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]}]})};
   throw Error('Unexpected request '+p);
  }};
 const window={C720PSecureRelay:relay};window.parent=window;window.addEventListener=()=>{};
@@ -70,6 +72,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
  assert.equal(el('faceCount').textContent,'1');
+ assert.equal(el('personScanLabel').textContent,'80 / 141');
+ assert.equal(el('faceScanLabel').textContent,'1 / 1 · reviewed');
+ assert.match(el('facePhotoStatus').textContent,/1 saved face images available · 1 candidate records have no saved image/);
+ assert.equal(el('faceScanProgress').value,100);
  assert.equal(el('savedPreview').children.length,1,'Provisional clothing group must not appear as confirmed person');
  assert.equal(el('appearancePreview').children.length,1,'Unreviewed group is optional separate list');
  assert.equal(el('reviewPreview').children.length,1);
