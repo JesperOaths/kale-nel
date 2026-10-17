@@ -30,9 +30,21 @@ def api(path):
 def cam():
  with urllib.request.urlopen("http://127.0.0.1:18808/status",timeout=15) as response:
   result=json.load(response)
- if not result.get("ok") or result.get("mode")!="watching" or not result.get("continuous_4k_ready"):
+ if not result.get("ok") or result.get("mode")!="watching" or \
+    result.get("last_frame_age_ms",99999)>2500:
   raise RuntimeError("live_camera_unhealthy_or_recording")
- return result
+ if result.get("continuous_4k_ready") is True:
+  return result
+ # This installer only replaces metadata/UI on the hub. Permit the known
+ # on-phone thermal fallback with verified H264 pre-roll while the existing
+ # 20-minute 4K cooldown remains fully intact. Never call camera controls.
+ if (result.get("continuous_4k_last_result")=="fallback_thermal_guard" and
+     result.get("continuous_4k_production_persisted") is True and
+     result.get("preroll_ready") is True and
+     int(result.get("preroll_buffered_ms") or 0)>=4400 and
+     float(result.get("temperature_c",100))<39):
+  return result
+ raise RuntimeError("unknown_camera_4k_fault_no_ui_deploy")
 
 def run(command,timeout):
  result=subprocess.run(command,capture_output=True,text=True,timeout=timeout)
@@ -132,6 +144,8 @@ def main():
     "drive_verified":progress.get("eligible"),"v28_rechecked":progress.get("completed"),
     "native_recordings_preserved":len(refreshed.get("events",[])),
     "original_media_modified":False,"cloud_writes":False,
+    "continuous_4k_healthy_at_ui_deploy":cam().get("continuous_4k_ready") is True,
+    "ui_job_never_controls_camera":True,
     "identities_automatically_verified":False},sort_keys=True),flush=True)
   except BaseException:
    for path,body in ((LIVE,old_source),(PAGE,page_before)):
