@@ -414,7 +414,9 @@ final class S9FaceReview implements AutoCloseable {
       paddedManualCrops++;
      }
      String id=match.optString("person_id","pending_"+(detected));
-     String safe=id.replaceAll("[^A-Za-z0-9_-]","_");
+     // Never let a second-pass crop overwrite an existing historical JPEG.
+     String safe="r5full_"+id.replaceAll("[^A-Za-z0-9_-]","_");
+     if(safe.length()>63)safe=safe.substring(0,63);
      File outDir=new File(sd,"FaceSnapshots");
      if(!outDir.isDirectory()&&!outDir.mkdirs())throw new IOException("snapshot_directory_failed");
      String image=clip.substring(0,clip.length()-4)+"__"+safe+"__"+ms+"_"+i+".jpg";
