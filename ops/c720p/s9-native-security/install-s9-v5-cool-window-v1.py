@@ -68,7 +68,7 @@ def main():
           "Nice=12\nIOSchedulingClass=idle\n"
           "NoNewPrivileges=yes\n").encode()
  timer=("[Unit]\nDescription=Check S9+ thermal/idle window for V5 archive review\n"
-        "[Timer]\nOnBootSec=5min\nOnUnitInactiveSec=20min\n"
+        "[Timer]\nOnBootSec=5min\nOnUnitInactiveSec=5min\n"
         "AccuracySec=1min\nRandomizedDelaySec=2min\n"
         "Persistent=true\nUnit="+UNIT+".service\n"
         "[Install]\nWantedBy=timers.target\n").encode()
@@ -97,6 +97,6 @@ def main():
     "timer_active":True,"timer_enabled":True,
     "run_on":"C720P_user_systemd","camera_apk_changed":False,
     "recordings_modified":False,"initial_scan_started":False,
-    "check_interval_minutes":20},sort_keys=True),flush=True)
+    "check_interval_minutes":5},sort_keys=True),flush=True)
 
 if __name__=="__main__":main()
