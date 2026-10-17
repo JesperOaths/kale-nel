@@ -3,12 +3,13 @@
 from pathlib import Path
 import datetime,hashlib,json,os,re,subprocess,time,urllib.request,zipfile
 ROOT=Path("/home/jespern/c720p-home-hub")
-RELEASE=Path("/dev/shm/s9-face-recall-v27/release.json")
+REF=os.environ.get("S9_FACE_RECALL_V27_REF","")
+STAGE=Path("/dev/shm/s9-face-recall-v27")/REF[:12]
+RELEASE=STAGE/"release.json"
 BACK="/storage/9C33-6BBD/c720p-offloaded-build-evidence-20261014/v27-exact-rollback"
 SERIAL="192.168.178.250:5555"
 PACKAGE="nl.kalenel.s9security"
 SIGNER="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
-REF=os.environ.get("S9_FACE_RECALL_V27_REF","")
 VERSION="s9_onphone_36_samples_person_or_tile_v4"
 BASE="http://127.0.0.1:18808"
 def run(a,sec=45):
@@ -62,7 +63,7 @@ def main():
  if not RELEASE.is_file():raise RuntimeError("signed_release_missing")
  m=json.loads(RELEASE.read_text())
  signed=Path(m.get("apk",""))
- baseline=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")
+ baseline=STAGE/"installed-before-v27.apk"
  if m.get("source_sha")!=REF or m.get("historical_face_review")!="bounded_verified_4k_face_tiles_v4":
   raise RuntimeError("wrong_version_or_source")
  if not signed.is_file() or not baseline.is_file() or sha(signed)!=m.get("sha256") or sha(baseline)!=m.get("baseline_apk_sha256"):
