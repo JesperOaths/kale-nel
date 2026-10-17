@@ -13,9 +13,9 @@
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Segoe UI",sans-serif}
 body{padding:clamp(14px,2.6vw,32px)}
 h1{font-size:clamp(22px,2.5vw,29px);letter-spacing:-.03em;line-height:1.1;margin:0 0 9px}h2{font-size:18px;margin:0}
-p{margin:0;color:var(--muted)}button,input{font:inherit}
+p{margin:0;color:var(--muted)}button,input,select{font:inherit}
 button{border:1px solid #477088;color:var(--ink);background:#1c3546;padding:10px 14px;border-radius:10px;cursor:pointer}
-button:hover{background:#285269}button:focus-visible,input:focus-visible{outline:2px solid #a9fff1;outline-offset:2px}
+button:hover{background:#285269}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #a9fff1;outline-offset:2px}
 button[disabled]{opacity:.5;cursor:default}
 header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:21px}
 .kicker{font-size:11px;font-weight:800;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}
@@ -28,6 +28,11 @@ header{display:flex;align-items:flex-start;justify-content:space-between;gap:16p
 .stat span{font-size:12px;color:var(--muted)}
 .note{margin:0 0 17px;padding:13px 16px;border:1px solid #54616a;background:#1b2831;border-radius:11px;color:#d0dce4;font-size:12px}
 .toolbar{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.toolbar select,.appearance-filters select{background:#122738;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 12px;max-width:100%}
+.appearance-filters{display:flex;align-items:end;gap:11px;flex-wrap:wrap;margin:15px 0}
+.appearance-filters label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:12px}
+.appearance-filters select{max-width:min(340px,85vw);min-height:42px}
+.appearance-filters button{min-height:42px}
 .toolbar input{width:min(440px,100%);min-width:190px;flex:1;border:1px solid var(--line);background:#122738;color:var(--ink);border-radius:9px;padding:11px 13px}
 .folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr));gap:14px;align-items:stretch}
 .folder{border:1px solid #3a5869;background:var(--card);border-radius:14px;min-width:0;text-align:left;overflow:hidden;padding:0;display:flex;flex-direction:column;transition:border-color .15s,transform .15s}
@@ -101,6 +106,7 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <nav class="tabs" aria-label="People and faces views">
 <button id="foldersTab" type="button" aria-selected="true">Face folders</button>
 <button id="historyTab" type="button" aria-selected="false">All person evidence</button>
+<button id="appearanceTab" type="button" aria-selected="false">Appearance search · pilot</button>
 <button id="timelineTab" type="button" aria-selected="false">Detailed evidence timeline</button>
 </nav>
 <section id="summary" class="stats" aria-label="Evidence totals">
@@ -115,6 +121,18 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <div class="toolbar"><h2>Folders</h2><input id="search" type="search" placeholder="Filter folders and recordings…" aria-label="Search folders"><button id="reload" type="button">Refresh</button></div>
 <div class="folders" id="folders" aria-live="polite"><div class="empty">Loading person and face evidence…</div></div>
 <button id="moreEvidence" type="button" hidden style="display:block;margin:17px auto">Show more</button>
+</section>
+<section id="appearanceSection" hidden aria-label="Read-only appearance comparison pilot">
+<h2>Appearance search · visual evidence only</h2>
+<p class="note">Compare upper- or lower-clothing colours from existing S9+ recordings using the on-phone HSV index. No facial features, biometric templates or identity probability are used. Similar clothing is NOT evidence that two clips show the same person. Results appear only when indexed 4K evidence exists.</p>
+<div class="appearance-filters">
+<label for="appearanceReference">Reference recording<select id="appearanceReference"><option value="">Loading S9+ recordings…</option></select></label>
+<label for="appearanceCategory">Compare<select id="appearanceCategory"><option value="upper_clothing">Upper clothing colour</option><option value="lower_clothing">Lower clothing colour</option></select></label>
+<label for="appearanceZone">Scene area<select id="appearanceZone"><option value="">Any mapped zone</option><option value="front_garden">Front garden</option><option value="background_street">Background street</option><option value="unspecified">Unspecified</option></select></label>
+<button id="appearanceGo" type="button">Find similar colours</button>
+</div>
+<p class="note" id="appearanceStatus" role="status" aria-live="polite">Choose a local recording to search similar clothing observations.</p>
+<div id="appearanceResults" class="records" aria-label="Visual comparison results"></div>
 </section>
 <section id="detail" class="detail" hidden>
 <div class="detail-top"><button id="back" type="button">← All folders</button><div><h2 id="detailTitle"></h2><p id="detailInfo"></p></div></div>
@@ -137,7 +155,7 @@ const clipOK=/^motion_[0-9]{13}[.]mp4$/;
 const driveOK=/^[A-Za-z0-9._-]{1,180}[.]mp4$/i;
 const imageOK=/^[A-Za-z0-9._-]{1,200}[.]jpg$/i;
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_-]{1,55})$/;
-const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1};
+const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1,appearanceRequest:0};
 const relay=()=>{if(window.C720PSecureRelay)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.C720PSecureRelay)return window.parent.C720PSecureRelay}catch(_){}return null};
 async function get(path){
  const r=relay();if(!r?.fetch)throw Error('Authenticated relay missing');
