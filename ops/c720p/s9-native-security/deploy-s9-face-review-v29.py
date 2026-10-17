@@ -36,9 +36,9 @@ def catalog():
 
 def status():
  r=json.loads(get("http://127.0.0.1:18808/status",200000))
- if not r.get("ok") or r.get("mode")!="watching" or
+ if (not r.get("ok") or r.get("mode")!="watching" or
      not r.get("native_4k_enabled") or
-     int(r.get("last_frame_age_ms") or 999999)>2500:
+     int(r.get("last_frame_age_ms") if r.get("last_frame_age_ms") is not None else 999999)>2500):
   raise RuntimeError("s9_live_camera_unhealthy_no_UI_write")
  if r.get("continuous_4k_ready") is True:return r
  # Page HTML cannot change camera capture. Allow only the known thermal
