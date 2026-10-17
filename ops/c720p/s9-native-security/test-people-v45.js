@@ -119,7 +119,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  group.handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('folderView').hidden,false);
- const provisionalKeep=scan(el('folderGrid'),'✓ Keep');assert(provisionalKeep);
+ const provisionalKeep=scan(el('folderGrid'),'✓ Keep here');assert(provisionalKeep);
  provisionalKeep.handlers.click();
  assert(el('approvalFolder').children.some(x=>x.value==='P345'),
   'Selected provisional appearance group should be an available manual destination');
