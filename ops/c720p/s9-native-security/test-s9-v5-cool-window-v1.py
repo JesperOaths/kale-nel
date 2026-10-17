@@ -68,6 +68,17 @@ class LocalCoolWindow(unittest.TestCase):
     m.tick(stage_only=True)
    self.assertEqual([c.args[1] for c in scripts.call_args_list],["build"])
    self.assertFalse(m.STATE.exists())
+ def test_local_timer_stages_during_fallback_but_never_installs(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   self.setup_mocks(tmp,35.4,stage_ready=False)
+   fallback=phone(35.4)
+   fallback["continuous_4k_ready"]=False
+   with mock.patch.object(m,"camera_status",return_value=fallback), mock.patch.object(
+       m,"prepared",side_effect=[False,True]), mock.patch.object(
+       m,"run_release_script",return_value="S9_FACE_RECALL_V27_SIGNED_STAGED") as runner:
+    m.tick(stage_only=False)
+   self.assertEqual([c.args[1] for c in runner.call_args_list],["build"])
+   self.assertFalse(m.STATE.exists())
  def test_real_motion_defers_even_when_cool(self):
   with tempfile.TemporaryDirectory() as tmp:
    self.setup_mocks(tmp,34.1)
