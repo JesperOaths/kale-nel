@@ -181,29 +181,36 @@ function comparisonCandidate(face){
 }
 function evidenceSummary(records){
  const clips=records.filter(x=>clipOK.test(String(x.clip_no||'')));
- const valid=clips.filter(x=>x.face_deep_review_version==='s9_onphone_36_samples_overlapping_tiles_v5');
+ const target='s9_onphone_36_samples_overlapping_tiles_v5';
+ const valid=clips.filter(x=>x.face_deep_review_version===target);
+ const protectedClips=clips.filter(x=>x.face_deep_review_version!==target&&Number(x.face_snapshots_saved)>0);
+ const olderNoCrop=clips.filter(x=>x.face_deep_review_version&&x.face_deep_review_version!==target&&
+  !(Number(x.face_snapshots_saved)>0));
+ const neverReviewed=clips.filter(x=>!x.face_deep_review_version&&!(Number(x.face_snapshots_saved)>0));
  const models=clips.filter(x=>x.face_model_state==='available_on_phone').length;
  const notTested=clips.filter(x=>x.face_model_state==='not_tested_no_usable_face').length;
  const faces=clips.reduce((n,r)=>n+(Array.isArray(r.face_candidates)?r.face_candidates.length:0),0);
- const legacyProtected=clips.filter(x=>x.face_deep_review_version!=='s9_onphone_36_samples_overlapping_tiles_v5'&&
-  Number(x.face_snapshots_saved)>0).length;
- const pending=clips.length-valid.length-legacyProtected;
  const shadow=clips.reduce((sum,r)=>sum+(Number.isInteger(r.face_shadow_model_succeeded)?
   Math.max(0,Math.min(1,r.face_shadow_model_succeeded)):0),0);
- return {total:clips.length,reviewed:valid.length,legacyProtected,pending,models,notTested,faces,shadow};
+ return {total:clips.length,reviewed:valid.length,legacyProtected:protectedClips.length,
+  olderNoCrop:olderNoCrop.length,neverReviewed:neverReviewed.length,
+  pending:olderNoCrop.length+neverReviewed.length,models,notTested,faces,shadow};
 }
 function renderFacePipelineSummary(){
  const summary=evidenceSummary(state.sd);
  const node=$('facePipelineStatus');
  if(!node)return;
- node.textContent='S9+ original 4K face reviews: '+summary.reviewed+'/'+summary.total+
-  ' recordings using the current V5 review · '+summary.legacyProtected+
-  ' older reviews with preserved snapshots · '+summary.pending+
-  ' genuinely awaiting V5 scan · '+summary.faces+' inspected face crops · '+
-  summary.models+' clips reporting an available local face model · '+
-  summary.shadow+' read-only shadow inference tests passed ('+
-  summary.notTested+' clips did not reach an embedding test). '+
-  'Unverified matches are suggestions only. Original recordings and all identity templates remain on the phone.';
+ node.textContent='Original 4K recordings: '+summary.total+' · Target V5 scan completed: '+
+  summary.reviewed+' · Older reviews with saved face crops: '+summary.legacyProtected+
+  ' · Older scans with no saved crops: '+summary.olderNoCrop+
+  ' · Never deep-scanned: '+summary.neverReviewed+
+  ' · Awaiting V5: '+summary.pending+' · Reviewable face crops: '+summary.faces+'. '+
+  'Face comparison model verified in these clips: '+summary.models+
+  '; local model untested: '+summary.notTested+
+  '; shadow tests passed: '+summary.shadow+'. '+
+  'A saved crop is NOT a verified identity. The older version may report “no frontal face” '+
+  'even when manual-review crops were retained; the saved crop evidence takes precedence. '+
+  'Scanning is paused when the phone is too warm or live 4K has priority.';
 }
 function buildFolders(){
  const folders=[],faceIndex=new Map(),unverifiedCrops=[],visit=new Map(),driveCategories=new Map();
