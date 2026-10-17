@@ -460,6 +460,13 @@ function openFolder(id){
   }
   const play=el('button','','Play recording');play.type='button';
   play.addEventListener('click',()=>openClip(e));body.append(play);
+  if(e.source==='sd'&&clipOK.test(e.key)){
+   const compare=el('button','','Compare clothing colours');compare.type='button';
+   compare.addEventListener('click',()=>{
+    setTab('appearance');$('appearanceReference').value=e.key;runAppearanceSearch();
+   });
+   body.append(compare);
+  }
   card.append(pic,body);records.append(card);signedPicture(pic,e);
  }
  $('detail').scrollIntoView({block:'start'});
@@ -552,7 +559,9 @@ function setTab(which){
  $('disclaimer').hidden=which==='timeline';
  $('folderSection').hidden=which==='timeline'||which==='appearance';
  $('appearanceSection').hidden=which!=='appearance';
- if(which!=='appearance')++state.appearanceRequest;
+ if(which!=='appearance'){
+  ++state.appearanceRequest;$('appearanceGo').disabled=false;
+ }
  $('detail').hidden=true;$('legacyView').hidden=which!=='timeline';
  if(which==='timeline'){
   if(!$('legacyView').src){
