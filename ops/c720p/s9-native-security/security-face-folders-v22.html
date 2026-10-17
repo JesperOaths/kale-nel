@@ -253,11 +253,11 @@ function buildFolders(){
  if(sdUnmatched.length)folders.push(group('sd:pending','S9+ · faces not captured',
   'Possible people or raw face hits without usable face evidence · original videos available',
   'pending',sdUnmatched.map(rec=>item('sd',rec)),false));
+ // Preserved legacy snapshots are evidence, not a completed current V5 scan.
  const notReviewed=state.sd.filter(rec=>clipOK.test(String(rec.clip_no||''))&&
-  rec.face_deep_review_version!=='s9_onphone_36_samples_overlapping_tiles_v5'&&
-  !(Number(rec.face_snapshots_saved)>0));
+  rec.face_deep_review_version!=='s9_onphone_36_samples_overlapping_tiles_v5');
  if(notReviewed.length)folders.push(group('sd:scan-pending','S9+ · deep face scan pending',
-  'Eligible original 4K videos awaiting overlapping-tile review · no absence-of-person claim',
+  'Original 4K clips awaiting V5 · older face snapshots remain preserved · no absence-of-person claim',
   'pending',notReviewed.map(rec=>item('sd',rec)),false));
  const lookup=new Map(state.drive.map(r=>[String(r.remote_name||''),r]));
  for(const review of state.reviews){
