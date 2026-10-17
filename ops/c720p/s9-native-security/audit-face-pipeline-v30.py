@@ -49,7 +49,17 @@ def audit(phone,archive):
   name=clip["clip_no"]
   if name in seen:raise RuntimeError("duplicate_clip_in_verified_archive")
   seen.add(name)
-  pipeline["v4_reviewed" if clip.get("face_deep_review_version")==FACE_VERSION else "not_yet_v4"]+=1
+  version=clip.get("face_deep_review_version")
+  saved=int(clip.get("face_snapshots_saved") or 0)
+  # The phone deliberately does not overwrite old validated snapshots on a
+  # V5 upgrade. Report them as protected legacy reviews, not false V5 passes
+  # or never-reviewed backlog items.
+  if version==FACE_VERSION:
+   pipeline["v5_reviewed"]+=1
+  elif saved>0:
+   pipeline["legacy_review_preserved_with_snapshots"]+=1
+  else:
+   pipeline["awaiting_4k_face_review"]+=1
   statuses[str(clip.get("face_model_state") or "unknown")]+=1
   if clip.get("face_model_state")=="available_on_phone":model_ready_clips+=1
   crops=clip.get("face_candidates")
@@ -77,8 +87,10 @@ def audit(phone,archive):
  return {
   "camera_ok":True,"camera_mode":phone.get("mode"),
   "current_face_review_version":FACE_VERSION,
-  "source_original_4k_clips":len(clips),"v4_reviewed":pipeline["v4_reviewed"],
-  "awaiting_latest_4k_face_pass":pipeline["not_yet_v4"],
+  "source_original_4k_clips":len(clips),"v5_reviewed":pipeline["v5_reviewed"],
+  "legacy_review_preserved_with_snapshots":pipeline["legacy_review_preserved_with_snapshots"],
+  "reviewed_or_protected":pipeline["v5_reviewed"]+pipeline["legacy_review_preserved_with_snapshots"],
+  "awaiting_latest_4k_face_pass":pipeline["awaiting_4k_face_review"],
   "clips_with_face_crops":pipeline["clips_with_crops"],
   "cropped_faces_visible_in_hub":snapshots,
   "clipped_face_detections_rejected":pipeline["detected_but_unusable_face"],

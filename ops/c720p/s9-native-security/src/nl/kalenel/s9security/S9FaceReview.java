@@ -307,8 +307,19 @@ final class S9FaceReview implements AutoCloseable {
   * The ROI is NOT a body pose or gait model.
   */
  void sample(Bitmap frame,long ms,float[] detectedPerson){
-  if(!FILE.matcher(clip).matches()||frames>=frameLimit||captures.length()>=MAX_CAPTURES)return;
+  if(!FILE.matcher(clip).matches()||frames>=frameLimit)return;
   frames++;
+  // Historical 36-position review has at most eight saved crops. Reserve
+  // later slots for later source times instead of filling all eight in the
+  // earliest frames and silently skipping the remaining face search.
+  // The ordinary 12-frame live review retains its original eight-slot cap.
+  // A 48-call ceiling covers occasional second-person anchors, whereas
+  // the actual deep review has 36 frame positions. Budget over those 36
+  // positions so a one-person clip can still fill all eight evidence slots.
+  final int expectedSamples=Math.min(frameLimit,36);
+  final int captureAllowance=frameLimit>MAX_FRAMES?
+      Math.min(MAX_CAPTURES,Math.max(1,(frames*MAX_CAPTURES+expectedSamples-1)/expectedSamples)):
+      MAX_CAPTURES;
   Bitmap scaled=null,rgb=null,subject=frame;
   int offsetX=0,offsetY=0;
   try{
@@ -338,7 +349,7 @@ final class S9FaceReview implements AutoCloseable {
    rgb=scaled.copy(Bitmap.Config.RGB_565,false);
    FaceDetector.Face[] faces=new FaceDetector.Face[MAX_FACES];
    int n=new FaceDetector(width,height,MAX_FACES).findFaces(rgb,faces);
-   for(int i=0;i<n&&captures.length()<MAX_CAPTURES;i++){
+   for(int i=0;i<n&&captures.length()<captureAllowance;i++){
     FaceDetector.Face f=faces[i];if(f==null)continue;
     rawDetectorHits++;
     // V27: permit borderline FACE CROPS for human review only; only the

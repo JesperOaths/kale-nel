@@ -1031,7 +1031,9 @@ public final class CameraService extends Service {
      if(!running||!"watching".equals(mode)||!faceBackfillThermallyAllowed())return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
-     Arrays.sort(manifests,(a,b)->b.getName().compareTo(a.getName()));
+     // Work oldest verified recordings first. New motion clips must never
+     // continually preempt the outstanding original-4K review backlog.
+     Arrays.sort(manifests,(a,b)->a.getName().compareTo(b.getName()));
      for(File manifest:manifests){
       if(!running||!"watching".equals(mode)||!faceBackfillThermallyAllowed())return;
       if(manifest.length()<100||manifest.length()>28000)continue;
@@ -1439,7 +1441,7 @@ public final class CameraService extends Service {
    d.put("historical_import_last_error_type",lastHistoricalError);
    d.put("historical_import_queued",historicalQueued);
    d.put("face_review_engine","s9_native_face_review_v1");
-   d.put("face_deep_rescue_version","s9_onphone_36_samples_person_or_tile_v4");
+   d.put("face_deep_rescue_version",ClipClassifier.DEEP_FACE_ROI_VERSION);
    d.put("face_crop_geometry_version",S9FaceReview.GEOMETRY_VERSION);
    d.put("face_deep_review_misses_are_not_no_person",true);
    d.put("face_backfill_queued",faceBackfillQueued);

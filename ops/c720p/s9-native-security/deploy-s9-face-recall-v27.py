@@ -122,6 +122,10 @@ def main():
   latest=status()
   if not healthy(latest) or latest.get("recorded")!=settle.get("recorded"):
    print("S9_V27_FACE_RESCUE_DEFERRED_EVENT",flush=True);return
+  # A warm restart can put the native 4K encoder into its lengthy
+  # thermal-recovery guard. Defer rather than interrupt a healthy stream.
+  if float(latest.get("temperature_c",100))>34.5:
+   print("S9_V27_FACE_RESCUE_DEFERRED_4K_RESTART_THERMAL_GUARD",flush=True);return
   changed=True
   adb("shell","am","force-stop",PACKAGE,sec=28)
   if "Success" not in adb("install","-r","-g",str(signed),sec=230):
