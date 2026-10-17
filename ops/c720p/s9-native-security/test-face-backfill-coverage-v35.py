@@ -28,6 +28,10 @@ class FaceBackfillCoverageV35(unittest.TestCase):
   self.assertIn("FACE_BACKFILL_WITH_4K_MAX_TENTHS_C=360",SERVICE)
   self.assertIn("FACE_BACKFILL_MAX_TEMP_TENTHS_C=390",SERVICE)
   self.assertIn("!continuous4K.readyForEvent()",SERVICE)
+ def test_reported_review_version_is_compiled_classifier_version(self):
+  self.assertIn('d.put("face_deep_rescue_version",ClipClassifier.DEEP_FACE_ROI_VERSION);',SERVICE)
+  self.assertIn('DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"',CLASSIFIER)
+  self.assertNotIn('d.put("face_deep_rescue_version","s9_onphone_36_samples_person_or_tile_v4")',SERVICE)
  def test_eight_slots_reserved_across_all_deep_review_samples(self):
   self.assertIn("if(!FILE.matcher(clip).matches()||frames>=frameLimit)return;",FACE)
   self.assertNotIn("frames>=frameLimit||captures.length()>=MAX_CAPTURES",FACE)
