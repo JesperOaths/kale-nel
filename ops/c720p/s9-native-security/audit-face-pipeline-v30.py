@@ -38,6 +38,7 @@ def audit(phone,archive):
  statuses=Counter()
  matches=Counter()
  pipeline=Counter()
+ diagnostics=Counter()
  seen=set()
  snapshots=0
  weak=0
@@ -62,6 +63,11 @@ def audit(phone,archive):
    pipeline["awaiting_4k_face_review"]+=1
   statuses[str(clip.get("face_model_state") or "unknown")]+=1
   if clip.get("face_model_state")=="available_on_phone":model_ready_clips+=1
+  if clip.get("face_shadow_review_version")=="s9_shadow_model_probe_v2":
+   diagnostics["v2_reviewed_clips"]+=1
+   for key in ("face_shadow_model_trials","face_shadow_model_succeeded","face_shadow_model_failed"):
+    value=clip.get(key)
+    if type(value) is int and 0<=value<=1:diagnostics[key]+=value
   crops=clip.get("face_candidates")
   if not isinstance(crops,list) or len(crops)>16:
    raise RuntimeError("sanitized_face_candidate_shape_changed")
@@ -99,6 +105,13 @@ def audit(phone,archive):
  prior_scanned_no_crops=sum(clip.get("face_deep_review_version") not in (None,"",FACE_VERSION)
                             and int(clip.get("face_snapshots_saved") or 0)==0 for clip in clips)
  current_version=str(phone.get("face_deep_rescue_version") or "not_reported")
+ scanner_active=phone.get("face_backfill_queued") is True
+ temperature=phone.get("temperature_c")
+ thermal_ready=isinstance(temperature,(int,float)) and temperature<41.5
+ scanner_state=("actively_reviewing" if scanner_active else
+   "thermal_fallback" if known_thermal_fallback else
+   "too_warm" if not thermal_ready else
+   "waiting_for_idle_window" if camera_ready else "not_ready")
  return {
   "camera_ok":True,"camera_mode":phone.get("mode"),
   "camera_4k_ready":camera_ready,
@@ -108,6 +121,12 @@ def audit(phone,archive):
    isinstance(phone.get("temperature_c"),(int,float)) and
    phone.get("temperature_c")<min(41.5,float(phone.get("face_review_4k_temperature_below_c",41.5)))),
   "installed_face_review_version":current_version,
+  "scanner_state":scanner_state,
+  "scanner_active":scanner_active,
+  "v2_model_diagnostic_clips":diagnostics["v2_reviewed_clips"],
+  "v2_model_diagnostic_trials":diagnostics["face_shadow_model_trials"],
+  "v2_model_diagnostic_successes":diagnostics["face_shadow_model_succeeded"],
+  "v2_model_diagnostic_failures":diagnostics["face_shadow_model_failed"],
   "never_deep_reviewed":never_reviewed,
   "older_scanned_no_face_crops":prior_scanned_no_crops,
   "current_face_review_version":FACE_VERSION,
