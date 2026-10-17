@@ -32,7 +32,7 @@ class LocalCoolWindow(unittest.TestCase):
   for unsafe in ('"/new/api/saved"','/shot.jpg','/new/saved/face/','upload_face',
                  "face_embedding_vector","delete_original_video"):
    self.assertNotIn(unsafe,script)
-  self.assertIn("MAX_RESTART_TEMP_C=34.5",script)
+  self.assertIn("MAX_RESTART_TEMP_C=40.5",script)
   self.assertIn("if not healthy(latest) or not idle(latest):",script)
   self.assertIn("fcntl.flock(handle,fcntl.LOCK_EX|fcntl.LOCK_NB)",script)
   self.assertIn('("complete","needs_manual_recovery","installing")',script)
@@ -52,7 +52,7 @@ class LocalCoolWindow(unittest.TestCase):
   return d,mocks
  def test_hot_camera_must_not_install_or_restart(self):
   with tempfile.TemporaryDirectory() as tmp:
-   _,_mocks=self.setup_mocks(tmp,39.0)
+   _,_mocks=self.setup_mocks(tmp,42.0)
    with mock.patch.object(m,"run_release_script",side_effect=AssertionError("installer_called")):
     m.tick()
    self.assertFalse(m.STATE.exists())
@@ -108,7 +108,7 @@ class LocalCoolWindow(unittest.TestCase):
  def test_guarded_original_installer_hard_limits(self):
   s=(HERE/"deploy-s9-face-recall-v27.py").read_text()
   self.assertIn('DEFERRED_4K_RESTART_THERMAL_GUARD',s)
-  self.assertIn('float(latest.get("temperature_c",100))>34.5',s)
+  self.assertIn('float(latest.get("temperature_c",100))>40.5',s)
   self.assertIn('S9_FACE_RECALL_V27_DEVICE_VERIFIED',s)
   self.assertIn('"original_apk_restored":True',s)
   self.assertIn('rollback_microSD_final_checksum_mismatch',s)
