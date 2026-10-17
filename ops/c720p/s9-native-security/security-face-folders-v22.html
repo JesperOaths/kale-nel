@@ -293,7 +293,7 @@ function buildFolders(){
  // Group recordings by observed upper-clothing COLOUR, not by a person's identity.
  // These are deliberately evidence buckets: multiple people or changing light
  // can produce identical colour labels across unrelated source recordings.
- const shades=new Map(),validShade=/^(?:black|white|grey|gray|red|orange|yellow|green|blue|purple|pink|brown|beige|dark|light|multicolour|multi_color)$/;
+ const shades=new Map(),validShade=/^(?:black|white|grey|gray|red|orange|yellow|green|blue|purple|pink|purple_or_pink|brown|beige|dark|light|multicolour|multi_color)$/;
  for(const rec of state.sd){
   if(!clipOK.test(String(rec.clip_no||'')))continue;
   const colours=new Set((Array.isArray(rec.anonymous_tracks)?rec.anonymous_tracks:[])
@@ -502,6 +502,38 @@ function fillAppearanceReferences(){
  }
  if([...select.options].some(o=>o.value===previous))select.value=previous;
 }
+// Fallback uses only existing *clip-scoped* coarse colour labels, never
+// face vectors, RGB fingerprints, similarity probabilities or person IDs.
+// Explicitly distinguish metadata equality from high-resolution HSV scores.
+function showCoarseColourFallback(reference,category,host,status){
+ if(category!=='upper_clothing')return false;
+ const names=new Map(state.sd.filter(r=>clipOK.test(String(r.clip_no||'')))
+  .map(r=>[r.clip_no,r]));
+ const valid=/^(?:black|white|grey|gray|red|orange|yellow|green|blue|purple|pink|purple_or_pink|brown|beige|dark|light|multicolour|multi_color)$/;
+ const shades=rec=>new Set((Array.isArray(rec?.anonymous_tracks)?rec.anonymous_tracks:[])
+  .map(t=>String(t.upper_clothing_colour||'').toLowerCase()).filter(x=>valid.test(x)));
+ const original=names.get(reference),referenceColours=shades(original);
+ if(referenceColours.size===0)return false;
+ const matches=[...names.values()].filter(r=>r.clip_no!==reference&&
+  [...shades(r)].some(c=>referenceColours.has(c))).slice(0,25);
+ if(!matches.length)return false;
+ status.textContent=matches.length+' coarse-colour metadata result'+
+  (matches.length===1?'':'s')+' · HSV index unavailable or incomplete. '+
+  'Same recorded clothing colour, NOT a person match or numerical similarity score.';
+ for(const rec of matches){
+  const entry=item('sd',rec),shared=[...shades(rec)].filter(c=>referenceColours.has(c));
+  const card=el('article','record'),pic=el('div','record-preview'),
+   body=el('div','record-body'),open=el('button','','Review original clip');
+  pic.append(el('span','','Archived 4K recording'));
+  body.append(el('strong','',stamp(entry)),
+   el('small','','Shared coarse clothing label: '+shared.join(', ')),
+   el('small','','Metadata category only · no precise histogram comparison'),
+   el('small','','Identity unverified · unrelated people may wear the same colour'));
+  open.type='button';open.addEventListener('click',()=>openClip(entry));body.append(open);
+  card.append(pic,body);host.append(card);signedPicture(pic,entry);
+ }
+ return true;
+}
 async function runAppearanceSearch(){
  const clip=$('appearanceReference').value,category=$('appearanceCategory').value,
   zone=$('appearanceZone').value,run=++state.appearanceRequest;
@@ -529,6 +561,7 @@ async function runAppearanceSearch(){
    hit.clip_name!==clip&&known.has(hit.clip_name)&&
    typeof hit.similarity==='number'&&Number.isFinite(hit.similarity)&&
    hit.similarity>=0&&hit.similarity<=1);
+  if(accepted.length===0&&showCoarseColourFallback(clip,category,host,status))return;
   status.textContent=accepted.length+' visual comparison'+
    (accepted.length===1?'':'s')+' · HSV clothing colour only; NOT identity confidence.'+
    (!accepted.length?' This clip or clothing category may not be indexed yet.':'');
@@ -546,7 +579,8 @@ async function runAppearanceSearch(){
   }
  }catch(_){
   if(run!==state.appearanceRequest)return;
-  status.textContent='Appearance search is unavailable for that reference. The S9+ may still be indexing its recordings. No identity was inferred.';
+  if(showCoarseColourFallback(clip,category,host,status))return;
+  status.textContent='No usable indexed comparison or matching coarse-colour evidence yet. The S9+ may still be indexing its 4K recordings. No identity was inferred.';
  }finally{if(run===state.appearanceRequest)button.disabled=false}
 }
 function setTab(which){
