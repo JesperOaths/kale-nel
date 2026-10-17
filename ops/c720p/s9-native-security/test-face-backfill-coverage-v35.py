@@ -25,8 +25,8 @@ class FaceBackfillCoverageV35(unittest.TestCase):
   for gate in ("faceBackfillThermallyAllowed()","gardenPersonGateBusy",
    "lastMovementAt<45000L","folder.getUsableSpace()<20L*1024*1024*1024"):
    self.assertIn(gate,scope)
-  self.assertIn("FACE_BACKFILL_WITH_4K_MAX_TENTHS_C=360",SERVICE)
-  self.assertIn("FACE_BACKFILL_MAX_TEMP_TENTHS_C=390",SERVICE)
+  self.assertIn("FACE_BACKFILL_WITH_4K_MAX_TENTHS_C=415",SERVICE)
+  self.assertIn("FACE_BACKFILL_MAX_TEMP_TENTHS_C=420",SERVICE)
   self.assertIn("!continuous4K.readyForEvent()",SERVICE)
  def test_reported_review_version_is_compiled_classifier_version(self):
   self.assertIn('d.put("face_deep_rescue_version",ClipClassifier.DEEP_FACE_ROI_VERSION);',SERVICE)
