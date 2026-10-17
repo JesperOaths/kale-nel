@@ -38,6 +38,24 @@ class ReleaseProofTests(TestCase):
   with mock.patch.object(m,"read_command",
    return_value="package:/data/app/a/base.apk\npackage:/data/app/b/base.apk\n"):
    with self.assertRaisesRegex(RuntimeError,"unverified"):m.apk_sha()
+ def test_stale_completed_release_never_claims_current_install_is_complete(self):
+  old="c188e5603ebd"+"0"*28
+  current="c4908e4505d3"+"1"*28
+  self.assertEqual(len(old),40)
+  state={"ref":old,"status":"complete"}
+  result=m.state_summary(current,state)
+  self.assertEqual(result["worker_state"],"stale_other_revision")
+  self.assertEqual(result["previous_worker_state"],"complete")
+  self.assertFalse(result["worker_ref_matches_pin"])
+  self.assertEqual(result["worker_state_source_ref"],old[:12])
+  matching=m.state_summary(current,{"ref":current,"status":"complete"})
+  self.assertEqual(matching["worker_state"],"complete")
+  self.assertTrue(matching["worker_ref_matches_pin"])
+ def test_no_prior_state_or_untrusted_state_does_not_claim_install(self):
+  self.assertEqual(m.state_summary("a"*40,{})["worker_state"],"unavailable")
+  self.assertEqual(m.state_summary("a"*40,{"ref":"a"*40,
+                "status":"hacked"} )["worker_state"],"unavailable")
+
  def test_worker_state_distinguishes_old_revision_from_pinned_release(self):
   source=P.read_text()
   for name in ("worker_ref_matches_pin","worker_state_source_ref",
