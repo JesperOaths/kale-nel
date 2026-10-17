@@ -17,10 +17,15 @@ class ReleaseProofTests(TestCase):
    new=m.summary(m.CANDIDATE,p)
    old=m.summary(m.PREVIOUS,p)
   self.assertEqual(old["deployment"]["worker_state"],"waiting")
+  self.assertTrue(new["matches_current_pinned_signed_release"])
+  self.assertFalse(old["matches_current_pinned_signed_release"])
+  self.assertTrue(new["current_pinned_signed_release_verified"])
   self.assertTrue(new["matches_full_archive_v5_candidate"])
   self.assertFalse(old["matches_full_archive_v5_candidate"])
   self.assertTrue(old["matches_previous_v2_diagnostic_candidate"])
   self.assertTrue(new["read_only"])
+  with mock.patch.object(m,"deployment_state",return_value={"signed_stage":"not_verified"}):
+   self.assertFalse(m.summary(m.CANDIDATE,p)["matches_current_pinned_signed_release"])
  def test_readback_uses_package_manager_and_sha_only(self):
   with mock.patch.object(m,"read_command",side_effect=[
    "package:/data/app/one/base.apk\n",
