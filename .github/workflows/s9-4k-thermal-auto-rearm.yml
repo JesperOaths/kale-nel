@@ -1,0 +1,21 @@
+name: S9 thermal 4K auto-rearm recovery contracts
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java'
+      - 'ops/c720p/s9-native-security/test-s9-auto-4k-rearm.py'
+      - '.github/workflows/s9-4k-thermal-auto-rearm.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/test-s9-auto-4k-rearm.py'
+      - '.github/workflows/s9-4k-thermal-auto-rearm.yml'
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - run: python3 ops/c720p/s9-native-security/test-s9-auto-4k-rearm.py
