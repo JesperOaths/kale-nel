@@ -88,7 +88,7 @@ class FaceBackfillV2Regression(unittest.TestCase):
   text=self.classifier
   self.assertIn('DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"',text)
   self.assertIn('return !DEEP_FACE_ROI_VERSION.equals',text)
-  self.assertIn('manifest.optInt("face_snapshots_saved",0)>0',text)
+  self.assertIn('face_deep_prior_snapshots_preserved',text)
   self.assertIn('manifest.optInt("width",0)!=3840',text)
   self.assertIn('manifest.optInt("height",0)!=2160',text)
   self.assertIn('fingerprint.equalsIgnoreCase(digest(mp4))',text)
