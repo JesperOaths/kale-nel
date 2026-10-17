@@ -177,8 +177,8 @@ def tick(stage_only=False):
    report("deferred_camera_not_ready",mode=phone.get("mode"),
           continuous_4k_ready=phone.get("continuous_4k_ready"),
           temperature_c=phone.get("temperature_c"),
-          4k_last_result=phone.get("continuous_4k_last_result"),
-          4k_cooldown_retry_ms=phone.get("continuous_4k_retry_after_ms"))
+          cooldown_4k_last_result=phone.get("continuous_4k_last_result"),
+          cooldown_4k_retry_ms=phone.get("continuous_4k_retry_after_ms"))
    return
   if not idle(phone):
    report("deferred_motion_or_background_work")
@@ -208,7 +208,7 @@ def tick(stage_only=False):
     return
   if stage_only:
    report("stage_only_complete",camera_unchanged=True,
-          4k_was_ready=phone.get("continuous_4k_ready"),
+          continuous_4k_was_ready=phone.get("continuous_4k_ready"),
           temperature_c=phone.get("temperature_c"))
    return
   try:
