@@ -18,6 +18,7 @@ def summarize(release,face,pairs):
  total=int(face.get("source_original_4k_clips",0))
  current=int(face.get("v5_reviewed",0))
  remaining=int(face.get("remaining_current_v5_face_pass",total))
+ counts_consistent=total>0 and 0<=current<=total and remaining==total-current
  signed=release.get("matches_current_pinned_signed_release") is True
  recording=release.get("camera_ok") is True and release.get("watching") is True and release.get("continuous_4k_ready") is True
  error_free=face.get("phone_face_deep_errors")==0
@@ -26,7 +27,7 @@ def summarize(release,face,pairs):
  calibrated=pairs.get("offline_thresholds_pass") is True
  approved=pairs.get("qualified_for_automated_grouping") is True
  # Keep approval fail-closed even for synthetic threshold passing fixtures.
- completed=bool(signed and recording and remaining==0 and total>0 and error_free and
+ completed=bool(signed and recording and remaining==0 and counts_consistent and error_free and
                 actual_positive>0 and actual_negative>0 and calibrated and approved)
  return {
   "status":"complete" if completed else "not_complete",
@@ -35,7 +36,8 @@ def summarize(release,face,pairs):
   "current_v5_originals_reviewed":current,
   "source_original_4k_clips":total,
   "remaining_original_4k_reviews":remaining,
-  "v5_review_fraction":round(current/total,4) if total else 0,
+  "v5_review_fraction":round(current/total,4) if counts_consistent else 0,
+  "archive_counters_consistent":counts_consistent,
   "older_face_crops_protected_but_need_v5":int(face.get("legacy_review_preserved_with_snapshots",0)),
   "face_snapshots_in_archive":int(face.get("cropped_faces_visible_in_hub",0)),
   "face_scan_error_free":error_free,
