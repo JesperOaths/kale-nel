@@ -179,14 +179,14 @@ def stage_one(rescan_v28=False):
  if status.get("historical_gpu_import_version")!="isolated_drive_import_v1":
   raise RuntimeError("phone_historical_worker_not_installed")
  # Staging transfers one small derivative to microSD; it performs no
- # on-phone inference. Android's maybeHistoricalImport() still requires <37 C,
- # so prepare ahead at <39 C and let the phone analyze only once cool.
+ # on-phone inference. The new S9 APK allows review below 42 C;
+ # older APKs still have a 37 C inference guard, which remains respected.
  if not status.get("ok") or status.get("mode")!="watching":
   raise RuntimeError("phone_camera_not_idle_or_cool")
  if not status.get("continuous_4k_ready"):
   raise RuntimeError("phone_4k_not_ready_for_staging")
  temperature=float(status.get("temperature_c",100))
- if temperature>=39:
+ if temperature>=42:
   raise RuntimeError("phone_too_hot_even_for_staging")
  if int(status.get("sd_free_bytes") or 0)<20*1024**3:
   raise RuntimeError("phone_staging_sd_reserve_guard")
@@ -235,9 +235,11 @@ def stage_one(rescan_v28=False):
   ready.write_text(json.dumps(meta,separators=(",",":"),sort_keys=True))
   execute(["adb","-s",PHONE,"push",str(ready),destination+".ready.json.partial"],25)
   phone("mv",destination+".ready.json.partial",destination+".ready.json",timeout=12)
- if temperature>=37:
+ # Never claim old V4 can infer above its known 37 C cap after staging.
+ phone_inference_limit=42.0 if status.get("application_battery_temperature_max_c")==42.0 else 37.0
+ if temperature>=phone_inference_limit:
   print("S9_HISTORY_STAGED_WAITING_FOR_SAFE_PHONE_INFERENCE",json.dumps({
-   "requires_phone_temperature_below_c":37,"max_staging_temperature_c":39,
+   "requires_phone_temperature_below_c":phone_inference_limit,"max_staging_temperature_c":42,
    "staged_one_input_only":True,"recording_unmodified":True}))
  print("S9_HISTORY_STAGED",json.dumps({"clip_id_prefix":key[:12],
         "size":source["size"],"gpu_input_bytes":gpu_input_bytes,
