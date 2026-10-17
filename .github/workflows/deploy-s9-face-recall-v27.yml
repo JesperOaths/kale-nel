@@ -7,6 +7,7 @@ on:
       - 'ops/c720p/s9-native-security/deploy-s9-face-recall-v27.py'
       - 'ops/c720p/s9-native-security/test-s9-face-recall-v27.py'
       - 'ops/c720p/s9-native-security/test-face-overlap-v33.py'
+      - 'ops/c720p/s9-native-security/test-face-4k-thermal-priority-v34.py'
       - 'ops/c720p/s9-native-security/deploy-s9-face-ui-v27.py'
       - 'ops/c720p/s9-native-security/security-face-folders-v22.html'
       - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java'
@@ -37,6 +38,7 @@ jobs:
           python3 ops/c720p/s9-native-security/test-s9-face-recall-v27.py
           python3 ops/c720p/s9-native-security/test-s9-face-geometry-v271.py
           python3 ops/c720p/s9-native-security/test-face-overlap-v33.py
+          python3 ops/c720p/s9-native-security/test-face-4k-thermal-priority-v34.py
           python3 -m py_compile ops/c720p/s9-native-security/build-s9-face-recall-v27.py
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-face-recall-v27.py ops/c720p/s9-native-security/deploy-s9-face-ui-v27.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py
           grep -Fq 's9_onphone_36_samples_overlapping_tiles_v5' ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java

@@ -1002,12 +1002,25 @@ public final class CameraService extends Service {
  // Battery thermistor is tenths of a degree Celsius. Keep the worker
  // strictly below 39 C, and continue yielding immediately to motion events.
  private static final int FACE_BACKFILL_MAX_TEMP_TENTHS_C=390;
+ // Background inference must not stop a healthy 4K encoder, or prevent
+ // a previously verified 4K encoder from cooling enough to recover.
+ private static final int FACE_BACKFILL_WITH_4K_MAX_TENTHS_C=360;
+ private boolean faceBackfillThermallyAllowed(){
+  int batteryTenths=temperature();
+  if(batteryTenths>=FACE_BACKFILL_MAX_TEMP_TENTHS_C)return false;
+  if(getSharedPreferences("native",MODE_PRIVATE)
+       .getBoolean("continuous_4k_production_enabled",false)){
+   if(!continuous4KTrial||continuous4K==null||!continuous4K.readyForEvent())return false;
+   return batteryTenths<FACE_BACKFILL_WITH_4K_MAX_TENTHS_C;
+  }
+  return true;
+ }
  /** Scan finalized Security4K person recordings at idle: one clip per phone-local pass. */
  private void maybeFaceBackfill(){
   long now=SystemClock.elapsedRealtime();
   if(!running||faceBackfillQueued||now-lastFaceBackfillScan<60000||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||movementBackfillQueued||temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C||gardenPersonGateBusy||
+     !"watching".equals(mode)||movementBackfillQueued||!faceBackfillThermallyAllowed()||gardenPersonGateBusy||
      (lastMovementAt>0&&now-lastMovementAt<45000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   faceBackfillQueued=true;
@@ -1015,12 +1028,12 @@ public final class CameraService extends Service {
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C)return;
+     if(!running||!"watching".equals(mode)||!faceBackfillThermallyAllowed())return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
      Arrays.sort(manifests,(a,b)->b.getName().compareTo(a.getName()));
      for(File manifest:manifests){
-      if(!running||!"watching".equals(mode)||temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C)return;
+      if(!running||!"watching".equals(mode)||!faceBackfillThermallyAllowed())return;
       if(manifest.length()<100||manifest.length()>28000)continue;
       String mp4name=manifest.getName().replace(".verified.json","");
       File video=new File(target,mp4name);
