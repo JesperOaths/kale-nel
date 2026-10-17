@@ -75,6 +75,12 @@ assert '"s9_onphone_36_samples_overlapping_tiles_v5", "face_evidence_outcome"' i
 assert '"s9_onphone_36_samples_person_roi_v2", "face_evidence_outcome"' not in build
 
 assert 'S9_FACE_RECALL_V27_ROLLBACK_VERIFIED' in install
+assert 'restored_sha=adb("shell","sha256sum",restored[0],sec=35).split()[0]' in install
+assert 'if restored_sha!=installed:raise RuntimeError("rollback_apk_digest_mismatch")' in install
+assert '"restored_sha256":restored_sha' in install
+assert 'sha(old)' not in install
+assert 'S9_FACE_RECALL_V27_ROLLBACK_CAMERA_HEALTH_UNVERIFIED' in install
+assert '"original_apk_restored":True' in install
 assert 'originals.issubset(nowclips)' in install
 assert 'S9_FACE_RECALL_V27_DEVICE_VERIFIED' in install
 assert 'face_rejected_low_confidence' in catalog.read_text()
