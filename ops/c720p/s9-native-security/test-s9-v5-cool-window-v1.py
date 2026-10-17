@@ -39,6 +39,7 @@ class LocalCoolWindow(unittest.TestCase):
  def setup_mocks(self,tempdir,temp,stage_ready=True,version=None):
   d=dict(ref="a"*40,build_sha256="b"*64,install_sha256="c"*64)
   patches=[
+   mock.patch.object(m,"ROOT",Path(tempdir)),
    mock.patch.object(m,"STATE",Path(tempdir)/"state.json"),
    mock.patch.object(m,"LOCK",Path(tempdir)/"state.lock"),
    mock.patch.object(m,"config",return_value=d),
