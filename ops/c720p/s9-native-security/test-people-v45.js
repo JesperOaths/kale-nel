@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const html=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.html','utf8');
+const js=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.js','utf8');
+new vm.Script(js,{filename:'security-people-v45.js'});
+assert(!/\.innerHTML\s*=/.test(js));
+assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
+const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
+for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing rendered control '+id);
+for(const label of ['Overview','Review queue','People &amp; groups','Face images','Needs your decision','Saved people &amp; groups'])
+ assert(html.includes(label),label);
+assert(html.includes('id="approvalConfirmed"')&&js.includes('if(!$('+"'approvalConfirmed'"+').checked)'));
+class E{
+ constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.handlers={};this.attributes={};this.dataset={};this.style={};
+ this.hidden=false;this.disabled=false;this.textContent='';this.value='';this.checked=false;this.src='';this.isConnected=true;this.open=false;this.lastChild=null;}
+ append(...arr){this.children.push(...arr);this.lastChild=this.children[this.children.length-1]||null}
+ replaceChildren(...arr){this.children=[...arr];this.lastChild=this.children[this.children.length-1]||null}
+ add(o){this.append(o)}
+ addEventListener(name,handler){this.handlers[name]=handler}
+ setAttribute(k,v){this.attributes[k]=String(v)}
+ getAttribute(k){return this.attributes[k]||null}
+ querySelector(tag){const t=tag.toUpperCase();return this.children.find(e=>e.tagName===t)||null}
+ showModal(){this.open=true}close(){this.open=false}
+ load(){}pause(){}remove(){}get duration(){return 20}set currentTime(x){this.seek=x}
+}
+const idMap=new Map();const el=id=>{if(!idMap.has(id))idMap.set(id,new E());return idMap.get(id)};
+const panes=['overview','review','people','faces'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
+const document={getElementById:el,createElement:t=>new E(t),querySelectorAll:q=>q==='[data-pane]'?panes:[],addEventListener(){}};
+const clip='motion_1792200000000.mp4';
+const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observation:'v1',signature:'b'.repeat(64),
+ full_crop:{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg',time_ms:2500},video_path:'/new/saved/clip/'+clip,
+ temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
+const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[],approvals_needing_person_recheck:3};
+const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
+let posts=[],fetches=[];
+const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
+ fetch:async (p,opts={})=>{
+  fetches.push(p);
+  if(p.startsWith('/new/api/visual-review/review')){
+   const payload=JSON.parse(opts.body);posts.push({payload,opts});
+   return {ok:true,json:async()=>({ok:true,folder:payload.folder||'G123'})};
+  }
+  if(p.startsWith('/new/api/visual-review?')){
+   const q=new URLSearchParams(p.split('?')[1]),tab=q.get('tab');
+   return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],person_detection:
+    {assessed_clips:80,total_clips:141,clips_with_supported_people:29,status:'in_progress'},
+    inbox_clips:27,total:tab==='inbox'?27:tab==='approved'?3:1,
+    items:tab==='approved'?[{...item,decision:'approved'}]:[item],
+    reference_examples:tab==='suggestions'?[item]:[]})};
+  }
+  if(p==='/new/api/saved')return {ok:true,json:async()=>({archive_mode:'S9-microSD-only',events:[
+   {clip_no:clip,face_candidates:[{snapshot_name:'motion_1792200000000__pending_1__6365_0.jpg',time_ms:6365,
+    face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'}]}]})};
+  throw Error('Unexpected request '+p);
+ }};
+const window={C720PSecureRelay:relay};window.parent=window;window.addEventListener=()=>{};
+const ctx={window,document,Option:class Option{constructor(text,value){this.text=text;this.value=value}},
+  URLSearchParams,Date,Promise,Number,String,Array,Math,Map,Set,Object,Error,JSON,RegExp,console};
+vm.createContext(ctx);vm.runInContext(js,ctx);
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')return root;for(const c of root.children||[]){
+ const match=scan(c,name);if(match)return match;}return null}
+(async()=>{
+ for(let i=0;i<9;i++)await flush();
+ assert.equal(el('queueCount').textContent,'27');
+ assert.equal(el('personCount').textContent,'1');
+ assert.equal(el('approvalCount').textContent,'3');
+ assert.equal(el('faceCount').textContent,'1');
+ assert.equal(el('savedPreview').children.length,1,'Provisional clothing group must not appear as confirmed person');
+ assert.equal(el('appearancePreview').children.length,1,'Unreviewed group is optional separate list');
+ assert.equal(el('reviewPreview').children.length,1);
+ let keep=scan(el('reviewPreview'),'✓ Keep');assert(keep,'Primary review action');
+ keep.handlers.click();
+ assert(el('approvalDialog').open,'Keep must open explicit confirmation');
+ el('approvalFolder').value='G123';
+ await el('approvalForm').handlers.submit({preventDefault(){}});
+ assert.equal(posts.length,0,'No manual approval without explicit original inspection confirmation');
+ assert.match(el('message').textContent,/Confirm that you reviewed/);
+ el('approvalConfirmed').checked=true;
+ await el('approvalForm').handlers.submit({preventDefault(){}});
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(posts.length,1);
+ assert.equal(posts[0].payload.action,'approve_clip');
+ assert.equal(posts[0].payload.folder,'G123');
+ assert.equal(posts[0].payload.human_confirmed,true);
+ assert.equal(posts[0].opts.headers['X-S9-Visual-Review-Intent'],'manual-attributes-v36');
+ panes[1].handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('review').hidden,false);
+ assert.equal(el('reviewGrid').children.length,1);
+ panes[3].handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('faces').hidden,false);
+ assert.equal(el('faceGrid').children.length,1);
+ panes[2].handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('savedList').children.length,1);
+ console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
+})().catch(e=>{console.error(e);process.exitCode=1});
