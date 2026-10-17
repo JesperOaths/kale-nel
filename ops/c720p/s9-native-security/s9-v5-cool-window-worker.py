@@ -147,7 +147,7 @@ def tick(stage_only=False):
  with LOCK.open("a+") as handle:
   fcntl.flock(handle,fcntl.LOCK_EX|fcntl.LOCK_NB)
   st=state_read(d["ref"])
-  if st.get("status") in ("complete","needs_manual_recovery"):
+  if st.get("status") in ("complete","needs_manual_recovery","installing"):
    report("terminal_state",state=st.get("status"),ref=d["ref"][:12])
    return
   try:
