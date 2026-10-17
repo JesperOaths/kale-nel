@@ -33,7 +33,7 @@ const clips=[clipA,clipB].map((clip_no,i)=>({
  anonymous_tracks:[{upper_clothing_colour:'blue',image_movement_direction:'image_left',id:'clip_t1'}],
  anonymous_track_count:1
 }));
-let appearanceCalls=0;
+let appearanceCalls=0,simulateUnavailable=false;
 const relay={
  fetch:async(path)=>{
   if(path==='/new/api/saved')return {ok:true,json:async()=>({archive_mode:'S9-microSD-only',events:clips})};
@@ -41,6 +41,7 @@ const relay={
   if(path==='/new/api/drive-person-review')return {ok:true,json:async()=>({clips:[]})};
   if(path.startsWith('/new/api/appearance-search?')){
    appearanceCalls++;
+   if(simulateUnavailable)return {ok:false,status:503,json:async()=>({})};
    const params=new URLSearchParams(path.slice(path.indexOf('?')+1));
    assert.equal(params.get('clip'),clipA);
    assert.equal(params.get('category'),'upper_clothing');
@@ -82,6 +83,18 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
  assert.equal(byId('appearanceResults').children.length,1,
   'Must ignore self results and all identity-claiming records');
  assert.match(byId('appearanceStatus').textContent,/NOT identity confidence/);
+ // No completed HSV backfill yet: SAME COARSE LABEL only, not a face score.
+ simulateUnavailable=true;
+ await byId('appearanceGo').handlers.click();
+ assert.equal(appearanceCalls,2);
+ assert.equal(byId('appearanceResults').children.length,1);
+ assert.match(byId('appearanceStatus').textContent,/coarse-colour metadata/);
+ assert.match(byId('appearanceStatus').textContent,/NOT a person match/);
+ // No lower-clothing annotation exists in this minimal corpus. Fail closed.
+ byId('appearanceCategory').value='lower_clothing';
+ await byId('appearanceGo').handlers.click();
+ assert.equal(byId('appearanceResults').children.length,0);
+ assert.match(byId('appearanceStatus').textContent,/No usable indexed comparison/);
  byId('foldersTab').handlers.click();
  assert.equal(byId('appearanceSection').hidden,true);
  console.log('S9_STEP2_PROVISIONAL_APPEARANCE_PILOT_TEST_PASS');
