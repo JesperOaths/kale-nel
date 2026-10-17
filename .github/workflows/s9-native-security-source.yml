@@ -46,6 +46,7 @@ jobs:
           python3 ops/c720p/s9-native-security/test-garden-only-retention.py
           python3 ops/c720p/s9-native-security/test-adaptive-garden-archive-cadence.py
           python3 ops/c720p/s9-native-security/test-two-frame-deep-face.py
+          python3 ops/c720p/s9-native-security/test-step1-scanner-readiness.py
           python3 ops/c720p/s9-native-security/test-production-face-model-preservation.py
           python3 ops/c720p/s9-native-security/test-security-live-fetch-fallback.py
           python3 ops/c720p/s9-native-security/test-native-preview-8fps.py
