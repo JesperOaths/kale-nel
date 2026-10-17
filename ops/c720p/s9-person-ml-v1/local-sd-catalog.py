@@ -295,7 +295,10 @@ def safe_face_review_metadata(m):
   if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4","s9_onphone_36_samples_overlapping_tiles_v5"):
    for key in ("face_deep_tiled_scene_samples","face_deep_second_person_roi_samples"):
     value=m.get(key)
-    if type(value) is int and 0<=value<=12:result[key]=value
+    # V5 tiles 24 non-anchor frames plus fallback anchors (up to 36).
+    # The separate second-person detector is still limited to 12 anchors.
+    maximum=36 if key=="face_deep_tiled_scene_samples" and result["face_deep_review_version"]=="s9_onphone_36_samples_overlapping_tiles_v5" else 12
+    if type(value) is int and 0<=value<=maximum:result[key]=value
  rows=m.get("face_candidates")
  if not isinstance(rows,list) or len(rows)>16:return result
  out=[]
