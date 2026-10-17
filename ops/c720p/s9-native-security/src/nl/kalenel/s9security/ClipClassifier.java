@@ -482,7 +482,8 @@ public final class ClipClassifier {
   // A negative 12-frame person model result is NOT proof the recording is
   // empty. Retry also person-model-negative 4K clips once with a denser,
   // scene-tiled face search. Preserve prior metadata/recordings.
-  return !DEEP_FACE_ROI_VERSION.equals(manifest.optString("face_deep_review_version",""));
+  return !DEEP_FACE_ROI_VERSION.equals(manifest.optString("face_deep_review_version",""))||
+   !S9FaceReview.GEOMETRY_VERSION.equals(manifest.optString("face_crop_geometry_version",""));
  }
  public synchronized boolean deepFaceReview(File mp4,File folder,String name,JSONObject manifest)throws Exception{
   if(mp4==null||folder==null||name==null||manifest==null||

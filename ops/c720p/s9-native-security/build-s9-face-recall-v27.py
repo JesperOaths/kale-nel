@@ -192,7 +192,8 @@ def main():
    if not all(any(w.encode() in package.read(n) for n in package.namelist() if n.startswith("classes") and n.endswith(".dex")) for w in
      ["high_resolution_isolated_person_head_roi_v2",
       "image_speed_body_heights_per_second",
-      "s9_onphone_36_samples_person_or_tile_v4", "face_evidence_outcome"]):
+      "s9_onphone_36_samples_person_or_tile_v4", "face_evidence_outcome",
+      "face_crop_geometry_v2_padded_manual"]):
     raise RuntimeError("new_camera_evidence_unavailable")
   if not any(b"s9_on_phone_avc_memory_ring_keyframe_5s_v4" in d.read_bytes() for d in outputs):
    raise RuntimeError("preroll_v4_dex_marker_missing")
@@ -213,6 +214,7 @@ def main():
      "face_roi":"high_resolution_isolated_person_head_roi_v2_plus_scene_tiles_v26",
      "motion":"clip_scoped_2d_speed_and_straightness_no_pose_or_gait",
      "historical_face_review":"bounded_verified_4k_face_tiles_v4",
+     "geometry_review":"face_crop_geometry_v2_padded_manual",
      "tensorflow_dependencies":dependency_hashes,"source_ref_immutable":True,"preroll_version":"s9_on_phone_avc_memory_ring_keyframe_5s_v4","continuous_4k_trial":"requires_verification_then_promotion","min_saved_preroll_ms":4400,"baseline_apk_sha256":baseline_sha}
   (TARGET/"release.json").write_text(json.dumps(result,indent=2)+"\n")
   print("S9_FACE_RECALL_V27_SIGNED_STAGED",json.dumps(result),flush=True)

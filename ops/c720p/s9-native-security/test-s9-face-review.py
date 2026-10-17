@@ -192,7 +192,7 @@ class FaceReviewTests(unittest.TestCase):
   # decoded 4K frame, never from the reduced browser playback stream.
   self.assertIn('scaled=Bitmap.createScaledBitmap(subject,width,height,true)',face)
   self.assertIn('int x=offsetX+(int)(center.x*subject.getWidth()/width)',face)
-  self.assertIn('Bitmap face=crop(frame,x,y,size)',face)
+  self.assertIn('Bitmap face=crop(frame,x,y,Math.max(70,estimatedSize))',face)
   self.assertNotIn('getFilesDir(),"1080',k)
   self.assertNotIn('ffmpeg',k)
   self.assertNotIn('adb',k)

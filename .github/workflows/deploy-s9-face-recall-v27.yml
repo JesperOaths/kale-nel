@@ -34,6 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 ops/c720p/s9-native-security/test-s9-face-recall-v27.py
+          python3 ops/c720p/s9-native-security/test-s9-face-geometry-v271.py
           python3 -m py_compile ops/c720p/s9-native-security/build-s9-face-recall-v27.py
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-face-recall-v27.py ops/c720p/s9-native-security/deploy-s9-face-ui-v27.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py
           grep -Fq 's9_onphone_36_samples_person_or_tile_v4' ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java

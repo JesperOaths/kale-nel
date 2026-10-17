@@ -33,14 +33,14 @@ jobs:
           python3 ops/c720p/s9-native-security/test-s9-face-recall-v26.py
           python3 -m py_compile ops/c720p/s9-native-security/build-s9-face-recall-v26.py
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-face-recall-v26.py ops/c720p/s9-native-security/deploy-s9-face-ui-v26.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py
-          grep -Fq 's9_onphone_36_samples_person_or_tile_v3' ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java
+          grep -Fq 's9_onphone_36_samples_person_or_tile_v4' ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java
           grep -Fq 'AppearanceSearchIndex","Boot"' ops/c720p/s9-native-security/build-s9-face-recall-v26.py
           grep -Fq '"s9_onphone_36_samples_person_or_tile_v3", "face_evidence_outcome"' ops/c720p/s9-native-security/build-s9-face-recall-v26.py
           grep -Fq 'QUIET_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
           grep -Fq 'lastAcceptedEncodedPtsUs' ops/c720p/s9-native-security/src/nl/kalenel/s9security/Continuous4KEncoder.java
   deploy:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    if: false # V26 has been retired; never deploy an older camera APK over V27.
     runs-on: ubuntu-latest
     timeout-minutes: 44
     env:
