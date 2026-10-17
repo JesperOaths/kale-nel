@@ -92,7 +92,15 @@ def deployment_state():
  return result
 
 def summary(sha,phone):
+ deployment=deployment_state()
+ staged=deployment.get("signed_stage")
+ has_stage=isinstance(staged,str) and bool(re.fullmatch(r"[0-9a-f]{64}",staged))
  return {"installed_apk_sha256":sha,
+  # A rebuilt signed release has a different checksum despite the same V5
+  # camera revision. Compare the exact CURRENT pinned release, never only the
+  # historical #676 candidate digest or an advertised version string.
+  "matches_current_pinned_signed_release":sha==staged if has_stage else False,
+  "current_pinned_signed_release_verified":has_stage,
   "matches_full_archive_v5_candidate":sha==CANDIDATE,
   "matches_previous_v2_diagnostic_candidate":sha==PREVIOUS,
   "camera_ok":phone.get("ok") is True,
@@ -102,7 +110,7 @@ def summary(sha,phone):
   "face_scan_completed_since_camera_start":phone.get("face_deep_scanned"),
   "face_scan_errors_since_camera_start":phone.get("face_deep_errors"),
   "camera_temperature_c":phone.get("temperature_c"),
-  "read_only":True,"deployment":deployment_state()}
+  "read_only":True,"deployment":deployment}
 
 if __name__=="__main__":
  print("S9_RELEASE_PROOF "+json.dumps(summary(apk_sha(),status()),sort_keys=True))
