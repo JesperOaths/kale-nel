@@ -29,6 +29,12 @@ class Tests(unittest.TestCase):
   self.assertIn(marker,FACE)
   self.assertIn(marker,BUILD)
   self.assertIn('face_crop_geometry_version",S9FaceReview.GEOMETRY_VERSION',SERVICE)
+ def test_security_proxy_exposes_metadata_without_face_embeddings(self):
+  source=(ROOT.parent/"s9-person-ml-v1/s9_sd_proxy_extension.py").read_text()
+  for name in ("face_crop_geometry_version","face_crop_padded_manual_count",
+               "face_rejected_insufficient_native_eye_detail"):
+   self.assertIn('"' + name + '":r.get("' + name + '")',source)
+  self.assertNotIn('"face_embedding":r.get(',source)
  def test_archive_exposes_only_allowlisted_geometry_marker(self):
   import importlib.util
   path=ROOT.parent/"s9-person-ml-v1/local-sd-catalog.py"
