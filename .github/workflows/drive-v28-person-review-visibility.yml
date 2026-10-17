@@ -6,6 +6,7 @@ on:
       - 'ops/c720p/s9-native-security/patch-drive-visitor-review-ui.py'
       - 'ops/c720p/s9-native-security/test-drive-visitor-review.py'
       - 'ops/c720p/s9-native-security/deploy-s9-drive-v28-review.py'
+      - 'ops/c720p/s9-native-security/test-s9-drive-v28-deploy-gates.py'
       - '.github/workflows/drive-v28-person-review-visibility.yml'
   push:
     branches: [main]
@@ -31,5 +32,6 @@ jobs:
         run: |
           set -euo pipefail
           python3 ops/c720p/s9-native-security/test-drive-visitor-review.py
+          python3 ops/c720p/s9-native-security/test-s9-drive-v28-deploy-gates.py
           grep -Fq 'v28_review_progress' ops/c720p/s9-person-ml-v1/s9_drive_visitor_review.py
           grep -Fq 'No person identity verified' ops/c720p/s9-native-security/patch-drive-visitor-review-ui.py
