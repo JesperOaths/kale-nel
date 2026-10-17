@@ -204,7 +204,7 @@ function renderFacePipelineSummary(){
   summary.reviewed+' · Older reviews with saved face crops: '+summary.legacyProtected+
   ' · Older scans with no saved crops: '+summary.olderNoCrop+
   ' · Never deep-scanned: '+summary.neverReviewed+
-  ' · Awaiting V5: '+summary.pending+' · Reviewable face crops: '+summary.faces+'. '+
+  ' · Awaiting V5: '+summary.pending+' · All originals current V5: '+(summary.reviewed===summary.total?'YES':'NO')+' · Reviewable face crops: '+summary.faces+'. '+
   'Face comparison model verified in these clips: '+summary.models+
   '; local model untested: '+summary.notTested+
   '; shadow tests passed: '+summary.shadow+'. '+
