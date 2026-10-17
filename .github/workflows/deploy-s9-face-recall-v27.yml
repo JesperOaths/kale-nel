@@ -25,12 +25,48 @@ on:
       - '.github/workflows/deploy-s9-face-recall-v27.yml'
       - 'ops/c720p/s9-native-security/build-s9-face-recall-v27.py'
       - 'ops/c720p/s9-native-security/deploy-s9-face-recall-v27.py'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/**'
 permissions:
   contents: read
 concurrency:
   group: s9-face-recall-v27-install
   cancel-in-progress: false
 jobs:
+  changed_firmware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    outputs:
+      apk_changed: ${{ steps.diff.outputs.apk_changed }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - id: diff
+        name: Check whether firmware changed before flashing the S9+
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            echo "apk_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$GITHUB_EVENT_NAME" != push ]]; then
+            echo "apk_changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          before="$BEFORE_SHA"
+          if ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            before="$(git rev-parse "$GITHUB_SHA^")"
+          fi
+          changes="$(git diff --name-only "$before" "$GITHUB_SHA")"
+          if grep -Eq '^ops/c720p/s9-native-security/(src/nl/kalenel/s9security/.*[.]java|build-s9-face-recall-v27[.]py)$' <<< "$changes"; then
+            echo "apk_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "apk_changed=false" >> "$GITHUB_OUTPUT"
+            echo "Only installer, test or UI files changed; no APK installation."
+          fi
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -54,8 +90,8 @@ jobs:
           grep -Fq 'QUIET_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
           grep -Fq 'lastAcceptedEncodedPtsUs' ops/c720p/s9-native-security/src/nl/kalenel/s9security/Continuous4KEncoder.java
   deploy:
-    needs: verify
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    needs: [verify, changed_firmware]
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.changed_firmware.outputs.apk_changed == 'true' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
     runs-on: ubuntu-latest
     timeout-minutes: 44
     env:
