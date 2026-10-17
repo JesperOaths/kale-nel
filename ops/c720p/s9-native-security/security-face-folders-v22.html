@@ -106,7 +106,8 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <nav class="tabs" aria-label="People and faces views">
 <button id="foldersTab" type="button" aria-selected="true">Face folders</button>
 <button id="historyTab" type="button" aria-selected="false">All person evidence</button>
-<button id="appearanceTab" type="button" aria-selected="false">Appearance search · pilot</button>
+<button id="appearanceTab" type="button" aria-selected="false">Appearance search</button>
+<button id="casesTab" type="button" aria-selected="false">Reviewed cases</button>
 <button id="timelineTab" type="button" aria-selected="false">Detailed evidence timeline</button>
 </nav>
 <section id="summary" class="stats" aria-label="Evidence totals">
@@ -134,11 +135,34 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <p class="note" id="appearanceStatus" role="status" aria-live="polite">Choose a local recording to search similar clothing observations.</p>
 <div id="appearanceResults" class="records" aria-label="Visual comparison results"></div>
 </section>
+<section id="casesSection" hidden aria-label="Private manually reviewed video case folders">
+<h2>Reviewed recording cases</h2>
+<p class="note">Keep recordings from the same event or investigation together. You must inspect the original video before saving a link. Case IDs do not establish a person's identity; nothing is linked automatically. Cases, edits and removals are stored privately on the C720P.</p>
+<p id="casesStatus" role="status" class="note">Connecting to the private case registry…</p>
+<div id="caseFolders" class="folders" aria-label="Saved manual cases"></div>
+<div id="caseContents" class="detail" hidden><div class="detail-top">
+<button id="caseBack" type="button">← All review cases</button>
+<div><h2 id="caseTitle"></h2><p id="caseSubtitle"></p></div>
+</div>
+<div id="caseControls" class="toolbar"></div>
+<div id="caseRecords" class="records"></div>
+</div>
+</section>
 <section id="detail" class="detail" hidden>
 <div class="detail-top"><button id="back" type="button">← All folders</button><div><h2 id="detailTitle"></h2><p id="detailInfo"></p></div></div>
 <div class="records" id="records"></div>
 </section>
 <iframe id="legacyView" title="Detailed face evidence timeline" data-src="/local/frontyard-security-new/face-appearances.html?v=faces-v19" loading="lazy" hidden></iframe>
+<dialog id="casePicker" aria-label="Add reviewed evidence to case">
+<div class="modal-head"><strong>Save video to a private review case</strong><button id="casePickerClose" type="button">Close</button></div>
+<p id="casePickerRecording"></p>
+<p class="note">A case links recordings for investigation only, not people or faces. Review the original video before recording a manual confirmation.</p>
+<label for="caseTarget">Case folder</label>
+<select id="caseTarget" style="display:block;width:100%;margin:9px 0 13px;padding:10px;background:#122738;color:var(--ink);border:1px solid var(--line)"></select>
+<label style="display:flex;align-items:center;gap:10px;margin:12px 0"><input type="checkbox" id="caseConfirmed"> I have personally reviewed the original recording.</label>
+<p id="casePickerStatus" role="status" class="note">Choose an existing case or create a new one.</p>
+<button id="casePickerSave" type="button">Save reviewed evidence</button>
+</dialog>
 <dialog id="viewer" aria-label="Security evidence recording">
 <div class="modal-head"><strong id="videoTitle">Original recording</strong><button id="closeVideo" type="button">Close</button></div>
 <video id="video" controls playsinline preload="metadata"></video>
@@ -155,7 +179,7 @@ const clipOK=/^motion_[0-9]{13}[.]mp4$/;
 const driveOK=/^[A-Za-z0-9._-]{1,180}[.]mp4$/i;
 const imageOK=/^[A-Za-z0-9._-]{1,200}[.]jpg$/i;
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_-]{1,55})$/;
-const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1,appearanceRequest:0};
+const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1,appearanceRequest:0,cases:[],caseRevision:0,caseAvailable:false,caseSelection:null,caseTargetClip:null,caseBusy:false};
 const relay=()=>{if(window.C720PSecureRelay)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.C720PSecureRelay)return window.parent.C720PSecureRelay}catch(_){}return null};
 async function get(path){
  const r=relay();if(!r?.fetch)throw Error('Authenticated relay missing');
