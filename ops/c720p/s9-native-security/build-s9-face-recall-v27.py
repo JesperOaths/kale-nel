@@ -147,6 +147,9 @@ def main():
   assert "continuous_4k_production_enabled" in (src/"CameraService.java").read_text()
   assert "4k_trial_not_verified_or_unhealthy" in (src/"CameraService.java").read_text()
   assert "face_detector_raw_hits" in (src/"S9FaceReview.java").read_text()
+  assert "CaptureResult.LENS_APERTURE" in (src/"CameraService.java").read_text()
+  assert "sensor_lens_aperture_result_available" in (src/"CameraService.java").read_text()
+  assert "LENS_INFO_AVAILABLE_APERTURES" in (src/"CameraService.java").read_text()
   classes=p/"classes";classes.mkdir()
   run(["javac","-source","8","-target","8","-cp",":".join(map(str,[android,*cp])),
     "-d",str(classes),*map(str,src.glob("*.java"))],180)
@@ -194,6 +197,8 @@ def main():
    raise RuntimeError("preroll_v4_dex_marker_missing")
   if not any(b"continuous_native_4k_h264_ring_v1" in d.read_bytes() for d in outputs):
    raise RuntimeError("native_4k_trial_not_in_dex")
+  if not any(b"sensor_lens_aperture_result_available" in d.read_bytes() for d in outputs):
+   raise RuntimeError("passive_optical_aperture_capture_not_in_dex")
   TARGET.mkdir(parents=True,exist_ok=True,mode=0o700)
   dest=TARGET/"s9-face-recall-v27.apk"
   if dest.is_file() and sha(dest.read_bytes())!=sha(signed.read_bytes()):
