@@ -14,9 +14,12 @@ class TestNightControlRelay(unittest.TestCase):
  def test_existing_native_camera_proxy_only_gets_night_mode(self):
   original=('VALUES={"zoom":re.compile(r"1\\Z"),\n'
    '        "recording_rotation":re.compile(r"(?:auto|0|90|180|270)\\Z"),\n'
-   '        "garden_zone":re.compile(r"(?:strict|near|wide|all)\\Z")}\n')
+   '        "garden_zone":re.compile(r"(?:strict|near|wide|all)\\Z")}\n'
+   'def handler(d, options, self):\n'
+   ' self.js(200,{"can_change_while_recording":False,"mode":d.get("mode"),"controls":options})\n')
   patched=module.updated_source(module.PROXY,original.encode())
   self.assertIn(b'"night_mode":re.compile',patched)
+  self.assertIn(b'"night_active":d["controls"].get("night_active")',patched)
   self.assertEqual(module.updated_source(module.PROXY,patched),patched)
   self.assertEqual(patched.count(b'night_mode'),1)
   self.assertIn(b'"garden_zone":re.compile',patched)
@@ -42,6 +45,8 @@ class TestNightControlRelay(unittest.TestCase):
       "native_camera_night_mode_not_ready_no_changes",
       "saved_archive", "no_camera_commands_sent"):
    if phrase!="saved_archive":self.assertIn(phrase,text)
+  self.assertIn("PROXY_STATUS_NEW",text)
+  self.assertIn('isinstance(status.get("night_active"),bool)',text)
   self.assertIn("data=r.read(2_000_001)",text)
   self.assertIn('camera_metadata_response_too_large',text)
   self.assertNotIn("r.read(150000)",text)
