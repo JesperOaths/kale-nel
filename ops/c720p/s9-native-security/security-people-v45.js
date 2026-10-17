@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'overview',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null};
+ faceSummary:null,faceFetchToken:0};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -87,9 +87,11 @@ async function loadView(){
 }
 async function fetchFaces(){
  if(state.faceLoaded)return;
+ const requestToken=++state.faceFetchToken;
  try{
   const r=await relay().fetch('/new/api/saved',{cache:'no-store'});
   const data=await r.json();
+  if(requestToken!==state.faceFetchToken)return;
   if(!r.ok||data.archive_mode!=='S9-microSD-only'||!Array.isArray(data.events))
    throw Error('S9+ face image archive unavailable');
   const found=[];
@@ -97,9 +99,10 @@ async function fetchFaces(){
   const v5Reviewed=data.events.filter(rec=>rec.face_deep_review_version==='s9_onphone_36_samples_overlapping_tiles_v5').length;
   for(const rec of data.events){
    if(!clipName.test(String(rec.clip_no||'')))continue;
-   for(const face of (Array.isArray(rec.face_candidates)?rec.face_candidates:[]).slice(0,16)){
-    candidateRecords++;
-    if(!faceName.test(String(face.snapshot_name||'')))continue;
+   const candidates=Array.isArray(rec.face_candidates)?rec.face_candidates:[];
+   candidateRecords+=candidates.length;
+   for(const face of candidates.slice(0,48)){
+    if(!face||!faceName.test(String(face.snapshot_name||'')))continue;
     if(!String(face.snapshot_name).startsWith(rec.clip_no.slice(0,-4)+'__'))continue;
     found.push({clip:rec.clip_no,face,recording:rec});
    }
@@ -112,6 +115,8 @@ async function fetchFaces(){
   renderMetrics();
   if(state.pane==='faces')renderFaces();
  }catch(e){
+  if(requestToken!==state.faceFetchToken)return;
+  state.faceSummary=null;
   $('faceCount').textContent='—';
   $('faceScanLabel').textContent='Unavailable';
   $('facePhotoStatus').textContent='Face snapshot metadata is currently unavailable. Try Refresh.';
@@ -429,7 +434,12 @@ $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;s
 $('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('faceMode').addEventListener('change',()=>{state.facePage=0;renderFaces()});
-$('refresh').addEventListener('click',()=>{loadView();if(state.pane==='faces'){state.faceLoaded=false;fetchFaces()}});
+$('refresh').addEventListener('click',()=>{
+ state.faceLoaded=false;
+ state.faceSummary=null;
+ loadView();
+ fetchFaces();
+});
 $('newFolder').addEventListener('click',()=>openFolderEditor('create'));
 $('newFolderInline').addEventListener('click',()=>openFolderEditor('create'));
 $('editFolder').addEventListener('click',()=>openFolderEditor('edit'));
