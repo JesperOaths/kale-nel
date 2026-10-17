@@ -12,7 +12,7 @@ CAMERA={"ok":True,"mode":"watching","native_4k_enabled":True,
         "face_deep_errors":0}
 def clip(i,**kwargs):
  result={"clip_no":"motion_"+str(1792000000000+i)+".mp4",
-   "face_deep_review_version":"s9_onphone_36_samples_person_or_tile_v4",
+   "face_deep_review_version":"s9_onphone_36_samples_overlapping_tiles_v5",
    "face_model_state":"available_on_phone","face_candidates":[]}
  result.update(kwargs)
  return result
