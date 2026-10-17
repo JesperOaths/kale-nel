@@ -27,7 +27,8 @@ assert 'writeJson(new File(folder,name+".verified.json"),manifest)' in deep
 scope=service.split("private void maybeFaceBackfill(){",1)[1].split("Offloaded archived-video retention review",1)[0]
 assert 'if(meta.optInt("person_count",0)<=0)continue;' not in scope
 assert "faceBackfillQueued" in scope
-assert "temperature()>=370" in scope
+assert "temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C" in scope
+assert "FACE_BACKFILL_MAX_TEMP_TENTHS_C=390" in service
 assert "gardenPersonGateBusy" in scope
 assert '"watching".equals(mode)' in scope
 assert "now-lastMovementAt<45000L" in scope
@@ -40,6 +41,11 @@ assert 'rejectedLowConfidence++' in face and 'rejectedSmallFace++' in face
 assert 'manualRescueCandidates++' in face
 assert 'if(reliableForEmbedding)' in face
 assert "void sampleSceneTile(Bitmap frame,long ms,boolean right)" in face
+assert 'face_shadow_review_version' in face
+assert 'shadowEmbeddingTrials==0' in face
+assert 'shadow=null' in face
+assert 'JSONObject match=assign(emb)' in face
+assert 'face_shadow_embeddings_persisted' in face
 assert "face_crop_requires_manual_review" in face
 assert "reliableForEmbedding" in face
 assert "if(reliableForEmbedding)" in face
