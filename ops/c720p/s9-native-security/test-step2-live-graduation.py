@@ -27,6 +27,7 @@ class Step2(unittest.TestCase):
   self.assertFalse(status["automatic_identity_grouping_authorized"])
   self.assertTrue(status["signed_release_installed"])
   self.assertEqual(status["v5_review_fraction"],1.0)
+  self.assertTrue(status["archive_counters_consistent"])
   self.assertEqual(status["face_snapshots_in_archive"],0)
   self.assertEqual(status["older_face_crops_protected_but_need_v5"],0)
   self.assertFalse(status["installer_timer_active"])
