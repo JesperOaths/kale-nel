@@ -31,11 +31,12 @@ class FaceBackfillCoverageV35(unittest.TestCase):
  def test_eight_slots_reserved_across_all_deep_review_samples(self):
   self.assertIn("if(!FILE.matcher(clip).matches()||frames>=frameLimit)return;",FACE)
   self.assertNotIn("frames>=frameLimit||captures.length()>=MAX_CAPTURES",FACE)
-  self.assertIn("(frames*MAX_CAPTURES+frameLimit-1)/frameLimit",FACE)
+  self.assertIn("(frames*MAX_CAPTURES+expectedSamples-1)/expectedSamples",FACE)
   self.assertIn("captures.length()<captureAllowance",FACE)
-  slots=[min(8,max(1,(f*8+48-1)//48)) for f in range(1,49)]
+  self.assertIn("expectedSamples=Math.min(frameLimit,36)",FACE)
+  slots=[min(8,max(1,(f*8+36-1)//36)) for f in range(1,49)]
   self.assertEqual((slots[0],slots[11],slots[23],slots[35],slots[47]),
-                   (1,2,4,6,8))
+                   (1,3,6,8,8))
   self.assertTrue(all(a<=b for a,b in zip(slots,slots[1:])))
   # Snapshots are a strict bounded sample, never guaranteed 36 good frames.
   self.assertIn("MAX_CAPTURES=8",FACE)
