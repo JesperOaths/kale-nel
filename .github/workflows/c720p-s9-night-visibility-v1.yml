@@ -7,6 +7,7 @@ on:
       - 'ops/c720p/s9-native-security/s9-night-visibility-v1.js'
       - 'ops/c720p/s9-native-security/deploy-s9-night-visibility-v1.py'
       - 'ops/c720p/s9-native-security/test-s9-night-visibility-v1.py'
+      - 'ops/c720p/s9-native-security/test-night-visibility-dom-v2.js'
   push:
     branches: [main]
     paths:
@@ -33,6 +34,7 @@ jobs:
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-night-visibility-v1.py
           python3 ops/c720p/s9-native-security/test-s9-night-visibility-v1.py
           node --check ops/c720p/s9-native-security/s9-night-visibility-v1.js
+          node ops/c720p/s9-native-security/test-night-visibility-dom-v2.js
 
   deploy:
     needs: validate
