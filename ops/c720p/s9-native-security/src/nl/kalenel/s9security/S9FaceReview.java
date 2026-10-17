@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
  */
 final class S9FaceReview implements AutoCloseable {
  static final String VERSION="s9_face_review_v1";
+ static final String GEOMETRY_VERSION="face_crop_geometry_v2_padded_manual";
  private static final int MAX_FRAMES=12,MAX_FACES=3,MAX_CAPTURES=8,EMBED=128,SIDE=112;
  private static final Pattern FILE=Pattern.compile("motion_[0-9]{13}[.]mp4");
  private static final Pattern PERSON=Pattern.compile("[A-Za-z0-9][A-Za-z0-9 _.-]{0,55}");
@@ -38,6 +39,7 @@ final class S9FaceReview implements AutoCloseable {
  private int nextId=1,frames=0,detected=0,saved=0,personRoiSamples=0,fullFrameSamples=0;
  private int rawDetectorHits=0,lowConfidenceOrSmall=0,rejectedPose=0,rejectedCrop=0,rejectedImageQuality=0;
  private int rejectedLowConfidence=0,rejectedSmallFace=0,manualRescueCandidates=0;
+ private int paddedManualCrops=0,rejectedInsufficientNativeEyeDetail=0;
  private boolean loaded=false,modelAttempted=false,modelReady=false;
  private static final class Entry {
   final String id; final float[] vector;
@@ -94,11 +96,14 @@ final class S9FaceReview implements AutoCloseable {
    error=ex instanceof FileNotFoundException?"face_model_not_bundled":ex.getClass().getSimpleName();
   }
  }
+ /** Keep a real unscaled 70+ pixel source crop, including at frame edges.
+  * A manual-only padded context crop does not invent any missing face detail.
+  */
  private static Bitmap crop(Bitmap b,int x,int y,int size){
-  int left=Math.max(0,Math.min(b.getWidth()-1,x-size/2));
-  int top=Math.max(0,Math.min(b.getHeight()-1,y-(int)(size*.43)));
-  int side=Math.min(size,Math.min(b.getWidth()-left,b.getHeight()-top));
+  int side=Math.min(size,Math.min(b.getWidth(),b.getHeight()));
   if(side<70)return null;
+  int left=Math.max(0,Math.min(b.getWidth()-side,x-side/2));
+  int top=Math.max(0,Math.min(b.getHeight()-side,y-(int)(side*.43)));
   return Bitmap.createBitmap(b,left,top,side,side);
  }
  private static boolean usable(Bitmap b){
@@ -341,8 +346,15 @@ final class S9FaceReview implements AutoCloseable {
     PointF center=new PointF();f.getMidPoint(center);
     int x=offsetX+(int)(center.x*subject.getWidth()/width);
     int y=offsetY+(int)(center.y*subject.getHeight()/height);
-    int size=(int)(f.eyesDistance()*3.5*subject.getWidth()/width);
-    Bitmap face=crop(frame,x,y,size);
+    // FaceDetector sees a rescaled ROI. Validate actual unscaled source pixels
+    // before padding an inspection-only crop; no upscaling or invented detail.
+    float originalEyeSpan=f.eyesDistance()*subject.getWidth()/width;
+    if(originalEyeSpan<10f){
+     rejectedCrop++;rejectedInsufficientNativeEyeDetail++;continue;
+    }
+    int estimatedSize=(int)Math.ceil(originalEyeSpan*3.5f);
+    boolean contextPadded=estimatedSize<70;
+    Bitmap face=crop(frame,x,y,Math.max(70,estimatedSize));
     if(face==null){rejectedCrop++;continue;}
     try{
      if(!usable(face)){rejectedImageQuality++;continue;}
@@ -350,7 +362,8 @@ final class S9FaceReview implements AutoCloseable {
      // Lower-confidence/off-axis facial images may be useful for manual
      // inspection, but must NEVER be used for automatic biometric linking.
      final boolean reliableForEmbedding=f.confidence()>=.70f&&
-         f.eyesDistance()>=14&&Math.abs(yaw)<=18&&Math.abs(roll)<=15;
+         f.eyesDistance()>=14&&Math.abs(yaw)<=18&&Math.abs(roll)<=15&&
+         originalEyeSpan>=22f&&estimatedSize>=96&&!contextPadded;
      float[] emb=null;
      if(reliableForEmbedding){
       try{emb=vector(face);}catch(Exception ex){
@@ -361,6 +374,11 @@ final class S9FaceReview implements AutoCloseable {
      if(!reliableForEmbedding){
       match.put("face_crop_requires_manual_review",true);
       manualRescueCandidates++;
+     }
+     if(contextPadded){
+      // Mark inspection evidence explicitly; never an identity template.
+      match.put("face_crop_padded_context_only",true);
+      paddedManualCrops++;
      }
      String id=match.optString("person_id","pending_"+(detected));
      String safe=id.replaceAll("[^A-Za-z0-9_-]","_");
@@ -408,6 +426,9 @@ final class S9FaceReview implements AutoCloseable {
   manifest.put("face_manual_review_rescue_candidates",manualRescueCandidates);
   manifest.put("face_rejected_looking_away_or_roll",rejectedPose);
   manifest.put("face_rejected_crop_geometry",rejectedCrop);
+  manifest.put("face_crop_geometry_version",GEOMETRY_VERSION);
+  manifest.put("face_crop_padded_manual_count",paddedManualCrops);
+  manifest.put("face_rejected_insufficient_native_eye_detail",rejectedInsufficientNativeEyeDetail);
   manifest.put("face_rejected_dark_or_blurry",rejectedImageQuality);
   manifest.put("face_model_state",!modelAttempted?"not_tested_no_usable_face":
       modelReady?"available_on_phone":"unavailable_on_phone");
