@@ -54,6 +54,27 @@ class Tests(unittest.TestCase):
   row=dict(self.row,v28_person_recheck={"status":"error","attempts":3})
   self.assertEqual(module.v28_candidates({self.key:self.original},{self.key:row}),[])
 
+ def test_prefetch_never_weakens_phone_inference_thermal_guard(self):
+  script=(HERE/"s9-historical-gpu-relay.py").read_text()
+  stage=script.split("def stage_one(",1)[1].split("def category_from_phone(",1)[0]
+  self.assertIn("if temperature>=39:",stage)
+  self.assertIn("phone_staging_sd_reserve_guard",stage)
+  self.assertIn("phone_4k_not_ready_for_staging",stage)
+  self.assertIn("S9_HISTORY_STAGED_WAITING_FOR_SAFE_PHONE_INFERENCE",stage)
+  self.assertIn('if inflight:',stage)
+  self.assertIn('if rescan_v28:meta["review_request_version"]=RECHECK_VERSION',stage)
+  android=(HERE/"src/nl/kalenel/s9security/CameraService.java").read_text()
+  worker=android.split("private void maybeHistoricalImport(){",1)[1].split("private void maybeFaceBackfill(){",1)[0]
+  self.assertIn("temperature()>=370",worker)
+  self.assertIn("HistoricalImportWorker(sandbox,model).processOne()",worker)
+
+ def test_thermal_and_space_deferrals_are_not_source_failures(self):
+  text=(HERE/"s9-historical-gpu-relay.py").read_text()
+  cycle=text.split("def cycle(",1)[1]
+  for name in ("phone_too_hot_even_for_staging","phone_staging_sd_reserve_guard",
+               "phone_4k_not_ready_for_staging"):
+   self.assertIn('"'+name+'"',cycle)
+
  def test_source_is_read_only_and_cleanup_applies_to_temporary_media_only(self):
   script=(HERE/"s9-historical-gpu-relay.py").read_text()
   self.assertIn('source_clip_id',script)
