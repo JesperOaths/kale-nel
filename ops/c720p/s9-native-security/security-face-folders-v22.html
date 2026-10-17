@@ -181,7 +181,7 @@ function comparisonCandidate(face){
 }
 function evidenceSummary(records){
  const clips=records.filter(x=>clipOK.test(String(x.clip_no||'')));
- const valid=clips.filter(x=>x.face_deep_review_version==='s9_onphone_36_samples_person_or_tile_v4');
+ const valid=clips.filter(x=>x.face_deep_review_version==='s9_onphone_36_samples_overlapping_tiles_v5');
  const models=clips.filter(x=>x.face_model_state==='available_on_phone').length;
  const notTested=clips.filter(x=>x.face_model_state==='not_tested_no_usable_face').length;
  const faces=clips.reduce((n,r)=>n+(Array.isArray(r.face_candidates)?r.face_candidates.length:0),0);
@@ -226,9 +226,9 @@ function buildFolders(){
   'Possible people or raw face hits without usable face evidence · original videos available',
   'pending',sdUnmatched.map(rec=>item('sd',rec)),false));
  const notReviewed=state.sd.filter(rec=>clipOK.test(String(rec.clip_no||''))&&
-  rec.face_deep_review_version!=='s9_onphone_36_samples_person_or_tile_v4');
+  rec.face_deep_review_version!=='s9_onphone_36_samples_overlapping_tiles_v5');
  if(notReviewed.length)folders.push(group('sd:scan-pending','S9+ · deep face scan pending',
-  'Recordings not yet reviewed by the current original-4K face pass · no absence-of-person claim',
+  'Awaiting current overlapping-tile 4K pass; older face images are preserved · no absence-of-person claim',
   'pending',notReviewed.map(rec=>item('sd',rec)),false));
  const lookup=new Map(state.drive.map(r=>[String(r.remote_name||''),r]));
  for(const review of state.reviews){
