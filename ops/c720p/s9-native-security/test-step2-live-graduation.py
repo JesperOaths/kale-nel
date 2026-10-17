@@ -49,7 +49,8 @@ class Step2(unittest.TestCase):
   status=mod.summarize(self.release,self.face,self.pairs)
   self.assertFalse(status["signed_release_installed"])
   self.assertEqual(status["remaining_original_4k_reviews"],50)
-  self.assertEqual(status["v5_review_fraction"],1.0)
+  self.assertEqual(status["v5_review_fraction"],0.0)
+  self.assertFalse(status["archive_counters_consistent"])
   self.assertEqual(status["status"],"not_complete")
  def test_status_report_never_touches_clips_or_exports_vectors(self):
   content=P.read_text()
