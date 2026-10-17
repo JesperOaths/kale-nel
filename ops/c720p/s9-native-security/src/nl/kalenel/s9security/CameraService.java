@@ -39,6 +39,9 @@ public final class CameraService extends Service {
  // Read-only Camera2 metadata distinguishes night exposure from callback load.
  private volatile long sensorCaptureResults=0,lastSensorTimestampNs=0,lastSensorCaptureAt=0;
  private volatile float sensorResultFps=0f,sensorExposureMs=-1f,sensorFrameDurationMs=-1f;
+ // Read actual optical iris from sensor capture results, not requested settings.
+ private volatile float sensorLensApertureF=-1f;
+ private volatile float[] supportedLensApertures=new float[0];
  private volatile int sensorIso=-1,sensorAeState=-1,sensorAeMinFps=-1,sensorAeMaxFps=-1;
  private final CameraCaptureSession.CaptureCallback sensorTelemetry=
    new CameraCaptureSession.CaptureCallback(){
@@ -61,6 +64,9 @@ public final class CameraService extends Service {
      if(duration!=null&&duration>0)sensorFrameDurationMs=duration/1000000f;
      Integer iso=result.get(CaptureResult.SENSOR_SENSITIVITY);
      if(iso!=null)sensorIso=iso;
+     Float actualAperture=result.get(CaptureResult.LENS_APERTURE);
+     if(actualAperture!=null&&Float.isFinite(actualAperture)&&actualAperture>0f)
+      sensorLensApertureF=actualAperture;
      Integer ae=result.get(CaptureResult.CONTROL_AE_STATE);
      if(ae!=null)sensorAeState=ae;
      Range<Integer> target=result.get(CaptureResult.CONTROL_AE_TARGET_FPS_RANGE);
@@ -283,7 +289,11 @@ public final class CameraService extends Service {
     }
    }
    if(cameraId.isEmpty())throw new IOException("camera_has_no_3840_2160_30fps_profile");
-   cameraControls=new CameraControls(manager.getCameraCharacteristics(cameraId));
+   CameraCharacteristics activeCameraInfo=manager.getCameraCharacteristics(cameraId);
+   cameraControls=new CameraControls(activeCameraInfo);
+   float[] lensChoices=activeCameraInfo.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES);
+   supportedLensApertures=lensChoices==null?new float[0]:lensChoices.clone();
+   sensorLensApertureF=-1f;
    // Auto night is the default. User-selected on/off is retained across boots.
    String storedNight=getSharedPreferences("native",MODE_PRIVATE).getString("night_mode","auto");
    try{cameraControls.select("night_mode",storedNight);}
@@ -1367,6 +1377,13 @@ public final class CameraService extends Service {
    d.put("sensor_frame_duration_ms",sensorFrameDurationMs>0?
       Math.round(sensorFrameDurationMs*100f)/100f:null);
    d.put("sensor_iso",sensorIso>0?sensorIso:null);
+   // Passive optical evidence only; never control iris, FPS, codec or 4K paths.
+   JSONArray measuredApertures=new JSONArray();
+   for(float value:supportedLensApertures)measuredApertures.put(value);
+   d.put("sensor_lens_apertures_supported",measuredApertures);
+   d.put("sensor_lens_aperture_f_number",sensorLensApertureF>0?
+     Math.round(sensorLensApertureF*100f)/100f:JSONObject.NULL);
+   d.put("sensor_lens_aperture_result_available",sensorLensApertureF>0);
    d.put("sensor_ae_state",aeStateLabel(sensorAeState));
    d.put("sensor_ae_target_fps_min",sensorAeMinFps>0?sensorAeMinFps:null);
    d.put("sensor_ae_target_fps_max",sensorAeMaxFps>0?sensorAeMaxFps:null);
