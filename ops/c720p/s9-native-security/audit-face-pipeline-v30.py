@@ -12,10 +12,6 @@ import urllib.request
 PHONE="http://127.0.0.1:18808/status"
 ARCHIVE="http://127.0.0.1:8795/new/api/saved"
 FACE_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"
-LEGACY_DEEP_VERSIONS={
- "s9_onphone_36_samples_v1","s9_onphone_36_samples_person_roi_v2",
- "s9_onphone_36_samples_person_or_tile_v3",
- "s9_onphone_36_samples_person_or_tile_v4"}
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4")
 SAFE_MATCHES={
  "not_comparable_model_unavailable","not_comparable_manual_review","not_tested_no_usable_face",
@@ -60,7 +56,7 @@ def audit(phone,archive):
   # or never-reviewed backlog items.
   if version==FACE_VERSION:
    pipeline["v5_reviewed"]+=1
-  elif version in LEGACY_DEEP_VERSIONS and saved>0:
+  elif saved>0:
    pipeline["legacy_review_preserved_with_snapshots"]+=1
   else:
    pipeline["awaiting_4k_face_review"]+=1
