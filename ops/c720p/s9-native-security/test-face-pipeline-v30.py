@@ -90,6 +90,28 @@ class FaceAuditV30Tests(unittest.TestCase):
    with self.subTest(unsafe=unsafe),self.assertRaises(RuntimeError):
     module.audit({**baseline,**unsafe},
       {"archive_mode":"S9-microSD-only","events":[clip(0)]})
+ def test_runtime_model_diagnostics_are_separate_from_identity(self):
+  row=clip(0,face_shadow_review_version="s9_shadow_model_probe_v2",
+      face_shadow_model_trials=1,face_shadow_model_succeeded=1,
+      face_shadow_model_failed=0)
+  camera={**CAMERA,"face_backfill_queued":True,"temperature_c":38.5}
+  result=module.audit(camera,{"archive_mode":"S9-microSD-only","events":[row]})
+  self.assertEqual(result["scanner_state"],"actively_reviewing")
+  self.assertTrue(result["scanner_active"])
+  self.assertEqual(result["v2_model_diagnostic_trials"],1)
+  self.assertEqual(result["v2_model_diagnostic_successes"],1)
+  self.assertEqual(result["v2_model_diagnostic_failures"],0)
+  self.assertFalse(result["named_identity_automatically_verified"])
+ def test_idle_and_fallback_statuses(self):
+  base={**CAMERA,"temperature_c":37.5}
+  waiting=module.audit(base,{"archive_mode":"S9-microSD-only","events":[clip(0)]})
+  self.assertEqual(waiting["scanner_state"],"waiting_for_idle_window")
+  fallback={**base,"continuous_4k_ready":False,
+   "continuous_4k_last_result":"fallback_thermal_guard",
+   "continuous_4k_production_persisted":True,
+   "preroll_ready":True,"preroll_buffered_ms":6500}
+  paused=module.audit(fallback,{"archive_mode":"S9-microSD-only","events":[clip(0)]})
+  self.assertEqual(paused["scanner_state"],"thermal_fallback")
  def test_never_accepts_embeddings_on_hub(self):
   for name in ("embedding","face_embedding","descriptor","biometric_template","embedding_vector"):
    with self.subTest(name=name):
