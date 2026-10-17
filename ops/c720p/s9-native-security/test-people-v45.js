@@ -35,7 +35,7 @@ const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observat
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
 const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
-let posts=[],fetches=[];
+let posts=[],fetches=[],holdAll=false,releaseHeldAll=null;
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
@@ -45,6 +45,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
   }
   if(p.startsWith('/new/api/visual-review?')){
    const q=new URLSearchParams(p.split('?')[1]),tab=q.get('tab');
+   if(tab==='all'&&holdAll)await new Promise(resolve=>{releaseHeldAll=resolve});
    return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],person_detection:
     {assessed_clips:80,total_clips:141,clips_with_supported_people:29,status:'in_progress'},
     inbox_clips:27,total:tab==='inbox'?27:tab==='approved'?3:1,
@@ -72,6 +73,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('savedPreview').children.length,1,'Provisional clothing group must not appear as confirmed person');
  assert.equal(el('appearancePreview').children.length,1,'Unreviewed group is optional separate list');
  assert.equal(el('reviewPreview').children.length,1);
+ assert.equal(el('reviewAlerts').children.length,1,'The existing Jesper review issue must be highlighted as an action');
+ assert(scan(el('reviewAlerts'),'Inspect originals →'),'Saved clips flagged for person recheck must be actionable');
  let keep=scan(el('reviewPreview'),'✓ Keep');assert(keep,'Primary review action');
  keep.handlers.click();
  assert(el('approvalDialog').open,'Keep must open explicit confirmation');
@@ -110,5 +113,30 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
+ // Navigate to a provisional group; explicit manual approval must remain
+ // possible without claiming an automatic same-person identity.
+ const group=el('candidateList').children[0];assert(group);
+ group.handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('folderView').hidden,false);
+ const provisionalKeep=scan(el('folderGrid'),'✓ Keep here');assert(provisionalKeep);
+ provisionalKeep.handlers.click();
+ assert(el('approvalFolder').children.some(x=>x.value==='P345'),
+  'Selected provisional appearance group should be an available manual destination');
+ el('approvalDialog').close();
+ // Simulate a slow previous tab request arriving after a newer navigation.
+ panes[1].handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ holdAll=true;
+ el('reviewMode').value='all';el('reviewMode').handlers.change();
+ for(let i=0;i<4;i++)await flush();
+ assert(releaseHeldAll,'Old request must be deliberately paused');
+ el('reviewMode').value='inbox';el('reviewMode').handlers.change();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('reviewTotal').textContent,'27 matching recordings');
+ holdAll=false;releaseHeldAll();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('reviewTotal').textContent,'27 matching recordings',
+  'Stale responses must not replace current tab data');
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});

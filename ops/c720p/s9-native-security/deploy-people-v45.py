@@ -28,10 +28,10 @@ ORIG={
  "js":"ops/c720p/s9-native-security/security-people-v45.js",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
-OLD="security-people-v33.html?v=s9pf-v43-20261017&"
-NEW="security-people-v45.html?v=s9pf-v45-20261017&"
-ENTRY_OLD="security-hub-v30.js?v=person-presence-v44b-20261017"
-ENTRY_NEW="security-hub-v30.js?v=people-faces-v45-20261017"
+OLD="security-people-v45.html?v=s9pf-v45-20261017&"
+NEW="security-people-v45.html?v=s9pf-v45-20261017-review-recheck-r2&"
+ENTRY_OLD="security-hub-v30.js?v=people-faces-v45-20261017"
+ENTRY_NEW="security-hub-v30.js?v=people-faces-v45-20261017-review-recheck-r2"
 MARK="s9-people-v45-real-route"
 def digest(b):return hashlib.sha256(b).hexdigest()
 def get(url,limit=220000):
@@ -80,7 +80,7 @@ def main():
  for k,source in ORIG.items():
   b=get("https://raw.githubusercontent.com/JesperOaths/kale-nel/"+args.ref+"/"+source)
   if k=="html":
-   for phrase in (b'id="reviewPreview"',b'id="savedPreview"',b'id="faceGrid"',
+   for phrase in (b'id="reviewPreview"',b'id="reviewAlerts"',b'id="folderRecheck"',b'id="savedPreview"',b'id="faceGrid"',
                   b'id="approvalConfirmed"',b"security-people-v45.js"):
     if phrase not in b:raise RuntimeError("html_interface_contract_missing")
   else:
@@ -89,17 +89,17 @@ def main():
     if phrase not in b:raise RuntimeError("js_review_contract_missing")
   out[k]=b
  hub=prior["hub"][0].decode("utf-8")
- if MARK in hub:
-  if NEW not in hub:raise RuntimeError("marked_hub_missing_route")
+ if MARK not in hub:raise RuntimeError("expected_existing_v45_hub")
+ if NEW in hub:
   out["hub"]=prior["hub"][0]
  else:
-  out["hub"]=("/* "+MARK+" */\n"+update(hub,OLD,NEW,"hub")).encode("utf-8")
+  out["hub"]=update(hub,OLD,NEW,"hub").encode("utf-8")
  entry=prior["entry"][0].decode("utf-8")
- if MARK in entry:
-  if ENTRY_NEW not in entry:raise RuntimeError("marked_entry_missing_version")
+ if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
+ if ENTRY_NEW in entry:
   out["entry"]=prior["entry"][0]
  else:
-  out["entry"]=("<!-- "+MARK+" -->\n"+update(entry,ENTRY_OLD,ENTRY_NEW,"entry")).encode("utf-8")
+  out["entry"]=update(entry,ENTRY_OLD,ENTRY_NEW,"entry").encode("utf-8")
  if args.dry_run:
   print("S9_PEOPLE_V45_LIVE_ROUTE_DRY_RUN_PASS "+json.dumps({
    "source_ref":args.ref,"originals":len(old_clips),
