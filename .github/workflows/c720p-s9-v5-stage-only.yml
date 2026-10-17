@@ -1,5 +1,5 @@
 name: S9 V5 signed 4K face-review staging · no camera restart
-# Re-stage current pinned original-4K release using the verified 40.5 C restart guard; never install here.
+# Re-stage after the source-pinned C720P worker update. Stage-only may build while face/historical archive workers are busy; it never installs.
 on:
   workflow_dispatch:
   push:
