@@ -70,6 +70,20 @@ class LocalCoolWindow(unittest.TestCase):
     m.tick(stage_only=True)
    self.assertEqual([c.args[1] for c in scripts.call_args_list],["build"])
    self.assertFalse(m.STATE.exists())
+ def test_stage_only_prepares_during_busy_archive_review_never_installs(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   self.setup_mocks(tmp,38.2,stage_ready=False)
+   busy=phone(38.2)
+   busy["face_backfill_queued"]=True
+   busy["historical_import_queued"]=True
+   self.assertFalse(m.idle(busy))
+   with mock.patch.object(m,"camera_status",return_value=busy),mock.patch.object(
+       m,"prepared",side_effect=[False,True]),mock.patch.object(
+       m,"run_release_script",return_value="S9_FACE_RECALL_V27_SIGNED_STAGED") as jobs:
+    m.tick(stage_only=True)
+   self.assertEqual([c.args[1] for c in jobs.call_args_list],["build"])
+   self.assertFalse(m.STATE.exists())
+
  def test_local_timer_stages_during_fallback_but_never_installs(self):
   with tempfile.TemporaryDirectory() as tmp:
    self.setup_mocks(tmp,35.4,stage_ready=False)
