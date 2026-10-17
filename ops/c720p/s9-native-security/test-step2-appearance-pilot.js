@@ -75,6 +75,8 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
  byId('appearanceTab').handlers.click();
  assert.equal(byId('appearanceSection').hidden,false);
  byId('appearanceReference').value=clipA;
+ byId('appearanceCategory').value='upper_clothing'; // Browser defaults to first option; fake DOM must emulate it.
+ byId('appearanceZone').value='';
  await byId('appearanceGo').handlers.click();
  assert.equal(appearanceCalls,1);
  assert.equal(byId('appearanceResults').children.length,1,
