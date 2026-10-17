@@ -45,7 +45,7 @@ class FaceAuditV30Tests(unittest.TestCase):
       face_snapshots_saved=1,
       face_candidates=[{"match_status":"not_tested_no_usable_face"}]),
     clip(2,face_deep_review_version="s9_onphone_36_samples_person_or_tile_v4"),
-    clip(3)]
+    clip(3,face_deep_review_version=None)]
   result=module.audit(CAMERA,{"archive_mode":"S9-microSD-only","events":rows})
   self.assertEqual(result["source_original_4k_clips"],4)
   self.assertEqual(result["v5_reviewed"],0)
