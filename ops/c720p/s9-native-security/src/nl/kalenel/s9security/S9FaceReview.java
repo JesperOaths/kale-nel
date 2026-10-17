@@ -345,7 +345,7 @@ final class S9FaceReview implements AutoCloseable {
    rgb=scaled.copy(Bitmap.Config.RGB_565,false);
    FaceDetector.Face[] faces=new FaceDetector.Face[MAX_FACES];
    int n=new FaceDetector(width,height,MAX_FACES).findFaces(rgb,faces);
-   for(int i=0;i<n&&captures.length()<MAX_CAPTURES;i++){
+   for(int i=0;i<n&&captures.length()<captureAllowance;i++){
     FaceDetector.Face f=faces[i];if(f==null)continue;
     rawDetectorHits++;
     // V27: permit borderline FACE CROPS for human review only; only the
