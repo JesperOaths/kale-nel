@@ -100,27 +100,79 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
   #viewer .modal-head{top:-8px}
 }
 </style>
+
+<style id="s9-people-faces-unified-v2">
+:root{--pf-surface:#122637;--pf-quiet:#9fb8c7;--pf-border:#355263;--pf-highlight:#77e0cc}
+.pf-header{margin-bottom:12px}.pf-head-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pf-tabs{position:sticky;top:0;z-index:5;background:#0b141ef2;padding:13px 0 14px;backdrop-filter:blur(10px);border-bottom:1px solid #3d5664;margin-bottom:12px}
+.pf-tabs button{white-space:nowrap;min-height:42px}
+.pf-help{font-size:12px;margin:0 0 13px;color:#bad0d9}
+.pf-diagnostics{margin:0 0 18px;padding:10px 14px;border:1px solid #304a59;border-radius:10px;color:#acc3d0;font-size:12px}
+.pf-diagnostics summary{cursor:pointer;font-weight:650}
+.pf-diagnostics div{line-height:1.75;margin-top:9px}
+.pf-section-heading{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:16px 0 15px}
+.pf-section-heading h2{font-size:20px;margin:0 0 3px}.pf-section-heading p{font-size:13px}.pf-section-heading button{flex-shrink:0}
+.pf-section-heading.pf-after{margin-top:29px}
+.pf-eyebrow{display:block;font-size:10px;font-weight:800;letter-spacing:.11em;color:#82decc;margin-bottom:3px}
+.pf-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,265px),1fr));gap:14px;align-items:stretch}
+.pf-queue{grid-template-columns:repeat(auto-fill,minmax(min(100%,278px),1fr))}
+.pf-evidence{min-width:0;border:1px solid var(--pf-border);border-radius:13px;overflow:hidden;background:var(--pf-surface);display:flex;flex-direction:column}
+.pf-evidence:hover{border-color:#72a6a9}
+.pf-evidence .pf-media{height:158px;background:linear-gradient(135deg,#1b3d4c,#10202f);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;color:#a7bcca;font-size:13px}
+.pf-evidence .pf-media img{height:100%;width:100%;object-fit:cover;display:block}
+.pf-evidence .pf-content{padding:13px;display:flex;flex:1;flex-direction:column;gap:7px}
+.pf-evidence .pf-content strong{font-size:14px;line-height:1.35}
+.pf-evidence .pf-meta{color:#a4c0cf;font-size:12px;overflow-wrap:anywhere}
+.pf-evidence .pf-action-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
+.pf-evidence button{padding:8px 10px;min-height:38px;flex:1;font-size:12px}
+.pf-evidence .pf-tag{position:absolute;z-index:1;top:8px;left:8px;border-radius:6px;background:#0b1822e8;padding:4px 8px;color:#e2f4f7;font-size:10px;font-weight:700}
+.pf-filters{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin:14px 0 19px}
+.pf-filters label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#b4ced7}
+.pf-filters input,.pf-filters select{padding:10px 11px;min-height:42px;border:1px solid #405f71;border-radius:8px;color:#eff9fb;background:#102332;font:inherit}
+.pf-filters input{width:min(370px,83vw)}
+.pf-browser-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:0 0 12px;font-size:12px;color:#a5bdc9}
+.pf-more{margin:18px auto 4px;display:block}
+#recordingsSection[hidden],#facesSection[hidden],#timelineSection[hidden]{display:none!important}
+#legacyView{height:max(620px,calc(100dvh - 270px))}
+@media(max-width:640px){.pf-gallery,.pf-queue{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.pf-evidence .pf-media{height:120px}.pf-evidence .pf-content{padding:10px}.pf-evidence .pf-action-row{flex-direction:column;gap:6px}.pf-tabs{position:static;gap:5px}.pf-tabs button{padding:8px 10px;flex:1}.pf-section-heading h2{font-size:18px}}
+@media(max-width:380px){.pf-gallery,.pf-queue{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-<header><div><div class="kicker">S9+ · historical Drive · anonymous evidence</div><h1>People &amp; face folders</h1><p>Browse face-similarity suggestions, manually verified visitor folders and person evidence.</p></div><span id="sync" class="pill" role="status" aria-live="polite">Connecting to archive…</span></header>
-<nav class="tabs" aria-label="People and faces views">
-<button id="foldersTab" type="button" aria-selected="true">Face folders</button>
-<button id="historyTab" type="button" aria-selected="false">All person evidence</button>
-<button id="appearanceTab" type="button" aria-selected="false">Appearance search · pilot</button>
-<button id="timelineTab" type="button" aria-selected="false">Detailed evidence timeline</button>
+<header class="pf-header"><div><div class="kicker">Security / S9+ camera evidence</div><h1>People &amp; faces</h1><p>Find a recording, inspect captured faces, or collect related events for review.</p></div><div class="pf-head-actions"><span id="sync" class="pill" role="status" aria-live="polite">Connecting to archive…</span><button id="reload" type="button">↻ Refresh</button></div></header>
+<nav class="tabs pf-tabs" aria-label="People and faces views">
+<button id="foldersTab" type="button" aria-selected="true">Overview</button>
+<button id="facesTab" type="button" aria-selected="false">Face images</button>
+<button id="historyTab" type="button" aria-selected="false">Recordings</button>
+<button id="appearanceTab" type="button" aria-selected="false">Compare appearance</button>
+<button id="casesTab" type="button" aria-selected="false">Saved cases</button>
 </nav>
-<section id="summary" class="stats" aria-label="Evidence totals">
-<div class="stat"><strong id="facesCount">—</strong><span>Saved face crops</span></div>
-<div class="stat"><strong id="verifiedCount">—</strong><span>Manually linked visitor folders</span></div>
-<div class="stat"><strong id="driveCount">—</strong><span>Verified historical Drive clips</span></div>
-<div class="stat"><strong id="s9PersonCount">—</strong><span>MicroSD clips with person evidence</span></div>
+<section id="summary" class="stats pf-summary" aria-label="Archive overview">
+<div class="stat"><strong id="s9PersonCount">—</strong><span>S9+ clips with person evidence</span></div>
+<div class="stat"><strong id="facesCount">—</strong><span>Face images to inspect</span></div>
+<div class="stat"><strong id="verifiedCount">—</strong><span>Manually reviewed cases</span></div>
+<div class="stat"><strong id="driveCount">—</strong><span>Historical Drive clips</span></div>
 </section>
-<p class="note" id="disclaimer">Person detection does not establish facial identity. Face-similarity groupings are suggestions only; distinct people must not be merged without reviewing the recordings. No real names are inferred. Body movement folders show image direction only; they do not identify a person or measure walking cadence.</p>
-<section id="facePipelineStatus" class="note" role="status" aria-live="polite">Checking S9+ original-4K face-analysis coverage…</section>
-<section id="folderSection">
-<div class="toolbar"><h2>Folders</h2><input id="search" type="search" placeholder="Filter folders and recordings…" aria-label="Search folders"><button id="reload" type="button">Refresh</button></div>
-<div class="folders" id="folders" aria-live="polite"><div class="empty">Loading person and face evidence…</div></div>
-<button id="moreEvidence" type="button" hidden style="display:block;margin:17px auto">Show more</button>
+<p class="pf-help" id="disclaimer">A face image or similar clothing is <strong>evidence to review, not proof of identity</strong>. Nothing in this view automatically identifies or links people.</p>
+<details class="pf-diagnostics"><summary>Analysis coverage and diagnostics</summary><div id="facePipelineStatus" role="status" aria-live="polite">Checking original 4K face-analysis coverage…</div></details>
+<section id="folderSection" aria-label="People and faces overview">
+<div class="pf-section-heading"><div><span class="pf-eyebrow">FOCUS</span><h2>Review next</h2><p>Recordings showing possible people, but without a usable face image yet.</p></div><button id="queueBrowse" type="button">Browse recordings →</button></div>
+<div class="pf-gallery pf-queue" id="reviewQueue" aria-live="polite"></div>
+<div class="pf-section-heading pf-after"><div><span class="pf-eyebrow">RECENT EVIDENCE</span><h2>Latest face images</h2><p>Individual crops grouped by recording, never automatically by person.</p></div><button id="queueFaces" type="button">View all face images →</button></div>
+<div class="pf-gallery" id="folders" aria-live="polite"><div class="empty">Loading face images…</div></div>
+</section>
+<section id="facesSection" hidden aria-label="Face snapshot review">
+<div class="pf-section-heading"><div><span class="pf-eyebrow">VISUAL REVIEW</span><h2>Face images</h2><p>Review each captured face in the context of its original 4K recording.</p></div><span id="faceTotal" class="pill"></span></div>
+<div class="pf-filters"><label for="faceSearch">Find a recording<input id="faceSearch" type="search" placeholder="Search date or clip ID…" aria-label="Search face images"></label><label for="faceFilter">Show<select id="faceFilter"><option value="all">All captured images</option><option value="manual">Needs manual review</option><option value="suggested">Has comparison suggestion</option></select></label></div>
+<div id="faceGallery" class="pf-gallery" aria-live="polite"></div>
+<button id="moreFaces" type="button" hidden class="pf-more">Show more face images</button>
+</section>
+<section id="recordingsSection" hidden aria-label="Video recording browser">
+<div class="pf-section-heading"><div><span class="pf-eyebrow">ALL VIDEO EVIDENCE</span><h2>Recordings</h2><p>Search the entire archive without empty or unassigned folders.</p></div><button id="timelineTab" type="button">Detailed timeline ↗</button></div>
+<div class="pf-filters"><label for="search">Find recording<input id="search" type="search" placeholder="Filter by clip, date, camera…" aria-label="Find video evidence"></label><label for="recordFilter">Show<select id="recordFilter"><option value="person">Person evidence</option><option value="faces">Clips with face images</option><option value="review">Needs face review</option><option value="all">All recordings</option><option value="drive">Drive archive</option></select></label></div>
+<div class="pf-browser-head"><span id="recordCount" role="status" aria-live="polite">Loading recordings…</span><span>Most recent first</span></div>
+<div id="browseGrid" class="pf-gallery" aria-live="polite"></div>
+<button id="moreEvidence" type="button" hidden class="pf-more">Show more recordings</button>
 </section>
 <section id="appearanceSection" hidden aria-label="Read-only appearance comparison pilot">
 <h2>Appearance search · visual evidence only</h2>
@@ -134,11 +186,34 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <p class="note" id="appearanceStatus" role="status" aria-live="polite">Choose a local recording to search similar clothing observations.</p>
 <div id="appearanceResults" class="records" aria-label="Visual comparison results"></div>
 </section>
+<section id="casesSection" hidden aria-label="Private manually reviewed video case folders">
+<h2>Reviewed recording cases</h2>
+<p class="note">Keep recordings from the same event or investigation together. You must inspect the original video before saving a link. Case IDs do not establish a person's identity; nothing is linked automatically. Cases, edits and removals are stored privately on the C720P.</p>
+<p id="casesStatus" role="status" class="note">Connecting to the private case registry…</p>
+<div id="caseFolders" class="folders" aria-label="Saved manual cases"></div>
+<div id="caseContents" class="detail" hidden><div class="detail-top">
+<button id="caseBack" type="button">← All review cases</button>
+<div><h2 id="caseTitle"></h2><p id="caseSubtitle"></p></div>
+</div>
+<div id="caseControls" class="toolbar"></div>
+<div id="caseRecords" class="records"></div>
+</div>
+</section>
 <section id="detail" class="detail" hidden>
-<div class="detail-top"><button id="back" type="button">← All folders</button><div><h2 id="detailTitle"></h2><p id="detailInfo"></p></div></div>
+<div class="detail-top"><button id="back" type="button">← Overview</button><div><h2 id="detailTitle"></h2><p id="detailInfo"></p></div></div>
 <div class="records" id="records"></div>
 </section>
-<iframe id="legacyView" title="Detailed face evidence timeline" data-src="/local/frontyard-security-new/face-appearances.html?v=faces-v19" loading="lazy" hidden></iframe>
+<section id="timelineSection" hidden><div class="pf-section-heading"><h2>Detailed evidence timeline</h2><button id="timelineBack" type="button">← Back to recordings</button></div><iframe id="legacyView" title="Detailed evidence timeline" data-src="/local/frontyard-security-new/face-appearances.html?v=faces-v19" loading="lazy"></iframe></section>
+<dialog id="casePicker" aria-label="Add reviewed evidence to case">
+<div class="modal-head"><strong>Save video to a private review case</strong><button id="casePickerClose" type="button">Close</button></div>
+<p id="casePickerRecording"></p>
+<p class="note">A case links recordings for investigation only, not people or faces. Review the original video before recording a manual confirmation.</p>
+<label for="caseTarget">Case folder</label>
+<select id="caseTarget" style="display:block;width:100%;margin:9px 0 13px;padding:10px;background:#122738;color:var(--ink);border:1px solid var(--line)"></select>
+<label style="display:flex;align-items:center;gap:10px;margin:12px 0"><input type="checkbox" id="caseConfirmed"> I have personally reviewed the original recording.</label>
+<p id="casePickerStatus" role="status" class="note">Choose an existing case or create a new one.</p>
+<button id="casePickerSave" type="button">Save reviewed evidence</button>
+</dialog>
 <dialog id="viewer" aria-label="Security evidence recording">
 <div class="modal-head"><strong id="videoTitle">Original recording</strong><button id="closeVideo" type="button">Close</button></div>
 <video id="video" controls playsinline preload="metadata"></video>
@@ -155,7 +230,7 @@ const clipOK=/^motion_[0-9]{13}[.]mp4$/;
 const driveOK=/^[A-Za-z0-9._-]{1,180}[.]mp4$/i;
 const imageOK=/^[A-Za-z0-9._-]{1,200}[.]jpg$/i;
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_-]{1,55})$/;
-const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1,appearanceRequest:0};
+const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1,facePage:1,appearanceRequest:0,cases:[],caseRevision:0,caseAvailable:false,caseSelection:null,caseTargetClip:null,caseBusy:false};
 const relay=()=>{if(window.C720PSecureRelay)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.C720PSecureRelay)return window.parent.C720PSecureRelay}catch(_){}return null};
 async function get(path){
  const r=relay();if(!r?.fetch)throw Error('Authenticated relay missing');
@@ -360,50 +435,125 @@ function stamp(entry){
  }
  return String(entry.rec.timestamp||entry.rec.uploaded_at||'Historical Drive clip').slice(0,24);
 }
+// One recording can contain multiple people and face crops. These are evidence
+// cards, not automatically generated person/identity folders.
+function needsFaceReview(rec){
+ return clipOK.test(String(rec.clip_no||''))&&
+ (Number(rec.person_count)>0||Number(rec.face_detector_raw_hits)>0)&&
+ !(Array.isArray(rec.face_candidates)&&rec.face_candidates.some(f=>imageOK.test(String(f.snapshot_name||''))));
+}
+function personEvidence(rec){
+ return Number(rec.person_count)>0||Number(rec.face_detector_raw_hits)>0||
+  (Array.isArray(rec.face_candidates)&&rec.face_candidates.length>0);
+}
+function saveCaseButton(entry){
+ const btn=el('button','','Save to case');btn.type='button';
+ btn.disabled=!state.caseAvailable;
+ btn.addEventListener('click',()=>reviewToCase(entry));
+ return btn;
+}
+function evidenceCard(entry,tag,description,{compare=false}={}){
+ const card=el('article','pf-evidence'),media=el('div','pf-media'),
+  body=el('div','pf-content'),actions=el('div','pf-action-row');
+ media.append(el('span','','Original recording'));
+ media.append(el('span','pf-tag',tag));
+ body.append(el('strong','',stamp(entry)),
+  el('span','pf-meta',description));
+ const play=el('button','','Play video');play.type='button';
+ play.addEventListener('click',()=>openClip(entry));actions.append(play);
+ if(entry.source==='sd'){
+  if(compare){
+   const go=el('button','','Compare');go.type='button';
+   go.addEventListener('click',()=>{setTab('appearance');
+    $('appearanceReference').value=entry.key;runAppearanceSearch()});
+   actions.append(go);
+  }
+  actions.append(saveCaseButton(entry));
+ }
+ body.append(actions);card.append(media,body);
+ signedPicture(media,entry);
+ return card;
+}
+function orderedFaces(){
+ return s9Faces().sort((a,b)=>String(b.rec.clip_no).localeCompare(String(a.rec.clip_no)));
+}
+function faceEvidenceCard(f){
+ const entry=item('sd',f.rec,f.face);
+ const suggested=comparisonCandidate(f.face)!==null;
+ return evidenceCard(entry,suggested?'COMPARISON CLUE':'FACE IMAGE',
+  (suggested?'On-phone suggestion · ':'Human inspection only · ')+
+   'Captured from original 4K · no identity established',{compare:true});
+}
 function renderFolders(){
+ // Overview deliberately shows only actionable and recent evidence.
+ // No unassigned, unknown-person, direction or colour dumping-ground folders.
  $('detail').hidden=true;$('folderSection').hidden=false;
- $('folders').replaceChildren();
- const needle=state.filter,groups=state.folders.filter(g=>
-  !needle||[g.title,g.subtitle,...g.entries.slice(0,10).map(x=>x.key)].join(' ').toLowerCase().includes(needle));
- if(!groups.length){
-  $('folders').append(el('p','empty',state.ready?'No folders match this search. A face cannot be grouped until a usable crop or a reviewed visitor link exists.':'Loading…'));
-  return;
+ const queue=$('reviewQueue');queue.replaceChildren();
+ const pending=state.sd.filter(needsFaceReview).sort((a,b)=>
+   String(b.clip_no).localeCompare(String(a.clip_no)));
+ if(!pending.length){
+  queue.append(el('p','empty','No outstanding face-image review items in the current archive. New evidence will appear here.'));
+ }else{
+  for(const rec of pending.slice(0,8)){
+   const reason=Number(rec.face_detector_raw_hits)>0?
+     'Face candidates observed, but no usable crop saved':
+     'Possible person · no face image saved yet';
+   queue.append(evidenceCard(item('sd',rec),'REVIEW',reason,{compare:false}));
+  }
  }
- for(const g of groups){
-  const b=el('button','folder');b.type='button';b.setAttribute('aria-label','Open '+g.title+' · '+g.entries.length+' recordings');
-  const cover=el('div','cover');cover.append(el('span','glyph',g.kind==='face'?'◉':'▤'));
-  cover.append(el('span','tag',g.verified?'MANUALLY LINKED':g.kind==='face'?'FACE SUGGESTION':g.kind==='face-review'?'MANUAL REVIEW':'PENDING FACE'));
-  const body=el('div','folder-body');
-  body.append(el('strong','folder-title',g.title),el('span','folder-meta',g.subtitle));
-  const uniqueClips=new Set(g.entries.map(e=>e.key)).size;
-  const foot=el('div','folder-footer');foot.append(el('span','',uniqueClips+' recordings · '+g.entries.length+' evidence items'),el('b','','›'));
-  b.append(cover,body,foot);
-  b.addEventListener('click',()=>openFolder(g.id));
-  $('folders').append(b);
-  const pictured=g.entries.find(x=>thumb(x));
-  if(pictured)signedPicture(cover,pictured);
- }
+ const gallery=$('folders');gallery.replaceChildren();
+ const faces=orderedFaces();
+ if(!faces.length){
+  gallery.append(el('p','empty','No face images are available yet. The S9+ continues reviewing original 4K recordings.'));
+ }else for(const f of faces.slice(0,8))gallery.append(faceEvidenceCard(f));
+}
+function renderFaces(){
+ $('detail').hidden=true;
+ const all=orderedFaces(),needle=String($('faceSearch').value||'').toLowerCase().trim().slice(0,140);
+ const kind=$('faceFilter').value;
+ const filtered=all.filter(f=>{
+  if(needle&&![f.rec.clip_no,stamp(item('sd',f.rec))].join(' ').toLowerCase().includes(needle))return false;
+  const suggested=comparisonCandidate(f.face)!==null;
+  return kind==='suggested'?suggested:kind==='manual'?!suggested:true;
+ });
+ $('faceTotal').textContent=filtered.length+' saved images';
+ const host=$('faceGallery');host.replaceChildren();
+ for(const f of filtered.slice(0,state.facePage*36))host.append(faceEvidenceCard(f));
+ if(!filtered.length)host.append(el('p','empty','No saved face images match this filter. Try All captured images.'));
+ const remaining=Math.max(0,filtered.length-state.facePage*36);
+ $('moreFaces').hidden=remaining===0;
+ $('moreFaces').textContent='Show more face images · '+remaining+' remaining';
 }
 function renderEvidence(){
- $('detail').hidden=true;$('folderSection').hidden=false;
- const all=[...state.sd.filter(r=>clipOK.test(String(r.clip_no||''))&&Number(r.person_count)>0).map(r=>item('sd',r)),
-   ...state.drive.filter(r=>driveOK.test(String(r.remote_name||''))).map(r=>item('drive',r))];
- const reviewIndex=new Map(state.reviews.map(r=>[String(r.remote_name||''),r]));
- const needle=state.filter,filtered=all.filter(e=>!needle||[e.key,e.source,stamp(e),
-   reviewIndex.get(e.key)?.category||''].join(' ').toLowerCase().includes(needle));
- const selected=filtered.slice(0,state.page*36),host=$('folders');host.replaceChildren();
- for(const entry of selected){
-  const card=el('button','folder');card.type='button';card.setAttribute('aria-label','Play '+entry.source+' clip from '+stamp(entry));
-  const cover=el('div','cover');cover.append(el('span','glyph','▣'),el('span','tag',entry.source==='drive'?'HISTORICAL DRIVE':'S9+ MICROSD'));
-  const body=el('div','folder-body');body.append(el('strong','folder-title',stamp(entry)),
-   el('span','folder-meta',String(reviewIndex.get(entry.key)?.category||entry.rec.category||'Person evidence · face unverified').replaceAll('_',' ')));
-  const foot=el('div','folder-footer');foot.append(el('span','',entry.source==='drive'?'Archived recording':'Local camera clip'),el('b','','Play ›'));
-  card.append(cover,body,foot);card.addEventListener('click',()=>openClip(entry));host.append(card);
-  signedPicture(cover,entry);
+ $('detail').hidden=true;
+ const sel=$('recordFilter').value,needle=String($('search').value||'').toLowerCase().trim().slice(0,140);
+ const local=state.sd.filter(x=>clipOK.test(String(x.clip_no||''))).map(x=>item('sd',x));
+ const drive=state.drive.filter(x=>driveOK.test(String(x.remote_name||''))).map(x=>item('drive',x));
+ const all=[...local,...drive];
+ const filtered=all.filter(entry=>{
+  const r=entry.rec,faces=Array.isArray(r.face_candidates)&&r.face_candidates.length>0;
+  if(sel==='person'&&!(entry.source==='sd'&&personEvidence(r)||
+      entry.source==='drive'&&/person|group/i.test(String(r.person_status||r.category||''))))return false;
+  if(sel==='faces'&&!(entry.source==='sd'&&faces))return false;
+  if(sel==='review'&&!(entry.source==='sd'&&needsFaceReview(r)))return false;
+  if(sel==='drive'&&entry.source!=='drive')return false;
+  if(needle&&![entry.key,stamp(entry),entry.source,String(r.scene_category||'')].join(' ').toLowerCase().includes(needle))return false;
+  return true;
+ }).sort((a,b)=>stamp(b).localeCompare(stamp(a)));
+ $('recordCount').textContent=filtered.length+' recordings match';
+ const host=$('browseGrid');host.replaceChildren();
+ for(const entry of filtered.slice(0,state.page*36)){
+  const r=entry.rec,faces=Array.isArray(r.face_candidates)?r.face_candidates.length:0;
+  const desc=entry.source==='drive'?'Historical Drive · original recording':
+   faces?'Face images: '+faces+' · original 4K':
+   needsFaceReview(r)?'Face review needed · original 4K':
+   personEvidence(r)?'Person evidence · original 4K':'Original 4K recording';
+  host.append(evidenceCard(entry,entry.source==='drive'?'DRIVE':faces?'FACES':needsFaceReview(r)?'REVIEW':'S9+',desc,{compare:entry.source==='sd'}));
  }
- if(!selected.length)host.append(el('p','empty','No matching historical or local person evidence.'));
- $('moreEvidence').hidden=selected.length>=filtered.length;
- $('moreEvidence').textContent='Show more recordings · '+(filtered.length-selected.length)+' remaining';
+ if(!filtered.length)host.append(el('p','empty','No recordings match these filters. Try All recordings.'));
+ const remaining=Math.max(0,filtered.length-state.page*36);
+ $('moreEvidence').hidden=remaining===0;
+ $('moreEvidence').textContent='Show more recordings · '+remaining+' remaining';
 }
 function openFolder(id){
  const g=state.folders.find(x=>x.id===id);if(!g)return;
@@ -466,6 +616,8 @@ function openFolder(id){
     setTab('appearance');$('appearanceReference').value=e.key;runAppearanceSearch();
    });
    body.append(compare);
+   const save=el('button','','Save to review case');save.type='button';
+   save.disabled=!state.caseAvailable;save.addEventListener('click',()=>reviewToCase(e));body.append(save);
   }
   card.append(pic,body);records.append(card);signedPicture(pic,e);
  }
@@ -530,6 +682,7 @@ function showCoarseColourFallback(reference,category,host,status){
    el('small','','Metadata category only · no precise histogram comparison'),
    el('small','','Identity unverified · unrelated people may wear the same colour'));
   open.type='button';open.addEventListener('click',()=>openClip(entry));body.append(open);
+   body.append(saveCaseButton(entry));
   card.append(pic,body);host.append(card);signedPicture(pic,entry);
  }
  return true;
@@ -575,6 +728,7 @@ async function runAppearanceSearch(){
      el('small','','Image area: '+String(hit.zone||'unspecified').slice(0,40)),
      el('small','','Same-person status: not verified'));
    open.type='button';open.addEventListener('click',()=>openClip(entry));body.append(open);
+   body.append(saveCaseButton(entry));
    card.append(pic,body);host.append(card);signedPicture(pic,entry);
   }
  }catch(_){
@@ -583,29 +737,180 @@ async function runAppearanceSearch(){
   status.textContent='No usable indexed comparison or matching coarse-colour evidence yet. The S9+ may still be indexing its 4K recordings. No identity was inferred.';
  }finally{if(run===state.appearanceRequest)button.disabled=false}
 }
+function currentCase(id){return state.cases.find(c=>c.id===id)||null}
+async function reloadCases(){
+ try{
+  const response=await get('/new/api/s9-evidence-cases');
+  if(response.ok!==true||response.version!==1||
+     response.manual_collection_only!==true||response.auto_identity!==false||
+     !Number.isInteger(response.revision)||response.revision<0||
+     !Array.isArray(response.cases)||response.cases.length>250)
+   throw Error('Invalid private case response');
+  state.cases=response.cases.filter(c=>/^CASE-[0-9]{4,6}$/.test(String(c.id||''))&&
+   ['open','closed'].includes(c.state)&&Array.isArray(c.clips)&&c.clips.length<=128);
+  state.caseRevision=response.revision;state.caseAvailable=true;
+  $('casesStatus').textContent=state.cases.length+' saved review cases · '+
+   response.linked_available_clips+' visible original clips linked · '+
+   'Manual evidence collections, not identified people.';
+ }catch(_){
+  state.caseAvailable=false;state.cases=[];
+  $('casesStatus').textContent='Private case registry not connected. Existing videos and colour search are unaffected; review-case writes are disabled.';
+ }
+ if(state.view==='cases')renderCaseFolders();
+}
+function caseVideoEntry(name){
+ const row=state.sd.find(r=>r.clip_no===name);
+ return row&&clipOK.test(name)?item('sd',row):null;
+}
+function renderCaseFolders(){
+ $('detail').hidden=true;$('folderSection').hidden=true;
+ $('casesSection').hidden=false;
+ const content=$('caseContents'),host=$('caseFolders');
+ host.replaceChildren();
+ const active=currentCase(state.caseSelection);
+ if(active){renderCaseDetails(active);return}
+ content.hidden=true;
+ if(!state.caseAvailable){
+  host.append(el('p','empty','Private review-case service is not available. No data has been changed.'));return;
+ }
+ if(!state.cases.length){
+  host.append(el('p','empty','No saved cases yet. Open any S9+ recording from Face folders, All person evidence or Appearance search and choose “Save to review case”.'));return;
+ }
+ for(const c of state.cases){
+  const valid=c.clips.filter(x=>x.available===true);
+  const b=el('button','folder');b.type='button';
+  b.setAttribute('aria-label','Open review case '+c.id);
+  const cover=el('div','cover');cover.append(el('span','glyph','▤'),
+   el('span','tag',c.state==='closed'?'CLOSED':'MANUALLY REVIEWED'));
+  const main=el('div','folder-body');main.append(el('strong','folder-title',c.id),
+   el('span','folder-meta',valid.length+' originals available · '+c.clips.length+
+    ' saved evidence links · not an identity'));
+  const footer=el('div','folder-footer');footer.append(el('span','',c.state==='open'?'Open for new evidence':'Read-only until reopened'),
+    el('b','','›'));
+  b.append(cover,main,footer);b.addEventListener('click',()=>{state.caseSelection=c.id;renderCaseFolders()});
+  host.append(b);
+  const first=c.clips.find(x=>x.available&&caseVideoEntry(x.clip));
+  if(first)signedPicture(cover,caseVideoEntry(first.clip));
+ }
+}
+function renderCaseDetails(c){
+ $('caseFolders').replaceChildren();$('caseContents').hidden=false;
+ $('caseTitle').textContent=c.id;
+ $('caseSubtitle').textContent=c.clips.length+' human-reviewed recording links · case '+c.state+
+  ' · no automatic same-person assertions';
+ const controls=$('caseControls');controls.replaceChildren();
+ const toggle=el('button','',c.state==='open'?'Close case':'Reopen case');
+ toggle.type='button';toggle.disabled=state.caseBusy;
+ toggle.addEventListener('click',()=>caseWrite({action:c.state==='open'?'close':'reopen',
+  case_id:c.id,clip:null,confirmed:true}));
+ controls.append(toggle);
+ const host=$('caseRecords');host.replaceChildren();
+ if(!c.clips.length)host.append(el('p','empty','This case has no recordings. You may add a reviewed clip from another tab.'));
+ for(const reference of c.clips){
+  if(!clipOK.test(String(reference.clip||'')))continue;
+  const entry=caseVideoEntry(reference.clip),card=el('article','record'),
+    cover=el('div','record-preview'),body=el('div','record-body');
+  cover.append(el('span','',reference.available?'Verified 4K archive':'Source unavailable'));
+  body.append(el('strong','',entry?stamp(entry):reference.clip),
+   el('small','',reference.available?'Original recording in microSD archive':
+    'Source is absent or no longer matches its reviewed source size'),
+   el('small','','Saved by manual review · not a facial identity or similarity result'));
+  if(entry&&reference.available){
+   const play=el('button','','Open original recording');play.type='button';
+   play.addEventListener('click',()=>openClip(entry));body.append(play);
+   signedPicture(cover,entry);
+  }
+  const remove=el('button','','Remove from case');remove.type='button';
+  remove.disabled=state.caseBusy;remove.addEventListener('click',()=>caseWrite({
+   action:'remove',case_id:c.id,clip:reference.clip,confirmed:true
+  }));body.append(remove);
+  card.append(cover,body);host.append(card);
+ }
+}
+function reviewToCase(entry){
+ if(entry?.source!=='sd'||!clipOK.test(String(entry.key||'')))return;
+ if(!state.caseAvailable){
+  $('casesStatus').textContent='Case registry is unavailable. Refresh the archive and retry.';return;
+ }
+ state.caseTargetClip=entry.key;
+ const select=$('caseTarget');select.replaceChildren();
+ const create=el('option','','Create a new case');create.value='create';select.append(create);
+ for(const c of state.cases.filter(c=>c.state==='open')){
+  const opt=el('option','',c.id+' · '+c.clips.length+' recordings');
+  opt.value=c.id;select.append(opt);
+ }
+ select.value='create';
+ $('caseConfirmed').checked=false;
+ $('casePickerRecording').textContent='Original recording: '+stamp(entry)+' · '+entry.key;
+ $('casePickerStatus').textContent='Inspect the original video and tick manual review confirmation to save.';
+ $('casePickerSave').disabled=false;
+ if(!$('casePicker').open)$('casePicker').showModal();
+}
+async function caseWrite(payload){
+ if(!state.caseAvailable||state.caseBusy)return;
+ const status=payload.action==='create'||payload.action==='add'?
+  $('casePickerStatus'):$('casesStatus');
+ state.caseBusy=true;$('casePickerSave').disabled=true;
+ try{
+  const auth=relay();
+  if(!auth?.fetch)throw Error('Authenticated relay unavailable');
+  const response=await auth.fetch('/new/api/s9-evidence-cases',{
+   method:'POST',cache:'no-store',
+   headers:{'Content-Type':'application/json',
+     'X-S9-Case-Intent':'manually-reviewed-evidence-v1'},
+   body:JSON.stringify({...payload,revision:state.caseRevision})
+  });
+  const doc=await response.json();
+  if(!response.ok||doc.ok!==true||doc.no_identity_inferred!==true)
+   throw Error(doc.error||'Case update was rejected');
+  await reloadCases();
+  state.caseSelection=doc.case_id;
+  if($('casePicker').open)$('casePicker').close();
+  if(state.view==='cases')renderCaseFolders();
+  status.textContent='Case '+doc.case_id+' saved securely. Original footage unchanged.';
+ }catch(err){
+  status.textContent='Case update not saved: '+String(err.message||err).slice(0,120)+
+   '. Reload case data before trying another change.';
+  await reloadCases();
+ }finally{state.caseBusy=false;$('casePickerSave').disabled=false;
+  if(state.view==='cases'&&state.caseAvailable)renderCaseFolders();}
+}
+function saveCasePicker(){
+ const clip=state.caseTargetClip,id=$('caseTarget').value,checked=$('caseConfirmed').checked;
+ if(!checked){
+  $('casePickerStatus').textContent='You must confirm that you reviewed the original video.';return;
+ }
+ if(!clipOK.test(String(clip||''))||!(id==='create'||/^CASE-[0-9]{4,6}$/.test(id))){
+  $('casePickerStatus').textContent='Choose a valid existing case or create a new one.';return;
+ }
+ caseWrite({action:id==='create'?'create':'add',
+  case_id:id==='create'?null:id,clip,confirmed:true});
+}
 function setTab(which){
- state.view=which;state.page=1;
- $('moreEvidence').hidden=which!=='history';
- for(const [id,name] of [['foldersTab','folders'],['historyTab','history'],['appearanceTab','appearance'],['timelineTab','timeline']]){
-  $(id).setAttribute('aria-selected',String(which===name));
- }
- $('summary').hidden=which==='timeline';
- $('disclaimer').hidden=which==='timeline';
- $('folderSection').hidden=which==='timeline'||which==='appearance';
+ state.view=which;state.page=1;state.facePage=1;
+ const tabs=[['foldersTab','folders'],['facesTab','faces'],
+  ['historyTab','history'],['appearanceTab','appearance'],['casesTab','cases']];
+ for(const [id,name] of tabs)$(id).setAttribute('aria-selected',String(which===name));
+ $('summary').hidden=which==='timeline';$('disclaimer').hidden=which==='timeline';
+ $('folderSection').hidden=which!=='folders';
+ $('facesSection').hidden=which!=='faces';
+ $('recordingsSection').hidden=which!=='history';
  $('appearanceSection').hidden=which!=='appearance';
- if(which!=='appearance'){
-  ++state.appearanceRequest;$('appearanceGo').disabled=false;
- }
- $('detail').hidden=true;$('legacyView').hidden=which!=='timeline';
+ $('casesSection').hidden=which!=='cases';
+ $('timelineSection').hidden=which!=='timeline';
+ $('detail').hidden=true;
+ $('moreEvidence').hidden=which!=='history';
+ $('moreFaces').hidden=which!=='faces';
+ if(which!=='appearance'){++state.appearanceRequest;$('appearanceGo').disabled=false}
  if(which==='timeline'){
   if(!$('legacyView').src){
-   const shared=relay();
-   if(shared)window.C720PSecureRelay=shared;
+   const shared=relay();if(shared)window.C720PSecureRelay=shared;
    $('legacyView').src=$('legacyView').dataset.src;
   }
- }else{
-  if(which==='history')renderEvidence();else if(which==='folders')renderFolders();
- }
+ }else if(which==='folders')renderFolders();
+ else if(which==='faces')renderFaces();
+ else if(which==='history')renderEvidence();
+ else if(which==='cases')renderCaseFolders();
 }
 async function refresh(){
  $('sync').textContent='Refreshing evidence…';
@@ -618,22 +923,38 @@ async function refresh(){
  renderFacePipelineSummary();
  $('driveCount').textContent=String(state.drive.length);
  $('s9PersonCount').textContent=String(state.sd.filter(x=>Number(x.person_count)>0).length);
- $('verifiedCount').textContent=String(new Set(state.reviews.map(x=>x.visitor_id).filter(x=>/^VIS-[0-9]{4,6}$/.test(String(x)))).size);
- buildFolders();fillAppearanceReferences();state.ready=true;
- if(state.view==='history')renderEvidence();else if(state.view==='folders')renderFolders();
+ fillAppearanceReferences();state.ready=true;
+ await reloadCases();
+ $('verifiedCount').textContent=state.caseAvailable?String(state.cases.length):'—';
+ if(state.view==='history')renderEvidence();
+ else if(state.view==='folders')renderFolders();
+ else if(state.view==='faces')renderFaces();
+ else if(state.view==='cases')renderCaseFolders();
  const failed=tasks.filter(t=>t.status!=='fulfilled').length;
  $('sync').textContent=(failed?'Partial index · '+failed+' source unavailable':'Archive connected')+' · '+state.reviews.length+' classified Drive clips';
  if(failed)$('disclaimer').textContent='Some evidence sources are currently unavailable. This view never fills missing face matches with guessed identities.';
 }
 $('reload').addEventListener('click',refresh);
-$('search').addEventListener('input',e=>{state.filter=String(e.target.value||'').toLowerCase().trim().slice(0,140);state.view==='history'?renderEvidence():renderFolders()});
+$('search').addEventListener('input',()=>{state.page=1;if(state.view==='history')renderEvidence()});
+$('recordFilter').addEventListener('change',()=>{state.page=1;renderEvidence()});
+$('faceSearch').addEventListener('input',()=>{state.facePage=1;renderFaces()});
+$('faceFilter').addEventListener('change',()=>{state.facePage=1;renderFaces()});
 $('moreEvidence').addEventListener('click',()=>{state.page++;renderEvidence()});
+$('moreFaces').addEventListener('click',()=>{state.facePage++;renderFaces()});
 $('foldersTab').addEventListener('click',()=>setTab('folders'));
+$('facesTab').addEventListener('click',()=>setTab('faces'));
+$('queueFaces').addEventListener('click',()=>setTab('faces'));
+$('queueBrowse').addEventListener('click',()=>setTab('history'));
 $('historyTab').addEventListener('click',()=>setTab('history'));
 $('appearanceTab').addEventListener('click',()=>setTab('appearance'));
+$('casesTab').addEventListener('click',()=>setTab('cases'));
+$('caseBack').addEventListener('click',()=>{state.caseSelection=null;renderCaseFolders()});
+$('casePickerSave').addEventListener('click',saveCasePicker);
+$('casePickerClose').addEventListener('click',()=>$('casePicker').close());
 $('appearanceGo').addEventListener('click',runAppearanceSearch);
 $('timelineTab').addEventListener('click',()=>setTab('timeline'));
-$('back').addEventListener('click',()=>{state.selected=null;renderFolders()});
+$('timelineBack').addEventListener('click',()=>setTab('history'));
+$('back').addEventListener('click',()=>{state.selected=null;setTab('folders')});
 $('closeVideo').addEventListener('click',()=>$('viewer').close());
 $('viewer').addEventListener('close',()=>{++playbackTicket;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
 $('video').addEventListener('loadedmetadata',()=>{$('videoState').textContent='Ready · '+($('video').duration||0).toFixed(1)+' seconds. Press Play.'});
