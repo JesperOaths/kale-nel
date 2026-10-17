@@ -999,12 +999,15 @@ public final class CameraService extends Service {
    }});
   }catch(java.util.concurrent.RejectedExecutionException e){historicalQueued=false;}
  }
+ // Battery thermistor is tenths of a degree Celsius. Keep the worker
+ // strictly below 39 C, and continue yielding immediately to motion events.
+ private static final int FACE_BACKFILL_MAX_TEMP_TENTHS_C=390;
  /** Scan finalized Security4K person recordings at idle: one clip per phone-local pass. */
  private void maybeFaceBackfill(){
   long now=SystemClock.elapsedRealtime();
   if(!running||faceBackfillQueued||now-lastFaceBackfillScan<60000||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||movementBackfillQueued||temperature()>=370||gardenPersonGateBusy||
+     !"watching".equals(mode)||movementBackfillQueued||temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C||gardenPersonGateBusy||
      (lastMovementAt>0&&now-lastMovementAt<45000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   faceBackfillQueued=true;
@@ -1012,12 +1015,12 @@ public final class CameraService extends Service {
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     if(!running||!"watching".equals(mode)||temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C)return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
      Arrays.sort(manifests,(a,b)->b.getName().compareTo(a.getName()));
      for(File manifest:manifests){
-      if(!running||!"watching".equals(mode)||temperature()>=370)return;
+      if(!running||!"watching".equals(mode)||temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C)return;
       if(manifest.length()<100||manifest.length()>28000)continue;
       String mp4name=manifest.getName().replace(".verified.json","");
       File video=new File(target,mp4name);
