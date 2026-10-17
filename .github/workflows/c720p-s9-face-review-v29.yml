@@ -6,12 +6,14 @@ on:
       - 'ops/c720p/s9-native-security/security-face-folders-v22.html'
       - 'ops/c720p/s9-native-security/test-face-review-evidence-gates-v29.js'
       - 'ops/c720p/s9-native-security/deploy-s9-face-review-v29.py'
+      - 'ops/c720p/s9-native-security/test-s9-face-review-v29-ui-deploy-gate.py'
       - '.github/workflows/c720p-s9-face-review-v29.yml'
   push:
     branches: [main]
     paths:
       - 'ops/c720p/s9-native-security/security-face-folders-v22.html'
       - 'ops/c720p/s9-native-security/deploy-s9-face-review-v29.py'
+      - 'ops/c720p/s9-native-security/test-s9-face-review-v29-ui-deploy-gate.py'
       - '.github/workflows/c720p-s9-face-review-v29.yml'
 
 permissions:
@@ -32,6 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-face-review-v29.py
+          python3 ops/c720p/s9-native-security/test-s9-face-review-v29-ui-deploy-gate.py
           node ops/c720p/s9-native-security/test-face-review-evidence-gates-v29.js
           python3 ops/c720p/s9-native-security/test-s9-face-recall-v27.py
           node - <<'JS'

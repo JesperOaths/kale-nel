@@ -36,9 +36,20 @@ def catalog():
 
 def status():
  r=json.loads(get("http://127.0.0.1:18808/status",200000))
- if not r.get("ok") or not r.get("native_4k_enabled") or not r.get("continuous_4k_ready"):
-  raise RuntimeError("s9_native_4k_not_ready")
- return r
+ if (not r.get("ok") or r.get("mode")!="watching" or
+     not r.get("native_4k_enabled") or
+     int(r.get("last_frame_age_ms") if r.get("last_frame_age_ms") is not None else 999999)>2500):
+  raise RuntimeError("s9_live_camera_unhealthy_no_UI_write")
+ if r.get("continuous_4k_ready") is True:return r
+ # Page HTML cannot change camera capture. Allow only the known thermal
+ # fallback with 4K production preference preserved and a valid pre-roll.
+ if (r.get("continuous_4k_last_result")=="fallback_thermal_guard" and
+     r.get("continuous_4k_production_persisted") is True and
+     r.get("preroll_ready") is True and
+     int(r.get("preroll_buffered_ms") or 0)>=4400 and
+     float(r.get("temperature_c",100))<39.5):
+  return r
+ raise RuntimeError("s9_4k_unknown_fault_no_UI_write")
 
 def atomic(path,body,meta):
  fd,name=tempfile.mkstemp(prefix=".s9-face-v29-",dir=str(path.parent))
@@ -97,11 +108,14 @@ def main():
   after=catalog()
   new_ids={e.get("clip_no") for e in after["events"]}
   if not old_ids.issubset(new_ids):raise RuntimeError("face_review_deployment_lost_archive_records")
-  if not status().get("continuous_4k_ready"):raise RuntimeError("s9_4k_healthy_state_changed")
+  after_camera=status()
+  if after_camera.get("mode")!="watching":raise RuntimeError("camera_not_watching_after_UI")
   print("S9_FACE_REVIEW_V29_VERIFIED "+json.dumps({
    "already_installed":False,"clips_before":len(old_ids),"clips_after":len(new_ids),
    "changed_file":UI.name,"ui_sha256":digest(source),
-   "s9_4k_healthy":True,"camera_apk_changed":False,
+   "s9_4k_healthy":after_camera.get("continuous_4k_ready") is True,
+   "safe_thermal_fallback":after_camera.get("continuous_4k_ready") is not True,
+   "ui_never_controls_camera":True,"camera_apk_changed":False,
    "archive_clips_modified":False,"biometric_templates_transferred":False,
    "backup":str(backup),"http_readback_verified":True},sort_keys=True),flush=True)
  except BaseException:
