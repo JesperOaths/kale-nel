@@ -29,6 +29,22 @@ class Tests(unittest.TestCase):
   self.assertIn(marker,FACE)
   self.assertIn(marker,BUILD)
   self.assertIn('face_crop_geometry_version",S9FaceReview.GEOMETRY_VERSION',SERVICE)
+ def test_archive_exposes_only_allowlisted_geometry_marker(self):
+  import importlib.util
+  path=ROOT.parent/"s9-person-ml-v1/local-sd-catalog.py"
+  spec=importlib.util.spec_from_file_location("s9_catalog_geom_test",path)
+  mod=importlib.util.module_from_spec(spec)
+  spec.loader.exec_module(mod)
+  basis={"face_review_version":"s9_face_review_v1","face_review_status":"no_frontal_face_in_samples",
+         "face_review_sampled_frames":36,"face_deep_review_version":"s9_onphone_36_samples_person_or_tile_v4",
+         "face_candidates":[],"face_crop_padded_manual_count":2,"face_rejected_insufficient_native_eye_detail":3}
+  good=mod.safe_face_review_metadata(dict(basis,face_crop_geometry_version="face_crop_geometry_v2_padded_manual"))
+  self.assertEqual(good["face_crop_geometry_version"],"face_crop_geometry_v2_padded_manual")
+  self.assertEqual(good["face_crop_padded_manual_count"],2)
+  self.assertEqual(good["face_rejected_insufficient_native_eye_detail"],3)
+  invalid=mod.safe_face_review_metadata(dict(basis,face_crop_geometry_version="arbitrary_or_untrusted"))
+  self.assertIsNone(invalid["face_crop_geometry_version"])
+  self.assertIsNone(mod.safe_face_review_metadata({})["face_crop_geometry_version"])
  def test_reviewer_must_not_make_weak_auto_identity_claim(self):
   self.assertIn('if(reliableForEmbedding)',FACE)
   self.assertIn('if(!reliableForEmbedding)',FACE)
