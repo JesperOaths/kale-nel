@@ -388,7 +388,7 @@ final class S9FaceReview implements AutoCloseable {
      }else if(shadowEmbeddingTrials==0&&!contextPadded&&
          // A saved, visually usable, unpadded face crop may be below the
          // much stricter identification threshold. Probe the TFLite paired
-         // forward pass once for diagnostics only; NEVER call assign(shadow).
+         // forward pass once for diagnostics only; never assign its identity.
          // Keep the already-validated 10px native eye-detail minimum and
          // reject padded context or rejected/blurred crops.
          f.confidence()>=.49f&&f.eyesDistance()>=7f&&
