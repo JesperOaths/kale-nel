@@ -313,8 +313,12 @@ final class S9FaceReview implements AutoCloseable {
   // later slots for later source times instead of filling all eight in the
   // earliest frames and silently skipping the remaining face search.
   // The ordinary 12-frame live review retains its original eight-slot cap.
+  // A 48-call ceiling covers occasional second-person anchors, whereas
+  // the actual deep review has 36 frame positions. Budget over those 36
+  // positions so a one-person clip can still fill all eight evidence slots.
+  final int expectedSamples=Math.min(frameLimit,36);
   final int captureAllowance=frameLimit>MAX_FRAMES?
-      Math.min(MAX_CAPTURES,Math.max(1,(frames*MAX_CAPTURES+frameLimit-1)/frameLimit)):
+      Math.min(MAX_CAPTURES,Math.max(1,(frames*MAX_CAPTURES+expectedSamples-1)/expectedSamples)):
       MAX_CAPTURES;
   Bitmap scaled=null,rgb=null,subject=frame;
   int offsetX=0,offsetY=0;
