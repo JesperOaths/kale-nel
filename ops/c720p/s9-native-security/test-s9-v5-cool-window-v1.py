@@ -35,7 +35,7 @@ class LocalCoolWindow(unittest.TestCase):
                  "face_embedding_vector","delete_original_video"):
    self.assertNotIn(unsafe,script)
   self.assertIn("MAX_RESTART_TEMP_C=40.5",script)
-  self.assertIn("if not healthy(latest) or not idle(latest):",script)
+  self.assertIn("if not (healthy(latest) or safe_fallback_for_install(latest)) or not idle(latest):",script)
   self.assertIn("fcntl.flock(handle,fcntl.LOCK_EX|fcntl.LOCK_NB)",script)
   self.assertIn('("complete","needs_manual_recovery","installing")',script)
  def setup_mocks(self,tempdir,temp,stage_ready=True,version=None):
