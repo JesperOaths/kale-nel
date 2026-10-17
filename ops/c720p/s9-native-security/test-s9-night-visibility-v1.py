@@ -32,6 +32,8 @@ class NightVisibilityPatch(unittest.TestCase):
   self.assertIn("S9_NIGHT_VISIBILITY_V1_ROLLBACK_ATTEMPTED",deployment)
   self.assertIn("original_archive_count",deployment)
   self.assertIn("night_active",js)
+  self.assertIn("result.night_active",js)
+  self.assertIn('j.get("night_active")',deployment)
   self.assertIn("brightness(",js)
   self.assertIn("cameraLive",js)
   self.assertIn("/new/camera-controls",js)
