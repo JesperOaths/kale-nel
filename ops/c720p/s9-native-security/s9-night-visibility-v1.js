@@ -5,13 +5,13 @@
  */
 (()=>{
   'use strict';
-  if(document.getElementById('s9-night-visibility-v1'))return;
+  if(document.getElementById('s9-night-visibility-controls-v1'))return;
   const live=document.getElementById('cameraLive');
   const section=document.getElementById('panel-live');
   if(!live||!section)return;
 
   const ui=document.createElement('div');
-  ui.id='s9-night-visibility-v1';
+  ui.id='s9-night-visibility-controls-v1';
   ui.setAttribute('role','group');
   ui.setAttribute('aria-label','Nighttime live picture visibility');
   ui.style.cssText='display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:10px 13px;margin:10px 0;border:1px solid #416071;border-radius:11px;background:#152633;color:#f0fbff;font:12px/1.45 system-ui,sans-serif';
