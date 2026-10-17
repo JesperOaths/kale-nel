@@ -6,7 +6,8 @@ const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
 const state={pane:'overview',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,
- approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null};
+ approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
+ faceSummary:null};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -92,19 +93,30 @@ async function fetchFaces(){
   if(!r.ok||data.archive_mode!=='S9-microSD-only'||!Array.isArray(data.events))
    throw Error('S9+ face image archive unavailable');
   const found=[];
+  let candidateRecords=0;
+  const v5Reviewed=data.events.filter(rec=>rec.face_deep_review_version==='s9_onphone_36_samples_overlapping_tiles_v5').length;
   for(const rec of data.events){
    if(!clipName.test(String(rec.clip_no||'')))continue;
    for(const face of (Array.isArray(rec.face_candidates)?rec.face_candidates:[]).slice(0,16)){
+    candidateRecords++;
     if(!faceName.test(String(face.snapshot_name||'')))continue;
     if(!String(face.snapshot_name).startsWith(rec.clip_no.slice(0,-4)+'__'))continue;
     found.push({clip:rec.clip_no,face,recording:rec});
    }
   }
   state.faceList=found.sort((a,b)=>String(b.clip).localeCompare(String(a.clip)));
+  state.faceSummary={reviewed:v5Reviewed,total:data.events.length,
+   snapshots:found.length,withoutSnapshot:Math.max(0,candidateRecords-found.length)};
   state.faceLoaded=true;
   $('faceCount').textContent=String(found.length);
+  renderMetrics();
   if(state.pane==='faces')renderFaces();
- }catch(e){$('faceCount').textContent='—';if(state.pane==='faces')$('faceGrid').replaceChildren(elt('p','Face images could not be loaded right now.','empty'))}
+ }catch(e){
+  $('faceCount').textContent='—';
+  $('faceScanLabel').textContent='Unavailable';
+  $('facePhotoStatus').textContent='Face snapshot metadata is currently unavailable. Try Refresh.';
+  if(state.pane==='faces')$('faceGrid').replaceChildren(elt('p','Face images could not be loaded right now.','empty'));
+ }
 }
 async function action(data,after){
  if(state.busy||!state.doc)return false;
@@ -249,11 +261,30 @@ function renderMetrics(){
  $('appearanceCount').textContent=String(tentativeFolders().length);
  $('groupCount').textContent=String(tentativeFolders().length);
  const scan=state.doc?.person_detection;
- if(scan){
-  $('scanStatus').textContent=num(scan.assessed_clips)+' of '+num(scan.total_clips)+
-   ' recordings reassessed · '+num(scan.clips_with_supported_people)+' with supported person detections'+
-   (scan.status==='complete'?'.':' · scanning continues on S9+.');
- }else $('scanStatus').textContent='Historical person review is not yet available.';
+ if(scan&&num(scan.total_clips)){
+  const total=num(scan.total_clips),reviewed=Math.min(total,num(scan.assessed_clips));
+  $('personScanLabel').textContent=reviewed+' / '+total+
+    (scan.status==='complete'?' · complete':'');
+  $('personScanProgress').value=Math.round(100*reviewed/total);
+  $('scanStatus').textContent=num(scan.clips_with_supported_people)+
+   ' recordings with supported person evidence. Lack of detection is not proof that nobody appeared.';
+ }else{
+  $('personScanLabel').textContent='No current data';
+  $('personScanProgress').value=0;
+  $('scanStatus').textContent='Person-detection coverage is currently unavailable.';
+ }
+ const fs=state.faceSummary;
+ if(fs&&fs.total){
+  const reviewed=Math.min(fs.total,fs.reviewed);
+  $('faceScanLabel').textContent=reviewed+' / '+fs.total+
+   (reviewed===fs.total?' · reviewed':' · remaining '+(fs.total-reviewed));
+  $('faceScanProgress').value=Math.round(100*reviewed/fs.total);
+  $('facePhotoStatus').textContent=fs.snapshots+' saved face images available · '+
+   fs.withoutSnapshot+' candidate records have no saved image. Images are for manual review, not identity matches.';
+ }else if(!state.faceLoaded){
+  $('faceScanLabel').textContent='Loading…';
+  $('faceScanProgress').value=0;
+ }
 }
 function renderOverview(){
  const flagged=savedFolders().filter(f=>num(f.approvals_needing_person_recheck)>0);
