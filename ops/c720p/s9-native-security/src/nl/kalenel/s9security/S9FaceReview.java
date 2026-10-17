@@ -386,9 +386,14 @@ final class S9FaceReview implements AutoCloseable {
        status="face_embedding_failed_snapshots_only";error=ex.getClass().getSimpleName();
       }
      }else if(shadowEmbeddingTrials==0&&!contextPadded&&
-         f.confidence()>=.58f&&f.eyesDistance()>=10f&&
-         Math.abs(yaw)<=22&&Math.abs(roll)<=18&&
-         originalEyeSpan>=14f&&estimatedSize>=70){
+         // A saved, visually usable, unpadded face crop may be below the
+         // much stricter identification threshold. Probe the TFLite paired
+         // forward pass once for diagnostics only; NEVER call assign(shadow).
+         // Keep the already-validated 10px native eye-detail minimum and
+         // reject padded context or rejected/blurred crops.
+         f.confidence()>=.49f&&f.eyesDistance()>=7f&&
+         Math.abs(yaw)<=28&&Math.abs(roll)<=22&&
+         originalEyeSpan>=10f&&estimatedSize>=70){
       // Shadow inference confirms the installed model can process a real crop.
       // Borderline photos must never generate a known/unknown identity match.
       shadowEmbeddingTrials++;
@@ -430,7 +435,12 @@ final class S9FaceReview implements AutoCloseable {
       .put("time_ms",ms).put("frontal_candidate",true)
       .put("yaw_degrees",Math.round(yaw)).put("roll_degrees",Math.round(roll));
      captures.put(match);
-     if(modelReady&&!status.equals("face_model_changed_requires_reenrollment"))
+     // A usable saved crop contradicts "no frontal face in samples" even
+     // when the image is inspection-only and no model inference was allowed.
+     // Retain specific embedding/index errors instead of hiding them.
+     if("no_frontal_face_in_samples".equals(status)||
+        (modelReady&&!status.equals("face_model_changed_requires_reenrollment")&&
+         !status.equals("face_index_read_error")))
       status="review_complete_unverified_matches";
     }finally{face.recycle();}
    }
@@ -463,7 +473,7 @@ final class S9FaceReview implements AutoCloseable {
   manifest.put("face_crop_padded_manual_count",paddedManualCrops);
   manifest.put("face_rejected_insufficient_native_eye_detail",rejectedInsufficientNativeEyeDetail);
   manifest.put("face_rejected_dark_or_blurry",rejectedImageQuality);
-  manifest.put("face_shadow_review_version","s9_shadow_model_probe_v1");
+  manifest.put("face_shadow_review_version","s9_shadow_model_probe_v2");
   manifest.put("face_shadow_model_trials",shadowEmbeddingTrials);
   manifest.put("face_shadow_model_succeeded",shadowEmbeddingSucceeded);
   manifest.put("face_shadow_model_failed",shadowEmbeddingFailed);
