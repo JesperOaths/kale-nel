@@ -233,6 +233,7 @@ def safe_face_review_metadata(m):
          "face_manual_review_rescue_candidates":None,
          "face_rejected_looking_away_or_roll":None,
          "face_rejected_crop_geometry":None,"face_rejected_dark_or_blurry":None,
+         "face_crop_padded_manual_count":None,"face_rejected_insufficient_native_eye_detail":None,
          "face_deep_detector_anchor_frames":None,
          "face_deep_person_roi_anchors":None,
          "face_deep_multiple_person_anchors":None,
@@ -265,7 +266,8 @@ def safe_face_review_metadata(m):
              "face_rejected_low_confidence","face_rejected_small_face",
              "face_manual_review_rescue_candidates",
              "face_rejected_looking_away_or_roll","face_rejected_crop_geometry",
-             "face_rejected_dark_or_blurry"):
+             "face_rejected_dark_or_blurry","face_crop_padded_manual_count",
+             "face_rejected_insufficient_native_eye_detail"):
   value=m.get(key)
   if type(value) is int and 0<=value<=144:result[key]=value
  if result["face_deep_review_version"] in ("s9_onphone_36_samples_person_roi_v2","s9_onphone_36_samples_person_or_tile_v3","s9_onphone_36_samples_person_or_tile_v4"):
@@ -311,6 +313,7 @@ def safe_face_review_metadata(m):
   out.append({"person_id":key,"candidate_name":label,"match_status":status,
     "time_ms":ms,"cosine_similarity":round(score,3) if score is not None else None,
     "face_crop_requires_manual_review":row.get("face_crop_requires_manual_review") is True,
+    "face_crop_padded_context_only":row.get("face_crop_padded_context_only") is True,
     "snapshot_on_s9":snap is not None,
     "snapshot_name":snap,"snapshot_size":size,"snapshot_sha256":digest})
  result["face_candidates"]=out
