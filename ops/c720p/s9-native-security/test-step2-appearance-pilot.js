@@ -33,6 +33,8 @@ const clips=[clipA,clipB].map((clip_no,i)=>({
  anonymous_tracks:[{upper_clothing_colour:'blue',image_movement_direction:'image_left',id:'clip_t1'}],
  anonymous_track_count:1
 }));
+clips[1].face_deep_review_version='s9_onphone_36_samples_person_or_tile_v4';
+clips[1].face_snapshots_saved=1; // An earlier crop does NOT count as current V5.
 let appearanceCalls=0,simulateUnavailable=false;
 const relay={
  fetch:async(path)=>{
@@ -69,6 +71,8 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
 (async()=>{
  await flush();await flush();
  assert.equal(byId('facesCount').textContent,'0');
+ const pendingClips=vm.runInContext("state.folders.find(g=>g.id==='sd:scan-pending')?.entries.map(e=>e.key)",context);
+ assert(pendingClips.includes(clipB),'Legacy preserved-crop recording still needs V5 review');
  // Coarse colour evidence works with ZERO usable face embeddings.
  const containsText=(node,text)=>node.textContent===text||node.children.some(child=>containsText(child,text));
  assert(byId('folders').children.some(e=>containsText(e,'Upper clothing · blue')),
