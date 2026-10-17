@@ -218,7 +218,9 @@ def tick(stage_only=False):
           cooldown_4k_last_result=phone.get("continuous_4k_last_result"),
           cooldown_4k_retry_ms=phone.get("continuous_4k_retry_after_ms"))
    return
-  if not idle(phone):
+  # Staging only reads the signed installed APK and builds on C720P. It may
+  # proceed alongside historical review; actual installation must remain idle.
+  if not stage_only and not idle(phone):
    # Only non-biometric booleans: useful for diagnosing a missed install window.
    report("deferred_motion_or_background_work",
           face_review_busy=phone.get("face_backfill_queued") is True,
