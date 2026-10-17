@@ -65,7 +65,7 @@ class Tests(unittest.TestCase):
   self.assertIn('if rescan_v28:meta["review_request_version"]=RECHECK_VERSION',stage)
   android=(HERE/"src/nl/kalenel/s9security/CameraService.java").read_text()
   worker=android.split("private void maybeHistoricalImport(){",1)[1].split("private void maybeFaceBackfill(){",1)[0]
-  self.assertIn("temperature()>=370",worker)
+  self.assertIn("temperature()>=420",worker)
   self.assertIn("HistoricalImportWorker(sandbox,model).processOne()",worker)
 
  def test_thermal_and_space_deferrals_are_not_source_failures(self):

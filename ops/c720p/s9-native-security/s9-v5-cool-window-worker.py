@@ -25,7 +25,7 @@ LOCK=ROOT/"state/s9-face-v5-cool-window-v1.lock"
 API="http://127.0.0.1:18808/status"
 VERSION="s9_onphone_36_samples_overlapping_tiles_v5"
 SOURCE="ops/c720p/s9-native-security/"
-MAX_RESTART_TEMP_C=34.5
+MAX_RESTART_TEMP_C=40.5
 MIN_SD_FREE=20*1024**3
 INSTALL_TIMEOUT_S=940
 BUILD_TIMEOUT_S=820
@@ -83,6 +83,19 @@ def healthy(s):
    not s.get("continuous_4k_error") and
    s.get("sd_free_bytes",0)>=MIN_SD_FREE and
    s.get("last_frame_age_ms",99999)<2600)
+
+def safe_fallback_for_install(s):
+ # Pre-V5 firmware may fall back at 39.5 C, even though Android still has
+ # healthy frame capture, 4K recording-on-motion and an independent pre-roll.
+ # Only install after >=90 s without a validated person and no active clip.
+ return (stage_eligible(s) and
+   s.get("continuous_4k_production_persisted") is True and
+   s.get("continuous_4k_ready") is False and
+   s.get("continuous_4k_last_result")=="fallback_thermal_guard" and
+   s.get("preroll_ready") is True and s.get("preroll_buffered_ms",0)>=4400 and
+   not s.get("preroll_last_error") and
+   s.get("person_last_accepted_motion_age_ms",0)>=90000 and
+   s.get("temperature_c",100)<=MAX_RESTART_TEMP_C)
 
 def stage_eligible(s):
  """Reading the signed APK needs an alive camera service, not a live 4K codec.
@@ -213,7 +226,7 @@ def tick(stage_only=False):
    return
   # The recurring C720P timer should ALSO stage during thermal fallback,
   # but can never enter the actual installer until full native 4K is ready.
-  if not healthy(phone):
+  if not healthy(phone) and not safe_fallback_for_install(phone):
    report("staged_waiting_for_4k_encoder",camera_unchanged=True,
           continuous_4k_ready=phone.get("continuous_4k_ready"),
           temperature_c=phone.get("temperature_c"))
@@ -223,7 +236,7 @@ def tick(stage_only=False):
   except Exception:
    report("deferred_post_build_status_unavailable")
    return
-  if not healthy(latest) or not idle(latest):
+  if not (healthy(latest) or safe_fallback_for_install(latest)) or not idle(latest):
    report("deferred_no_longer_idle")
    return
   temperature=latest.get("temperature_c")

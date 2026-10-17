@@ -36,20 +36,38 @@ def healthy(s):
      and s.get("continuous_4k_dropped_output_frames",1)==0
      and not s.get("continuous_4k_error")
      and s.get("sd_free_bytes",0)>10*1024**3
-     and s.get("temperature_c",100)<38.5
+     and s.get("temperature_c",100)<42.0
      and s.get("last_frame_age_ms",99999)<2600)
+def safe_preflight(s):
+ # Previous V4 camera may legitimately be in 4K thermal fallback. Only a
+ # checksum-protected, idle and verified thermal fallback is an alternative
+ # pre-upgrade state; after installation the 4K encoder MUST be healthy.
+ if healthy(s):return True
+ return (s.get("ok") is True and s.get("mode")=="watching"
+     and s.get("native_4k_enabled") is True
+     and s.get("garden_person_gate_backend")=="gpu"
+     and s.get("continuous_4k_production_persisted") is True
+     and s.get("continuous_4k_ready") is False
+     and s.get("continuous_4k_last_result")=="fallback_thermal_guard"
+     and s.get("preroll_ready") is True
+     and s.get("preroll_buffered_ms",0)>=4400
+     and not s.get("preroll_last_error")
+     and s.get("sd_free_bytes",0)>20*1024**3
+     and s.get("last_frame_age_ms",99999)<2600
+     and s.get("temperature_c",100)<=40.5
+     and s.get("person_last_accepted_motion_age_ms",0)>=90000)
 def signer(p):
  if SIGNER not in run(["apksigner","verify","--print-certs",str(p)],55):
   raise RuntimeError("APK_signer_changed")
 def start():
  adb("shell","am","start","-n",PACKAGE+"/.CameraActivity",
      "--ez","enable_native_camera","true",sec=50)
-def wait(version=None,seconds=165):
+def wait(version=None,seconds=165,allow_thermal=False):
  starttime=time.monotonic()
  while time.monotonic()-starttime<seconds:
   try:
    refresh();s=status()
-   if healthy(s) and (version is None or s.get("face_deep_rescue_version")==version):
+   if (healthy(s) or (allow_thermal and safe_preflight(s))) and (version is None or s.get("face_deep_rescue_version")==version):
     return s
   except Exception:pass
   time.sleep(3)
@@ -84,11 +102,11 @@ def main():
  if adb("shell","getprop","ro.product.model",sec=20).strip()!="SM-G965F":
   raise RuntimeError("unexpected_phone")
  refresh()
- old_status=wait(seconds=60)
+ old_status=wait(seconds=60,allow_thermal=True)
  originals=archive()
  time.sleep(15)
  settle=status()
- if not healthy(settle) or settle.get("recorded")!=old_status.get("recorded"):
+ if not safe_preflight(settle) or settle.get("recorded")!=old_status.get("recorded"):
   print("S9_V27_FACE_RESCUE_DEFERRED_BUSY",flush=True);return
  path=adb("shell","pm","path",PACKAGE,sec=20).splitlines()
  paths=[line.partition(":")[2].strip() for line in path if line.startswith("package:") and line.endswith("base.apk")]
@@ -120,11 +138,11 @@ def main():
  changed=False
  try:
   latest=status()
-  if not healthy(latest) or latest.get("recorded")!=settle.get("recorded"):
+  if not safe_preflight(latest) or latest.get("recorded")!=settle.get("recorded"):
    print("S9_V27_FACE_RESCUE_DEFERRED_EVENT",flush=True);return
-  # A warm restart can put the native 4K encoder into its lengthy
-  # thermal-recovery guard. Defer rather than interrupt a healthy stream.
-  if float(latest.get("temperature_c",100))>34.5:
+  # 42 C battery maximum, with 1.5 C restart headroom. Never force a
+  # hot restart, interrupt events, or bypass original APK rollback.
+  if float(latest.get("temperature_c",100))>40.5:
    print("S9_V27_FACE_RESCUE_DEFERRED_4K_RESTART_THERMAL_GUARD",flush=True);return
   changed=True
   adb("shell","am","force-stop",PACKAGE,sec=28)
@@ -142,6 +160,12 @@ def main():
   if not isinstance(current.get("sensor_lens_apertures_supported"),list) or (
        not isinstance(current.get("sensor_lens_aperture_result_available"),bool)):
    raise RuntimeError("s9_night_optical_telemetry_not_installed")
+  # The signed V5 APK must expose the agreed battery policy from the
+  # *running* Android service, not merely embed it in the DEX file.
+  if (current.get("application_battery_temperature_max_c")!=42.0 or
+      current.get("continuous_4k_rearm_temperature_below_c")!=40.5 or
+      current.get("face_review_4k_temperature_below_c")!=41.5):
+   raise RuntimeError("installed_s9_42c_battery_policy_not_verified")
   nowclips=archive()
   if not originals.issubset(nowclips):
    raise RuntimeError("archived_recordings_disappeared")

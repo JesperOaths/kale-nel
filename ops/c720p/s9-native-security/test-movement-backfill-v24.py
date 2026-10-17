@@ -35,7 +35,7 @@ class BackfillSafety(unittest.TestCase):
     def test_idle_reviewer_not_capture(self):
         method=CAMERA.split("private void maybeMovementBackfill()",1)[1].split(
             "private void maybeGardenArchiveTriage()",1)[0]
-        for token in ('movementBackfillQueued', 'temperature()>=335',
+        for token in ('movementBackfillQueued', 'temperature()>=420',
                       'SystemClock.elapsedRealtime()-lastMovementAt<60000L',
                       'folder.getUsableSpace()<20L*1024*1024*1024',
                       'new File(target,name)', 'movementBackfillRetries',

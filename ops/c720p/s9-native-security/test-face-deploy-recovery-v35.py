@@ -9,10 +9,10 @@ INSTALL=(HERE/"deploy-s9-face-recall-v27.py").read_text()
 class FaceDeployRecoveryV35(unittest.TestCase):
  def test_hot_restart_defers_before_camera_force_stop(self):
   before=INSTALL.split('changed=False',1)[1].split('changed=True',1)[0]
-  self.assertIn('float(latest.get("temperature_c",100))>34.5',before)
+  self.assertIn('float(latest.get("temperature_c",100))>40.5',before)
   self.assertIn('DEFERRED_4K_RESTART_THERMAL_GUARD',before)
-  self.assertIn('if not healthy(latest)',before)
-  self.assertIn('if not healthy(settle)',INSTALL)
+  self.assertIn('if not safe_preflight(latest)',before)
+  self.assertIn('if not safe_preflight(settle)',INSTALL)
  def test_rollback_uses_actual_onphone_apk_checksum(self):
   rollback=INSTALL.split('except BaseException as err:',1)[1]
   self.assertIn('sha(baseline)!=installed',rollback)

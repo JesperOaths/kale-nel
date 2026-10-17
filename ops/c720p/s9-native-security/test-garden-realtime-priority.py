@@ -96,7 +96,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
             'recorder.setVideoSize(3840,2160)',
             'recorder.setVideoFrameRate(30)',
             'recorder.setVideoEncodingBitRate(36000000)',
-            'temperature()<415',
+            'temperature()<420',
             'folder.getUsableSpace()>15L*1024*1024*1024',
             'COOLDOWN_MS=0',
             'recording_rate_max_per_hour',

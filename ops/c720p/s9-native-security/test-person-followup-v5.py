@@ -21,7 +21,7 @@ class FollowupTests(unittest.TestCase):
     "gardenGateClassifier.personEvidenceInGarden","gardenGateClassifier.lastPersonScoreAnywhere",
     "personTrackGate.offer(now,jpegAt,score,personBox,localCells)",
     "personTrackGate","gardenPersonCandidateUntil=0",
-    "temperature()<415","folder.getUsableSpace()>15L*1024*1024*1024"):
+    "temperature()<420","folder.getUsableSpace()>15L*1024*1024*1024"):
    self.assertIn(required,body)
   self.assertLess(body.index("GardenPersonTrackGate.Decision.CONFIRMED"),body.index("startRecording()"))
  def test_roi_multiscale_passes_and_diagnostics(self):

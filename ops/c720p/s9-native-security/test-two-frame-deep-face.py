@@ -47,7 +47,7 @@ class Contract(unittest.TestCase):
                    'folder.getUsableSpace()<20L*1024*1024*1024',
                    'classifier.deepFaceReview','faceBackfillQueued=false'):
    self.assertIn(required,part)
-  self.assertIn('FACE_BACKFILL_MAX_TEMP_TENTHS_C=390',SOURCE)
+  self.assertIn('FACE_BACKFILL_MAX_TEMP_TENTHS_C=420',SOURCE)
   self.assertNotIn('gardenGateExecutor.execute',part)
   self.assertNotIn('http',part)
  def test_no_irreversible_auto_cleanup(self):

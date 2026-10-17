@@ -22,7 +22,9 @@ def phone(temp,version="s9_onphone_36_samples_person_or_tile_v4"):
     garden_person_gate_backend="gpu",sd_free_bytes=80*1024**3,
     last_frame_age_ms=30,person_last_accepted_motion_age_ms=120000,
     face_deep_rescue_version=version,temperature_c=temp,
-    face_backfill_queued=False)
+    face_backfill_queued=False,
+    continuous_4k_production_persisted=True,
+    preroll_ready=True,preroll_buffered_ms=6900,preroll_last_error="")
 
 class LocalCoolWindow(unittest.TestCase):
  def test_scripts_are_valid_and_do_not_send_images(self):
@@ -32,8 +34,8 @@ class LocalCoolWindow(unittest.TestCase):
   for unsafe in ('"/new/api/saved"','/shot.jpg','/new/saved/face/','upload_face',
                  "face_embedding_vector","delete_original_video"):
    self.assertNotIn(unsafe,script)
-  self.assertIn("MAX_RESTART_TEMP_C=34.5",script)
-  self.assertIn("if not healthy(latest) or not idle(latest):",script)
+  self.assertIn("MAX_RESTART_TEMP_C=40.5",script)
+  self.assertIn("if not (healthy(latest) or safe_fallback_for_install(latest)) or not idle(latest):",script)
   self.assertIn("fcntl.flock(handle,fcntl.LOCK_EX|fcntl.LOCK_NB)",script)
   self.assertIn('("complete","needs_manual_recovery","installing")',script)
  def setup_mocks(self,tempdir,temp,stage_ready=True,version=None):
@@ -52,7 +54,7 @@ class LocalCoolWindow(unittest.TestCase):
   return d,mocks
  def test_hot_camera_must_not_install_or_restart(self):
   with tempfile.TemporaryDirectory() as tmp:
-   _,_mocks=self.setup_mocks(tmp,39.0)
+   _,_mocks=self.setup_mocks(tmp,42.0)
    with mock.patch.object(m,"run_release_script",side_effect=AssertionError("installer_called")):
     m.tick()
    self.assertFalse(m.STATE.exists())
@@ -73,11 +75,34 @@ class LocalCoolWindow(unittest.TestCase):
    self.setup_mocks(tmp,35.4,stage_ready=False)
    fallback=phone(35.4)
    fallback["continuous_4k_ready"]=False
+   fallback["preroll_ready"]=False  # incomplete fallback must never install
    with mock.patch.object(m,"camera_status",return_value=fallback), mock.patch.object(
        m,"prepared",side_effect=[False,True]), mock.patch.object(
        m,"run_release_script",return_value="S9_FACE_RECALL_V27_SIGNED_STAGED") as runner:
     m.tick(stage_only=False)
    self.assertEqual([c.args[1] for c in runner.call_args_list],["build"])
+   self.assertFalse(m.STATE.exists())
+ def test_verified_idle_thermal_fallback_under_40_5_can_install(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   self.setup_mocks(tmp,39.5)
+   before=phone(39.5);before["continuous_4k_ready"]=False
+   before["continuous_4k_last_result"]="fallback_thermal_guard"
+   after=phone(40.8,version=m.VERSION)
+   with mock.patch.object(m,"camera_status",side_effect=[before,before,after]), mock.patch.object(
+       m,"run_release_script",return_value="S9_FACE_RECALL_V27_DEVICE_VERIFIED") as run:
+    m.tick()
+   self.assertEqual([c.args[1] for c in run.call_args_list],["install"])
+   self.assertEqual(json.loads(m.STATE.read_text())["status"],"complete")
+ def test_person_motion_refuses_fallback_install(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   self.setup_mocks(tmp,39.0)
+   fallback=phone(39.0)
+   fallback["continuous_4k_ready"]=False
+   fallback["continuous_4k_last_result"]="fallback_thermal_guard"
+   fallback["person_last_accepted_motion_age_ms"]=32000
+   with mock.patch.object(m,"camera_status",return_value=fallback),mock.patch.object(
+       m,"run_release_script",side_effect=AssertionError("must_not_install")):
+    m.tick()
    self.assertFalse(m.STATE.exists())
  def test_real_motion_defers_even_when_cool(self):
   with tempfile.TemporaryDirectory() as tmp:
@@ -108,7 +133,7 @@ class LocalCoolWindow(unittest.TestCase):
  def test_guarded_original_installer_hard_limits(self):
   s=(HERE/"deploy-s9-face-recall-v27.py").read_text()
   self.assertIn('DEFERRED_4K_RESTART_THERMAL_GUARD',s)
-  self.assertIn('float(latest.get("temperature_c",100))>34.5',s)
+  self.assertIn('float(latest.get("temperature_c",100))>40.5',s)
   self.assertIn('S9_FACE_RECALL_V27_DEVICE_VERIFIED',s)
   self.assertIn('"original_apk_restored":True',s)
   self.assertIn('rollback_microSD_final_checksum_mismatch',s)

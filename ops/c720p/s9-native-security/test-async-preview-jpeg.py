@@ -31,7 +31,7 @@ class Tests(unittest.TestCase):
                     'PhoneMediaRange.handle(in,out,line,folder)',
                     'garden_roi_gpu_person_gate_v1',
                     'COOLDOWN_MS=0',
-                    'temperature()<415',
+                    'temperature()<420',
                     'gardenPersonGateBusy',
                     'reviewer.shutdown()'):
    self.assertIn(essential,c)
