@@ -1,0 +1,66 @@
+name: S9+ read-only signed release proof
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/report-s9-release-proof.py'
+      - 'ops/c720p/s9-native-security/test-s9-release-proof.py'
+      - '.github/workflows/s9-release-proof-readonly.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/report-s9-release-proof.py'
+      - '.github/workflows/s9-release-proof-readonly.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate checksum-only readback
+        run: |
+          python3 ops/c720p/s9-native-security/test-s9-release-proof.py
+          python3 -m py_compile ops/c720p/s9-native-security/report-s9-release-proof.py
+  readback:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Run checksum-only readback on authorized C720P gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          path='ops/c720p/s9-native-security/report-s9-release-proof.py'
+          digest="$(sha256sum "$path" | cut -d' ' -f1)"
+          dest="/tmp/s9-release-proof-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$path"
+          cmd="curl -fSsL --max-time 35 '$uri' -o '$dest' && printf '%s  %s\n' '$digest' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest'"
+          idem="s9-release-proof-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-release-proof','diagnostic',:'cmd',160,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "S9_RELEASE_PROOF_JOB=$job"
+          for i in $(seq 1 54); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 9000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]]
+              grep -q 'S9_RELEASE_PROOF' <<< "$output"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
