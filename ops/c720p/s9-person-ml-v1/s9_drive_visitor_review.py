@@ -80,6 +80,39 @@ def sampled_person_presence_percent(row):
   return None
  return round(100*observed/frames,1)
 
+V28_VERSION="v28_s9_gpu_historical_person_review_v1"
+V28_CATEGORIES={"single_person_event_candidate","possible_person_needs_review",
+ "multiple_people_candidate","possible_group_needs_frame_review",
+ "vehicle_candidate","animal_candidate","unresolved_motion"}
+
+def safe_v28_review(row):
+ """Display only validated, sample-scoped phone results, never identities."""
+ source=row.get("v28_person_recheck")
+ if not isinstance(source,dict) or source.get("status")!="classified" or \
+    source.get("version")!=V28_VERSION or \
+    source.get("source_media")!="verified_read_only_google_drive" or \
+    source.get("identity_status")!="not_verified":
+  return None
+ category=source.get("category")
+ frames=source.get("sampled_frames")
+ people=source.get("person_frame_count")
+ if category not in V28_CATEGORIES or type(frames) is not int or \
+    not 1<=frames<=120 or type(people) is not int or not 0<=people<=frames:
+  return None
+ score=source.get("person_score")
+ if type(score) not in (int,float) or isinstance(score,bool) or \
+    not __import__("math").isfinite(score) or not 0<=score<=1:
+  return None
+ backend=source.get("review_backend")
+ if backend not in ("gpu","cpu"):return None
+ return {"category":category,"person_score":round(float(score),3),
+   "sampled_frames":frames,"person_detected_frames_050":people,
+   "person_presence_percent":round(100*people/frames,1),
+   "review_backend":backend,"sampled_video_only":True,
+   "review_status":"not_human_verified",
+   "identity_status":"not_verified",
+   "legacy_baseline_preserved":True}
+
 def report():
  import s9_appearance_review
  rows,summary=source_rows()
@@ -97,12 +130,14 @@ def report():
   who=links.get(key)
   if who not in doc["visitors"]:who=None
   suggestions=s9_appearance_review.candidates(r,rows.values(),max_result=3)
+  v28=safe_v28_review(r)
   out.append({"clip_id":key,"camera":r.get("camera"),
     "remote_name":r.get("remote_name"),"category":r.get("category"),
     "person_score":r.get("person_score"),
     "sampled_frames":r.get("sampled_frames"),
     "person_detected_frames_050":r.get("person_frame_count"),
     "person_presence_percent":sampled_person_presence_percent(r),
+    "v28_phone_review":v28,
     "max_simultaneous_person_boxes":r.get("max_simultaneous_person_boxes"),
     "visitor_id":who,"appearance_quality":r.get("appearance_quality","not_evaluated"),
     "possible_same_outfit_clips":suggestions,
@@ -113,6 +148,9 @@ def report():
   "persistent_visitor_ids_require_manual_clip_confirmation":True,
   "automatic_identity":"not_available_outfit_similarity_review_only",
   "processed":len(rows),"summary":summary,
+  "v28_review_progress":{"completed":sum(x["v28_phone_review"] is not None for x in out),
+    "eligible":len(rows),"remaining":sum(x["v28_phone_review"] is None for x in out),
+    "sampled_video_only":True,"no_auto_identity":True},
   "drive_folders":folders,
   "visitor_ids":sorted(doc["visitors"]),
   "reviewed_single_person_links":sum(bool(x["visitor_id"]) for x in out),
