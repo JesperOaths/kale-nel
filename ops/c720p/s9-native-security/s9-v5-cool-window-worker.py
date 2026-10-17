@@ -136,6 +136,25 @@ def prepared(d):
          sha(apk)==meta.get("sha256") and
          sha(baseline)==meta.get("baseline_apk_sha256"))
 
+def installed_release_matches(d):
+ # A matching reported V5 version does NOT prove a newer V5 binary was
+ # installed. Inspect the exact signed APK digest without touching Camera2.
+ if not prepared(d):return False
+ release=json.loads((stage_dir(d["ref"])/"release.json").read_text())
+ expected=release.get("sha256")
+ if not isinstance(expected,str) or not re.fullmatch(r"[a-f0-9]{64}",expected):return False
+ try:
+  p=subprocess.run(["adb","-s","192.168.178.250:5555","shell","pm","path","nl.kalenel.s9security"],
+                   capture_output=True,text=True,timeout=24)
+  paths=[x.partition(":")[2].strip() for x in p.stdout.splitlines()
+         if x.startswith("package:") and x.endswith("base.apk")]
+  if p.returncode or len(paths)!=1:return False
+  result=subprocess.run(["adb","-s","192.168.178.250:5555","shell","sha256sum",paths[0]],
+                        capture_output=True,text=True,timeout=24)
+  digest=result.stdout.split()[0].lower() if result.stdout.split() else ""
+  return result.returncode==0 and digest==expected
+ except (OSError,subprocess.TimeoutExpired):return False
+
 def fetch_verified(d,kind):
  name={"build":"build-s9-face-recall-v27.py",
        "install":"deploy-s9-face-recall-v27.py"}[kind]
@@ -181,7 +200,8 @@ def tick(stage_only=False):
   except Exception as error:
    report("deferred_status_unavailable",error=type(error).__name__)
    return
-  if healthy(phone) and phone.get("face_deep_rescue_version")==VERSION:
+  if (healthy(phone) and phone.get("face_deep_rescue_version")==VERSION
+      and installed_release_matches(d)):
    st.update(status="complete",finished_at=utc(),phone_review_version=VERSION)
    state_write(st)
    report("already_v5_running",camera_4k_ready=True)
