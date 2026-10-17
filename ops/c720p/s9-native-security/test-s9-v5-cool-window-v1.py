@@ -47,6 +47,7 @@ class LocalCoolWindow(unittest.TestCase):
    mock.patch.object(m,"config",return_value=d),
    mock.patch.object(m,"camera_status",return_value=phone(temp,version or "s9_onphone_36_samples_person_or_tile_v4")),
    mock.patch.object(m,"prepared",return_value=stage_ready),
+   mock.patch.object(m,"poll_idle",side_effect=lambda first:first),
    mock.patch.object(m,"report"),
   ]
   mocks=[p.start() for p in patches]
@@ -84,6 +85,21 @@ class LocalCoolWindow(unittest.TestCase):
    self.assertEqual([c.args[1] for c in jobs.call_args_list],["build"])
    self.assertFalse(m.STATE.exists())
 
+ def test_natural_idle_probe_only_reads_status_and_stops_when_clear(self):
+  busy=phone(38.0);busy["face_backfill_queued"]=True
+  free=phone(38.0)
+  with mock.patch.object(m,"camera_status",side_effect=[busy,free]) as readings, \
+       mock.patch.object(m.time,"sleep") as sleeper:
+   self.assertTrue(m.idle(m.poll_idle(busy)))
+  self.assertEqual(readings.call_count,2)
+  self.assertEqual(sleeper.call_count,2)
+ def test_idle_probe_never_clears_a_busy_archive_flag(self):
+  busy=phone(38.0);busy["historical_import_queued"]=True
+  with mock.patch.object(m,"camera_status",return_value=busy), \
+       mock.patch.object(m.time,"sleep") as sleeper:
+   result=m.poll_idle(busy)
+  self.assertFalse(m.idle(result))
+  self.assertEqual(sleeper.call_count,9)
  def test_local_timer_stages_during_fallback_but_never_installs(self):
   with tempfile.TemporaryDirectory() as tmp:
    self.setup_mocks(tmp,35.4,stage_ready=False)

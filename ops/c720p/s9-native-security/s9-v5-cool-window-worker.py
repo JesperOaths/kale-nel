@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 import tempfile
 import urllib.request
 
@@ -124,6 +125,24 @@ def idle(s):
  if isinstance(age,(int,float)) and 0<=age<90000: return False
  return True
 
+def poll_idle(initial):
+ """Read-only bounded search for a NATURAL idle window.
+
+ Only inspect status; never pause, stop, or change Camera2/background jobs.
+ All existing busy flags still prohibit installation at the last preflight.
+ """
+ latest=initial
+ for _ in range(9):
+  time.sleep(4)
+  try: latest=camera_status()
+  except Exception:return initial
+  # Hot/broken 4K must not keep an installer worker busy.
+  if not (healthy(latest) or safe_fallback_for_install(latest)):return latest
+  if not isinstance(latest.get("temperature_c"),(int,float)) or (
+      latest["temperature_c"]>MAX_RESTART_TEMP_C):return latest
+  if idle(latest):return latest
+ return latest
+
 def stage_dir(ref):
  return Path("/dev/shm/s9-face-recall-v27")/ref[:12]
 
@@ -221,14 +240,22 @@ def tick(stage_only=False):
   # Staging only reads the signed installed APK and builds on C720P. It may
   # proceed alongside historical review; actual installation must remain idle.
   if not stage_only and not idle(phone):
-   # Only non-biometric booleans: useful for diagnosing a missed install window.
-   report("deferred_motion_or_background_work",
-          face_review_busy=phone.get("face_backfill_queued") is True,
-          movement_review_busy=phone.get("movement_4k_backfill_queued") is True,
-          historical_import_busy=phone.get("historical_import_queued") is True,
-          appearance_review_busy=phone.get("appearance_backfill_queued") is True,
-          garden_triage_busy=phone.get("garden_archive_triage_queued") is True)
-   return
+   # A staged release is ready: catch short naturally idle gaps between
+   # serialized archive passes instead of checking just one instant per 5 min.
+   # Polling is read-only and never suspends an active camera-side worker.
+   if prepared(d):
+    phone=poll_idle(phone)
+   if idle(phone):
+    report("natural_archive_idle_window_found",camera_unchanged=True)
+   else:
+    # Only non-biometric booleans: useful for diagnosing a missed install window.
+     report("deferred_motion_or_background_work",
+            face_review_busy=phone.get("face_backfill_queued") is True,
+            movement_review_busy=phone.get("movement_4k_backfill_queued") is True,
+            historical_import_busy=phone.get("historical_import_queued") is True,
+            appearance_review_busy=phone.get("appearance_backfill_queued") is True,
+            garden_triage_busy=phone.get("garden_archive_triage_queued") is True)
+     return
   try:
    ready=prepared(d)
   except Exception as error:
