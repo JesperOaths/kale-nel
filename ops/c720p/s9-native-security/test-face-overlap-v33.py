@@ -34,7 +34,8 @@ class Overlapping4KFaceTiles(unittest.TestCase):
    assert min(w,width-(width-w))==w
  def test_existing_snapshot_and_identity_safeguards(self):
   assert VERSION in cls
-  assert 'manifest.optInt("face_snapshots_saved",0)>0' in cls
+  assert 'face_deep_prior_snapshots_preserved' in cls
+  assert 'manifest.put("face_snapshots_saved",combined.length())' in cls
   assert 'fingerprint.equalsIgnoreCase(digest(mp4))' in cls
   assert 'writeJson(new File(folder,name+".verified.json"),manifest)' in cls
   assert "JSONObject match=assign(emb)" in java
