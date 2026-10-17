@@ -1,0 +1,78 @@
+name: S9 installed face model asset audit V31
+
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/audit-face-model-asset-v31.py'
+      - 'ops/c720p/s9-native-security/test-face-model-asset-v31.py'
+      - '.github/workflows/c720p-s9-face-model-asset-v31.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-s9-face-model-asset-v31.yml'
+      - 'ops/c720p/s9-native-security/audit-face-model-asset-v31.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s9-face-model-asset-v31
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check bounded ephemeral face model asset inspection
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/audit-face-model-asset-v31.py
+          python3 ops/c720p/s9-native-security/test-face-model-asset-v31.py
+
+  audit:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Inspect installed S9 app archive entry without copying any personal data
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          src='ops/c720p/s9-native-security/audit-face-model-asset-v31.py'
+          hash="$(sha256sum "$src" | cut -d' ' -f1)"
+          [[ "$hash" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${src}"
+          dest="/tmp/s9-face-model-audit-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 35 '${url}' -o '${dest}' && printf '%s  %s\n' '${hash}' '${dest}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${dest}'"
+          idem="s9-face-model-asset-v31-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-face-model-v31','diagnostic',:'cmd',140,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_FACE_MODEL_ASSET_V31_JOB=$job"
+          for i in $(seq 1 56); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 6500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_FACE_MODEL_ASSET_V31' <<< "$output"
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
