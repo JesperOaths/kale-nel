@@ -271,8 +271,8 @@ def safe_face_review_metadata(m):
  model=m.get("face_model_state")
  if model in ("not_tested_no_usable_face","available_on_phone","unavailable_on_phone"):
   result["face_model_state"]=model
- if m.get("face_shadow_review_version")=="s9_shadow_model_probe_v1":
-  result["face_shadow_review_version"]="s9_shadow_model_probe_v1"
+ if m.get("face_shadow_review_version") in ("s9_shadow_model_probe_v1","s9_shadow_model_probe_v2"):
+  result["face_shadow_review_version"]=m["face_shadow_review_version"]
   for key in ("face_shadow_model_trials","face_shadow_model_succeeded",
               "face_shadow_model_failed","face_shadow_matches_created"):
    value=m.get(key)
