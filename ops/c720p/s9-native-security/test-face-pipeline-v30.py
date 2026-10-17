@@ -53,6 +53,43 @@ class FaceAuditV30Tests(unittest.TestCase):
   self.assertEqual(result["reviewed_or_protected"],2)
   self.assertEqual(result["awaiting_latest_4k_face_pass"],2)
   self.assertEqual(result["inspection_only_face_crops"],1)
+ def test_known_thermal_fallback_reports_without_erasing_archived_progress(self):
+  rows=[
+    clip(0,face_deep_review_version=None,face_model_state="not_tested_no_usable_face"),
+    clip(1,face_deep_review_version="s9_onphone_36_samples_person_or_tile_v4",
+      face_snapshots_saved=0,face_candidates=[]),
+    clip(2,face_deep_review_version="s9_onphone_36_samples_person_or_tile_v4",
+      face_snapshots_saved=2,face_candidates=[
+        {"match_status":"not_comparable_model_unavailable","face_crop_requires_manual_review":True},
+        {"match_status":"not_tested_no_usable_face","face_crop_padded_context_only":True}])]
+  fallback={**CAMERA,"continuous_4k_ready":False,"continuous_4k_last_result":"fallback_thermal_guard",
+      "continuous_4k_production_persisted":True,"mode":"watching",
+      "preroll_ready":True,"preroll_buffered_ms":6500,
+      "temperature_c":36.7,"face_deep_rescue_version":"s9_onphone_36_samples_person_or_tile_v4"}
+  outcome=module.audit(fallback,{"archive_mode":"S9-microSD-only","events":rows})
+  self.assertFalse(outcome["camera_4k_ready"])
+  self.assertTrue(outcome["known_thermal_fallback"])
+  self.assertFalse(outcome["face_scan_safe_to_resume_now"])
+  self.assertEqual(outcome["source_original_4k_clips"],3)
+  self.assertEqual(outcome["never_deep_reviewed"],1)
+  self.assertEqual(outcome["older_scanned_no_face_crops"],1)
+  self.assertEqual(outcome["legacy_review_preserved_with_snapshots"],1)
+  self.assertEqual(outcome["awaiting_latest_4k_face_pass"],2)
+  self.assertEqual(outcome["installed_face_review_version"],"s9_onphone_36_samples_person_or_tile_v4")
+ def test_thermal_fallback_gating_rejects_unsafe_camera(self):
+  baseline={**CAMERA,"continuous_4k_ready":False,"continuous_4k_last_result":"fallback_thermal_guard",
+   "continuous_4k_production_persisted":True,"preroll_ready":True,
+   "preroll_buffered_ms":6500,"mode":"watching"}
+  for unsafe in (
+      {"continuous_4k_last_result":"fallback_codec_health_guard"},
+      {"continuous_4k_production_persisted":False},
+      {"preroll_ready":False},
+      {"preroll_buffered_ms":300},
+      {"mode":"recording"},
+      {"native_4k_enabled":False}):
+   with self.subTest(unsafe=unsafe),self.assertRaises(RuntimeError):
+    module.audit({**baseline,**unsafe},
+      {"archive_mode":"S9-microSD-only","events":[clip(0)]})
  def test_never_accepts_embeddings_on_hub(self):
   for name in ("embedding","face_embedding","descriptor","biometric_template","embedding_vector"):
    with self.subTest(name=name):
