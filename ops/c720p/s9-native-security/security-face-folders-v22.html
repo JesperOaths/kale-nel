@@ -13,9 +13,9 @@
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Segoe UI",sans-serif}
 body{padding:clamp(14px,2.6vw,32px)}
 h1{font-size:clamp(22px,2.5vw,29px);letter-spacing:-.03em;line-height:1.1;margin:0 0 9px}h2{font-size:18px;margin:0}
-p{margin:0;color:var(--muted)}button,input{font:inherit}
+p{margin:0;color:var(--muted)}button,input,select{font:inherit}
 button{border:1px solid #477088;color:var(--ink);background:#1c3546;padding:10px 14px;border-radius:10px;cursor:pointer}
-button:hover{background:#285269}button:focus-visible,input:focus-visible{outline:2px solid #a9fff1;outline-offset:2px}
+button:hover{background:#285269}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #a9fff1;outline-offset:2px}
 button[disabled]{opacity:.5;cursor:default}
 header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:21px}
 .kicker{font-size:11px;font-weight:800;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}
@@ -28,6 +28,11 @@ header{display:flex;align-items:flex-start;justify-content:space-between;gap:16p
 .stat span{font-size:12px;color:var(--muted)}
 .note{margin:0 0 17px;padding:13px 16px;border:1px solid #54616a;background:#1b2831;border-radius:11px;color:#d0dce4;font-size:12px}
 .toolbar{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.toolbar select,.appearance-filters select{background:#122738;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 12px;max-width:100%}
+.appearance-filters{display:flex;align-items:end;gap:11px;flex-wrap:wrap;margin:15px 0}
+.appearance-filters label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:12px}
+.appearance-filters select{max-width:min(340px,85vw);min-height:42px}
+.appearance-filters button{min-height:42px}
 .toolbar input{width:min(440px,100%);min-width:190px;flex:1;border:1px solid var(--line);background:#122738;color:var(--ink);border-radius:9px;padding:11px 13px}
 .folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr));gap:14px;align-items:stretch}
 .folder{border:1px solid #3a5869;background:var(--card);border-radius:14px;min-width:0;text-align:left;overflow:hidden;padding:0;display:flex;flex-direction:column;transition:border-color .15s,transform .15s}
@@ -101,6 +106,7 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <nav class="tabs" aria-label="People and faces views">
 <button id="foldersTab" type="button" aria-selected="true">Face folders</button>
 <button id="historyTab" type="button" aria-selected="false">All person evidence</button>
+<button id="appearanceTab" type="button" aria-selected="false">Appearance search · pilot</button>
 <button id="timelineTab" type="button" aria-selected="false">Detailed evidence timeline</button>
 </nav>
 <section id="summary" class="stats" aria-label="Evidence totals">
@@ -115,6 +121,18 @@ footer{color:#819daa;font-size:11px;margin-top:30px}
 <div class="toolbar"><h2>Folders</h2><input id="search" type="search" placeholder="Filter folders and recordings…" aria-label="Search folders"><button id="reload" type="button">Refresh</button></div>
 <div class="folders" id="folders" aria-live="polite"><div class="empty">Loading person and face evidence…</div></div>
 <button id="moreEvidence" type="button" hidden style="display:block;margin:17px auto">Show more</button>
+</section>
+<section id="appearanceSection" hidden aria-label="Read-only appearance comparison pilot">
+<h2>Appearance search · visual evidence only</h2>
+<p class="note">Compare upper- or lower-clothing colours from existing S9+ recordings using the on-phone HSV index. No facial features, biometric templates or identity probability are used. Similar clothing is NOT evidence that two clips show the same person. Results appear only when indexed 4K evidence exists.</p>
+<div class="appearance-filters">
+<label for="appearanceReference">Reference recording<select id="appearanceReference"><option value="">Loading S9+ recordings…</option></select></label>
+<label for="appearanceCategory">Compare<select id="appearanceCategory"><option value="upper_clothing">Upper clothing colour</option><option value="lower_clothing">Lower clothing colour</option></select></label>
+<label for="appearanceZone">Scene area<select id="appearanceZone"><option value="">Any mapped zone</option><option value="front_garden">Front garden</option><option value="background_street">Background street</option><option value="unspecified">Unspecified</option></select></label>
+<button id="appearanceGo" type="button">Find similar colours</button>
+</div>
+<p class="note" id="appearanceStatus" role="status" aria-live="polite">Choose a local recording to search similar clothing observations.</p>
+<div id="appearanceResults" class="records" aria-label="Visual comparison results"></div>
 </section>
 <section id="detail" class="detail" hidden>
 <div class="detail-top"><button id="back" type="button">← All folders</button><div><h2 id="detailTitle"></h2><p id="detailInfo"></p></div></div>
@@ -137,7 +155,7 @@ const clipOK=/^motion_[0-9]{13}[.]mp4$/;
 const driveOK=/^[A-Za-z0-9._-]{1,180}[.]mp4$/i;
 const imageOK=/^[A-Za-z0-9._-]{1,200}[.]jpg$/i;
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_-]{1,55})$/;
-const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1};
+const state={sd:[],drive:[],reviews:[],folders:[],selected:null,view:'folders',filter:'',ready:false,page:1,appearanceRequest:0};
 const relay=()=>{if(window.C720PSecureRelay)return window.C720PSecureRelay;try{if(window.parent!==window&&window.parent.C720PSecureRelay)return window.parent.C720PSecureRelay}catch(_){}return null};
 async function get(path){
  const r=relay();if(!r?.fetch)throw Error('Authenticated relay missing');
@@ -272,6 +290,24 @@ function buildFolders(){
  const notClassed=state.drive.filter(r=>driveOK.test(String(r.remote_name||''))&&!inReview.has(String(r.remote_name)));
  if(notClassed.length)folders.push(group('drive:unclassified','Drive · awaiting classification',
   'Source video available; classification still pending','drive',notClassed.map(r=>item('drive',r)),false));
+ // Group recordings by observed upper-clothing COLOUR, not by a person's identity.
+ // These are deliberately evidence buckets: multiple people or changing light
+ // can produce identical colour labels across unrelated source recordings.
+ const shades=new Map(),validShade=/^(?:black|white|grey|gray|red|orange|yellow|green|blue|purple|pink|brown|beige|dark|light|multicolour|multi_color)$/;
+ for(const rec of state.sd){
+  if(!clipOK.test(String(rec.clip_no||'')))continue;
+  const colours=new Set((Array.isArray(rec.anonymous_tracks)?rec.anonymous_tracks:[])
+   .map(t=>String(t.upper_clothing_colour||'').toLowerCase())
+   .filter(c=>validShade.test(c)));
+  for(const shade of colours){
+   if(!shades.has(shade))shades.set(shade,[]);
+   shades.get(shade).push(item('sd',rec));
+  }
+ }
+ for(const [shade,entries] of shades)folders.push(group('appearance:upper:'+shade,
+  'Upper clothing · '+shade.replaceAll('_',' '),
+  'Same observed clothing colour, not same person · inspect originals',
+  'appearance',entries,false));
  // Review folders describe motion observed in the camera image, not identity or gait.
  const movementBuckets=new Map();
  const movementLabels={
@@ -424,6 +460,13 @@ function openFolder(id){
   }
   const play=el('button','','Play recording');play.type='button';
   play.addEventListener('click',()=>openClip(e));body.append(play);
+  if(e.source==='sd'&&clipOK.test(e.key)){
+   const compare=el('button','','Compare clothing colours');compare.type='button';
+   compare.addEventListener('click',()=>{
+    setTab('appearance');$('appearanceReference').value=e.key;runAppearanceSearch();
+   });
+   body.append(compare);
+  }
   card.append(pic,body);records.append(card);signedPicture(pic,e);
  }
  $('detail').scrollIntoView({block:'start'});
@@ -445,15 +488,80 @@ async function openClip(entry){
   $('videoState').textContent='Loading video metadata. The original recording is preserved.';
  }catch(_){$('videoState').textContent='This recording cannot be opened through the authenticated archive.'}
 }
+function fillAppearanceReferences(){
+ const select=$('appearanceReference'),previous=select.value;
+ const candidates=state.sd.filter(r=>clipOK.test(String(r.clip_no||''))&&
+  (Number(r.person_count)>0||Number(r.anonymous_track_count)>0||Number(r.face_snapshots_saved)>0));
+ select.replaceChildren();
+ const placeholder=el('option','',candidates.length?'Choose a recording…':'No person-evidence clips yet');
+ placeholder.value='';select.append(placeholder);
+ for(const rec of candidates.slice(0,260)){
+  const option=el('option','',new Date(Number(rec.clip_no.slice(7,20))).toLocaleString('en-GB',
+   {timeZone:'Europe/Amsterdam'})+' · '+rec.clip_no);
+  option.value=rec.clip_no;select.append(option);
+ }
+ if([...select.options].some(o=>o.value===previous))select.value=previous;
+}
+async function runAppearanceSearch(){
+ const clip=$('appearanceReference').value,category=$('appearanceCategory').value,
+  zone=$('appearanceZone').value,run=++state.appearanceRequest;
+ const status=$('appearanceStatus'),host=$('appearanceResults'),button=$('appearanceGo');
+ host.replaceChildren();
+ if(!clipOK.test(clip)||!state.sd.some(r=>r.clip_no===clip)){
+  status.textContent='Choose a verified S9+ recording first.';return;
+ }
+ if(!['upper_clothing','lower_clothing'].includes(category)||
+    !['','front_garden','background_street','unspecified'].includes(zone))return;
+ const query=new URLSearchParams({clip,category,method:'bhattacharyya',limit:'25'});
+ if(zone)query.set('zone',zone);
+ status.textContent='Searching indexed clothing colours on the S9+…';
+ button.disabled=true;
+ try{
+  const response=await get('/new/api/appearance-search?'+query.toString());
+  if(run!==state.appearanceRequest||state.view!=='appearance')return;
+  if(response.ok!==true||response.appearance_only!==true||
+     response.verified_same_person!==false||response.reference_clip!==clip||
+     !Array.isArray(response.results))throw Error('Invalid visual-only response');
+  const known=new Map(state.sd.filter(r=>clipOK.test(String(r.clip_no||'')))
+   .map(r=>[r.clip_no,r]));
+  const accepted=response.results.slice(0,25).filter(hit=>hit&&
+   hit.verified_same_person===false&&hit.appearance_only===true&&
+   hit.clip_name!==clip&&known.has(hit.clip_name)&&
+   typeof hit.similarity==='number'&&Number.isFinite(hit.similarity)&&
+   hit.similarity>=0&&hit.similarity<=1);
+  status.textContent=accepted.length+' visual comparison'+
+   (accepted.length===1?'':'s')+' · HSV clothing colour only; NOT identity confidence.'+
+   (!accepted.length?' This clip or clothing category may not be indexed yet.':'');
+  for(const hit of accepted){
+   const entry=item('sd',known.get(hit.clip_name));
+   const card=el('article','record'),pic=el('div','record-preview'),
+     body=el('div','record-body'),open=el('button','','Review original clip');
+   pic.append(el('span','','S9+ 4K'));
+   body.append(el('strong','',stamp(entry)),
+     el('small','','HSV colour similarity: '+hit.similarity.toFixed(3)+' · not an identity score'),
+     el('small','','Image area: '+String(hit.zone||'unspecified').slice(0,40)),
+     el('small','','Same-person status: not verified'));
+   open.type='button';open.addEventListener('click',()=>openClip(entry));body.append(open);
+   card.append(pic,body);host.append(card);signedPicture(pic,entry);
+  }
+ }catch(_){
+  if(run!==state.appearanceRequest)return;
+  status.textContent='Appearance search is unavailable for that reference. The S9+ may still be indexing its recordings. No identity was inferred.';
+ }finally{if(run===state.appearanceRequest)button.disabled=false}
+}
 function setTab(which){
  state.view=which;state.page=1;
  $('moreEvidence').hidden=which!=='history';
- for(const [id,name] of [['foldersTab','folders'],['historyTab','history'],['timelineTab','timeline']]){
+ for(const [id,name] of [['foldersTab','folders'],['historyTab','history'],['appearanceTab','appearance'],['timelineTab','timeline']]){
   $(id).setAttribute('aria-selected',String(which===name));
  }
  $('summary').hidden=which==='timeline';
  $('disclaimer').hidden=which==='timeline';
- $('folderSection').hidden=which==='timeline';
+ $('folderSection').hidden=which==='timeline'||which==='appearance';
+ $('appearanceSection').hidden=which!=='appearance';
+ if(which!=='appearance'){
+  ++state.appearanceRequest;$('appearanceGo').disabled=false;
+ }
  $('detail').hidden=true;$('legacyView').hidden=which!=='timeline';
  if(which==='timeline'){
   if(!$('legacyView').src){
@@ -462,7 +570,7 @@ function setTab(which){
    $('legacyView').src=$('legacyView').dataset.src;
   }
  }else{
-  if(which==='history')renderEvidence();else renderFolders();
+  if(which==='history')renderEvidence();else if(which==='folders')renderFolders();
  }
 }
 async function refresh(){
@@ -477,7 +585,7 @@ async function refresh(){
  $('driveCount').textContent=String(state.drive.length);
  $('s9PersonCount').textContent=String(state.sd.filter(x=>Number(x.person_count)>0).length);
  $('verifiedCount').textContent=String(new Set(state.reviews.map(x=>x.visitor_id).filter(x=>/^VIS-[0-9]{4,6}$/.test(String(x)))).size);
- buildFolders();state.ready=true;
+ buildFolders();fillAppearanceReferences();state.ready=true;
  if(state.view==='history')renderEvidence();else if(state.view==='folders')renderFolders();
  const failed=tasks.filter(t=>t.status!=='fulfilled').length;
  $('sync').textContent=(failed?'Partial index · '+failed+' source unavailable':'Archive connected')+' · '+state.reviews.length+' classified Drive clips';
@@ -488,6 +596,8 @@ $('search').addEventListener('input',e=>{state.filter=String(e.target.value||'')
 $('moreEvidence').addEventListener('click',()=>{state.page++;renderEvidence()});
 $('foldersTab').addEventListener('click',()=>setTab('folders'));
 $('historyTab').addEventListener('click',()=>setTab('history'));
+$('appearanceTab').addEventListener('click',()=>setTab('appearance'));
+$('appearanceGo').addEventListener('click',runAppearanceSearch);
 $('timelineTab').addEventListener('click',()=>setTab('timeline'));
 $('back').addEventListener('click',()=>{state.selected=null;renderFolders()});
 $('closeVideo').addEventListener('click',()=>$('viewer').close());
