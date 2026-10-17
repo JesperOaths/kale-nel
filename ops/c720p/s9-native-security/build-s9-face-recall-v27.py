@@ -201,6 +201,10 @@ def main():
    raise RuntimeError("native_4k_trial_not_in_dex")
   if not any(b"sensor_lens_aperture_result_available" in d.read_bytes() for d in outputs):
    raise RuntimeError("passive_optical_aperture_capture_not_in_dex")
+  if not all(any(marker in d.read_bytes() for d in outputs) for marker in (
+      b"face_shadow_review_version",b"face_shadow_model_succeeded",
+      b"face_shadow_vectors_persisted",b"s9_shadow_model_probe_v1")):
+   raise RuntimeError("shadow_face_model_probe_not_compiled_into_signed_APK")
   TARGET.mkdir(parents=True,exist_ok=True,mode=0o700)
   dest=TARGET/"s9-face-recall-v27.apk"
   if dest.is_file() and sha(dest.read_bytes())!=sha(signed.read_bytes()):

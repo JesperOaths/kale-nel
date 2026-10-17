@@ -186,7 +186,9 @@ function evidenceSummary(records){
  const notTested=clips.filter(x=>x.face_model_state==='not_tested_no_usable_face').length;
  const faces=clips.reduce((n,r)=>n+(Array.isArray(r.face_candidates)?r.face_candidates.length:0),0);
  const pending=clips.length-valid.length;
- return {total:clips.length,reviewed:valid.length,pending,models,notTested,faces};
+ const shadow=clips.reduce((sum,r)=>sum+(Number.isInteger(r.face_shadow_model_succeeded)?
+  Math.max(0,Math.min(1,r.face_shadow_model_succeeded)):0),0);
+ return {total:clips.length,reviewed:valid.length,pending,models,notTested,faces,shadow};
 }
 function renderFacePipelineSummary(){
  const summary=evidenceSummary(state.sd);
@@ -195,8 +197,9 @@ function renderFacePipelineSummary(){
  node.textContent='S9+ original 4K face reviews: '+summary.reviewed+'/'+summary.total+
   ' recordings using the current review version · '+summary.pending+
   ' awaiting upgrade · '+summary.faces+' inspected face crops · '+
-  summary.models+' recordings tested with a local embedding model ('+
-  summary.notTested+' never reached a usable face test). '+
+  summary.models+' clips reporting an available local face model · '+
+  summary.shadow+' read-only shadow inference tests passed ('+
+  summary.notTested+' clips did not reach an embedding test). '+
   'Unverified matches are suggestions only. Original recordings and all identity templates remain on the phone.';
 }
 function buildFolders(){

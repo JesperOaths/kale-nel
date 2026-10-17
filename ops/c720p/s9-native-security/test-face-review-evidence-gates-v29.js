@@ -31,7 +31,7 @@ const clips=[
  {clip_no:'motion_1792000000002.mp4',face_model_state:'unavailable_on_phone'},
  {clip_no:'bad.mp4',face_deep_review_version:'s9_onphone_36_samples_person_or_tile_v4',face_candidates:[{},{}]}
 ];
-assert.deepEqual(count(clips,/^motion_[0-9]{13}[.]mp4$/),{total:3,reviewed:1,pending:2,models:1,notTested:1,faces:2});
+assert.deepEqual(count(clips,/^motion_[0-9]{13}[.]mp4$/),{total:3,reviewed:1,pending:2,models:1,notTested:1,faces:2,shadow:0});
 assert.match(script,/rec\.face_deep_review_version!=='s9_onphone_36_samples_person_or_tile_v4'/);
 assert.match(script,/Number\(rec\.face_detector_raw_hits\)>0/);
 assert.match(script,/new Set\(g\.entries\.map\(e=>e\.key\)\)\.size/);

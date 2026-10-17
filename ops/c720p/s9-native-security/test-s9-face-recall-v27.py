@@ -27,7 +27,8 @@ assert 'writeJson(new File(folder,name+".verified.json"),manifest)' in deep
 scope=service.split("private void maybeFaceBackfill(){",1)[1].split("Offloaded archived-video retention review",1)[0]
 assert 'if(meta.optInt("person_count",0)<=0)continue;' not in scope
 assert "faceBackfillQueued" in scope
-assert "temperature()>=370" in scope
+assert "temperature()>=FACE_BACKFILL_MAX_TEMP_TENTHS_C" in scope
+assert "FACE_BACKFILL_MAX_TEMP_TENTHS_C=390" in service
 assert "gardenPersonGateBusy" in scope
 assert '"watching".equals(mode)' in scope
 assert "now-lastMovementAt<45000L" in scope
@@ -40,6 +41,11 @@ assert 'rejectedLowConfidence++' in face and 'rejectedSmallFace++' in face
 assert 'manualRescueCandidates++' in face
 assert 'if(reliableForEmbedding)' in face
 assert "void sampleSceneTile(Bitmap frame,long ms,boolean right)" in face
+assert 'face_shadow_review_version' in face
+assert 'shadowEmbeddingTrials==0' in face
+assert 'shadow=null' in face
+assert 'JSONObject match=assign(emb)' in face
+assert 'face_shadow_vectors_persisted' in face
 assert "face_crop_requires_manual_review" in face
 assert "reliableForEmbedding" in face
 assert "if(reliableForEmbedding)" in face
@@ -96,6 +102,23 @@ assert res["face_deep_second_person_roi_samples"]==6
 assert res["face_rejected_low_confidence"]==2
 assert res["face_rejected_small_face"]==1
 assert res["face_manual_review_rescue_candidates"]==3
+shadow={"face_review_version":"s9_face_review_v1",
+        "face_review_status":"review_complete_unverified_matches",
+        "face_shadow_review_version":"s9_shadow_model_probe_v1",
+        "face_shadow_model_trials":1,
+        "face_shadow_model_succeeded":1,
+        "face_shadow_model_failed":0,
+        "face_shadow_matches_created":0,
+        "face_shadow_vectors_persisted":False,
+        "face_candidates":[{"match_status":"not_comparable_manual_review",
+                            "time_ms":1000}]}
+out=module.safe_face_review_metadata(shadow)
+assert out["face_shadow_model_trials"]==1
+assert out["face_shadow_model_succeeded"]==1
+assert out["face_shadow_matches_created"]==0
+assert out["face_shadow_vectors_persisted"] is False
+assert out["face_candidates"][0]["match_status"]=="not_comparable_manual_review"
+assert "embedding" not in out["face_candidates"][0]
 assert "face_embedding" not in res
 assert module.safe_face_review_metadata({})["face_review_status"]=="not_available_in_original_review"
 assert "CaptureResult.LENS_APERTURE" in service

@@ -237,6 +237,12 @@ def install_local_sd(H):
       # diagnostics. Expose these human-readable results, never embeddings.
       "face_evidence_outcome":r.get("face_evidence_outcome","not_reviewed"),
       "face_model_state":r.get("face_model_state","not_tested_no_usable_face"),
+      "face_shadow_review_version":r.get("face_shadow_review_version"),
+      "face_shadow_model_trials":r.get("face_shadow_model_trials",0),
+      "face_shadow_model_succeeded":r.get("face_shadow_model_succeeded",0),
+      "face_shadow_model_failed":r.get("face_shadow_model_failed",0),
+      "face_shadow_vectors_persisted":False,
+      "face_shadow_matches_created":0,
       "face_detector_raw_hits":r.get("face_detector_raw_hits"),
       "face_rejected_confidence_or_size":r.get("face_rejected_confidence_or_size"),
       "face_rejected_low_confidence":r.get("face_rejected_low_confidence"),

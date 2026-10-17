@@ -228,6 +228,12 @@ def safe_face_review_metadata(m):
          "face_crop_geometry_version":None,
          "face_evidence_outcome":"not_reviewed",
          "face_model_state":"not_tested_no_usable_face",
+         "face_shadow_review_version":None,
+         "face_shadow_model_trials":0,
+         "face_shadow_model_succeeded":0,
+         "face_shadow_model_failed":0,
+         "face_shadow_vectors_persisted":False,
+         "face_shadow_matches_created":0,
          "face_detector_raw_hits":None,"face_rejected_confidence_or_size":None,
          "face_rejected_low_confidence":None,
          "face_rejected_small_face":None,
@@ -265,6 +271,13 @@ def safe_face_review_metadata(m):
  model=m.get("face_model_state")
  if model in ("not_tested_no_usable_face","available_on_phone","unavailable_on_phone"):
   result["face_model_state"]=model
+ if m.get("face_shadow_review_version")=="s9_shadow_model_probe_v1":
+  result["face_shadow_review_version"]="s9_shadow_model_probe_v1"
+  for key in ("face_shadow_model_trials","face_shadow_model_succeeded",
+              "face_shadow_model_failed","face_shadow_matches_created"):
+   value=m.get(key)
+   if type(value) is int and 0<=value<=1:result[key]=value
+  result["face_shadow_vectors_persisted"]=False
  for key in ("face_detector_raw_hits","face_rejected_confidence_or_size",
              "face_rejected_low_confidence","face_rejected_small_face",
              "face_manual_review_rescue_candidates",
@@ -289,7 +302,8 @@ def safe_face_review_metadata(m):
  for row in rows:
   if not isinstance(row,dict):continue
   status=row.get("match_status")
-  if status not in ("not_comparable_model_unavailable","reference_similarity_unverified",
+  if status not in ("not_comparable_model_unavailable","not_comparable_manual_review","not_tested_no_usable_face",
+    "reference_similarity_unverified",
     "anonymous_similarity_unverified","new_anonymous_candidate","face_model_changed_requires_reenrollment",
     "face_index_read_error","face_database_unavailable","face_index_capacity_reached"):continue
   ms=row.get("time_ms")
