@@ -332,7 +332,7 @@ public final class CameraService extends Service {
      // Store compressed PRE-EVENT video in phone RAM without writing any
      // untriggered clips to microSD. The encoder worker never blocks cameraHandler.
      if(preRoll!=null&&!preRoll.failed()&&"watching".equals(mode)&&
-         temperature()<375&&lastFrameAt-preRollLastFrameAt>=44L){
+         temperature()<420&&lastFrameAt-preRollLastFrameAt>=44L){
       preRollLastFrameAt=lastFrameAt;
       if(!preRoll.busy()){
        try{preRoll.offer(PreviewJpeg.snapshot(frame),
@@ -367,7 +367,7 @@ public final class CameraService extends Service {
      if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&
          lastFrameAt>=cameraControlSettleUntil){
       boolean eventFollowup=lastFrameAt<gardenPersonCandidateUntil;
-      boolean safeSentinel=!eventFollowup&&temperature()<370&&
+      boolean safeSentinel=!eventFollowup&&temperature()<420&&
            lastFrameAt-gardenPersonGateLastAt>=GARDEN_PERSON_SENTINEL_MS;
       if(eventFollowup||safeSentinel)evaluateGardenPersonAsync(safeSentinel);
      }
@@ -385,7 +385,7 @@ public final class CameraService extends Service {
      // Only a verified and explicitly promoted 4K recorder can resume on boot.
      boolean preferred=!pilotOnly&&getSharedPreferences("native",MODE_PRIVATE)
        .getBoolean("continuous_4k_production_enabled",false);
-     if(preferred&&temperature()<382&&folder!=null&&
+     if(preferred&&temperature()<405&&folder!=null&&
          folder.getUsableSpace()>15L*1024*1024*1024){
       Continuous4KEncoder candidate=new Continuous4KEncoder();
       try{
@@ -470,7 +470,7 @@ public final class CameraService extends Service {
         (continuousSurface!=null?"continuous_4k":pilotOnly?"pilot":"motion_record"));
       if(!pilotOnly&&!temporaryTest&&eventChain.continuationReady(SystemClock.elapsedRealtime())){
        segmentResumeAttempts++;
-       if(temperature()<415&&folder!=null&&folder.getUsableSpace()>15L*1024*1024*1024){
+       if(temperature()<420&&folder!=null&&folder.getUsableSpace()>15L*1024*1024*1024){
         cameraHandler.postDelayed(()->{
          if(running&&"watching".equals(mode))startRecording();
         },180);
@@ -585,7 +585,7 @@ public final class CameraService extends Service {
      // no MotionGrid vote ever updated lastMovementAt.
      lastMovementAt=SystemClock.elapsedRealtime();
      eventChain.evidence(lastMovementAt);
-     if(temperature()<415 && folder!=null&&
+     if(temperature()<420 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024){
       gardenPersonGateConfirmedStarts++;
       if(sentinelObservation)gardenPersonSentinelStarts++;
@@ -640,7 +640,7 @@ public final class CameraService extends Service {
    saveFallbackEvidence("recording_budget_rejected");
    return;
   }
-  if(temperature()>=415||folder.getUsableSpace()<15L*1024*1024*1024){
+  if(temperature()>=420||folder.getUsableSpace()<15L*1024*1024*1024){
    saveFallbackEvidence("recording_safety_guard");
    return;
   }
@@ -978,14 +978,14 @@ public final class CameraService extends Service {
  private void maybeHistoricalImport(){
   long now=SystemClock.elapsedRealtime();
   if(!running||historicalQueued||now-lastHistoricalScan<60000||folder==null||classifier==null||reviewer==null||
-     !"watching".equals(mode)||movementBackfillQueued||temperature()>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
+     !"watching".equals(mode)||movementBackfillQueued||temperature()>=420||folder.getUsableSpace()<20L*1024*1024*1024)return;
   historicalQueued=true;
   final File sandbox=folder.getParentFile();
   final ClipClassifier model=classifier;
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     if(!running||!"watching".equals(mode)||temperature()>=420)return;
      int done=new HistoricalImportWorker(sandbox,model).processOne();
      if(done>0){historicalReviewed+=done;Log.i(TAG,"HISTORICAL_IMPORT_REVIEW_COMPLETED "+done);}
     }catch(Exception e){
@@ -1000,11 +1000,11 @@ public final class CameraService extends Service {
   }catch(java.util.concurrent.RejectedExecutionException e){historicalQueued=false;}
  }
  // Battery thermistor is tenths of a degree Celsius. Keep the worker
- // strictly below 39 C, and continue yielding immediately to motion events.
- private static final int FACE_BACKFILL_MAX_TEMP_TENTHS_C=390;
+ // below 42 C, yielding immediately to motion events.
+ private static final int FACE_BACKFILL_MAX_TEMP_TENTHS_C=420;
  // Background inference must not stop a healthy 4K encoder, or prevent
  // a previously verified 4K encoder from cooling enough to recover.
- private static final int FACE_BACKFILL_WITH_4K_MAX_TENTHS_C=360;
+ private static final int FACE_BACKFILL_WITH_4K_MAX_TENTHS_C=415;
  private boolean faceBackfillThermallyAllowed(){
   int batteryTenths=temperature();
   if(batteryTenths>=FACE_BACKFILL_MAX_TEMP_TENTHS_C)return false;
@@ -1102,7 +1102,7 @@ public final class CameraService extends Service {
   if(!running||movementBackfillQueued||faceBackfillQueued||historicalQueued||
      now-lastMovementBackfillScan<90000L||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||temperature()>=335||gardenPersonGateBusy||
+     !"watching".equals(mode)||temperature()>=420||gardenPersonGateBusy||
      (lastMovementAt>0&&now-lastMovementAt<60000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   movementBackfillQueued=true;
@@ -1110,12 +1110,12 @@ public final class CameraService extends Service {
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=335)return;
+     if(!running||!"watching".equals(mode)||temperature()>=420)return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
      Arrays.sort(manifests,Comparator.comparing(File::getName));
      for(File manifest:manifests){
-      if(!running||!"watching".equals(mode)||temperature()>=335||
+      if(!running||!"watching".equals(mode)||temperature()>=420||
          gardenPersonGateBusy||(lastMovementAt>0&&
          SystemClock.elapsedRealtime()-lastMovementAt<60000L))return;
       if(manifest.length()<100||manifest.length()>28000)continue;
@@ -1175,7 +1175,7 @@ public final class CameraService extends Service {
      faceBackfillQueued||historicalQueued||gardenPersonGateBusy||
      now-lastAppearanceBackfillScan<120000L||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||temperature()>=335||
+     !"watching".equals(mode)||temperature()>=420||
      (lastMovementAt>0&&now-lastMovementAt<90000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   appearanceBackfillQueued=true;
@@ -1183,14 +1183,14 @@ public final class CameraService extends Service {
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=335)return;
+     if(!running||!"watching".equals(mode)||temperature()>=420)return;
      File[] manifests=archive.listFiles((d,n)->
         n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
      Arrays.sort(manifests,Comparator.comparing(File::getName));
      try(AppearanceSearchIndex index=new AppearanceSearchIndex(archive)){
       for(File manifest:manifests){
-       if(!running||!"watching".equals(mode)||temperature()>=335||
+       if(!running||!"watching".equals(mode)||temperature()>=420||
           gardenPersonGateBusy||(lastMovementAt>0&&
           SystemClock.elapsedRealtime()-lastMovementAt<90000L))return;
        if(manifest.length()<100||manifest.length()>28000)continue;
@@ -1263,7 +1263,7 @@ public final class CameraService extends Service {
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     if(!running||!"watching".equals(mode)||temperature()>=420)return;
      int changed=new GardenArchiveTriage(media,classifier,roiTop,roiMargin,cutoff).processOne();
      if(changed==1)gardenTriageQuarantined++;
      if(changed==2)gardenTriagePreserved++;
@@ -1280,15 +1280,15 @@ public final class CameraService extends Service {
    gardenTriageQueued=false;
   }
  }
- // Keep the full 20-minute cooldown and below-37.5 C rearm guard.
- // The old below-35.0 C threshold prevented self-recovery on an otherwise
- // healthy permanently powered S9+, despite identical manual enable safety.
+ // Keep the 20-minute cooldown and <40.5 C rearm headroom below the 42 C limit.
+ // The old low-temperature threshold prevented self-recovery on an otherwise
+ // healthy permanently powered S9+; Android thermal protection remains active.
  private void maybeRestoreCool4K(){
   if(continuous4KTrial||pilotOnly||!"watching".equals(mode)||
      !getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_4k_production_enabled",false)||
      continuous4KRecoveryAttempts>=3)return;
   long now=SystemClock.elapsedRealtime();
-  if(now<continuous4KRetryAfterMs||temperature()>=375||folder==null||
+  if(now<continuous4KRetryAfterMs||temperature()>=405||folder==null||
      folder.getUsableSpace()<15L*1024*1024*1024||camera==null||preview==null||
      now-lastFrameAt>1500||now-lastMovementAt<30000||
      gardenPersonCandidateUntil>now)return;
@@ -1315,7 +1315,7 @@ public final class CameraService extends Service {
   if("recording".equals(mode)&&n-lastStart>MAX_MS+8000)stopRecording("watchdog_cap");
   if(continuous4KTrial&&continuous4K!=null){
    boolean codecBad=continuous4K.error().length()>0||continuous4K.droppedOutputFrames()>0;
-   boolean tooHot=temperature()>=395;
+   boolean tooHot=temperature()>=420;
    if(codecBad||tooHot){
     failure("continuous_4k_trial_failed_health_guard",null);
     String reason=codecBad?"codec_health_guard":"thermal_guard";
@@ -1359,7 +1359,7 @@ public final class CameraService extends Service {
    d.put("continuous_4k_failures",continuous4KFailures);
    d.put("continuous_4k_recovery_attempts",continuous4KRecoveryAttempts);
    d.put("continuous_4k_retry_after_ms",continuous4KRetryAfterMs);
-   d.put("continuous_4k_rearm_temperature_below_c",37.5);
+   d.put("continuous_4k_rearm_temperature_below_c",40.5);
    d.put("continuous_4k_last_result",continuous4KLastResult);
    d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
    d.put("preroll_ready",preRoll!=null&&preRoll.ready());
@@ -1615,7 +1615,7 @@ public final class CameraService extends Service {
      if(!("record_once".equals(value)||"record_tail_once".equals(value))||
         diagnosticPrerollUsed||diagnosticPrerollActive||
         pilotOnly||(!(continuous4KTrial&&continuous4K!=null&&continuous4K.readyForEvent())&&
-        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<4400))||temperature()>=("record_tail_once".equals(value)?382:375)||
+        (preRoll==null||!preRoll.ready()||preRoll.cachedDurationMs()<4400))||temperature()>=("record_tail_once".equals(value)?420:405)||
         folder==null||folder.getUsableSpace()<15L*1024*1024*1024){
       return response.put("ok",false).put("error","diagnostic_prebuffer_not_ready_or_already_used");
      }
@@ -1640,7 +1640,7 @@ public final class CameraService extends Service {
     if("promote".equals(value)){
      if(!continuous4KTrial||continuous4K==null||!continuous4K.readyForEvent()||
         continuous4KCompleted<1||continuous4KFailures>0||
-        continuous4K.droppedOutputFrames()!=0||temperature()>=375||
+        continuous4K.droppedOutputFrames()!=0||temperature()>=405||
         !continuous4KLastResult.startsWith("verified_native_4k_"))
       return response.put("ok",false).put("error","4k_trial_not_verified_or_unhealthy");
      boolean stored=getSharedPreferences("native",MODE_PRIVATE).edit()
@@ -1649,7 +1649,7 @@ public final class CameraService extends Service {
        .put("hardware_4k_pre_event",true);
     }
     if("enable".equals(value)){
-     if(pilotOnly||continuous4KTrial||temperature()>=375||folder==null||
+     if(pilotOnly||continuous4KTrial||temperature()>=405||folder==null||
         folder.getUsableSpace()<15L*1024*1024*1024)
       return response.put("ok",false).put("error","4k_trial_guard");
      // Trial is never persisted: a service restart reverts to known v3.
