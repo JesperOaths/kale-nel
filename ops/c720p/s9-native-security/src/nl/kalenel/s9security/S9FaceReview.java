@@ -453,10 +453,10 @@ final class S9FaceReview implements AutoCloseable {
   manifest.put("face_rejected_insufficient_native_eye_detail",rejectedInsufficientNativeEyeDetail);
   manifest.put("face_rejected_dark_or_blurry",rejectedImageQuality);
   manifest.put("face_shadow_review_version","s9_shadow_model_probe_v1");
-  manifest.put("face_shadow_embedding_trials",shadowEmbeddingTrials);
-  manifest.put("face_shadow_embedding_successful",shadowEmbeddingSucceeded);
-  manifest.put("face_shadow_embedding_failed",shadowEmbeddingFailed);
-  manifest.put("face_shadow_embeddings_persisted",false);
+  manifest.put("face_shadow_model_trials",shadowEmbeddingTrials);
+  manifest.put("face_shadow_model_succeeded",shadowEmbeddingSucceeded);
+  manifest.put("face_shadow_model_failed",shadowEmbeddingFailed);
+  manifest.put("face_shadow_vectors_persisted",false);
   manifest.put("face_shadow_matches_created",0);
   manifest.put("face_model_state",!modelAttempted?"not_tested_no_usable_face":
       modelReady?"available_on_phone":"unavailable_on_phone");
