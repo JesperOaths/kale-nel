@@ -84,6 +84,19 @@ def healthy(s):
    s.get("sd_free_bytes",0)>=MIN_SD_FREE and
    s.get("last_frame_age_ms",99999)<2600)
 
+def stage_eligible(s):
+ """Reading the signed APK needs an alive camera service, not a live 4K codec.
+
+ Thermal fallback can last until natural cooldown; preparing a candidate on
+ C720P during fallback avoids an otherwise lengthy build in the cool window.
+ No service stop, APK install, original MP4 read or face inference occurs.
+ """
+ return (s.get("ok") is True and s.get("mode")=="watching" and
+   s.get("native_4k_enabled") is True and
+   s.get("garden_person_gate_backend")=="gpu" and
+   s.get("sd_free_bytes",0)>=MIN_SD_FREE and
+   s.get("last_frame_age_ms",99999)<2600)
+
 def idle(s):
  if s.get("face_backfill_queued") is True or s.get("movement_4k_backfill_queued") is True:
   return False
@@ -160,9 +173,12 @@ def tick(stage_only=False):
    state_write(st)
    report("already_v5_running",camera_4k_ready=True)
    return
-  if not healthy(phone):
+  if not healthy(phone) and not (stage_only and stage_eligible(phone)):
    report("deferred_camera_not_ready",mode=phone.get("mode"),
-          continuous_4k_ready=phone.get("continuous_4k_ready"))
+          continuous_4k_ready=phone.get("continuous_4k_ready"),
+          temperature_c=phone.get("temperature_c"),
+          4k_last_result=phone.get("continuous_4k_last_result"),
+          4k_cooldown_retry_ms=phone.get("continuous_4k_retry_after_ms"))
    return
   if not idle(phone):
    report("deferred_motion_or_background_work")
@@ -191,7 +207,9 @@ def tick(stage_only=False):
     report("build_failed_review_required",error=type(error).__name__)
     return
   if stage_only:
-   report("stage_only_complete",camera_unchanged=True)
+   report("stage_only_complete",camera_unchanged=True,
+          4k_was_ready=phone.get("continuous_4k_ready"),
+          temperature_c=phone.get("temperature_c"))
    return
   try:
    latest=camera_status()
