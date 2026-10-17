@@ -33,6 +33,12 @@ class ReleaseProofTests(TestCase):
   with mock.patch.object(m,"read_command",
    return_value="package:/data/app/a/base.apk\npackage:/data/app/b/base.apk\n"):
    with self.assertRaisesRegex(RuntimeError,"unverified"):m.apk_sha()
+ def test_worker_state_distinguishes_old_revision_from_pinned_release(self):
+  source=P.read_text()
+  for name in ("worker_ref_matches_pin","worker_state_source_ref",
+               "pinned_stage_manifest_present","last_event_source_ref"):
+   self.assertIn(name,source)
+
  def test_no_camera_restarts_or_media_access(self):
   src=P.read_text()
   for banned in ("force-stop","install -r","rm -rf","/new/api/saved",

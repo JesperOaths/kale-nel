@@ -48,9 +48,23 @@ def deployment_state():
   result["source_ref"]=ref[:12]
   if worker.is_file():
    state=json.loads(worker.read_text())
-   if state.get("ref")==ref:
-    result["worker_state"]=str(state.get("status","unknown"))[:45]
+   recorded_ref=state.get("ref","")
+   result["worker_record_exists"]=True
+   result["worker_ref_matches_pin"]=recorded_ref==ref
+   if isinstance(recorded_ref,str) and re.fullmatch(r"[0-9a-f]{40}",recorded_ref):
+    result["worker_state_source_ref"]=recorded_ref[:12]
+   recorded_state=state.get("status","unknown")
+   if recorded_state in ("waiting","complete","installing","needs_manual_recovery"):
+    result["worker_state"]=recorded_state
+  else:
+   result["worker_record_exists"]=False
   release=Path("/dev/shm/s9-face-recall-v27")/ref[:12]/"release.json"
+  result["pinned_stage_manifest_present"]=release.is_file()
+  stage_root=release.parent.parent
+  if stage_root.is_dir():
+   result["other_staged_revisions"]=sorted(
+    item.name for item in stage_root.iterdir()
+    if item.is_dir() and re.fullmatch(r"[0-9a-f]{12}",item.name))[:8]
   if release.is_file():
    data=json.loads(release.read_text())
    if data.get("source_sha")==ref and re.fullmatch(r"[0-9a-f]{64}",str(data.get("sha256",""))):
@@ -65,9 +79,13 @@ def deployment_state():
        "-n","30","--no-pager","-o","cat"],capture_output=True,text=True,timeout=15)
   for line in reversed(log.stdout.splitlines()):
    if "S9_V5_COOL_WINDOW " not in line:continue
-   event=json.loads(line.split("S9_V5_COOL_WINDOW ",1)[1]).get("event")
+   payload=json.loads(line.split("S9_V5_COOL_WINDOW ",1)[1])
+   event=payload.get("event")
    if isinstance(event,str) and re.fullmatch(r"[a-z_]{2,65}",event):
     result["last_worker_event"]=event
+    event_ref=payload.get("ref")
+    if isinstance(event_ref,str) and re.fullmatch(r"[0-9a-f]{12}",event_ref):
+     result["last_event_source_ref"]=event_ref
     break
  except (OSError,ValueError,TypeError,subprocess.TimeoutExpired):
   pass
