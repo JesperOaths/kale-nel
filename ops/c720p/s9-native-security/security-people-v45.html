@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>People &amp; Faces · Review workspace V45</title>
+<style id="s9-people-v45-style">
+:root{color-scheme:dark;--bg:#0e1720;--panel:#152430;--panel2:#1b2e3a;--border:#304958;--text:#eff8fa;--muted:#a4bec9;--mint:#81daca;--warn:#f2c98f;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+*{box-sizing:border-box}
+body{margin:0;padding:19px 24px 40px;min-width:0}
+button,input,select,textarea{font:inherit;color:inherit;border:1px solid #426071;border-radius:8px;background:#1a3040;min-height:37px;padding:8px 12px}
+button{cursor:pointer}button:hover{background:#244456}button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+h1,h2,h3,p{margin:0}h1{font-size:23px;line-height:1.25}h2{font-size:19px;line-height:1.3}h3{font-size:14px}
+small,.muted{font-size:12px;color:var(--muted)}
+[hidden]{display:none!important}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:17px}
+.kicker{display:block;color:var(--mint);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.top p{font-size:13px;color:var(--muted);margin-top:3px}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.secondary{background:#162733;border-color:#344f5c}
+.primary{background:#286452;border-color:#72ceaf;color:#f3fffb}
+.danger{background:#513038;border-color:#935b65}
+.tabs{display:flex;gap:5px;flex-wrap:wrap;padding:4px;background:#111f2a;border:1px solid #294352;border-radius:11px;margin-bottom:17px}
+.tabs button{border-color:transparent;background:transparent;color:#a9c3cb;min-height:40px;font-weight:650;padding:8px 17px}
+.tabs button[aria-selected=true]{background:#254b49;border-color:#4b998a;color:#edfff9}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:19px}
+.metric{background:#14242f;border:1px solid var(--border);border-radius:10px;padding:12px 15px;min-height:77px}
+.metric strong{display:block;font-size:23px;line-height:1.16;font-variant-numeric:tabular-nums}
+.metric span{font-size:11px;color:var(--muted)}
+.section-head{display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-bottom:13px}
+.section-head p{font-size:12px;color:var(--muted);margin-top:4px}
+.section-head button{min-height:34px;font-size:12px}
+.overview-layout{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(270px,.95fr);gap:17px;align-items:start}
+.surface{border:1px solid var(--border);background:#121f29;border-radius:13px;padding:16px;min-width:0}
+.side-column{display:grid;gap:15px}
+.overview-feed{display:grid;gap:9px}
+.review-row{display:grid;grid-template-columns:128px minmax(0,1fr);gap:13px;align-items:center;padding:9px;background:#1a2a35;border:1px solid #344d5b;border-radius:10px;min-width:0}
+.review-row .media{height:112px;width:128px;border-radius:7px;overflow:hidden}
+.media{background:linear-gradient(145deg,#223d48,#0b1a24);position:relative;display:flex;align-items:center;justify-content:center;color:#bed2d9;font-size:11px}
+.media img{width:100%;height:100%;display:block;object-fit:cover}
+.media .corner{position:absolute;left:7px;top:7px;background:#071620da;border:1px solid #335866;padding:2px 6px;border-radius:5px;color:#e2f1f5;font-size:10px;font-weight:700}
+.row-info{min-width:0}
+.row-info strong{font-size:13px;display:block;overflow-wrap:anywhere}
+.row-info p{font-size:12px;color:var(--muted);margin:4px 0 7px}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.actions button{font-size:12px;min-height:33px;padding:6px 10px}
+.profile-list{display:grid;gap:8px}
+.profile{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;width:100%;background:#1b2b35;border:1px solid #375563;padding:9px;border-radius:10px}
+.profile .avatar{height:50px;width:50px;display:flex;align-items:center;justify-content:center;background:#31504d;border-radius:8px;color:#bdffeb;font-size:23px;font-weight:800;overflow:hidden}
+.profile .avatar img{height:100%;width:100%;object-fit:cover}
+.profile strong{display:block;font-size:13px}.profile small{display:block;font-size:11px;margin-top:3px}
+.profile .arrow{font-size:19px;color:#8db3b5}
+.details{margin-top:15px;border:1px solid #334a58;border-radius:10px;background:#13232d;overflow:hidden}
+.details>summary{cursor:pointer;padding:12px 14px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+.details>summary::marker{color:#80d7c4}
+.details>p{padding:0 14px 10px;font-size:12px;color:var(--muted)}
+.details .group-list{padding:0 10px 10px;display:grid;gap:5px}
+.group-list button{background:#1c2d39;text-align:left;border-color:#345162;display:flex;justify-content:space-between;gap:10px;font-size:12px}
+.subnotice{font-size:12px;color:#b2c9d1;margin-top:9px}
+.callout{display:flex;align-items:start;gap:10px;background:#1b302e;border-left:3px solid #7bd8c0;border-radius:7px;padding:12px;margin-bottom:13px}
+.callout p{font-size:12px;color:#d3e4df}
+.filters{display:flex;gap:9px;flex-wrap:wrap;align-items:end;margin:0 0 13px}
+.filters label{font-size:12px;display:flex;gap:6px;flex-direction:column;color:#afc7d1}
+.filters select,.filters input{min-width:160px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px}
+.evidence{border:1px solid #385360;border-radius:10px;background:var(--panel);overflow:hidden;display:flex;flex-direction:column}
+.evidence>.media{height:190px;width:100%}
+.evidence .body{padding:12px;display:flex;flex-direction:column;gap:7px;flex:1}
+.evidence strong{font-size:13px}.evidence p{font-size:12px;color:var(--muted)}
+.evidence .actions{margin-top:auto}
+.evidence .actions button{flex:1}
+.folder-layout{display:grid;grid-template-columns: minmax(0,1fr) 225px;gap:15px}
+.folder-aside{position:sticky;top:13px;align-self:start;background:#173029;border:1px solid #427360;border-radius:12px;padding:12px}
+.folder-aside .reference-list{display:grid;gap:8px;margin-top:10px;max-height:390px;overflow:auto}
+.folder-aside button{display:grid;gap:5px;background:#193d30;text-align:left;padding:6px;min-height:0}
+.folder-aside img{width:100%;height:115px;object-fit:contain}
+.folder-aside small{font-size:10px}
+.pagebar{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0}
+.pagebar span{font-size:12px;color:var(--muted)}
+.back{padding:7px 0;margin:2px 0 15px;background:none;border:0;color:var(--mint)}
+.empty{padding:23px 14px;border:1px dashed #466371;border-radius:9px;color:#a6bfca;font-size:13px;text-align:center}
+.status{font-size:12px;color:var(--muted);margin:9px 0}
+.status[role=alert]{border:1px solid #946a69;border-radius:8px;padding:11px;background:#3d2830;color:#ffe5e5}
+.notice{font-size:12px;color:#c4f0cf;border:1px solid #4e8b69;border-radius:8px;padding:9px 11px;margin:9px 0;background:#183526}
+.notice button{min-height:30px;padding:4px 10px;margin-left:9px}
+.dialog{width:min(720px,94vw);max-height:88dvh;overflow:auto;background:#142733;color:var(--text);border:1px solid #598497;border-radius:12px;padding:17px}
+.dialog::backdrop{background:#03080ee0}
+.dialog .head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.dialog form{display:grid;gap:12px}
+.dialog label{display:grid;gap:5px;font-size:12px}
+.dialog input,.dialog textarea,.dialog select{width:100%}
+.dialog video{width:100%;display:block;max-height:57vh;background:#000}
+.compare-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.compare-columns img{height:260px;width:100%;object-fit:contain;background:#0b1922}
+details summary{user-select:none}
+footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
+@media(max-width:1000px){.overview-layout{grid-template-columns:1fr}.side-column{grid-template-columns:1fr 1fr}.folder-layout{grid-template-columns:1fr}.folder-aside{position:static}}
+@media(max-width:650px){body{padding:12px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.side-column{grid-template-columns:1fr}.top{align-items:start}.tabs button{flex:1;padding:7px;font-size:12px}.review-row{grid-template-columns:105px minmax(0,1fr)}.review-row .media{width:105px;height:120px}.review-row .actions button{flex:1}.compare-columns{grid-template-columns:1fr}}
+</style>
+<script defer src="/local/frontyard-security-new/security-people-v45.js?v=v45-20261017"></script>
+<script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
+</head>
+<body>
+<header class="top">
+ <div><span class="kicker">S9+ · People evidence</span><h1>Review &amp; organize</h1><p>Recordings first, people second. Keep only what you've checked.</p></div>
+ <div class="top-actions"><button id="newFolder" type="button" class="secondary">+ New folder</button><button id="refresh" type="button" class="secondary">↻ Refresh</button></div>
+</header>
+<nav class="tabs" aria-label="People and faces workspace">
+ <button type="button" data-pane="overview" aria-selected="true">Overview</button>
+ <button type="button" data-pane="review" aria-selected="false">Review queue</button>
+ <button type="button" data-pane="people" aria-selected="false">People &amp; groups</button>
+ <button type="button" data-pane="faces" aria-selected="false">Face images</button>
+</nav>
+<section class="metrics" aria-label="Security evidence totals">
+ <div class="metric"><strong id="queueCount">—</strong><span>Recording decisions pending</span></div>
+ <div class="metric"><strong id="personCount">—</strong><span>Saved folders</span></div>
+ <div class="metric"><strong id="approvalCount">—</strong><span>Saved clip links</span></div>
+ <div class="metric"><strong id="faceCount">—</strong><span>Captured face images</span></div>
+</section>
+<p id="message" class="status" role="alert" hidden></p>
+<div id="notice" class="notice" role="status" hidden></div>
+<section id="overview" aria-label="Evidence overview">
+ <div class="overview-layout">
+  <section class="surface" aria-label="Latest recordings requiring review">
+   <div class="section-head"><div><span class="kicker">PRIORITY</span><h2>Needs your decision</h2><p>A short queue of recordings, not another folder of unknown people.</p></div><button id="openReview" type="button" class="secondary">Review all →</button></div>
+   <div id="reviewPreview" class="overview-feed"><div class="empty">Loading reviewable recordings…</div></div>
+  </section>
+  <div class="side-column">
+   <section class="surface" aria-label="Saved people">
+    <div class="section-head"><div><span class="kicker">ORGANIZED</span><h2>Saved people &amp; groups</h2><p>Only folders you've created or approved.</p></div><button id="openPeople" class="secondary" type="button">View all →</button></div>
+    <div id="savedPreview" class="profile-list"></div>
+   </section>
+   <section class="surface" aria-label="Analysis notes">
+    <div class="section-head"><div><span class="kicker">SCAN PROGRESS</span><h2>Evidence quality</h2></div></div>
+    <p id="scanStatus" class="status">Loading original-4K scan status…</p>
+    <p class="subnotice">Face images and clothing similarities are observations, not confirmed identities.</p>
+    <details class="details"><summary>Possible clothing matches <span id="appearanceCount">—</span></summary>
+      <p>Unreviewed appearance sets are hidden by default. Open a group to inspect its actual recordings.</p>
+      <div id="appearancePreview" class="group-list"></div>
+    </details>
+   </section>
+  </div>
+ </div>
+</section>
+<section id="review" hidden aria-label="Recording review queue">
+ <div class="section-head"><div><span class="kicker">RECORDING REVIEW</span><h2>Review recordings</h2><p>Play an original recording, then keep it in a folder or dismiss it.</p></div><span id="reviewTotal" class="status"></span></div>
+ <div class="filters"><label>Show<select id="reviewMode"><option value="inbox">Needs review</option><option value="all">All supported recordings</option><option value="skipped">Dismissed</option></select></label></div>
+ <div id="reviewGrid" class="grid"></div><div id="reviewPage" class="pagebar"></div>
+</section>
+<section id="people" hidden aria-label="Saved people and provisional groups">
+ <div class="section-head"><div><span class="kicker">MANUAL COLLECTIONS</span><h2>People &amp; groups</h2><p>Folders created by you, with their approved clips.</p></div><button id="newFolderInline" type="button">+ Create folder</button></div>
+ <div id="savedList" class="profile-list"></div>
+ <details class="details"><summary>Provisional appearance groups <span id="groupCount">—</span></summary>
+ <p>Clothing-colour groupings are not identities. Open a group to review its suggestions.</p>
+ <div id="candidateList" class="group-list"></div></details>
+</section>
+<section id="faces" hidden aria-label="Original-4K face image evidence">
+ <div class="section-head"><div><span class="kicker">IMAGE EVIDENCE</span><h2>Face images</h2><p>Each image belongs to one recording. There are no automatic same-person folders.</p></div><span id="faceTotal" class="status"></span></div>
+ <div class="filters"><label>Filter<select id="faceMode"><option value="all">All captured images</option><option value="manual">Manual review needed</option><option value="suggested">Comparison suggested</option></select></label></div>
+ <div id="faceGrid" class="grid"></div><div id="facePage" class="pagebar"></div>
+</section>
+<section id="folderView" hidden aria-label="Selected reviewed folder">
+ <button id="backFolders" class="back" type="button">← Back to People &amp; groups</button>
+ <div class="section-head"><div><span class="kicker">REVIEWED FOLDER</span><h2 id="folderTitle">Folder</h2><p id="folderDescription"></p></div><button id="editFolder" type="button">Edit folder</button></div>
+ <div class="filters"><label>Show<select id="folderMode"><option value="approved">Approved recordings</option><option value="suggestions">Suggested appearances</option><option value="assign">Add from queue</option><option value="rejected">Rejected</option></select></label>
+ <label id="distanceLabel">Colour distance<select id="distance"><option value="0.15">Close</option><option value="0.35" selected>Similar</option><option value="0.65">Broad</option><option value="1">Any colour</option></select></label>
+ <label id="weakLabel">Low-confidence detections<select id="weak"><option value="0" selected>Exclude</option><option value="1">Include</option></select></label>
+ <label id="routeLabel">Route<select id="route"><option value="0">Any</option><option value="1">Same</option></select></label></div>
+ <div id="folderContext" class="callout" hidden><p id="folderContextText"></p></div>
+ <div class="folder-layout"><div><div id="folderGrid" class="grid"></div><div id="folderPage" class="pagebar"></div></div><aside id="references" class="folder-aside" hidden><h3>Approved reference clips</h3><p class="status">Human-reviewed examples for visual comparison only.</p><div id="referenceList" class="reference-list"></div></aside></div>
+</section>
+<dialog id="approvalDialog" class="dialog"><form id="approvalForm"><div class="head"><h2>Keep this recording</h2><button id="cancelApproval" type="button">✕</button></div>
+ <div id="approvalPreview" class="media" style="height:185px"></div><p class="muted">Select where to keep the reviewed recording. Similar clothing alone does not confirm identity.</p>
+ <label>Folder<select id="approvalFolder"></select></label><label id="newLabel">New folder name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
+ <div class="actions"><button class="primary" type="submit">Confirm &amp; keep</button></div></form></dialog>
+<dialog id="folderDialog" class="dialog"><form id="folderForm"><div class="head"><h2 id="folderDialogTitle">New folder</h2><button id="cancelFolder" type="button">✕</button></div>
+ <label>Folder name<input id="folderLabel" maxlength="100" required></label><label>Notes<textarea id="folderNotes" maxlength="2000" rows="3"></textarea></label>
+ <div class="actions"><button class="primary" type="submit">Save folder</button></div></form></dialog>
+<dialog id="viewer" class="dialog"><div class="head"><h2 id="videoTitle">Original video</h2><button id="closeVideo" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><p id="videoStatus" class="status"></p></dialog>
+<dialog id="compareDialog" class="dialog"><div class="head"><h2>Compare original evidence</h2><button id="closeCompare" type="button">Close</button></div><div id="compareGrid" class="compare-columns"></div><p class="subnotice">Appearance comparison never establishes the identity of a person.</p></dialog>
+<footer>PEOPLE &amp; FACES V45 · Manual visual review · Original recordings remain on S9+ microSD</footer>
+</body>
+</html>
