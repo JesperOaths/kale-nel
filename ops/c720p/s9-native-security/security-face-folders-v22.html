@@ -481,6 +481,67 @@ async function openClip(entry){
   $('videoState').textContent='Loading video metadata. The original recording is preserved.';
  }catch(_){$('videoState').textContent='This recording cannot be opened through the authenticated archive.'}
 }
+function fillAppearanceReferences(){
+ const select=$('appearanceReference'),previous=select.value;
+ const candidates=state.sd.filter(r=>clipOK.test(String(r.clip_no||''))&&
+  (Number(r.person_count)>0||Number(r.anonymous_track_count)>0||Number(r.face_snapshots_saved)>0));
+ select.replaceChildren();
+ const placeholder=el('option','',candidates.length?'Choose a recording…':'No person-evidence clips yet');
+ placeholder.value='';select.append(placeholder);
+ for(const rec of candidates.slice(0,260)){
+  const option=el('option','',new Date(Number(rec.clip_no.slice(7,20))).toLocaleString('en-GB',
+   {timeZone:'Europe/Amsterdam'})+' · '+rec.clip_no);
+  option.value=rec.clip_no;select.append(option);
+ }
+ if([...select.options].some(o=>o.value===previous))select.value=previous;
+}
+async function runAppearanceSearch(){
+ const clip=$('appearanceReference').value,category=$('appearanceCategory').value,
+  zone=$('appearanceZone').value,run=++state.appearanceRequest;
+ const status=$('appearanceStatus'),host=$('appearanceResults'),button=$('appearanceGo');
+ host.replaceChildren();
+ if(!clipOK.test(clip)||!state.sd.some(r=>r.clip_no===clip)){
+  status.textContent='Choose a verified S9+ recording first.';return;
+ }
+ if(!['upper_clothing','lower_clothing'].includes(category)||
+    !['','front_garden','background_street','unspecified'].includes(zone))return;
+ const query=new URLSearchParams({clip,category,method:'bhattacharyya',limit:'25'});
+ if(zone)query.set('zone',zone);
+ status.textContent='Searching indexed clothing colours on the S9+…';
+ button.disabled=true;
+ try{
+  const response=await get('/new/api/appearance-search?'+query.toString());
+  if(run!==state.appearanceRequest||state.view!=='appearance')return;
+  if(response.ok!==true||response.appearance_only!==true||
+     response.verified_same_person!==false||response.reference_clip!==clip||
+     !Array.isArray(response.results))throw Error('Invalid visual-only response');
+  const known=new Map(state.sd.filter(r=>clipOK.test(String(r.clip_no||'')))
+   .map(r=>[r.clip_no,r]));
+  const accepted=response.results.slice(0,25).filter(hit=>hit&&
+   hit.verified_same_person===false&&hit.appearance_only===true&&
+   hit.clip_name!==clip&&known.has(hit.clip_name)&&
+   typeof hit.similarity==='number'&&Number.isFinite(hit.similarity)&&
+   hit.similarity>=0&&hit.similarity<=1);
+  status.textContent=accepted.length+' visual comparison'+
+   (accepted.length===1?'':'s')+' · HSV clothing colour only; NOT identity confidence.'+
+   (!accepted.length?' This clip or clothing category may not be indexed yet.':'');
+  for(const hit of accepted){
+   const entry=item('sd',known.get(hit.clip_name));
+   const card=el('article','record'),pic=el('div','record-preview'),
+     body=el('div','record-body'),open=el('button','','Review original clip');
+   pic.append(el('span','','S9+ 4K'));
+   body.append(el('strong','',stamp(entry)),
+     el('small','','HSV colour similarity: '+hit.similarity.toFixed(3)+' · not an identity score'),
+     el('small','','Image area: '+String(hit.zone||'unspecified').slice(0,40)),
+     el('small','','Same-person status: not verified'));
+   open.type='button';open.addEventListener('click',()=>openClip(entry));body.append(open);
+   card.append(pic,body);host.append(card);signedPicture(pic,entry);
+  }
+ }catch(_){
+  if(run!==state.appearanceRequest)return;
+  status.textContent='Appearance search is unavailable for that reference. The S9+ may still be indexing its recordings. No identity was inferred.';
+ }finally{if(run===state.appearanceRequest)button.disabled=false}
+}
 function setTab(which){
  state.view=which;state.page=1;
  $('moreEvidence').hidden=which!=='history';
