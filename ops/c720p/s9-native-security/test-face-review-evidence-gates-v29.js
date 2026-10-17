@@ -10,7 +10,7 @@ new vm.Script(script,{filename:'security-face-folders-v22.html'});
 const selector=script.split('function comparisonCandidate(face){')[1]?.split('function evidenceSummary(records){')[0];
 const summary=script.split('function evidenceSummary(records){')[1]?.split('function renderFacePipelineSummary(){')[0];
 assert.ok(selector&&summary,'v29 gates must exist');
-const candidate=new Function('face','idOK','return (function comparisonCandidate(face){'+selector+'})(face);');
+const candidate=new Function('face','idOK','return (function comparisonCandidate(face){'+selector.slice(0,selector.lastIndexOf('}'))+'})(face);');
 const idOK=/^(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_-]{1,55})$/;
 const check=(face)=>candidate(face,idOK);
 assert.equal(check({person_id:'unknown_00003',match_status:'anonymous_similarity_unverified'}),'unknown_00003');
@@ -24,7 +24,7 @@ for(const face of [
  {person_id:'../../secret',match_status:'anonymous_similarity_unverified'},
  {person_id:'unknown_00003',match_status:'not_comparable_model_unavailable'},
  ])assert.equal(check(face),null,'unverified or invalid face cannot become linked candidate');
-const count=new Function('records','clipOK','return (function evidenceSummary(records){'+summary+'})(records);');
+const count=new Function('records','clipOK','return (function evidenceSummary(records){'+summary.slice(0,summary.lastIndexOf('}'))+'})(records);');
 const clips=[
  {clip_no:'motion_1792000000000.mp4',face_deep_review_version:'s9_onphone_36_samples_person_or_tile_v4',face_model_state:'available_on_phone',face_candidates:[{},{}]},
  {clip_no:'motion_1792000000001.mp4',face_deep_review_version:'s9_onphone_36_samples_person_or_tile_v3',face_model_state:'not_tested_no_usable_face',face_candidates:[]},
