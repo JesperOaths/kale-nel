@@ -11,8 +11,12 @@ spec.loader.exec_module(m)
 class ReleaseProofTests(TestCase):
  def test_exact_sha_separates_two_v5_packages(self):
   p={"ok":True,"mode":"watching","continuous_4k_ready":True}
-  new=m.summary(m.CANDIDATE,p)
-  old=m.summary(m.PREVIOUS,p)
+  with mock.patch.object(m,"deployment_state",return_value={
+      "timer_enabled":True,"worker_state":"waiting",
+      "signed_stage":m.CANDIDATE}):
+   new=m.summary(m.CANDIDATE,p)
+   old=m.summary(m.PREVIOUS,p)
+  self.assertEqual(old["deployment"]["worker_state"],"waiting")
   self.assertTrue(new["matches_full_archive_v5_candidate"])
   self.assertFalse(old["matches_full_archive_v5_candidate"])
   self.assertTrue(old["matches_previous_v2_diagnostic_candidate"])
