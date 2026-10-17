@@ -175,7 +175,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <dialog id="approvalDialog" class="dialog"><form id="approvalForm"><div class="head"><h2>Keep this recording</h2><button id="cancelApproval" type="button">✕</button></div>
  <div id="approvalPreview" class="media" style="height:185px"></div><p class="muted">Select where to keep the reviewed recording. Similar clothing alone does not confirm identity.</p>
  <label>Folder<select id="approvalFolder"></select></label><label id="newLabel">New folder name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
- <div class="actions"><button class="primary" type="submit">Confirm &amp; keep</button></div></form></dialog>
+ <label style="display:flex;align-items:center;gap:9px"><input id="approvalConfirmed" type="checkbox" required style="width:18px;min-height:18px"> I inspected the original recording.</label><div class="actions"><button class="primary" type="submit">Confirm &amp; keep</button></div></form></dialog>
 <dialog id="folderDialog" class="dialog"><form id="folderForm"><div class="head"><h2 id="folderDialogTitle">New folder</h2><button id="cancelFolder" type="button">✕</button></div>
  <label>Folder name<input id="folderLabel" maxlength="100" required></label><label>Notes<textarea id="folderNotes" maxlength="2000" rows="3"></textarea></label>
  <div class="actions"><button class="primary" type="submit">Save folder</button></div></form></dialog>
