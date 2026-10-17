@@ -310,6 +310,9 @@ def install_local_sd(H):
  # Historical Drive people are listed privately; visitor IDs require explicit human linking.
  import s9_drive_visitor_review
  s9_drive_visitor_review.install(H)
+ # Audited manually reviewed event cases (not biometric identities).
+ import s9_manual_evidence_cases
+ s9_manual_evidence_cases.install(H)
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)

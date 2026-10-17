@@ -10,7 +10,7 @@ assert(body,'Step2 pilot script missing');
 assert(!html.includes('innerHTML='),'No raw HTML injection');
 for(const s of scripts)if(s[1].trim())new vm.Script(s[1]);
 class Element{
- constructor(tag='div'){this.tagName=tag;this.children=[];this.handlers={};this.dataset={};this.attributes={};this.hidden=false;this.value='';this.textContent='';this.src='';this.disabled=false;}
+ constructor(tag='div'){this.tagName=tag;this.children=[];this.handlers={};this.dataset={};this.attributes={};this.hidden=false;this.value='';this.textContent='';this.src='';this.disabled=false;this.open=false;this.checked=false;this.isConnected=true;}
  get options(){return this.children;}
  append(...x){this.children.push(...x);}
  replaceChildren(...x){this.children=[...x];}
@@ -18,6 +18,8 @@ class Element{
  setAttribute(key,val){this.attributes[key]=val;}
  getAttribute(key){return this.attributes[key]??null;}
  scrollIntoView(){}
+ showModal(){this.open=true;}
+ close(){this.open=false;}
  remove(){}
 }
 const ids=new Map();
@@ -33,12 +35,34 @@ const clips=[clipA,clipB].map((clip_no,i)=>({
  anonymous_tracks:[{upper_clothing_colour:'blue',image_movement_direction:'image_left',id:'clip_t1'}],
  anonymous_track_count:1
 }));
-clips[0].face_deep_review_version='s9_onphone_36_samples_overlapping_tiles_v5';
-clips[1].face_deep_review_version='s9_onphone_36_samples_person_or_tile_v4';
-clips[1].face_snapshots_saved=1; // An earlier crop does NOT count as current V5.
-let appearanceCalls=0,simulateUnavailable=false;
+let appearanceCalls=0,simulateUnavailable=false,caseRevision=0,caseNext=1;
+const reviewedCases=[];
 const relay={
- fetch:async(path)=>{
+ fetch:async(path,opts={})=>{
+  if(path==='/new/api/s9-evidence-cases'){
+   if(opts.method==='POST'){
+    assert.equal(opts.headers['X-S9-Case-Intent'],'manually-reviewed-evidence-v1');
+    const q=JSON.parse(opts.body);
+    assert.equal(q.confirmed,true);
+    assert.equal(q.revision,caseRevision);
+    let id=q.case_id;
+    if(q.action==='create'){id='CASE-'+String(caseNext++).padStart(4,'0');
+      reviewedCases.push({id,state:'open',clips:[]});}
+    const c=reviewedCases.find(x=>x.id===id);
+    assert(c,'Case exists for mutation');
+    if(q.action==='create'||q.action==='add')
+      c.clips.push({clip:q.clip,available:true,added_at:'2026-10-17',manually_reviewed_original:true});
+    if(q.action==='remove')c.clips=c.clips.filter(x=>x.clip!==q.clip);
+    if(q.action==='close')c.state='closed';
+    if(q.action==='reopen')c.state='open';
+    caseRevision++;
+    return {ok:true,json:async()=>({ok:true,case_id:id,revision:caseRevision,no_identity_inferred:true})};
+   }
+   return {ok:true,json:async()=>({ok:true,version:1,revision:caseRevision,
+    auto_identity:false,manual_collection_only:true,
+    linked_available_clips:reviewedCases.flatMap(x=>x.clips).length,
+    cases:reviewedCases.map(x=>({...x}))})};
+  }
   if(path==='/new/api/saved')return {ok:true,json:async()=>({archive_mode:'S9-microSD-only',events:clips})};
   if(path==='/new/api/drive-saved')return {ok:true,json:async()=>({events:[]})};
   if(path==='/new/api/drive-person-review')return {ok:true,json:async()=>({clips:[]})};
@@ -72,13 +96,21 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
 (async()=>{
  await flush();await flush();
  assert.equal(byId('facesCount').textContent,'0');
-
- // Coarse colour evidence works with ZERO usable face embeddings.
+ // The overview prioritizes unresolved video evidence rather than building
+ // misleading folders from colour labels or arbitrary motion directions.
  const containsText=(node,text)=>node.textContent===text||node.children.some(child=>containsText(child,text));
- assert(byId('folders').children.some(e=>containsText(e,'S9+ · deep face scan pending')),
-  'Legacy preserved-crop recording must be present in pending V5 folder');
- assert(byId('folders').children.some(e=>containsText(e,'Upper clothing · blue')),
-  'Blue clothing evidence folder should exist without any face match');
+ assert.equal(byId('reviewQueue').children.length,2);
+ assert.equal(byId('folders').children.length,1); // informative empty face-gallery state
+ assert(!containsText(byId('folders'),'Upper clothing · blue'),'No automatic colour-person folders');
+ byId('queueBrowse').handlers.click();
+ assert.equal(byId('recordingsSection').hidden,false);
+ assert.equal(byId('browseGrid').children.length,2);
+ byId('facesTab').handlers.click();
+ assert.equal(byId('facesSection').hidden,false);
+ assert.equal(byId('faceGallery').children.length,1);
+ byId('foldersTab').handlers.click();
+ byId('queueFaces').handlers.click();
+ assert.equal(byId('facesSection').hidden,false);
  byId('appearanceTab').handlers.click();
  assert.equal(byId('appearanceSection').hidden,false);
  byId('appearanceReference').value=clipA;
@@ -103,5 +135,35 @@ function flush(){return new Promise(resolve=>setImmediate(resolve));}
  assert.match(byId('appearanceStatus').textContent,/No usable indexed comparison/);
  byId('foldersTab').handlers.click();
  assert.equal(byId('appearanceSection').hidden,true);
+ // Original video metadata can now be saved in a private manually reviewed
+ // CASE folder, with confirmed intent and a reversible link.
+ const findControl=(node,text)=>node.textContent===text&&typeof node.handlers.click==='function'?
+   node:node.children.map(child=>findControl(child,text)).find(Boolean);
+ const review=byId('reviewQueue').children[0];
+ assert(review,'Expected an actionable item in the overview');
+ const save=findControl(review,'Save to case');
+ assert(save,'Manual case action missing from original clip detail');
+ save.handlers.click();
+ assert.equal(byId('casePicker').open,true);
+ byId('casePickerSave').handlers.click();
+ assert.match(byId('casePickerStatus').textContent,/must confirm/);
+ assert.equal(reviewedCases.length,0);
+ byId('caseConfirmed').checked=true;
+ byId('casePickerSave').handlers.click();
+ for(let i=0;i<7;i++)await flush();
+ assert.equal(reviewedCases.length,1);
+ assert.equal(reviewedCases[0].clips.length,1);
+ assert.equal(byId('casePicker').open,false);
+ byId('casesTab').handlers.click();
+ assert.equal(byId('casesSection').hidden,false);
+ byId('caseBack').handlers.click();
+ const saved=byId('caseFolders').children.find(e=>containsText(e,'CASE-0001'));
+ assert(saved,'Newly created private case should be listed');
+ saved.handlers.click();
+ const remove=findControl(byId('caseRecords'),'Remove from case');
+ assert(remove,'Case details must provide reversible removal');
+ await remove.handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(reviewedCases[0].clips.length,0);
  console.log('S9_STEP2_PROVISIONAL_APPEARANCE_PILOT_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1;});
