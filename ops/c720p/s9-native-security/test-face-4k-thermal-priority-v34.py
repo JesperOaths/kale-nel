@@ -21,7 +21,7 @@ class Thermal4KPriority(unittest.TestCase):
   self.assertIn('reviewer.execute(new Runnable()',code)
  def test_camera_recovery_original_guard_preserved(self):
   s=SERVICE.split("private void maybeRestoreCool4K(){",1)[1].split("private void watchdog(){",1)[0]
-  self.assertIn('now<continuous4KRetryAfterMs||temperature()>350',s)
+  self.assertIn('now<continuous4KRetryAfterMs||temperature()>=375',s)
   self.assertIn('continuous4KRecoveryAttempts>=3',s)
   self.assertIn('continuous4KLastResult="rearmed_after_thermal_cooldown"',s)
 if __name__=="__main__":unittest.main(verbosity=2)
