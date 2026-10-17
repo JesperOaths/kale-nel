@@ -18,6 +18,8 @@ PROXY_UNIT="c720p-drive-security-archive.service"
 LAN_UNIT="c720p-lan-camera-relay.service"
 APP_ANCHOR='VALUES={'
 APP_ADD='VALUES={"night_mode":re.compile(r"(?:auto|on|off)\\Z"),'
+PROXY_STATUS_OLD='"can_change_while_recording":False,"mode":d.get("mode"),"controls":options'
+PROXY_STATUS_NEW='"can_change_while_recording":False,"mode":d.get("mode"),"night_active":d["controls"].get("night_active") if isinstance(d["controls"].get("night_active"),bool) else None,"controls":options'
 LAN_OLD="('zoom','exposure_ev','torch','focus','recording_rotation','garden_zone')"
 LAN_NEW="('zoom','exposure_ev','torch','focus','recording_rotation','garden_zone','night_mode')"
 
@@ -58,9 +60,14 @@ def updated_source(path,raw):
  if path==PROXY:
   if "s9_native_camera_controls.py" not in str(path) or "VALUES={" not in old:
    raise RuntimeError("camera_proxy_shape_changed")
-  if APP_ADD in old:return raw
-  if old.count(APP_ANCHOR)!=1:raise RuntimeError("camera_proxy_night_anchor_changed")
-  patched=old.replace(APP_ANCHOR,APP_ADD,1)
+  patched=old
+  if '"night_mode":re.compile(' not in patched:
+   if patched.count(APP_ANCHOR)!=1:raise RuntimeError("camera_proxy_night_anchor_changed")
+   patched=patched.replace(APP_ANCHOR,APP_ADD,1)
+  if PROXY_STATUS_NEW not in patched:
+   if patched.count(PROXY_STATUS_OLD)!=1:
+    raise RuntimeError("night_sensor_state_relay_shape_changed")
+   patched=patched.replace(PROXY_STATUS_OLD,PROXY_STATUS_NEW,1)
  elif path==LAN:
   if "SECURITY_NATIVE_CAMERA2_RELAY_V18" not in old:
    raise RuntimeError("authenticated_LAN_relay_v18_missing")
@@ -68,7 +75,7 @@ def updated_source(path,raw):
   if old.count(LAN_OLD)!=1:raise RuntimeError("authenticated_LAN_allowlist_changed")
   patched=old.replace(LAN_OLD,LAN_NEW,1)
  else:raise RuntimeError("unrecognized_target")
- if len(patched)-len(old)>120:raise RuntimeError("unexpected_patch_growth")
+ if len(patched)-len(old)>260:raise RuntimeError("unexpected_patch_growth")
  compile(patched,str(path),"exec")
  return patched.encode("utf-8")
 
@@ -98,8 +105,10 @@ def wait_control(port,path):
   try:
    opts=controls(port,path)
    night=opts.get("night_mode")
+   status=request(port,path)
    if isinstance(night,dict) and night.get("value") in ("auto","on","off") and (
-       set(night.get("available",[]))=={"auto","on","off"}):
+       set(night.get("available",[]))=={"auto","on","off"}) and (
+       isinstance(status.get("night_active"),bool)):
     return opts
   except Exception:
    pass
@@ -178,6 +187,7 @@ def main():
    "night_control_value":options["night_mode"]["value"],
    "allowed":options["night_mode"]["available"],
    "native_mode":after.get("mode"),"night_active":after.get("night_active"),
+   "secured_relay_night_active":request(8794,"/new/camera-controls").get("night_active"),
    "night_luminance":luminance,"night_effective_ev":effective,
    "night_ev_supported":native_controls.get("night_ev_supported"),
    "sensor_exposure_ms":exposure,"sensor_iso":after.get("sensor_iso"),
