@@ -52,7 +52,7 @@ def main():
  args=p.parse_args()
  if not re.fullmatch("[a-f0-9]{40}",args.ref):raise RuntimeError("immutable_commit_required")
  before=api();identifiers={x.get("clip_no") for x in before["events"]}
- checks={"catalog":"s9_onphone_36_samples_person_or_tile_v4","proxy":"face_review_status","face":"unverifiedCrops"}
+ checks={"catalog":"s9_onphone_36_samples_overlapping_tiles_v5","proxy":"face_review_status","face":"unverifiedCrops"}
  staged={}
  for k,(target,relative) in FILES.items():
   want=getattr(args,k+"_sha")
@@ -94,7 +94,7 @@ def main():
   served=fetch("http://127.0.0.1:8123/local/frontyard-security-new/security-face-folders-v22.html?v=face-recall-v26",250000)
   if sha(served)!=sha(staged[WWW/"security-face-folders-v22.html"]):
    raise RuntimeError("home_assistant_ui_readback_mismatch")
-  if "s9_onphone_36_samples_person_or_tile_v4" not in (ROOT/"bin/c720p-s9-local-sd-catalog.py").read_text():
+  if "s9_onphone_36_samples_overlapping_tiles_v5" not in (ROOT/"bin/c720p-s9-local-sd-catalog.py").read_text():
    raise RuntimeError("catalog_face_review_contract_missing")
   print("S9_FACE_RECALL_V27_CATALOG_DEPLOY_PASS "+json.dumps({
    "clips_preserved":len(response["events"]),"archive_mode":response["archive_mode"],
