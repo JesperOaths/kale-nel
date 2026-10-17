@@ -15,7 +15,8 @@ ITEMS={
  "review":"s9-person-ml-v1/s9_drive_visitor_review.py",
  "patch":"s9-native-security/patch-drive-visitor-review-ui.py",
  "tests":"s9-native-security/test-drive-visitor-review.py",
- "appearance":"s9-native-security/s9_appearance_review.py"
+ "appearance":"s9-native-security/s9_appearance_review.py",
+ "catalog":"s9-native-security/drive-person-batch-catalog.py"
 }
 
 def digest(data):
