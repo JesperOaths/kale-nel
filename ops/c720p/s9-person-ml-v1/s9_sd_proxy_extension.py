@@ -232,6 +232,7 @@ def install_local_sd(H):
       "face_review_status":r.get("face_review_status","not_available_in_original_review"),
       "face_review_sampled_frames":r.get("face_review_sampled_frames"),
       "face_deep_review_version":r.get("face_deep_review_version"),
+      "face_crop_geometry_version":r.get("face_crop_geometry_version"),
       # The local catalog already checks all status enums and bounds numeric
       # diagnostics. Expose these human-readable results, never embeddings.
       "face_evidence_outcome":r.get("face_evidence_outcome","not_reviewed"),
@@ -243,6 +244,8 @@ def install_local_sd(H):
       "face_manual_review_rescue_candidates":r.get("face_manual_review_rescue_candidates"),
       "face_rejected_looking_away_or_roll":r.get("face_rejected_looking_away_or_roll"),
       "face_rejected_crop_geometry":r.get("face_rejected_crop_geometry"),
+      "face_rejected_insufficient_native_eye_detail":r.get("face_rejected_insufficient_native_eye_detail"),
+      "face_crop_padded_manual_count":r.get("face_crop_padded_manual_count"),
       "face_rejected_dark_or_blurry":r.get("face_rejected_dark_or_blurry"),
       "face_deep_detector_anchor_frames":r.get("face_deep_detector_anchor_frames"),
       "face_deep_person_roi_anchors":r.get("face_deep_person_roi_anchors"),
