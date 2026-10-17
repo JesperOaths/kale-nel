@@ -290,6 +290,24 @@ function buildFolders(){
  const notClassed=state.drive.filter(r=>driveOK.test(String(r.remote_name||''))&&!inReview.has(String(r.remote_name)));
  if(notClassed.length)folders.push(group('drive:unclassified','Drive · awaiting classification',
   'Source video available; classification still pending','drive',notClassed.map(r=>item('drive',r)),false));
+ // Group recordings by observed upper-clothing COLOUR, not by a person's identity.
+ // These are deliberately evidence buckets: multiple people or changing light
+ // can produce identical colour labels across unrelated source recordings.
+ const shades=new Map(),validShade=/^(?:black|white|grey|gray|red|orange|yellow|green|blue|purple|pink|brown|beige|dark|light|multicolour|multi_color)$/;
+ for(const rec of state.sd){
+  if(!clipOK.test(String(rec.clip_no||'')))continue;
+  const colours=new Set((Array.isArray(rec.anonymous_tracks)?rec.anonymous_tracks:[])
+   .map(t=>String(t.upper_clothing_colour||'').toLowerCase())
+   .filter(c=>validShade.test(c)));
+  for(const shade of colours){
+   if(!shades.has(shade))shades.set(shade,[]);
+   shades.get(shade).push(item('sd',rec));
+  }
+ }
+ for(const [shade,entries] of shades)folders.push(group('appearance:upper:'+shade,
+  'Upper clothing · '+shade.replaceAll('_',' '),
+  'Same observed clothing colour, not same person · inspect originals',
+  'appearance',entries,false));
  // Review folders describe motion observed in the camera image, not identity or gait.
  const movementBuckets=new Map();
  const movementLabels={
