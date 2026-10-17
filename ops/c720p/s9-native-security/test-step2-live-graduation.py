@@ -26,6 +26,9 @@ class Step2(unittest.TestCase):
   self.assertEqual(status["status"],"not_complete")
   self.assertFalse(status["automatic_identity_grouping_authorized"])
   self.assertTrue(status["signed_release_installed"])
+  self.assertEqual(status["v5_review_fraction"],1.0)
+  self.assertEqual(status["face_snapshots_in_archive"],0)
+  self.assertEqual(status["older_face_crops_protected_but_need_v5"],0)
   self.assertFalse(status["installer_timer_active"])
   self.release["deployment"].update(timer_enabled=True,
       last_worker_event="deferred_motion_or_background_work",
@@ -45,6 +48,7 @@ class Step2(unittest.TestCase):
   status=mod.summarize(self.release,self.face,self.pairs)
   self.assertFalse(status["signed_release_installed"])
   self.assertEqual(status["remaining_original_4k_reviews"],50)
+  self.assertEqual(status["v5_review_fraction"],1.0)
   self.assertEqual(status["status"],"not_complete")
  def test_status_report_never_touches_clips_or_exports_vectors(self):
   content=P.read_text()
