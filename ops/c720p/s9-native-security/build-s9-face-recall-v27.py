@@ -10,10 +10,11 @@ from pathlib import Path
 import hashlib,json,os,re,shutil,subprocess,tempfile,urllib.request,zipfile
 HOME=Path("/home/jespern/c720p-home-hub")
 REF=os.environ.get("S9_FACE_RECALL_V27_REF","")
-BASE=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")
+STAGE=Path("/dev/shm/s9-face-recall-v27")/REF[:12]
+BASE=STAGE/"installed-before-v27.apk"
 SERIAL="192.168.178.250:5555"
 PACKAGE="nl.kalenel.s9security"
-TARGET=Path("/dev/shm/s9-face-recall-v27")
+TARGET=STAGE
 KEY=Path("/home/jespern/.config/s9-native-security-sign")
 FINGERPRINT="0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5"
 JAVAS=("AnonymousClipTracks","AppearanceSearchIndex","Boot","CameraActivity","CameraControls",

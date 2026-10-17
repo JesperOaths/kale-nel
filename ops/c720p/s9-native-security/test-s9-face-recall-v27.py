@@ -46,12 +46,13 @@ assert "if(reliableForEmbedding)" in face
 assert 'face_review_identity_claim","similarity_suggestion_not_verified_identity"' in face
 assert 'face_embedding_on_s9_only",true' in face
 assert "s9-face-recall-v27" in build and "saved_current_camera_apk_not_identical_to_installed" in build
-assert 'TARGET=Path("/dev/shm/s9-face-recall-v27")' in build
-assert 'BASE=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")' in build
+assert 'STAGE=Path("/dev/shm/s9-face-recall-v27")/REF[:12]' in build
+assert 'TARGET=STAGE' in build
+assert 'BASE=STAGE/"installed-before-v27.apk"' in build
 assert 'hub_disk_below_210MiB_refuse_ram_stage_build' in build
 assert 'ram_stage_below_110MiB_refuse_build' in build
-assert 'RELEASE=Path("/dev/shm/s9-face-recall-v27/release.json")' in install
-assert 'baseline=Path("/dev/shm/s9-face-recall-v27/installed-before-v26.apk")' in install
+assert 'RELEASE=STAGE/"release.json"' in install
+assert 'baseline=STAGE/"installed-before-v27.apk"' in install
 assert 'BACK="/storage/9C33-6BBD/c720p-offloaded-build-evidence-20261014/v27-exact-rollback"' in install
 assert 'rollback_microSD_staged_checksum_mismatch' in install
 assert 'rollback_microSD_final_checksum_mismatch' in install
