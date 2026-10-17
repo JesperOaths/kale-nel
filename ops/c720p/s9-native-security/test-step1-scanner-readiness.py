@@ -10,6 +10,11 @@ class ScannerReadiness(unittest.TestCase):
   self.assertNotIn('phone.get("temperature_c")<36',SOURCE)
   self.assertIn('face_review_4k_temperature_below_c',SOURCE)
   self.assertIn('41.5',SOURCE)
+  self.assertIn('"remaining_current_v5_face_pass"',SOURCE)
+ def test_ui_includes_legacy_crop_clips_in_remaining_v5_total(self):
+  ui=(ROOT/"security-face-folders-v22.html").read_text()
+  self.assertIn("' · Still need V5: '+(summary.total-summary.reviewed)",ui)
+
  def test_safety_and_privacy_still_enforced(self):
   for part in ("known_thermal_fallback", "BIOMETRIC_FIELDS", "duplicate_clip_in_verified_archive",
                "archive_mode", "face_backfill_queued", "source_original_4k_clips"):
@@ -28,15 +33,19 @@ class ScannerReadiness(unittest.TestCase):
   result=gate.evaluate(report)
   self.assertFalse(result["coverage_complete_current_or_preserved"])
   self.assertFalse(result["every_original_current_v5_complete"])
-  self.assertEqual(result["pending_latest_scan"],87)
+  self.assertEqual(result["pending_latest_scan"],139)
+  self.assertEqual(result["pending_without_preserved_crops"],87)
   report.update(v5_reviewed=87,awaiting_latest_4k_face_pass=0)
   result=gate.evaluate(report)
   self.assertTrue(result["coverage_complete_current_or_preserved"])
   self.assertFalse(result["every_original_current_v5_complete"])
+  self.assertEqual(result["pending_latest_scan"],52)
+  self.assertEqual(result["pending_without_preserved_crops"],0)
   self.assertFalse(result["step_2_release_approved"])
   report.update(v5_reviewed=139,legacy_review_preserved_with_snapshots=0)
   result=gate.evaluate(report)
   self.assertTrue(result["every_original_current_v5_complete"])
+  self.assertEqual(result["pending_latest_scan"],0)
   self.assertFalse(result["face_detector_accuracy_validated"])
   with self.assertRaisesRegex(RuntimeError,"partition"):
    gate.evaluate({**report,"awaiting_latest_4k_face_pass":2})
