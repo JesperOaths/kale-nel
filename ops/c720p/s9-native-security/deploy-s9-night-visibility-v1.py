@@ -27,7 +27,7 @@ def status():
 def cameras():
  with urllib.request.urlopen("http://127.0.0.1:8794/new/camera-controls",timeout=12) as r:
   j=json.loads(r.read(200000))
- if not j.get("ok") or not isinstance(j.get("controls",{}).get("night_active"),bool):
+ if not j.get("ok") or not isinstance(j.get("night_active"),bool):
   raise RuntimeError("authenticated_night_control_status_missing")
  return j
 
@@ -127,7 +127,7 @@ def main():
     "changed":[p.name for p in changed],
     "display_only":True,"raw_video_unchanged":True,
     "signed_relay_unchanged":True,"night_mode":after.get("night_mode"),
-    "night_active":cams["controls"]["night_active"],
+    "night_active":cams["night_active"],
     "original_archive_count":previous_count,"archive_after":now,
     "4k_ready":after.get("continuous_4k_ready"),
     "ui_js_sha256":digest(js),
