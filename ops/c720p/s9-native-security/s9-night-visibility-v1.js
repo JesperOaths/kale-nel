@@ -77,7 +77,7 @@
       const response=await relay.fetch('/new/camera-controls',{cache:'no-store'});
       if(!response.ok)return;
       const result=await response.json();
-      const active=result&&result.controls&&result.controls.night_active;
+      const active=result&&result.night_active;
       if(typeof active==='boolean'){nightActive=active;apply();}
     }catch(_){
       /* Existing stream stays untouched if control telemetry is unavailable. */
