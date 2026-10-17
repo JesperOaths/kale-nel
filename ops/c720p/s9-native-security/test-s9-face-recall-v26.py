@@ -53,7 +53,7 @@ assert '"s9_onphone_36_samples_person_roi_v2", "face_evidence_outcome"' not in b
 assert 'S9_FACE_RECALL_V26_ROLLBACK_VERIFIED' in install
 assert 'originals.issubset(nowclips)' in install
 assert 'S9_FACE_RECALL_V26_DEVICE_VERIFIED' in install
-assert "Face images · review needed" in ui
+assert "Face images · manual review" in ui
 assert "unverifiedCrops" in ui and "C720PSecureRelay" in ui
 spec=importlib.util.spec_from_file_location("catalog",catalog)
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
