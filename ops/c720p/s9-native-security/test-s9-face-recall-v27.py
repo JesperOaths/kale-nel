@@ -96,4 +96,9 @@ assert res["face_rejected_small_face"]==1
 assert res["face_manual_review_rescue_candidates"]==3
 assert "face_embedding" not in res
 assert module.safe_face_review_metadata({})["face_review_status"]=="not_available_in_original_review"
+assert "CaptureResult.LENS_APERTURE" in service
+assert "sensor_lens_aperture_result_available" in service
+assert "LENS_INFO_AVAILABLE_APERTURES" in service
+assert "passive_optical_aperture_capture_not_in_dex" in build
+assert "s9_night_optical_telemetry_not_installed" in install
 print("S9_PEOPLE_FACE_RECALL_V27_TESTS_PASS")
