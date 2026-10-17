@@ -11,7 +11,7 @@ catalog=root.parent/"s9-person-ml-v1/local-sd-catalog.py"
 ui=(root/"security-face-folders-v22.html").read_text()
 build=(root/"build-s9-face-recall-v27.py").read_text()
 install=(root/"deploy-s9-face-recall-v27.py").read_text()
-assert 'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_person_or_tile_v4"' in classification
+assert 'DEEP_FACE_ROI_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"' in classification
 scope=classification.split('static boolean deepFaceNeedsUpgrade(',1)[1].split("public synchronized boolean deepFaceReview",1)[0]
 assert 'person_count' not in scope
 assert 'face_snapshots_saved' in scope
@@ -71,7 +71,7 @@ assert 'shutil.copy2(baseline' not in install
 assert '"AppearanceSearchIndex","Boot"' in build
 assert '"AppearanceSearchIndex" in JAVAS' in build
 assert "models_native_and_manifest_preserved" in build and "APK_SIGNER_CHANGED" in build
-assert '"s9_onphone_36_samples_person_or_tile_v4", "face_evidence_outcome"' in build
+assert '"s9_onphone_36_samples_overlapping_tiles_v5", "face_evidence_outcome"' in build
 assert '"s9_onphone_36_samples_person_roi_v2", "face_evidence_outcome"' not in build
 
 assert 'S9_FACE_RECALL_V27_ROLLBACK_VERIFIED' in install
@@ -88,7 +88,7 @@ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 m={"face_review_version":"s9_face_review_v1",
    "face_review_status":"no_frontal_face_in_samples",
    "face_review_sampled_frames":42,
-   "face_deep_review_version":"s9_onphone_36_samples_person_or_tile_v4",
+   "face_deep_review_version":"s9_onphone_36_samples_overlapping_tiles_v5",
    "face_deep_tiled_scene_samples":8,
    "face_deep_second_person_roi_samples":6,
    "face_rejected_low_confidence":2,
