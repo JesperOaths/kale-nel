@@ -1,0 +1,68 @@
+name: S9 independently labeled face-pair validation gate
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/validate-s9-face-identity-pairs.py'
+      - 'ops/c720p/s9-native-security/test-face-pair-qualification.py'
+      - '.github/workflows/s9-face-pair-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/validate-s9-face-identity-pairs.py'
+      - '.github/workflows/s9-face-pair-validation.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-private-face-pair-calibration
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate human-label and false-acceptance safety gates
+        run: |
+          python3 ops/c720p/s9-native-security/test-face-pair-qualification.py
+          python3 -m py_compile ops/c720p/s9-native-security/validate-s9-face-identity-pairs.py
+  readback:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read private human-labeled pair calibration without exporting images
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || exit 1
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          path='ops/c720p/s9-native-security/validate-s9-face-identity-pairs.py'
+          digest="$(sha256sum "$path" | cut -d' ' -f1)"
+          dest="/tmp/s9-face-pair-qualification-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$path"
+          cmd="curl -fSsL --max-time 35 '$uri' -o '$dest' && printf '%s  %s\n' '$digest' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest'"
+          idem="s9-pair-qualification-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-face-pair-validation','diagnostic',:'cmd',165,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_PAIR_QUALIFICATION_JOB=$job"
+          for i in $(seq 1 60); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 9000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_FACE_IDENTITY_QUALIFICATION' <<< "$output"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
