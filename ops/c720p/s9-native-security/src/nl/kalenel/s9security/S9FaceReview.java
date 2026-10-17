@@ -307,8 +307,15 @@ final class S9FaceReview implements AutoCloseable {
   * The ROI is NOT a body pose or gait model.
   */
  void sample(Bitmap frame,long ms,float[] detectedPerson){
-  if(!FILE.matcher(clip).matches()||frames>=frameLimit||captures.length()>=MAX_CAPTURES)return;
+  if(!FILE.matcher(clip).matches()||frames>=frameLimit)return;
   frames++;
+  // Historical 36-position review has at most eight saved crops. Reserve
+  // later slots for later source times instead of filling all eight in the
+  // earliest frames and silently skipping the remaining face search.
+  // The ordinary 12-frame live review retains its original eight-slot cap.
+  final int captureAllowance=frameLimit>MAX_FRAMES?
+      Math.min(MAX_CAPTURES,Math.max(1,(frames*MAX_CAPTURES+frameLimit-1)/frameLimit)):
+      MAX_CAPTURES;
   Bitmap scaled=null,rgb=null,subject=frame;
   int offsetX=0,offsetY=0;
   try{
