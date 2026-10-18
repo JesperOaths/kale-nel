@@ -10,7 +10,7 @@ assert(!/\.innerHTML\s*=/.test(js));
 assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
 for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing rendered control '+id);
-for(const label of ['Overview','Review queue','People &amp; groups','Face images','Needs your decision','Saved people &amp; groups'])
+for(const label of ['Activity &amp; scan status','Review recordings','People','Face images','Needs your decision','Your people and groups'])
  assert(html.includes(label),label);
 assert(html.includes('id="approvalConfirmed"')&&js.includes('if(!$('+"'approvalConfirmed'"+').checked)'));
 class E{
@@ -74,6 +74,11 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  const match=scan(c,name);if(match)return match;}return null}
 (async()=>{
  for(let i=0;i<9;i++)await flush();
+ assert.equal(el('people').hidden,false,'Saved people must be the landing page');
+ assert.equal(el('savedList').children.length,1,'Show saved person folders immediately');
+ assert.equal(el('peopleReviewSummary').textContent,'27 recordings need review');
+ assert.equal(el('peopleReviewNotice').hidden,false);
+ assert.equal(el('reviewTabCount').textContent,' · 27');
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
@@ -82,6 +87,9 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('faceScanLabel').textContent,'1 / 1 · reviewed');
  assert.match(el('facePhotoStatus').textContent,/2 saved face images available · 1 candidate records have no saved image/);
  assert.equal(el('faceScanProgress').value,100);
+ panes[0].handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('overview').hidden,false);
  assert.equal(el('savedPreview').children.length,1,'Provisional clothing group must not appear as confirmed person');
  assert.equal(el('appearancePreview').children.length,1,'Unreviewed group is optional separate list');
  assert.equal(el('reviewPreview').children.length,1);
@@ -116,6 +124,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
  const folderGrid=el('folderGrid');
  assert(folderGrid.children.length,'Saved folder must show original recording rows');
+ assert.equal(el('folderFaces').hidden,false,'Saved folder should display original face evidence when it exists');
+ assert.equal(el('folderFaceGrid').children.length,2,'Show actual face images linked to reviewed recordings');
  const faceContext=scan(folderGrid,'Inspect face 1');
  assert(faceContext,'Step 3 must link exact same-recording face snapshot for human review');
  let lines=[];
