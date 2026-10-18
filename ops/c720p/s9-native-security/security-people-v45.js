@@ -134,10 +134,31 @@ async function manualLink(item,folder){
     'X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
    body:JSON.stringify(data)});
   const outcome=await response.json();
+  if(response.status===409){
+   let refreshed=false;
+   try{await fetchExtraLinks();refreshed=true}catch(_){}
+   throw Error(refreshed?
+    'Another review changed the assignments. Check the person and try again.':
+    'Another review changed the assignments. Refresh before retrying.');
+  }
   if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not file recording under person');
-  await fetchExtraLinks();
+  // A successful POST is a committed review change. A subsequent GET failure
+  // must never turn its success into an apparent failed save and a duplicate retry.
+  if(!Number.isSafeInteger(outcome.revision)||outcome.revision<=data.revision||
+     (outcome.folder||null)!==data.folder)
+   throw Error('Saved response could not be verified. Refresh before retrying.');
+  const key=data.source+':'+data.name;
+  state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder};
+  state.extraLinks.revision=outcome.revision;
+  state.linksRevision=outcome.revision;
   state.lastFolder=folder||state.lastFolder;
-  notification(folder?'Recording filed under person':'Recording returned to review');
+  const label=folder?'Recording filed under person':'Recording returned to review';
+  try{await fetchExtraLinks()}
+  catch(_){
+   notification(label+' · Saved, but the latest assignments could not be refreshed. Refresh to sync.');
+   return true;
+  }
+  notification(label);
   return true;
  }catch(error){alertText(String(error.message||error));return false}
  finally{state.busy=false;await loadView();if(state.doc)render()}
