@@ -61,7 +61,7 @@ let posts=[],linkPosts=[],fetches=[],holdAll=false,releaseHeldAll=null,linkRevis
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
-  if(p.startsWith('/new/api/visual-review/review')){
+  if(p.startsWith('/new/api/visual-review/review')||p==='/new/api/s9-evidence-cases'){
    const payload=JSON.parse(opts.body);
    if(opts.headers?.['X-S9-Manual-Link-Intent']){
     linkPosts.push({payload,opts});
