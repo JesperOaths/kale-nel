@@ -77,7 +77,7 @@ async function fetchDriveArchive(){
  const response=await relay().fetch('/new/api/drive-saved',{cache:'no-store'});
  const data=await response.json();
  if(!response.ok||data.ok!==true||!Array.isArray(data.events)||
-    data.archive_mode==='S9-microSD-only')throw Error('Drive archive unavailable');
+    !data.events)throw Error('Drive archive unavailable');
  state.driveRecords=data.events;
  state.driveStatus='ready';
 }
