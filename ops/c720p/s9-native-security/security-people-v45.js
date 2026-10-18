@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:''};
+ faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people'};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -237,6 +237,7 @@ function openReview(mode){
 }
 function openFolder(id,tab){
  const f=state.doc?.folders.find(f=>f.id===id);if(!f)return;
+ state.folderReturnPane=f.automatic_appearance_group&&!isSaved(f)?'clothing':'people';
  state.pane='folder';state.folder=id;state.tab=tab|| (num(f.approved_clips)?'approved':'suggestions');
  state.offset=0;state.facePage=0;$('folderMode').value=state.tab;
  selectPane('folder');loadView();
@@ -249,7 +250,7 @@ function selectPane(pane){
  for(const name of ['overview','review','people','faces','clothing','folderView'])
   $(name).hidden=(name!==(pane==='folder'?'folderView':pane));
  for(const b of document.querySelectorAll('[data-pane]')){
-  const expected=pane==='folder'?'people':pane;
+  const expected=pane==='folder'?state.folderReturnPane:pane;
   b.setAttribute('aria-selected',String(b.dataset.pane===expected));
  }
 }
@@ -347,6 +348,22 @@ function step3ClipEvidence(item){
  }
  return root;
 }
+function reviewFacesForClip(item){
+ const faces=state.faceList.filter(f=>f.clip===item.clip).slice(0,3);
+ if(!faces.length)return null;
+ const host=elt('div','','review-face-evidence');
+ host.append(elt('small',faces.length+' saved face '+(faces.length===1?'image':'images')+
+  ' from this recording · verify who appears'));
+ const group=elt('div','','review-face-strip');
+ for(const [i,face] of faces.entries()){
+  const button=control('',()=>inspectFaceSnapshot(face),'review-face-button');
+  button.setAttribute('aria-label','Inspect captured face '+(i+1));
+  button.replaceChildren(mediaForFace(face),elt('small','Face '+(i+1)));
+  group.append(button);
+ }
+ host.append(group);
+ return host;
+}
 function reviewItem(item,compact){
  const root=elt('article','',compact?'review-row':'evidence');
  const media=sceneFor(item);
@@ -354,6 +371,7 @@ function reviewItem(item,compact){
  badge(media, item.person_recheck_required?'RECHECK':item.decision==='approved'?'APPROVED':item.temporal_support?'PERSON CLUE':'WEAK EVIDENCE');
  const main=elt('strong',date(item));
  info.append(main);
+ if(!compact){const faceEvidence=reviewFacesForClip(item);if(faceEvidence)info.append(faceEvidence)}
  if(item.person_recheck_required)info.append(elt('p','Previously kept, but current person detection needs checking.'));
  else if(!item.temporal_support)info.append(elt('p','Limited observations · inspect the original video.'));
  else info.append(elt('p','Original 4K · '+(item.entry_zone||'front garden').replaceAll('_',' ')+' · visual evidence'));
@@ -743,7 +761,7 @@ $('openReview').addEventListener('click',()=>openReview('inbox'));
 $('peopleReviewNow').addEventListener('click',()=>openReview('inbox'));
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
-$('backFolders').addEventListener('click',()=>openHome('people'));
+$('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
 $('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
