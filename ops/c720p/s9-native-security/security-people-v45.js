@@ -317,7 +317,9 @@ async function loadView(){
   if(!res.ok||next.ok!==true||!Array.isArray(next.folders)||!Array.isArray(next.items))
    throw Error(next.error||'The review archive is unavailable.');
   state.doc=next;
-  if(state.pane==='review'&&!state.assignedReady&&state.archiveEntries.length===0)
+  // Initialize both archives whichever of the face scan or folder index loads
+  // first. The People landing page must not hide Drive until Review opens.
+  if(state.faceLoaded&&!state.assignedReady&&state.archiveToken===0)
    refreshArchiveReviewSources(next.folders);
   const pageTotal=state.tab==='all'&&state.archiveEntries?
    state.archiveEntries.length:num(next.total);
