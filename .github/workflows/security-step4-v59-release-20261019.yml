@@ -5,6 +5,7 @@ on:
       - '.github/workflows/security-step4-v59-release-20261019.yml'
       - 'ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py'
       - 'ops/c720p/s9-native-security/verify-security-step4-v59-browser-readonly.py'
+      - 'ops/c720p/s9-native-security/security-step4-cdp-safe.py'
   push:
     branches: [main]
     paths:
@@ -35,7 +36,7 @@ jobs:
           done
           node --check "$tmp/ops/c720p/s9-native-security/security-people-v45.js"
           (cd "$tmp" && node ops/c720p/s9-native-security/test-people-v45.js)
-          python3 -m py_compile ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py ops/c720p/s9-native-security/verify-security-step4-v59-browser-readonly.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py ops/c720p/s9-native-security/verify-security-step4-v59-browser-readonly.py ops/c720p/s9-native-security/security-step4-cdp-safe.py
           python3 - <<'PY'
           from pathlib import Path
           src=Path('ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py').read_text()
@@ -113,12 +114,12 @@ jobs:
           fi
           directory="ops/c720p/s9-native-security"
           probe="$directory/verify-security-step4-v59-browser-readonly.py"
-          library="$directory/security-v8-real-browser-probe.py"
+          library="$directory/security-step4-cdp-safe.py"
           a="$(sha256sum "$probe" | cut -d' ' -f1)"
           b="$(sha256sum "$library" | cut -d' ' -f1)"
           tmp="/tmp/security-step4-v59-browser-${GITHUB_SHA:0:12}"
           origin="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$directory"
-          cmd="mkdir -p '$tmp' && curl -fSsL --max-time 30 '$origin/verify-security-step4-v59-browser-readonly.py' -o '$tmp/verify-security-step4-v59-browser-readonly.py' && curl -fSsL --max-time 30 '$origin/security-v8-real-browser-probe.py' -o '$tmp/security-v8-real-browser-probe.py' && printf '%s  %s\\n' '$a' '$tmp/verify-security-step4-v59-browser-readonly.py' | sha256sum -c - >/dev/null && printf '%s  %s\\n' '$b' '$tmp/security-v8-real-browser-probe.py' | sha256sum -c - >/dev/null && /usr/bin/python3 '$tmp/verify-security-step4-v59-browser-readonly.py'"
+          cmd="mkdir -p '$tmp' && curl -fSsL --max-time 30 '$origin/verify-security-step4-v59-browser-readonly.py' -o '$tmp/verify-security-step4-v59-browser-readonly.py' && curl -fSsL --max-time 30 '$origin/security-step4-cdp-safe.py' -o '$tmp/security-step4-cdp-safe.py' && printf '%s  %s\\n' '$a' '$tmp/verify-security-step4-v59-browser-readonly.py' | sha256sum -c - >/dev/null && printf '%s  %s\\n' '$b' '$tmp/security-step4-cdp-safe.py' | sha256sum -c - >/dev/null && /usr/bin/python3 '$tmp/verify-security-step4-v59-browser-readonly.py'"
           idem="security-step4-v59-browser-audit-${GITHUB_SHA:0:18}"
           id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(

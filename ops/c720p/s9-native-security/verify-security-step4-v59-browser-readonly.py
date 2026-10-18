@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 import time
 
-lib = Path(__file__).with_name("security-v8-real-browser-probe.py")
+lib = Path(__file__).with_name("security-step4-cdp-safe.py")
 spec = importlib.util.spec_from_file_location("s9_step4_cdp", lib)
 cdp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cdp)
