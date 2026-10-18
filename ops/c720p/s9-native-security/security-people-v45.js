@@ -265,7 +265,7 @@ function openApproval(item){
  $('newLabel').hidden=!!select.value;
  $('approvalConfirmed').checked=false;
  $('approvalDialog').showModal();
- $('approvalFolder').focus();
+ if(typeof $('approvalFolder').focus==='function')$('approvalFolder').focus();
 }
 function dismiss(item){
  const currentFolder=state.folder;
