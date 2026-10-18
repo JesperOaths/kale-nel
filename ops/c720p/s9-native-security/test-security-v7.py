@@ -80,6 +80,24 @@ class V7Tests(unittest.TestCase):
   self.assertIn('150</option>',html)
   self.assertIn('200</option>',html)
   self.assertIn("sensitivity:'base',numeric:true",script)
+ def test_active_security_views_do_not_reintroduce_smooth_copy(self):
+  # V58 deliberately serves original signed MP4 byte ranges. Preserve this
+  # choice across future People/Archive/Tracks/Evidence frontend publishes.
+  # This test does not claim the legacy hub converter/service is removed.
+  pages=('security-people-v45.html','security-people-v45.js',
+         'security-review-v8.html','security-archive-v7.html',
+         'security-tracks-v7.html')
+  forbidden=(r'playback=prepare',r'playback=hub',r'C720PSecurityVideo',
+             r'security-video-playback(?:-v\\d+)?\\.js',
+             r'Smooth\\s*[·-]\\s*\\d+p\\s*/\\s*30\\s*fps')
+  for filename in pages:
+   source=(HERE/filename).read_text()
+   for token in forbidden:
+    self.assertIsNone(re.search(token,source,re.I),filename+': '+token)
+  for filename in ('security-review-v8.html','security-archive-v7.html'):
+   source=(HERE/filename).read_text()
+   self.assertIn('/new/saved/clip/',source,filename)
+
  def test_js_syntax(self):
   if not shutil.which("node"):self.skipTest("Node unavailable")
   sources=[v7.ROOT_JS]
