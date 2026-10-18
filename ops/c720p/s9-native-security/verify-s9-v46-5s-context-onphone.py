@@ -4,7 +4,7 @@
 Never triggers person identification or enters the public Security archive.
 Runs only after verifying the quiet camera, stable 4K encoder and on-phone
 battery/storage headroom. The one-shot native diagnostic test itself
-records 12.5 seconds and should contain the preceding >=4.4 seconds of
+requests a 12.5-second tail and requires >=5 seconds of encoded pre-event
 4K footage in the SAME MP4. Original motion_* media is never modified.
 """
 import json
@@ -117,8 +117,15 @@ def main():
         info=video_info(target)
         if info["codec"]!="h264" or (info["width"],info["height"])!=(3840,2160):
             raise RuntimeError("original_not_continuous_native_4k")
-        if not 15.5<=info["duration_s"]<=25:
-            raise RuntimeError("five_second_preroll_not_contained_in_single_mp4:"+str(info))
+        observedClip=str(end.get("continuous_4k_last_completed_clip") or "")
+        prefixMs=int(end.get("continuous_4k_last_completed_prefix_ms") or 0)
+        liveMs=int(end.get("continuous_4k_last_completed_live_ms") or 0)
+        if observedClip!=clip or prefixMs<5000 or liveMs<10000:
+            raise RuntimeError("encoder_pts_context_not_verified:"+
+              str({"clip_matches":observedClip==clip,"prefix_ms":prefixMs,"live_ms":liveMs}))
+        if abs(info["duration_s"]*1000-(prefixMs+liveMs))>650:
+            raise RuntimeError("mp4_pts_duration_disagrees_with_encoder:"+
+              str({"prefix_ms":prefixMs,"live_ms":liveMs,"mp4":info}))
         decode_frame(target,0)
         decode_frame(target,max(0,info["duration_s"]-1.5))
     after=status()
@@ -130,7 +137,8 @@ def main():
     # Remove only an explicitly named diagnostic excluded from the archive.
     adb("shell","rm","--",PHONE_DIR+"/"+clip,timeout=30)
     print("S9_V46_5S_4K_PREROLL_AND_5S_HOLD_VERIFIED",json.dumps({
-      "video":info,"camera_healthy":True,"post_motion_hold_ms":5000,
+      "video":info,"camera_healthy":True,"measured_prefix_ms":prefixMs,
+      "measured_live_ms":liveMs,"post_motion_hold_ms":5000,
       "minimum_main_recording_ms":10000,"original_clips_preserved":len(current),
       "diagnostic_removed":True,"source_clips_altered":False},sort_keys=True),flush=True)
 
