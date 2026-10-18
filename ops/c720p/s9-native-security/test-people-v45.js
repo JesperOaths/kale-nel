@@ -143,13 +143,16 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[0].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('overview').hidden,false);
- assert.equal(el('savedPreview').children.length,1,'Provisional clothing group must not appear as confirmed person');
+ assert.equal(el('savedPreview').children.length,3,'Coverage shows SD, Drive, and manual assignments without duplicating person cards');
  assert(!html.includes('id="appearancePreview"'),'Clothing group must not be in bottom of scan status');
  assert(!html.includes('id="candidateList"'),'Clothing group must not be attached below saved people');
- assert.equal(el('reviewPreview').children.length,1);
+ assert(el('reviewPreview').children.length>=1,'Coverage summary must display outstanding work');
  assert.equal(el('reviewAlerts').children.length,1,'The existing Jesper review issue must be highlighted as an action');
  assert(scan(el('reviewAlerts'),'Inspect originals →'),'Saved clips flagged for person recheck must be actionable');
- let keep=scan(el('reviewPreview'),'✓ File under person');assert(keep,'Primary review action');
+ let keep=scan(el('peopleReviewNotice'),'Review →');
+ assert(keep,'Review action must remain accessible without a duplicate recording list');
+ el('openReview').handlers.click();for(let i=0;i<4;i++)await flush();
+ keep=scan(el('reviewGrid'),'✓ File under person');assert(keep,'Primary review action');
  keep.handlers.click();
  assert(el('approvalDialog').open,'Keep must open explicit confirmation');
  assert.match(el('approvalClip').textContent,/Recording/,'Confirmation must identify its recording');
@@ -157,13 +160,13 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  await el('approvalForm').handlers.submit({preventDefault(){}});
  for(let i=0;i<5;i++)await flush();
  assert.equal(linkPosts.length,1);
- assert.equal(el('overview').hidden,false,'Keep from overview must not redirect');
+ assert.equal(el('review').hidden,false,'Keep from the review queue must remain in the queue');
  assert.equal(linkPosts[0].payload.action,'assign');
  assert.equal(linkPosts[0].payload.folder,'G123');
  assert.equal(linkPosts[0].payload.source,'sd');
  assert.equal(linkPosts[0].opts.headers['X-S9-Manual-Link-Intent'],'manual-original-review-links-v1');
  // Creating a new folder also preserves the review context.
- keep=scan(el('reviewPreview'),'✓ File under person');
+ keep=scan(el('reviewGrid'),'✓ File under person');
  keep.handlers.click();
  el('approvalFolder').value='';
  el('approvalLabel').value='New reviewed visitor';
@@ -171,8 +174,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<5;i++)await flush();
  assert.equal(posts.at(-1).payload.action,'create_folder');
  assert.equal(linkPosts.at(-1).payload.action,'assign');
- assert.equal(el('overview').hidden,false,'New folder must not redirect from queue');
- el('savedPreview').children[0].handlers.click();
+ assert.equal(el('review').hidden,false,'New person must not redirect from queue');
+ el('savedList').children[0].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('folderView').hidden,false);
  assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
