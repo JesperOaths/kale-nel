@@ -111,7 +111,8 @@ def main():
     screen = q.FaceScreen(q.STATE/'yunet-2023mar.onnx')
     archive = json.loads(q.fetch('http://127.0.0.1:8795/new/api/saved', 6000000))
     events = q.validate_sources(archive)
-    gaps = sorted([event for event in events if not event['face_candidates']], key=lambda e: e['clip_no'])
+    gaps = sorted([event for event in events if not event['face_candidates']
+                   and event.get('face_deep_review_version') == q.NATIVE_PASS], key=lambda e: e['clip_no'])
     selected = gaps[:args.max_recordings]
     report_file = q.STATE/'original-gap-benchmark.json'
     try:

@@ -17,12 +17,22 @@ def source():
     clip = 'motion_1792338420826.mp4'
     return {'archive_mode': 'S9-microSD-only', 'events': [{
         'clip_no': clip, 'duration_ms': 16000, 'sampled_frames': 9,
+        'face_deep_review_version': q.NATIVE_PASS,
         'person_detected_frames_050': 3, 'person_tracks': [],
         'face_candidates': [{'snapshot_name': clip[:-4] + '__pending_1__5034_0.jpg',
             'snapshot_sha256': 'a'*64, 'snapshot_size': 1500, 'time_ms': 5034}]}]}
 
 
 class QualityTests(unittest.TestCase):
+    def test_new_recording_waiting_for_native_pass_is_not_a_completed_extraction_gap(self):
+        archive = source()
+        archive['events'][0].update(face_deep_review_version=None, face_candidates=[])
+        report = q.build_report(archive, {})
+        row = report['recordings'][0]
+        self.assertEqual(row['extraction_status'], 'awaiting_native_face_pass')
+        self.assertFalse(row['targeted_rescan_priority'])
+        self.assertFalse(row['native_face_pass_complete'])
+
     def test_no_false_face_claim_from_valid_jpeg_reference(self):
         archive = source()
         value = {'content_status': 'no_secondary_face_confirmation', 'quality_score': 99}

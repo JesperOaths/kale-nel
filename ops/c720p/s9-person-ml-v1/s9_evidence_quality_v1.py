@@ -20,6 +20,7 @@ import urllib.request
 from zoneinfo import ZoneInfo
 
 VERSION = 's9_evidence_quality_v1'
+NATIVE_PASS = 's9_onphone_36_samples_overlapping_tiles_v5'
 MODEL_SHA = '8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4'
 MODEL_URL = ('https://media.githubusercontent.com/media/opencv/opencv_zoo/main/'
              'models/face_detection_yunet/face_detection_yunet_2023mar.onnx')
@@ -186,7 +187,9 @@ def build_report(archive, measurements, content_audit=None):
                    else 'image_errors' if status == 'image_unavailable'
                    else 'unconfirmed_image_candidates'] += 1
         selected = diverse_best(images)
-        reason = ('no_indexed_image' if not event['face_candidates'] else
+        native_complete = event.get('face_deep_review_version') == NATIVE_PASS
+        reason = ('awaiting_native_face_pass' if not native_complete else
+                  'no_indexed_image' if not event['face_candidates'] else
                   'awaiting_image_screening' if len(images) != len(event['face_candidates']) else
                   'secondary_detector_has_no_supported_face' if not selected else
                   'supported_face_evidence_available')
@@ -194,6 +197,7 @@ def build_report(archive, measurements, content_audit=None):
                         'original_url': '/new/saved/clip/' + event['clip_no'],
                         'best_supported_snapshots': selected, 'images': images,
                         'extraction_status': reason,
+                        'native_face_pass_complete': native_complete,
                         'targeted_rescan_priority': reason in (
                             'no_indexed_image', 'secondary_detector_has_no_supported_face'),
                         'event_evidence': event_evidence(event)})
