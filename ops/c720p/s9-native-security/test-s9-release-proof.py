@@ -83,7 +83,7 @@ class ReleaseProofTests(TestCase):
   self.assertEqual(data["service_Result"],"success")
   self.assertNotIn("service_Unknown",data)
  def test_effective_timer_rules_detect_loaded_override_reset_without_modifying_units(self):
-  content="[Timer]\\nOnCalendar=*:0/5\\n# /home/user/timer.d/reset.conf\\n[Timer]\\nOnCalendar=\\nOnActiveSec=2min\\n"
+  content="[Timer]\nOnCalendar=*:0/5\n# /home/user/timer.d/reset.conf\n[Timer]\nOnCalendar=\nOnActiveSec=2min\n"
   with mock.patch.object(m.subprocess,"run",return_value=
       mock.Mock(returncode=0,stdout=content)) as proc:
    data=m.effective_timer_rules()
