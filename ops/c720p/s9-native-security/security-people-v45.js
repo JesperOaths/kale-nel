@@ -865,7 +865,11 @@ async function searchClothingMatches(force=false){
     const u=Number(hit.similarity),l=Number(bottom.similarity);
     if(!Number.isFinite(u)||!Number.isFinite(l)||u<.90||l<.88||u>1||l>1)continue;
     if(hit.zone&&bottom.zone&&hit.zone!==bottom.zone)continue;
-    if(!state.clipEvidence.has(clip))continue;
+    const observed=state.clipEvidence.get(clip);
+    // Different detected people inside one candidate clip may each supply
+    // one half of the outfit: never combine those colours into one match.
+    if(!observed||num(observed.person_count)!==1||
+       num(observed.frames_with_distinct_multiple_person_boxes)>0)continue;
     // A match describes the same clothing colours across two videos only.
     const score=.62*u+.38*l,key=person.id+':'+clip,prior=matches.get(key);
     if(prior&&prior.score>=score)continue;
