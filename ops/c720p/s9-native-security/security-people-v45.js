@@ -4,7 +4,7 @@
    No recording is changed or assigned automatically. */
 const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
-const state={pane:'overview',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
+const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
  faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null};
