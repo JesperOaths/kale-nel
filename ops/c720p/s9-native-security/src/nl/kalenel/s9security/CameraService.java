@@ -176,8 +176,10 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- // End 10 seconds after the most recent accepted motion; continue capped events.
- private static final long QUIET_MS=10000,MAX_MS=120000,COOLDOWN_MS=0;
+ // Minimum main recording context is ten seconds. Keep filming for FIVE
+ // seconds after the last accepted garden motion; long events remain capped.
+ // 4K encoded-ring deployments also retain five seconds BEFORE the trigger.
+ private static final long QUIET_MS=5000,MIN_EVENT_RECORD_MS=10000,MAX_MS=120000,COOLDOWN_MS=0;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
@@ -371,7 +373,7 @@ public final class CameraService extends Service {
            lastFrameAt-gardenPersonGateLastAt>=GARDEN_PERSON_SENTINEL_MS;
       if(eventFollowup||safeSentinel)evaluateGardenPersonAsync(safeSentinel);
      }
-     if("recording".equals(mode)&&lastFrameAt-lastStart>2500){
+     if("recording".equals(mode)&&lastFrameAt-lastStart>MIN_EVENT_RECORD_MS){
        if(lastFrameAt-lastStart>MAX_MS)stopRecording("max_segment");
        else if(lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end");
       }
@@ -1428,6 +1430,9 @@ public final class CameraService extends Service {
     d.put("post_record_cooldown_ms",COOLDOWN_MS);
     d.put("max_person_clip_ms",MAX_MS);
     d.put("person_post_motion_hold_ms",QUIET_MS);
+  d.put("minimum_main_recording_ms",MIN_EVENT_RECORD_MS);
+  d.put("requested_preroll_ms",5000);
+  d.put("preroll_in_original_mp4",continuous4KTrial&&continuous4K!=null&&continuous4K.readyForEvent());
     d.put("person_post_motion_remaining_ms","recording".equals(mode)?
        Math.max(0,QUIET_MS-Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt)):JSONObject.NULL);
     d.put("person_last_accepted_motion_age_ms",lastMovementAt<=0?
