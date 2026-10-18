@@ -24,7 +24,14 @@ header{display:flex;align-items:center;justify-content:space-between;gap:16px;pa
 h1{font-size:24px;line-height:1.1;letter-spacing:-.04em;margin:4px 0}
 .sub{margin:4px 0 0;color:var(--muted);font-size:12px}
 #sync{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
-main{min-height:0;overflow:auto;overscroll-behavior:contain;padding:17px clamp(16px,2.1vw,35px) 42px}
+main{min-height:0;overflow:auto;overscroll-behavior:contain;padding:17px clamp(16px,2.1vw,35px) 95px}
+.movement-insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:13px 0 20px}
+.movement-insights>div{background:#152934;border:1px solid #365363;padding:15px 17px;border-radius:12px;min-width:0}
+.movement-insights h2{margin:0;font-size:15px}.movement-insights p{font-size:11px;margin:4px 0 12px;color:#b1cad2}
+.track-chart{display:grid;gap:8px}.track-line{display:grid;grid-template-columns:minmax(90px,1fr) 2fr 40px;gap:9px;align-items:center;font-size:12px}
+.track-line .bar{height:10px;border-radius:5px;background:#274453;overflow:hidden}
+.track-line .bar i{display:block;height:100%;background:#70c9b6;border-radius:5px}.track-line b{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:750px){.movement-insights{grid-template-columns:1fr}}
 .overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:13px}
 .metric{background:linear-gradient(145deg,#172a35,#101f29);border:1px solid var(--border);border-radius:12px;padding:13px 16px;min-width:0}
 .metric{display:block;width:100%;color:inherit;text-align:left;font:inherit;cursor:pointer}
@@ -117,6 +124,10 @@ video{display:block;width:100%;max-height:60dvh;background:black;border-radius:9
   <select id="day" aria-label="Recording date"><option value="all">All dates</option></select>
   <select id="order" aria-label="Sort recordings"><option value="new">Newest first</option><option value="old">Oldest first</option></select>
   <input type="search" id="search" placeholder="Search a clip or date…" aria-label="Search clips" autocomplete="off">
+ </section>
+ <section class="movement-insights" aria-label="Movement patterns within the selected recordings">
+ <div><h2>Movement direction</h2><p>Corroborated person tracks only · movement across the camera image</p><div id="directionChart" class="track-chart"></div></div>
+ <div><h2>Time of day</h2><p>Recorded clips containing corroborated person tracks · Amsterdam time</p><div id="timeOfDayChart" class="track-chart"></div></div>
  </section>
  <div class="list-heading"><h2 id="sectionTitle">Person evidence</h2><span id="matches">—</span></div>
  <div class="list" id="results" aria-live="polite"></div>
@@ -247,8 +258,36 @@ function matched(r){
  if(state.query&&![r.clip_no,dayOf(r),dateOf(r),...tracks(r).map(t=>[t.id,t.image_movement_direction,t.upper_clothing_colour].join(' '))].join(' ').toLowerCase().includes(state.query))return false;
  return true;
 }
+function showTrackDistribution(host,entries){
+ host.replaceChildren();const top=Math.max(1,...entries.map(x=>x[1]));
+ for(const [label,total] of entries){
+  const line=el('div','track-line'),bar=el('span','bar'),fill=el('i');
+  fill.style.width=(100*total/top).toFixed(1)+'%';bar.append(fill);
+  line.append(el('span','',label),bar,el('b','',total));host.append(line);
+ }
+}
+function renderMovementInsights(rows){
+ const directions=[['← Left',0],['→ Right',0],['↑ Up',0],['↓ Down',0],['Other / unclear',0]];
+ const times=[['Night 00–06',0],['Morning 06–12',0],['Afternoon 12–18',0],['Evening 18–24',0]];
+ for(const recording of rows){
+  const tracklets=tracks(recording);if(!tracklets.length)continue;
+  for(const track of tracklets){
+   const dir=String(track.image_movement_direction||'');
+   const i=dir==='image_left'?0:dir==='image_right'?1:dir==='image_up'?2:dir==='image_down'?3:4;
+   directions[i][1]++;
+  }
+  const ts=stamp(recording);
+  if(ts>0){
+   const h=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'}).format(new Date(ts)));
+   if(Number.isFinite(h)&&h>=0&&h<24)times[Math.floor(h/6)][1]++;
+  }
+ }
+ showTrackDistribution($('directionChart'),directions);
+ showTrackDistribution($('timeOfDayChart'),times);
+}
 function render(){
  const rows=state.all.filter(matched).sort((a,b)=>state.order==='old'?stamp(a)-stamp(b):stamp(b)-stamp(a));
+ renderMovementInsights(rows);
  $('sectionTitle').textContent=state.view==='people'?'Person movement evidence':state.view==='review'?'Needs human review':state.view==='excluded'?'Non-person / rejected evidence':'All recorded motion';
  $('matches').textContent=rows.length+' matching recordings';
  const results=$('results');results.replaceChildren();
