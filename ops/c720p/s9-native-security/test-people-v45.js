@@ -9,7 +9,7 @@ new vm.Script(js,{filename:'security-people-v45.js'});
 assert(js.includes('function sceneFor(item)'),'Review must show a full recording scene, not only a tight detection crop');
 assert(js.includes('function automaticPortrait(f)'),'Automatic folder portrait required');
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
-assert(html.includes('automatically')&&js.includes('Change cover photo'),'Automatic covers with optional override required');
+assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
 assert(!/\.innerHTML\s*=/.test(js));
 assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
