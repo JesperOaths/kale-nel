@@ -143,10 +143,10 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
  <div class="kpi"><strong id="akCoverage">—</strong><span>With sampled-frame assessment</span></div>
  </div>
  <div class="analytics-panels">
- <section class="analytics-panel" aria-labelledby="heatTitle"><h3 id="heatTitle">Activity by weekday and hour</h3><p class="chart-subtitle">Number of recordings, aggregated across the complete indexed archive. Tap a cell to find those clips.</p>
+ <section class="analytics-panel" aria-labelledby="heatTitle"><h3 id="heatTitle">Activity by weekday and hour</h3><p class="chart-subtitle">Recorded events across the complete selected source scope. Select a cell to filter the statistics below; playback remains in Recordings and Archive.</p>
  <div class="heatmap-wrap"><div class="hour-axis" id="hourAxis"></div><div class="heatmap-days" id="heatDays"></div><div class="heatmap-cells" id="heatCells" role="group" aria-label="Hourly activity heatmap"></div></div>
  <div class="chart-key"><span><i class="chart-swatch soft"></i>Fewer recordings</span><span><i class="chart-swatch"></i>More recordings</span></div></section>
- <section class="analytics-panel" aria-labelledby="trendTitle"><h3 id="trendTitle">Daily recording trend</h3><p class="chart-subtitle">Most recent 21 calendar days through the latest saved clip; blank days contain no indexed clips. Tap a bar to inspect.</p>
+ <section class="analytics-panel" aria-labelledby="trendTitle"><h3 id="trendTitle">Daily recording trend</h3><p class="chart-subtitle">Most recent 21 calendar days through the latest saved clip. Select a bar to filter the statistics below.</p>
  <div class="daily-chart" id="dailyChart" role="group" aria-label="Recording activity by date"></div>
  <div class="chart-key"><span><i class="chart-swatch person"></i>Possible person</span><span><i class="chart-swatch other"></i>Other or not assessed</span></div></section>
  </div>
@@ -337,9 +337,17 @@ function renderEvidenceRate(host,observations){
 }
 function drawAnalytics(){
  if(mode!=='evidence')return;
- const subset=selectedAnalyticsClips(),times=subset.map(x=>({rec:x,time:localClipTime(x)})).filter(x=>x.time);
+ const allScope=selectedAnalyticsClips();
+ const overview=allScope.map(x=>({rec:x,time:localClipTime(x)})).filter(x=>x.time);
+ const subset=allScope.filter(rec=>{
+  const t=localClipTime(rec);
+  if(state.chartDay&&t?.date!==state.chartDay)return false;
+  if(state.chartHour&&(!t||t.weekday!==state.chartHour.weekday||t.hour!==state.chartHour.hour))return false;
+  return true;
+ });
+ const times=subset.map(x=>({rec:x,time:localClipTime(x)})).filter(x=>x.time);
  const matrix=Array.from({length:7},()=>Array(24).fill(0)),days=new Map();
- for(const {rec,time:t} of times){
+ for(const {rec,time:t} of overview){
   matrix[t.weekday][t.hour]++;
   const previous=days.get(t.date)||{total:0,person:0};
   previous.total++;
@@ -347,8 +355,8 @@ function drawAnalytics(){
   days.set(t.date,previous);
  }
  $('akTotal').textContent=subset.length.toLocaleString();
- $('akDays').textContent=days.size.toLocaleString();
- const hourly=Array.from({length:24},(_,h)=>matrix.reduce((sum,row)=>sum+row[h],0));
+ $('akDays').textContent=new Set(times.map(x=>x.time.date)).size.toLocaleString();
+ const hourly=Array.from({length:24},(_,h)=>times.filter(x=>x.time.hour===h).length);
  const peak=Math.max(0,...hourly),top=hourly.indexOf(peak);
  $('akPeak').textContent=peak?String(top).padStart(2,'0')+':00':'—';
  const reviewed=subset.filter(x=>Number(x.sampled_frames)>0).length;
@@ -433,7 +441,7 @@ function drawAnalytics(){
  const filter=state.chartDay?'Date: '+state.chartDay:
   state.chartHour?'Time: '+weekdayNames[state.chartHour.weekday]+' '+String(state.chartHour.hour).padStart(2,'0')+':00–'+String((state.chartHour.hour+1)%24).padStart(2,'0')+':00':
   'Showing all indexed recordings.';
- $('chartSelection').textContent=filter+' Click a recording below to inspect the original video.';
+ $('chartSelection').textContent=filter+' Breakdown charts and totals update with this selection. Open Recordings or Archive for playback.';
  $('clearChartSelection').hidden=!state.chartDay&&!state.chartHour;
 }
 if(mode==='evidence'){
