@@ -25,6 +25,16 @@ FOLDER="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
 VIDEO=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
 DIGEST=re.compile(r"[a-f0-9]{64}\Z")
 
+
+MANIFEST_MAX_BYTES=32768
+
+def decode_manifest(raw):
+ if not isinstance(raw,bytes) or len(raw)>MANIFEST_MAX_BYTES:
+  raise ValueError("manifest_too_large_or_invalid")
+ value=json.loads(raw)
+ if not isinstance(value,dict):raise ValueError("manifest_not_object")
+ return value
+
 def adb(*args,limit=160000,timeout=17):
     proc=subprocess.run(["adb","-s",PHONE,*args],stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,timeout=timeout)
@@ -75,8 +85,8 @@ def new_records(index, remote_names, helpers):
         reverse=True)[:12]
     added=[]
     for name in recent:
-        metadata=adb("exec-out","cat",FOLDER+"/"+name+".verified.json",limit=14000)
-        m=json.loads(metadata)
+        metadata=adb("exec-out","cat",FOLDER+"/"+name+".verified.json",limit=MANIFEST_MAX_BYTES)
+        m=decode_manifest(metadata)
         size_raw=adb("shell","stat","-c","%s",FOLDER+"/"+name,limit=64)
         size=int(size_raw.strip())
         thumbnail=None
@@ -118,7 +128,7 @@ def recent_existing_face_updates(index,latest_manifest_names,phone_video_names,h
         size=old.get("size")
         if type(size) is not int or not 100000<size<800000000:continue
         try:
-            raw=adb("exec-out","cat",FOLDER+"/"+suffix,limit=28000,timeout=16)
+            raw=adb("exec-out","cat",FOLDER+"/"+suffix,limit=MANIFEST_MAX_BYTES,timeout=16)
             manifest=json.loads(raw)
             if manifest.get("bytes")!=size:continue
             fresh=row_from_manifest(name,manifest,size,old.get("thumbnail"),helpers)
