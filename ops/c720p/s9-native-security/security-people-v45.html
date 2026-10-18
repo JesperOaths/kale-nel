@@ -143,6 +143,21 @@ html.security-embedded body{padding-top:16px}
 .notice button{min-height:30px;padding:4px 10px;margin-left:9px}
 .dialog{width:min(720px,94vw);max-height:88dvh;overflow:auto;background:#142733;color:var(--text);border:1px solid #598497;border-radius:12px;padding:17px}
 .dialog::backdrop{background:#03080ee0}
+/* Keep dialog: fixed context image cannot expand over form controls. */
+#approvalDialog{width:min(820px,calc(100vw - 26px));max-width:calc(100vw - 26px);max-height:min(660px,calc(100dvh - 24px));padding:0;overflow:auto;overscroll-behavior:contain}
+#approvalDialog form{display:flex;flex-direction:column;gap:0;min-width:0}
+#approvalDialog .head{position:sticky;top:0;z-index:2;background:#142733;margin:0;padding:14px 18px;border-bottom:1px solid #385462}
+#approvalDialog .approval-body{display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr);gap:18px;align-items:start;padding:18px;min-width:0}
+#approvalDialog .approval-left,#approvalDialog .approval-right{min-width:0;display:grid;gap:12px}
+#approvalPreview{height:175px!important;max-height:175px!important;width:100%!important;overflow:hidden;min-width:0;border:1px solid #466371;border-radius:10px;background:#0b1823}
+#approvalPreview>.media{height:100%!important;max-height:100%!important;width:100%!important;min-width:0;overflow:hidden}
+#approvalPreview img,#approvalPreview .media img{display:block;width:100%!important;height:100%!important;max-width:100%;max-height:100%;object-fit:contain!important}
+#approvalDialog .approval-confirm{display:flex;align-items:flex-start;gap:10px;line-height:1.5;padding:11px;border:1px solid #486271;border-radius:8px}
+#approvalDialog .approval-confirm input{width:18px;min-width:18px;height:18px;min-height:18px;margin:2px 0 0;flex:none}
+#approvalDialog .approval-footer{position:sticky;bottom:0;z-index:2;display:flex;justify-content:flex-end;gap:10px;background:#142733;border-top:1px solid #385462;padding:12px 18px}
+#approvalDialog .approval-footer button{min-width:115px}
+@media(max-width:660px){#approvalDialog .approval-body{grid-template-columns:minmax(0,1fr);padding:12px;gap:12px}#approvalPreview{height:125px!important;max-height:125px!important}#approvalDialog .approval-footer{padding:9px 12px}}
+
 .dialog .head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .dialog form{display:grid;gap:12px}
 .dialog label{display:grid;gap:5px;font-size:12px}
@@ -169,7 +184,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 .step3-face-links{display:flex;gap:7px;flex-wrap:wrap}
 .step3-face-links button{min-height:33px;font-size:12px;padding:5px 9px}
 </style>
-<script defer src="/local/frontyard-security-new/security-people-v45.js?v=v53-20261018-clothing-context"></script>
+<script defer src="/local/frontyard-security-new/security-people-v45.js?v=v54-20261018-face-analytics"></script>
 <script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
 <script>if(window.parent!==window)document.documentElement.classList.add('security-embedded');</script>
 </head>
@@ -260,10 +275,16 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <div id="folderContext" class="callout" hidden><p id="folderContextText"></p></div>
  <div class="folder-layout"><div><div id="folderGrid" class="grid"></div><div id="folderPage" class="pagebar"></div></div><aside id="references" class="folder-aside" hidden><h3>Approved reference clips</h3><p class="status">Human-reviewed examples for visual comparison only.</p><div id="referenceList" class="reference-list"></div></aside></div>
 </section>
-<dialog id="approvalDialog" class="dialog"><form id="approvalForm"><div class="head"><h2>Keep this recording</h2><button id="cancelApproval" type="button">✕</button></div>
- <div id="approvalPreview" class="media" style="height:185px"></div><p class="muted">Select where to keep the reviewed recording. Similar clothing alone does not confirm identity.</p>
- <label>Folder<select id="approvalFolder"></select></label><label id="newLabel">New folder name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
- <label style="display:flex;align-items:center;gap:9px"><input id="approvalConfirmed" type="checkbox" required style="width:18px;min-height:18px"> I inspected the original recording.</label><div class="actions"><button class="primary" type="submit">Confirm &amp; keep</button></div></form></dialog>
+<dialog id="approvalDialog" class="dialog" aria-labelledby="approvalTitle"><form id="approvalForm">
+ <div class="head"><h2 id="approvalTitle">Save reviewed recording</h2><button id="cancelApproval" type="button" aria-label="Cancel and close">✕</button></div>
+ <div class="approval-body">
+  <div class="approval-left"><div id="approvalPreview" class="media" role="img" aria-label="Recording scene preview"></div><button id="approvalPlay" type="button" class="secondary">▶ View original recording</button><p class="muted">This image is evidence, not a confirmed identity.</p></div>
+  <div class="approval-right"><p class="muted">Choose a folder. A clothing match by itself is not proof of identity.</p>
+  <label>Save in folder<select id="approvalFolder"></select></label><label id="newLabel">New folder name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
+  <label class="approval-confirm"><input id="approvalConfirmed" type="checkbox" required> <span>I have reviewed the original video and agree with this folder.</span></label></div>
+ </div>
+ <div class="approval-footer"><button id="approvalCancelFooter" type="button">Cancel</button><button class="primary" type="submit">Confirm &amp; save</button></div>
+ </form></dialog>
 <dialog id="folderDialog" class="dialog"><form id="folderForm"><div class="head"><h2 id="folderDialogTitle">New folder</h2><button id="cancelFolder" type="button">✕</button></div>
  <label>Folder name<input id="folderLabel" maxlength="100" required></label><label>Notes<textarea id="folderNotes" maxlength="2000" rows="3"></textarea></label>
  <div class="actions"><button class="primary" type="submit">Save folder</button></div></form></dialog>
