@@ -19,7 +19,7 @@ for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing render
 for(const label of ['Activity &amp; scan status','Review recordings','People','Your people and groups'])
  assert(html.includes(label),label);
 assert(!html.includes('id="approvalConfirmed"'),'Remove redundant second confirmation checkbox');
-assert(js.includes('state.lastFolder=id||result.folder'),'Review queue must retain last selected person');
+assert(js.includes('state.lastFolder=folder||state.lastFolder'),'Review queue must retain last selected person');
 const keepMarkup=html.split('<dialog id="approvalDialog"')[1]?.split('</dialog>')[0]||'';
 assert(keepMarkup.includes('id="approvalFolder"'),'Keep dialog must expose the folder picker');
 assert(keepMarkup.includes('id="approvalLabel"'),'Keep dialog must expose new folder input');
