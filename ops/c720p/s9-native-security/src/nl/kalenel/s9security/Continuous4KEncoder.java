@@ -44,6 +44,7 @@ public final class Continuous4KEncoder {
   final int rotation;
   final Listener listener;
   long originUs,lastUs;
+  long prefixLastUs;
   long count;
   boolean finished;
   Session(File tmp,File output,int degrees,Listener callback){
@@ -58,6 +59,9 @@ public final class Continuous4KEncoder {
  private volatile boolean running;
  private volatile Throwable failure;
  private volatile long droppedOutputFrames;
+ // Measured compressed-frame PTS, not wall-clock estimates.
+ private volatile long lastCompletedPrefixMs,lastCompletedLiveMs;
+ private volatile String lastCompletedClip="";
  private volatile MediaFormat encodedFormat;
  private volatile boolean outputFormatReady;
  private volatile Session active;
@@ -105,6 +109,9 @@ public final class Continuous4KEncoder {
  public long bufferedMs(){return ring.bufferedUs()/1000L;}
  public int bufferedBytes(){return ring.bytes();}
  public long droppedOutputFrames(){return droppedOutputFrames;}
+ public long lastCompletedPrefixMs(){return lastCompletedPrefixMs;}
+ public long lastCompletedLiveMs(){return lastCompletedLiveMs;}
+ public String lastCompletedClip(){return lastCompletedClip;}
  public String error(){Throwable f=failure;return f==null?"":f.getClass().getSimpleName();}
  public boolean readyForEvent(){return healthy()&&ring.freeze()!=null;}
 
@@ -203,6 +210,7 @@ public final class Continuous4KEncoder {
      // single AVC track, track always 0 after exactly one addTrack()
      if(track!=0)throw new IllegalStateException("unexpected_track_number");
      current.originUs=w.prefix.firstPtsUs;
+     current.prefixLastUs=w.prefix.lastPtsUs;
      current.lastUs=-1;
      for(Encoded4KRing.Sample packet:w.prefix.samples)
       write(muxer,current,packet);
@@ -228,6 +236,9 @@ public final class Continuous4KEncoder {
       throw new IllegalStateException("invalid_native_4k_complete_file");
      if(!current.temporary.renameTo(current.finalFile))
       throw new IllegalStateException("atomic_mp4_publish_failed");
+     lastCompletedPrefixMs=(current.prefixLastUs-current.originUs)/1000L;
+     lastCompletedLiveMs=Math.max(0,(current.lastUs-current.prefixLastUs)/1000L);
+     lastCompletedClip=current.finalFile.getName();
      current.finished=true;current.listener.completed(current.finalFile,durationMs);
      current=null;
     }
