@@ -104,12 +104,17 @@ def main():
  if "s9v7-root-script" not in shell or "s9v5-command-script" not in shell:
   raise RuntimeError("actual_outer_security_page_unknown")
  if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
- if LEGACY_PEOPLE.search(hub):
-  hub=LEGACY_PEOPLE.sub("security-people-v45.html?v="+PEOPLE_QUERY+"&",hub)
- elif "security-people-v45.html?" not in hub:
+ # Normalize both the legacy V33 route shown in the screenshots and
+ # the V49 route from the previous failed-to-display deployment.
+ def upgrade_faces_route(src):
+  src=LEGACY_PEOPLE.sub("security-people-v45.html?v="+PEOPLE_QUERY+"&",src)
+  v45=re.compile(r"security-people-v45\\.html\\?v=[A-Za-z0-9._-]+&")
+  src=v45.sub("security-people-v45.html?v="+PEOPLE_QUERY+"&",src)
+  return src
+ hub=upgrade_faces_route(hub)
+ shell=upgrade_faces_route(shell)
+ if "security-people-v45.html?" not in hub:
   raise RuntimeError("no_known_people_navigation_route")
- if LEGACY_PEOPLE.search(shell):
-  shell=LEGACY_PEOPLE.sub("security-people-v45.html?v="+PEOPLE_QUERY+"&",shell)
  def patch_tracks_route(match):
   return "const TRACKS='"+"/local/frontyard-security-new/security-tracks-v7.html?v="+TRACKS_QUERY+"';"
  shell,track_urls=TRACKS_ENTRY.subn(patch_tracks_route,shell)
