@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """S9 microSD security catalog. No Google Drive access or MP4 hub caching."""
-import json,subprocess,os,re,datetime,math
+import json,subprocess,os,re,datetime,math,fcntl
 from pathlib import Path
+try:
+ import phone_archive_catalog_v1 as phone_catalog
+except ImportError:
+ phone_catalog=None
 ADDR="192.168.178.250:5555"
 SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
 ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
 # Metadata only. Preview image bytes stay exclusively on S9+ microSD.
 PRIVATE_FALLBACK=Path("/home/jespern/c720p-home-hub/state/s9-fallback-evidence.json")
+CATALOG_LOCK=Path("/home/jespern/c720p-home-hub/state/s9-native-catalog.lock")
 RE_PREVIEW=re.compile(r"^preview_motion_([0-9]{13})[.]jpg$")
 NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 # Only clip-scoped, on-phone predictions are mirrored as metadata. Never copy images,
@@ -359,7 +364,7 @@ def adb(*args):
  p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
  if p.returncode:raise OSError("phone_adb_offline")
  return p.stdout
-def main():
+def build_catalog():
  state=subprocess.run(["adb","-s",ADDR,"get-state"],capture_output=True,timeout=6)
  if state.returncode or state.stdout.strip()!=b"device":
   subprocess.run(["adb","connect",ADDR],capture_output=True,timeout=12)
@@ -429,30 +434,44 @@ def main():
   if type(e).__name__!="OSError":problems.append("native_4k:"+type(e).__name__)
  # Standalone Camera2 motion-triggered 4K recordings, independently classified on S9.
  native_security="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
+ native_snapshot=None
+ if phone_catalog is not None:
+  try:native_snapshot=phone_catalog.load_catalog()
+  except phone_catalog.Unavailable:pass
+ try:
+  previous_rows={r.get("name"):r for r in json.loads((ROOT/"s9-phone-events.json").read_text()).get("phone_recordings",[]) if isinstance(r,dict)}
+ except (OSError,ValueError,TypeError):previous_rows={}
  try:
   recorded=adb("shell","ls","-1",native_security).decode().splitlines()
   native_listing_ok=True
  except Exception:
   recorded=[]
   native_listing_ok=False
- for name in recorded:
+ native_names=sorted(native_snapshot["records"]) if native_snapshot is not None else recorded
+ for name in native_names:
   if not re.fullmatch(r"motion_[0-9]{13}[.]mp4",name):continue
   try:
-   m=decode_manifest(adb("exec-out","cat",native_security+"/"+name+".verified.json"))
+   native_entry=native_snapshot["records"][name] if native_snapshot is not None else None
+   m=native_entry["manifest"] if native_entry is not None else decode_manifest(adb("exec-out","cat",native_security+"/"+name+".verified.json"))
    size=int(m.get("bytes",0));digest=str(m.get("sha256","")).lower()
    if m.get("name")!=name or not re.fullmatch(r"[a-f0-9]{64}",digest) or not 100000<size<800000000:
     raise ValueError("security_manifest_invalid")
    if int(m.get("width",0))!=3840 or int(m.get("height",0))!=2160:
     raise ValueError("not_verified_2160p")
-   actual=int(adb("shell","stat","-c","%s",native_security+"/"+name).strip())
+   actual=native_entry["bytes"] if native_entry is not None else int(adb("shell","stat","-c","%s",native_security+"/"+name).strip())
    if size!=actual:raise ValueError("incomplete_sd_mp4")
    group=str(m.get("scene_category","motion_other"))
    if group not in ("one_person","multiple_people","motion_other"):
     group="unreviewed"
-   thumb=None
+   thumb=None;thumb_version=""
    try:
-    raw=adb("exec-out","cat",native_security+"/"+name+".thumb.jpg")
-    if 4000<len(raw)<2200000 and raw[:3]==bytes([255,216,255]):
+    dest=ROOT/"s9-phone-thumbs"/(name+".thumb.jpg")
+    if native_entry is not None:
+     available,thumb_version=phone_catalog.cache_thumbnail(native_entry,dest,previous_rows.get(name,{}).get("phone_thumbnail_version"))
+     raw=None
+     if available:thumb="s9-phone-thumbs/"+dest.name
+    else:raw=adb("exec-out","cat",native_security+"/"+name+".thumb.jpg")
+    if raw is not None and 4000<len(raw)<2200000 and raw[:3]==bytes([255,216,255]):
      dest=ROOT/"s9-phone-thumbs"/(name+".thumb.jpg")
      dest.parent.mkdir(parents=True,exist_ok=True)
      if not dest.is_file() or dest.read_bytes()!=raw:
@@ -469,6 +488,7 @@ def main():
      "content_categories":m.get("categories",[]),
      **anonymous_clip_metadata(m),
      **safe_face_review_metadata(m),
+     **({"phone_catalog_version":native_entry["version"],"phone_thumbnail_version":thumb_version} if native_entry is not None else {}),
      "storage":"S9 native 4K Security microSD"})
   except Exception as error:problems.append(name+":"+type(error).__name__)
 
@@ -523,5 +543,11 @@ def main():
  dest=ROOT/"s9-phone-events.json"
  part=dest.with_suffix(".json.tmp");part.write_text(json.dumps(out,indent=2)+"\n");os.replace(part,dest)
  print("LOCAL_SD_INDEXED",len(rows),"errors",problems[:4])
+def main():
+ CATALOG_LOCK.parent.mkdir(parents=True,exist_ok=True)
+ with CATALOG_LOCK.open("a+") as guard:
+  fcntl.flock(guard,fcntl.LOCK_EX)
+  build_catalog()
 if __name__=="__main__":main()
+
 
