@@ -101,7 +101,7 @@ def main():
              const count=parseInt(label,10);
              if(!Number.isFinite(count))throw Error('profile count unavailable');
              b.click();
-             return {reported:count};
+             return {reported:count,targetName:b.querySelector('strong')?.textContent||''};
             """)
             assert isinstance(profile["reported"],int)
             folder=await_value(page,"""
@@ -110,11 +110,12 @@ def main():
              return {
                open:!!f&&!f.hidden,
                description:label,
-               title:!!d?.getElementById('folderTitle')?.textContent,
+               title:d?.getElementById('folderTitle')?.textContent||'',
                mode:d?.getElementById('folderMode')?.value||'',
                rows:d?.querySelectorAll('#folderGrid article').length||0
              };
-            """,lambda v:v and v.get("open") and v.get("title") and "saved recording links" in v.get("description",""),65)
+            """,lambda v:v and v.get("open") and v.get("title")==profile["targetName"]
+                and "saved recording links" in v.get("description",""),65)
             # If a new saved person has no reviewed originals yet, still inspect
             # the approved state without generating any review decisions.
             if folder["mode"]!="approved":
