@@ -1,0 +1,77 @@
+name: S9 Step 3 pre-rollout validation only
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/validate-s9-step3-pre-rollout.py'
+      - 'ops/c720p/s9-native-security/test-step3-pre-rollout-gate.py'
+      - '.github/workflows/c720p-s9-step3-pre-rollout-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/validate-s9-step3-pre-rollout.py'
+      - '.github/workflows/c720p-s9-step3-pre-rollout-validation.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-step3-pre-rollout-validation
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify fail-closed rollout gate without recording changes
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-step3-pre-rollout-gate.py
+          python3 ops/c720p/s9-native-security/test-face-pair-qualification.py
+          python3 ops/c720p/s9-native-security/test-step2-live-graduation.py
+          python3 -m py_compile ops/c720p/s9-native-security/validate-s9-step3-pre-rollout.py
+  audit:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Inspect current S9 production gate using existing diagnostic queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          dir='ops/c720p/s9-native-security'
+          names='validate-s9-step3-pre-rollout.py report-s9-release-proof.py audit-face-pipeline-v30.py validate-s9-face-identity-pairs.py'
+          dest="/tmp/s9-step3-validation-${GITHUB_SHA:0:12}"
+          cmd="mkdir -p '$dest'"
+          for name in $names; do
+            hash="$(sha256sum "$dir/$name" | cut -d' ' -f1)"
+            uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$dir/$name"
+            cmd="$cmd && curl -fSsL --max-time 35 '$uri' -o '$dest/$name' && printf '%s  %s\n' '$hash' '$dest/$name' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$dest/validate-s9-step3-pre-rollout.py'"
+          idem="s9-step3-readonly-validation-${GITHUB_SHA:0:21}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-step3-validation','diagnostic',:'cmd',230,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_STEP3_VALIDATION_JOB=$id"
+          for i in $(seq 1 50); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == error\|* || "$state" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 9000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]]
+              grep -q 'S9_STEP3_PRE_ROLLOUT_GATE' <<< "$output"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
