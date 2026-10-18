@@ -28,6 +28,8 @@ INBOX="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/HistoricalDri
 SAFE_ID=re.compile(r"[a-f0-9]{64}\Z")
 MAX_BYTES=650*1024*1024
 RECHECK_VERSION="v28_s9_gpu_historical_person_review_v1"
+DIRECT_IMPORT_MAX_BYTES=96*1024*1024
+DIRECT_IMPORT_OPT_IN=os.environ.get("S9_DIRECT_H264_IMPORT")=="1"
 APP_STATUS="http://127.0.0.1:18808/status"
 
 def wait_for_catalog_lock(lock,seconds=200):
@@ -84,6 +86,23 @@ def local_stream(cfg,source,target):
   proc.wait()
  if total!=expected:raise RuntimeError("drive_stream_size_mismatch")
  return h.hexdigest()
+
+def can_phone_decode_original_h264(original):
+ """Opt-in, bounded direct phone decoding; existing normalized path is fallback."""
+ if not DIRECT_IMPORT_OPT_IN or not original.is_file() or not 100000<original.stat().st_size<=DIRECT_IMPORT_MAX_BYTES:
+  return False
+ try:
+  detail=json.loads(execute(["ffprobe","-v","error",
+    "-show_entries","format=duration:stream=codec_type,codec_name,width,height",
+    "-of","json",str(original)],25))
+  duration=float(detail.get("format",{}).get("duration",0))
+  video=[x for x in detail.get("streams",[]) if x.get("codec_type")=="video"]
+  if len(video)!=1 or not 1<=duration<=120:return False
+  v=video[0];width,height=v.get("width"),v.get("height")
+  return (v.get("codec_name")=="h264" and type(width) is int and type(height) is int
+          and 320<=width<=3840 and 240<=height<=2160 and width%2==0 and height%2==0)
+ except (RuntimeError,ValueError,TypeError,KeyError,OverflowError):
+  return False
 
 def normalize_gpu_input(original,target):
  """Decode damaged legacy H264 on hub; phone only runs TFLite on a tiny clean MP4."""
@@ -215,8 +234,14 @@ def stage_one(rescan_v28=False):
   folder=Path(tmp);src=folder/("history_"+key+".mp4")
   cfg=json.loads(m.CONFIG.read_text())
   original_sha=local_stream(cfg,source,src)
-  gpu_mp4=folder/"gpu_input.mp4"
-  gpu_sha=normalize_gpu_input(src,gpu_mp4)
+  if can_phone_decode_original_h264(src):
+   gpu_mp4=src
+   gpu_sha=original_sha
+   preprocessing="s9_native_decode_h264_original_v1"
+  else:
+   gpu_mp4=folder/"gpu_input.mp4"
+   gpu_sha=normalize_gpu_input(src,gpu_mp4)
+   preprocessing="ffmpeg_h264_960x540_all_intra_12samples"
   gpu_input_bytes=gpu_mp4.stat().st_size
   destination=INBOX+"/history_"+key
   execute(["adb","-s",PHONE,"push",str(gpu_mp4),destination+".mp4.partial"],180)
@@ -226,7 +251,7 @@ def stage_one(rescan_v28=False):
    "source_remote_name":source["remote_name"],"bytes":gpu_mp4.stat().st_size,
    "source_sha256":gpu_sha,"original_source_sha256":original_sha,
    "original_source_size":src.stat().st_size,
-   "derivative_transcode":"ffmpeg_h264_960x540_all_intra_12samples",
+   "derivative_transcode":preprocessing,
    "source":"verified_historical_google_drive",
    "requires_gpu_or_cpu_on_phone":True,
    "identity_claim":"none","original_drive_read_only":True}
@@ -295,10 +320,15 @@ def validate_result(result,verified,descriptor=None):
       descriptor.get("camera")!=src["camera"] or
       descriptor.get("source_sha256")!=media_hash or
       descriptor.get("original_source_size")!=src["size"] or
-      descriptor.get("derivative_transcode")!="ffmpeg_h264_960x540_all_intra_12samples" or
+      descriptor.get("derivative_transcode") not in
+       ("ffmpeg_h264_960x540_all_intra_12samples","s9_native_decode_h264_original_v1") or
       not isinstance(descriptor.get("original_source_sha256"),str) or
       not SAFE_ID.fullmatch(descriptor["original_source_sha256"])):
    raise ValueError("original_drive_and_gpu_input_provenance_mismatch")
+  if descriptor.get("derivative_transcode")=="s9_native_decode_h264_original_v1" and (
+     descriptor.get("original_source_sha256")!=media_hash or
+     descriptor.get("bytes")!=src["size"]):
+   raise ValueError("native_direct_import_must_match_exact_drive_original")
  return {
   "clip_id":key,"camera":src["camera"],"remote_name":src["remote_name"],
   "status":"classified","category":category_from_phone(result),

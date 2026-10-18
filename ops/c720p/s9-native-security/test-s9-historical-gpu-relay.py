@@ -6,6 +6,7 @@ import threading
 import tempfile
 import time
 import json
+from unittest.mock import patch
 from pathlib import Path
 import unittest
 
@@ -102,6 +103,33 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    case["animal_confidence"]=0.0
    if confidence:case[confidence]=.7
    self.assertEqual(m.category_from_phone(case),expected)
+ def test_direct_h264_avoids_hub_transcode_only_on_compatible_opt_in(self):
+  with tempfile.TemporaryDirectory() as root:
+   movie=Path(root)/'source.mp4';movie.write_bytes(b'x'*500000)
+   meta={"format":{"duration":"18.2"},"streams":[
+      {"codec_type":"video","codec_name":"h264","width":1920,"height":1080}]}
+   with patch.object(m,"DIRECT_IMPORT_OPT_IN",True),patch.object(m,"execute",return_value=json.dumps(meta)) as probe:
+    self.assertTrue(m.can_phone_decode_original_h264(movie))
+    probe.assert_called_once()
+   with patch.object(m,"DIRECT_IMPORT_OPT_IN",False),patch.object(m,"execute") as probe:
+    self.assertFalse(m.can_phone_decode_original_h264(movie))
+    probe.assert_not_called()
+   with patch.object(m,"DIRECT_IMPORT_OPT_IN",True),patch.object(m,"execute",return_value=json.dumps({
+       "format":{"duration":"18.2"},"streams":[{"codec_type":"video","codec_name":"hevc","width":1920,"height":1080}]})):
+    self.assertFalse(m.can_phone_decode_original_h264(movie))
+
+ def test_direct_original_result_requires_identical_source_digest_and_bytes(self):
+  descriptor={"clip_id":self.id,"camera":"new","source_remote_name":self.name,
+    "source_sha256":self.hash,"original_source_sha256":self.hash,
+    "original_source_size":500000,"bytes":500000,
+    "derivative_transcode":"s9_native_decode_h264_original_v1"}
+  row=m.validate_result(self.result,self.verified,descriptor)
+  self.assertEqual(row["analysis_input_preprocessing"],"s9_native_decode_h264_original_v1")
+  for key,invalid in [("original_source_sha256","d"*64),("bytes",499999)]:
+   bad=dict(descriptor);bad[key]=invalid
+   with self.subTest(key=key),self.assertRaisesRegex(ValueError,"native_direct_import_must_match_exact_drive_original"):
+    m.validate_result(self.result,self.verified,bad)
+
  def test_android_worker_keeps_native_4k_archive_separate(self):
   text=(HERE/"src/nl/kalenel/s9security/HistoricalImportWorker.java").read_text()
   self.assertIn("HistoricalDriveInbox",text)
