@@ -208,6 +208,7 @@ async function open(rec){
  document.querySelectorAll('.clip').forEach(n=>n.setAttribute('aria-selected',String(n.dataset.clip===state.selected)));
  playbackStop();const host=$('detail');host.replaceChildren();
  host.append(text('h2',fmt(rec)),text('div',name(rec),'filename'));
+ if(mode==='today')host.append(personFilingControls('sd',name(rec)));
  if(mode==='evidence'){
   const support=Number(rec.person_detected_frames_050)||0;
   const reviewed=Number(rec.sampled_frames)||0;
@@ -525,6 +526,58 @@ for(const id of ['search','type','order'])$(id).addEventListener(id==='search'?'
 document.addEventListener('visibilitychange',()=>{if(document.hidden)state.activeVideo?.pause();else if(!state.all.length)refresh()});
 window.addEventListener('pagehide',playbackStop);
 refresh();setInterval(()=>{if(!document.hidden)refresh()},60000);
+
+function personFilingControls(source,name){
+ const panel=document.createElement('div');
+ panel.style.cssText='display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid #45616e';
+ if(!(source==='sd'?/^motion_[0-9]{13}[.]mp4$/.test(name):/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(name)&&!name.includes('..')))return panel;
+ const mk=(tag,label)=>{const e=document.createElement(tag);e.textContent=label||'';return e};
+ const load=mk('button','File under person…'),person=mk('select'),save=mk('button','Confirm person'),
+   undo=mk('button','Return to review queue'),message=mk('span','');
+ person.setAttribute('aria-label','Person');message.setAttribute('role','status');
+ message.style.fontSize='12px';person.hidden=save.hidden=undo.hidden=true;
+ panel.append(load,person,save,undo,message);
+ let revision=null,busy=false;
+ load.addEventListener('click',async()=>{
+  if(busy)return;busy=true;load.disabled=true;message.textContent='Loading people…';
+  try{
+   const api=relay();if(!api?.fetch)throw Error('Secure relay unavailable');
+   const [a,b]=await Promise.all([
+    api.fetch('/new/api/visual-review?workflow=clip_folders_v40&tab=inbox&offset=0&limit=1',{cache:'no-store'}),
+    api.fetch('/new/api/s9-manual-recording-links',{cache:'no-store'})]);
+   const [people,links]=await Promise.all([a.json(),b.json()]);
+   if(!a.ok||!b.ok||people.ok!==true||links.ok!==true||!Array.isArray(people.folders)||
+      links.manual_links_only!==true||!Number.isInteger(links.revision))throw Error('Person index unavailable');
+   revision=links.revision;person.replaceChildren();
+   const known=people.folders.filter(p=>!p.automatic_appearance_group||Number(p.approved_clips)>0)
+    .sort((a,b)=>String(a.label||'').localeCompare(String(b.label||''),'en',{sensitivity:'base'}));
+   for(const entry of known){const o=mk('option',String(entry.label||''));o.value=entry.id;person.append(o)}
+   if(!known.length){message.textContent='Add a person in People & Faces first';return}
+   const assigned=links.items?.[source+':'+name]?.folder;
+   if(assigned&&known.some(x=>x.id===assigned))person.value=assigned;
+   person.hidden=save.hidden=false;undo.hidden=!assigned;
+   message.textContent='Choose the person visible in this original recording';
+  }catch(e){message.textContent=String(e.message||e)}
+  finally{busy=false;load.disabled=false}
+ });
+ async function commit(personId){
+  if(busy||revision===null)return;busy=true;save.disabled=undo.disabled=true;
+  message.textContent='Saving human-confirmed decision…';
+  try{
+   const result=await relay().fetch('/new/api/s9-manual-recording-links',{
+    method:'POST',headers:{'Content-Type':'application/json','X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
+    body:JSON.stringify({action:personId?'assign':'return_to_queue',source,name,folder:personId||null,
+      revision,human_confirmed:true})});
+   const out=await result.json();if(!result.ok||out.ok!==true)throw Error(out.error||'Unable to save');
+   revision=out.revision;undo.hidden=!personId;
+   message.textContent=personId?'Filed under selected person':'Returned to review queue';
+  }catch(e){message.textContent=String(e.message||e)+' · reload people and retry'}
+  finally{busy=false;save.disabled=undo.disabled=false}
+ }
+ save.addEventListener('click',()=>{if(person.value)commit(person.value)});
+ undo.addEventListener('click',()=>commit(null));
+ return panel;
+}
 })();
-const GEJAST_PAGE_VERSION='v817';
+$1='v817';
 </script><div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#7894a5;font-size:10px;pointer-events:none">v817 - Made by Bruis</div></body></html>
