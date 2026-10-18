@@ -78,8 +78,8 @@ def main():
  # A previous drop-in contains OnUnitInactiveSec= (empty), which clears
  # ALL timer triggers, then re-adds only the expired inactivity trigger.
  # This owned lexically-later drop-in restores the desired schedule.
- override=("[Timer]\\nOnUnitInactiveSec=\\nOnActiveSec=2min\\n"
-           "OnUnitActiveSec=5min\\nOnCalendar=*:0/5\\n").encode()
+ override=("[Timer]\nOnUnitInactiveSec=\nOnActiveSec=2min\n"
+           "OnUnitActiveSec=5min\nOnCalendar=*:0/5\n").encode()
  if OVERLAY.exists() and OVERLAY.read_bytes()!=override:
   raise RuntimeError("unowned_existing_timer_schedule_override")
  try:
