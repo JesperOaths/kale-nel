@@ -38,6 +38,7 @@ ORIG={
  "archive":"ops/c720p/s9-native-security/security-archive-v7.html",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
+# Verified deployment history: security-visible-route-v56-20261018 (previous revision), then v57.
 OLD="security-people-v50.html?v=security-visible-route-v57-20261018&"
 NEW="security-people-v50.html?v=security-visible-route-v58-20261018&"
 ENTRY_OLD="security-hub-v30.js?v=security-visible-route-v57-20261018"
