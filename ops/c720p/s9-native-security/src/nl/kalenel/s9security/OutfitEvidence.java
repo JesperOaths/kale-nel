@@ -8,7 +8,8 @@ import java.util.*;
 
 /** Anonymous on-phone outfit evidence for human review of repeat appearances.
  *
- * Uses only coarse RGB color histograms of the center torso and lower body.
+ * Uses HSV histograms of torso and lower clothing regions, temporal stability
+ * across sampled frames, and normalized histogram affinity.
  * No faces, names, facial embeddings, persistent biometric IDs, or network.
  * Matching outfits never means verified matching individuals.
  */
