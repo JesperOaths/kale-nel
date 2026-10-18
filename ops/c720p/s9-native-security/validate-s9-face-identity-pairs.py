@@ -19,7 +19,7 @@ MIN_NEG=500
 MAX_FAR_95_UPPER=0.01
 MIN_TPR=0.90
 GATE_VERSION="s9_face_identity_qualification_v2"
-PRIVATE=Path("/home/jespern/c720p-home-hub/state/s9-human-confirmed-face-pairs-v1.json")
+PRIVATE=Path("/home/jespern/c720p-home-hub/state/s9-human-confirmed-face-pairs-v2.json")
 
 def wilson_upper(failures,total,z=1.96):
  if total<=0:return 1.0
