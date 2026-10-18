@@ -149,6 +149,7 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
  <div class="analytics-panels">
  <section class="analytics-panel" aria-labelledby="sourceTitle"><h3 id="sourceTitle">Where recordings are stored</h3><p class="chart-subtitle">Source coverage across the historical archive and the current camera.</p><div id="sourceDistribution" class="distribution"></div></section>
  <section class="analytics-panel" aria-labelledby="durationTitle"><h3 id="durationTitle">Recording length</h3><p class="chart-subtitle">Identify suspiciously short recordings and missing duration metadata. Only measured lengths are categorized.</p><div id="durationDistribution" class="distribution"></div></section>
+ <section class="analytics-panel" aria-labelledby="processingTitle"><h3 id="processingTitle">Processing coverage</h3><p class="chart-subtitle">Historical Drive scans and current S9+ recordings have separate analysis states. Unprocessed never means no person.</p><div id="processingDistribution" class="distribution"></div></section>
  </div><div class="analytics-help" id="analyticInsight" role="status">Checking original archive coverage…</div>
  <p class="analytics-note">Both S9+ microSD and historical Google Drive recordings are included where their indexes are accessible. Drive clips without a completed person review count as unassessed, not as a negative detection. Times use Europe/Amsterdam. These charts count recordings, not distinct people.</p>
 </section>
@@ -171,7 +172,7 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 const $=id=>document.getElementById(id),mode=new URLSearchParams(location.search).get('mode')==='evidence'?'evidence':'today';
 const native=/^motion_[0-9]{13}[.]mp4$/,legacy=/^rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}[.]mp4$/;
 const SAFE=/^(?:motion_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4[.]thumb[.]jpg$/;
-const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null,chartHour:null,chartDay:null,driveStatus:'not_checked'};
+const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null,chartHour:null,chartDay:null,driveStatus:'not_checked',driveProcessing:null};
 if(mode==='evidence')document.body.classList.add('evidence-mode');
 const evidenceButtons=document.querySelectorAll('[data-evidence-filter]');
 function syncEvidenceButtons(){
@@ -330,12 +331,23 @@ function drawAnalytics(){
   bounds[idx][1]++;
  }
  renderDistribution($('durationDistribution'),bounds);
+ const processing=[['S9+ assessed',0],['Drive · on-phone reviewed',0],
+ ['Drive · earlier sampled review',0],['Not yet assessed',0]];
+ for(const {rec} of times){
+  if(!(Number(rec.sampled_frames)>0))processing[3][1]++;
+  else if(rec.source!=='drive')processing[0][1]++;
+  else if(rec.review_stage==='v28')processing[1][1]++;
+  else processing[2][1]++;
+ }
+ renderDistribution($('processingDistribution'),processing);
  const missingDrive=state.driveStatus!=='ready';
  const short=bounds[0][1],unknown=bounds[4][1];
  $('analyticInsight').textContent=short+' recordings shorter than 10 seconds; '+unknown+
   ' lack measured duration. '+(missingDrive?'Drive index currently unavailable: charts may undercount historical activity.':
   times.filter(x=>x.rec.source==='drive').length+' historical Drive recordings included in this selection.')+
-  ' Continue investigating individual clips in Archive; identify people only after human review.';
+  (state.driveProcessing?.completed!==undefined?' S9+ on-phone historical rescans: '+
+   state.driveProcessing.completed+' / '+state.driveProcessing.eligible+' indexed Drive records.':'')+
+  ' Open Recordings or Archive to inspect source video; person labels require human confirmation.';
  $('hourAxis').replaceChildren();$('heatDays').replaceChildren();$('heatCells').replaceChildren();
  for(let h=0;h<24;h+=3)$('hourAxis').append(text('span',String(h).padStart(2,'0')));
  for(const label of weekdayNames)$('heatDays').append(text('span',label));
@@ -445,10 +457,26 @@ async function refresh(){
  if(state.refreshing)return;state.refreshing=true;$('sync').textContent='Refreshing S9+ and Drive archives…';
  try{
   const r=relay();if(!r?.fetch)throw Error('secure_relay_unavailable');
-  const [local,drive]=await Promise.allSettled([
+  const [local,drive,driveReview]=await Promise.allSettled([
    r.fetch('/new/api/saved',{cache:'no-store'}),
-   mode==='evidence'?r.fetch('/new/api/drive-saved',{cache:'no-store'}):Promise.resolve(null)
+   mode==='evidence'?r.fetch('/new/api/drive-saved',{cache:'no-store'}):Promise.resolve(null),
+   mode==='evidence'?r.fetch('/new/api/drive-person-review',{cache:'no-store'}):Promise.resolve(null)
   ]);
+  const historyByName=new Map();
+  state.driveProcessing=null;
+  if(driveReview.status==='fulfilled'&&driveReview.value?.ok){
+   try{
+    const review=await driveReview.value.json();
+    if(review.ok===true&&Array.isArray(review.clips)){
+     for(const rec of review.clips){
+      const name=String(rec.remote_name||'');
+      if(/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(name)&&!name.includes('..'))
+       historyByName.set(name,rec);
+     }
+     state.driveProcessing=review.v28_review_progress||null;
+    }
+   }catch(_){}
+  }
   const accepted=[];
   if(local.status==='fulfilled'&&local.value?.ok){
    const d=await local.value.json();
@@ -464,7 +492,19 @@ async function refresh(){
       if(!/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(n)||n.includes('..'))continue;
       const time=Date.parse(String(entry.timestamp||entry.date||''));
       if(!Number.isFinite(time)||time<=0)continue;
-      accepted.push({...entry,source:'drive',remote_name:n,timestamp:new Date(time).toISOString()});
+      const prior=historyByName.get(n);
+      const result=prior?.v28_phone_review||null;
+      const legacy=(!result&&Number(prior?.sampled_frames)>0)?prior:null;
+      const reviewed=result||legacy;
+      const frames=Number(reviewed?.sampled_frames)||0;
+      const hits=Math.max(0,Number(reviewed?.person_detected_frames_050)||0);
+      accepted.push({...entry,source:'drive',remote_name:n,
+       timestamp:new Date(time).toISOString(),
+       sampled_frames:frames,person_detected_frames_050:hits,
+       person_count:frames&&hits>0?1:0,
+       review_stage:result?'v28':legacy?'legacy':'none',
+       person_event_category:reviewed?.category||'unassessed_historical_drive',
+       scene_category:frames?'sampled_frame_review':'unreviewed'});
      }
      state.driveStatus='ready';
     }
