@@ -65,6 +65,8 @@ class ReleaseProofTests(TestCase):
    data=m.timer_service_readback()
   self.assertEqual(data["timer_SubState"],"waiting")
   self.assertEqual(data["timer_NextElapseUSecMonotonic"],"2h 3min")
+  self.assertIn("TimersMonotonic",P.read_text())
+  self.assertIn("timer_file_declared_triggers",P.read_text())
   self.assertEqual(data["service_Result"],"exit-code")
   self.assertEqual(data["service_ExecMainStatus"],"1")
   self.assertTrue(data["timer_LastTriggerUSec"].startswith("Sun"))
