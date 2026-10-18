@@ -85,6 +85,11 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 .distribution-track>i{display:block;height:100%;background:#73d8c0;min-width:0}
 .distribution-row strong{font-variant-numeric:tabular-nums;text-align:right}
 .analytics-help{margin:12px 0;padding:12px 16px;border:1px solid #3e6171;border-radius:11px;font-size:12px;color:#cae1e8}
+.evidence-rate{display:grid;gap:12px;margin-top:15px}
+.evidence-rate-row{display:grid;grid-template-columns:minmax(80px,118px) minmax(65px,1fr) 65px;gap:8px;align-items:center;font-size:12px}
+.evidence-rate-row .distribution-track{height:15px}
+.evidence-rate-row strong{font-variant-numeric:tabular-nums;text-align:right}
+.evidence-rate-row small{grid-column:1/-1;color:#99bac7;font-size:10px;margin-top:-6px}
 @media(max-width:620px){.distribution-row{grid-template-columns:90px 1fr 43px;gap:7px}}
 .analytics-heading{display:flex;align-items:start;justify-content:space-between;gap:15px;flex-wrap:wrap}
 .analytics-heading h2{margin:0;font-size:18px}
@@ -150,7 +155,12 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
  <section class="analytics-panel" aria-labelledby="sourceTitle"><h3 id="sourceTitle">Where recordings are stored</h3><p class="chart-subtitle">Source coverage across the historical archive and the current camera.</p><div id="sourceDistribution" class="distribution"></div></section>
  <section class="analytics-panel" aria-labelledby="durationTitle"><h3 id="durationTitle">Recording length</h3><p class="chart-subtitle">Identify suspiciously short recordings and missing duration metadata. Only measured lengths are categorized.</p><div id="durationDistribution" class="distribution"></div></section>
  <section class="analytics-panel" aria-labelledby="processingTitle"><h3 id="processingTitle">Processing coverage</h3><p class="chart-subtitle">Historical Drive scans and current S9+ recordings have separate analysis states. Unprocessed never means no person.</p><div id="processingDistribution" class="distribution"></div></section>
- </div><div class="analytics-help" id="analyticInsight" role="status">Checking original archive coverage…</div>
+ </div>
+ <div class="analytics-panels">
+ <section class="analytics-panel" aria-labelledby="localPeopleHoursTitle"><h3 id="localPeopleHoursTitle">S9+ · possible people by time of day</h3><p class="chart-subtitle">Percentage of recordings with person evidence among assessed S9+ videos. Missing reviews are shown separately.</p><div id="localEvidenceRates" class="evidence-rate"></div></section>
+ <section class="analytics-panel" aria-labelledby="drivePeopleHoursTitle"><h3 id="drivePeopleHoursTitle">Google Drive · historical person evidence</h3><p class="chart-subtitle">Historical sampled reviews by daypart, without interpreting an unassessed recording as a negative result.</p><div id="driveEvidenceRates" class="evidence-rate"></div></section>
+ </div>
+ <div class="analytics-help" id="analyticInsight" role="status">Checking original archive coverage…</div>
  <p class="analytics-note">Both S9+ microSD and historical Google Drive recordings are included where their indexes are accessible. Drive clips without a completed person review count as unassessed, not as a negative detection. Times use Europe/Amsterdam. These charts count recordings, not distinct people.</p>
 </section>
 
@@ -304,6 +314,27 @@ function renderDistribution(host,items){
   row.append(text('span',label),track,text('strong',count.toLocaleString()));host.append(row);
  }
 }
+function renderEvidenceRate(host,observations){
+ host.replaceChildren();
+ const bins=[
+  {name:'Night 00–06',lo:0,hi:6},
+  {name:'Morning 06–12',lo:6,hi:12},
+  {name:'Afternoon 12–18',lo:12,hi:18},
+  {name:'Evening 18–24',lo:18,hi:24}];
+ for(const part of bins){
+  const found=observations.filter(x=>x.time.hour>=part.lo&&x.time.hour<part.hi);
+  const assessed=found.filter(x=>Number(x.rec.sampled_frames)>0);
+  const positive=assessed.filter(x=>Number(x.rec.person_count)>0).length;
+  const rate=assessed.length?100*positive/assessed.length:0;
+  const row=text('div','','evidence-rate-row'),track=text('span','','distribution-track'),fill=text('i');
+  fill.style.width=rate.toFixed(1)+'%';track.append(fill);
+  row.append(text('span',part.name),track,
+   text('strong',assessed.length?Math.round(rate)+'%':'—'),
+   text('small',positive+' of '+assessed.length+' assessed · '+
+    (found.length-assessed.length)+' unassessed'));
+  host.append(row);
+ }
+}
 function drawAnalytics(){
  if(mode!=='evidence')return;
  const subset=selectedAnalyticsClips(),times=subset.map(x=>({rec:x,time:localClipTime(x)})).filter(x=>x.time);
@@ -341,6 +372,9 @@ function drawAnalytics(){
   else processing[2][1]++;
  }
  renderDistribution($('processingDistribution'),processing);
+ renderEvidenceRate($('localEvidenceRates'),times.filter(x=>x.rec.source!=='drive'));
+ renderEvidenceRate($('driveEvidenceRates'),times.filter(x=>x.rec.source==='drive'));
+
  const missingDrive=state.driveStatus!=='ready';
  const short=bounds[0][1],unknown=bounds[4][1];
  $('analyticInsight').textContent=short+' recordings shorter than 10 seconds; '+unknown+
