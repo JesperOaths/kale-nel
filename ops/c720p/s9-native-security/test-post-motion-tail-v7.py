@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard S9's 10s motion tail and continuous native 4K segment behavior.
+"""Guard S9's 5s motion tail and 10s minimum video and continuous native 4K segment behavior.
 Does not touch phones; uses the committed Java source and a JVM contract.
 """
 from pathlib import Path
@@ -7,7 +7,9 @@ import re,subprocess,tempfile,textwrap
 ROOT=Path(__file__).resolve().parent
 JAVA=ROOT/"src/nl/kalenel/s9security"
 s=(JAVA/"CameraService.java").read_text()
-assert re.search(r'QUIET_MS\s*=\s*10000\s*,\s*MAX_MS\s*=\s*120000',s), "post motion must be 10s; capped 120s"
+assert re.search(r'QUIET_MS\s*=\s*5000\s*,\s*MIN_EVENT_RECORD_MS\s*=\s*10000\s*,\s*MAX_MS\s*=\s*120000',s), "5s post-motion, 10s minimum, 120s cap"
+assert 'lastFrameAt-lastStart>MIN_EVENT_RECORD_MS' in s, "prevent one-second recordings"
+assert 'd.put("requested_preroll_ms",5000)' in s
 assert "lastMovementAt=lastFrameAt;" in s, "accepted new motion must reset quiet tail"
 assert 'else if(lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end")' in s
 assert 'continuous4KStopReason=reason;' in s, "actual stop reason must be saved"
