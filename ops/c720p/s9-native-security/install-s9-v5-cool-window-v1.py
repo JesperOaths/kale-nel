@@ -103,9 +103,24 @@ def main():
    service_state=service.get("ActiveState","unknown")
    if service_state not in ("inactive","active","activating","deactivating","failed"):
     service_state="unknown"
-   raise RuntimeError("calendar_timer_not_rearmed_state_"+current+
-      "_service_"+service_state+
-      "_future_"+str(has_future).lower())
+   loaded_raw=run("systemctl","--user","show",UNIT+".timer",
+        "--property=TimersMonotonic,TimersCalendar,NeedDaemonReload,FragmentPath",
+        "--no-pager")
+   loaded=dict(line.split("=",1) for line in loaded_raw.splitlines() if "=" in line)
+   monotonic=loaded.get("TimersMonotonic","")
+   cal=loaded.get("TimersCalendar","")
+   # Only boolean source and schedule evidence leaves C720P, never raw unit
+   # content or journal data. The full rollback remains fail-closed.
+   loaded_a="OnActiveUSec=" in monotonic
+   loaded_u="OnUnitActiveUSec=" in monotonic
+   loaded_c="OnCalendar=" in cal
+   loaded_same=loaded.get("FragmentPath")==str(TIMER)
+   reload_needed=loaded.get("NeedDaemonReload")=="yes"
+   raise RuntimeError("timer_rearm_failed_"+current+
+      "_service_"+service_state+"_future_"+str(has_future).lower()+
+      "_a_"+str(loaded_a).lower()+"_u_"+str(loaded_u).lower()+
+      "_c_"+str(loaded_c).lower()+"_fragment_"+str(loaded_same).lower()+
+      "_reload_"+str(reload_needed).lower())
  except Exception:
   for target,old in previous.items():
    if old is None:
