@@ -93,6 +93,18 @@ class ManualLinkCases(unittest.TestCase):
   installer=Path(__file__).with_name("deploy-manual-recording-links-v1.py").read_text()
   self.assertIn('api("/new/api/drive-saved")',installer)
   self.assertIn("historical_drive_catalog_missing_after_proxy_restart",installer)
+ def test_upstream_restart_preserves_current_drive_catalog_even_if_below_100(self):
+  path=Path(__file__).with_name("deploy-manual-recording-links-v1.py")
+  spec=importlib.util.spec_from_file_location("s9_manual_upstream_deploy",path)
+  mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+  before={"ok":True,"events":[{} for _ in range(94)]}
+  after={"ok":True,"events":[{} for _ in range(94)]}
+  self.assertTrue(mod.drive_archive_stable(before,after))
+  self.assertFalse(mod.drive_archive_stable(before,{"ok":True,"events":[]}))
+  self.assertFalse(mod.drive_archive_stable(before,{"ok":True,"events":[{} for _ in range(93)]}))
+  self.assertFalse(mod.drive_archive_stable({"ok":True,"events":[]},after))
+  self.assertFalse(mod.drive_archive_stable(before,
+    {"ok":True,"events":[{} for _ in range(94)],"archive_mode":"S9-microSD-only"}))
  def test_relay_health_uses_actual_historical_archive_size(self):
   path=Path(__file__).with_name("deploy-manual-recording-links-relay-v2.py")
   spec=importlib.util.spec_from_file_location("s9_manual_relay_install",path)
