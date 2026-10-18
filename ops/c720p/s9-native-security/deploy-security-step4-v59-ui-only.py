@@ -91,8 +91,10 @@ def routes(prior):
         if before.encode() in prior["shell"] or after.encode() in prior["shell"]:
             out["shell"] = replace_exact(
                 out.get("shell", prior["shell"]), before, after, "shell " + marker)
-    if "shell" not in out or out["shell"] == prior["shell"]:
-        raise RuntimeError("shell cache routing could not be updated")
+    # A repeated release may already serve the new cache token. That is
+    # valid and should be a no-op, not a reason to fail a guarded retry.
+    if "shell" not in out:
+        raise RuntimeError("shell cache routing unknown or missing")
     return out
 
 
