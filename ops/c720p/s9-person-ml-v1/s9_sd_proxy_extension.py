@@ -348,6 +348,10 @@ def install_local_sd(H):
  # Audited manually reviewed event cases (not biometric identities).
  import s9_manual_evidence_cases
  s9_manual_evidence_cases.install(H)
+ # Human-only folder links for original clips without person index, Drive
+ # sources, and reversible returns to the archive. Overlay, not biometrics.
+ import s9_manual_recording_links
+ s9_manual_recording_links.install(H,rows)
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
