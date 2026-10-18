@@ -116,7 +116,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 @media(max-width:1000px){.overview-layout{grid-template-columns:1fr}.side-column{grid-template-columns:1fr 1fr}.folder-layout{grid-template-columns:1fr}.folder-aside{position:static}}
 @media(max-width:650px){body{padding:12px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.side-column{grid-template-columns:1fr}.top{align-items:start}.tabs button{flex:1;padding:7px;font-size:12px}.review-row{grid-template-columns:105px minmax(0,1fr)}.review-row .media{width:105px;height:120px}.review-row .actions button{flex:1}.compare-columns{grid-template-columns:1fr}}
 </style>
-<script defer src="/local/frontyard-security-new/security-people-v45.js?v=v45-20261018-face-coverage-v3"></script>
+<script defer src="/local/frontyard-security-new/security-people-v45.js?v=v46-20261018-reversible-review-v4"></script>
 <script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
 </head>
 <body>
@@ -204,6 +204,15 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <dialog id="folderDialog" class="dialog"><form id="folderForm"><div class="head"><h2 id="folderDialogTitle">New folder</h2><button id="cancelFolder" type="button">✕</button></div>
  <label>Folder name<input id="folderLabel" maxlength="100" required></label><label>Notes<textarea id="folderNotes" maxlength="2000" rows="3"></textarea></label>
  <div class="actions"><button class="primary" type="submit">Save folder</button></div></form></dialog>
+<dialog id="removeDialog" class="dialog" aria-label="Confirm removing an approved recording">
+ <div class="head"><h2>Remove saved approval?</h2><button id="cancelRemoval" type="button">✕</button></div>
+ <p id="removeDescription" class="muted"></p>
+ <p class="subnotice">This changes only the reviewed folder decision. The original 4K recording and saved face images are not deleted. You can return the clip to review from the Rejected tab.</p>
+ <div class="actions" style="margin-top:18px">
+  <button id="removeApprovalCancel" type="button" class="secondary">Keep approval</button>
+  <button id="removeApprovalConfirm" type="button" class="danger">Remove approval</button>
+ </div>
+</dialog>
 <dialog id="viewer" class="dialog"><div class="head"><h2 id="videoTitle">Original video</h2><button id="closeVideo" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><p id="videoStatus" class="status"></p></dialog>
 <dialog id="compareDialog" class="dialog"><div class="head"><h2>Compare original evidence</h2><button id="closeCompare" type="button">Close</button></div><div id="compareGrid" class="compare-columns"></div><p class="subnotice">Appearance comparison never establishes the identity of a person.</p></dialog>
 <footer>PEOPLE &amp; FACES V45 · Manual visual review · Original recordings remain on S9+ microSD · <span class="version-watermark">v817 - Made by Bruis</span></footer>
