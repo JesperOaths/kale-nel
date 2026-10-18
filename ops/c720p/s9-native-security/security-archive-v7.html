@@ -87,10 +87,10 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 <main id="archive" data-archive-ui-version="v11-date-tile-gallery"><div class="wrap">
 <header class="heading"><h1>Archive</h1><div class="controls source-controls" id="localControls" hidden><select id="monthSelect" aria-label="Choose archive month"><option value="all">All dates</option></select><button id="refresh" class="subtle-button" type="button" aria-label="Refresh local archive">↻</button></div></header>
 <nav class="source-switch" role="tablist" aria-label="Archived recording source">
-<button id="driveTab" role="tab" type="button" aria-selected="true" aria-controls="driveLibrary">Google Drive <small>Historical saved clips</small></button>
-<button id="localTab" role="tab" type="button" aria-selected="false" aria-controls="localLibrary" tabindex="-1">S9+ microSD <small>Native camera archive</small></button>
+<button id="driveTab" role="tab" type="button" aria-selected="false" aria-controls="driveLibrary">Google Drive <small>Historical saved clips</small></button>
+<button id="localTab" role="tab" type="button" aria-selected="true" aria-controls="localLibrary" tabindex="-1">S9+ microSD <small>Native camera archive</small></button>
 </nav>
-<section id="driveLibrary" class="source-view" role="tabpanel" aria-labelledby="driveTab">
+<section id="driveLibrary" class="source-view" role="tabpanel" aria-labelledby="driveTab" hidden>
 <div class="drive-toolbar"><p class="drive-hint"><b>Historical Google Drive videos</b> · Stored separately from microSD. Open a date to browse recordings.</p>
 <div class="controls"><select id="driveMonthSelect" aria-label="Choose historical Drive month"><option value="all">All dates</option></select>
 <button id="driveRefresh" class="subtle-button" type="button" aria-label="Refresh Google Drive recordings">↻</button></div></div>
@@ -98,7 +98,7 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 <div id="driveTimeline" aria-label="Expandable Google Drive recording date tiles"></div>
 <div id="driveEmpty" hidden>No historical Drive recordings found.</div>
 </section>
-<section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab" hidden>
+<section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab">
 <div id="status" class="status" role="status">Loading local recordings…</div>
 <div id="timeline" aria-label="Expandable S9+ recording date tiles"></div><div id="empty" hidden>No local recordings found</div>
 </section>
@@ -295,7 +295,7 @@ $('video').addEventListener('error',()=>{if($('viewer').open)$('playerState').te
 $('close').addEventListener('click',()=>$('viewer').close());
 $('viewer').addEventListener('close',()=>{++playing;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
-showSource('drive');
+showSource('local');
 })();
 
 const GEJAST_PAGE_VERSION='v817';

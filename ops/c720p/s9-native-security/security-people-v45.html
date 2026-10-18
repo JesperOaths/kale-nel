@@ -209,13 +209,13 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <body>
 <header class="top">
  <div><span class="kicker">S9+ · People evidence</span><h1>People &amp; faces</h1></div>
- <div class="top-actions"><button id="newFolder" type="button" class="secondary">+ New folder</button><button id="refresh" type="button" class="secondary">↻ Refresh</button></div>
+ <div class="top-actions"><button id="newFolder" type="button" class="secondary">+ New person</button><button id="refresh" type="button" class="secondary">↻ Refresh</button></div>
 </header>
 <nav class="tabs" aria-label="People and faces workspace">
  <button type="button" data-pane="people" aria-selected="true">People</button>
  <button type="button" data-pane="review" aria-selected="false">Review recordings <span id="reviewTabCount"></span></button>
  <button type="button" data-pane="clothing" aria-selected="false">Possible clothing matches <span id="clothingTabCount"></span></button>
- <button type="button" data-pane="overview" aria-selected="false">Activity &amp; scan status</button>
+ <button type="button" data-pane="overview" aria-selected="false">Processing &amp; rechecks</button>
 </nav>
 
 <p id="message" class="status" role="alert" hidden></p>
@@ -223,7 +223,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <section id="overview" hidden aria-label="Evidence overview">
  <section class="metrics" aria-label="Security evidence totals">
  <button class="metric" type="button" data-go="review"><strong id="queueCount">—</strong><span>Recording decisions pending</span></button>
- <button class="metric" type="button" data-go="people"><strong id="personCount">—</strong><span>Saved folders</span></button>
+ <button class="metric" type="button" data-go="people"><strong id="personCount">—</strong><span>Saved people</span></button>
  <button class="metric" type="button" data-go="people"><strong id="approvalCount">—</strong><span>Saved clip links</span></button>
  <button class="metric" type="button" data-go="review"><strong id="archiveCount">—</strong><span>Original recordings</span></button>
 </section>
@@ -257,12 +257,12 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <section id="review" hidden aria-label="Recording review queue">
  <div class="section-head"><div><h2>Review recordings</h2></div><span id="reviewTotal" class="status"></span></div>
  <div class="filters"><label>Show<select id="reviewMode"><option value="all" selected>Unassigned recordings</option><option value="inbox">Needs review</option><option value="skipped">Skipped</option></select></label>
-<label>Per page<select id="pageSize"><option value="48" selected>48</option><option value="96">96</option></select></label></div>
+<label>Per page<select id="pageSize"><option value="120" selected>120</option><option value="240">240</option></select></label></div>
  <div id="reviewGrid" class="grid"></div><div id="reviewPage" class="pagebar"></div>
 </section>
 <section id="people" aria-label="Saved people and provisional groups">
  <div class="people-review-notice" id="peopleReviewNotice" hidden><strong id="peopleReviewSummary"></strong><button id="peopleReviewNow" type="button" class="primary">Review →</button></div>
- <div class="section-head"><div><h2>Your people and groups</h2></div><button id="newFolderInline" type="button">+ Create folder</button></div>
+ <div class="section-head"><div><h2>People</h2></div><button id="newFolderInline" type="button">+ Create person</button></div>
  <div id="savedList" class="profile-list" aria-live="polite"></div>
 </section>
 <section id="clothing" hidden aria-label="Possible clothing matches">
@@ -271,8 +271,8 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <div id="clothingList" class="group-list"></div>
 </section>
 <section id="folderView" hidden aria-label="Selected reviewed folder">
- <button id="backFolders" class="back" type="button">← Back to People &amp; groups</button>
- <div class="section-head"><div><h2 id="folderTitle">Folder</h2><p id="folderDescription"></p></div><button id="editFolder" type="button">Edit folder</button></div>
+ <button id="backFolders" class="back" type="button">← Back to People</button>
+ <div class="section-head"><div><h2 id="folderTitle">Folder</h2><p id="folderDescription"></p></div><button id="editFolder" type="button">Edit person</button></div>
  <div id="folderRecheck" class="folder-recheck" role="status" hidden></div>
  <div class="filters"><label>Show<select id="folderMode"><option value="approved">Approved recordings</option><option value="suggestions">Suggested appearances</option><option value="assign">Add from queue</option><option value="rejected">Rejected</option></select></label>
  <label id="distanceLabel">Colour distance<select id="distance"><option value="0.15">Close</option><option value="0.35" selected>Similar</option><option value="0.65">Broad</option><option value="1">Any colour</option></select></label>
@@ -283,19 +283,19 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <div class="folder-layout"><div><div id="folderGrid" class="grid"></div><div id="folderPage" class="pagebar"></div></div><aside id="references" class="folder-aside" hidden><h3>Approved reference clips</h3><p class="status">Human-reviewed examples for visual comparison only.</p><div id="referenceList" class="reference-list"></div></aside></div>
 </section>
 <dialog id="approvalDialog" class="dialog" aria-labelledby="approvalTitle"><form id="approvalForm">
- <div class="head"><h2 id="approvalTitle">Choose person or folder</h2><button id="cancelApproval" type="button" aria-label="Close without saving">✕</button></div>
+ <div class="head"><h2 id="approvalTitle">File under a person</h2><button id="cancelApproval" type="button" aria-label="Close without saving">✕</button></div>
  <div class="approval-main">
   <p id="approvalClip" class="approval-reference"></p>
   
   <div class="approval-video"><button id="approvalPlay" type="button" class="secondary">▶ Play original recording</button></div>
-  <label>Person / folder<select id="approvalFolder"></select></label>
-  <label id="newLabel">New folder name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
+  <label>Person<select id="approvalFolder"></select></label>
+  <label id="newLabel">New person name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
   
  </div>
  <div class="approval-footer"><button id="approvalCancelFooter" type="button">Cancel</button><button class="primary" type="submit">Confirm &amp; keep · next recording</button></div>
  </form></dialog>
-<dialog id="folderDialog" class="dialog"><form id="folderForm"><div class="head"><h2 id="folderDialogTitle">New folder</h2><button id="cancelFolder" type="button">✕</button></div>
- <label>Folder name<input id="folderLabel" maxlength="100" required></label><label>Notes<textarea id="folderNotes" maxlength="2000" rows="3"></textarea></label>
+<dialog id="folderDialog" class="dialog"><form id="folderForm"><div class="head"><h2 id="folderDialogTitle">New person</h2><button id="cancelFolder" type="button">✕</button></div>
+ <label>Person name<input id="folderLabel" maxlength="100" required></label><label>Notes<textarea id="folderNotes" maxlength="2000" rows="3"></textarea></label>
  <div class="actions"><button class="primary" type="submit">Save folder</button></div></form></dialog>
 <dialog id="snapshotViewer" class="dialog" aria-label="Original face snapshot inspection">
   <div class="head"><h2 id="snapshotTitle">Captured face image</h2><button id="closeSnapshot" type="button">Close</button></div>
@@ -309,7 +309,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
   <p id="snapshotStatus" class="status" role="status"></p>
   <div class="actions"><button id="snapshotPlay" type="button" class="primary">▶ Play original 4K at this moment</button></div>
 </dialog>
-<dialog id="viewer" class="dialog"><div class="head"><h2 id="videoTitle">Original video</h2><button id="closeVideo" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><p id="videoStatus" class="status"></p></dialog>
+<dialog id="viewer" class="dialog"><div class="head"><h2 id="videoTitle">Original video</h2><button id="closeVideo" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><div class="actions"><button id="videoFilePerson" type="button" class="primary" hidden>File this recording under a person</button></div><p id="videoStatus" class="status"></p></dialog>
 <dialog id="compareDialog" class="dialog"><div class="head"><h2>Compare original evidence</h2><button id="closeCompare" type="button">Close</button></div><div id="compareGrid" class="compare-columns"></div><p class="subnotice">Appearance comparison never establishes the identity of a person.</p></dialog>
 <footer><span class="version-watermark">v817 - Made by Bruis</span></footer>
 </body>
