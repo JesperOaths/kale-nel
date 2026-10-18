@@ -839,7 +839,7 @@ function renderReview(){
  }else{
   const unsaved=(state.doc?.items||[]).filter(item=>
    !assignedFolder({source:'sd',name:item.clip,clip:item.clip}));
-  $('reviewTotal').textContent=unsaved.length+' review items';
+  $('reviewTotal').textContent=unsaved.length+' review '+(unsaved.length===1?'item':'items');
   for(const item of unsaved)host.append(reviewItem(item,false));
   paginate($('reviewPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
  }
