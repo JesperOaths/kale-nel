@@ -60,13 +60,21 @@ def main():
  if "GEJAST_PAGE_VERSION='v818'" not in new_gallery or 'v818 - Made by Bruis' not in new_gallery:
   raise RuntimeError('gallery_version_identity_missing')
  nav_patch=load_patch(patch_path)
- new_html=nav_patch(old_html)
- if nav_patch(new_html)!=new_html:raise RuntimeError('non_idempotent_nav')
- if not all(x in new_html for x in ('data-tab="saved"','data-tab="camera"','data-tab="live"','data-tab="faces"','s9FacesGalleryFrame')):
-  raise RuntimeError('existing_security_navigation_changed')
+ modern='security-hub-v30' in old_html and 'id="panel-saved"' not in old_html
+ if modern:
+  # The modern Security hub already owns People & Faces. Do not reinsert
+  # the retired fourth-tab markup; this is a gallery asset-only update.
+  new_html=old_html
+  mode='modern_gallery_asset_only'
+ else:
+  new_html=nav_patch(old_html)
+  if nav_patch(new_html)!=new_html:raise RuntimeError('non_idempotent_nav')
+  if not all(x in new_html for x in ('data-tab="saved"','data-tab="camera"','data-tab="live"','data-tab="faces"','s9FacesGalleryFrame')):
+   raise RuntimeError('existing_security_navigation_changed')
+  mode='legacy_gallery_and_tab'
  before=archive_health()
  if not args.apply:
-  print('S9_FACES_DRY_RUN_OK',json.dumps({'saved_events':before,'changes_nav':new_html!=old_html,'gallery_bytes':len(new_gallery)}),flush=True)
+  print('S9_FACES_DRY_RUN_OK',json.dumps({'saved_events':before,'mode':mode,'changes_nav':new_html!=old_html,'gallery_bytes':len(new_gallery)}),flush=True)
   return
  stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
  target=BACKUP/stamp
@@ -88,7 +96,10 @@ def main():
    safe_write(SECURITY,new_html,SECURITY.stat().st_mode & 0o777)
    changes.append(SECURITY)
   final=SECURITY.read_text()
-  if nav_patch(final)!=final or final.count('id="panel-faces"')!=1:
+  if modern:
+   if final!=old_html or 'security-hub-v30' not in final:
+    raise RuntimeError('modern_hub_shell_modified')
+  elif nav_patch(final)!=final or final.count('id="panel-faces"')!=1:
    raise RuntimeError('live_nav_invalid')
   if hashlib.sha256(GALLERY.read_bytes()).digest()!=hashlib.sha256(template.read_bytes()).digest():
    raise RuntimeError('gallery_checksum_mismatch')
@@ -96,7 +107,7 @@ def main():
   if after<before:raise RuntimeError('archive_video_count_fell')
   print('S9_FACES_GALLERY_DEPLOY_OK',json.dumps({'backup':str(target),
    'archive_events':after,'gallery_bytes':GALLERY.stat().st_size,
-   'tab_visible_in_HA_markup':True,'camera_restarted':False,
+   'mode':mode,'tab_visible_in_HA_markup':not modern,'camera_restarted':False,
    'apk_modified':False,'recordings_modified':False}),flush=True)
  except BaseException:
   for current in reversed(changes):
