@@ -81,16 +81,16 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 #driveEmpty{color:var(--soft);font-size:13px;padding:26px 0}
 @media(max-width:750px){.source-switch{gap:6px;margin-bottom:12px}.source-switch button{flex:1;padding:9px;min-width:140px;font-size:12px}.drive-toolbar{margin-bottom:12px}#driveMonthSelect{flex:1}}
 </style>
-<script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
+<!-- Original MP4 via secure range relay; disabled unreliable smooth-copy playback override. -->
 </head>
 <body>
 <main id="archive" data-archive-ui-version="v11-date-tile-gallery"><div class="wrap">
 <header class="heading"><h1>Archive</h1><div class="controls source-controls" id="localControls" hidden><select id="monthSelect" aria-label="Choose archive month"><option value="all">All dates</option></select><button id="refresh" class="subtle-button" type="button" aria-label="Refresh local archive">↻</button></div></header>
 <nav class="source-switch" role="tablist" aria-label="Archived recording source">
-<button id="driveTab" role="tab" type="button" aria-selected="true" aria-controls="driveLibrary">Google Drive <small>Historical saved clips</small></button>
-<button id="localTab" role="tab" type="button" aria-selected="false" aria-controls="localLibrary" tabindex="-1">S9+ microSD <small>Native camera archive</small></button>
+<button id="driveTab" role="tab" type="button" aria-selected="false" tabindex="-1" aria-controls="driveLibrary">Google Drive <small>Historical saved clips</small></button>
+<button id="localTab" role="tab" type="button" aria-selected="true" aria-controls="localLibrary" tabindex="-1">S9+ microSD <small>Native camera archive</small></button>
 </nav>
-<section id="driveLibrary" class="source-view" role="tabpanel" aria-labelledby="driveTab">
+<section id="driveLibrary" class="source-view" role="tabpanel" aria-labelledby="driveTab" hidden>
 <div class="drive-toolbar"><p class="drive-hint"><b>Historical Google Drive videos</b> · Stored separately from microSD. Open a date to browse recordings.</p>
 <div class="controls"><select id="driveMonthSelect" aria-label="Choose historical Drive month"><option value="all">All dates</option></select>
 <button id="driveRefresh" class="subtle-button" type="button" aria-label="Refresh Google Drive recordings">↻</button></div></div>
@@ -98,7 +98,7 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 <div id="driveTimeline" aria-label="Expandable Google Drive recording date tiles"></div>
 <div id="driveEmpty" hidden>No historical Drive recordings found.</div>
 </section>
-<section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab" hidden>
+<section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab">
 <div id="status" class="status" role="status">Loading local recordings…</div>
 <div id="timeline" aria-label="Expandable S9+ recording date tiles"></div><div id="empty" hidden>No local recordings found</div>
 </section>
@@ -270,7 +270,7 @@ async function refreshDrive(){
   const res=await a.fetch('/new/api/drive-saved',{cache:'no-store'});
   if(!res.ok)throw Error('HTTP '+res.status);
   const j=await res.json();
-  if(j.ok!==true||!Array.isArray(j.events)||j.archive_mode==='S9-microSD-only')throw Error('Drive catalog invalid');
+  if(j.ok!==true||!Array.isArray(j.events)||false /* Primary S9+ storage mode does not describe Drive archive availability */)throw Error('Drive catalog invalid');
   driveRecords=j.events.filter(r=>driveSafe.test(driveVideoName(r))&&!driveVideoName(r).includes('..')&&driveDate(r))
    .sort((a,b)=>String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
   driveRendered=false;driveMonths();renderDrive();
@@ -295,7 +295,7 @@ $('video').addEventListener('error',()=>{if($('viewer').open)$('playerState').te
 $('close').addEventListener('click',()=>$('viewer').close());
 $('viewer').addEventListener('close',()=>{++playing;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
-showSource('drive');
+showSource('local');
 })();
 
 const GEJAST_PAGE_VERSION='v817';
