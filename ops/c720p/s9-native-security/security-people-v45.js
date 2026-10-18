@@ -123,6 +123,7 @@ async function refreshArchiveReviewSources(folders){
  if(state.pane==='clothing')searchClothingMatches();
 }
 async function manualLink(item,folder){
+ let errorAfterReload='';
  if(state.busy||!state.extraLinks)return false;
  const data={action:folder?'assign':'return_to_queue',
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
@@ -134,13 +135,41 @@ async function manualLink(item,folder){
     'X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
    body:JSON.stringify(data)});
   const outcome=await response.json();
+  if(response.status===409){
+   let refreshed=false;
+   try{await fetchExtraLinks();refreshed=true}catch(_){}
+   throw Error(refreshed?
+    'Another review changed the assignments. Check the person and try again.':
+    'Another review changed the assignments. Refresh before retrying.');
+  }
   if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not file recording under person');
-  await fetchExtraLinks();
+  // A successful POST is a committed review change. A subsequent GET failure
+  // must never turn its success into an apparent failed save and a duplicate retry.
+  if(!Number.isSafeInteger(outcome.revision)||outcome.revision<=data.revision||
+     (outcome.folder||null)!==data.folder)
+   throw Error('Saved response could not be verified. Refresh before retrying.');
+  const key=data.source+':'+data.name;
+  state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder};
+  state.extraLinks.revision=outcome.revision;
+  state.linksRevision=outcome.revision;
   state.lastFolder=folder||state.lastFolder;
-  notification(folder?'Recording filed under person':'Recording returned to review');
+  const label=folder?'Recording filed under person':'Recording returned to review';
+  try{await fetchExtraLinks()}
+  catch(_){
+   notification(label+' · Saved, but the latest assignments could not be refreshed. Refresh to sync.');
+   return true;
+  }
+  notification(label);
   return true;
- }catch(error){alertText(String(error.message||error));return false}
- finally{state.busy=false;await loadView();if(state.doc)render()}
+ }catch(error){errorAfterReload=String(error.message||error);return false}
+ finally{
+  state.busy=false;
+  await loadView();
+  if(state.doc)render();
+  // loadView clears ordinary transient messages, but a failed write/409
+  // requires an actionable explanation after the automatic redraw.
+  if(errorAfterReload)alertText(errorAfterReload);
+ }
 }
 
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
@@ -555,6 +584,7 @@ function reviewFacesForClip(item){
 function reviewItem(item,compact){
  const root=elt('article','',compact?'review-row':'evidence');
  root.dataset.clip=String(item.clip||'');
+ root.dataset.source=item.source==='drive'?'drive':'sd';
  const media=sceneFor(item);
  const info=elt('div','',compact?'row-info':'body');
  badge(media,item.source==='drive'?'GOOGLE DRIVE':item.unindexed?'S9+ MICROSD':item.decision==='approved'?'SAVED':item.person_recheck_required?'RECHECK':'S9+');
@@ -809,7 +839,7 @@ function renderReview(){
  }else{
   const unsaved=(state.doc?.items||[]).filter(item=>
    !assignedFolder({source:'sd',name:item.clip,clip:item.clip}));
-  $('reviewTotal').textContent=unsaved.length+' review items';
+  $('reviewTotal').textContent=unsaved.length+' review '+(unsaved.length===1?'item':'items');
   for(const item of unsaved)host.append(reviewItem(item,false));
   paginate($('reviewPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
  }
@@ -984,7 +1014,8 @@ function renderFolder(){
   for(const entry of state.archiveEntries){
    const override=state.extraLinks?.items?.[assignmentKey(entry)];
    if(!override||override.folder!==state.folder)continue;
-   if(Array.from(host.children).some(x=>x.dataset?.clip===entry.clip))continue;
+   if(Array.from(host.children).some(x=>x.dataset?.clip===entry.clip&&
+      x.dataset?.source===entry.source))continue;
    host.append(reviewItem({...entry,decision:'approved',
      manualAssignment:true,unindexed:entry.source==='drive'||!state.clipEvidence.has(entry.clip)},false));
   }
