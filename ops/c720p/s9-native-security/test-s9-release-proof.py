@@ -82,6 +82,20 @@ class ReleaseProofTests(TestCase):
   self.assertNotIn("timer_ActiveState",data)
   self.assertEqual(data["service_Result"],"success")
   self.assertNotIn("service_Unknown",data)
+ def test_effective_timer_rules_detect_loaded_override_reset_without_modifying_units(self):
+  content="[Timer]\\nOnCalendar=*:0/5\\n# /home/user/timer.d/reset.conf\\n[Timer]\\nOnCalendar=\\nOnActiveSec=2min\\n"
+  with mock.patch.object(m.subprocess,"run",return_value=
+      mock.Mock(returncode=0,stdout=content)) as proc:
+   data=m.effective_timer_rules()
+  self.assertTrue(data["timer_effective_rule_available"])
+  self.assertIn("OnCalendar=*:0/5",data["timer_effective_rule_declarations"])
+  self.assertIn("OnCalendar=",data["timer_effective_rule_declarations"])
+  self.assertTrue(data["timer_effective_rule_reset_present"])
+  self.assertEqual(proc.call_args.args[0][:3],["systemctl","--user","cat"])
+ def test_effective_timer_rules_fail_closed_when_unit_not_readable(self):
+  with mock.patch.object(m.subprocess,"run",return_value=
+      mock.Mock(returncode=1,stdout="")):
+   self.assertFalse(m.effective_timer_rules()["timer_effective_rule_available"])
  def test_worker_state_distinguishes_old_revision_from_pinned_release(self):
   source=P.read_text()
   for name in ("worker_ref_matches_pin","worker_state_source_ref",
