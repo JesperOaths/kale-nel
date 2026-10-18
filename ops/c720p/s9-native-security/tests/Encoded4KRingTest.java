@@ -43,7 +43,9 @@ public final class Encoded4KRingTest {
   check(ring.freeze()==null,"partial 1.5s must not be exported");
   feed(ring,46,115,180000);
   check(ring.freeze()==null,"partial 3.8s must be rejected");
-  feed(ring,115,220,180000);
+  feed(ring,115,146,180000);
+  check(ring.freeze()==null,"4.8s buffer must not masquerade as a full 5s");
+  feed(ring,146,220,180000);
   check(ring.freeze()!=null,"fully populated buffer should recover");
  }
  static void testPressureNeverSpills() {

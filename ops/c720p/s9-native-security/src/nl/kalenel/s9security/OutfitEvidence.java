@@ -8,13 +8,17 @@ import java.util.*;
 
 /** Anonymous on-phone outfit evidence for human review of repeat appearances.
  *
- * Uses only coarse RGB color histograms of the center torso and lower body.
+ * Uses HSV histograms of torso and lower clothing regions, temporal stability
+ * across sampled frames, and normalized histogram affinity.
  * No faces, names, facial embeddings, persistent biometric IDs, or network.
  * Matching outfits never means verified matching individuals.
  */
 final class OutfitEvidence {
- private static final int BINS=8, CHANNELS=6, SIZE=48, MIN_FRAMES=3;
- private static final double MATCH_FLOOR=.965;
+ // 24 HSV features per patch: circular hue (12), saturation (6), value (6).
+ // Clothing is only a SEARCH ATTRIBUTE, never a verified identity.
+ private static final int SIZE=48, MIN_FRAMES=4;
+ private static final double MATCH_FLOOR=.92;
+ private static final String VERSION="S9_ondevice_torso_leg_HSV_temporal_v2";
  private final List<float[]> samples=new ArrayList<>();
 
  private static float[] samplePatch(Bitmap img,float[] b,float verticalA,float verticalB){
@@ -26,9 +30,8 @@ final class OutfitEvidence {
   int y1=(int)(h*(top+verticalB*(bottom-top)));
   if(x1<=x0+4||y1<=y0+4)return null;
   final int NX=16,NY=16;
-  float[] bins=new float[24];
-  int valid=0;
-  double lum=0,lum2=0;
+  float[] bins=new float[24],hsv=new float[3];
+  int valid=0;double lum=0,lum2=0;
   for(int j=0;j<NY;j++)for(int i=0;i<NX;i++){
    int x=Math.max(0,Math.min(w-1,x0+(int)((i+.5)*((x1-x0)/(double)NX))));
    int y=Math.max(0,Math.min(h-1,y0+(int)((j+.5)*((y1-y0)/(double)NY))));
@@ -36,13 +39,23 @@ final class OutfitEvidence {
    int r=(c>>16)&255,g=(c>>8)&255,bb=c&255;
    double l=(r+g+bb)/3.0;
    lum+=l;lum2+=l*l;
-   bins[r>>5]++;bins[8+(g>>5)]++;bins[16+(bb>>5)]++;
+   android.graphics.Color.RGBToHSV(r,g,bb,hsv);
+   // Hue on unsaturated pixels is undefined: keep achromatic clothing in
+   // saturation/value bins, rather than giving arbitrary hue false matches.
+   if(hsv[1]>.16f&&hsv[2]>.12f)bins[Math.min(11,(int)(hsv[0]/30f))]++;
+   bins[12+Math.min(5,(int)(hsv[1]*6f))]++;
+   bins[18+Math.min(5,(int)(hsv[2]*6f))]++;
    valid++;
   }
   double mean=lum/valid;
   double stdev=Math.sqrt(Math.max(0,lum2/valid-mean*mean));
-  if(mean<45||mean>218||stdev<11)return null;
-  for(int i=0;i<24;i++)bins[i]/=valid;
+  if(mean<34||mean>234||stdev<8)return null;
+  // Distinct sub-histograms with no measurable hue are not false coloured.
+  for(int offset: new int[]{0,12,18}){
+   float total=0;int count=offset==0?12:6;
+   for(int k=0;k<count;k++)total+=bins[offset+k];
+   if(total>0)for(int k=0;k<count;k++)bins[offset+k]/=total;
+  }
   return bins;
  }
 
@@ -74,24 +87,53 @@ final class OutfitEvidence {
    for(int j=0;j<f.length;j++)f[j]=samples.get(j)[i];
    v[i]=median(f);
   }
-  for(int c=0;c<CHANNELS;c++){
-   float total=0;
-   for(int k=0;k<BINS;k++)total+=v[c*BINS+k];
-   if(total<.01)return null;
-   for(int k=0;k<BINS;k++)v[c*BINS+k]/=total;
+  // Temporal reliability: reject changing outfits / unstable backgrounds.
+  double instability=0;
+  for(float[] sample:samples){
+   double distance=0;
+   for(int i=0;i<SIZE;i++)distance+=Math.abs(v[i]-sample[i]);
+   instability+=distance;
   }
+  if(instability/samples.size()>3.0)return null;
+  for(int patch=0;patch<2;patch++)for(int component=0;component<3;component++){
+   int base=patch*24+(component==0?0:component==1?12:18);
+   int count=component==0?12:6;
+   float total=0;
+   for(int k=0;k<count;k++)total+=v[base+k];
+   if(component==0&&total<.015f)continue; // No hue on neutral clothing.
+   if(total<.01f)return null;
+   for(int k=0;k<count;k++)v[base+k]/=total;
+  }
+  // Fully neutral clothing is too generic for a useful candidate suggestion.
+  if(v[0]+v[1]+v[2]+v[3]+v[4]+v[5]+v[6]+v[7]+v[8]+v[9]+v[10]+v[11]<.05f &&
+     v[24]+v[25]+v[26]+v[27]+v[28]+v[29]+v[30]+v[31]+v[32]+v[33]+v[34]+v[35]<.05f)return null;
   return v;
  }
 
  private static double similarity(float[] a,JSONArray b){
   if(a==null||b==null||b.length()!=SIZE)return -1;
-  double same=0;
-  for(int i=0;i<SIZE;i++){
-   double other=b.optDouble(i,-1);
-   if(!Double.isFinite(other)||other<0||other>1)return -1;
-   same+=Math.min(a[i],other);
+  double weighted=0,weightSum=0;
+  final double[] weights={.49,.28,.23};
+  for(int patch=0;patch<2;patch++)for(int component=0;component<3;component++){
+   int offset=patch*24+(component==0?0:component==1?12:18);
+   int count=component==0?12:6;
+   double sumA=0,sumB=0,affinity=0;
+   for(int k=0;k<count;k++){
+    double other=b.optDouble(offset+k,-1);
+    if(!Double.isFinite(other)||other<0||other>1)return -1;
+    double here=a[offset+k];sumA+=here;sumB+=other;
+    affinity+=Math.sqrt(here*other);
+   }
+   // Both achromatic components: no meaningful hue evidence; ignore hue.
+   if(component==0&&(sumA<.05||sumB<.05)){
+    if((sumA<.05)!=(sumB<.05))return -1;
+    continue;
+   }
+   if(sumA<.5||sumB<.5)return -1;
+   double weight=weights[component]*(patch==0?.70:.30);
+   weighted+=weight*Math.min(1,affinity);weightSum+=weight;
   }
-  return same/CHANNELS;
+  return weightSum>0?weighted/weightSum:-1;
  }
 
  private static long timestamp(String filename){
@@ -139,7 +181,8 @@ final class OutfitEvidence {
    if(clip.equals(current)||other<0||Math.abs(other-now)>12L*3600*1000)continue;
    try{
     JSONObject metadata=safeRead(f);
-    if(metadata==null||!"clear_clothing_color_candidate".equals(metadata.optString("appearance_quality")))continue;
+    if(metadata==null||!"clear_clothing_color_candidate".equals(metadata.optString("appearance_quality"))||
+       !VERSION.equals(metadata.optString("appearance_algorithm")))continue;
     if(metadata.optInt("frames_with_distinct_multiple_person_boxes",1)>0)continue;
     double score=similarity(evidence,metadata.optJSONArray("appearance_vector"));
     if(score>=MATCH_FLOOR)top.add(new Candidate(clip,score));
@@ -162,7 +205,8 @@ final class OutfitEvidence {
  }
 
  void publish(JSONObject result,File folder,String name,boolean isolated)throws Exception{
-  result.put("appearance_algorithm","S9_ondevice_coarse_torso_leg_RGB_histogram_v1");
+  result.put("appearance_algorithm",VERSION);
+  result.put("appearance_matching_policy","outfit_only_temporal_and_quality_gated_not_biometric");
   result.put("appearance_samples",samples.size());
   result.put("appearance_quality","insufficient_clear_single_person_samples");
   result.put("appearance_claim","similar_outfit_only_not_identified_person");

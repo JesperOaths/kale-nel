@@ -28,10 +28,10 @@ jobs:
           python3 -m py_compile ops/c720p/s9-native-security/build-s9-unified-4k-person-v9.py
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-unified-4k-person-v9.py
           grep -Fq 'person_spatiotemporal_transport_v9' ops/c720p/s9-native-security/src/nl/kalenel/s9security/GardenPersonTrackGate.java
-          grep -Fq 'QUIET_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
+          grep -Fq 'QUIET_MS=5000,MIN_EVENT_RECORD_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
   deploy:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    if: false # Superseded by V27. Never flash older S9 firmware over the current Camera2 build.
     runs-on: ubuntu-latest
     timeout-minutes: 33
     env:

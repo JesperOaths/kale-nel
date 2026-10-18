@@ -17,8 +17,10 @@ jobs:
         run: |
           set -euo pipefail
           for file in ops/c720p/s9-native-security/*.sh; do bash -n "$file"; done
+          node ops/c720p/s9-native-security/test-security-overhaul-v46.js
           python3 ops/c720p/s9-native-security/test_pipeline_contract.py
           python3 ops/c720p/s9-native-security/test-preroll-diagnostic-v1.py
+          python3 -m py_compile ops/c720p/s9-native-security/verify-s9-v46-5s-context-onphone.py
           python3 ops/c720p/s9-native-security/test-historical-event-categories.py
           python3 ops/c720p/s9-native-security/test-live-person-watch.py
           python3 ops/c720p/s9-native-security/test-phone-detector-version-contract.py

@@ -7,7 +7,7 @@
 *{box-sizing:border-box}body{font:13px/1.46 system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
 button,input,select{font:inherit;color:inherit}button{cursor:pointer;border:1px solid var(--line);background:#203646;border-radius:9px;padding:9px 12px}
 button:hover{border-color:#7cb7c0}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-main{height:100dvh;overflow-y:auto;padding:23px clamp(15px,2.6vw,38px) 60px;scrollbar-gutter:stable;overscroll-behavior:contain}
+main{height:100dvh;min-height:0;overflow-y:auto;padding:23px clamp(15px,2.6vw,38px) 120px;scrollbar-gutter:stable;overscroll-behavior:contain}
 header{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap}
 header .eyebrow{letter-spacing:.18em;color:var(--accent);font-size:10px;font-weight:800;text-transform:uppercase}
 h1{font-size:25px;letter-spacing:-.04em;margin:0}p{color:var(--muted);margin:5px 0 0}
@@ -43,7 +43,7 @@ h1{font-size:25px;letter-spacing:-.04em;margin:0}p{color:var(--muted);margin:5px
 .evidence-mode .metric span{font-size:11px}
 @media(max-width:1050px){.layout{grid-template-columns:1fr}.detail{position:static}.evidence-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.evidence-choices{grid-template-columns:1fr}.evidence-mode .clip{grid-template-columns:112px minmax(0,1fr)}.evidence-mode .clip .pic{width:112px;height:95px}}
-#list{max-height:min(75dvh,900px);overflow:auto;padding-right:5px;align-content:start}
+#list{max-height:none;overflow:visible;padding-right:5px;padding-bottom:75px;align-content:start}
 #list .clip{display:grid;grid-template-columns:135px minmax(0,1fr);min-height:106px}
 #list .pic{height:100%;min-height:106px}
 #list .clip-label{padding:12px;display:flex;flex-direction:column;justify-content:center;gap:6px}
@@ -72,12 +72,25 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 .details dt,.details dd{margin:0;padding:8px 4px;border-bottom:1px solid #294554;font-size:11px;overflow-wrap:anywhere}
 .details dt{color:#a8c1ce}.empty{padding:35px 20px;text-align:center;border:1px dashed var(--line);color:var(--muted)}
 #results{color:var(--muted);font-size:11px;margin-bottom:12px}
-@media(max-width:1020px){.layout{grid-template-columns:1fr}.detail{position:static}#list{max-height:440px}}
+@media(max-width:1020px){.layout{grid-template-columns:1fr}.detail{position:static}#list{max-height:none}}
 @media(max-width:580px){.statrow{grid-template-columns:repeat(2,1fr)}.details{grid-template-columns:110px minmax(0,1fr)}.pic{height:150px}}
 
 /* Distinct longitudinal analysis; all values are counts of archived recordings. */
 .analytics{display:none}
 .evidence-mode .analytics{display:grid;gap:15px;margin:16px 0 24px}
+.evidence-mode .evidence-summary,.evidence-mode .statrow,.evidence-mode .filters,.evidence-mode #results,.evidence-mode .layout{display:none!important}
+.distribution{display:grid;gap:14px}
+.distribution-row{display:grid;grid-template-columns:minmax(95px,170px) 1fr 68px;gap:12px;align-items:center;font-size:12px}
+.distribution-track{height:18px;border-radius:6px;background:#213b49;overflow:hidden}
+.distribution-track>i{display:block;height:100%;background:#73d8c0;min-width:0}
+.distribution-row strong{font-variant-numeric:tabular-nums;text-align:right}
+.analytics-help{margin:12px 0;padding:12px 16px;border:1px solid #3e6171;border-radius:11px;font-size:12px;color:#cae1e8}
+.evidence-rate{display:grid;gap:12px;margin-top:15px}
+.evidence-rate-row{display:grid;grid-template-columns:minmax(80px,118px) minmax(65px,1fr) 65px;gap:8px;align-items:center;font-size:12px}
+.evidence-rate-row .distribution-track{height:15px}
+.evidence-rate-row strong{font-variant-numeric:tabular-nums;text-align:right}
+.evidence-rate-row small{grid-column:1/-1;color:#99bac7;font-size:10px;margin-top:-6px}
+@media(max-width:620px){.distribution-row{grid-template-columns:90px 1fr 43px;gap:7px}}
 .analytics-heading{display:flex;align-items:start;justify-content:space-between;gap:15px;flex-wrap:wrap}
 .analytics-heading h2{margin:0;font-size:18px}
 .analytics-heading p,.chart-subtitle{font-size:12px;color:#afc8d0;line-height:1.5;margin:5px 0 0}
@@ -115,7 +128,7 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 .chart-selection{display:flex;gap:9px;align-items:center;flex-wrap:wrap;min-height:30px;margin:4px 0;color:#baf3e4;font-size:12px}
 @media(max-width:1020px){.analytics-panels{grid-template-columns:1fr}.analytics-kpis{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.analytics-kpis{grid-template-columns:repeat(2,1fr)}.analytics-panel{padding:10px}.heatmap-wrap{grid-template-columns:29px minmax(0,1fr)}.heatmap-cells{gap:2px}.heatmap-cells button{font-size:9px}.hour-axis{gap:2px}.daily-chart{gap:2px}}
-</style><script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
+</style><!-- Original MP4 via secure range relay; disabled unreliable smooth-copy playback override. -->
 </head><body><main>
 <header><div><div class="eyebrow">S9+ · microSD · local only</div><h1 id="title">Recordings</h1><p id="intro"></p></div><button type="button" id="refresh">Refresh</button></header>
 <div id="sync" role="status">Connecting to the phone archive…</div>
@@ -130,15 +143,25 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
  <div class="kpi"><strong id="akCoverage">—</strong><span>With sampled-frame assessment</span></div>
  </div>
  <div class="analytics-panels">
- <section class="analytics-panel" aria-labelledby="heatTitle"><h3 id="heatTitle">Activity by weekday and hour</h3><p class="chart-subtitle">Number of recordings, aggregated across the complete indexed archive. Tap a cell to find those clips.</p>
+ <section class="analytics-panel" aria-labelledby="heatTitle"><h3 id="heatTitle">Activity by weekday and hour</h3><p class="chart-subtitle">Recorded events across the complete selected source scope. Select a cell to filter the statistics below; playback remains in Recordings and Archive.</p>
  <div class="heatmap-wrap"><div class="hour-axis" id="hourAxis"></div><div class="heatmap-days" id="heatDays"></div><div class="heatmap-cells" id="heatCells" role="group" aria-label="Hourly activity heatmap"></div></div>
  <div class="chart-key"><span><i class="chart-swatch soft"></i>Fewer recordings</span><span><i class="chart-swatch"></i>More recordings</span></div></section>
- <section class="analytics-panel" aria-labelledby="trendTitle"><h3 id="trendTitle">Daily recording trend</h3><p class="chart-subtitle">Most recent 21 calendar days through the latest saved clip; blank days contain no indexed clips. Tap a bar to inspect.</p>
+ <section class="analytics-panel" aria-labelledby="trendTitle"><h3 id="trendTitle">Daily recording trend</h3><p class="chart-subtitle">Most recent 21 calendar days through the latest saved clip. Select a bar to filter the statistics below.</p>
  <div class="daily-chart" id="dailyChart" role="group" aria-label="Recording activity by date"></div>
  <div class="chart-key"><span><i class="chart-swatch person"></i>Possible person</span><span><i class="chart-swatch other"></i>Other or not assessed</span></div></section>
  </div>
  <div class="chart-selection"><span id="chartSelection">Showing all indexed recordings.</span><button id="clearChartSelection" class="analytics-clear" type="button" hidden>Clear chart filter</button></div>
- <p class="analytics-note">A recording counts once at its start time, using Europe/Amsterdam including seasonal clock changes. Detector evidence is unverified; a zero count means no matching indexed recording, not proof of no real-world activity. Historical Drive videos are outside this S9+ microSD dataset.</p>
+ <div class="analytics-panels">
+ <section class="analytics-panel" aria-labelledby="sourceTitle"><h3 id="sourceTitle">Where recordings are stored</h3><p class="chart-subtitle">Source coverage across the historical archive and the current camera.</p><div id="sourceDistribution" class="distribution"></div></section>
+ <section class="analytics-panel" aria-labelledby="durationTitle"><h3 id="durationTitle">Recording length</h3><p class="chart-subtitle">Identify suspiciously short recordings and missing duration metadata. Only measured lengths are categorized.</p><div id="durationDistribution" class="distribution"></div></section>
+ <section class="analytics-panel" aria-labelledby="processingTitle"><h3 id="processingTitle">Processing coverage</h3><p class="chart-subtitle">Historical Drive scans and current S9+ recordings have separate analysis states. Unprocessed never means no person.</p><div id="processingDistribution" class="distribution"></div></section>
+ </div>
+ <div class="analytics-panels">
+ <section class="analytics-panel" aria-labelledby="localPeopleHoursTitle"><h3 id="localPeopleHoursTitle">S9+ · possible people by time of day</h3><p class="chart-subtitle">Percentage of recordings with person evidence among assessed S9+ videos. Missing reviews are shown separately.</p><div id="localEvidenceRates" class="evidence-rate"></div></section>
+ <section class="analytics-panel" aria-labelledby="drivePeopleHoursTitle"><h3 id="drivePeopleHoursTitle">Google Drive · historical person evidence</h3><p class="chart-subtitle">Historical sampled reviews by daypart, without interpreting an unassessed recording as a negative result.</p><div id="driveEvidenceRates" class="evidence-rate"></div></section>
+ </div>
+ <div class="analytics-help" id="analyticInsight" role="status">Checking original archive coverage…</div>
+ <p class="analytics-note">Both S9+ microSD and historical Google Drive recordings are included where their indexes are accessible. Drive clips without a completed person review count as unassessed, not as a negative detection. Times use Europe/Amsterdam. These charts count recordings, not distinct people.</p>
 </section>
 
 <section class="evidence-summary" aria-label="Evidence review shortcuts">
@@ -159,7 +182,7 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 const $=id=>document.getElementById(id),mode=new URLSearchParams(location.search).get('mode')==='evidence'?'evidence':'today';
 const native=/^motion_[0-9]{13}[.]mp4$/,legacy=/^rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}[.]mp4$/;
 const SAFE=/^(?:motion_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4[.]thumb[.]jpg$/;
-const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null,chartHour:null,chartDay:null};
+const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null,chartHour:null,chartDay:null,driveStatus:'not_checked',driveProcessing:null};
 if(mode==='evidence')document.body.classList.add('evidence-mode');
 const evidenceButtons=document.querySelectorAll('[data-evidence-filter]');
 function syncEvidenceButtons(){
@@ -171,16 +194,16 @@ evidenceButtons.forEach(b=>b.addEventListener('click',()=>{
 }));
 if(mode==='evidence')document.body.classList.add('evidence-mode');
 $('title').textContent=mode==='today'?"Today's recordings":"Evidence & analytics";
-$('intro').textContent=mode==='today'?'Clips recorded today, Amsterdam time. Historical clips remain in Archive.':'Browse recordings by evidence category; inspect the original video and measured detection results on the right.';
+$('intro').textContent=mode==='today'?'Clips recorded today, Amsterdam time. Historical clips remain in Archive.':'Activity statistics across S9+ microSD and the historical Drive archive.';
 $('cliplabel').textContent=mode==='today'?'Today’s clips':'Indexed clips';
 function relay(){if(window.C720PSecureRelay?.url&&window.C720PSecureRelay?.fetch)return window.C720PSecureRelay;
 try{if(window.parent!==window&&window.parent.C720PSecureRelay?.url)return window.parent.C720PSecureRelay}catch(_){}return null}
 function stamp(rec){const n=String(rec.clip_no||'');if(native.test(n))return Number(n.slice(7,20));if(legacy.test(n)){const m=n.match(/^rec_([0-9]{4}-[0-9]{2}-[0-9]{2})_([0-9]{2})-([0-9]{2})/);if(m)return Date.parse(m[1]+'T'+m[2]+':'+m[3]+':00+02:00')||0;}const t=Date.parse(String(rec.timestamp||''));return Number.isFinite(t)?t:0}
 function day(ms){if(!ms)return '';const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms));const k=Object.fromEntries(f.map(a=>[a.type,a.value]));return k.year+'-'+k.month+'-'+k.day}
 function today(){return day(Date.now())}
-function name(rec){return String(rec.clip_no||'')}
+function name(rec){return String(rec.clip_no||rec.remote_name||rec.name||'')}
 function fmt(rec){let ms=stamp(rec);return ms?new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(ms):String(rec.timestamp||'Unknown time')}
-function label(rec){const p=Number(rec.person_count||0);return p>1?p+' possible people':p>0?'Person candidate':rec.scene_category==='unreviewed'?'Awaiting review':'Motion · unverified'}
+function label(rec){if(rec.source==='drive'&&!(Number(rec.sampled_frames)>0))return 'Historical Drive · not assessed';const p=Number(rec.person_count||0);return p>1?p+' possible people':p>0?'Person candidate':rec.scene_category==='unreviewed'?'Awaiting review':'Motion · unverified'}
 function pct(n){return Number.isFinite(n)?(100*n).toFixed(1)+'%':'Not measured'}
 function text(tag,value,cls){const el=document.createElement(tag);if(cls)el.className=cls;el.textContent=String(value??'');return el}
 function pic(rec,host){const n=String(rec.snapshot_name||'');const outer=text('div','','pic');const fallback=text('span','No scene thumbnail','none');outer.append(fallback);if(SAFE.test(n)){
@@ -188,13 +211,14 @@ function pic(rec,host){const n=String(rec.snapshot_name||'');const outer=text('d
  img.onload=()=>fallback.remove();img.onerror=()=>img.remove();outer.append(img);
  }host.append(outer)}
 function metric(parent,value,title){const div=text('div','','metric');div.append(text('b',value),text('span',title));parent.append(div)}
-function entryKey(rec){return name(rec)}
+function entryKey(rec){return String(rec.source||'sd')+':'+name(rec)}
 function playbackStop(){if(state.activeVideo){state.activeVideo.pause();state.activeVideo.removeAttribute('src');state.activeVideo.load();state.activeVideo=null}}
 async function open(rec){
  state.selected=entryKey(rec);
  document.querySelectorAll('.clip').forEach(n=>n.setAttribute('aria-selected',String(n.dataset.clip===state.selected)));
  playbackStop();const host=$('detail');host.replaceChildren();
  host.append(text('h2',fmt(rec)),text('div',name(rec),'filename'));
+ if(mode==='today')host.append(personFilingControls('sd',name(rec)));
  if(mode==='evidence'){
   const support=Number(rec.person_detected_frames_050)||0;
   const reviewed=Number(rec.sampled_frames)||0;
@@ -280,24 +304,94 @@ function selectedAnalyticsClips(){
  return state.all.filter(rec=>scope==='person'?Number(rec.person_count)>0:
   scope==='reviewed'?Number(rec.sampled_frames)>0:true);
 }
+function renderDistribution(host,items){
+ host.replaceChildren();
+ const peak=Math.max(1,...items.map(x=>x[1]));
+ for(const [label,count] of items){
+  const row=text('div','','distribution-row');
+  const track=text('span','','distribution-track'),fill=text('i');
+  fill.style.width=(100*count/peak).toFixed(1)+'%';track.append(fill);
+  row.append(text('span',label),track,text('strong',count.toLocaleString()));host.append(row);
+ }
+}
+function renderEvidenceRate(host,observations){
+ host.replaceChildren();
+ const bins=[
+  {name:'Night 00–06',lo:0,hi:6},
+  {name:'Morning 06–12',lo:6,hi:12},
+  {name:'Afternoon 12–18',lo:12,hi:18},
+  {name:'Evening 18–24',lo:18,hi:24}];
+ for(const part of bins){
+  const found=observations.filter(x=>x.time.hour>=part.lo&&x.time.hour<part.hi);
+  const assessed=found.filter(x=>Number(x.rec.sampled_frames)>0);
+  const positive=assessed.filter(x=>Number(x.rec.person_count)>0).length;
+  const rate=assessed.length?100*positive/assessed.length:0;
+  const row=text('div','','evidence-rate-row'),track=text('span','','distribution-track'),fill=text('i');
+  fill.style.width=rate.toFixed(1)+'%';track.append(fill);
+  row.append(text('span',part.name),track,
+   text('strong',assessed.length?Math.round(rate)+'%':'—'),
+   text('small',positive+' of '+assessed.length+' assessed · '+
+    (found.length-assessed.length)+' unassessed'));
+  host.append(row);
+ }
+}
 function drawAnalytics(){
  if(mode!=='evidence')return;
- const subset=selectedAnalyticsClips(),times=subset.map(x=>({rec:x,time:localClipTime(x)})).filter(x=>x.time);
+ const allScope=selectedAnalyticsClips();
+ const overview=allScope.map(x=>({rec:x,time:localClipTime(x)})).filter(x=>x.time);
+ const subset=allScope.filter(rec=>{
+  const t=localClipTime(rec);
+  if(state.chartDay&&t?.date!==state.chartDay)return false;
+  if(state.chartHour&&(!t||t.weekday!==state.chartHour.weekday||t.hour!==state.chartHour.hour))return false;
+  return true;
+ });
+ const times=subset.map(x=>({rec:x,time:localClipTime(x)})).filter(x=>x.time);
  const matrix=Array.from({length:7},()=>Array(24).fill(0)),days=new Map();
- for(const {rec,time:t} of times){
+ for(const {rec,time:t} of overview){
   matrix[t.weekday][t.hour]++;
   const previous=days.get(t.date)||{total:0,person:0};
   previous.total++;
   if(Number(rec.person_count)>0)previous.person++;
   days.set(t.date,previous);
  }
- $('akTotal').textContent=times.length.toLocaleString();
- $('akDays').textContent=days.size.toLocaleString();
- const hourly=Array.from({length:24},(_,h)=>matrix.reduce((sum,row)=>sum+row[h],0));
+ $('akTotal').textContent=subset.length.toLocaleString();
+ $('akDays').textContent=new Set(times.map(x=>x.time.date)).size.toLocaleString();
+ const hourly=Array.from({length:24},(_,h)=>times.filter(x=>x.time.hour===h).length);
  const peak=Math.max(0,...hourly),top=hourly.indexOf(peak);
  $('akPeak').textContent=peak?String(top).padStart(2,'0')+':00':'—';
- const reviewed=times.filter(x=>Number(x.rec.sampled_frames)>0).length;
- $('akCoverage').textContent=times.length?Math.round(100*reviewed/times.length)+'%':'—';
+ const reviewed=subset.filter(x=>Number(x.sampled_frames)>0).length;
+ $('akCoverage').textContent=subset.length?Math.round(100*reviewed/subset.length)+'%':'—';
+ renderDistribution($('sourceDistribution'),[
+  ['S9+ microSD',subset.filter(x=>x.source!=='drive').length],
+  ['Google Drive',subset.filter(x=>x.source==='drive').length]]);
+ const bounds=[['Under 10 sec',0],['10–19 sec',0],['20–59 sec',0],['1 min or more',0],['Not measured',0]];
+ for(const rec of subset){
+  const ms=Number(rec.duration_ms)||Number(rec.duration_seconds)*1000||0;
+  const idx=ms<=0?4:ms<10000?0:ms<20000?1:ms<60000?2:3;
+  bounds[idx][1]++;
+ }
+ renderDistribution($('durationDistribution'),bounds);
+ const processing=[['S9+ assessed',0],['Drive · on-phone reviewed',0],
+ ['Drive · earlier sampled review',0],['Not yet assessed',0]];
+ for(const rec of subset){
+  if(!(Number(rec.sampled_frames)>0))processing[3][1]++;
+  else if(rec.source!=='drive')processing[0][1]++;
+  else if(rec.review_stage==='v28')processing[1][1]++;
+  else processing[2][1]++;
+ }
+ renderDistribution($('processingDistribution'),processing);
+ renderEvidenceRate($('localEvidenceRates'),times.filter(x=>x.rec.source!=='drive'));
+ renderEvidenceRate($('driveEvidenceRates'),times.filter(x=>x.rec.source==='drive'));
+
+ const missingDrive=state.driveStatus!=='ready';
+ const short=bounds[0][1],unknown=bounds[4][1];
+ $('analyticInsight').textContent=short+' recordings shorter than 10 seconds; '+unknown+
+  ' lack measured duration. '+(missingDrive?'Drive index currently unavailable: charts may undercount historical activity.':
+  subset.filter(x=>x.source==='drive').length+' historical Drive recordings included in this selection.')+
+  (state.driveProcessing?.completed!==undefined?' S9+ on-phone historical rescans: '+
+   state.driveProcessing.completed+' / '+state.driveProcessing.eligible+' indexed Drive records.':'')+
+  (subset.length>times.length?' '+(subset.length-times.length)+' recordings without valid timestamps are excluded from the time charts only.':'')+
+  ' Open Recordings or Archive to inspect source video; person labels require human confirmation.';
  $('hourAxis').replaceChildren();$('heatDays').replaceChildren();$('heatCells').replaceChildren();
  for(let h=0;h<24;h+=3)$('hourAxis').append(text('span',String(h).padStart(2,'0')));
  for(const label of weekdayNames)$('heatDays').append(text('span',label));
@@ -347,7 +441,7 @@ function drawAnalytics(){
  const filter=state.chartDay?'Date: '+state.chartDay:
   state.chartHour?'Time: '+weekdayNames[state.chartHour.weekday]+' '+String(state.chartHour.hour).padStart(2,'0')+':00–'+String((state.chartHour.hour+1)%24).padStart(2,'0')+':00':
   'Showing all indexed recordings.';
- $('chartSelection').textContent=filter+' Click a recording below to inspect the original video.';
+ $('chartSelection').textContent=filter+' Breakdown charts and totals update with this selection. Open Recordings or Archive for playback.';
  $('clearChartSelection').hidden=!state.chartDay&&!state.chartHour;
 }
 if(mode==='evidence'){
@@ -358,6 +452,11 @@ if(mode==='evidence'){
 function render(){
  const query=$('search').value.toLowerCase().trim(),type=$('type').value,order=$('order').value;
  if(mode==='evidence'){
+  // Analytics has no second recording browser; the Recordings and Archive
+  // tabs remain the only places showing clip cards and playback.
+  return;
+ }
+ if(false){
   const all=state.all;
   $('ePeople').textContent=all.filter(x=>Number(x.person_count)>0).length;
   $('eUnreviewed').textContent=all.filter(x=>!(Number(x.sampled_frames)>0)).length;
@@ -389,31 +488,139 @@ function render(){
  const host=$('list');host.replaceChildren();
  if(!result.length){host.append(text('div',mode==='today'?'No indexed clips today yet. Camera status is independent of recording count.':'No matching recordings.','empty'));return;}
  for(const rec of result.slice(0,400)){
-  const card=text('button','','clip');card.type='button';card.dataset.clip=name(rec);
-  card.setAttribute('aria-selected',String(state.selected===name(rec)));pic(rec,card);
+  const card=text('button','','clip');card.type='button';card.dataset.clip=entryKey(rec);
+  card.setAttribute('aria-selected',String(state.selected===entryKey(rec)));pic(rec,card);
   const labels=text('div','','clip-label');labels.append(text('strong',fmt(rec)),text('small',label(rec)));
   const cs=text('div','','chips');cs.append(text('span',Number(rec.sampled_frames||0)>0?'Reviewed '+rec.sampled_frames+' frames':'Unreviewed','chip'));
   if(rec.person_score!==null&&rec.person_score!==undefined&&Number.isFinite(Number(rec.person_score)))cs.append(text('span','Peak '+(Number(rec.person_score)*100).toFixed(0)+'%','chip'));
   labels.append(cs);card.append(labels);card.onclick=()=>open(rec);host.append(card);
  }
- if(state.selected&&!result.some(x=>name(x)===state.selected))playbackStop();
+ if(state.selected&&!result.some(x=>entryKey(x)===state.selected))playbackStop();
 }
 async function refresh(){
- if(state.refreshing)return;state.refreshing=true;$('sync').textContent='Refreshing verified S9+ archive…';
- try{const r=relay();if(!r?.fetch)throw Error('secure_relay_unavailable');
- const resp=await r.fetch('/new/api/saved',{cache:'no-store'});
- if(!resp.ok)throw Error('archive_status_'+resp.status);
- const d=await resp.json();if(d.archive_mode!=='S9-microSD-only'||!Array.isArray(d.events))throw Error('wrong_archive');
- state.all=d.events.filter(x=>native.test(name(x))||legacy.test(name(x)));
- $('sync').textContent='S9+ microSD connected · '+state.all.length+' recordings indexed · original 4K retained';
- render();drawAnalytics();
- }catch(e){$('sync').textContent='Archive metadata unavailable · '+String(e.message||e);if(!state.all.length)$('list').replaceChildren(text('div','Connection error; recordings remain on the phone.','empty'))}
- finally{state.refreshing=false}}
+ if(state.refreshing)return;state.refreshing=true;$('sync').textContent='Refreshing S9+ and Drive archives…';
+ try{
+  const r=relay();if(!r?.fetch)throw Error('secure_relay_unavailable');
+  const [local,drive,driveReview]=await Promise.allSettled([
+   r.fetch('/new/api/saved',{cache:'no-store'}),
+   mode==='evidence'?r.fetch('/new/api/drive-saved',{cache:'no-store'}):Promise.resolve(null),
+   mode==='evidence'?r.fetch('/new/api/drive-person-review',{cache:'no-store'}):Promise.resolve(null)
+  ]);
+  const historyByName=new Map();
+  state.driveProcessing=null;
+  if(driveReview.status==='fulfilled'&&driveReview.value?.ok){
+   try{
+    const review=await driveReview.value.json();
+    if(review.ok===true&&Array.isArray(review.clips)){
+     for(const rec of review.clips){
+      const name=String(rec.remote_name||'');
+      if(/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(name)&&!name.includes('..'))
+       historyByName.set(name,rec);
+     }
+     state.driveProcessing=review.v28_review_progress||null;
+    }
+   }catch(_){}
+  }
+  const accepted=[];
+  if(local.status==='fulfilled'&&local.value?.ok){
+   const d=await local.value.json();
+   if(Array.isArray(d.events))accepted.push(...d.events.filter(x=>native.test(name(x))||legacy.test(name(x))).map(x=>({...x,source:'sd'})));
+  }
+  if(mode==='evidence'){
+   state.driveStatus='unavailable';
+   if(drive.status==='fulfilled'&&drive.value?.ok){
+    const d=await drive.value.json();
+    if(Array.isArray(d.events)){
+     for(const entry of d.events){
+      const n=String(entry.remote_name||entry.name||'');
+      if(!/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(n)||n.includes('..'))continue;
+      const time=Date.parse(String(entry.timestamp||entry.date||''));
+      const safeTimestamp=Number.isFinite(time)&&time>0?new Date(time).toISOString():'';
+      const prior=historyByName.get(n);
+      const result=prior?.v28_phone_review||null;
+      const legacy=(!result&&Number(prior?.sampled_frames)>0)?prior:null;
+      const reviewed=result||legacy;
+      const frames=Number(reviewed?.sampled_frames)||0;
+      const hits=Math.max(0,Number(reviewed?.person_detected_frames_050)||0);
+      accepted.push({...entry,source:'drive',remote_name:n,
+       timestamp:safeTimestamp,
+       sampled_frames:frames,person_detected_frames_050:hits,
+       person_count:frames&&hits>0?1:0,
+       review_stage:result?'v28':legacy?'legacy':'none',
+       person_event_category:reviewed?.category||'unassessed_historical_drive',
+       scene_category:frames?'sampled_frame_review':'unreviewed'});
+     }
+     state.driveStatus='ready';
+    }
+   }
+  }
+  if(local.status!=='fulfilled'&&state.driveStatus!=='ready')throw Error('both_archive_indexes_unavailable');
+  if(!accepted.length&&state.driveStatus!=='ready')throw Error('no_accessible_archive_metadata');
+  state.all=accepted;
+  const localCount=accepted.filter(x=>x.source==='sd').length,driveCount=accepted.length-localCount;
+  $('sync').textContent=localCount+' S9+ recordings · '+driveCount+' Drive recordings'+
+   (state.driveStatus==='unavailable'?' · Drive unavailable':'')+' · original 4K retained on S9+';
+  render();drawAnalytics();
+ }catch(e){$('sync').textContent='Archive metadata unavailable · '+String(e.message||e)}
+ finally{state.refreshing=false}
+}
 $('refresh').onclick=refresh;
 for(const id of ['search','type','order'])$(id).addEventListener(id==='search'?'input':'change',render);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)state.activeVideo?.pause();else if(!state.all.length)refresh()});
 window.addEventListener('pagehide',playbackStop);
 refresh();setInterval(()=>{if(!document.hidden)refresh()},60000);
+
+function personFilingControls(source,name){
+ const panel=document.createElement('div');
+ panel.style.cssText='display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid #45616e';
+ if(!(source==='sd'?/^motion_[0-9]{13}[.]mp4$/.test(name):/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(name)&&!name.includes('..')))return panel;
+ const mk=(tag,label)=>{const e=document.createElement(tag);e.textContent=label||'';return e};
+ const load=mk('button','File under person…'),person=mk('select'),save=mk('button','Confirm person'),
+   undo=mk('button','Return to review queue'),message=mk('span','');
+ person.setAttribute('aria-label','Person');message.setAttribute('role','status');
+ message.style.fontSize='12px';person.hidden=save.hidden=undo.hidden=true;
+ panel.append(load,person,save,undo,message);
+ let revision=null,busy=false;
+ load.addEventListener('click',async()=>{
+  if(busy)return;busy=true;load.disabled=true;message.textContent='Loading people…';
+  try{
+   const api=relay();if(!api?.fetch)throw Error('Secure relay unavailable');
+   const [a,b]=await Promise.all([
+    api.fetch('/new/api/visual-review?workflow=clip_folders_v40&tab=inbox&offset=0&limit=1',{cache:'no-store'}),
+    api.fetch('/new/api/s9-manual-recording-links',{cache:'no-store'})]);
+   const [people,links]=await Promise.all([a.json(),b.json()]);
+   if(!a.ok||!b.ok||people.ok!==true||links.ok!==true||!Array.isArray(people.folders)||
+      links.manual_links_only!==true||!Number.isInteger(links.revision))throw Error('Person index unavailable');
+   revision=links.revision;person.replaceChildren();
+   const known=people.folders.filter(p=>!p.automatic_appearance_group||Number(p.approved_clips)>0)
+    .sort((a,b)=>String(a.label||'').localeCompare(String(b.label||''),'en',{sensitivity:'base'}));
+   for(const entry of known){const o=mk('option',String(entry.label||''));o.value=entry.id;person.append(o)}
+   if(!known.length){message.textContent='Add a person in People & Faces first';return}
+   const assigned=links.items?.[source+':'+name]?.folder;
+   if(assigned&&known.some(x=>x.id===assigned))person.value=assigned;
+   person.hidden=save.hidden=false;undo.hidden=!assigned;
+   message.textContent='Choose the person visible in this original recording';
+  }catch(e){message.textContent=String(e.message||e)}
+  finally{busy=false;load.disabled=false}
+ });
+ async function commit(personId){
+  if(busy||revision===null)return;busy=true;save.disabled=undo.disabled=true;
+  message.textContent='Saving human-confirmed decision…';
+  try{
+   const result=await relay().fetch('/new/api/s9-manual-recording-links',{
+    method:'POST',headers:{'Content-Type':'application/json','X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
+    body:JSON.stringify({action:personId?'assign':'return_to_queue',source,name,folder:personId||null,
+      revision,human_confirmed:true})});
+   const out=await result.json();if(!result.ok||out.ok!==true)throw Error(out.error||'Unable to save');
+   revision=out.revision;undo.hidden=!personId;
+   message.textContent=personId?'Filed under selected person':'Returned to review queue';
+  }catch(e){message.textContent=String(e.message||e)+' · reload people and retry'}
+  finally{busy=false;save.disabled=undo.disabled=false}
+ }
+ save.addEventListener('click',()=>{if(person.value)commit(person.value)});
+ undo.addEventListener('click',()=>commit(null));
+ return panel;
+}
 })();
 const GEJAST_PAGE_VERSION='v817';
 </script><div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#7894a5;font-size:10px;pointer-events:none">v817 - Made by Bruis</div></body></html>

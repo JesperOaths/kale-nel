@@ -64,7 +64,7 @@ dialog::backdrop{background:#000d}dialog video{width:100%;max-height:min(52dvh,4
 footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
 @media(max-width:720px){body{padding:12px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.visual{height:210px}}
 </style>
-<script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
+<!-- Original video only; no derived copies or alternate transcoding. -->
 <style id="s9-face-player-scroll-v1">
 /* Let the evidence player occupy the iframe's visible viewport instead of
    relying on the scrolling background body. */
@@ -133,17 +133,16 @@ footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
  <div class="modal-head"><strong id="playerLabel">Original recording</strong><button id="closePlayer" type="button">Close</button></div>
  <div class="video-shell">
   <video id="player" controls playsinline preload="metadata"></video>
-  <div id="playerLoading" class="playback-loading" role="status" aria-live="polite">Preparing smooth playback…</div>
+  <div id="playerLoading" class="playback-loading" role="status" aria-live="polite">Opening original recording…</div>
  </div>
  <div class="playback-actions">
   <div id="playerState" class="subtle" aria-live="polite">Waiting for recording…</div>
-  <button type="button" id="playerOriginal" hidden>Try original 4K instead</button>
  </div>
  <div class="subtle">Played directly from the S9+ microSD through the authenticated relay. Person identities have not been confirmed.</div>
 </dialog>
 <footer>Faces and video stay in the phone's existing microSD archive. Face crops are streamed only when visible and are not permanently cached by this page. Original 4K recordings are preserved.</footer>
 <script id="s9-faces-appearances-gallery-v1">
-window.GEJAST_PAGE_VERSION='v817';
+window.GEJAST_PAGE_VERSION='v818';
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
@@ -152,7 +151,7 @@ const cropOK=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const types={face:'Face crop',appearance:'Appearance',review:'Person clip'};
 const colours={black:'#252d34',white:'#eff4fa',gray:'#94a3b8',red:'#d45757',orange:'#e5964b',yellow:'#ecd05d',green:'#59ae7e',blue:'#5694d2',purple_or_pink:'#ae8ccc',brown:'#97715b'};
 const state={data:[],items:[],kind:'all',page:1,query:'',color:'',busy:false,observer:null};
-let activeClip=null,playbackTimer=null;
+let activeClip=null;
 const make=(tag,value,cls)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=String(value);if(cls)e.className=cls;return e;};
 const relay=()=>{
  if(window.C720PSecureRelay?.fetch && window.C720PSecureRelay?.url)return window.C720PSecureRelay;
@@ -214,8 +213,8 @@ function addVisual(card,item){
    item.rec.snapshot_name && /^motion_[0-9]{13}[.]mp4[.]thumb[.]jpg$/.test(String(item.rec.snapshot_name))?item.rec.snapshot_name:null;
  if(snap){
   const img=make('img');img.alt=item.kind==='face'?'Frontal face crop, unverified person candidate':'Video scene thumbnail, NOT an isolated face';
-  img.loading='lazy';img.decoding='async';img.dataset.relayPath=item.kind==='face'?'/new/saved/face/'+snap:'/new/saved/snap/'+snap;
-  v.append(img);state.observer?.observe(img);
+  img.loading='eager';img.decoding='async';img.dataset.relayPath=item.kind==='face'?'/new/saved/face/'+snap:'/new/saved/snap/'+snap;
+  v.append(img);
  }else v.append(make('small',item.kind==='face'?'Face image unavailable':'No isolated face crop. View original video for context.'));
  card.append(v);
 }
@@ -236,27 +235,18 @@ async function play(rec,at,button){
   const url=await r.url('/new/saved/clip/'+encodeURIComponent(rec.clip_no));
   const vid=$('player'),dlg=$('playerDialog');
   $('playerLabel').textContent=displayTime(rec)+' · '+rec.clip_no;
-  activeClip={clip:rec.clip_no,originalUrl:url,startedAt:Date.now()};
-  clearInterval(playbackTimer);
+  activeClip={clip:rec.clip_no};
+  vid.pause();vid.removeAttribute('src');vid.load();
   $('playerLoading').hidden=false;
-  $('playerLoading').textContent='Preparing a smooth version for your browser…';
-  $('playerOriginal').hidden=true;
-  $('playerState').textContent='Preparing smooth playback. The original 4K recording remains saved on the S9+.';
-  vid.src=url;vid.load();
-  playbackTimer=setInterval(()=>{
-   if(!$('playerDialog').open||!activeClip){clearInterval(playbackTimer);return}
-   if(vid.readyState>0){clearInterval(playbackTimer);return}
-   const seconds=Math.round((Date.now()-activeClip.startedAt)/1000);
-   $('playerLoading').textContent=seconds<20?'Preparing smooth playback · '+seconds+' seconds…':
-     'Still preparing · '+seconds+' seconds. You can try the original 4K version below.';
-   if(seconds>=20)$('playerOriginal').hidden=false;
-  },1000);
+  $('playerLoading').textContent='Opening original 4K recording…';
+  $('playerState').textContent='Streaming the original recording through the secure video relay.';
+  vid.src=url;vid.preload='metadata';
   const atSeconds=Number(at)/1000;
   if(Number.isFinite(atSeconds)&&atSeconds>0)vid.addEventListener('loadedmetadata',()=>{
    try{vid.currentTime=Math.max(0,Math.min(atSeconds,Math.max(0,vid.duration-0.25)));}catch(_){}
   },{once:true});
-  dlg.showModal();
- }catch(_){button.textContent='Recording unavailable';}
+  dlg.showModal();vid.load();
+ }catch(_){$('playerLoading').textContent='Could not open the original recording.';}
  finally{button.disabled=false;}
 }
 function cardFor(item){
@@ -291,10 +281,9 @@ function filtered(){
    (!state.color||x.colour===state.color) && (!state.query||x.search.includes(state.query)));
 }
 function render(){
- state.observer?.disconnect();
- state.observer=('IntersectionObserver' in window)?new IntersectionObserver(entries=>{
-  for(const e of entries){if(!e.isIntersecting)continue;state.observer.unobserve(e.target);loadImage(e.target);}
- },{rootMargin:'200px'}):null;
+ // Sign and assign the first page of image URLs immediately; an embedded or
+ // initially hidden iframe can leave IntersectionObserver callbacks unfired.
+ state.observer?.disconnect();state.observer=null;
  const matches=filtered(),limit=state.page*24,chosen=matches.slice(0,limit),gallery=$('gallery');
  gallery.replaceChildren();
  if(!chosen.length){
@@ -305,7 +294,7 @@ function render(){
  for(const item of chosen)gallery.append(cardFor(item));
  $('count').textContent='Showing '+chosen.length+' of '+matches.length+' evidence entries. Entries are not counts of unique people.';
  $('more').hidden=chosen.length>=matches.length;
- if(!state.observer)for(const img of gallery.querySelectorAll('img[data-relay-path]'))loadImage(img);
+ for(const img of gallery.querySelectorAll('img[data-relay-path]'))loadImage(img);
 }
 async function loadImage(img){
  if(!img.isConnected||img.dataset.loaded==='1')return;
@@ -345,35 +334,21 @@ for(const [id] of Object.entries(colours)){
 $('refresh').addEventListener('click',refresh);
 $('more').addEventListener('click',()=>{state.page++;render();});
 function stopVideo(){
- clearInterval(playbackTimer);activeClip=null;
+ activeClip=null;
  const v=$('player');v.pause();v.removeAttribute('src');v.load();
- $('playerLoading').hidden=false;$('playerLoading').textContent='Waiting for recording…';
- $('playerOriginal').hidden=true;$('playerState').textContent='Waiting for recording…';
-}
-$('playerOriginal').addEventListener('click',()=>{
- if(!activeClip)return;
- const current=activeClip,video=$('player'),helper=window.C720PSecurityVideo;
- if(!helper||typeof helper.setSource!=='function'){
-  $('playerState').textContent='Original playback option unavailable on this browser.';
-  return;
- }
- clearInterval(playbackTimer);
  $('playerLoading').hidden=false;
- $('playerLoading').textContent='Opening preserved original 4K clip…';
- $('playerState').textContent='Original 4K may stutter on the C720P. The recording is unchanged.';
- $('playerOriginal').hidden=true;
- helper.setSource(video,'/new/saved/clip/'+encodeURIComponent(current.clip),
-   {mode:'original',originalUrl:current.originalUrl,play:true});
-});
+ $('playerLoading').textContent='Waiting for original recording…';
+ $('playerState').textContent='Waiting for recording…';
+}
 $('player').addEventListener('loadedmetadata',()=>{
- clearInterval(playbackTimer);$('playerLoading').hidden=true;
- $('playerState').textContent='Recording ready · '+(Number.isFinite($('player').duration)?$('player').duration.toFixed(1)+' seconds':'duration unknown')+' · press Play if it does not start';
+ $('playerLoading').hidden=true;
+ $('playerState').textContent='Original recording ready · '+
+  (Number.isFinite($('player').duration)?$('player').duration.toFixed(1)+' seconds':'duration unknown');
 });
 $('player').addEventListener('error',()=>{
- clearInterval(playbackTimer);$('playerLoading').hidden=false;
- $('playerLoading').textContent='This browser could not decode the prepared video.';
- $('playerState').textContent='The source recording is preserved. You may try the original 4K.';
- $('playerOriginal').hidden=false;
+ $('playerLoading').hidden=false;
+ $('playerLoading').textContent='This browser could not decode the original video.';
+ $('playerState').textContent='The original 4K file is preserved on S9+ microSD.';
 });
 $('closePlayer').addEventListener('click',()=>$('playerDialog').close());
 $('playerDialog').addEventListener('close',stopVideo);
@@ -383,6 +358,6 @@ refresh();
 window.setInterval(()=>{if(!document.hidden)refresh();},90000);
 })();
 </script>
-<div class="watermark">v817 - Made by Bruis</div>
+<div class="watermark">v818 - Made by Bruis</div>
 </body>
 </html>

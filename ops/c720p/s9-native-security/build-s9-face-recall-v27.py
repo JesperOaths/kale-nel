@@ -118,7 +118,7 @@ def main():
   assert "faceBackfillRetries" in (src/"CameraService.java").read_text()
   assert "sampleSceneTile(frame" in (src/"ClipClassifier.java").read_text()
   assert "sampleSceneTile(Bitmap frame" in (src/"S9FaceReview.java").read_text()
-  assert "QUIET_MS=10000,MAX_MS=120000" in (src/"CameraService.java").read_text()
+  assert "QUIET_MS=5000,MIN_EVENT_RECORD_MS=10000,MAX_MS=120000" in (src/"CameraService.java").read_text()
   assert "person_spatiotemporal_transport_v9" in (src/"GardenPersonTrackGate.java").read_text()
   assert "transportDominates" in (src/"ClipClassifier.java").read_text()
   assert "garden_person_transport_conflicts_total" in (src/"CameraService.java").read_text()
