@@ -685,14 +685,21 @@ function render(){
  if(state.pane==='faces')renderFaces();
 }
 function compare(item){
- const examples=state.doc?.reference_examples||[];
+ const examples=(state.doc?.reference_examples||[]).slice(0,3);
  if(!examples.length)return;
- const ref=examples[0],host=$('compareGrid');host.replaceChildren();
- for(const [name,entry] of [['Already approved (reference)',ref],['Proposed appearance (unverified)',item]]){
-  const col=elt('div');col.append(elt('h3',name),imageFor(entry.full_crop,name),
-   elt('p',date(entry),'status'),control('▶ Play original',()=>startVideo(entry)));
+ const host=$('compareGrid');host.replaceChildren();
+ for(const [i,entry] of examples.entries()){
+  const col=elt('div');
+  col.append(elt('h3','Reviewed reference '+(i+1)),
+   sceneFor(entry),elt('p',date(entry)+' · approved example, not automatic identity','status'),
+   control('▶ View reference recording',()=>startVideo(entry)));
   host.append(col);
  }
+ const proposed=elt('div');
+ proposed.append(elt('h3','New clip to compare · unverified'),
+  sceneFor(item),elt('p',date(item)+' · colour alone is unreliable','status'),
+  control('▶ View new recording',()=>startVideo(item)));
+ host.append(proposed);
  $('compareDialog').showModal();
 }
 function openFolderEditor(mode){
