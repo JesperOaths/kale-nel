@@ -46,17 +46,24 @@ class Tests(unittest.TestCase):
             self.assertEqual(self.fast.native_updates({'phone_recordings':[old]},snapshot,self.catalog),[])
         images.assert_not_called();adb.assert_not_called()
     def test_native_full_path_avoids_per_clip_adb_and_keeps_valid_rows(self):
-        calls=[];snapshot={'records':{NAME:entry()}}
+        calls=[];snapshot={'snapshot_id':'1'*64,'records':{NAME:entry()}}
         def adb(*args):
             calls.append(args)
             if args[:3]==('shell','ls','-1'):return (NAME+'\n').encode() if 'Security4K' in args[-1] else b''
             raise OSError('legacy_source_absent')
         with patch.object(self.catalog,'ROOT',self.root),patch.object(self.catalog,'PRIVATE_FALLBACK',self.root/'fallback.json'),patch.object(self.catalog,'CATALOG_LOCK',self.root/'shared.lock'), \
              patch.object(self.catalog,'adb',side_effect=adb),patch.object(self.catalog.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=b'device')), \
-             patch.object(client,'load_catalog',return_value=snapshot):self.catalog.main()
+             patch.object(client,'load_catalog',return_value=snapshot), \
+             patch.object(client,'read_summary',return_value={'recordings':1,'snapshot_id':'1'*64,
+                 'daily_recording_counts':{'2026-10-19':1},
+                 'hourly_recording_counts':{'2026-10-19T09+0200':1}}):self.catalog.main()
         result=json.loads((self.root/'s9-phone-events.json').read_text())
         self.assertEqual(result['total_phone_files'],1);self.assertEqual(result['errors'],[])
         self.assertFalse(any(NAME in str(args) for args in calls))
+        observations=json.loads((self.root/'s9-native-observations.json').read_text())
+        self.assertEqual(observations['recordings'],1)
+        self.assertEqual(observations['daily_recording_counts'],{'2026-10-19':1})
+        self.assertIn('generated_at_utc',observations)
     def test_fast_defers_while_full_catalog_owns_shared_lock(self):
         lock=self.root/'shared.lock'
         with lock.open('a+') as owner:
