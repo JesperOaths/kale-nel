@@ -165,7 +165,8 @@ def native_updates(source,snapshot,helpers):
         old=prior.get(name,{})
         dest=ROOT/"s9-phone-thumbs"/(name+".thumb.jpg")
         if (old.get("phone_catalog_version")==entry["version"] and
-            (not entry["thumbnail"] or (dest.is_file() and old.get("phone_thumbnail_version")==entry["thumbnail_version"]))):continue
+            (not entry["thumbnail"] or (old.get("phone_thumbnail_version")==entry["thumbnail_version"] and
+                phone_catalog.valid_cached_thumbnail(dest,entry["thumbnail_version"])))):continue
         available,thumb_version=phone_catalog.cache_thumbnail(entry,dest,old.get("phone_thumbnail_version"))
         thumbnail="s9-phone-thumbs/"+dest.name if available else None
         fresh=row_from_manifest(name,entry["manifest"],entry["bytes"],thumbnail,helpers)
