@@ -64,7 +64,7 @@ def read(port,path):
   raw=response.read(5_000_001)
   if len(raw)>5_000_000:raise RuntimeError("oversized_catalog_response")
  return json.loads(raw)
-def health():
+def health(drive_baseline):
  private=read(8794,"/new/api/s9-manual-recording-links")
  if not(private.get("ok") is True and private.get("manual_links_only") is True
         and private.get("automatic_identity_matching") is False):
@@ -73,7 +73,7 @@ def health():
  drive=read(8794,"/new/api/drive-saved")
  if (sd.get("archive_mode")!="S9-microSD-only" or
      not isinstance(sd.get("events"),list) or len(sd["events"])<70 or
-     not isinstance(drive.get("events"),list) or len(drive["events"])<100):
+     not isinstance(drive.get("events"),list) or len(drive["events"])<drive_baseline):
   raise RuntimeError("existing_archive_source_regressed")
  if service("is-active")!="active":raise RuntimeError("relay_not_active")
  return {"sd_originals":len(sd["events"]),"historical_drive_clips":len(drive["events"]),
@@ -93,6 +93,10 @@ def atomic(blob,owner):
 def main():
  if not RELAY.is_file() or RELAY.is_symlink():raise RuntimeError("unsafe_relay_source")
  if service("is-active")!="active":raise RuntimeError("relay_inactive")
+ upstream_drive=read(8795,"/new/api/drive-saved")
+ if not isinstance(upstream_drive.get("events"),list) or not upstream_drive["events"]:
+  raise RuntimeError("no_verified_drive_baseline")
+ drive_baseline=len(upstream_drive["events"])
  upstream=read(8795,"/new/api/s9-manual-recording-links")
  if upstream.get("manual_links_only") is not True or upstream.get("automatic_identity_matching") is not False:
   raise RuntimeError("upstream_review_link_route_missing")
@@ -100,7 +104,7 @@ def main():
  owner=RELAY.stat()
  text=original.decode()
  if MARKER in text:
-  result=health()
+  result=health(drive_baseline)
   print("S9_MANUAL_LINKS_LAN_RELAY_VERIFIED "+json.dumps({"already":True,**result}),flush=True)
   return
  for marker in ("SECURITY_NATIVE_CAMERA2_RELAY_V18","SECURITY_HISTORICAL_DRIVE_READONLY_RELAY_V16"):
@@ -125,7 +129,7 @@ def main():
   atomic(patched,owner);installed=True;service("restart")
   for _ in range(12):
    try:
-    result=health()
+    result=health(drive_baseline)
     print("S9_MANUAL_LINKS_LAN_RELAY_VERIFIED "+json.dumps({
       "already":False,**result,"backup":str(backup),
       "prior_sha256":checksum(original),"installed_sha256":checksum(patched),
