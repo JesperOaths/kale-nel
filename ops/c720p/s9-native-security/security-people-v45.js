@@ -4,10 +4,10 @@
    No recording is changed or assigned automatically. */
 const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
-const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
+const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:48,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null};
+ faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -35,6 +35,111 @@ function stampMs(ms){const t=Number(ms);return Number.isFinite(t)&&t>0?
  new Date(t).toLocaleString('en-GB',{timeZone:'Europe/Amsterdam',day:'2-digit',
  month:'short',hour:'2-digit',minute:'2-digit'}):'Recording time unavailable'}
 function date(item){return stampMs(item.recorded_ms)}
+const driveName=/^[A-Za-z0-9._-]{1,180}[.]mp4$/;
+const driveSnap=/^[A-Za-z0-9._-]{1,180}[.]jpg$/;
+function assignmentKey(item){return (item.source==='drive'?'drive':'sd')+':'+String(item.name||item.clip||'')}
+function assignedFolder(item){
+ const key=assignmentKey(item);
+ const explicit=state.extraLinks?.items?.[key];
+ if(explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder'))return explicit.folder||null;
+ return state.legacyAssigned.get(key)||null;
+}
+function makeArchiveRows(){
+ const sd=[...state.clipEvidence.keys()].map(clip=>({
+  source:'sd',name:clip,clip,recorded_ms:Number(clip.slice(7,20)),
+  video_path:'/new/saved/clip/'+encodeURIComponent(clip),
+  temporal_support:!!state.clipEvidence.get(clip)?.person_event_category
+ }));
+ const byName=new Map(sd.map(e=>[e.name,e]));
+ for(const rec of state.driveRecords||[]){
+  const name=String(rec.remote_name||'');
+  if(!driveName.test(name)||name.includes('..')||byName.has(name))continue;
+  const timestamp=Date.parse(String(rec.timestamp||rec.date||''));
+  if(!Number.isFinite(timestamp)||timestamp<=0)continue;
+  byName.set(name,{
+   source:'drive',name,clip:name,recorded_ms:timestamp,unindexed:true,
+   video_path:'/new/drive/saved/clip/'+encodeURIComponent(name),
+   snapshot_name:rec.snapshot_name,temporal_support:false
+  });
+ }
+ state.archiveEntries=[...byName.values()].sort((a,b)=>
+  num(b.recorded_ms)-num(a.recorded_ms)||String(a.name).localeCompare(String(b.name)));
+ $('archiveCount').textContent=String(state.archiveEntries.length);
+}
+async function fetchExtraLinks(){
+ const response=await relay().fetch('/new/api/visual-review?workflow=manual_recording_links_v1',{cache:'no-store'});
+ const data=await response.json();
+ if(!response.ok||data.ok!==true||!data.manual_links_only||!data.items)
+  throw Error('Manual recording links unavailable');
+ state.extraLinks=data;state.linksRevision=data.revision;
+}
+async function fetchDriveArchive(){
+ const response=await relay().fetch('/new/api/drive-saved',{cache:'no-store'});
+ const data=await response.json();
+ if(!response.ok||data.ok!==true||!Array.isArray(data.events)||
+    data.archive_mode==='S9-microSD-only')throw Error('Drive archive unavailable');
+ state.driveRecords=data.events;
+ state.driveStatus='ready';
+}
+async function scanApprovedFolders(folders){
+ // Read every page of the authoritative v40 approved lists. Never mistake
+ // the current review-page slice for the full set of assigned originals.
+ const assigned=new Map();
+ for(const folder of folders.filter(isSaved)){
+  let offset=0,total=0;
+  do{
+   const q=new URLSearchParams({workflow:'clip_folders_v40',tab:'approved',
+       folder:String(folder.id),offset:String(offset),limit:'48'});
+   const response=await relay().fetch('/new/api/visual-review?'+q,{cache:'no-store'});
+   const data=await response.json();
+   if(!response.ok||data.ok!==true||!Array.isArray(data.items))
+    throw Error('Cannot verify all saved assignments');
+   total=num(data.total);
+   for(const item of data.items)if(clipName.test(String(item.clip||'')))
+     assigned.set('sd:'+item.clip,folder.id);
+   if(data.items.length===0&&offset<total)throw Error('Incomplete assigned archive');
+   offset+=data.items.length;
+   if(offset>5000)throw Error('Assigned archive too large');
+  }while(offset<total);
+ }
+ state.legacyAssigned=assigned;state.assignedReady=true;
+}
+async function refreshArchiveReviewSources(folders){
+ const token=++state.archiveToken;
+ state.assignedReady=false;
+ const jobs=await Promise.allSettled([fetchExtraLinks(),fetchDriveArchive(),
+     scanApprovedFolders(folders)]);
+ if(token!==state.archiveToken)return;
+ if(jobs[0].status!=='fulfilled'||jobs[2].status!=='fulfilled'){
+  $('reviewTotal').textContent='Review index unavailable · Refresh';
+  alertText('Could not safely verify assigned recordings; refresh to retry.');
+  return;
+ }
+ if(jobs[1].status!=='fulfilled')state.driveStatus='unavailable';
+ makeArchiveRows();
+ if(state.doc)render();
+}
+async function manualLink(item,folder){
+ if(state.busy||!state.extraLinks)return false;
+ const data={action:folder?'assign':'return_to_queue',
+   source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
+   folder:folder||null,revision:state.linksRevision,human_confirmed:true};
+ state.busy=true;
+ try{
+  const response=await relay().fetch('/new/api/visual-review/review',{
+   method:'POST',headers:{'Content-Type':'application/json',
+    'X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
+   body:JSON.stringify(data)});
+  const outcome=await response.json();
+  if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not save folder link');
+  await fetchExtraLinks();
+  state.lastFolder=folder||state.lastFolder;
+  notification(folder?'Recording saved':'Recording returned to review');
+  return true;
+ }catch(error){alertText(String(error.message||error));return false}
+ finally{state.busy=false;await loadView();if(state.doc)render()}
+}
+
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
 function isSaved(f){return !f.automatic_appearance_group||num(f.approved_clips)>0}
 function savedFolders(){return (state.doc?.folders||[]).filter(isSaved).sort((a,b)=>num(b.approved_clips)-num(a.approved_clips))}
@@ -52,6 +157,16 @@ function imageFor(crop,alt,kind){
 function sceneFor(item){
  const clip=String(item?.clip||'');
  const fallback=imageFor(item?.full_crop,'Detector crop (scene thumbnail unavailable)');
+ if(item?.source==='drive'){
+  const name=String(item.snapshot_name||'');
+  const host=elt('div','','media scene-media');
+  if(!driveSnap.test(name)||name.includes('..')){host.append(elt('span','Drive recording'));return host}
+  const img=elt('img');img.alt='Historical Drive recording preview';
+  img.loading='lazy';host.append(img);
+  Promise.resolve().then(()=>relay().url('/new/drive/saved/snap/'+encodeURIComponent(name)))
+   .then(url=>{if(img.isConnected)img.src=url}).catch(()=>{});
+  return host;
+ }
  if(!clipName.test(clip))return fallback;
  const host=elt('div','','media scene-media'),img=elt('img');
  img.loading='lazy';img.decoding='async';
@@ -182,9 +297,11 @@ async function loadView(){
   if(!res.ok||next.ok!==true||!Array.isArray(next.folders)||!Array.isArray(next.items))
    throw Error(next.error||'The review archive is unavailable.');
   state.doc=next;
+  if(state.pane==='review'&&!state.assignedReady&&state.archiveEntries.length===0)
+   refreshArchiveReviewSources(next.folders);
   const pageTotal=state.tab==='all'&&state.archiveClips?
    state.archiveClips.length:num(next.total);
-  if(state.offset>=pageTotal&&pageTotal>0){
+  if(state.offset>=pageTotal&&pageTotal>0&&state.pane!=='review'){
    state.offset=Math.max(0,Math.floor((pageTotal-1)/state.limit)*state.limit);
    state.loading=false;return loadView();
   }
@@ -218,6 +335,8 @@ async function fetchFaces(){
   }
   state.clipEvidence=byClip;
   state.archiveClips=[...byClip.keys()].sort((a,b)=>b.localeCompare(a));
+  makeArchiveRows();
+  if(state.doc)refreshArchiveReviewSources(state.doc.folders);
   state.faceList=found.sort((a,b)=>String(b.clip).localeCompare(String(a.clip)));
   state.faceSummary={reviewed:v5Reviewed,total:data.events.length,
    snapshots:found.length,withoutSnapshot:Math.max(0,candidateRecords-found.length)};
