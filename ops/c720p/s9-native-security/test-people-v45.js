@@ -92,7 +92,8 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
   if(p.startsWith('/new/api/appearance-search?'))return {ok:true,json:async()=>({ok:true,appearance_only:true,results:[{clip_name:pendingOutfitClip,similarity:.97,zone:'front_garden'}]})};
   if(p==='/new/api/drive-saved')return {ok:true,json:async()=>({
     ok:true,archive_mode:'historical-google-drive',events:[
-      {remote_name:driveClip,timestamp:'2026-05-12T08:30:00',snapshot_name:'history.jpg'}
+      {remote_name:driveClip,timestamp:'2026-05-12T08:30:00',snapshot_name:'history.jpg'},
+      {remote_name:clip,timestamp:'2026-10-17T09:00:00',snapshot_name:'same-name.jpg'}
     ]})};
   if(p.startsWith('/new/api/visual-review?')){
    const q=new URLSearchParams(p.split('?')[1]),tab=q.get('tab');
@@ -140,7 +141,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
- assert.equal(el('archiveCount').textContent,'6','All SD originals plus historical Drive appear in archive');
+ assert.equal(el('archiveCount').textContent,'7','All SD originals plus two historical Drive originals appear in archive');
  assert(!html.includes('data-pane="faces"'),'Face gallery tab must be removed');
  assert(!html.includes('id="faceGrid"'),'Invalid gallery not to be retained');
  assert.equal(el('personScanLabel').textContent,'80 / 141');
@@ -276,6 +277,33 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(linkItems['drive:'+driveClip].folder,'G123',
   'Confirmed retry uses the refreshed revision');
  assert.equal(el('approvalDialog').open,false);
+ // Same-basename originals must remain source distinct in a person folder.
+ // The SD original has a legacy approval, while the Drive original with the
+ // same basename gets a separate manual source-qualified link.
+ const sameNameDriveRow=el('reviewGrid').children.find(x=>
+  x.dataset.clip===clip&&x.dataset.source==='drive');
+ assert(sameNameDriveRow,'Drive and SD entries with identical names must remain distinct');
+ scan(sameNameDriveRow,'✓ File under person').handlers.click();
+ el('approvalFolder').value='G123';
+ await el('approvalForm').handlers.submit({preventDefault(){}});
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(linkItems['drive:'+clip].folder,'G123');
+ panes[2].handlers.click();for(let i=0;i<5;i++)await flush();
+ el('savedList').children[0].handlers.click();for(let i=0;i<5;i++)await flush();
+ const sameNameEntries=el('folderGrid').children.filter(x=>x.dataset.clip===clip);
+ assert.deepEqual(sameNameEntries.map(x=>x.dataset.source).sort(),['drive','sd'],
+  'Source-specific approved originals may share the same basename');
+ const sdInPerson=sameNameEntries.find(x=>x.dataset.source==='sd');
+ scan(sdInPerson,'↩ Return to review queue').handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(linkItems['sd:'+clip].folder,null,
+  'Returning SD original must not delete or move the same-name Drive link');
+ assert.equal(linkItems['drive:'+clip].folder,'G123');
+ panes[1].handlers.click();for(let i=0;i<5;i++)await flush();
+ assert(el('reviewGrid').children.some(x=>x.dataset.clip===clip&&x.dataset.source==='sd'),
+  'Returned native original must be available for review');
+ assert(!el('reviewGrid').children.some(x=>x.dataset.clip===clip&&x.dataset.source==='drive'),
+  'Same-name Drive original remains assigned');
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
