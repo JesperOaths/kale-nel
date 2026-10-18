@@ -19,7 +19,7 @@ JAVAS=("AppearanceSearchIndex","AnonymousClipTracks","Boot","CameraActivity","Ca
  "CameraOrientation","CameraService","CaptureContinuity","ClipClassifier",
  "EventFrameRanker","GardenArchiveTriage","GardenPersonTrackGate",
  "GardenPreRoll","Continuous4KEncoder","Encoded4KRing","HistoricalImportWorker","MotionGrid","OutfitEvidence",
- "PhoneMediaRange","PreviewJpeg","RecordingRate","S9FaceReview")
+ "PhoneMediaRange","PhoneArchiveCatalog","PreviewJpeg","RecordingRate","S9FaceReview")
 def run(a,sec=200):
  p=subprocess.run(a,text=True,capture_output=True,timeout=sec)
  if p.returncode:raise RuntimeError("command_error "+str(a[:4])+":"+p.stderr[-2200:])
@@ -199,3 +199,4 @@ def main():
   (TARGET/"release.json").write_text(json.dumps(result,indent=2)+"\n")
   print("S9_HSV_V1_SIGNED_STAGED",json.dumps(result),flush=True)
 if __name__=="__main__":main()
+
