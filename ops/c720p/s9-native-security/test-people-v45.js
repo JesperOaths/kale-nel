@@ -114,7 +114,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('reviewPreview').children.length,1);
  assert.equal(el('reviewAlerts').children.length,1,'The existing Jesper review issue must be highlighted as an action');
  assert(scan(el('reviewAlerts'),'Inspect originals →'),'Saved clips flagged for person recheck must be actionable');
- let keep=scan(el('reviewPreview'),'✓ Keep');assert(keep,'Primary review action');
+ let keep=scan(el('reviewPreview'),'✓ Choose person / folder');assert(keep,'Primary review action');
  keep.handlers.click();
  assert(el('approvalDialog').open,'Keep must open explicit confirmation');
  assert.match(el('approvalClip').textContent,/Recording/,'Confirmation must identify its recording');
@@ -128,7 +128,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(posts[0].payload.human_confirmed,true);
  assert.equal(posts[0].opts.headers['X-S9-Visual-Review-Intent'],'manual-attributes-v36');
  // Creating a new folder also preserves the review context.
- keep=scan(el('reviewPreview'),'✓ Keep');
+ keep=scan(el('reviewPreview'),'✓ Choose person / folder');
  keep.handlers.click();
  el('approvalFolder').value='';
  el('approvalLabel').value='New reviewed visitor';
@@ -169,6 +169,16 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false);
  assert.equal(el('reviewGrid').children.length,1);
+ // Main requirement: save from Review recordings, stay on Review recordings,
+ // and preselect the last-used person to speed up review of the next clip.
+ const nextKeep=scan(el('reviewGrid'),'✓ Choose person / folder');assert(nextKeep);
+ nextKeep.handlers.click();
+ assert.equal(el('approvalFolder').value,'G123','Previously chosen folder should be remembered');
+ await el('approvalForm').handlers.submit({preventDefault(){}});
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('review').hidden,false,'Confirm & keep must not navigate into a folder');
+ assert.equal(el('folderView').hidden,true,'Saved clips must not hijack the current review queue');
+ assert.equal(posts.at(-1).payload.folder,'G123');
  panes[3].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('faces').hidden,false);
