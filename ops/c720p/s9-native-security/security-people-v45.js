@@ -123,6 +123,7 @@ async function refreshArchiveReviewSources(folders){
  if(state.pane==='clothing')searchClothingMatches();
 }
 async function manualLink(item,folder){
+ let errorAfterReload='';
  if(state.busy||!state.extraLinks)return false;
  const data={action:folder?'assign':'return_to_queue',
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
@@ -160,8 +161,15 @@ async function manualLink(item,folder){
   }
   notification(label);
   return true;
- }catch(error){alertText(String(error.message||error));return false}
- finally{state.busy=false;await loadView();if(state.doc)render()}
+ }catch(error){errorAfterReload=String(error.message||error);return false}
+ finally{
+  state.busy=false;
+  await loadView();
+  if(state.doc)render();
+  // loadView clears ordinary transient messages, but a failed write/409
+  // requires an actionable explanation after the automatic redraw.
+  if(errorAfterReload)alertText(errorAfterReload);
+ }
 }
 
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
