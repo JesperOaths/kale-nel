@@ -126,6 +126,12 @@ def main():
   response=restart()
   # Collision check: never claim successful deployment if the live loader
   # still routes this endpoint to the old visual-review handler.
+  drive_catalog=api("/new/api/drive-saved")
+  if (drive_catalog.get("ok") is not True or
+      drive_catalog.get("archive_mode")=="S9-microSD-only" or
+      not isinstance(drive_catalog.get("events"),list) or
+      len(drive_catalog["events"])<100):
+   raise RuntimeError("historical_drive_catalog_missing_after_proxy_restart")
   direct=api("/new/api/s9-manual-recording-links")
   if direct.get("manual_links_only") is not True or direct.get("automatic_identity_matching") is not False:
    raise RuntimeError("manual_api_wrong_live_handler")

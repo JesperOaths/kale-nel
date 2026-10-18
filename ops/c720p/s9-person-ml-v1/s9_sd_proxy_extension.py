@@ -237,6 +237,27 @@ def install_local_sd(H):
    except (urllib.error.URLError,TimeoutError,OSError,ValueError,TypeError,json.JSONDecodeError):
     self.js(503,{"ok":False,"error":"s9_appearance_index_unavailable"});return
    return
+  # SECURITY_DRIVE_V9_SOURCE_PRESERVED: historical Drive routes belong to
+  # the earlier trusted 8795 handler. Retain this forwarding in committed
+  # source so installing new S9 metadata handlers cannot silently erase it.
+  # Neither archive is modified; the outer 8794 relay still authenticates.
+  if path=="/new/api/drive-saved":
+   before=self.path
+   try:
+    self.path="/new/api/saved"+("?" + url.query if url.query else "")
+    return original(self)
+   finally:self.path=before
+  drive_clip=re.fullmatch(r"/new/drive/saved/clip/([A-Za-z0-9._-]{1,180}[.]mp4)",path)
+  drive_snap=re.fullmatch(r"/new/drive/saved/snap/([A-Za-z0-9._-]{1,180}[.]jpg)",path)
+  if drive_clip or drive_snap:
+   name=(drive_clip or drive_snap).group(1)
+   if ".." in name:
+    self.js(400,{"ok":False,"error":"invalid_historical_name"});return
+   before=self.path
+   try:
+    self.path="/new/saved/"+("clip/" if drive_clip else "snap/")+name
+    return original(self)
+   finally:self.path=before
   if path=="/new/api/saved":
    events=[]
    for name,r in sorted(data.items(),reverse=True):

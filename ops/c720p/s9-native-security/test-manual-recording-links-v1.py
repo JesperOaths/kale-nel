@@ -82,6 +82,17 @@ class ManualLinkCases(unittest.TestCase):
       "/new/drive/saved/clip/"+("a"*220)+".mp4"):
    self.assertIsNone(ext.historical_drive_origin_path(invalid,""))
   self.assertIsNone(ext.historical_drive_origin_path("/new/api/drive-saved","q=1"))
+ def test_historical_drive_routes_are_preserved_in_versioned_proxy_source(self):
+  proxy=Path(__file__).resolve().parent.parent/"s9-person-ml-v1/s9_sd_proxy_extension.py"
+  script=proxy.read_text()
+  self.assertIn("SECURITY_DRIVE_V9_SOURCE_PRESERVED",script)
+  self.assertIn('if path=="/new/api/drive-saved":',script)
+  self.assertIn('self.path="/new/api/saved"',script)
+  self.assertIn('if drive_clip or drive_snap:',script)
+  self.assertIn('return original(self)',script)
+  installer=Path(__file__).with_name("deploy-manual-recording-links-v1.py").read_text()
+  self.assertIn('api("/new/api/drive-saved")',installer)
+  self.assertIn("historical_drive_catalog_missing_after_proxy_restart",installer)
  def test_route_does_not_recognize_or_modify_people(self):
   src=SRC.read_text()
   for forbidden in ("cv2.imread","face_embedding","rclone delete",
