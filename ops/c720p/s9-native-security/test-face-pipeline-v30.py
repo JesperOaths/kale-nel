@@ -34,8 +34,45 @@ class FaceAuditV30Tests(unittest.TestCase):
   self.assertEqual(result["clips_confirming_model_available"],2)
   self.assertEqual(result["comparisons_eligible_for_review_grouping"],1)
   self.assertEqual(result["inspection_only_face_crops"],1)
-  self.assertEqual(result["cropped_faces_visible_in_hub"],2)
+  self.assertEqual(result["cropped_faces_visible_in_hub"],0)
+  self.assertEqual(result["face_candidate_records"],2)
+  self.assertEqual(result["candidate_records_without_saved_image"],2)
   self.assertFalse(result["named_identity_automatically_verified"])
+ def test_saved_counter_and_candidates_do_not_establish_image_files(self):
+  rows=[clip(0,face_snapshots_saved=3,face_candidates=[
+   {"match_status":"not_tested_no_usable_face"},
+   {"match_status":"not_tested_no_usable_face","snapshot_name":None},
+   {"match_status":"not_tested_no_usable_face","snapshot_name":""}])]
+  result=module.audit(CAMERA,{"archive_mode":"S9-microSD-only","events":rows})
+  self.assertEqual(result["face_candidate_records"],3)
+  self.assertEqual(result["cropped_faces_visible_in_hub"],0)
+  self.assertEqual(result["clips_with_face_candidates"],1)
+  self.assertEqual(result["clips_with_face_crops"],0)
+  self.assertEqual(result["candidate_records_without_saved_image"],3)
+  self.assertFalse(result["snapshot_file_availability_checked"])
+ def test_only_indexed_images_from_the_corresponding_clip_are_counted(self):
+  valid="motion_1792000000000__face_1__450_0.jpg"
+  invalid=["../"+valid,valid+"\n",valid.replace(".jpg",".png"),
+   valid.replace("1792000000000","1792000000001"),12,{"name":valid}]
+  faces=[{"match_status":"not_comparable_manual_review","snapshot_name":n}
+         for n in [valid]+invalid]
+  result=module.audit(CAMERA,{"archive_mode":"S9-microSD-only",
+   "events":[clip(0,face_candidates=faces)]})
+  self.assertEqual(result["cropped_faces_visible_in_hub"],1)
+  self.assertEqual(result["clips_with_face_crops"],1)
+  self.assertEqual(result["candidate_records_invalid_snapshot_reference"],len(invalid))
+  self.assertEqual(result["candidate_records_without_saved_image"],0)
+ def test_duplicate_references_do_not_inflate_image_count(self):
+  face={"match_status":"not_comparable_manual_review",
+   "snapshot_name":"motion_1792000000000__face_1__450_0.jpg"}
+  row=clip(0,face_candidates=[face.copy(),face.copy()])
+  import copy
+  before=copy.deepcopy(row)
+  result=module.audit(CAMERA,{"archive_mode":"S9-microSD-only","events":[row]})
+  self.assertEqual(result["face_candidate_records"],2)
+  self.assertEqual(result["cropped_faces_visible_in_hub"],1)
+  self.assertEqual(result["duplicate_snapshot_references"],1)
+  self.assertEqual(row,before)
  def test_legacy_snapshots_are_protected_not_permanently_pending(self):
   rows=[
     clip(0,face_deep_review_version=None,face_snapshots_saved=1,
@@ -131,3 +168,4 @@ class FaceAuditV30Tests(unittest.TestCase):
      "POST","MediaCodec","rmtree(","unlink(","open('w')"):
    self.assertNotIn(forbidden,src)
 if __name__=="__main__":unittest.main(verbosity=2)
+
