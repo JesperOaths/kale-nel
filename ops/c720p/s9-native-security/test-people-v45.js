@@ -183,7 +183,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(el('pageSize').value==='','Select mock has no initial value');
  el('pageSize').value='96';el('pageSize').handlers.change();
  for(let i=0;i<4;i++)await flush();
- assert(fetches.some(p=>p.includes('limit=48')),'Bounding page size protects v40 backend');
+ assert(fetches.some(p=>p.includes('limit=24')),'Bounding page size protects v40 backend');
  assert.match(el('reviewTotal').textContent,/unassigned recordings/);
  assert(!scan(el('reviewGrid'),'View face candidate 1'),'Background crops must not be called faces');
  const archiveEntry=el('reviewGrid').children[0];
