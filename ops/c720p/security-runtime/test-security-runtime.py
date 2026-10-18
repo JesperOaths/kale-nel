@@ -190,5 +190,23 @@ class LegacyScanTests(unittest.TestCase):
         row = self.row();row['person_status'] = 'confirmed_person'
         self.assertFalse(self.clean.needs_scan(row, self.clip, 'current', 'model-inputs', force=True))
 
+    def test_metadata_only_touch_reuses_results_but_same_size_content_change_rechecks(self):
+        row = self.row();stamp = self.clip.stat()
+        os.utime(self.clip, ns=(stamp.st_atime_ns, stamp.st_mtime_ns+1000000000))
+        self.assertFalse(self.clean.needs_scan(row, self.clip, 'current', 'model-inputs'))
+        self.clip.write_bytes(b'changed!')
+        os.utime(self.clip, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+        self.assertTrue(self.clean.needs_scan(row, self.clip, 'current', 'model-inputs'))
+
+    def test_model_file_content_change_invalidates_version_without_timestamp_dependency(self):
+        base = Path(self.temp.name);models = base/'person-detector/model';models.mkdir(parents=True)
+        hybrid = base/'hybrid.py';hybrid.write_text('MODEL_ID="current"')
+        for name in self.clean.MODEL_FILES:(models/name).write_bytes(b'a')
+        with patch.object(self.clean, 'BASE', base), patch.object(self.clean, 'HYBRID', hybrid):
+            before = self.clean.detector_version()
+            model = models/self.clean.MODEL_FILES[0];stamp = model.stat();model.write_bytes(b'b')
+            os.utime(model, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+            self.assertNotEqual(before, self.clean.detector_version())
+
 
 if __name__ == '__main__': unittest.main()

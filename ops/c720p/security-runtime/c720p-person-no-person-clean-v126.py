@@ -5,6 +5,13 @@ DET=BASE/'state/person-detection-index.json';LOCK=BASE/'state/person-detection-i
 HYBRID=BASE/'bin/c720p-person-hybrid-v126.py'
 MODEL_FILES=('mobilenet_iter_73000.caffemodel','deploy.prototxt','yolov5n-v7.0.onnx')
 
+def file_digest(path):
+ if path.is_symlink():raise ValueError('unexpected_source_symlink')
+ digest=hashlib.sha256()
+ with path.open('rb') as stream:
+  for block in iter(lambda:stream.read(1024*1024),b''):digest.update(block)
+ return digest.hexdigest()
+
 def detector_version():
  raw=HYBRID.read_bytes();tree=ast.parse(raw)
  model=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign)
@@ -14,12 +21,11 @@ def detector_version():
  for name in MODEL_FILES:
   p=BASE/'person-detector/model'/name
   if p.is_symlink():raise ValueError('unexpected_detector_model_symlink')
-  st=p.stat();parts.append([name,st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns])
+  parts.append([name,file_digest(p)])
  return model,hashlib.sha256(json.dumps(parts,separators=(',',':')).encode()).hexdigest()
 
 def source_signature(path,version):
- st=path.stat()
- return hashlib.sha256(json.dumps([path.name,st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns,version],separators=(',',':')).encode()).hexdigest()
+ return hashlib.sha256(json.dumps(['sha256-v2',path.name,file_digest(path),version],separators=(',',':')).encode()).hexdigest()
 
 def needs_scan(row,path,model,version,force=False):
  eligible=row.get('model')!=model or str(row.get('person_status') or '') in ('no_person_sampled','uncertain','unknown','')
