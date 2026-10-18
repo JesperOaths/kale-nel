@@ -142,7 +142,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('reviewPreview').children.length,1);
  assert.equal(el('reviewAlerts').children.length,1,'The existing Jesper review issue must be highlighted as an action');
  assert(scan(el('reviewAlerts'),'Inspect originals →'),'Saved clips flagged for person recheck must be actionable');
- let keep=scan(el('reviewPreview'),'✓ Choose person / folder');assert(keep,'Primary review action');
+ let keep=scan(el('reviewPreview'),'✓ File under person');assert(keep,'Primary review action');
  keep.handlers.click();
  assert(el('approvalDialog').open,'Keep must open explicit confirmation');
  assert.match(el('approvalClip').textContent,/Recording/,'Confirmation must identify its recording');
@@ -156,7 +156,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(linkPosts[0].payload.source,'sd');
  assert.equal(linkPosts[0].opts.headers['X-S9-Manual-Link-Intent'],'manual-original-review-links-v1');
  // Creating a new folder also preserves the review context.
- keep=scan(el('reviewPreview'),'✓ Choose person / folder');
+ keep=scan(el('reviewPreview'),'✓ File under person');
  keep.handlers.click();
  el('approvalFolder').value='';
  el('approvalLabel').value='New reviewed visitor';
@@ -184,18 +184,18 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(el('reviewGrid').children.some(x=>x.dataset.clip===driveClip),
   'Historical verified Drive video must appear');
  assert(el('pageSize').value==='','Select mock has no initial value');
- el('pageSize').value='96';el('pageSize').handlers.change();
+ el('pageSize').value='150';el('pageSize').handlers.change();
  for(let i=0;i<4;i++)await flush();
  assert(fetches.some(p=>p.includes('limit=24')),'Bounding page size protects v40 backend');
  assert.match(el('reviewTotal').textContent,/unassigned recordings/);
  assert(!scan(el('reviewGrid'),'View face candidate 1'),'Background crops must not be called faces');
  const archiveEntry=el('reviewGrid').children[0];
  assert(scan(archiveEntry,'▶ Play'),'Unindexed originals still available for playback');
- assert(scan(archiveEntry,'✓ Choose person / folder'),
+ assert(scan(archiveEntry,'✓ File under person'),
    'Unindexed original clips must be manually assignable');
  // Main requirement: save from Review recordings, stay on Review recordings,
  // and preselect the last-used person to speed up review of the next clip.
- const nextKeep=scan(el('reviewGrid'),'✓ Choose person / folder');assert(nextKeep);
+ const nextKeep=scan(el('reviewGrid'),'✓ File under person');assert(nextKeep);
  nextKeep.handlers.click();
  assert.equal(el('approvalFolder').value,'G123','Previously chosen folder should be remembered');
  await el('approvalForm').handlers.submit({preventDefault(){}});
