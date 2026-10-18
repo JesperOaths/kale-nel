@@ -41,7 +41,9 @@ class V7Tests(unittest.TestCase):
   self.assertIn('id="driveMonthSelect"',page)
   self.assertIn('id="driveRefresh"',page)
   self.assertIn('role="tablist"',page)
-  # Native S9+ should be selected on load; historical Drive remains accessible.\n  self.assertIn("showSource('local');",page)\n  self.assertIn("showSource('drive')",page)
+  self.assertIn("showSource('local');",page)
+  self.assertIn("showSource('drive')",page)
+  self.assertIn('id="localTab" role="tab" type="button" aria-selected="true"',page)
   self.assertIn("a.fetch('/new/api/drive-saved'",page)
   self.assertIn("a.fetch('/new/api/saved'",page)
   self.assertIn("a.url('/new/drive/saved/clip/'",page)
@@ -56,6 +58,28 @@ class V7Tests(unittest.TestCase):
   self.assertIn('window.parent.C720PSecureRelay',page)
   self.assertIn('max-height:min(55dvh,420px)',page)
 
+ def test_evidence_analytics_really_filter_without_duplication(self):
+  page=(HERE/'security-review-v8.html').read_text()
+  for marker in ('id="localEvidenceRates"','id="driveEvidenceRates"',
+                 'function renderEvidenceRate(host,observations)',
+                 'const allScope=selectedAnalyticsClips();',
+                 'const subset=allScope.filter(rec=>{',
+                 'renderEvidenceRate($(\'localEvidenceRates\')',
+                 'renderEvidenceRate($(\'driveEvidenceRates\')'):
+   self.assertIn(marker,page)
+  self.assertIn("if(mode==='evidence'){",page)
+  self.assertIn('tabs remain the only places showing clip cards and playback',page)
+  self.assertNotIn('Click a recording below to inspect',page)
+  self.assertNotIn('Tap a cell to find those clips',page)
+ def test_people_face_queue_and_review_capacity(self):
+  script=(HERE/'security-people-v45.js').read_text()
+  html=(HERE/'security-people-v45.html').read_text()
+  self.assertIn('Promise.resolve().then(queue);',script)
+  self.assertNotIn("observer.observe(host);",script)
+  self.assertIn('100</option>',html)
+  self.assertIn('150</option>',html)
+  self.assertIn('200</option>',html)
+  self.assertIn("sensitivity:'base',numeric:true",script)
  def test_js_syntax(self):
   if not shutil.which("node"):self.skipTest("Node unavailable")
   sources=[v7.ROOT_JS]
