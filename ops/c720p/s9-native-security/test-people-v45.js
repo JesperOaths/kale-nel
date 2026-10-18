@@ -55,6 +55,9 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
   }
   if(p==='/new/api/saved')return {ok:true,json:async()=>({archive_mode:'S9-microSD-only',events:[
    {clip_no:clip,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',
+    anonymous_tracks:[
+     {id:'Person 1',upper_clothing_colour:'blue',image_movement_direction:'image_left'},
+     {id:'Person 2',upper_clothing_colour:'red',image_movement_direction:'insufficient_samples'}],
     face_candidates:[{snapshot_name:'motion_1792200000000__pending_1__6365_0.jpg',time_ms:6365,
     face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
     {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]}]})};
@@ -109,6 +112,23 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(posts[1].payload.action,'seed_folder');
  assert.equal(el('folderView').hidden,false);
  assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
+ const folderGrid=el('folderGrid');
+ assert(folderGrid.children.length,'Saved folder must show original recording rows');
+ const faceContext=scan(folderGrid,'Inspect face 1');
+ assert(faceContext,'Step 3 must link exact same-recording face snapshot for human review');
+ let lines=[];
+ function collect(x){if(x.textContent)lines.push(x.textContent);
+  for(const child of x.children||[])collect(child)}
+ collect(folderGrid);
+ assert(lines.some(x=>x.includes('2 temporary within-clip tracks')));
+ assert(lines.some(x=>x.includes('clothing blue')&&x.includes('moves left across image')));
+ assert(lines.some(x=>x.includes('clothing red')&&x.includes('direction not measured')));
+ assert(lines.some(x=>x.includes('Body pose and gait: not verified')));
+ assert(!lines.some(x=>x.includes('face matches track 1')),'Do not invent face-to-track associations');
+ faceContext.handlers.click();
+ assert.equal(el('snapshotViewer').open,true);
+ el('snapshotViewer').close();
+
  panes[1].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false);
