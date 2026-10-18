@@ -91,7 +91,7 @@ jobs:
           grep -Fq 's9_onphone_36_samples_overlapping_tiles_v5' ops/c720p/s9-native-security/src/nl/kalenel/s9security/ClipClassifier.java
           grep -Fq 'AppearanceSearchIndex","Boot"' ops/c720p/s9-native-security/build-s9-face-recall-v27.py
           grep -Fq '"s9_onphone_36_samples_overlapping_tiles_v5", "face_evidence_outcome"' ops/c720p/s9-native-security/build-s9-face-recall-v27.py
-          grep -Fq 'QUIET_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
+          grep -Fq 'QUIET_MS=5000,MIN_EVENT_RECORD_MS=10000,MAX_MS=120000' ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java
           grep -Fq 'lastAcceptedEncodedPtsUs' ops/c720p/s9-native-security/src/nl/kalenel/s9security/Continuous4KEncoder.java
   deploy:
     needs: [verify, changed_firmware]
