@@ -129,7 +129,7 @@ def event_evidence(event):
             'physical_speed_status': 'not_measured', 'people_count_status': 'not_established'}
 
 
-def build_report(archive, measurements):
+def build_report(archive, measurements, content_audit=None):
     events = validate_sources(archive)
     records = []
     totals = {'indexed_images': 0, 'images_measured': 0, 'supported_face_candidates': 0,
@@ -162,9 +162,20 @@ def build_report(archive, measurements):
                         'targeted_rescan_priority': reason in (
                             'no_indexed_image', 'secondary_detector_has_no_supported_face'),
                         'event_evidence': event_evidence(event)})
+    audit = content_audit if isinstance(content_audit, dict) else {}
+    supported_keys = {image_key(face) for event in events for face in event['face_candidates']
+                      if measurements.get(image_key(face), {}).get('content_status') == 'secondary_detector_supported_face'}
+    audited = [audit[key] for key in supported_keys if key in audit]
+    benchmark = {'selection': 'all_secondary_supported_candidates',
+                 'supported_candidates_visually_reviewed': len(audited),
+                 'visible_face_labels': audited.count('visible_face'),
+                 'not_a_face_labels': audited.count('not_a_face'),
+                 'uncertain_labels': audited.count('uncertain'),
+                 'full_archive_recall_measured': False}
     return {'analysis_version': VERSION, 'detector_model_sha256': MODEL_SHA,
             'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'original_recordings': len(events), **totals, 'recordings': records,
+            'content_benchmark': benchmark,
             'model_scores_are_not_calibrated_probabilities': True,
             'secondary_non_detection_does_not_prove_no_face': True,
             'sampled_frames_do_not_establish_absence_or_continuous_dwell': True,
@@ -340,7 +351,12 @@ def main():
             except (OSError, ValueError, RuntimeError):
                 cache[key] = {'content_status': 'image_unavailable', 'quality_score': 0}
         atomic_json(cache_file, {'analysis_version': VERSION, 'detector_model_sha256': MODEL_SHA, 'images': cache})
-    report = build_report(archive, cache)
+    try:
+        audit = json.loads((STATE/'content-benchmark.json').read_text())
+        audit_labels = audit['image_labels'] if audit.get('detector_model_sha256') == MODEL_SHA else {}
+    except (OSError, ValueError, TypeError, KeyError):
+        audit_labels = {}
+    report = build_report(archive, cache, audit_labels)
     atomic_json(REPORT, report)
     print('S9_EVIDENCE_QUALITY', json.dumps({key: value for key, value in report.items() if key != 'recordings'}), flush=True)
 

@@ -351,6 +351,11 @@ def install_local_sd(H):
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
+ try:
+  import s9_evidence_quality_v1
+ except ModuleNotFoundError as error:
+  if error.name!='s9_evidence_quality_v1':raise
+ else:s9_evidence_quality_v1.install(H,rows)
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:

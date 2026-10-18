@@ -96,6 +96,17 @@ class QualityTests(unittest.TestCase):
         for field in ('embedding', 'person_id', 'candidate_name', 'review_decision'):
             self.assertNotIn('"' + field + '"', encoded)
 
+    def test_content_benchmark_is_bound_to_current_source_digest(self):
+        archive = source()
+        key = q.image_key(archive['events'][0]['face_candidates'][0])
+        measurements = {key: {'content_status': 'secondary_detector_supported_face', 'quality_score': 80}}
+        report = q.build_report(archive, measurements, {key: 'visible_face'})
+        self.assertEqual(report['content_benchmark']['visible_face_labels'], 1)
+        self.assertFalse(report['content_benchmark']['full_archive_recall_measured'])
+        archive['events'][0]['face_candidates'][0]['snapshot_sha256'] = 'b'*64
+        changed = q.build_report(archive, measurements, {key: 'visible_face'})
+        self.assertEqual(changed['content_benchmark']['visible_face_labels'], 0)
+
     def test_atomic_report_is_private_and_nan_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'report.json'
