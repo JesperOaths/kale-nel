@@ -34,15 +34,18 @@ class Gate(unittest.TestCase):
   self.assertTrue(v["manual_evidence_review_technically_ready"])
   self.assertFalse(v["automatic_identity_rollout_ready"])
   self.assertEqual(v["current_v5_reviewed"],1)
-  self.assertEqual(v["face_images_indexable_by_metadata"],1)
+  self.assertEqual(v["face_images_with_valid_source_metadata"],1)
+  self.assertEqual(v["face_images_2000_bytes_or_larger"],1)
   self.assertIn("independent_same_different_face_validation_missing",v["blockers"])
   self.assertTrue(v["read_only"])
  def test_tiny_face_crops_are_not_indexable(self):
   a=archive();a["events"][0]["face_candidates"][0]["snapshot_size"]=1710
   got=m.check(release(),scan(),pairs(),a)
   self.assertEqual(got["face_images_under_2000_bytes"],1)
-  self.assertEqual(got["face_images_indexable_by_metadata"],0)
-  self.assertIn("undersized_face_crops_require_quality_triage",got["blockers"])
+  self.assertEqual(got["face_images_with_valid_source_metadata"],1)
+  self.assertEqual(got["face_images_2000_bytes_or_larger"],0)
+  self.assertIn("small_jpeg_images_need_resolution_quality_review",got["blockers"])
+  self.assertTrue(got["jpeg_byte_size_is_not_a_integrity_failure"])
  def test_duplicate_or_mismatched_evidence_fails_privacy_gate(self):
   a=archive()
   a["events"][0]["anonymous_id_scope"]="across_recordings"
