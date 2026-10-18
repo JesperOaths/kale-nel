@@ -39,9 +39,9 @@ ORIG={
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
 OLD="security-people-v45.html?v=s9pf-v49-folder-first-20261018&"
-NEW="security-people-v50.html?v=security-visible-route-v50-20261018&"
+NEW="security-people-v50.html?v=security-visible-route-v52-20261018&"
 ENTRY_OLD="security-hub-v30.js?v=people-faces-v49-folder-first-20261018"
-ENTRY_NEW="security-hub-v30.js?v=security-visible-route-v50-20261018"
+ENTRY_NEW="security-hub-v30.js?v=security-visible-route-v52-20261018"
 MARK="s9-people-v45-real-route"
 def digest(b):return hashlib.sha256(b).hexdigest()
 def get(url,limit=220000):
@@ -107,8 +107,8 @@ def main():
  # Use fresh filenames to prevent Firefox or a cached iframe from reusing an
  # older HTML document even when Home Assistant has already updated the file.
  people_v50=out["html"].replace(
-  b"security-people-v45.js?v=v51-20261018-image-framing",
-  b"security-people-v45.js?v=security-face-review-v51-20261018")
+  b"security-people-v45.js?v=v52-20261018-folder-portrait",
+  b"security-people-v45.js?v=security-face-review-v52-20261018")
  if people_v50==out["html"]:raise RuntimeError("people_js_version_contract_missing")
  out["people50"]=people_v50
  out["tracks50"]=out["tracks"]
@@ -133,32 +133,32 @@ def main():
   '<!doctype html><html lang="en"><head><meta charset="utf-8">'
   '<meta name="robots" content="noindex,nofollow">'
   '<meta http-equiv="Cache-Control" content="no-store">'
-  '<meta http-equiv="refresh" content="0;url=security-people-v50.html?v=security-visible-route-v50-20261018">'
+  '<meta http-equiv="refresh" content="0;url=security-people-v50.html?v=security-visible-route-v52-20261018">'
   '<title>Opening People &amp; Faces</title></head><body>'
-  '<p>Opening <a href="security-people-v50.html?v=security-visible-route-v50-20261018">People &amp; Faces</a>...</p>'
-  '<script>location.replace("security-people-v50.html?v=security-visible-route-v50-20261018")</script>'
+  '<p>Opening <a href="security-people-v50.html?v=security-visible-route-v52-20261018">People &amp; Faces</a>...</p>'
+  '<script>location.replace("security-people-v50.html?v=security-visible-route-v52-20261018")</script>'
   '</body></html>').encode()
  if not legacy_known:
   out["legacy"]=legacy_bytes
  hub=prior["hub"][0].decode("utf-8")
  if MARK not in hub:raise RuntimeError("expected_existing_v45_hub")
  if NEW not in hub:
-  hub,n=re.subn(r"security-people-v45[.]html[?]v=[A-Za-z0-9._-]+&",NEW,hub)
+  hub,n=re.subn(r"security-people-v(?:45|50)[.]html[?]v=[A-Za-z0-9._-]+&",NEW,hub)
   if n!=1:raise RuntimeError("unrecognized_people_hub_route_"+str(n))
- if "security-tracks-v50.html?v=security-visible-route-v50-20261018&" not in hub:
-  hub,n=re.subn(r"security-tracks-v7[.]html[?](?:v=[A-Za-z0-9._-]+&)?",
-                "security-tracks-v50.html?v=security-visible-route-v50-20261018&",hub)
+ if "security-tracks-v50.html?v=security-visible-route-v52-20261018&" not in hub:
+  hub,n=re.subn(r"security-tracks-v(?:7|50)[.]html[?](?:v=[A-Za-z0-9._-]+&)?",
+                "security-tracks-v50.html?v=security-visible-route-v52-20261018&",hub)
   if n!=1:raise RuntimeError("unrecognized_tracks_hub_route_"+str(n))
  hub=re.sub(r"security-review-v8[.]html[?]mode=evidence(?:&v=[A-Za-z0-9._-]+)?&",
-            "security-review-v8.html?mode=evidence&v=security-analytics-v51-20261018&",hub)
+            "security-review-v8.html?mode=evidence&v=security-analytics-v52-20261018&",hub)
  hub=re.sub(r"security-archive-v7[.]html(?:[?]v=[A-Za-z0-9._-]+)?&",
-            "security-archive-v7.html?v=security-archive-grid-v51-20261018&",hub)
+            "security-archive-v7.html?v=security-archive-grid-v52-20261018&",hub)
  out["hub"]=hub.encode("utf-8")
  entry=prior["entry"][0].decode("utf-8")
  if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
  if ENTRY_NEW not in entry:
   entry,n=re.subn(
-    r"security-hub-v30[.]js[?]v=(?:people-faces-v49-folder-first|people-faces-v50-route-correction|people-faces-v50-visible-route)-20261018",
+    r"security-hub-v30[.]js[?]v=(?:people-faces-v49-folder-first|people-faces-v50-route-correction|people-faces-v50-visible-route|security-visible-route-v50|security-visible-route-v51)-20261018",
     ENTRY_NEW,entry)
   if n!=1:raise RuntimeError("unrecognized_hub_entry_route_"+str(n))
  out["entry"]=entry.encode("utf-8")
@@ -167,21 +167,21 @@ def main():
  # Do not require speculative outer-shell marker strings.
  shell,nold=re.subn(
   r"security-people-v33[.]html(?:[?]v=[A-Za-z0-9._-]+)?",
-  "security-people-v50.html?v=security-visible-route-v50-20261018",shell)
+  "security-people-v50.html?v=security-visible-route-v52-20261018",shell)
  shell,nprevious=re.subn(
-  r"security-people-v45[.]html[?]v=[A-Za-z0-9._-]+",
-  "security-people-v50.html?v=security-visible-route-v50-20261018",shell)
+  r"security-people-v(?:45|50)[.]html[?]v=[A-Za-z0-9._-]+",
+  "security-people-v50.html?v=security-visible-route-v52-20261018",shell)
  shell,ntracks=re.subn(
-  r"security-tracks-v7[.]html(?:[?]v=[A-Za-z0-9._-]+)?",
-  "security-tracks-v50.html?v=security-visible-route-v50-20261018",shell)
+  r"security-tracks-v(?:7|50)[.]html(?:[?]v=[A-Za-z0-9._-]+)?",
+  "security-tracks-v50.html?v=security-visible-route-v52-20261018",shell)
  updated,count=re.subn(
   r"(security-hub-v30[.](?:js|html))(?:[?]v=[A-Za-z0-9._-]+)?",
-  lambda m:m.group(1)+"?v=security-visible-route-v50-20261018",
+  lambda m:m.group(1)+"?v=security-visible-route-v52-20261018",
   shell)
  updated=re.sub(r"security-review-v8[.]html[?]mode=evidence(?:&v=[A-Za-z0-9._-]+)?",
-            "security-review-v8.html?mode=evidence&v=security-analytics-v51-20261018",updated)
+            "security-review-v8.html?mode=evidence&v=security-analytics-v52-20261018",updated)
  updated=re.sub(r"security-archive-v7[.]html(?:[?]v=[A-Za-z0-9._-]+)?",
-            "security-archive-v7.html?v=security-archive-grid-v51-20261018",updated)
+            "security-archive-v7.html?v=security-archive-grid-v52-20261018",updated)
  out["shell"]=updated.encode("utf-8")
  if OLD.encode() in out["hub"] or ENTRY_OLD.encode() in out["entry"]:
   raise RuntimeError("old_route_retained_in_staged_assets")
