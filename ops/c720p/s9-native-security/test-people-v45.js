@@ -160,7 +160,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(el('peopleReviewNow').handlers.click,'Review action must remain accessible without a duplicate recording list');
  let keep;
  el('openReview').handlers.click();for(let i=0;i<4;i++)await flush();
- keep=scan(el('reviewGrid'),'✓ File under person');assert(keep,'Primary review action');
+ keep=scan(el('reviewGrid').children.find(x=>x.dataset.source==='sd'),'✓ File under person');
+ assert(keep,'Primary SD review action');
  keep.handlers.click();
  assert(el('approvalDialog').open,'Keep must open explicit confirmation');
  assert.match(el('approvalClip').textContent,/Recording/,'Confirmation must identify its recording');
@@ -174,7 +175,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(linkPosts[0].payload.source,'sd');
  assert.equal(linkPosts[0].opts.headers['X-S9-Manual-Link-Intent'],'manual-original-review-links-v1');
  // Creating a new folder also preserves the review context.
- keep=scan(el('reviewGrid'),'✓ File under person');
+ keep=scan(el('reviewGrid').children.find(x=>x.dataset.source==='sd'),'✓ File under person');
  keep.handlers.click();
  el('approvalFolder').value='';
  el('approvalLabel').value='New reviewed visitor';
@@ -213,7 +214,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
    'Unindexed original clips must be manually assignable');
  // Main requirement: save from Review recordings, stay on Review recordings,
  // and preselect the last-used person to speed up review of the next clip.
- const nextKeep=scan(el('reviewGrid'),'✓ File under person');assert(nextKeep);
+ const nextKeep=scan(el('reviewGrid').children.find(x=>x.dataset.source==='sd'),'✓ File under person');assert(nextKeep);
  nextKeep.handlers.click();
  assert.equal(el('approvalFolder').value,'G123','Previously chosen folder should be remembered');
  await el('approvalForm').handlers.submit({preventDefault(){}});
