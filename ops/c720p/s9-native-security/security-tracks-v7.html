@@ -22,6 +22,9 @@ h1{font-size:24px;line-height:1.1;letter-spacing:-.04em;margin:4px 0}
 main{min-height:0;overflow:auto;overscroll-behavior:contain;padding:17px clamp(16px,2.1vw,35px) 42px}
 .overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:13px}
 .metric{background:linear-gradient(145deg,#172a35,#101f29);border:1px solid var(--border);border-radius:12px;padding:13px 16px;min-width:0}
+.metric{display:block;width:100%;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.metric:hover,.metric:focus-visible{border-color:#82dfc9;background:#1c3b42}
+.metric[aria-current="true"]{outline:2px solid #82dfc9;outline-offset:0}
 .metric strong{display:block;font-size:28px;font-weight:780;line-height:1.05;font-variant-numeric:tabular-nums}
 .metric span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
 .metric small{display:block;font-size:11px;color:#7fa3b2;margin-top:3px}
@@ -92,16 +95,17 @@ video{display:block;width:100%;max-height:60dvh;background:black;border-radius:9
 </header>
 <main>
  <section class="overview" aria-label="Movement overview">
-  <div class="metric emphasis"><strong id="metricClips">—</strong><span>Clips with supported people</span><small>Repeated person evidence</small></div>
-  <div class="metric"><strong id="metricTracks">—</strong><span>Person tracklets</span><small>Clip-scoped, not unique visitors</small></div>
-  <div class="metric"><strong id="metricReview">—</strong><span>Needs review</span><small>Uncertain or incomplete evidence</small></div>
-  <div class="metric"><strong id="metricExcluded">—</strong><span>Non-person / rejected</span><small>Not counted as people</small></div>
+  <button type="button" data-summary-view="people" class="metric emphasis"><strong id="metricClips">—</strong><span>Clips with supported people</span><small>Repeated person evidence</small></button>
+  <button type="button" data-summary-view="people" class="metric"><strong id="metricTracks">—</strong><span>Person tracklets</span><small>Clip-scoped, not unique visitors</small></button>
+  <button type="button" data-summary-view="review" class="metric"><strong id="metricReview">—</strong><span>Needs review</span><small>Uncertain or incomplete evidence</small></button>
+  <button type="button" data-summary-view="excluded" class="metric"><strong id="metricExcluded">—</strong><span>Non-person / rejected</span><small>Not counted as people</small></button>
  </section>
  <section class="summary" id="explanation"><span><b>How to read this page:</b> A track is an estimated person-shaped object repeatedly detected inside one video. Direction is movement across the camera image, not a physical route. Items needing review are deliberately excluded from person totals.</span></section>
  <section class="filters" aria-label="Clip filters">
   <div class="tabs" id="viewTabs" role="group" aria-label="Evidence status">
    <button type="button" data-view="people" aria-pressed="true">Person evidence</button>
    <button type="button" data-view="review" aria-pressed="false">Needs review</button>
+<button type="button" data-view="excluded" aria-pressed="false">Non-person / rejected</button>
    <button type="button" data-view="all" aria-pressed="false">All recordings</button>
   </div>
   <div class="spacer"></div>
@@ -232,13 +236,14 @@ function renderCard(r){
 function matched(r){
  if(state.view==='people'&&!count(r))return false;
  if(state.view==='review'&&!needsReview(r))return false;
+ if(state.view==='excluded'&&!excluded(r))return false;
  if(state.day!=='all'&&dayOf(r)!==state.day)return false;
  if(state.query&&![r.clip_no,dayOf(r),dateOf(r),...tracks(r).map(t=>[t.id,t.image_movement_direction,t.upper_clothing_colour].join(' '))].join(' ').toLowerCase().includes(state.query))return false;
  return true;
 }
 function render(){
  const rows=state.all.filter(matched).sort((a,b)=>state.order==='old'?stamp(a)-stamp(b):stamp(b)-stamp(a));
- $('sectionTitle').textContent=state.view==='people'?'Person movement evidence':state.view==='review'?'Needs human review':'All recorded motion';
+ $('sectionTitle').textContent=state.view==='people'?'Person movement evidence':state.view==='review'?'Needs human review':state.view==='excluded'?'Non-person / rejected evidence':'All recorded motion';
  $('matches').textContent=rows.length+' matching recordings';
  const results=$('results');results.replaceChildren();
  for(const record of rows.slice(0,state.limit))results.append(renderCard(record));
@@ -247,7 +252,7 @@ function render(){
  $('empty').hidden=rows.length>0;
  if(!rows.length)$('empty').textContent=state.error?'Could not load the secured recording index. Your existing videos have not been changed.':
  state.view==='people'?'No corroborated person tracks found for this filter. Check “Needs review” for uncertain detections.':
- state.view==='review'?'No recordings need person-track review in this selection.':'No recordings match the selected filters.';
+ state.view==='review'?'No recordings need person-track review in this selection.':state.view==='excluded'?'No rejected or non-person evidence matches.':'No recordings match the selected filters.';
 }
 function dates(){
  const d=$('day');const old=state.day;d.replaceChildren();
@@ -281,11 +286,17 @@ async function load(){
  }catch(_){state.error=true;$('sync').textContent='Secured archive unavailable';render()}
  finally{state.loading=false}
 }
+function selectView(view){
+ state.view=view;state.limit=32;state.day='all';state.query='';
+ $('day').value='all';$('search').value='';
+ for(const b of $('viewTabs').querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.view===view));
+ for(const b of document.querySelectorAll('[data-summary-view]'))b.setAttribute('aria-current',String(b.dataset.summaryView===view));
+ render();
+}
+document.querySelectorAll('[data-summary-view]').forEach(b=>b.addEventListener('click',()=>selectView(b.dataset.summaryView)));
 $('viewTabs').addEventListener('click',e=>{
  const b=e.target.closest('button[data-view]');if(!b)return;
- state.view=b.dataset.view;state.limit=32;
- for(const x of $('viewTabs').querySelectorAll('button'))x.setAttribute('aria-pressed',String(b===x));
- render();
+ selectView(b.dataset.view);
 });
 $('day').addEventListener('change',e=>{state.day=e.target.value;state.limit=32;render()});
 $('order').addEventListener('change',e=>{state.order=e.target.value;render()});
