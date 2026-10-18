@@ -1,0 +1,26 @@
+name: Security live MJPEG only - original playback regression
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/security-live-mjpeg-only-v1.js'
+      - 'ops/c720p/security-runtime/test-live-only-mjpeg-v1.js'
+      - '.github/workflows/c720p-security-live-only.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/security-live-mjpeg-only-v1.js'
+      - 'ops/c720p/security-runtime/test-live-only-mjpeg-v1.js'
+      - '.github/workflows/c720p-security-live-only.yml'
+permissions:
+  contents: read
+jobs:
+  standalone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify authenticated native MJPEG with no smooth player or VIDEO prototype rewrite
+        run: |
+          set -euo pipefail
+          node --check ops/c720p/security-runtime/security-live-mjpeg-only-v1.js
+          node ops/c720p/security-runtime/test-live-only-mjpeg-v1.js
