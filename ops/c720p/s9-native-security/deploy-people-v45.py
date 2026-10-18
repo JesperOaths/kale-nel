@@ -108,7 +108,7 @@ def main():
  # the V49 route from the previous failed-to-display deployment.
  def upgrade_faces_route(src):
   src=LEGACY_PEOPLE.sub("security-people-v45.html?v="+PEOPLE_QUERY+"&",src)
-  v45=re.compile(r"security-people-v45\\.html\\?v=[A-Za-z0-9._-]+&")
+  v45=re.compile(r"security-people-v45\.html\?v=[A-Za-z0-9._-]+&")
   src=v45.sub("security-people-v45.html?v="+PEOPLE_QUERY+"&",src)
   return src
  hub=upgrade_faces_route(hub)
