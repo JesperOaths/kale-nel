@@ -1,0 +1,33 @@
+# Security V46 — verified checkpoint (18 October 2026)
+
+This file deliberately distinguishes **observed production behavior**, **PR source improvements**, and **work not yet verified**. Do not treat a green source test as a firmware deployment. The relevant pull request is #766 on `security-unified-evidence-v46-20261018`.
+
+## Production last independently verified
+
+- C720P modern Security UI update from commit `b3f022ecf9f27215f43169daee4d539ede5cf688` installed and HA HTTP hash readback passed. Report: `S9_PEOPLE_FACES_V45_ACTUAL_HUB_DEPLOY_VERIFIED`, agent job 11502. Rollback: `/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route/20261018T205024977042Z`.
+- S9+ signed V27 Camera2 APK at immutable source commit `ad93f127c789e2f00a34b301d8047712c89a9ad0` installed and verified by job 11511. APK SHA-256 `f302d2a28a58ed7cb3f0284f17da04c01b1e7ac501b1feae0f49a4f1ceb76f51`. 4K GPU encoder healthy; no dropped output frames reported in preflight; battery temperature was 32.6°C. Exact installed-prior APK saved and checksum verified on S9 microSD. No 4K originals or approvals were modified by installation.
+- 175 S9+ original recordings remained indexed after the rollout. Drive API returned 94 currently available historical videos. Historical review API returned 101/101 eligible reviewed records, including all 94 currently playable Drive videos and 7 catalog entries no longer present in the current Drive listing (read-only join audit job 11530).
+- A **real** native 4K diagnostic generated one H.264 3840×2160 30 fps file, 15.292s long, 46,020,938 bytes (job 11518). The initial simplistic verifier expected 17.5s from a 12.5s wall-clock diagnostic plus 5s pretrigger, and failed. The clip duration ALONE cannot identify the encoded pretrigger duration because wall-clock and compressed-frame PTS need not advance equally. The proof was NOT accepted. Diagnostic excluded from Security archive, and the script did **not** delete it after the failed assertion.
+
+## PR source implemented since production deployment; NOT yet live
+
+- Main People & Faces: bounded face-image loader no longer relies exclusively on IntersectionObserver inside a hidden iframe; a timed-out JPEG fails visibly rather than an endless placeholder. Alphabetical People sorting, 100–200 review page sizes, manual person links, recheck entry point, and source-safe person terminology retained.
+- Secondary historic face gallery v818: eager signed image URLs and original-MP4-only playback. Modern Security shell no longer exposes its legacy tab; gallery deployment script now supports preserving the modern shell with asset-only updates.
+- Review/Analytics: separate SD vs Drive coverage, event heatmap and daily trend, 4-daypart possible-person detection rates per source (assessed denominator only), source/length/processing distributions, real chart selection filtering, no duplicate clip browser. Archive no-timestamp videos stay counted even when excluded from time charts, and SD and Drive filenames are keyed by source.
+- Outfit comparisons: independently approved single-person clips can provide up to three time-separated *non-biometric appearance exemplars* per person. Both torso and lower clothing HSV similarities must pass thresholds; multi-person candidates rejected; agreements across examples are counted; similarly matching several people is marked explicitly ambiguous. No automatic identity or file assignment.
+- Native 4K source now rejects prefixes shorter than a full 5,000ms keyframe-decodable AVC window (rather than accepting >=4,400ms cold starts); JVM ring test added. Continuous4KEncoder now exposes actual completed event prefix PTS and live-segment PTS through CameraService status for a definitive follow-up diagnostic.
+- The proof script now checks verified matched clip name, >=5,000ms encoded prefix, >=10,000ms encoded live segment, MP4/PTS consistency, first and last frame decoding, healthy camera and unchanged original archive. It no longer assumes 12.5s of Android wall time equals 12.5s of encoded PTS.
+
+## Remaining gates / known limitations
+
+1. **Do not claim the new 5-second native pre-event guarantee is deployed or independently verified.** Compile, sign, stage, and install the current source under the existing guarded V27 policy only after current installed-APK hash, 4K idle state, temperature and microSD rollback can be proven. Run the new PTS-aware diagnostic and independently review an ordinary motion clip's tail before marking complete.
+2. The latest main Security UI, gallery v818 and analytics source patches are **not deployed**. The previous production UI deployment is verified, but a subsequent agent deployment attempt was blocked by a safety check; do not silently retry alternative remote-execution routes. Source CI success alone is insufficient.
+3. A live browser test of the old gallery showed an image element without a `src` and no loaded face (job 11517). Source fix is committed but requires current-browser end-to-end proof after deployment.
+4. C720P root disk was 97% used with ~646 MiB free in the last disk audit. A sudo-based apt cleanup was denied for lacking credentials; no files were removed by that attempt. Do not delete APK rollback, original videos, microSD recordings, Drive assets, models, HA state or person-review decisions to reclaim space.
+5. Remaining playback-derived *backend* cache/workers require an inventory before retirement. UI smooth-copy fallbacks have been removed, but do not claim all server-side background transcodes are disabled until service and route audit proves it.
+6. S9+ live person detection and confirmed manual person clips are **not** biometric identity recognition. Clothing resemblance must never auto-confirm a person. Historical Google Drive person review is sampled visual evidence, not exhaustive face identification.
+7. The original user scope includes production live checks of Recording tab bottom scrolling, modal filing actions, archived Drive playback, and real-world 5s post-motion hold. Source contracts passed, but end-to-end confirmation of every UI interaction has not been independently obtained since the latest source changes.
+
+## Safety rules for continuation
+
+Use immutable source refs, source+CI checks, transactional backup, authenticated HTTP hash readback, original archive set monotonicity, camera idle guard, and exact microSD APK rollback. Never merge/redeploy an old V17/V19 legacy Faces workflow over modern People & Faces. Do not confuse the current 94 Drive files with 101 V28 historic analysis records. Do not introduce derived 30fps smooth-copy media again.
