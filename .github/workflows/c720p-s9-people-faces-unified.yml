@@ -1,5 +1,6 @@
 name: S9 People and Faces unified UI plus private review cases
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/security-face-folders-v22.html'
@@ -21,7 +22,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: c720p-s9-people-faces-unified
+  group: c720p-s9-people-faces-unified-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   verify:
@@ -43,7 +44,8 @@ jobs:
             ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
   deploy:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    # Combined legacy UI publishers require explicit operator dispatch.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
