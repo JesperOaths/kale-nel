@@ -32,10 +32,11 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           d=Path("ops/c720p/s9-native-security/deploy-people-v45.py").read_text()
-          for marker in ("c720p-surveillance.html", "s9FacesGalleryFrame",
-                         "LEGACY_PEOPLE.sub(", "TRACKS_ENTRY.subn(",
-                         "visible_people_route_verified", "visible_tracks_route_verified",
-                         "legacy_frame_in_deployed_files", "850000 if k==\"shell\" else 220000"):
+          for marker in ("c720p-surveillance.html", "security-people-v33.html",
+                         "security-people-v50.html", "security-tracks-v50.html",
+                         "security-visible-route-v50-20261018", "legacy_route_redirected",
+                         "fresh_iframe_assets_installed", "archive_records_disappeared",
+                         "HA_not_serving_new_version_", "S9_PEOPLE_V45_DEPLOY_ROLLED_BACK"):
               assert marker in d,marker
           print("S9_VISIBLE_IFRAME_ROUTE_CONTRACT_PASS")
           PY
