@@ -260,7 +260,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <label>Per page<select id="pageSize"><option value="100" selected>100</option><option value="150">150</option><option value="200">200</option></select></label></div>
  <div id="reviewGrid" class="grid"></div><div id="reviewPage" class="pagebar"></div>
 </section>
-<section id="people" aria-label="Saved people and provisional groups">
+<section id="people" aria-label="Saved people">
  <div class="people-review-notice" id="peopleReviewNotice" hidden><strong id="peopleReviewSummary"></strong><button id="peopleReviewNow" type="button" class="primary">Review →</button></div>
  <div class="section-head"><div><h2>People A–Z</h2></div><button id="newFolderInline" type="button">+ Add person</button></div>
  <div id="savedList" class="profile-list" aria-live="polite"></div>
@@ -271,7 +271,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <p id="clothingTotal" class="status" role="status">Waiting for reviewed reference recordings…</p>
  <div id="clothingList" class="group-list"></div>
 </section>
-<section id="folderView" hidden aria-label="Selected reviewed folder">
+<section id="folderView" hidden aria-label="Selected person">
  <button id="backFolders" class="back" type="button">← Back to People</button>
  <div class="section-head"><div><h2 id="folderTitle">Person</h2><p id="folderDescription"></p></div><button id="editFolder" type="button">Edit person</button></div>
  <div id="folderRecheck" class="folder-recheck" role="status" hidden></div>
@@ -279,7 +279,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <label id="distanceLabel">Colour distance<select id="distance"><option value="0.15">Close</option><option value="0.35" selected>Similar</option><option value="0.65">Broad</option><option value="1">Any colour</option></select></label>
  <label id="weakLabel">Low-confidence detections<select id="weak"><option value="0" selected>Exclude</option><option value="1">Include</option></select></label>
  <label id="routeLabel">Route<select id="route"><option value="0">Any</option><option value="1">Same</option></select></label></div>
- <section id="folderFaces" class="folder-faces" hidden aria-label="Usable face candidates from this folder"><div class="section-head"><div><h3>Usable face candidates</h3></div></div><div id="folderFaceGrid" class="folder-face-grid"></div></section>
+ <section id="folderFaces" class="folder-faces" hidden aria-label="Usable face candidates for this person"><div class="section-head"><div><h3>Usable face candidates</h3></div></div><div id="folderFaceGrid" class="folder-face-grid"></div></section>
  <div id="folderContext" class="callout" hidden><p id="folderContextText"></p></div>
  <div class="folder-layout"><div><div id="folderGrid" class="grid"></div><div id="folderPage" class="pagebar"></div></div><aside id="references" class="folder-aside" hidden><h3>Approved reference clips</h3><p class="status">Human-reviewed examples for visual comparison only.</p><div id="referenceList" class="reference-list"></div></aside></div>
 </section>
