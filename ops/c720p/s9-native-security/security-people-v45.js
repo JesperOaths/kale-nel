@@ -55,9 +55,11 @@ function makeArchiveRows(){
   const name=String(rec.remote_name||'');
   if(!driveName.test(name)||name.includes('..')||byName.has(name))continue;
   const timestamp=Date.parse(String(rec.timestamp||rec.date||''));
-  if(!Number.isFinite(timestamp)||timestamp<=0)continue;
+  // Historical Drive files without reliable timestamps are still originals:
+  // show them in Review instead of silently losing them from the archive.
+  const recordedMs=Number.isFinite(timestamp)&&timestamp>0?timestamp:0;
   byName.set(name,{
-   source:'drive',name,clip:name,recorded_ms:timestamp,unindexed:true,
+   source:'drive',name,clip:name,recorded_ms:recordedMs,unindexed:true,
    video_path:'/new/drive/saved/clip/'+encodeURIComponent(name),
    snapshot_name:rec.snapshot_name,temporal_support:false
   });
