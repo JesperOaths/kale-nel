@@ -30,4 +30,5 @@ jobs:
           python3 -m compileall -q ops/c720p/security-runtime
           bash -n ops/c720p/security-runtime/c720p-security-value-retention.sh
           bash -n ops/c720p/security-runtime/c720p-kiosk-zoomed.sh
+          node ops/c720p/security-runtime/test-original-playback-v1.js
 

@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import sqlite3
 import stat
 import subprocess
@@ -30,6 +31,8 @@ FILES={
  'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py':('s9-fast-recent-clip-index.py','6508d170fb0a917e3384aa1c7d2059aff3da163440371108f05ebcee62ec427a'),
  'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py':('s9_sd_proxy_extension.py','b4abc54b46ca558a5fcf1591d6dce401547407d138301f7840de6f1db28e53f5'),
 }
+ASSETS={'ops/c720p/security-runtime/security-original-playback-v1.js':(WEB/'security-video-playback-v30.js','e10b0470d7ae8e9687303b125febaa6932d7e7229de292688ffbe0bf83909c43')}
+JS_TEST='ops/c720p/security-runtime/test-original-playback-v1.js'
 TESTS=['ops/c720p/security-runtime/test-phone-archive-catalog-v1.py',
        'ops/c720p/security-runtime/test-phone-archive-adapters-v1.py',
        'ops/c720p/s9-native-security/test-phone-native-media-range-proxy.py']
@@ -70,19 +73,36 @@ def main():
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--ref',required=True);ap.add_argument('--apply',action='store_true');args=ap.parse_args()
  if not re.fullmatch(r'[a-f0-9]{40}',args.ref):raise ValueError('immutable_ref_required')
  stage=ROOT/'build'/('phone-archive-offload-'+args.ref[:12]);stage.mkdir(parents=True,exist_ok=True)
- for path in [*FILES,*TESTS]:
+ for path in [*FILES,*TESTS,*ASSETS,JS_TEST]:
   dest=stage/path;dest.parent.mkdir(parents=True,exist_ok=True)
   with urllib.request.urlopen('https://raw.githubusercontent.com/JesperOaths/kale-nel/'+args.ref+'/'+path,timeout=40) as r:raw=r.read(500001)
   if not 50<len(raw)<500000:raise ValueError('unbounded_source')
-  compile(raw,str(dest),'exec');dest.write_bytes(raw)
+  if path.endswith('.py'):compile(raw,str(dest),'exec')
+  dest.write_bytes(raw)
  for path in TESTS:
   print('STAGED_TEST',path,run(['python3',str(stage/path)],timeout=45),flush=True)
+ if shutil.which('node'):
+  print('STAGED_JS_TEST',run(['node',str(stage/JS_TEST)],timeout=30),flush=True)
  changes={};old={};modes={}
  for source,(name,expected) in FILES.items():
   target=ROOT/'bin'/name;raw=(stage/source).read_bytes();before=target.read_bytes() if target.exists() else None
   if before==raw:continue
   if (sha(before) if before is not None else None)!=expected:raise RuntimeError('live_predecessor_changed:'+name)
   changes[target]=raw;old[target]=before;modes[target]=stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o600
+ for source,(target,expected) in ASSETS.items():
+  raw=(stage/source).read_bytes();before=target.read_bytes()
+  if before==raw:continue
+  if sha(before)!=expected:raise RuntimeError('live_asset_predecessor_changed:'+target.name)
+  changes[target]=raw;old[target]=before;modes[target]=stat.S_IMODE(target.stat().st_mode)
+ # Keep the active UI intact. Only bust the old global asset's browser cache;
+ # lease each live page immediately before its atomic update below.
+ for target in [WEB/'security-hub-v30.html',WEB.parent/'c720p-surveillance.html']:
+  before=target.read_bytes();text=before.decode()
+  updated,count=re.subn(r'security-video-playback-v30[.]js(?:[?][^\s\"\'<>]*)?',
+    'security-video-playback-v30.js?original=20261018-v1',text)
+  if count!=1:raise RuntimeError('unexpected_global_playback_reference:'+target.name)
+  raw=updated.encode()
+  if raw!=before:changes[target]=raw;old[target]=before;modes[target]=stat.S_IMODE(target.stat().st_mode)
  if not args.apply:print('PHONE_ARCHIVE_ADAPTERS_STAGED_NOT_DEPLOYED',len(changes),args.ref,flush=True);return
  spec=importlib.util.spec_from_file_location('staged_phone_catalog',stage/'ops/c720p/security-runtime/phone_archive_catalog_v1.py');client=importlib.util.module_from_spec(spec);spec.loader.exec_module(client)
  native=client.load_catalog(stage/'native-preflight.json');before=originals();review_hash=reviews();phone=camera()
