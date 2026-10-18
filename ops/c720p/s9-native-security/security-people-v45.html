@@ -30,6 +30,8 @@ small,.muted{font-size:12px;color:var(--muted)}
 .tabs button[aria-selected=true]{background:#254b49;border-color:#4b998a;color:#edfff9}
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:19px}
 .metric{background:#14242f;border:1px solid var(--border);border-radius:10px;padding:12px 15px;min-height:77px}
+.metric[data-go]{cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
+.metric[data-go]:hover,.metric[data-go]:focus-visible{border-color:var(--mint);background:#1d363b}
 .metric strong{display:block;font-size:23px;line-height:1.16;font-variant-numeric:tabular-nums}
 .metric span{font-size:11px;color:var(--muted)}
 .section-head{display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-bottom:13px}
@@ -134,24 +136,24 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 </head>
 <body>
 <header class="top">
- <div><span class="kicker">S9+ · People evidence</span><h1>Review &amp; organize</h1><p>Recordings first, people second. Keep only what you've checked.</p></div>
+ <div><span class="kicker">S9+ · People evidence</span><h1>People &amp; faces</h1><p>Browse your saved people and reviewed clips. Investigate new evidence separately.</p></div>
  <div class="top-actions"><button id="newFolder" type="button" class="secondary">+ New folder</button><button id="refresh" type="button" class="secondary">↻ Refresh</button></div>
 </header>
 <nav class="tabs" aria-label="People and faces workspace">
- <button type="button" data-pane="overview" aria-selected="true">Overview</button>
+ <button type="button" data-pane="overview" aria-selected="false">Activity</button>
  <button type="button" data-pane="review" aria-selected="false">Review queue</button>
- <button type="button" data-pane="people" aria-selected="false">People &amp; groups</button>
+ <button type="button" data-pane="people" aria-selected="true">Saved people</button>
  <button type="button" data-pane="faces" aria-selected="false">Face images</button>
 </nav>
 <section class="metrics" aria-label="Security evidence totals">
- <div class="metric"><strong id="queueCount">—</strong><span>Recording decisions pending</span></div>
- <div class="metric"><strong id="personCount">—</strong><span>Saved folders</span></div>
- <div class="metric"><strong id="approvalCount">—</strong><span>Saved clip links</span></div>
- <div class="metric"><strong id="faceCount">—</strong><span>Captured face images</span></div>
+ <button class="metric" type="button" data-go="review"><strong id="queueCount">—</strong><span>Recording decisions pending</span></button>
+ <button class="metric" type="button" data-go="people"><strong id="personCount">—</strong><span>Saved folders</span></button>
+ <button class="metric" type="button" data-go="people"><strong id="approvalCount">—</strong><span>Saved clip links</span></button>
+ <button class="metric" type="button" data-go="faces"><strong id="faceCount">—</strong><span>Captured face images</span></button>
 </section>
 <p id="message" class="status" role="alert" hidden></p>
 <div id="notice" class="notice" role="status" hidden></div>
-<section id="overview" aria-label="Evidence overview">
+<section id="overview" hidden aria-label="Evidence overview">
  <div class="overview-layout">
   <section class="surface" aria-label="Latest recordings requiring review">
    <div class="section-head"><div><span class="kicker">PRIORITY</span><h2>Needs your decision</h2><p>A short queue of recordings, not another folder of unknown people.</p></div><button id="openReview" type="button" class="secondary">Review all →</button></div>
@@ -187,8 +189,8 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <div class="filters"><label>Show<select id="reviewMode"><option value="inbox">Needs review</option><option value="all">All supported recordings</option><option value="skipped">Dismissed</option></select></label></div>
  <div id="reviewGrid" class="grid"></div><div id="reviewPage" class="pagebar"></div>
 </section>
-<section id="people" hidden aria-label="Saved people and provisional groups">
- <div class="section-head"><div><span class="kicker">MANUAL COLLECTIONS</span><h2>People &amp; groups</h2><p>Folders created by you, with their approved clips.</p></div><button id="newFolderInline" type="button">+ Create folder</button></div>
+<section id="people" aria-label="Saved people and provisional groups">
+ <div class="section-head"><div><span class="kicker">YOUR COLLECTIONS</span><h2>Saved people &amp; groups</h2><p>Open a folder to inspect its approved videos. Unconfirmed clothing suggestions stay separate.</p></div><button id="newFolderInline" type="button">+ Create folder</button></div>
  <div id="savedList" class="profile-list"></div>
  <details class="details"><summary>Provisional appearance groups <span id="groupCount">—</span></summary>
  <p>Clothing-colour groupings are not identities. Open a group to review its suggestions.</p>
