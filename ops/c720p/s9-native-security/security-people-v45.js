@@ -49,12 +49,48 @@ function imageFor(crop,alt,kind){
  img.addEventListener('error',()=>{img.remove();wrap.append(elt('span','Image unavailable · play video'))},{once:true});
  return wrap;
 }
+function sceneFor(item){
+ const clip=String(item?.clip||'');
+ const fallback=imageFor(item?.full_crop,'Detector crop (scene thumbnail unavailable)');
+ if(!clipName.test(clip))return fallback;
+ const host=elt('div','','media scene-media'),img=elt('img');
+ img.loading='lazy';img.decoding='async';
+ img.alt='Entire recording scene with surrounding context, not an identified person';
+ host.append(img);
+ Promise.resolve().then(()=>relay().url('/new/saved/snap/'+encodeURIComponent(clip+'.thumb.jpg')))
+ .then(url=>{if(img.isConnected)img.src=url})
+ .catch(()=>{if(host.isConnected)host.replaceChildren(fallback)});
+ img.addEventListener('error',()=>{if(host.isConnected)host.replaceChildren(fallback)},{once:true});
+ return host;
+}
+// Delay signed face URLs until on-screen, and limit simultaneous on-phone loads.
+const faceQueue=[],facePending=new Set();let faceWorkers=0;
+function pumpFaces(){
+ while(faceWorkers<2&&faceQueue.length){
+  const {img,source,host}=faceQueue.shift();
+  if(!img.isConnected){facePending.delete(img);continue}
+  faceWorkers++;
+  Promise.resolve().then(()=>relay().url(source))
+   .then(url=>{if(img.isConnected)img.src=url})
+   .catch(()=>{if(img.isConnected){img.remove();host.append(elt('span','Image unavailable · original video preserved'))}})
+   .finally(()=>{faceWorkers--;facePending.delete(img);pumpFaces()});
+ }
+}
+function queueVisibleFace(img,source,host){
+ const queue=()=>{if(facePending.has(img))return;facePending.add(img);faceQueue.push({img,source,host});pumpFaces()};
+ if(typeof IntersectionObserver==='undefined'){queue();return}
+ const observer=new IntersectionObserver(items=>{
+  if(items.some(x=>x.isIntersecting)){observer.disconnect();queue()}
+ },{rootMargin:'280px'});
+ observer.observe(img);
+}
 function mediaForFace(f){
  const host=elt('div','', 'media');
  const img=elt('img');img.loading='lazy';img.decoding='async';img.alt='Captured face for manual review';
  host.append(img);
- Promise.resolve().then(()=>relay().url('/new/saved/face/'+encodeURIComponent(f.face.snapshot_name)))
- .then(url=>{if(img.isConnected)img.src=url}).catch(()=>{img.remove();host.append(elt('span','Image unavailable'))});
+ const name=String(f?.face?.snapshot_name||'');
+ if(!faceName.test(name)){img.remove();host.append(elt('span','No saved face image'));return host}
+ queueVisibleFace(img,'/new/saved/face/'+encodeURIComponent(name),host);
  img.addEventListener('error',()=>{img.remove();host.append(elt('span','Image unavailable'))},{once:true});
  return host;
 }
@@ -259,7 +295,7 @@ function step3ClipEvidence(item){
 }
 function reviewItem(item,compact){
  const root=elt('article','',compact?'review-row':'evidence');
- const media=imageFor(item.full_crop,'Cropped evidence from original recording');
+ const media=sceneFor(item);
  const info=elt('div','',compact?'row-info':'body');
  badge(media, item.person_recheck_required?'RECHECK':item.decision==='approved'?'APPROVED':item.temporal_support?'PERSON CLUE':'WEAK EVIDENCE');
  const main=elt('strong',date(item));
@@ -426,7 +462,7 @@ function renderFolder(){
  ref.hidden=!(suggestions&&references.length);
  if(!ref.hidden)for(const item of references.slice(0,8)){
   const b=control('',()=>startVideo(item));
-  b.replaceChildren(imageFor(item.full_crop,'Reviewed reference'),elt('small',date(item)));
+  b.replaceChildren(sceneFor(item),elt('small',date(item)));
   list.append(b);
  }
 }
