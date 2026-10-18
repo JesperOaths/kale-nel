@@ -54,6 +54,36 @@ def state_summary(pinned_ref,state):
    result["previous_worker_state"]=status
  return result
 
+def timer_service_readback():
+ """Inspect unit scheduling and last exit without starting or modifying either unit.
+
+ Only a fixed allowlist of systemd properties is returned. Historical
+ journal events may be absent even when a timer is active; timestamps and
+ service exit status distinguish an idle timer from a failing service.
+ """
+ props={
+  "timer":("ActiveState","SubState","LastTriggerUSec","NextElapseUSecRealtime"),
+  "service":("ActiveState","SubState","Result","ExecMainStatus",
+             "ExecMainStartTimestamp","ExecMainExitTimestamp")
+ }
+ result={}
+ for unit,fields in props.items():
+  name="c720p-s9-face-v5-cool-window."+unit
+  try:
+   proc=subprocess.run(
+    ["systemctl","--user","show",name,"--no-pager",
+     "--property="+",".join(fields)],
+    capture_output=True,text=True,timeout=12)
+   if proc.returncode:continue
+   for line in proc.stdout.splitlines():
+    key,sep,value=line.partition("=")
+    if (sep and key in fields and len(value)<=90 and
+        all(ch.isprintable() for ch in value)):
+     result[unit+"_"+key]=value
+  except (OSError,subprocess.TimeoutExpired):
+   continue
+ return result
+
 def deployment_state():
  root=Path("/home/jespern/c720p-home-hub")
  config=root/"etc/s9-face-v5-cool-window-v1.json"
@@ -86,6 +116,7 @@ def deployment_state():
  proc=subprocess.run(["systemctl","--user","is-active","c720p-s9-face-v5-cool-window.timer"],
      capture_output=True,text=True,timeout=12)
  result["timer_enabled"]=proc.returncode==0 and proc.stdout.strip()=="active"
+ result.update(timer_service_readback())
  try:
   log=subprocess.run(["journalctl","--user","-u","c720p-s9-face-v5-cool-window.service",
        "-n","30","--no-pager","-o","cat"],capture_output=True,text=True,timeout=15)

@@ -56,6 +56,29 @@ class ReleaseProofTests(TestCase):
   self.assertEqual(m.state_summary("a"*40,{"ref":"a"*40,
                 "status":"hacked"} )["worker_state"],"unavailable")
 
+ def test_timer_readback_reports_scheduled_firing_and_service_failure_without_actions(self):
+  timer="ActiveState=active\nSubState=waiting\nLastTriggerUSec=Sun 2026-10-18 02:34:00 CEST\nNextElapseUSecRealtime=Sun 2026-10-18 02:40:00 CEST\n"
+  service="ActiveState=failed\nSubState=failed\nResult=exit-code\nExecMainStatus=1\nExecMainStartTimestamp=Sun 2026-10-18 02:34:00 CEST\nExecMainExitTimestamp=Sun 2026-10-18 02:34:01 CEST\n"
+  with mock.patch.object(m.subprocess,"run",side_effect=[
+    mock.Mock(returncode=0,stdout=timer),
+    mock.Mock(returncode=0,stdout=service)]) as proc:
+   data=m.timer_service_readback()
+  self.assertEqual(data["timer_SubState"],"waiting")
+  self.assertEqual(data["service_Result"],"exit-code")
+  self.assertEqual(data["service_ExecMainStatus"],"1")
+  self.assertTrue(data["timer_LastTriggerUSec"].startswith("Sun"))
+  self.assertEqual(proc.call_count,2)
+  for call in proc.call_args_list:
+   self.assertEqual(call.args[0][:3],["systemctl","--user","show"])
+   self.assertNotIn("start",call.args[0])
+ def test_failed_or_unavailable_systemd_metadata_is_not_claimed_as_success(self):
+  with mock.patch.object(m.subprocess,"run",side_effect=[
+    mock.Mock(returncode=1,stdout=""),
+    mock.Mock(returncode=0,stdout="Result=success\nExecMainStatus=0\nUnknown=unsafe\n")]):
+   data=m.timer_service_readback()
+  self.assertNotIn("timer_ActiveState",data)
+  self.assertEqual(data["service_Result"],"success")
+  self.assertNotIn("service_Unknown",data)
  def test_worker_state_distinguishes_old_revision_from_pinned_release(self):
   source=P.read_text()
   for name in ("worker_ref_matches_pin","worker_state_source_ref",
