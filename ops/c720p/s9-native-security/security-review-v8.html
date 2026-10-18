@@ -315,18 +315,18 @@ function drawAnalytics(){
   if(Number(rec.person_count)>0)previous.person++;
   days.set(t.date,previous);
  }
- $('akTotal').textContent=times.length.toLocaleString();
+ $('akTotal').textContent=subset.length.toLocaleString();
  $('akDays').textContent=days.size.toLocaleString();
  const hourly=Array.from({length:24},(_,h)=>matrix.reduce((sum,row)=>sum+row[h],0));
  const peak=Math.max(0,...hourly),top=hourly.indexOf(peak);
  $('akPeak').textContent=peak?String(top).padStart(2,'0')+':00':'—';
- const reviewed=times.filter(x=>Number(x.rec.sampled_frames)>0).length;
- $('akCoverage').textContent=times.length?Math.round(100*reviewed/times.length)+'%':'—';
+ const reviewed=subset.filter(x=>Number(x.sampled_frames)>0).length;
+ $('akCoverage').textContent=subset.length?Math.round(100*reviewed/subset.length)+'%':'—';
  renderDistribution($('sourceDistribution'),[
-  ['S9+ microSD',times.filter(x=>x.rec.source!=='drive').length],
-  ['Google Drive',times.filter(x=>x.rec.source==='drive').length]]);
+  ['S9+ microSD',subset.filter(x=>x.source!=='drive').length],
+  ['Google Drive',subset.filter(x=>x.source==='drive').length]]);
  const bounds=[['Under 10 sec',0],['10–19 sec',0],['20–59 sec',0],['1 min or more',0],['Not measured',0]];
- for(const {rec} of times){
+ for(const rec of subset){
   const ms=Number(rec.duration_ms)||Number(rec.duration_seconds)*1000||0;
   const idx=ms<=0?4:ms<10000?0:ms<20000?1:ms<60000?2:3;
   bounds[idx][1]++;
@@ -334,7 +334,7 @@ function drawAnalytics(){
  renderDistribution($('durationDistribution'),bounds);
  const processing=[['S9+ assessed',0],['Drive · on-phone reviewed',0],
  ['Drive · earlier sampled review',0],['Not yet assessed',0]];
- for(const {rec} of times){
+ for(const rec of subset){
   if(!(Number(rec.sampled_frames)>0))processing[3][1]++;
   else if(rec.source!=='drive')processing[0][1]++;
   else if(rec.review_stage==='v28')processing[1][1]++;
@@ -345,9 +345,10 @@ function drawAnalytics(){
  const short=bounds[0][1],unknown=bounds[4][1];
  $('analyticInsight').textContent=short+' recordings shorter than 10 seconds; '+unknown+
   ' lack measured duration. '+(missingDrive?'Drive index currently unavailable: charts may undercount historical activity.':
-  times.filter(x=>x.rec.source==='drive').length+' historical Drive recordings included in this selection.')+
+  subset.filter(x=>x.source==='drive').length+' historical Drive recordings included in this selection.')+
   (state.driveProcessing?.completed!==undefined?' S9+ on-phone historical rescans: '+
    state.driveProcessing.completed+' / '+state.driveProcessing.eligible+' indexed Drive records.':'')+
+  (subset.length>times.length?' '+(subset.length-times.length)+' recordings without valid timestamps are excluded from the time charts only.':'')+
   ' Open Recordings or Archive to inspect source video; person labels require human confirmation.';
  $('hourAxis').replaceChildren();$('heatDays').replaceChildren();$('heatCells').replaceChildren();
  for(let h=0;h<24;h+=3)$('hourAxis').append(text('span',String(h).padStart(2,'0')));
@@ -492,7 +493,7 @@ async function refresh(){
       const n=String(entry.remote_name||entry.name||'');
       if(!/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(n)||n.includes('..'))continue;
       const time=Date.parse(String(entry.timestamp||entry.date||''));
-      if(!Number.isFinite(time)||time<=0)continue;
+      const safeTimestamp=Number.isFinite(time)&&time>0?new Date(time).toISOString():'';
       const prior=historyByName.get(n);
       const result=prior?.v28_phone_review||null;
       const legacy=(!result&&Number(prior?.sampled_frames)>0)?prior:null;
@@ -500,7 +501,7 @@ async function refresh(){
       const frames=Number(reviewed?.sampled_frames)||0;
       const hits=Math.max(0,Number(reviewed?.person_detected_frames_050)||0);
       accepted.push({...entry,source:'drive',remote_name:n,
-       timestamp:new Date(time).toISOString(),
+       timestamp:safeTimestamp,
        sampled_frames:frames,person_detected_frames_050:hits,
        person_count:frames&&hits>0?1:0,
        review_stage:result?'v28':legacy?'legacy':'none',
