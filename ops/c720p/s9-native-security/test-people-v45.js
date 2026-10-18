@@ -61,7 +61,7 @@ let posts=[],linkPosts=[],fetches=[],holdAll=false,releaseHeldAll=null,linkRevis
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
-  if(p.startsWith('/new/api/visual-review/review')){
+  if(p.startsWith('/new/api/visual-review/review')||p==='/new/api/s9-evidence-cases'){
    const payload=JSON.parse(opts.body);
    if(opts.headers?.['X-S9-Manual-Link-Intent']){
     linkPosts.push({payload,opts});
@@ -75,7 +75,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    posts.push({payload,opts});
    return {ok:true,json:async()=>({ok:true,folder:payload.folder||'G123'})};
   }
-  if(p==='/new/api/visual-review?workflow=manual_recording_links_v1')
+  if(p==='/new/api/s9-evidence-cases?workflow=manual_recording_links_v1')
    return {ok:true,json:async()=>({ok:true,revision:linkRevision,items:linkItems,
      manual_links_only:true,automatic_identity_matching:false})};
   if(p==='/new/api/drive-saved')return {ok:true,json:async()=>({
