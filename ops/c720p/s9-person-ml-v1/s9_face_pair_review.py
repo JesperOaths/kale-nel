@@ -145,10 +145,11 @@ def mutate(body):
   updated={"version":1,"revision":doc["revision"]+1,
            "pairs":dict(doc["pairs"])}
   updated["pairs"][key]=result
+  if AUDIT.is_symlink():
+   return 503,{"ok":False,"error":"audit_path_untrusted"}
   try:
-   write_atomic(updated)
    AUDIT.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
-   if AUDIT.is_symlink():raise RuntimeError("audit_symlink")
+   write_atomic(updated)
    with AUDIT.open("a",encoding="utf-8") as f:
     f.write(json.dumps({"utc":now,"pair_id":key[:16],
        "revision":updated["revision"],"decision":body["decision"],
@@ -156,6 +157,10 @@ def mutate(body):
     f.flush();os.fsync(f.fileno())
    os.chmod(AUDIT,0o600)
   except OSError:
+   # If the append failed, restore the previous registry before reporting
+   # failure. An unlogged decision must not silently become an approval.
+   try:write_atomic(doc)
+   except OSError:raise RuntimeError("review_audit_recovery_required")
    return 503,{"ok":False,"error":"local_review_persistence_failed"}
   return 200,{"ok":True,"revision":updated["revision"],
               "pair_id":key[:16],"manual_visual_review_only":True,
