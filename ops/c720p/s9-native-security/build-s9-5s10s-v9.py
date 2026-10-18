@@ -109,7 +109,7 @@ def main():
   assert "BITRATE=24000000" in (src/"Encoded4KRing.java").read_text()
   assert "HISTORY_US=7000000L" in (src/"Encoded4KRing.java").read_text()
   assert "TARGET_US=5000000L" in (src/"Encoded4KRing.java").read_text()
-  assert "MIN_VALID_US=4400000L" in (src/"Encoded4KRing.java").read_text()
+  assert "MIN_VALID_US=5000000L" in (src/"Encoded4KRing.java").read_text()
   assert "MAX_RESUME_MS=10000" in (src/"CaptureContinuity.java").read_text()
   assert "diagnosticTailProof?12500:9000" in (src/"CameraService.java").read_text()
   assert "continuous_native_4k_h264_ring_v1" in (src/"CameraService.java").read_text()

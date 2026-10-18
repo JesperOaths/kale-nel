@@ -1,0 +1,33 @@
+name: C720P security runtime regressions
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/**'
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
+      - 'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py'
+      - '.github/workflows/c720p-security-runtime-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/**'
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
+      - 'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py'
+      - '.github/workflows/c720p-security-runtime-audit.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 ops/c720p/security-runtime/test-security-runtime.py
+          python3 ops/c720p/security-runtime/test-cdp-transport-v1.py
+          python3 ops/c720p/security-runtime/test-manifest-bounds-v1.py
+          python3 ops/c720p/s9-native-security/test-fast-recent-s9-clip-index.py
+          python3 ops/c720p/s9-native-security/test-evidence-quality-v1.py
+          python3 -m compileall -q ops/c720p/security-runtime
+          bash -n ops/c720p/security-runtime/c720p-security-value-retention.sh
+          bash -n ops/c720p/security-runtime/c720p-kiosk-zoomed.sh
+
