@@ -57,7 +57,7 @@ def main():
  new_gallery=template.read_text()
  if 'C720PSecureRelay' not in new_gallery or '/new/saved/face/' not in new_gallery or '/new/saved/clip/' not in new_gallery:
   raise RuntimeError('gallery_signed_relay_contract_missing')
- if "GEJAST_PAGE_VERSION='v817'" not in new_gallery or 'v817 - Made by Bruis' not in new_gallery:
+ if "GEJAST_PAGE_VERSION='v818'" not in new_gallery or 'v818 - Made by Bruis' not in new_gallery:
   raise RuntimeError('gallery_version_identity_missing')
  nav_patch=load_patch(patch_path)
  new_html=nav_patch(old_html)
