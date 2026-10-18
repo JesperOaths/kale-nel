@@ -131,5 +131,32 @@ class QualityTests(unittest.TestCase):
             q.REPORT = original
 
 
+class GapBenchmarkTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        path = Path(__file__).with_name('rescan-original4k-face-gaps-v1.py')
+        spec = importlib.util.spec_from_file_location('gaps', path)
+        cls.gaps = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.gaps)
+
+    def test_original_samples_cover_full_duration_and_stay_in_bounds(self):
+        for duration in [1000, 16000, 180000]:
+            values = self.gaps.sample_times(duration, 5)
+            self.assertEqual(len(set(values)), 5)
+            self.assertTrue(all(0 <= value < duration for value in values))
+            self.assertLess(values[0], duration/5)
+            self.assertGreater(values[-1], duration*.8)
+
+    def test_frame_budget_and_unknown_duration_are_rejected(self):
+        for duration, count in [(0, 5), (True, 5), (200000, 5), (16000, 100)]:
+            with self.assertRaises(ValueError):
+                self.gaps.sample_times(duration, count)
+
+    def test_overlapping_tiles_deduplicate_same_frame_geometry(self):
+        self.assertEqual(self.gaps.overlap([0, 0, 20, 20], [0, 0, 20, 20]), 1)
+        self.assertEqual(self.gaps.overlap([0, 0, 20, 20], [40, 40, 20, 20]), 0)
+        self.assertGreater(self.gaps.overlap([0, 0, 20, 20], [1, 1, 20, 20]), .8)
+
+
 if __name__ == '__main__':
     unittest.main()

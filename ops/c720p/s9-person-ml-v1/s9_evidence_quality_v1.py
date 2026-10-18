@@ -273,7 +273,18 @@ def install(handler_class, phone_rows):
                 record['best_supported_snapshots'] = [n for n in record['best_supported_snapshots'] if n in present]
                 output.append(record)
             report = dict(report, recordings=output, current_original_recordings=len(current),
-                          pending_new_recordings=len(set(current)-{r['clip_no'] for r in output}))
+                          pending_new_recordings=len(set(current)-{r['clip_no'] for r in output}),
+                          totals_describe_generated_snapshot=True)
+            report['currently_matching_image_references'] = sum(len(r['images']) for r in output)
+            report['source_changed_since_analysis'] = (
+                report['currently_matching_image_references'] != report['images_measured']
+                or len(current) != report['original_recordings'])
+            gap_path = STATE/'original-gap-benchmark.json'
+            if gap_path.is_file() and not gap_path.is_symlink() and gap_path.stat().st_size < 1000000:
+                gap = json.loads(gap_path.read_text())
+                if gap.get('detector_model_sha256') == MODEL_SHA:
+                    report['original_gap_benchmark'] = dict(gap, recordings=[
+                        row for row in gap.get('recordings', []) if row.get('clip_no') in current])
             handler.js(200, dict(report, ok=True))
         except (OSError, ValueError, TypeError, KeyError):
             handler.js(200, {'ok': True, 'analysis_version': VERSION, 'state': 'not_yet_available'})
