@@ -195,7 +195,7 @@ class LocalCoolWindow(unittest.TestCase):
                'OnCalendar=*:0/5','OnActiveSec=2min','OnUnitActiveSec=5min','Persistent=true',
                'NoNewPrivileges=yes','S9_V5_LOCAL_TIMER_VERIFIED',
                'run("systemctl","--user","restart",UNIT+".timer")',
-               'calendar_timer_not_rearmed_state_','NextElapseUSecMonotonic'):
+               'timer_rearm_failed_','TimersMonotonic','TimersCalendar','NextElapseUSecMonotonic'):
    self.assertIn(mark,src)
   self.assertNotIn('OnUnitInactiveSec=5min',src)
   self.assertNotIn('run("systemctl","--user","restart",UNIT+".service")',src)
