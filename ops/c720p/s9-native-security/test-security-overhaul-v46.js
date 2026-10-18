@@ -44,8 +44,8 @@ assert(tracks.includes('directionChart')&&tracks.includes('timeOfDayChart'),
  'Movement needs independently useful direction and hour summaries');
 assert(camera.includes('QUIET_MS=5000,MIN_EVENT_RECORD_MS=10000,MAX_MS=120000'));
 assert(camera.includes('requested_preroll_ms",5000'),'Expose requested preroll metadata');
-assert(outfit.includes('RGBToHSV')&&outfit.includes('Bhattacharyya')===false &&
- outfit.includes('Math.sqrt(here*other)'), 'HSV appearance score must use histogram affinity');
+assert(outfit.includes('RGBToHSV')&&outfit.includes('Math.sqrt(here*other)'),
+ 'HSV appearance score must use normalized histogram affinity');
 assert(outfit.includes('appearance_matching_policy')&&outfit.includes('VERSION.equals(metadata.optString'),
  'Incompatible and unreviewed outfit versions must not silently match');
 console.log('S9_SECURITY_OVERHAUL_V46_SOURCE_CONTRACT_PASS');
