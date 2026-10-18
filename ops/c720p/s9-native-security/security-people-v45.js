@@ -255,7 +255,7 @@ function selectPane(pane){
 }
 function openApproval(item){
  state.approvalItem=item;
- $('approvalPreview').replaceChildren(sceneFor(item));
+ $('approvalClip').textContent='Recording · '+date(item);
  const select=$('approvalFolder');select.replaceChildren();
  select.add(new Option('Create a new folder',''));
  for(const f of (state.doc?.folders||[]))if(isSaved(f)||f.id===state.folder)
@@ -265,6 +265,8 @@ function openApproval(item){
  $('newLabel').hidden=!!select.value;
  $('approvalConfirmed').checked=false;
  $('approvalDialog').showModal();
+ const main=$('approvalDialog').querySelector('.approval-main');
+ if(main&&typeof main.scrollTop==='number')main.scrollTop=0;
  if(typeof $('approvalFolder').focus==='function')$('approvalFolder').focus();
 }
 function dismiss(item){

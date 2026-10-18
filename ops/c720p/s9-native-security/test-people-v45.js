@@ -17,6 +17,18 @@ for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing render
 for(const label of ['Activity &amp; scan status','Review recordings','People','Face images','Needs your decision','Your people and groups'])
  assert(html.includes(label),label);
 assert(html.includes('id="approvalConfirmed"')&&js.includes('if(!$('+"'approvalConfirmed'"+').checked)'));
+const keepMarkup=html.split('<dialog id="approvalDialog"')[1]?.split('</dialog>')[0]||'';
+assert(keepMarkup.includes('id="approvalFolder"'),'Keep dialog must expose the folder picker');
+assert(keepMarkup.includes('id="approvalLabel"'),'Keep dialog must expose new folder input');
+assert(keepMarkup.includes('id="approvalConfirmed"'),'Keep dialog must expose consent');
+assert(keepMarkup.includes('id="approvalCancelFooter"'),'Keep dialog must expose cancel');
+assert(keepMarkup.includes('type="submit"'),'Keep dialog must have a save control');
+assert(keepMarkup.includes('id="approvalPlay"'),'Keep dialog retains the original video button');
+assert(!keepMarkup.includes('<img')&&!keepMarkup.includes('id="approvalPreview"')&&!keepMarkup.includes('class="media"'),
+ 'Keep dialog must contain NO image or media elements that can obscure controls');
+assert(html.includes('#approvalDialog{box-sizing:border-box;width:min(490px'),'Keep dialog width must be bounded');
+assert(!js.includes("$('approvalPreview').replaceChildren("),'Keep dialog must not inject preview images');
+
 class E{
  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.handlers={};this.attributes={};this.dataset={};this.style={};
  this.hidden=false;this.disabled=false;this.textContent='';this.value='';this.checked=false;this.src='';this.isConnected=true;this.open=false;this.lastChild=null;}
@@ -103,6 +115,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  let keep=scan(el('reviewPreview'),'✓ Keep');assert(keep,'Primary review action');
  keep.handlers.click();
  assert(el('approvalDialog').open,'Keep must open explicit confirmation');
+ assert.match(el('approvalClip').textContent,/Recording/,'Confirmation must identify its recording');
  el('approvalFolder').value='G123';
  await el('approvalForm').handlers.submit({preventDefault(){}});
  assert.equal(posts.length,0,'No manual approval without explicit original inspection confirmation');
