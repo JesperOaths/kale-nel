@@ -96,9 +96,17 @@ def check(release,scan,calibration,archive):
  # A self-consistency model probe is not a cross-person discrimination test.
  positives=calibration.get("positive_confirmed_pairs",0)
  negatives=calibration.get("negative_confirmed_pairs",0)
+ # Offline discrimination quality and authorization to activate biometric
+ # identity grouping are separate decisions. The qualification evaluator
+ # deliberately never authorizes rollout, even when its real held-out metrics
+ # pass; requiring that approval here would make offline validation
+ # *impossible* to complete by construction.
  calibrated=(positives>=40 and negatives>=500 and
     calibration.get("offline_thresholds_pass") is True and
-    calibration.get("qualified_for_automated_grouping") is True)
+    type(calibration.get("true_positive_95pct_lower")) in (float,int) and
+    calibration["true_positive_95pct_lower"]>=0.90 and
+    type(calibration.get("false_acceptance_95pct_upper")) in (float,int) and
+    calibration["false_acceptance_95pct_upper"]<=0.01)
  blockers=[]
  if not signed:blockers.append("signed_4k_install_or_scheduler_not_verified")
  if not complete:blockers.append("incomplete_original_4k_review_or_processing_errors")
@@ -118,6 +126,9 @@ def check(release,scan,calibration,archive):
   "manual_evidence_review_technically_ready":manual_review_ready,
   "automatic_identity_rollout_ready":False,
   "face_comparison_calibrated":bool(calibrated),
+  "pair_gate_authorized_automated_identity_grouping":
+      calibration.get("qualified_for_automated_grouping") is True,
+  "offline_validation_does_not_authorize_deployment":True,
   "camera_and_signed_upgrade_verified":bool(signed),
   "current_v5_archive_complete":bool(complete),
   "original_4k_clips":len(clips),
