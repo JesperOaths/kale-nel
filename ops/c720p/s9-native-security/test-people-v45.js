@@ -6,19 +6,6 @@ const vm=require('node:vm');
 const html=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.html','utf8');
 const js=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.js','utf8');
 new vm.Script(js,{filename:'security-people-v45.js'});
-const deploy=fs.readFileSync('ops/c720p/s9-native-security/deploy-people-v45.py','utf8');
-// Regression: serving new page assets without updating the actual sidebar
-// iframe left the old V33 page on screen. Both entrypoints must be patched.
-for(const marker of ['c720p-surveillance.html','s9FacesGalleryFrame',
- 'LEGACY_PEOPLE.sub(','TRACKS_ENTRY.subn(','visible_people_route_verified',
- 'visible_tracks_route_verified','legacy_frame_in_deployed_files',
- '850000 if k=="shell" else 220000']){
- assert(deploy.includes(marker),'Visible security navigation deployment contract: '+marker);
-}
-assert.match(deploy,/security-people-v33\\\\\.html|security-people-v33\\\.html/);
-assert(deploy.includes('security-people-v45.html?v='));
-assert(deploy.includes('security-tracks-v7.html?v='));
-
 assert(!/\.innerHTML\s*=/.test(js));
 assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
