@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'overview',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,faceFetchToken:0};
+ faceSummary:null,faceFetchToken:0,snapshotRequest:0,snapshotSelected:null};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -363,6 +363,30 @@ function renderFolder(){
   list.append(b);
  }
 }
+function inspectFaceSnapshot(f){
+ // Only indexed S9+ face crops may open; never infer that two crops share an identity.
+ if(!f||!clipName.test(String(f.clip||''))||
+    !faceName.test(String(f.face?.snapshot_name||'')))return;
+ const ticket=++state.snapshotRequest;
+ state.snapshotSelected=f;
+ const t=Number(String(f.clip).slice(7,20));
+ $('snapshotTitle').textContent='Face image · '+stampMs(t);
+ $('snapshotDescription').textContent='Saved from original 4K · '+(num(f.face.time_ms)/1000).toFixed(1)+
+  ' s into recording · manual inspection only · identity not established';
+ $('snapshotStatus').textContent='Loading saved crop securely…';
+ $('snapshotImage').removeAttribute('src');
+ $('snapshotPlay').disabled=false;
+ const dialog=$('snapshotViewer');if(!dialog.open)dialog.showModal();
+ Promise.resolve().then(()=>relay().url('/new/saved/face/'+encodeURIComponent(f.face.snapshot_name)))
+ .then(url=>{if(ticket===state.snapshotRequest&&dialog.open)$('snapshotImage').src=url})
+ .catch(()=>{if(ticket===state.snapshotRequest)$('snapshotStatus').textContent='Image unavailable. The original recording remains accessible.'});
+}
+function closeFaceSnapshot(){
+ ++state.snapshotRequest;
+ $('snapshotViewer').close();
+ $('snapshotImage').removeAttribute('src');
+ state.snapshotSelected=null;
+}
 function renderFaces(){
  const faceMode=$('faceMode').value;
  const list=state.faceList.filter(f=>{
@@ -381,6 +405,7 @@ function renderFaces(){
   box.append(elt('strong',stampMs(timestamp)),
     elt('p','Original 4K · inspection evidence; same-person identity not verified'));
   const tools=elt('div','','actions');
+  tools.append(control('Inspect image',()=>inspectFaceSnapshot(f),'secondary'));
   tools.append(control('▶ View clip',()=>playVideo('/new/saved/clip/'+encodeURIComponent(f.clip),
    'Original 4K recording · '+stampMs(timestamp),num(f.face.time_ms)/1000)));
   box.append(tools);card.append(media,box);host.append(card);
@@ -481,6 +506,26 @@ $('video').addEventListener('loadedmetadata',()=>{const v=$('video');
 });
 $('video').addEventListener('error',()=>{$('videoStatus').textContent='Playback error. Original recording has not been altered.'});
 $('closeCompare').addEventListener('click',()=>$('compareDialog').close());
+$('closeSnapshot').addEventListener('click',closeFaceSnapshot);
+$('snapshotViewer').addEventListener('close',()=>{
+ ++state.snapshotRequest;
+ $('snapshotImage').removeAttribute('src');
+ state.snapshotSelected=null;
+});
+$('snapshotImage').addEventListener('load',()=>{
+ if($('snapshotViewer').open)$('snapshotStatus').textContent='Original saved face crop · inspection only';
+});
+$('snapshotImage').addEventListener('error',()=>{
+ if($('snapshotViewer').open)$('snapshotStatus').textContent='Saved crop could not be displayed. Try the original video.';
+});
+$('snapshotPlay').addEventListener('click',()=>{
+ const f=state.snapshotSelected;
+ if(!f||!clipName.test(String(f.clip||'')))return;
+ closeFaceSnapshot();
+ const time=Number(String(f.clip).slice(7,20));
+ playVideo('/new/saved/clip/'+encodeURIComponent(f.clip),
+  'Original 4K recording · '+stampMs(time),num(f.face.time_ms)/1000);
+});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
 window.addEventListener('pagehide',stopVideo);
 selectPane('overview');loadView();fetchFaces();

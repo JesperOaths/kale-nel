@@ -21,6 +21,7 @@ class E{
  add(o){this.append(o)}
  addEventListener(name,handler){this.handlers[name]=handler}
  setAttribute(k,v){this.attributes[k]=String(v)}
+ removeAttribute(k){delete this.attributes[k];if(k==='src')this.src=''}
  getAttribute(k){return this.attributes[k]||null}
  querySelector(tag){const t=tag.toUpperCase();return this.children.find(e=>e.tagName===t)||null}
  showModal(){this.open=true}close(){this.open=false}
@@ -116,6 +117,21 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('faces').hidden,false);
  assert.equal(el('faceGrid').children.length,1);
+ const faceInspect=scan(el('faceGrid'),'Inspect image');
+ assert(faceInspect,'Face gallery must allow inspection of original saved image');
+ faceInspect.handlers.click();
+ assert.equal(el('snapshotViewer').open,true,'Full-size image dialog must open');
+ for(let i=0;i<4;i++)await flush();
+ assert(decodeURIComponent(el('snapshotImage').src).includes('/new/saved/face/'),
+   'Saved face image must load through the existing authenticated relay');
+ assert.match(el('snapshotDescription').textContent,/identity not established/);
+ el('snapshotPlay').handlers.click();
+ for(let i=0;i<4;i++)await flush();
+ assert.equal(el('snapshotViewer').open,false);
+ assert.equal(el('viewer').open,true);
+ assert(decodeURIComponent(el('video').src).includes('/new/saved/clip/'),
+   'Original MP4 must open from the face snapshot inspector');
+ el('viewer').close();
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
