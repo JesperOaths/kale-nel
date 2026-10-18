@@ -7,20 +7,21 @@ const html=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.htm
 const js=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.js','utf8');
 new vm.Script(js,{filename:'security-people-v45.js'});
 assert(js.includes('function sceneFor(item)'),'Review must show a full recording scene, not only a tight detection crop');
-assert(js.includes('function choosePortrait(f,face)'),'Manual folder portrait selection required');
+assert(js.includes('function automaticPortrait(f)'),'Automatic folder portrait required');
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
-assert(html.includes('Use as folder photo')||js.includes('Use as folder photo'),'Folder portrait control missing');
+assert(html.includes('automatically')&&js.includes('Change cover photo'),'Automatic covers with optional override required');
 assert(!/\.innerHTML\s*=/.test(js));
 assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
 for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing rendered control '+id);
 for(const label of ['Activity &amp; scan status','Review recordings','People','Face images','Needs your decision','Your people and groups'])
  assert(html.includes(label),label);
-assert(html.includes('id="approvalConfirmed"')&&js.includes('if(!$('+"'approvalConfirmed'"+').checked)'));
+assert(!html.includes('id="approvalConfirmed"'),'Remove redundant second confirmation checkbox');
+assert(js.includes('state.lastFolder=id||result.folder'),'Review queue must retain last selected person');
 const keepMarkup=html.split('<dialog id="approvalDialog"')[1]?.split('</dialog>')[0]||'';
 assert(keepMarkup.includes('id="approvalFolder"'),'Keep dialog must expose the folder picker');
 assert(keepMarkup.includes('id="approvalLabel"'),'Keep dialog must expose new folder input');
-assert(keepMarkup.includes('id="approvalConfirmed"'),'Keep dialog must expose consent');
+assert(keepMarkup.includes('Confirm &amp; keep'),'Positive submit button must clearly confirm reviewed decision');
 assert(keepMarkup.includes('id="approvalCancelFooter"'),'Keep dialog must expose cancel');
 assert(keepMarkup.includes('type="submit"'),'Keep dialog must have a save control');
 assert(keepMarkup.includes('id="approvalPlay"'),'Keep dialog retains the original video button');
@@ -44,13 +45,13 @@ class E{
  load(){}pause(){}remove(){}get duration(){return 20}set currentTime(x){this.seek=x}
 }
 const idMap=new Map();const el=id=>{if(!idMap.has(id))idMap.set(id,new E());return idMap.get(id)};
-const panes=['overview','review','people','faces'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
+const panes=['overview','review','people','faces','clothing'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
 const document={getElementById:el,createElement:t=>new E(t),querySelectorAll:q=>q==='[data-pane]'?panes:[],addEventListener(){}};
 const clip='motion_1792200000000.mp4';
 const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observation:'v1',signature:'b'.repeat(64),
  full_crop:{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg',time_ms:2500},video_path:'/new/saved/clip/'+clip,
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
-const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[],approvals_needing_person_recheck:3};
+const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg'}],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
 let posts=[],fetches=[],holdAll=false,releaseHeldAll=null;
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
@@ -108,7 +109,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('overview').hidden,false);
  assert.equal(el('savedPreview').children.length,1,'Provisional clothing group must not appear as confirmed person');
- assert.equal(el('appearancePreview').children.length,1,'Unreviewed group is optional separate list');
+ assert(!html.includes('id="appearancePreview"'),'Clothing group must not be in bottom of scan status');
+ assert(!html.includes('id="candidateList"'),'Clothing group must not be attached below saved people');
  assert.equal(el('reviewPreview').children.length,1);
  assert.equal(el('reviewAlerts').children.length,1,'The existing Jesper review issue must be highlighted as an action');
  assert(scan(el('reviewAlerts'),'Inspect originals →'),'Saved clips flagged for person recheck must be actionable');
@@ -118,26 +120,24 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.match(el('approvalClip').textContent,/Recording/,'Confirmation must identify its recording');
  el('approvalFolder').value='G123';
  await el('approvalForm').handlers.submit({preventDefault(){}});
- assert.equal(posts.length,0,'No manual approval without explicit original inspection confirmation');
- assert.match(el('message').textContent,/Confirm that you reviewed/);
- el('approvalConfirmed').checked=true;
- await el('approvalForm').handlers.submit({preventDefault(){}});
  for(let i=0;i<5;i++)await flush();
  assert.equal(posts.length,1);
+ assert.equal(el('overview').hidden,false,'Keep from overview must not redirect');
  assert.equal(posts[0].payload.action,'approve_clip');
  assert.equal(posts[0].payload.folder,'G123');
  assert.equal(posts[0].payload.human_confirmed,true);
  assert.equal(posts[0].opts.headers['X-S9-Visual-Review-Intent'],'manual-attributes-v36');
- // Starting a new folder must open its approved recordings, not a broken
- // folder-only inbox view.
+ // Creating a new folder also preserves the review context.
  keep=scan(el('reviewPreview'),'✓ Keep');
  keep.handlers.click();
  el('approvalFolder').value='';
  el('approvalLabel').value='New reviewed visitor';
- el('approvalConfirmed').checked=true;
  await el('approvalForm').handlers.submit({preventDefault(){}});
  for(let i=0;i<5;i++)await flush();
  assert.equal(posts[1].payload.action,'seed_folder');
+ assert.equal(el('overview').hidden,false,'New folder must not redirect from queue');
+ el('savedPreview').children[0].handlers.click();
+ for(let i=0;i<5;i++)await flush();
  assert.equal(el('folderView').hidden,false);
  assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
  const folderGrid=el('folderGrid');
@@ -145,7 +145,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('folderFaces').hidden,false,'Saved folder should display original face evidence when it exists');
  assert.equal(el('folderFaceGrid').children.length,2,'Show actual face images linked to reviewed recordings');
  const coverAction=el('folderFaceGrid').children[0].children[1];
- assert(coverAction&&coverAction.textContent==='Use as folder photo','Each approved face should allow manual portrait choice');
+ assert(coverAction&&coverAction.textContent==='✓ Cover photo','Folder automatically displays a representative face');
  const writesBeforePortrait=posts.length;
  coverAction.handlers.click();
  assert.equal(posts.length,writesBeforePortrait,'Choosing a folder photo must not alter approvals or videos');
@@ -213,13 +213,18 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
- assert.equal(el('savedList').children[0].children[0].children[0].className,'media','Saved folder must display selected face photograph');
+ assert.equal(el('savedList').children[0].children[0].children[0].className,'media','Saved folder should display face automatically from approved footage');
  // Navigate to a provisional group; explicit manual approval must remain
  // possible without claiming an automatic same-person identity.
- const group=el('candidateList').children[0];assert(group);
+ panes[4].handlers.click();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('clothing').hidden,false,'Clothing matches deserve their own tab');
+ assert.equal(el('people').hidden,true);
+ const group=el('clothingList').children[0];assert(group);
  group.handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('folderView').hidden,false);
+ assert.equal(panes[4].attributes['aria-selected'],'true','Clothing group keeps its navigation context');
  const provisionalKeep=scan(el('folderGrid'),'✓ Keep here');assert(provisionalKeep);
  provisionalKeep.handlers.click();
  assert(el('approvalFolder').children.some(x=>x.value==='P345'),
