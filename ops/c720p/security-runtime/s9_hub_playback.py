@@ -380,18 +380,18 @@ def install(handler_class, phone_rows):
             return original(handler)
         try:
             src = source(match.group(1), match.group(2), phone_rows)
-            if mode == "prepare":
-                handler.js(200, prepare(src))
-                return
-            ready = cached(src)
-            if ready:
-                return serve(handler, *ready)
-            handler.js(409, {"ok": False, "state": "preparing", "error": "playback_copy_not_ready"})
-        except (BrokenPipeError, ConnectionResetError):
-            handler.close_connection = True
-            return
+            result = prepare(src) if mode == "prepare" else None
+            ready = cached(src) if mode == "hub" else None
         except (OSError, ValueError, urllib.error.URLError):
             handler.js(503, {"ok": False, "state": "failed", "error": "smooth_playback_source_unavailable"})
+            return
+        # Response writes stay outside the source-error handler: a cancelled
+        # browser is not an upstream failure and must not get a second reply.
+        if mode == "prepare":
+            return handler.js(200, result)
+        if ready:
+            return serve(handler, *ready)
+        handler.js(409, {"ok": False, "state": "preparing", "error": "playback_copy_not_ready"})
     handler_class.go = go
     import s9_rgb_video_playback_v1
     s9_rgb_video_playback_v1.install(handler_class,phone_rows,__import__("sys").modules[__name__])

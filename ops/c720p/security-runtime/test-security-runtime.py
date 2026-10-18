@@ -82,6 +82,20 @@ class CancellationTests(unittest.TestCase):
             h.path = '/unrelated'
             self.assertEqual(h.handle(), 'previous')
 
+    def test_upstream_connection_reset_returns_503_instead_of_silently_closing(self):
+        p = self.playback()
+        class Handler:
+            path = '/new/saved/clip/motion_1792338420826.mp4?playback=prepare'
+            def handle(self): return self.go()
+            def go(self): return 'previous'
+            def js(self, code, value): self.response = (code, value)
+        with patch.dict(sys.modules, {'s9_rgb_video_playback_v1': SimpleNamespace(install=Mock()),
+                                     's9_visual_review_v36': SimpleNamespace(install=Mock())}), \
+             patch.object(p, 'source', side_effect=ConnectionResetError('upstream')):
+            p.install(Handler, lambda: {})
+            h = Handler();h.handle()
+            self.assertEqual(h.response[0], 503)
+
 
 class CoverageTests(unittest.TestCase):
     def test_current_api_contracts_and_manual_counts(self):
