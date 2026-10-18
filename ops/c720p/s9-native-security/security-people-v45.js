@@ -285,7 +285,7 @@ async function loadView(){
  // Latest request wins. View switches must not inherit the old tab's response.
  state.loading=true;const token=++state.serial;alertText('');
  const q=new URLSearchParams({workflow:'clip_folders_v40',tab:state.tab,
-  offset:String(state.offset),limit:String(state.limit)});
+  offset:String(state.offset),limit:String(Math.min(48,state.limit))});
  if(state.folder)q.set('folder',state.folder);
  if(state.tab==='suggestions'){
   q.set('distance',$('distance').value);q.set('weak',$('weak').value);q.set('route',$('route').value)
@@ -299,8 +299,8 @@ async function loadView(){
   state.doc=next;
   if(state.pane==='review'&&!state.assignedReady&&state.archiveEntries.length===0)
    refreshArchiveReviewSources(next.folders);
-  const pageTotal=state.tab==='all'&&state.archiveClips?
-   state.archiveClips.length:num(next.total);
+  const pageTotal=state.tab==='all'&&state.archiveEntries?
+   state.archiveEntries.length:num(next.total);
   if(state.offset>=pageTotal&&pageTotal>0&&state.pane!=='review'){
    state.offset=Math.max(0,Math.floor((pageTotal-1)/state.limit)*state.limit);
    state.loading=false;return loadView();
@@ -433,7 +433,10 @@ function restore(item){
 }
 function startVideo(item){
  const sec=num(item?.full_crop?.time_ms)/1000;
- playVideo(item.video_path,date(item),sec);
+ const path=item.video_path||(item.source==='drive'?
+  '/new/drive/saved/clip/'+encodeURIComponent(item.name):
+  '/new/saved/clip/'+encodeURIComponent(item.clip));
+ playVideo(path,date(item),sec);
 }
 async function playVideo(path,title,seconds){
  const ticket=++state.playSerial;
@@ -512,7 +515,7 @@ function reviewItem(item,compact){
  root.dataset.clip=String(item.clip||'');
  const media=sceneFor(item);
  const info=elt('div','',compact?'row-info':'body');
- badge(media,item.unindexed?'ARCHIVE':item.person_recheck_required?'RECHECK':item.decision==='approved'?'SAVED':item.temporal_support?'PERSON':'REVIEW');
+ badge(media,item.source==='drive'?'GOOGLE DRIVE':item.unindexed?'S9+ MICROSD':item.decision==='approved'?'SAVED':item.person_recheck_required?'RECHECK':'S9+');
  const main=elt('strong',date(item));
  info.append(main);
  if(!compact){const faceEvidence=reviewFacesForClip(item);if(faceEvidence)info.append(faceEvidence)}
@@ -789,7 +792,9 @@ function renderFolder(){
  // Only show images linked to manually approved recordings in this folder.
  // A linked recording can still contain a different person: never label a crop as an identified face.
  const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
- const clips=new Set((state.doc?.items||[]).filter(x=>x.decision==='approved').map(x=>String(x.clip||'')));
+ const clips=new Set((state.doc?.items||[]).filter(x=>x.decision==='approved'&&
+  (state.extraLinks?.items?.['sd:'+x.clip]?.folder===undefined||
+   state.extraLinks.items['sd:'+x.clip].folder===state.folder)).map(x=>String(x.clip||'')));
  const faceMatches=state.faceList.filter(x=>clips.has(x.clip)&&credibleFaceCrop(x)).slice(0,16);
  facePanel.hidden=state.tab!=='approved'||faceMatches.length===0;
  if(!facePanel.hidden)for(const face of faceMatches){
@@ -902,6 +907,11 @@ $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
 $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
+$('pageSize').addEventListener('change',()=>{
+ const value=Number($('pageSize').value);
+ if(value!==48&&value!==96)return;
+ state.limit=value;state.offset=0;loadView();
+});
 $('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('refresh').addEventListener('click',()=>{
