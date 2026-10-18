@@ -70,7 +70,7 @@ jobs:
           echo "SECURITY_V58_UI_JOB=$id"
           for i in $(seq 1 70); do
             status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
-            if [[ "$status" == done\\|* || "$status" == error\\|* || "$status" == failed\\|* ]]; then
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
               out="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 14000)"
               echo "$out"
               [[ "$status" == 'done|0' ]]
