@@ -57,8 +57,8 @@ class ReleaseProofTests(TestCase):
                 "status":"hacked"} )["worker_state"],"unavailable")
 
  def test_timer_readback_reports_scheduled_firing_and_service_failure_without_actions(self):
-  timer="ActiveState=active\\nSubState=waiting\\nLastTriggerUSec=Sun 2026-10-18 02:34:00 CEST\\nNextElapseUSecRealtime=Sun 2026-10-18 02:40:00 CEST\\n"
-  service="ActiveState=failed\\nSubState=failed\\nResult=exit-code\\nExecMainStatus=1\\nExecMainStartTimestamp=Sun 2026-10-18 02:34:00 CEST\\nExecMainExitTimestamp=Sun 2026-10-18 02:34:01 CEST\\n"
+  timer="ActiveState=active\nSubState=waiting\nLastTriggerUSec=Sun 2026-10-18 02:34:00 CEST\nNextElapseUSecRealtime=Sun 2026-10-18 02:40:00 CEST\n"
+  service="ActiveState=failed\nSubState=failed\nResult=exit-code\nExecMainStatus=1\nExecMainStartTimestamp=Sun 2026-10-18 02:34:00 CEST\nExecMainExitTimestamp=Sun 2026-10-18 02:34:01 CEST\n"
   with mock.patch.object(m.subprocess,"run",side_effect=[
     mock.Mock(returncode=0,stdout=timer),
     mock.Mock(returncode=0,stdout=service)]) as proc:
@@ -74,7 +74,7 @@ class ReleaseProofTests(TestCase):
  def test_failed_or_unavailable_systemd_metadata_is_not_claimed_as_success(self):
   with mock.patch.object(m.subprocess,"run",side_effect=[
     mock.Mock(returncode=1,stdout=""),
-    mock.Mock(returncode=0,stdout="Result=success\\nExecMainStatus=0\\nUnknown=unsafe\\n")]):
+    mock.Mock(returncode=0,stdout="Result=success\nExecMainStatus=0\nUnknown=unsafe\n")]):
    data=m.timer_service_readback()
   self.assertNotIn("timer_ActiveState",data)
   self.assertEqual(data["service_Result"],"success")
