@@ -64,7 +64,7 @@ dialog::backdrop{background:#000d}dialog video{width:100%;max-height:min(52dvh,4
 footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
 @media(max-width:720px){body{padding:12px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.visual{height:210px}}
 </style>
-<script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
+<!-- Unreliable derived smooth-copy playback retired; original range MP4 only. -->
 <style id="s9-face-player-scroll-v1">
 /* Let the evidence player occupy the iframe's visible viewport instead of
    relying on the scrolling background body. */
