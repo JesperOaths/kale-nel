@@ -19,7 +19,15 @@ select,.subtle-button{background:#182835;border:1px solid #314653;border-radius:
 .subtle-button{font-size:12px;color:#b9c9d3}
 .status{font-size:12px;color:var(--soft);margin:0 0 18px}
 .month{font-size:12px;font-weight:760;color:#8faab6;letter-spacing:.06em;text-transform:uppercase;margin:28px 3px 13px}
-.day{border:1px solid var(--edge);background:var(--panel);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.day{border:1px solid var(--edge);background:var(--panel);border-radius:14px;margin:0;overflow:hidden;min-width:0}
+#timeline,#driveTimeline{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,295px),1fr));gap:13px;align-items:start}
+#timeline>.month,#driveTimeline>.month{grid-column:1/-1;margin:19px 3px 0}
+.day[open]{grid-column:1/-1;border-color:#49867e}
+.day>summary{border-radius:13px}
+.day:not([open])>summary{min-height:105px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px 12px;align-content:center}
+.day:not([open])>summary .date{grid-column:1/-1;font-size:15px}
+.day:not([open])>summary .summary-end{font-size:12px}
+.day:not([open])>summary .arrow{justify-self:end}
 .day>summary{min-height:69px;display:flex;align-items:center;gap:18px;padding:15px 23px;list-style:none;cursor:pointer}
 .day>summary::-webkit-details-marker{display:none}
 .day>summary:hover{background:#1a2a37}
@@ -46,7 +54,7 @@ dialog::backdrop{background:#03070cd9}
 video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;border-radius:10px;object-fit:contain}
 #playerState{color:var(--soft);font-size:12px;padding-top:9px}
 @media(max-width:750px){main{padding:19px 14px 70px}.heading{margin-bottom:22px}.day>summary{min-height:61px;padding:12px 15px}.clips{padding:13px;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.meta{display:block}.meta span{display:block;margin-top:3px}}
-@media(max-width:400px){.clips{grid-template-columns:1fr}.heading{flex-wrap:wrap}}
+@media(max-width:400px){.clips{grid-template-columns:1fr}.heading{flex-wrap:wrap}#timeline,#driveTimeline{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.day>summary .arrow{transition:none}}
 
 /* One archive destination with direct authenticated catalogs, no nested pages. */

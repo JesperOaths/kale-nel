@@ -25,6 +25,8 @@ DEST={
  "legacy":ROOT/"security-people-v33.html",
  "shell":Path("/opt/homeassistant/config/www/c720p-surveillance.html"),
  "tracks":ROOT/"security-tracks-v7.html",
+ "review":ROOT/"security-review-v8.html",
+ "archive":ROOT/"security-archive-v7.html",
  "hub":ROOT/"security-hub-v30.js",
  "entry":ROOT/"security-hub-v30.html",
 }
@@ -32,6 +34,8 @@ ORIG={
  "html":"ops/c720p/s9-native-security/security-people-v45.html",
  "js":"ops/c720p/s9-native-security/security-people-v45.js",
  "tracks":"ops/c720p/s9-native-security/security-tracks-v7.html",
+ "review":"ops/c720p/s9-native-security/security-review-v8.html",
+ "archive":"ops/c720p/s9-native-security/security-archive-v7.html",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
 OLD="security-people-v45.html?v=s9pf-v49-folder-first-20261018&"
@@ -93,16 +97,18 @@ def main():
    for phrase in (b"clip_folders_v40",b"manual-attributes-v36",
                   b"human_confirmed:true",b"loadView()",b"fetchFaces()",b"inspectFaceSnapshot(f)",b"facesInRecording(clip)",b"step3ClipEvidence(item)"):
     if phrase not in b:raise RuntimeError("js_review_contract_missing")
-  else:
+  elif k=="tracks":
    for phrase in (b'data-summary-view="people"',b'data-summary-view="review"',b'data-summary-view="excluded"',b'data-view="excluded"',b"function selectView(view)"):
     if phrase not in b:raise RuntimeError("tracks_navigation_contract_missing")
+  elif k in ("review","archive") and b"<html" not in b:
+   raise RuntimeError("security_view_source_invalid_"+k)
   out[k]=b
 
  # Use fresh filenames to prevent Firefox or a cached iframe from reusing an
  # older HTML document even when Home Assistant has already updated the file.
  people_v50=out["html"].replace(
-  b"security-people-v45.js?v=v49-20261018-folder-first-r1",
-  b"security-people-v45.js?v=security-visible-route-v50-20261018")
+  b"security-people-v45.js?v=v51-20261018-image-framing",
+  b"security-people-v45.js?v=security-face-review-v51-20261018")
  if people_v50==out["html"]:raise RuntimeError("people_js_version_contract_missing")
  out["people50"]=people_v50
  out["tracks50"]=out["tracks"]
@@ -124,6 +130,10 @@ def main():
  if NEW not in hub:hub=update(hub,OLD,NEW,"hub_people")
  if "security-tracks-v50.html?v=security-visible-route-v50-20261018&" not in hub:
   hub=update(hub,"security-tracks-v7.html?","security-tracks-v50.html?v=security-visible-route-v50-20261018&","hub_tracks")
+ hub=re.sub(r"security-review-v8[.]html[?]mode=evidence(?:&v=[A-Za-z0-9._-]+)?&",
+            "security-review-v8.html?mode=evidence&v=security-analytics-v51-20261018&",hub)
+ hub=re.sub(r"security-archive-v7[.]html(?:[?]v=[A-Za-z0-9._-]+)?&",
+            "security-archive-v7.html?v=security-archive-grid-v51-20261018&",hub)
  out["hub"]=hub.encode("utf-8")
  entry=prior["entry"][0].decode("utf-8")
  if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
@@ -145,6 +155,10 @@ def main():
   r"(security-hub-v30[.](?:js|html))(?:[?]v=[A-Za-z0-9._-]+)?",
   lambda m:m.group(1)+"?v=security-visible-route-v50-20261018",
   shell)
+ updated=re.sub(r"security-review-v8[.]html[?]mode=evidence(?:&v=[A-Za-z0-9._-]+)?",
+            "security-review-v8.html?mode=evidence&v=security-analytics-v51-20261018",updated)
+ updated=re.sub(r"security-archive-v7[.]html(?:[?]v=[A-Za-z0-9._-]+)?",
+            "security-archive-v7.html?v=security-archive-grid-v51-20261018",updated)
  out["shell"]=updated.encode("utf-8")
  if OLD.encode() in out["hub"] or ENTRY_OLD.encode() in out["entry"]:
   raise RuntimeError("old_route_retained_in_staged_assets")
@@ -189,7 +203,7 @@ def main():
    "source_ref":args.ref,"clip_count":len(new_clips),
    "served_sha16":served,"rollback":str(folder),"original_videos_modified":False,
    "camera_modified":False,"existing_approvals_modified":False,
-   "clip_scoped_step3_review_enabled":True,"tracks_navigation_enabled":True,"legacy_route_redirected":True,"fresh_iframe_assets_installed":True,"automatic_identity_grouping_enabled":False}),flush=True)
+   "clip_scoped_step3_review_enabled":True,"tracks_navigation_enabled":True,"legacy_route_redirected":True,"fresh_iframe_assets_installed":True,"evidence_archive_ui_updated":True,"automatic_identity_grouping_enabled":False}),flush=True)
  except BaseException:
   for k in reversed(changed):
    path=DEST[k];b,owner=prior[k]
