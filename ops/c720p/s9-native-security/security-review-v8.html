@@ -18,6 +18,31 @@ h1{font-size:25px;letter-spacing:-.04em;margin:0}p{color:var(--muted);margin:5px
 .filters input,.filters select{border:1px solid var(--line);background:#172a39;border-radius:8px;padding:10px;min-height:39px}
 .filters input{min-width:180px;flex:1}
 .layout{display:grid;grid-template-columns:minmax(0,.85fr) minmax(370px,1.15fr);gap:18px;align-items:start}
+.evidence-summary{display:none}
+.evidence-mode .evidence-summary{display:block;margin:18px 0}
+.evidence-mode .statrow{display:none}
+.evidence-summary>h2{font-size:17px;margin:0 0 5px}
+.evidence-summary>p{font-size:12px;max-width:950px;line-height:1.5}
+.evidence-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-top:15px}
+.evidence-choice{text-align:left;padding:16px 18px;background:#162836;border:1px solid #345364;border-radius:12px;min-width:0}
+.evidence-choice:hover,.evidence-choice[aria-pressed=true]{border-color:#76d9c2;background:#1c3c40}
+.evidence-choice strong{display:block;font-size:27px;line-height:1.05}
+.evidence-choice span{display:block;font-size:13px;font-weight:700;margin-top:8px}
+.evidence-choice small{display:block;font-size:11px;color:#acc4ca;margin-top:4px;line-height:1.45}
+.evidence-mode .list{display:flex;flex-direction:column;gap:9px;max-height:none}
+.evidence-mode .clip{display:grid;grid-template-columns:160px minmax(0,1fr);min-height:108px;align-items:center}
+.evidence-mode .clip .pic{height:105px;width:160px}
+.evidence-mode .clip .clip-label{min-width:0}
+.evidence-mode .clip-label strong{font-size:14px}
+.evidence-mode .detail{top:6px}
+.evidence-mode #detail{scroll-margin-top:14px}
+.interpretation{margin:10px 0;padding:12px 14px;border-left:3px solid #7dd9c2;border-radius:7px;background:#192f3a;font-size:13px;line-height:1.5}
+.interpretation b{display:block;font-size:13px;margin-bottom:5px}
+.interpretation span{color:#c1d6df}
+.evidence-mode .metric b{font-size:18px}
+.evidence-mode .metric span{font-size:11px}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}.detail{position:static}.evidence-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.evidence-choices{grid-template-columns:1fr}.evidence-mode .clip{grid-template-columns:112px minmax(0,1fr)}.evidence-mode .clip .pic{width:112px;height:95px}}
 #list{max-height:min(75dvh,900px);overflow:auto;padding-right:5px;align-content:start}
 #list .clip{display:grid;grid-template-columns:135px minmax(0,1fr);min-height:106px}
 #list .pic{height:100%;min-height:106px}
@@ -31,7 +56,7 @@ body.evidence-mode .stat strong{font-size:28px}
 .clip{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0;overflow:hidden;text-align:left;min-width:0}
 .clip[aria-selected=true]{border:2px solid var(--accent);background:#1b3945}
 .pic{height:148px;display:block;position:relative;background:#253849}
-.pic img{width:100%;height:100%;object-fit:cover}
+.pic img{width:100%;height:100%;object-fit:contain;background:#0d1b25}
 .pic .none{position:absolute;inset:0;display:grid;place-items:center;color:#b4c5d1;font-size:12px}
 .clip-label{padding:11px}.clip-label strong{display:block;font-size:12px}.clip-label small{display:block;color:var(--muted);margin-top:5px}
 .chips{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}.chip{font-size:10px;border:1px solid #486879;background:#223c4e;padding:3px 6px;border-radius:6px}
@@ -53,6 +78,15 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 </head><body><main>
 <header><div><div class="eyebrow">S9+ · microSD · local only</div><h1 id="title">Recordings</h1><p id="intro"></p></div><button type="button" id="refresh">Refresh</button></header>
 <div id="sync" role="status">Connecting to the phone archive…</div>
+<section class="evidence-summary" aria-label="Evidence review shortcuts">
+ <h2>What do you need to inspect?</h2>
+ <p>These are observations from sampled frames, not verified identities. Select a group to inspect its original recordings. False positives remain visible under Other motion.</p>
+ <div class="evidence-choices" id="evidenceChoices">
+ <button class="evidence-choice" type="button" data-evidence-filter="people" aria-pressed="false"><strong id="ePeople">—</strong><span>Person candidates</span><small>Footage where person evidence was reported</small></button>
+ <button class="evidence-choice" type="button" data-evidence-filter="review" aria-pressed="false"><strong id="eUnreviewed">—</strong><span>Needs analysis</span><small>No sampled-frame assessment yet</small></button>
+ <button class="evidence-choice" type="button" data-evidence-filter="motion" aria-pressed="false"><strong id="eMotion">—</strong><span>Other motion</span><small>Unconfirmed movement or non-person events</small></button>
+ </div>
+</section>
 <section class="statrow" aria-label="Recording summary"><div class="stat"><strong id="nclips">—</strong><span id="cliplabel">Clips</span></div><div class="stat"><strong id="npeople">—</strong><span>Flagged people (unverified)</span></div><div class="stat"><strong id="nreview">—</strong><span>With sampled-frame review</span></div><div class="stat"><strong id="nfaces">—</strong><span>Saved frontal face crops</span></div></section>
 <div class="filters"><input id="search" type="search" maxlength="100" placeholder="Filter by time, filename, category" aria-label="Find recording"><select id="type" aria-label="Filter classifications"><option value="all">All categories</option><option value="people">Person candidates</option><option value="motion">Other motion</option><option value="review">Unreviewed</option></select><select id="order" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="score">Highest person score</option></select></div>
 <div id="results"></div><div class="layout"><section id="list" class="list" aria-label="Recordings"></section><aside id="detail" class="detail"><div class="empty">Choose a recording to inspect the original video and review evidence.</div></aside></div>
@@ -63,6 +97,15 @@ const $=id=>document.getElementById(id),mode=new URLSearchParams(location.search
 const native=/^motion_[0-9]{13}[.]mp4$/,legacy=/^rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}[.]mp4$/;
 const SAFE=/^(?:motion_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4[.]thumb[.]jpg$/;
 const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null};
+if(mode==='evidence')document.body.classList.add('evidence-mode');
+const evidenceButtons=document.querySelectorAll('[data-evidence-filter]');
+function syncEvidenceButtons(){
+ evidenceButtons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.evidenceFilter===$('type').value)));
+}
+evidenceButtons.forEach(b=>b.addEventListener('click',()=>{
+ $('type').value=b.dataset.evidenceFilter;
+ $('search').value='';state.selected=null;playbackStop();render();
+}));
 if(mode==='evidence')document.body.classList.add('evidence-mode');
 $('title').textContent=mode==='today'?"Today's recordings":"Evidence & analytics";
 $('intro').textContent=mode==='today'?'Clips recorded today, Amsterdam time. Historical clips remain in Archive.':'Browse recordings by evidence category; inspect the original video and measured detection results on the right.';
@@ -89,6 +132,17 @@ async function open(rec){
  document.querySelectorAll('.clip').forEach(n=>n.setAttribute('aria-selected',String(n.dataset.clip===state.selected)));
  playbackStop();const host=$('detail');host.replaceChildren();
  host.append(text('h2',fmt(rec)),text('div',name(rec),'filename'));
+ if(mode==='evidence'){
+  const support=Number(rec.person_detected_frames_050)||0;
+  const reviewed=Number(rec.sampled_frames)||0;
+  const people=Number(rec.person_count)||0;
+  const msg=reviewed<=0?'No sampled-frame analysis yet. This does not mean the recording is empty.':
+   people>0?'Possible person detected in '+support+' of '+reviewed+' sampled frames. Inspect the original recording to confirm.':
+   'No corroborated person in the available frame samples. Objects or people may still appear outside the samples.';
+  const explanation=text('div','','interpretation');
+  explanation.append(text('b','Evidence assessment'),text('span',msg));
+  host.append(explanation);
+ }
  const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.disablePictureInPicture=false;
  host.append(video);state.activeVideo=video;
  const quality=text('div','Loading media details…','');quality.id='quality';host.append(quality);
@@ -143,6 +197,13 @@ async function open(rec){
 }
 function render(){
  const query=$('search').value.toLowerCase().trim(),type=$('type').value,order=$('order').value;
+ if(mode==='evidence'){
+  const all=state.all;
+  $('ePeople').textContent=all.filter(x=>Number(x.person_count)>0).length;
+  $('eUnreviewed').textContent=all.filter(x=>!(Number(x.sampled_frames)>0)).length;
+  $('eMotion').textContent=all.filter(x=>Number(x.person_count)<=0&&x.scene_category!=='unreviewed').length;
+  syncEvidenceButtons();
+ }
  let result=state.all.filter(rec=>{
   if(mode==='today'&&day(stamp(rec))!==today())return false;
   const p=Number(rec.person_count||0),review=Number(rec.sampled_frames||0)>0;
@@ -158,7 +219,7 @@ function render(){
  $('npeople').textContent=p.length;
  $('nreview').textContent=result.filter(x=>Number(x.sampled_frames)>0).length;
  $('nfaces').textContent=result.reduce((n,x)=>n+Number(x.face_snapshots_saved||0),0);
- $('results').textContent=result.length+' recordings shown'+(mode==='today'?' · Today in Amsterdam, including all classifications':' · historical and current evidence');
+ $('results').textContent=result.length+' matching recordings'+(mode==='today'?' · Today in Amsterdam':' · select one to inspect the original and the measured evidence');
  const host=$('list');host.replaceChildren();
  if(!result.length){host.append(text('div',mode==='today'?'No indexed clips today yet. Camera status is independent of recording count.':'No matching recordings.','empty'));return;}
  for(const rec of result.slice(0,400)){
