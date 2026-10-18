@@ -33,6 +33,7 @@ assert(people.includes("upper_clothing")&&people.includes("lower_clothing"),
 assert(people.includes('u<.90||l<.88'),'Reject weak one-colour-only outfit matches');
 assert(!people.includes("groupRows($('clothingList'))"),'Retire unverified provisional-cluster gallery');
 assert(people.includes('Recheck person evidence'),'Human recheck action must be visible');
+assert(peopleHtml.includes('id="peopleRecheckNotice"')&&people.includes("$('peopleRecheckNow').addEventListener"),'Landing page must link directly to evidence needing recheck');
 assert(records.includes("'/new/api/drive-person-review'"),'Drive inference results must join archived footage');
 assert(records.includes('processingDistribution')&&records.includes('durationDistribution')&&records.includes('sourceDistribution'),
  'Evidence must show three distinct useful analytics');
