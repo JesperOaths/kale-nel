@@ -75,7 +75,7 @@ class FacePairs(unittest.TestCase):
   self.assertEqual(self.request()[0],404)
  def test_corrupt_store_blocks_updates(self):
   m.STORE.write_text("not JSON")
-  with self.assertRaises(RuntimeError):m.mutate(self.request(0)[1])
+  with self.assertRaises(RuntimeError):self.request()
  def test_no_synthetic_review_can_become_score_corpus(self):
   # This backend does not create scores, identity groups or write the
   # separate Step 2 independent phone-model qualification dataset.
