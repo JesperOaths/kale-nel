@@ -224,8 +224,9 @@ const colourLabels=new Set(['black','white','grey','gray','blue','red','green','
 function step3ClipEvidence(item){
  const clip=String(item?.clip||'');
  const record=clipName.test(clip)?state.clipEvidence.get(clip):null;
- const root=elt('div','','step3-evidence');
- root.append(elt('strong','Evidence from this recording'));
+ const root=elt('details','','step3-evidence');
+ const heading=elt('summary','Face and movement evidence · Expand details');
+ root.append(heading);
  const details=elt('div','','step3-evidence-lines');
  const faces=state.faceList.filter(f=>f.clip===clip).slice(0,8);
  const tracks=record&&Array.isArray(record.anonymous_tracks)?
