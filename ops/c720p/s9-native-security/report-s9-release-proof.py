@@ -63,7 +63,8 @@ def timer_service_readback():
  """
  props={
   "timer":("ActiveState","SubState","LastTriggerUSec","NextElapseUSecRealtime",
-     "NextElapseUSecMonotonic"),
+     "NextElapseUSecMonotonic","TimersCalendar","TimersMonotonic",
+     "FragmentPath","NeedDaemonReload","LoadState"),
   "service":("ActiveState","SubState","Result","ExecMainStatus",
              "ExecMainStartTimestamp","ExecMainExitTimestamp")
  }
@@ -78,11 +79,28 @@ def timer_service_readback():
    if proc.returncode:continue
    for line in proc.stdout.splitlines():
     key,sep,value=line.partition("=")
-    if (sep and key in fields and len(value)<=90 and
+    if (sep and key in fields and len(value)<=240 and
         all(ch.isprintable() for ch in value)):
      result[unit+"_"+key]=value
   except (OSError,subprocess.TimeoutExpired):
    continue
+ # Fixed, non-sensitive scheduling fields from the intended user unit.
+ unit=Path("/home/jespern/.config/systemd/user/c720p-s9-face-v5-cool-window.timer")
+ try:
+  if unit.is_file() and not unit.is_symlink() and unit.stat().st_size<=6000:
+   data=unit.read_text()
+   allowed={"OnCalendar","OnActiveSec","OnUnitActiveSec",
+            "OnBootSec","OnUnitInactiveSec","OnStartupSec"}
+   declared=[]
+   for line in data.splitlines():
+    key,sep,value=line.partition("=")
+    if sep and key in allowed and re.fullmatch(r"[A-Za-z0-9*:./-]{1,36}",value):
+     declared.append(key+"="+value)
+   result["timer_file_declared_triggers"]=declared[:8]
+  result["timer_fragment_is_user_file"]=(
+      result.get("timer_FragmentPath")==str(unit))
+ except (OSError,ValueError):
+  pass
  return result
 
 def deployment_state():
