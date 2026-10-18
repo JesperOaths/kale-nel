@@ -515,7 +515,7 @@ async function refresh(){
   state.all=accepted;
   const localCount=accepted.filter(x=>x.source==='sd').length,driveCount=accepted.length-localCount;
   $('sync').textContent=localCount+' S9+ recordings · '+driveCount+' Drive recordings'+
-   (state.driveStatus==='unavailable'?' · Drive unavailable':'')+' · original media preserved';
+   (state.driveStatus==='unavailable'?' · Drive unavailable':'')+' · original 4K retained on S9+';
   render();drawAnalytics();
  }catch(e){$('sync').textContent='Archive metadata unavailable · '+String(e.message||e)}
  finally{state.refreshing=false}
