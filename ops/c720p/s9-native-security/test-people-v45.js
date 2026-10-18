@@ -84,7 +84,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
   if(p==='/new/api/s9-manual-recording-links')
    return {ok:true,json:async()=>({ok:true,revision:linkRevision,items:linkItems,
      manual_links_only:true,automatic_identity_matching:false})};
-  if(p.startsWith('/new/api/appearance-search?'))return {ok:true,json:async()=>({ok:true,appearance_only:true,results:[{clip_name:otherClip,similarity:.97,zone:'front_garden'}]})};
+  if(p.startsWith('/new/api/appearance-search?'))return {ok:true,json:async()=>({ok:true,appearance_only:true,results:[{clip_name:clip,similarity:.97,zone:'front_garden'}]})};
   if(p==='/new/api/drive-saved')return {ok:true,json:async()=>({
     ok:true,archive_mode:'historical-google-drive',events:[
       {remote_name:driveClip,timestamp:'2026-05-12T08:30:00',snapshot_name:'history.jpg'}
