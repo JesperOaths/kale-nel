@@ -34,7 +34,8 @@ ORIG={
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
 PEOPLE_QUERY="s9pf-v51-active-hub-route-20261018"
 TRACKS_QUERY="s9-v51-active-tracks-20261018"
-ENTRY_OLD="security-hub-v30.js?v=people-faces-v50-visible-route-20261018"
+ENTRY_OLD="security-hub-v30.js?v=people-faces-v49-folder-first-20261018"
+ENTRY_MID="security-hub-v30.js?v=people-faces-v50-visible-route-20261018"
 ENTRY_NEW="security-hub-v30.js?v=people-faces-v51-active-hub-route-20261018"
 LEGACY_PEOPLE=re.compile(r"security-people-v33\.html(?:\?v=[A-Za-z0-9._-]+&)?")
 TRACKS_ENTRY=re.compile(r"const TRACKS=(['\"])/local/frontyard-security-new/security-tracks-v7\.html(?:\?[^'\"]*)?\1;")
@@ -135,6 +136,8 @@ def main():
   raise RuntimeError("legacy_people_frame_still_referenced")
  if ENTRY_OLD in entry:
   entry=update(entry,ENTRY_OLD,ENTRY_NEW,"entry")
+ elif ENTRY_MID in entry:
+  entry=update(entry,ENTRY_MID,ENTRY_NEW,"entry")
  elif ENTRY_NEW not in entry:
   raise RuntimeError("unknown_entry_script_version")
  out["hub"]=hub.encode("utf-8")
