@@ -10,6 +10,9 @@ from unittest.mock import patch
 SRC=Path(__file__).resolve().parent.parent/"s9-person-ml-v1/s9_manual_recording_links.py"
 spec=importlib.util.spec_from_file_location("s9_manual_links",SRC)
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+EXT_PATH=Path(__file__).resolve().parent.parent/"s9-person-ml-v1/s9_sd_proxy_extension.py"
+ext_spec=importlib.util.spec_from_file_location("s9_proxy_drive_alias",EXT_PATH)
+ext=importlib.util.module_from_spec(ext_spec);ext_spec.loader.exec_module(ext)
 SD="motion_1792200000000.mp4"
 DRIVE="drive_2026-05-12_08-30-00.mp4"
 class ManualLinkCases(unittest.TestCase):
@@ -61,6 +64,24 @@ class ManualLinkCases(unittest.TestCase):
   m.AUDIT.symlink_to(Path(self.tmp.name)/"trap")
   self.assertEqual(self.mutate()[0],503)
   self.assertFalse(m.STORE.exists())
+ def test_exact_drive_catalog_and_clip_paths_preserve_legacy_handler(self):
+  expected={
+   "/new/api/drive-saved":"/new/api/saved",
+   "/new/drive/saved/clip/drive_2026-05-12.mp4":
+     "/new/saved/clip/drive_2026-05-12.mp4",
+   "/new/drive/saved/snap/drive_2026-05-12.jpg":
+     "/new/saved/snap/drive_2026-05-12.jpg"}
+  for request,legacy in expected.items():
+   with self.subTest(request=request):
+    self.assertEqual(ext.historical_drive_origin_path(request,""),legacy)
+  for invalid in ("/new/api/drive-saved/extra",
+      "/new/drive/saved/clip/../secret.mp4",
+      "/new/drive/saved/clip/clip.jpg",
+      "/new/drive/saved/snap/image.mp4",
+      "/new/drive/saved/clip/unknown file.mp4",
+      "/new/drive/saved/clip/"+("a"*220)+".mp4"):
+   self.assertIsNone(ext.historical_drive_origin_path(invalid,""))
+  self.assertIsNone(ext.historical_drive_origin_path("/new/api/drive-saved","q=1"))
  def test_route_does_not_recognize_or_modify_people(self):
   src=SRC.read_text()
   for forbidden in ("cv2.imread","face_embedding","rclone delete",
