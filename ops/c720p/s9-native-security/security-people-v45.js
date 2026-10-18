@@ -293,8 +293,9 @@ function profileRow(f){
   if(img)avatar.append(img);else avatar.append(elt('span',String(f.label||'?')[0]||'?'));
  }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
  const info=elt('div');info.append(elt('strong',f.label),
-  elt('small',num(f.approved_clips)+' kept'+(num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' recheck':'')+' · human reviewed'));
- b.append(avatar,info,elt('span','›','arrow'));
+  elt('small',num(f.approved_clips)+' reviewed '+(num(f.approved_clips)===1?'recording':'recordings')+
+    (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')));
+ b.append(avatar,info,elt('span','Open recordings →','arrow'));
  return b;
 }
 function groupRows(host){
@@ -311,6 +312,10 @@ function renderMetrics(){
  const f=state.doc?.folders||[];
  const saved=f.filter(isSaved);
  $('queueCount').textContent=String(num(state.doc?.inbox_clips));
+ const queue=num(state.doc?.inbox_clips);
+ $('reviewTabCount').textContent=queue?' · '+queue:'';
+ $('peopleReviewNotice').hidden=queue===0;
+ $('peopleReviewSummary').textContent=queue+(queue===1?' recording needs':' recordings need')+' review';
  $('personCount').textContent=String(saved.length);
  $('approvalCount').textContent=String(saved.reduce((n,x)=>n+num(x.approved_clips),0));
  $('appearanceCount').textContent=String(tentativeFolders().length);
@@ -403,6 +408,17 @@ function renderFolder(){
  const host=$('folderGrid');host.replaceChildren();
  for(const item of state.doc?.items||[])host.append(reviewItem(item,false));
  if(!host.children.length)host.append(elt('p',suggestions?'No appearance suggestions with these filters.':'No recordings in this view.','empty'));
+ // Only show images linked to manually approved recordings in this folder.
+ // A linked recording can still contain a different person: never label a crop as an identified face.
+ const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
+ const clips=new Set((state.doc?.items||[]).filter(x=>x.decision==='approved').map(x=>String(x.clip||'')));
+ const faceMatches=state.faceList.filter(x=>clips.has(x.clip)).slice(0,16);
+ facePanel.hidden=state.tab!=='approved'||faceMatches.length===0;
+ if(!facePanel.hidden)for(const face of faceMatches){
+  const button=control('',()=>inspectFaceSnapshot(face),'folder-face');
+  button.replaceChildren(mediaForFace(face),elt('small',stampMs(Number(face.clip.slice(7,20)))+' · Inspect image'));
+  faceGrid.append(button);
+ }
  paginate($('folderPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
  const ref=$('references'),list=$('referenceList');list.replaceChildren();
  const references=state.doc?.reference_examples||[];
@@ -560,6 +576,7 @@ for(const b of document.querySelectorAll('[data-pane]'))b.addEventListener('clic
  const p=b.dataset.pane;if(p==='review')openReview('inbox');else openHome(p);
 });
 $('openReview').addEventListener('click',()=>openReview('inbox'));
+$('peopleReviewNow').addEventListener('click',()=>openReview('inbox'));
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('backFolders').addEventListener('click',()=>openHome('people'));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
