@@ -56,7 +56,8 @@ def run(path,apply,health=True):
        patch.object(mod,"inventory",return_value=(items,faces)),\
        patch.object(mod,"jpeg",return_value={"size":600,"digest16":"ab12","cors":"*"}),\
        patch.object(mod,"healthy",side_effect=None if health else RuntimeError("failure")) as h,\
-       patch.object(mod,"request",return_value=(b'{}',{})):
+       patch.object(mod,"request",return_value=(b'{}',{})),\
+       patch.object(mod.time,"sleep",return_value=None):
    if health:h.return_value={"original_recordings":1,"jpeg_samples":3}
    capture=io.StringIO()
    try:
