@@ -57,14 +57,14 @@ class ReleaseProofTests(TestCase):
                 "status":"hacked"} )["worker_state"],"unavailable")
 
  def test_timer_readback_reports_scheduled_firing_and_service_failure_without_actions(self):
-  timer="ActiveState=active\nSubState=waiting\nLastTriggerUSec=Sun 2026-10-18 02:34:00 CEST\nNextElapseUSecRealtime=Sun 2026-10-18 02:40:00 CEST\n"
+  timer="ActiveState=active\nSubState=waiting\nLastTriggerUSec=Sun 2026-10-18 02:34:00 CEST\nNextElapseUSecRealtime=Sun 2026-10-18 02:40:00 CEST\nNextElapseUSecMonotonic=2h 3min\n"
   service="ActiveState=failed\nSubState=failed\nResult=exit-code\nExecMainStatus=1\nExecMainStartTimestamp=Sun 2026-10-18 02:34:00 CEST\nExecMainExitTimestamp=Sun 2026-10-18 02:34:01 CEST\n"
   with mock.patch.object(m.subprocess,"run",side_effect=[
     mock.Mock(returncode=0,stdout=timer),
     mock.Mock(returncode=0,stdout=service)]) as proc:
    data=m.timer_service_readback()
   self.assertEqual(data["timer_SubState"],"waiting")
-  self.assertIn("NextElapseUSecMonotonic",P.read_text())
+  self.assertEqual(data["timer_NextElapseUSecMonotonic"],"2h 3min")
   self.assertEqual(data["service_Result"],"exit-code")
   self.assertEqual(data["service_ExecMainStatus"],"1")
   self.assertTrue(data["timer_LastTriggerUSec"].startswith("Sun"))
