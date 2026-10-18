@@ -8,6 +8,8 @@ const js=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.js','
 new vm.Script(js,{filename:'security-people-v45.js'});
 assert(js.includes('function sceneFor(item)'),'Review must show a full recording scene, not only a tight detection crop');
 assert(js.includes('function automaticPortrait(f)'),'Automatic folder portrait required');
+assert(js.includes('function scanApprovedFolders('),'Full folder assignment scan required');
+assert(js.includes("'/new/api/drive-saved'"),'Historical Drive catalog must be included');
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
 assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
 assert(!/\.innerHTML\s*=/.test(js));
@@ -48,26 +50,44 @@ const idMap=new Map();const el=id=>{if(!idMap.has(id))idMap.set(id,new E());retu
 const panes=['overview','review','people','clothing'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
 const document={getElementById:el,createElement:t=>new E(t),querySelectorAll:q=>q==='[data-pane]'?panes:[],addEventListener(){}};
 const clip='motion_1792200000000.mp4';
+const driveClip='historical_2026-05-12_08-30-00.mp4';
 const otherClip='motion_1792200500000.mp4';
 const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observation:'v1',signature:'b'.repeat(64),
  full_crop:{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg',time_ms:2500},video_path:'/new/saved/clip/'+clip,
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
 const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg'}],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
-let posts=[],fetches=[],holdAll=false,releaseHeldAll=null;
+let posts=[],linkPosts=[],fetches=[],holdAll=false,releaseHeldAll=null,linkRevision=0,linkItems={};
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
   if(p.startsWith('/new/api/visual-review/review')){
-   const payload=JSON.parse(opts.body);posts.push({payload,opts});
+   const payload=JSON.parse(opts.body);
+   if(opts.headers?.['X-S9-Manual-Link-Intent']){
+    linkPosts.push({payload,opts});
+    assert.equal(payload.revision,linkRevision);
+    linkItems[payload.source+':'+payload.name]={source:payload.source,
+      name:payload.name,folder:payload.action==='return_to_queue'?null:payload.folder};
+    linkRevision++;
+    return {ok:true,json:async()=>({ok:true,revision:linkRevision,
+      folder:linkItems[payload.source+':'+payload.name].folder})};
+   }
+   posts.push({payload,opts});
    return {ok:true,json:async()=>({ok:true,folder:payload.folder||'G123'})};
   }
+  if(p==='/new/api/visual-review?workflow=manual_recording_links_v1')
+   return {ok:true,json:async()=>({ok:true,revision:linkRevision,items:linkItems,
+     manual_links_only:true,automatic_identity_matching:false})};
+  if(p==='/new/api/drive-saved')return {ok:true,json:async()=>({
+    ok:true,archive_mode:'historical-google-drive',events:[
+      {remote_name:driveClip,timestamp:'2026-05-12T08:30:00',snapshot_name:'history.jpg'}
+    ]})};
   if(p.startsWith('/new/api/visual-review?')){
    const q=new URLSearchParams(p.split('?')[1]),tab=q.get('tab');
    if(tab==='all'&&holdAll)await new Promise(resolve=>{releaseHeldAll=resolve});
    return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],person_detection:
     {assessed_clips:80,total_clips:141,clips_with_supported_people:29,status:'in_progress'},
-    inbox_clips:27,total:tab==='inbox'?27:tab==='approved'?3:1,
+    inbox_clips:27,total:tab==='inbox'?27:tab==='approved'?1:1,
     items:tab==='approved'?[{...item,decision:'approved'}]:[item],
     reference_examples:tab==='suggestions'?[item]:[]})};
   }
