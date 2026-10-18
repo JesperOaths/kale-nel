@@ -64,19 +64,33 @@ def read(port,path):
   raw=response.read(5_000_001)
   if len(raw)>5_000_000:raise RuntimeError("oversized_catalog_response")
  return json.loads(raw)
+def matching_drive_catalogs(relay,upstream):
+ """Accept current retention size, reject stale or missing relay catalogs."""
+ return (isinstance(upstream,dict) and upstream.get("ok") is True
+   and isinstance(upstream.get("events"),list)
+   and len(upstream["events"])>0 and isinstance(relay,dict)
+   and relay.get("ok") is True
+   and isinstance(relay.get("events"),list)
+   and len(relay["events"])==len(upstream["events"]))
+
 def health():
  private=read(8794,"/new/api/s9-manual-recording-links")
  if not(private.get("ok") is True and private.get("manual_links_only") is True
         and private.get("automatic_identity_matching") is False):
   raise RuntimeError("signed_relay_route_missing")
  sd=read(8794,"/new/api/saved")
+ drive_upstream=read(8795,"/new/api/drive-saved")
  drive=read(8794,"/new/api/drive-saved")
+ # The historical archive is subject to retention/deletion; do not require
+ # a fictional floor of 100 clips. Verify the exact current upstream set
+ # is visible at the authenticated LAN relay instead.
  if (sd.get("archive_mode")!="S9-microSD-only" or
      not isinstance(sd.get("events"),list) or len(sd["events"])<70 or
-     not isinstance(drive.get("events"),list) or len(drive["events"])<100):
+     not matching_drive_catalogs(drive,drive_upstream)):
   raise RuntimeError("existing_archive_source_regressed")
  if service("is-active")!="active":raise RuntimeError("relay_not_active")
  return {"sd_originals":len(sd["events"]),"historical_drive_clips":len(drive["events"]),
+         "source_relative_drive_verified":True,
          "manual_link_revision":private["revision"],"readonly_recordings_preserved":True}
 def atomic(blob,owner):
  fd,tmp=tempfile.mkstemp(prefix=".s9-manual-links-relay-v2-",dir=RELAY.parent)
