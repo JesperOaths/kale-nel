@@ -14,6 +14,7 @@ assert(js.includes("'/new/api/s9-manual-recording-links'"),'Use isolated authent
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
 assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
 assert(!/\.innerHTML\s*=/.test(js));
+assert(!js.includes("groupRows($('clothingList'))"),'Legacy provisional groups cannot masquerade as scored outfit matches');
 assert(!/id="unassignedFolder"|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
 for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing rendered control '+id);
@@ -82,6 +83,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
   if(p==='/new/api/s9-manual-recording-links')
    return {ok:true,json:async()=>({ok:true,revision:linkRevision,items:linkItems,
      manual_links_only:true,automatic_identity_matching:false})};
+  if(p.startsWith('/new/api/appearance-search?'))return {ok:true,json:async()=>({ok:true,appearance_only:true,results:[{clip_name:otherClip,similarity:.97,zone:'front_garden'}]})};
   if(p==='/new/api/drive-saved')return {ok:true,json:async()=>({
     ok:true,archive_mode:'historical-google-drive',events:[
       {remote_name:driveClip,timestamp:'2026-05-12T08:30:00',snapshot_name:'history.jpg'}
@@ -96,7 +98,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     reference_examples:tab==='suggestions'?[item]:[]})};
   }
   if(p==='/new/api/saved')return {ok:true,json:async()=>({archive_mode:'S9-microSD-only',events:[
-   {clip_no:clip,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',
+   {clip_no:clip,person_count:1,frames_with_distinct_multiple_person_boxes:0,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',
     anonymous_tracks:[
      {id:'Person 1',upper_clothing_colour:'blue',image_movement_direction:'image_left'},
      {id:'Person 2',upper_clothing_colour:'red',image_movement_direction:'insufficient_samples'}],
@@ -105,7 +107,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     {snapshot_name:'motion_1792200000000__pending_2__8300_0.jpg',time_ms:8300,
     snapshot_size:50000,face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
     {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]},
-   {clip_no:otherClip,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]}]})};
+   {clip_no:otherClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]}]})};
   if(p.startsWith('/new/saved/face/'))return {ok:true,status:200};
   throw Error('Unexpected request '+p);
  }};
@@ -208,22 +210,20 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('savedList').children.length,1);
  assert.equal(el('savedList').children[0].children[0].children[0].tagName,'SPAN',
   'Only a real, qualified face can replace the folder initials');
- // Navigate to a provisional group; explicit manual approval must remain
- // possible without claiming an automatic same-person identity.
+ // The outfit page must use separately scored upper/lower clothing matches
+ // against a previously human-approved, single-person reference clip.
  panes[3].handlers.click();
- for(let i=0;i<5;i++)await flush();
- assert.equal(el('clothing').hidden,false,'Clothing matches deserve their own tab');
+ for(let i=0;i<15;i++)await flush();
+ assert.equal(el('clothing').hidden,false);
  assert.equal(el('people').hidden,true);
- const group=el('clothingList').children[0];assert(group);
- group.handlers.click();
- for(let i=0;i<5;i++)await flush();
- assert.equal(el('folderView').hidden,false);
- assert.equal(panes[3].attributes['aria-selected'],'true','Clothing group keeps its navigation context');
- const provisionalKeep=scan(el('folderGrid'),'✓ Keep here');assert(provisionalKeep);
- provisionalKeep.handlers.click();
- assert(el('approvalFolder').children.some(x=>x.value==='P345'),
-  'Selected provisional appearance group should be an available manual destination');
- el('approvalDialog').close();
+ assert.equal(panes[3].attributes['aria-selected'],'true');
+ assert(fetches.some(p=>p.includes('/new/api/appearance-search?')&&p.includes('upper_clothing')),
+  'Must use indexed upper clothing, not guessed group IDs');
+ assert(fetches.some(p=>p.includes('/new/api/appearance-search?')&&p.includes('lower_clothing')),
+  'Must corroborate with indexed lower clothing');
+ assert(scan(el('clothingList'),'▶ Review original'),
+  'Suggestions must return to source evidence for confirmation');
+ assert.match(el('clothingTotal').textContent,/human review/);
  // Simulate a slow previous tab request arriving after a newer navigation.
  panes[1].handlers.click();
  for(let i=0;i<5;i++)await flush();
