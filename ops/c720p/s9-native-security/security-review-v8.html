@@ -452,7 +452,7 @@ function render(){
   if(rec.person_score!==null&&rec.person_score!==undefined&&Number.isFinite(Number(rec.person_score)))cs.append(text('span','Peak '+(Number(rec.person_score)*100).toFixed(0)+'%','chip'));
   labels.append(cs);card.append(labels);card.onclick=()=>open(rec);host.append(card);
  }
- if(state.selected&&!result.some(x=>name(x)===state.selected))playbackStop();
+ if(state.selected&&!result.some(x=>entryKey(x)===state.selected))playbackStop();
 }
 async function refresh(){
  if(state.refreshing)return;state.refreshing=true;$('sync').textContent='Refreshing S9+ and Drive archives…';
