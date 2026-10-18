@@ -5,7 +5,7 @@
 const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
- busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,
+ busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
  faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
@@ -82,7 +82,7 @@ function queueVisibleFace(img,source,host){
  const observer=new IntersectionObserver(items=>{
   if(items.some(x=>x.isIntersecting)){observer.disconnect();queue()}
  },{rootMargin:'280px'});
- observer.observe(img);
+ observer.observe(host);
 }
 function mediaForFace(f){
  const host=elt('div','', 'media');
@@ -140,7 +140,7 @@ async function fetchFaces(){
    const candidates=Array.isArray(rec.face_candidates)?rec.face_candidates:[];
    candidateRecords+=candidates.length;
    for(const face of candidates.slice(0,48)){
-    if(!face||!faceName.test(String(face.snapshot_name||'')))continue;
+    if(!face||!faceName.test(String(face.snapshot_name||''))||face.snapshot_on_s9===false)continue;
     if(!String(face.snapshot_name).startsWith(rec.clip_no.slice(0,-4)+'__'))continue;
     found.push({clip:rec.clip_no,face,recording:rec});
    }
@@ -321,17 +321,43 @@ function reviewItem(item,compact){
  else root.append(media,info);
  return root;
 }
+function portraitKey(id){return 's9security.folderPortrait.v1.'+String(id).slice(0,100)}
+function chosenPortrait(f){
+ const id=String(f?.id||'');
+ if(!id)return null;
+ let saved=state.folderPortraits.get(id);
+ if(!saved&&typeof localStorage!=='undefined'){
+  try{saved=JSON.parse(localStorage.getItem(portraitKey(id))||'null')}catch(_){}
+ }
+ if(!saved||!faceName.test(String(saved.name||''))||!clipName.test(String(saved.clip||'')))return null;
+ return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name)||null;
+}
+function choosePortrait(f,face){
+ // The user, not the model, picks this folder's cover from an approved clip.
+ const id=String(f.id||''),name=String(face?.face?.snapshot_name||'');
+ if(!id||!faceName.test(name)||!state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
+  alertText('Choose a face image from an approved recording in this folder.');return;
+ }
+ const data={name,clip:face.clip};state.folderPortraits.set(id,data);
+ if(typeof localStorage!=='undefined'){
+  try{localStorage.setItem(portraitKey(id),JSON.stringify(data))}
+  catch(_){notification('Folder photo selected for this session; browser storage is unavailable.')}
+ }
+ notification('Folder photo selected on this browser. Your review approvals were not changed.');
+ renderFolder();
+}
 function profileRow(f){
  const b=control('',()=>openFolder(f.id),'profile');b.replaceChildren();
  const avatar=elt('div','', 'avatar');
- if(Array.isArray(f.previews)&&f.previews.length){
-  const im=imageFor(f.previews[0],'Saved folder preview');
-  const img=im.querySelector('img');
-  if(img)avatar.append(img);else avatar.append(elt('span',String(f.label||'?')[0]||'?'));
+ const face=chosenPortrait(f);
+ if(face){
+  const media=mediaForFace(face),img=media.querySelector('img');
+  if(img)avatar.append(img);else avatar.append(elt('span','Portrait unavailable'));
  }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
  const info=elt('div');info.append(elt('strong',f.label),
   elt('small',num(f.approved_clips)+' reviewed '+(num(f.approved_clips)===1?'recording':'recordings')+
-    (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')));
+    (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')),
+  elt('small',face?'Manually selected folder photo':'Open folder to choose face photo'));
  b.append(avatar,info,elt('span','Open recordings →','arrow'));
  return b;
 }
@@ -340,8 +366,12 @@ function groupRows(host){
  const groups=tentativeFolders();
  if(!groups.length){host.append(elt('p','No provisional groups available.','status'));return}
  for(const f of groups){
-  const b=control('',()=>openFolder(f.id,'suggestions'));
-  b.replaceChildren(elt('span',f.label),elt('small',num(f.suggested_clips)+' to review · not an identity'));
+  const b=control('',()=>openFolder(f.id,'suggestions'),'candidate-folder');
+  b.replaceChildren(
+   Array.isArray(f.previews)&&f.previews.length?imageFor(f.previews[0],'Appearance evidence; no identity confirmed'):
+    elt('span','No preview available','candidate-empty'),
+   elt('strong',f.label),
+   elt('small',num(f.suggested_clips)+' unverified suggestions · Open to review'));
   host.append(b);
  }
 }
@@ -452,9 +482,13 @@ function renderFolder(){
  const faceMatches=state.faceList.filter(x=>clips.has(x.clip)).slice(0,16);
  facePanel.hidden=state.tab!=='approved'||faceMatches.length===0;
  if(!facePanel.hidden)for(const face of faceMatches){
+  const cell=elt('div','','folder-photo-choice');
   const button=control('',()=>inspectFaceSnapshot(face),'folder-face');
-  button.replaceChildren(mediaForFace(face),elt('small',stampMs(Number(face.clip.slice(7,20)))+' · Inspect image'));
-  faceGrid.append(button);
+  button.replaceChildren(mediaForFace(face),elt('small',stampMs(Number(face.clip.slice(7,20)))+' · View'));
+  const selected=chosenPortrait(f)?.face.snapshot_name===face.face.snapshot_name;
+  const set=control(selected?'✓ Folder photo':'Use as folder photo',()=>choosePortrait(f,face),'secondary');
+  set.setAttribute('aria-pressed',String(selected));
+  cell.append(button,set);faceGrid.append(cell);
  }
  paginate($('folderPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
  const ref=$('references'),list=$('referenceList');list.replaceChildren();
