@@ -70,7 +70,7 @@ jobs:
           uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
           dest="/tmp/c720p-security-step4-v59-${GITHUB_SHA:0:12}.py"
           cmd="curl -fSsL --max-time 35 '$uri' -o '$dest' && printf '%s  %s\\n' '$sha' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest' --dry-run && /usr/bin/python3 '$dest'"
-          idem="security-step4-v59-ui-once-${TARGET_SHA:0:18}"
+          idem="security-step4-v59-ui-once-${GITHUB_SHA:0:18}"
           id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(
             'github-actions-security-v59-ui','deployment',:'cmd',290,:'idem');
