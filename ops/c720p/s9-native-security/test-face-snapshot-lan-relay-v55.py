@@ -19,7 +19,7 @@ spec.loader.exec_module(mod)
 content=DEPLOY.read_text()
 py_compile.compile(str(DEPLOY),doraise=True)
 assert mod.ANCHOR.count("saved/(clip|snap)")==1
-assert mod.NEW.count("saved/face/")==1
+assert mod.NEW.count("saved/face/")==2  # validated matcher and forwarded upstream path
 assert "m.group(2)" in mod.NEW
 assert "self.archive(" in mod.NEW
 assert "if not self.authorized(): return self.empty(401)" in content
