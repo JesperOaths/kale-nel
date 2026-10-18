@@ -29,6 +29,7 @@ SAFE_ID=re.compile(r"[a-f0-9]{64}\Z")
 MAX_BYTES=650*1024*1024
 RECHECK_VERSION="v28_s9_gpu_historical_person_review_v1"
 DIRECT_IMPORT_MAX_BYTES=96*1024*1024
+DRIVE_THUMB_CACHE=Path("/tmp/c720p-drive-archive-thumbs-new")
 DIRECT_IMPORT_OPT_IN=os.environ.get("S9_DIRECT_H264_IMPORT")=="1"
 APP_STATUS="http://127.0.0.1:18808/status"
 
@@ -351,6 +352,47 @@ def validate_result(result,verified,descriptor=None):
   "drive_read_only":True,"source_preserved_in_drive":True,"attempts":1,
  }
 
+def reuse_native_drive_thumbnail(key,source):
+ """Use already generated S9 JPEG for a verified NEW Drive clip, never its video."""
+ if not SAFE_ID.fullmatch(key) or source.get("camera")!="new":return False
+ try:
+  m=cpu_catalog()
+  catalog=json.loads(m.SOURCE.read_text())
+  matching=[r for r in catalog.get("items",[]) if isinstance(r,dict)
+    and r.get("state")=="verified" and r.get("camera")=="new"
+    and r.get("remote_name")==source.get("remote_name")]
+  if len(matching)!=1:return False
+  name=matching[0].get("snapshot_name")
+  if not isinstance(name,str) or ".." in name or not re.fullmatch(r"[A-Za-z0-9._-]{1,180}[.]jpe?g",name,re.I):
+   return False
+  cache=DRIVE_THUMB_CACHE
+  cache.mkdir(parents=True,exist_ok=True)
+  target=cache/name
+  if target.is_symlink():return False
+  if target.is_file() and 2500<target.stat().st_size<8000000:
+   with target.open("rb") as stream:
+    if stream.read(3)==b"\xff\xd8\xff":
+     stream.seek(-2,os.SEEK_END)
+     if stream.read(2)==b"\xff\xd9":return False
+  filename=INBOX+"/history_"+key+".mp4.thumb.jpg"
+  length=int(phone("stat","-c","%s",filename,timeout=12).strip())
+  if not 2500<length<2200000:return False
+  result=subprocess.run(["adb","-s",PHONE,"exec-out","cat",filename],
+      stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=22)
+  jpeg=result.stdout
+  if result.returncode or len(jpeg)!=length or jpeg[:3]!=b"\xff\xd8\xff" or jpeg[-2:]!=b"\xff\xd9":
+   return False
+  fd,temp=tempfile.mkstemp(prefix=".s9-review-thumb-",dir=cache)
+  try:
+   with os.fdopen(fd,"wb") as stream:
+    stream.write(jpeg);stream.flush();os.fsync(stream.fileno())
+   os.chmod(temp,0o600);os.replace(temp,target)
+  finally:
+   if os.path.exists(temp):os.unlink(temp)
+  return True
+ except (OSError,ValueError,TypeError,RuntimeError,subprocess.TimeoutExpired):
+  return False
+
 def clean_import_copy(key,rescan_v28=False):
  """Only remove the disposable staging copy after trusted catalog reconciliation."""
  if not SAFE_ID.fullmatch(key):raise ValueError("invalid_cleanup_key")
@@ -419,6 +461,9 @@ def collect():
         "classification":entry["category"],"backend":entry["review_backend"],
         "progress":cat["summary"]["processed"],"source_preserved":True}))
   # Clean imported TEMPORARY phone copy only after the catalog lock was released.
+  # Avoid the hub's second video decode: reuse native reviewer thumbnail first.
+  print("S9_HISTORY_NATIVE_THUMBNAIL_REUSED",
+        reuse_native_drive_thumbnail(entry["clip_id"],verified[entry["clip_id"]]))
   clean_import_copy(entry["clip_id"],rescan_v28=ready.get("review_request_version")==RECHECK_VERSION)
  print("S9_HISTORY_COLLECT_COMPLETE",accepted)
 

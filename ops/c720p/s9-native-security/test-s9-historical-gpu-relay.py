@@ -7,6 +7,7 @@ import tempfile
 import time
 import json
 from unittest.mock import patch
+from types import SimpleNamespace
 from pathlib import Path
 import unittest
 
@@ -129,6 +130,37 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    bad=dict(descriptor);bad[key]=invalid
    with self.subTest(key=key),self.assertRaisesRegex(ValueError,"native_direct_import_must_match_exact_drive_original"):
     m.validate_result(self.result,self.verified,bad)
+
+ def test_phone_generated_historical_jpeg_reused_without_drive_decode(self):
+  with tempfile.TemporaryDirectory() as root:
+   local=Path(root);source=local/'verified.json'
+   snapshot="NEW_20260916165945_person-1.00_20260916-165945-0189.jpg"
+   source.write_text(json.dumps({"items":[{"state":"verified","camera":"new",
+     "remote_name":self.name,"snapshot_name":snapshot}]}))
+   jpeg=b"\xff\xd8\xff"+b"x"*4995+b"\xff\xd9"
+   with patch.object(m,"DRIVE_THUMB_CACHE",local/'cache'),\
+        patch.object(m,"cpu_catalog",return_value=SimpleNamespace(SOURCE=source)),\
+        patch.object(m,"phone",return_value=str(len(jpeg))),\
+        patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0,stdout=jpeg,stderr=b"")) as adb:
+    self.assertTrue(m.reuse_native_drive_thumbnail(self.id,self.verified[self.id]))
+    self.assertEqual((local/'cache'/snapshot).read_bytes(),jpeg)
+    self.assertFalse(m.reuse_native_drive_thumbnail(self.id,self.verified[self.id]))
+    self.assertEqual(adb.call_count,1)
+   self.assertTrue(source.is_file())
+
+ def test_broken_native_historical_jpeg_does_not_poison_cache(self):
+  with tempfile.TemporaryDirectory() as root:
+   local=Path(root);source=local/'verified.json'
+   snapshot="NEW_20260916165945_person-1.00_20260916-165945-0189.jpg"
+   source.write_text(json.dumps({"items":[{"state":"verified","camera":"new",
+     "remote_name":self.name,"snapshot_name":snapshot}]}))
+   bad=b"\xff\xd8\xff"+b"x"*4997
+   with patch.object(m,"DRIVE_THUMB_CACHE",local/'cache'),\
+        patch.object(m,"cpu_catalog",return_value=SimpleNamespace(SOURCE=source)),\
+        patch.object(m,"phone",return_value=str(len(bad))),\
+        patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0,stdout=bad,stderr=b"")):
+    self.assertFalse(m.reuse_native_drive_thumbnail(self.id,self.verified[self.id]))
+    self.assertFalse((local/'cache'/snapshot).exists())
 
  def test_android_worker_keeps_native_4k_archive_separate(self):
   text=(HERE/"src/nl/kalenel/s9security/HistoricalImportWorker.java").read_text()
