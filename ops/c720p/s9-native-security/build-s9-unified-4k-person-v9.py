@@ -18,7 +18,7 @@ JAVAS=("AnonymousClipTracks","Boot","CameraActivity","CameraControls",
  "CameraOrientation","CameraService","CaptureContinuity","ClipClassifier",
  "EventFrameRanker","GardenArchiveTriage","GardenPersonTrackGate",
  "GardenPreRoll","Continuous4KEncoder","Encoded4KRing","HistoricalImportWorker","MotionGrid","OutfitEvidence",
- "PhoneMediaRange","PreviewJpeg","RecordingRate","S9FaceReview")
+ "PhoneMediaRange","PhoneArchiveCatalog","PreviewJpeg","RecordingRate","S9FaceReview")
 def run(a,sec=200):
  p=subprocess.run(a,text=True,capture_output=True,timeout=sec)
  if p.returncode:raise RuntimeError("command_error "+str(a[:4])+":"+p.stderr[-2200:])
@@ -113,7 +113,7 @@ def main():
   assert "BITRATE=24000000" in (src/"Encoded4KRing.java").read_text()
   assert "HISTORY_US=7000000L" in (src/"Encoded4KRing.java").read_text()
   assert "TARGET_US=5000000L" in (src/"Encoded4KRing.java").read_text()
-  assert "MIN_VALID_US=4400000L" in (src/"Encoded4KRing.java").read_text()
+  assert "MIN_VALID_US=5000000L" in (src/"Encoded4KRing.java").read_text()
   assert "MAX_RESUME_MS=10000" in (src/"CaptureContinuity.java").read_text()
   assert "diagnosticTailProof?12500:9000" in (src/"CameraService.java").read_text()
   assert "continuous_native_4k_h264_ring_v1" in (src/"CameraService.java").read_text()
@@ -185,3 +185,4 @@ def main():
   (TARGET/"release.json").write_text(json.dumps(result,indent=2)+"\n")
   print("S9_UNIFIED_4K_PERSON_V9_SIGNED_STAGED",json.dumps(result),flush=True)
 if __name__=="__main__":main()
+

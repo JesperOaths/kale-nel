@@ -14,7 +14,7 @@ class UnifiedReleaseSafety(unittest.TestCase):
   for needle in ('S9_UNIFIED_V11_REF','person_spatiotemporal_transport_v9',
        'transportDominates','garden_person_transport_conflicts_total',
        'QUIET_MS=5000,MIN_EVENT_RECORD_MS=10000,MAX_MS=120000','TARGET_US=5000000L',
-       'MIN_VALID_US=4400000L','changed_model_manifest_or_native_lib',
+       'MIN_VALID_US=5000000L','changed_model_manifest_or_native_lib',
        'models_native_and_manifest_preserved','APK_SIGNER_CHANGED'):
    self.assertIn(needle,BUILDER,needle)
   self.assertIn('s9-unified-4k-person-v11.apk',BUILDER)
@@ -48,3 +48,4 @@ class UnifiedReleaseSafety(unittest.TestCase):
   self.assertNotIn('adb("install"',BUILDER)
   self.assertNotIn('am force-stop',BUILDER)
 if __name__=='__main__': unittest.main(verbosity=2)
+
