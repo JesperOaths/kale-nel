@@ -13,31 +13,36 @@ features.
 | --- | --- | --- |
 | Evidence coverage watchdog repeatedly failed with 404 | Read the current loopback archive and manual-review API contracts. Count manual profiles explicitly; use the independent face-quality count only while its source snapshot is current. | Live service completed after deployment. |
 | Legacy retention imported a retired S3 recorder and assumed unknown recorder health meant idle | Skip a missing recorder only when its service is inactive. Require an explicit successful, boolean idle-health response before retention. Preserve the existing retain function/policy. | Synthetic unavailable/busy/malformed-health cases pass; live dry run and service succeeded, all six legacy videos unchanged. |
-| Client disconnects became tracebacks or a second playback error response | Close cancelled requests quietly for BrokenPipe/ConnectionReset only, preserving real exceptions and source-unavailable responses. | Synthetic cancellation and real-error cases pass; live reset/auth probes are recorded below when complete. |
+| Client disconnects became tracebacks or a second playback error response | Close cancelled requests quietly for BrokenPipe/ConnectionReset only, preserving real exceptions and source-unavailable responses. | Synthetic cancellation and real-error cases pass. Live client resets produced no cancellation traceback; missing/expired credentials returned 401 and valid credentials returned 200. |
 | Legacy classifier repeatedly decoded the same unchanged uncertain clip, starving older candidates | Bind completed full scans to exact clip, detector-source and model-file content digests. Reuse completed results, load the detector only when work remains, and retain explicit --force rechecking. | Live cached verification: 1.92 CPU seconds, 19.5 MiB peak and 4.80 seconds wall time, versus 21.20 CPU seconds / 201.1 MiB / 77 seconds before. Both pending clips were processed once; subsequent backlog was zero. Input/model changes and incomplete scans still retry. No deletion or classification thresholds changed. |
 | Fully cached evidence refresh still polled every recording and rewrote the cache | Check pending image keys first. Load the pinned detector only for uncached/retry work; checkpoint only changed measurements. | Live cached run: zero phone polls, zero image reads, zero cache checkpoints, no detector load. CPU fell from 4.41 to 0.336 seconds and peak memory from 29.8 to 16.2 MiB in the measured cached run. |
 | New-clip fast indexer rejected rich manifests above 14 KB | Use a shared 32 KiB contract in both fast-index paths and the catalog's native manifest decoder. The native full scanner previously accepted these larger files without a bound; its 14 KB restriction belonged to the older archive path. | Six current manifests exceed 14,000 bytes, maximum 15,844. Synthetic rich/boundary/oversized cases pass. Live full catalog and fast-index services completed: 175 originals and an empty error list. |
+| A daily watchdog restart opened localhost, outside the kiosk's existing authenticated 127.0.0.1 origin | Set the launcher's default to 127.0.0.1. Preserve its explicit URL override and all browser options. | Reproduced the login-route failure, then performed a real restart and daily watchdog run: authenticated Home restored, service succeeded. No credentials or auth gates changed. |
+| The browser recovery helper assumed TCP frame headers arrived in one read and could spin on payload EOF | Read exact frame lengths with EOF detection and a total monotonic deadline; retain the existing recovery actions. | Four segmented-frame, length, EOF and deadline tests pass. Live browser status and screenshot actions succeeded; the private PNG was 680,718 bytes. |
 
 The initial inventory matched 46 loaded camera/security-related services. Five
 failed units were investigated: two were already disabled legacy guards, two
-were active failing jobs repaired here, and the daily dashboard watchdog had a
-historical failure while its current browser-health check passed. Disabled
-legacy guards remain disabled; a healthy current status is not a claim that
-their old implementations were repaired.
+were active failing jobs repaired here, and the daily dashboard watchdog's
+restart exposed the wrong-origin bug repaired above. Final verification found
+zero failed user units. Disabled legacy guards remain disabled; clearing their
+old failed states is not a claim that their implementations were repaired.
 
 Clock synchronization is an unresolved administrator action: the hub is about
-88 seconds slow, NTP is disabled and its service package is absent. Actual sudo
+90 seconds slow, NTP is disabled and its service package is absent. Actual sudo
 installation/activation attempts required a password. This can reject freshly
-issued media tokens under the existing 60-second future-time check. See
+issued media tokens under the existing 60-second future-time check; that is a
+mechanism identified in the code, not proof of every earlier login failure. See
 [the exact administrator repair](ADMIN_TIME_SYNC_REPAIR.md). Token checks were
 not relaxed.
 
 The real authenticated HA route loaded Live, Recordings, People & faces, Tracks
 & movement, Evidence & analytics, Archive and four camera-setting controls.
 The live image decoded at 640 pixels wide. Loaded recording/track/evidence
-images had no broken-image elements in that check. Empty/collapsed galleries
-need their own opened-state checks; page availability alone does not establish
-all actions or every historical video works.
+images had no broken-image elements in that check. The current People source
+intentionally retires the standalone crop gallery. A follow-up that targeted
+the old face-pane control therefore did not open a gallery or assign image
+URLs; it is not a successful gallery-rendering test. Crop delivery is verified
+separately below. Page availability alone does not establish every UI action.
 
 ## Measured baseline on the C720P
 
@@ -62,7 +67,7 @@ living-room detector at 0.91%. These workloads overlap; percentages do not sum
 to a whole-machine utilization figure. Whisper/wake-word processing is a
 separate voice workload, not hidden S9 video inference.
 
-Root storage had 646 MiB free (97% used). That favors small bounded derived
+Root storage had 635 MiB free (97% used) at the final check. That favors small bounded derived
 caches and streaming jobs rather than copying the original archive onto the
 C720P. No original or safe-cache deletion was performed as part of this audit.
 
@@ -158,11 +163,45 @@ it does not propose removing any of them.
 - Legacy content-cache activation job 11500: source
   aee43a9ea227a91b0b114018b7f52c3c9152f1df, fourteen staged tests, pending legacy
   scans 2 → 1 → 0, then a successful cached run without detector import.
+- Manual-profile counter activation: source
+  6f27abb66fc2864c20c55368a91fda53732fa0fc. Live coverage audit succeeded with
+  175 recordings, 20 manual profiles and 16 independently supported crops.
+- Kiosk-origin activation and real restart: source
+  df86daedab257c927d5ff023218df9cfd9fc99fd. The daily watchdog passed after
+  restart, retaining the already authenticated 127.0.0.1 profile origin.
+- CDP transport activation: source
+  d58e5aee810e283eaf599f25492a6d7659be208e. Four transport tests and live browser
+  status/screenshot actions passed.
 - Independent origin checks in job 11490: missing/expired credentials returned
   401, valid credentials returned 200, and deliberate client resets produced no
   BrokenPipe/ConnectionReset traceback in either HTTP service.
-- Final opened-gallery, complete-original-link, Drive sample and room-privacy
-  verification results are appended after their jobs complete.
+- Complete media check, job 11504: all 175 native originals answered HEAD with
+  the expected size/type; 12 byte-range requests returned 206 with the expected
+  512 bytes. All 16 supported crop JPEGs matched their recorded size/digest.
+  The evidence snapshot was current. All 175 recordings had completed V5;
+  there were 602 candidate crop references, not 602 verified faces or people.
+- Historical Drive remains read-only and available: 94 recordings, three
+  sampled video HEAD requests returned 200. Opened archive UI, job 11516:
+  19 date groups and 14 loaded previews, zero broken previews. The Drive
+  uploader remains inactive under the existing storage policy.
+- Bounded post-restart browser check, job 11517: Live repeatedly reported
+  "S9+ watching" and decoded a 640-pixel preview; the kiosk was restored to
+  Home after inspection. The attempted standalone face gallery showed no
+  requested images. Source inspection, job 11519, established that this
+  gallery/control is intentionally retired in the current People UI. No UI
+  patch or gallery-rendering success is claimed by this audit.
+- Room/privacy check, jobs 11505 and 11516: living-room camera-owned start and
+  refresh use ten minutes; bedroom uses five minutes. Source guards preserve
+  manual ON ownership. No physical walk/manual-switch test was performed and
+  no light was toggled. S3 Wi-Fi ADB and image-export ports were closed or
+  unreachable; the privacy watchdog accessed no images. Its camera health
+  file was stale, so a current bedroom frame heartbeat was not established.
+- Final camera status: watching, continuous 4K ready, zero dropped output
+  frames, 32.6°C and no reported error. Final user-service failed count: zero.
+- Local regression verification: 71 tests across runtime, TCP transport,
+  manifest bounds, fast indexing, evidence quality, face pipeline and snapshot
+  integrity. The added runtime CI executes 49 tests plus Python compilation
+  and shell syntax checks; the existing face/pipeline checks also passed.
 
 Exact rollback material remains on the managed hub in the private deployment
 backup directory. Deployer source pins and live predecessor checks prevent this
