@@ -5,8 +5,10 @@ on:
       - 'ops/c720p/s9-native-security/security-face-folders-v22.html'
       - 'ops/c720p/s9-native-security/test-step2-appearance-pilot.js'
       - 'ops/c720p/s9-native-security/test-step2-manual-evidence-cases.py'
+      - 'ops/c720p/s9-native-security/test-step3-face-pair-review.py'
       - 'ops/c720p/s9-native-security/deploy-step2-manual-cases-v1.py'
       - 'ops/c720p/s9-person-ml-v1/s9_manual_evidence_cases.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_face_pair_review.py'
       - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
       - '.github/workflows/c720p-s9-people-faces-unified.yml'
   push:
@@ -16,6 +18,7 @@ on:
       - 'ops/c720p/s9-native-security/test-step2-appearance-pilot.js'
       - 'ops/c720p/s9-native-security/deploy-step2-manual-cases-v1.py'
       - 'ops/c720p/s9-person-ml-v1/s9_manual_evidence_cases.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_face_pair_review.py'
       - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
       - '.github/workflows/c720p-s9-people-faces-unified.yml'
 permissions:
@@ -36,10 +39,12 @@ jobs:
           node ops/c720p/s9-native-security/test-step2-appearance-pilot.js
           node ops/c720p/s9-native-security/test-face-review-evidence-gates-v29.js
           python3 ops/c720p/s9-native-security/test-step2-manual-evidence-cases.py
+          python3 ops/c720p/s9-native-security/test-step3-face-pair-review.py
           python3 ops/c720p/s9-native-security/test-s9-hsv-integration.py
           python3 -m py_compile \
             ops/c720p/s9-native-security/deploy-step2-manual-cases-v1.py \
             ops/c720p/s9-person-ml-v1/s9_manual_evidence_cases.py \
+            ops/c720p/s9-person-ml-v1/s9_face_pair_review.py \
             ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
   deploy:
     needs: verify
@@ -61,11 +66,12 @@ jobs:
           installer="$dir/deploy-step2-manual-cases-v1.py"
           isha="$(sha256sum "$installer" | cut -d' ' -f1)"
           sha_backend="$(sha256sum ops/c720p/s9-person-ml-v1/s9_manual_evidence_cases.py | cut -d' ' -f1)"
+          sha_facepairs="$(sha256sum ops/c720p/s9-person-ml-v1/s9_face_pair_review.py | cut -d' ' -f1)"
           sha_proxy="$(sha256sum ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py | cut -d' ' -f1)"
           sha_ui="$(sha256sum "$dir/security-face-folders-v22.html" | cut -d' ' -f1)"
           dest="/tmp/s9-step2-unified-${GITHUB_SHA:0:12}.py"
           uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/$GITHUB_SHA/$installer"
-          cmd="curl -fSsL --max-time 40 '$uri' -o '$dest' && printf '%s  %s\n' '$isha' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest' --ref '$GITHUB_SHA' --backend-sha '$sha_backend' --proxy-sha '$sha_proxy' --ui-sha '$sha_ui'"
+          cmd="curl -fSsL --max-time 40 '$uri' -o '$dest' && printf '%s  %s\n' '$isha' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest' --ref '$GITHUB_SHA' --backend-sha '$sha_backend' --facepairs-sha '$sha_facepairs' --proxy-sha '$sha_proxy' --ui-sha '$sha_ui'"
           idem="s9-unified-people-faces-${GITHUB_SHA:0:22}-$GITHUB_RUN_ATTEMPT"
           id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(
