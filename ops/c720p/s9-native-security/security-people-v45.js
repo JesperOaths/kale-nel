@@ -413,12 +413,39 @@ function renderFolder(){
   list.append(b);
  }
 }
+function facesInRecording(clip){
+ return state.faceList.filter(f=>f.clip===clip).sort((a,b)=>
+   num(a.face.time_ms)-num(b.face.time_ms)||
+   String(a.face.snapshot_name).localeCompare(String(b.face.snapshot_name)));
+}
+function representativeFace(list){
+ // Prefer non-padded saved crops, then a larger saved crop for a usable preview.
+ const sorted=[...list].sort((a,b)=>
+  Number(a.face.face_crop_padded_context_only===true)-
+   Number(b.face.face_crop_padded_context_only===true)||
+  num(b.face.snapshot_size)-num(a.face.snapshot_size));
+ return sorted[0];
+}
+function advanceFaceSnapshot(direction){
+ const current=state.snapshotSelected;
+ if(!current)return;
+ const faces=facesInRecording(current.clip);
+ const index=faces.findIndex(f=>f.face.snapshot_name===current.face.snapshot_name);
+ if(index<0||index+direction<0||index+direction>=faces.length)return;
+ inspectFaceSnapshot(faces[index+direction]);
+}
 function inspectFaceSnapshot(f){
  // Only indexed S9+ face crops may open; never infer that two crops share an identity.
  if(!f||!clipName.test(String(f.clip||''))||
     !faceName.test(String(f.face?.snapshot_name||'')))return;
  const ticket=++state.snapshotRequest;
  state.snapshotSelected=f;
+ const clipFaces=facesInRecording(f.clip);
+ const pos=clipFaces.findIndex(x=>x.face.snapshot_name===f.face.snapshot_name);
+ const index=Math.max(0,pos);
+ $('snapshotPosition').textContent='Image '+(index+1)+' of '+clipFaces.length+' in this recording';
+ $('snapshotPrev').disabled=index===0;
+ $('snapshotNext').disabled=index>=clipFaces.length-1;
  const t=Number(String(f.clip).slice(7,20));
  $('snapshotTitle').textContent='Face image · '+stampMs(t);
  $('snapshotDescription').textContent='Saved from original 4K · '+(num(f.face.time_ms)/1000).toFixed(1)+
@@ -438,36 +465,66 @@ function closeFaceSnapshot(){
  state.snapshotSelected=null;
 }
 function renderFaces(){
- const faceMode=$('faceMode').value;
- const list=state.faceList.filter(f=>{
-  const matched=['anonymous_similarity_unverified','reference_similarity_unverified'].includes(String(f.face.match_status||'')) &&
-   f.face.face_crop_requires_manual_review!==true && f.face.face_crop_padded_context_only!==true;
-  return faceMode==='suggested'?matched:faceMode==='manual'?!matched:true;
+ const mode=$('faceMode').value;
+ const needle=String($('faceSearch').value||'').trim().toLowerCase().slice(0,120);
+ const images=state.faceList.filter(f=>{
+  const suggested=['anonymous_similarity_unverified','reference_similarity_unverified'].includes(
+    String(f.face.match_status||''))&&
+    f.face.face_crop_requires_manual_review!==true&&
+    f.face.face_crop_padded_context_only!==true;
+  if(mode==='suggested'&&!suggested)return false;
+  if(mode==='manual'&&suggested)return false;
+  if(needle){
+   const clipDate=stampMs(Number(f.clip.slice(7,20))).toLowerCase();
+   if(!f.clip.toLowerCase().includes(needle)&&!clipDate.includes(needle))return false;
+  }
+  return true;
  });
- $('faceTotal').textContent=list.length+' captured images';
+ const grouping=$('faceGrouping').value==='images'?'images':'recording';
+ const groups=new Map();
+ for(const f of images){
+  if(!groups.has(f.clip))groups.set(f.clip,[]);
+  groups.get(f.clip).push(f);
+ }
+ const grouped=[...groups.entries()].map(([clip,faces])=>
+  ({clip,faces,preview:representativeFace(faces)}));
+ const entries=grouping==='recording'?grouped:images.map(f=>
+  ({clip:f.clip,faces:[f],preview:f}));
+ $('faceTotal').textContent=images.length+' images across '+groups.size+' original recordings';
+ $('faceGroupingNote').textContent=grouping==='recording'?
+  'One card per original recording. Multiple crops can show different people; grouping does not identify anyone.':
+  'One card per saved face crop. These images are not automatic same-person matches.';
  const host=$('faceGrid');host.replaceChildren();
  const start=state.facePage*24;
- for(const f of list.slice(start,start+24)){
+ const visible=entries.slice(start,start+24);
+ for(const row of visible){
+  const f=row.preview;
   const card=elt('article','','evidence'),media=mediaForFace(f);
-  badge(media,'FACE IMAGE');
+  badge(media,grouping==='recording'?row.faces.length+' FACE IMAGES':'FACE IMAGE');
   const box=elt('div','','body');
-  const timestamp=Number(String(f.clip).slice(7,20));
+  const timestamp=Number(String(row.clip).slice(7,20));
   box.append(elt('strong',stampMs(timestamp)),
-    elt('p','Original 4K · inspection evidence; same-person identity not verified'));
+    elt('p',row.faces.length+' saved '+(row.faces.length===1?'image':'images')+
+    ' · original 4K · no identity grouping'));
   const tools=elt('div','','actions');
-  tools.append(control('Inspect image',()=>inspectFaceSnapshot(f),'secondary'));
-  tools.append(control('▶ View clip',()=>playVideo('/new/saved/clip/'+encodeURIComponent(f.clip),
+  tools.append(control(grouping==='recording'?'Inspect images':'Inspect image',
+    ()=>inspectFaceSnapshot(f),'secondary'));
+  tools.append(control('▶ Play recording',()=>playVideo('/new/saved/clip/'+encodeURIComponent(row.clip),
    'Original 4K recording · '+stampMs(timestamp),num(f.face.time_ms)/1000)));
   box.append(tools);card.append(media,box);host.append(card);
  }
- if(!list.length)host.append(elt('p',state.faceLoaded?'No face images match this filter.':'Loading face image evidence…','empty'));
+ if(!entries.length)host.append(elt('p',state.faceLoaded?
+   'No face images match these filters. Try All captured images or clear the recording search.':
+   'Loading face-image evidence…','empty'));
  const bar=$('facePage');bar.replaceChildren();
- if(list.length>24){
+ if(entries.length>24){
   const prev=control('← Previous',()=>{state.facePage=Math.max(0,state.facePage-1);renderFaces()});
   prev.disabled=state.facePage===0;
   const next=control('Next →',()=>{state.facePage++;renderFaces()});
-  next.disabled=start+24>=list.length;
-  bar.append(prev,elt('span',Math.min(start+1,list.length)+'–'+Math.min(start+24,list.length)+' / '+list.length),next);
+  next.disabled=start+24>=entries.length;
+  bar.append(prev,elt('span',Math.min(start+1,entries.length)+'–'+
+    Math.min(start+24,entries.length)+' / '+entries.length+
+    ' '+(grouping==='recording'?'recordings':'images')),next);
  }
 }
 function render(){
@@ -509,6 +566,8 @@ $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;s
 $('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('faceMode').addEventListener('change',()=>{state.facePage=0;renderFaces()});
+$('faceGrouping').addEventListener('change',()=>{state.facePage=0;renderFaces()});
+$('faceSearch').addEventListener('input',()=>{state.facePage=0;renderFaces()});
 $('refresh').addEventListener('click',()=>{
  state.faceLoaded=false;
  state.faceSummary=null;
@@ -558,6 +617,8 @@ $('video').addEventListener('loadedmetadata',()=>{const v=$('video');
 $('video').addEventListener('error',()=>{$('videoStatus').textContent='Playback error. Original recording has not been altered.'});
 $('closeCompare').addEventListener('click',()=>$('compareDialog').close());
 $('closeSnapshot').addEventListener('click',closeFaceSnapshot);
+$('snapshotPrev').addEventListener('click',()=>advanceFaceSnapshot(-1));
+$('snapshotNext').addEventListener('click',()=>advanceFaceSnapshot(1));
 $('snapshotViewer').addEventListener('close',()=>{
  ++state.snapshotRequest;
  $('snapshotImage').removeAttribute('src');
