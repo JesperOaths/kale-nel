@@ -29,3 +29,42 @@ original-archive change, or identity model/threshold change.
 - Never enable permanent identity folders, automatic matches, or consequential surveillance actions just because V5 scanned a clip or an embedding model passed a self-test.
 - Keep the signed S9+ capture system, 4K originals, C720P review decisions and private identities unchanged during preflight. Preserve offline backups and roll back failing revisions.
 - Report a rollout as *blocked* whenever any acceptance evidence is missing; do not fill missing labels with guesses.
+
+## Consent-scoped capture preflight (before the independent score benchmark)
+
+The audit script `validate-s9-opt-in-captures-v1.py` reads the private file
+`/home/jespern/c720p-home-hub/state/s9-opt-in-face-validation-v1.json`, **if
+one exists**. It does not generate consent, labels, scores or names. Without
+the file, the correct result is `missing_opt_in_participant_manifest`.
+
+Each manifest must have `version: 1`, `purpose:
+"explicit_opt_in_face_validation_only"`, `participants`, and `captures`.
+Each consenting adult participant has a unique random `V-` plus 12-character
+alphanumeric code, a SHA-256 digest of a separately retained permission
+document, `adult_verified: true`, `consent_human_verified: true`,
+`consent_scope` equal to the explicit purpose and `withdrawn: false`.
+No names, addresses, facial vectors, or personal identifiers belong in the
+manifest.
+
+Each candidate capture records one explicitly reviewed face per original 4K
+clip: `subject_code`, `clip_no`, `snapshot_name`, `snapshot_sha256`,
+and `human_original_and_face_reviewed: true`. The filename and SHA-256 must
+match the C720P's read-only verified S9+ catalog. Reused clips or image names,
+ambiguous clips with several people, revoked permissions, or mismatched hashes
+are rejected. This is an **input-provenance check**, not proof the person is
+correctly labeled.
+
+The tool estimates how many *possible* cross-clip same-subject and different-
+subject review tasks exist, without creating or declaring a single ground-truth
+label. Independently reviewed **exact face pairs**, phone-generated model
+scores with pinned hash, independent capture days, and a separate held-out test
+set are still required. Do not count repeated pairs involving the same few
+people as statistically independent observations. Do not enroll unrelated
+passersby or neighbours from existing general-surveillance footage.
+
+Privacy review requires the responsible human to verify actual camera
+framing, masks, notice, retention and withdrawal/deletion mechanisms,
+especially if a public footpath is visible. The model cannot establish this
+from status metadata. A withdrawn participant's copies and derived scores must
+be identified and erased under the approved retention plan before further
+processing.
