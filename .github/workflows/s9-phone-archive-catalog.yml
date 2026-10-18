@@ -4,6 +4,7 @@ on:
     paths:
       - 'ops/c720p/security-runtime/phone_archive_catalog_v1.py'
       - 'ops/c720p/security-runtime/test-phone-archive-catalog-v1.py'
+      - 'ops/c720p/security-runtime/test-phone-archive-adapters-v1.py'
       - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java'
       - 'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py'
       - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'ops/c720p/security-runtime/phone_archive_catalog_v1.py'
       - 'ops/c720p/security-runtime/test-phone-archive-catalog-v1.py'
+      - 'ops/c720p/security-runtime/test-phone-archive-adapters-v1.py'
       - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java'
       - 'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py'
       - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
@@ -27,6 +29,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - run: |
           python3 ops/c720p/security-runtime/test-phone-archive-catalog-v1.py
+          python3 ops/c720p/security-runtime/test-phone-archive-adapters-v1.py
           python3 ops/c720p/s9-native-security/test-phone-native-media-range-proxy.py
           python3 -m compileall -q ops/c720p/security-runtime/phone_archive_catalog_v1.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py ops/c720p/s9-native-security/fast-recent-s9-clip-index.py
           bash -n ops/c720p/s9-native-security/fetch-source.sh
