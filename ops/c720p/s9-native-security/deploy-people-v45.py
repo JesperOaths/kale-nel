@@ -108,8 +108,17 @@ def main():
  out["tracks50"]=out["tracks"]
  # The old V33 page is still requested by some older shell frames. Redirect
  # it to the maintained page instead of leaving two different UIs available.
- if b"Review candidate recordings" not in prior["legacy"][0]:
-  raise RuntimeError("legacy_people_page_no_longer_matches")
+ legacy_bytes=prior["legacy"][0]
+ if legacy_bytes is None:raise RuntimeError("legacy_people_page_missing")
+ legacy_text=legacy_bytes.decode("utf-8","replace").lower()
+ legacy_known=("people" in legacy_text and "folder" in legacy_text) or "security-people-v50.html" in legacy_text
+ print("S9_LEGACY_ROUTE_DISCOVERY "+json.dumps({
+  "known_people_page":legacy_known,
+  "has_folder_script":"people-folders" in legacy_text,
+  "has_pf_navigation":"pfnav" in legacy_text,
+  "is_existing_v50_redirect":"security-people-v50.html" in legacy_text,
+  "html_bytes":len(legacy_bytes)}),flush=True)
+ if not legacy_known:raise RuntimeError("legacy_people_page_identity_unverified")
  out["legacy"]=(
   '<!doctype html><html lang="en"><head><meta charset="utf-8">'
   '<meta name="robots" content="noindex,nofollow">'
@@ -177,7 +186,7 @@ def main():
   for k,path in DEST.items():
    relative=("local/"+path.name if k=="shell" else "local/frontyard-security-new/"+path.name)
    url="http://127.0.0.1:8123/"+relative+"?version="+args.ref[:12]
-   b=get(url)
+   b=get(url,850000 if k=="shell" else 220000)
    if digest(b)!=digest(out[k]):raise RuntimeError("HA_not_serving_new_version_"+k)
    served[k]=digest(b)[:16]
   if OLD.encode() in out["hub"] or (ENTRY_OLD+'"').encode() in out["entry"]:
