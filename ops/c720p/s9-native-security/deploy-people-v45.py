@@ -108,8 +108,11 @@ def main():
  out["tracks50"]=out["tracks"]
  # The old V33 page is still requested by some older shell frames. Redirect
  # it to the maintained page instead of leaving two different UIs available.
- if b"Review candidate recordings" not in prior["legacy"][0]:
-  raise RuntimeError("legacy_people_page_no_longer_matches")
+ existing_legacy=prior["legacy"][0] or b""
+ if not any(token in existing_legacy for token in (
+      b"Review candidate recordings",b"security-people-v45.html",
+      b"security-people-v50.html")):
+  raise RuntimeError("unrecognized_legacy_people_page")
  out["legacy"]=(
   '<!doctype html><html lang="en"><head><meta charset="utf-8">'
   '<meta name="robots" content="noindex,nofollow">'
@@ -121,13 +124,21 @@ def main():
   '</body></html>').encode()
  hub=prior["hub"][0].decode("utf-8")
  if MARK not in hub:raise RuntimeError("expected_existing_v45_hub")
- if NEW not in hub:hub=update(hub,OLD,NEW,"hub_people")
+ if NEW not in hub:
+  hub,count=re.subn(r"security-people-v45[.]html[?]v=[A-Za-z0-9._-]+&",NEW,hub)
+  if count!=1:raise RuntimeError("unrecognized_hub_people_route_"+str(count))
  if "security-tracks-v50.html?v=security-visible-route-v50-20261018&" not in hub:
-  hub=update(hub,"security-tracks-v7.html?","security-tracks-v50.html?v=security-visible-route-v50-20261018&","hub_tracks")
+  hub,count=re.subn(r"security-tracks-v7[.]html[?](?:v=[A-Za-z0-9._-]+&)?",
+                    "security-tracks-v50.html?v=security-visible-route-v50-20261018&",hub)
+  if count!=1:raise RuntimeError("unrecognized_hub_tracks_route_"+str(count))
  out["hub"]=hub.encode("utf-8")
  entry=prior["entry"][0].decode("utf-8")
  if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
- if ENTRY_NEW not in entry:entry=update(entry,ENTRY_OLD,ENTRY_NEW,"entry")
+ if ENTRY_NEW not in entry:
+  entry,count=re.subn(
+    r"security-hub-v30[.]js[?]v=(?:people-faces-v49-folder-first|people-faces-v50-route-correction|people-faces-v50-visible-route)-20261018",
+    ENTRY_NEW,entry)
+  if count!=1:raise RuntimeError("unrecognized_entry_route_"+str(count))
  out["entry"]=entry.encode("utf-8")
  shell=prior["shell"][0].decode("utf-8")
  # Rewrite both the older direct-iframe references and hub references.
@@ -185,7 +196,7 @@ def main():
   new_clips=archive()
   if not old_clips.issubset(new_clips):raise RuntimeError("archive_records_disappeared")
   print("S9_PEOPLE_FACES_V45_ACTUAL_HUB_DEPLOY_VERIFIED "+json.dumps({
-   "served_route":"security-hub-v30.html -> security-hub-v30.js -> security-people-v45.html -> security-people-v45.js",
+   "served_route":"security-hub-v30.html -> security-hub-v30.js -> security-people-v50.html -> security-people-v45.js",
    "source_ref":args.ref,"clip_count":len(new_clips),
    "served_sha16":served,"rollback":str(folder),"original_videos_modified":False,
    "camera_modified":False,"existing_approvals_modified":False,
