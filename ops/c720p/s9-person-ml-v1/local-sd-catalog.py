@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """S9 microSD security catalog. No Google Drive access or MP4 hub caching."""
-import json,subprocess,os,re,datetime,math
+import json,subprocess,os,re,datetime,math,fcntl
 from pathlib import Path
 try:
  import phone_archive_catalog_v1 as phone_catalog
@@ -11,6 +11,7 @@ SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
 ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
 # Metadata only. Preview image bytes stay exclusively on S9+ microSD.
 PRIVATE_FALLBACK=Path("/home/jespern/c720p-home-hub/state/s9-fallback-evidence.json")
+CATALOG_LOCK=Path("/home/jespern/c720p-home-hub/state/s9-native-catalog.lock")
 RE_PREVIEW=re.compile(r"^preview_motion_([0-9]{13})[.]jpg$")
 NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 # Only clip-scoped, on-phone predictions are mirrored as metadata. Never copy images,
@@ -363,7 +364,7 @@ def adb(*args):
  p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
  if p.returncode:raise OSError("phone_adb_offline")
  return p.stdout
-def main():
+def build_catalog():
  state=subprocess.run(["adb","-s",ADDR,"get-state"],capture_output=True,timeout=6)
  if state.returncode or state.stdout.strip()!=b"device":
   subprocess.run(["adb","connect",ADDR],capture_output=True,timeout=12)
@@ -542,6 +543,11 @@ def main():
  dest=ROOT/"s9-phone-events.json"
  part=dest.with_suffix(".json.tmp");part.write_text(json.dumps(out,indent=2)+"\n");os.replace(part,dest)
  print("LOCAL_SD_INDEXED",len(rows),"errors",problems[:4])
+def main():
+ CATALOG_LOCK.parent.mkdir(parents=True,exist_ok=True)
+ with CATALOG_LOCK.open("a+") as guard:
+  fcntl.flock(guard,fcntl.LOCK_EX)
+  build_catalog()
 if __name__=="__main__":main()
 
 

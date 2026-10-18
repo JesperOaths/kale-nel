@@ -1,4 +1,5 @@
 import hashlib
+import fcntl
 import importlib.util
 from io import BytesIO
 import json
@@ -50,12 +51,29 @@ class Tests(unittest.TestCase):
             calls.append(args)
             if args[:3]==('shell','ls','-1'):return (NAME+'\n').encode() if 'Security4K' in args[-1] else b''
             raise OSError('legacy_source_absent')
-        with patch.object(self.catalog,'ROOT',self.root),patch.object(self.catalog,'PRIVATE_FALLBACK',self.root/'fallback.json'), \
+        with patch.object(self.catalog,'ROOT',self.root),patch.object(self.catalog,'PRIVATE_FALLBACK',self.root/'fallback.json'),patch.object(self.catalog,'CATALOG_LOCK',self.root/'shared.lock'), \
              patch.object(self.catalog,'adb',side_effect=adb),patch.object(self.catalog.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=b'device')), \
              patch.object(client,'load_catalog',return_value=snapshot):self.catalog.main()
         result=json.loads((self.root/'s9-phone-events.json').read_text())
         self.assertEqual(result['total_phone_files'],1);self.assertEqual(result['errors'],[])
         self.assertFalse(any(NAME in str(args) for args in calls))
+    def test_fast_defers_while_full_catalog_owns_shared_lock(self):
+        lock=self.root/'shared.lock'
+        with lock.open('a+') as owner:
+            fcntl.flock(owner,fcntl.LOCK_EX)
+            with patch.object(self.fast,'CATALOG_LOCK',lock),patch.object(client,'load_catalog') as phone:
+                self.fast.main()
+            phone.assert_not_called()
+    def test_concurrent_newer_index_is_never_replaced_by_older_native_metadata(self):
+        index=self.root/'index.json'
+        original={'storage_policy':'local_microSD','phone_recordings':[{'name':NAME,'person_score':.7}]}
+        newest={'storage_policy':'local_microSD','phone_recordings':[{'name':NAME,'person_score':.99}]}
+        index.write_text(json.dumps(original))
+        def snapshot():index.write_text(json.dumps(newest));return {'records':{NAME:entry()}}
+        with patch.object(self.fast,'INDEX',index),patch.object(self.fast,'LOCK',self.root/'fast.lock'), \
+             patch.object(self.fast,'CATALOG_LOCK',self.root/'shared.lock'),patch.object(self.fast,'module',return_value=self.catalog), \
+             patch.object(client,'load_catalog',side_effect=snapshot):self.fast.main()
+        self.assertEqual(json.loads(index.read_text()),newest)
     def jpeg(self):
         return b'\xff\xd8\xff\xe0'+(500).to_bytes(2,'big')+b'x'*498+b'\xff\xc0\x00\x11\x08\x00\x78\x00\x78\x03'+b'\x01\x11\x00\x02\x11\x00\x03\x11\x00'+b'\xff\xd9'
     def face(self,raw):

@@ -24,6 +24,7 @@ ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
 INDEX=ROOT/"s9-phone-events.json"
 CATALOG=Path("/home/jespern/c720p-home-hub/bin/c720p-s9-local-sd-catalog.py")
 LOCK=Path("/home/jespern/c720p-home-hub/state/s9-fast-clip-index.lock")
+CATALOG_LOCK=Path("/home/jespern/c720p-home-hub/state/s9-native-catalog.lock")
 PHONE="192.168.178.250:5555"
 FOLDER="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
 VIDEO=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
@@ -172,7 +173,7 @@ def native_updates(source,snapshot,helpers):
         updates.append({**old,**fresh})
     return updates
 
-def main():
+def index_once():
     LOCK.parent.mkdir(parents=True,exist_ok=True)
     with LOCK.open("a+") as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -185,7 +186,10 @@ def main():
             try:snapshot=phone_catalog.load_catalog()
             except phone_catalog.Unavailable:pass
         if snapshot is not None:
-            added=native_updates(source,snapshot,helpers);changed=[]
+            updates=native_updates(source,snapshot,helpers)
+            known={row.get("name") for row in source["phone_recordings"] if isinstance(row,dict)}
+            added=[row for row in updates if row["name"] not in known]
+            changed=[row for row in updates if row["name"] in known]
         else:
             listing=adb("shell","ls","-1",FOLDER,limit=500000,timeout=15).decode().splitlines()
             added=new_records(source,listing,helpers)
@@ -204,6 +208,11 @@ def main():
             # A concurrent full-catalog rebuild may have newer scan evidence.
             # Never replace its rows using our prior index snapshot.
             changed=[]
+            known={row.get("name") for row in latest["phone_recordings"] if isinstance(row,dict)}
+            added=[row for row in added if row["name"] not in known]
+            if not added:
+                print("S9_FAST_INDEX_DEFER_TO_NEWER_CATALOG",flush=True)
+                return
         next_index=update_index(latest,added+changed)
         if not next_index["phone_recordings"]:raise RuntimeError("unsafe_empty_index")
         target=INDEX.with_name(INDEX.name+".s9-fast-tmp")
@@ -213,6 +222,15 @@ def main():
         print("S9_FAST_INDEX_ADDED",len(added),[r["name"] for r in added],flush=True)
         print("S9_FAST_INDEX_TOTAL",len(next_index["phone_recordings"]),flush=True)
         print("S9_FAST_FACE_METADATA_REFRESH",len(changed),flush=True)
+
+def main():
+    CATALOG_LOCK.parent.mkdir(parents=True,exist_ok=True)
+    with CATALOG_LOCK.open("a+") as guard:
+        try:fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("S9_FAST_INDEX_DEFER_FULL_CATALOG_BUSY",flush=True)
+            return
+        index_once()
 
 if __name__=="__main__":
     main()

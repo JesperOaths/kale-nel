@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Guarded hub adapters for an already verified on-phone archive API.
 
-No original videos, phone settings, manual decisions or UI assets are targets.
+No original videos, phone settings, manual decisions or page layout are targets.
+The retired global player and its two cache-busting references are updated.
 The phone APK has its own exact-binary rollback and capture acceptance gate.
 """
 import argparse
@@ -27,8 +28,8 @@ WEB=Path('/opt/homeassistant/config/www/frontyard-security-new')
 FILES={
  'ops/c720p/security-runtime/phone_archive_catalog_v1.py':('phone_archive_catalog_v1.py',None),
  'ops/c720p/security-runtime/s9_hub_playback.py':('s9_hub_playback.py','e36c0f92976867400d4752939b82ada3cde9b7958f2626cd8216a289ed76db6c'),
- 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py':('c720p-s9-local-sd-catalog.py','db37d7b4447fbf6ff3a4d94327ae725b905804047a7c4686684ba60dfb15ef54'),
- 'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py':('s9-fast-recent-clip-index.py','6508d170fb0a917e3384aa1c7d2059aff3da163440371108f05ebcee62ec427a'),
+ 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py':('c720p-s9-local-sd-catalog.py',('db37d7b4447fbf6ff3a4d94327ae725b905804047a7c4686684ba60dfb15ef54','11b8e9efc6f8fe539336450118711c9e45c17cb765bb12947707a09de7e9c4e6')),
+ 'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py':('s9-fast-recent-clip-index.py',('6508d170fb0a917e3384aa1c7d2059aff3da163440371108f05ebcee62ec427a','dd231332ee634bdd0a14056e3c3f4a36c7f54e671ed82bc04976c3d88f6b6d06')),
  'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py':('s9_sd_proxy_extension.py','b4abc54b46ca558a5fcf1591d6dce401547407d138301f7840de6f1db28e53f5'),
 }
 ASSETS={'ops/c720p/security-runtime/security-original-playback-v1.js':(WEB/'security-video-playback-v30.js','e10b0470d7ae8e9687303b125febaa6932d7e7229de292688ffbe0bf83909c43')}
@@ -87,7 +88,8 @@ def main():
  for source,(name,expected) in FILES.items():
   target=ROOT/'bin'/name;raw=(stage/source).read_bytes();before=target.read_bytes() if target.exists() else None
   if before==raw:continue
-  if (sha(before) if before is not None else None)!=expected:raise RuntimeError('live_predecessor_changed:'+name)
+  permitted=expected if isinstance(expected,tuple) else (expected,)
+  if (sha(before) if before is not None else None) not in permitted:raise RuntimeError('live_predecessor_changed:'+name)
   changes[target]=raw;old[target]=before;modes[target]=stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o600
  for source,(target,expected) in ASSETS.items():
   raw=(stage/source).read_bytes();before=target.read_bytes()
