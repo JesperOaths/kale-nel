@@ -57,7 +57,16 @@ small,.muted{font-size:12px;color:var(--muted)}
 .row-info p{font-size:12px;color:var(--muted);margin:4px 0 7px}
 .actions{display:flex;gap:7px;flex-wrap:wrap}
 .actions button{font-size:12px;min-height:33px;padding:6px 10px}
-.profile-list{display:grid;gap:8px}
+.profile-list{display:grid;gap:10px}
+#savedList{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+#savedList .profile{grid-template-columns:72px minmax(0,1fr) auto;min-height:104px;padding:14px;border-color:#426776;background:linear-gradient(145deg,#1c3641,#142732)}
+#savedList .profile:hover,#savedList .profile:focus-visible{border-color:#81daca;background:#20424a}
+#savedList .profile .avatar{width:72px;height:72px;border-radius:11px}
+#savedList .profile strong{font-size:16px}
+#savedList .profile small{font-size:12px;line-height:1.45}
+#people>.details{margin-top:25px;max-width:850px}
+#people .section-head{margin:10px 0 20px}
+#people .section-head h2{font-size:23px}
 .profile{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;width:100%;background:#1b2b35;border:1px solid #375563;padding:9px;border-radius:10px}
 .profile .avatar{height:50px;width:50px;display:flex;align-items:center;justify-content:center;background:#31504d;border-radius:8px;color:#bdffeb;font-size:23px;font-weight:800;overflow:hidden}
 .profile .avatar img{height:100%;width:100%;object-fit:cover}
