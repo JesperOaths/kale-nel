@@ -96,7 +96,7 @@ def main():
  backup_originals={path:(path.read_bytes() if path.is_file() else None,
     path.stat() if path.is_file() else None) for path in staged}
  if all(data==backup_originals[path][0] for path,data in staged.items()):
-  links=api("/new/api/visual-review?workflow=manual_recording_links_v1")
+  links=api("/new/api/s9-manual-recording-links")
   if links.get("ok") is not True or links.get("manual_links_only") is not True:
    raise RuntimeError("already_installed_but_manual_link_route_missing")
   print("S9_MANUAL_CLIP_LINKS_DEPLOY_VERIFIED "+json.dumps({
@@ -124,10 +124,15 @@ def main():
    if data==backup_originals[path][0]:continue
    write(path,data,backup_originals[path][1]);changed.append(path)
   response=restart()
+  # Collision check: never claim successful deployment if the live loader
+  # still routes this endpoint to the old visual-review handler.
+  direct=api("/new/api/s9-manual-recording-links")
+  if direct.get("manual_links_only") is not True or direct.get("automatic_identity_matching") is not False:
+   raise RuntimeError("manual_api_wrong_live_handler")
   after={e.get("clip_no") for e in response.get("events",[]) if isinstance(e,dict)}
   if response.get("archive_mode")!="S9-microSD-only" or not clips.issubset(after):
    raise RuntimeError("existing_recordings_disappeared")
-  links=api("/new/api/visual-review?workflow=manual_recording_links_v1")
+  links=api("/new/api/s9-manual-recording-links")
   if links.get("ok") is not True or links.get("manual_links_only") is not True or links.get("automatic_identity_matching") is not False:
    raise RuntimeError("private_manual_link_route_not_verified")
   print("S9_MANUAL_CLIP_LINKS_DEPLOY_VERIFIED "+json.dumps({
