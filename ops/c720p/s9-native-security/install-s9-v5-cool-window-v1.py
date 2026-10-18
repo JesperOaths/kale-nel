@@ -91,7 +91,20 @@ def main():
                "--property=SubState,NextElapseUSecRealtime","--no-pager")
   values=dict(line.split("=",1) for line in metadata.splitlines() if "=" in line)
   if values.get("SubState")!="waiting" or not values.get("NextElapseUSecRealtime"):
-   raise RuntimeError("calendar_timer_not_rearmed_with_future_deadline")
+   # Diagnostic enums only: do not leak journal content, device paths or
+   # camera metadata. A boot-time catch-up may briefly run the oneshot worker.
+   current=values.get("SubState","unknown")
+   if current not in ("waiting","running","elapsed","dead","failed"):
+    current="unknown"
+   service_meta=run("systemctl","--user","show",UNIT+".service",
+                    "--property=ActiveState,SubState,Result","--no-pager")
+   service=dict(line.split("=",1) for line in service_meta.splitlines() if "=" in line)
+   service_state=service.get("ActiveState","unknown")
+   if service_state not in ("inactive","active","activating","deactivating","failed"):
+    service_state="unknown"
+   raise RuntimeError("calendar_timer_not_rearmed_state_"+current+
+      "_service_"+service_state+
+      "_future_"+str(bool(values.get("NextElapseUSecRealtime"))).lower())
  except Exception:
   for target,old in previous.items():
    if old is None:
