@@ -13,6 +13,11 @@ html,body{margin:0;width:100%;height:100%;font:14px/1.42 system-ui,-apple-system
 button,select,input{font:inherit;color:inherit}button{cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #a6fff0;outline-offset:2px}
 [hidden]{display:none!important}
+html.security-embedded #app>header{padding:5px clamp(16px,2.1vw,35px);border:0;min-height:25px;justify-content:flex-end}
+html.security-embedded #app>header>div{display:none}
+html.security-embedded #app>header #sync{font-size:11px}
+html.security-embedded main{padding-top:9px}
+
 #app{height:100dvh;display:flex;flex-direction:column;min-height:0}
 header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,2.1vw,35px);border-bottom:1px solid var(--border);flex:none}
 .kicker{font-size:10px;text-transform:uppercase;color:var(--accent);letter-spacing:.14em;font-weight:800}
@@ -127,6 +132,7 @@ video{display:block;width:100%;max-height:60dvh;background:black;border-radius:9
 <script id="s9v25-tracks-script">
 (()=>{
 "use strict";
+if(window.parent!==window)document.documentElement.classList.add("security-embedded");
 const $=id=>document.getElementById(id);
 const clipOK=/^motion_[0-9]{13}[.]mp4$/;
 const palette={black:'#303943',white:'#e9f3f5',gray:'#9caab5',red:'#d27473',orange:'#dca25c',yellow:'#e0cd78',green:'#74b896',blue:'#7aaed4',purple_or_pink:'#b59acf',brown:'#a78a72'};
