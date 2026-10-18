@@ -177,20 +177,44 @@ def read_asset(name):
     except (urllib.error.HTTPError,urllib.error.URLError,TimeoutError) as error:
         raise Unavailable("phone_archive_asset_unavailable") from error
 
+def valid_cached_thumbnail(destination,version=None):
+    """Validate local JPEG integrity before trusting a cached version.
+
+    Thumbnail checks are metadata-only and never touch the original SD video.
+    """
+    path=Path(destination)
+    try:
+        size=path.stat().st_size
+        if not 4000<size<2200000:return False
+        if isinstance(version,str) and re.fullmatch(r"[0-9]{4,7}:[0-9]{10,16}",version):
+            if size!=int(version.split(":",1)[0]):return False
+        with path.open("rb") as stream:
+            if stream.read(3)!=b"\xff\xd8\xff":return False
+            stream.seek(-2,os.SEEK_END)
+            return stream.read(2)==b"\xff\xd9"
+    except (OSError,ValueError):
+        return False
+
 def cache_thumbnail(entry,destination,previous_version):
-    """Retry failed refreshes without discarding the last usable thumbnail."""
+    """Self-heal invalid JPEGs and preserve only valid old thumbnails on failure."""
     destination=Path(destination)
     if not entry["thumbnail"]:return False,""
     wanted=entry["thumbnail_version"]
-    exists=destination.is_file()
-    if exists and previous_version==wanted and destination.stat().st_size==int(wanted.split(":")[0]):
-        return True,wanted
+    old_ok=valid_cached_thumbnail(destination,previous_version)
+    if old_ok and previous_version==wanted:return True,wanted
     try:
         raw=read_asset(entry["name"]+".thumb.jpg")
-        if len(raw)!=int(wanted.split(":")[0]):raise Unavailable("phone_thumbnail_changed_during_snapshot")
+        if (len(raw)!=int(wanted.split(":")[0]) or raw[:3]!=b"\xff\xd8\xff"
+            or raw[-2:]!=b"\xff\xd9"):
+            raise Unavailable("phone_thumbnail_invalid_or_changed")
         destination.parent.mkdir(parents=True,exist_ok=True)
-        if not exists or destination.read_bytes()!=raw:
-            tmp=destination.with_suffix(".jpg.phone-tmp");tmp.write_bytes(raw);os.replace(tmp,destination)
+        if not old_ok or destination.read_bytes()!=raw:
+            tmp=destination.with_suffix(".jpg.phone-tmp")
+            try:
+                tmp.write_bytes(raw)
+                os.replace(tmp,destination)
+            finally:
+                if tmp.exists():tmp.unlink()
         return True,wanted
-    except Unavailable:
-        return exists,previous_version or ""
+    except (Unavailable,ValueError,OSError):
+        return old_ok,(previous_version or "") if old_ok else ""

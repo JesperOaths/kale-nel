@@ -90,6 +90,22 @@ class Tests(unittest.TestCase):
         with patch.dict(sys.modules,{'phone_archive_catalog_v1':client}),patch.object(client,'read_asset',return_value=b'corrupt'),patch.object(self.proxy.subprocess,'run') as adb:
             self.proxy.serve_face_snapshot(h,name,record)
         adb.assert_not_called();self.assertEqual(h.status,503);self.assertEqual(h.wfile.getvalue(),b'')
+    def test_fast_rechecks_corrupt_thumbnail_without_adb_when_version_unchanged(self):
+        record=entry();record.update(thumbnail=True,thumbnail_version="5000:1792000000000")
+        dest=self.root/'s9-phone-thumbs'/(NAME+'.thumb.jpg')
+        dest.parent.mkdir(parents=True)
+        dest.write_bytes(b'\xff\xd8\xff'+b'x'*4997)
+        old={'name':NAME,'phone_catalog_version':record['version'],
+             'phone_thumbnail_version':record['thumbnail_version']}
+        valid=b'\xff\xd8\xff'+b'y'*4995+b'\xff\xd9'
+        with patch.object(self.fast,'ROOT',self.root),patch.object(self.fast,'adb') as adb, \
+             patch.object(client,'read_asset',return_value=valid) as read:
+            updated=self.fast.native_updates({'phone_recordings':[old]},
+                                             {'records':{NAME:record}},self.catalog)
+        adb.assert_not_called();read.assert_called_once()
+        self.assertEqual(len(updated),1)
+        self.assertEqual(dest.read_bytes(),valid)
+
     def test_old_app_keeps_existing_verified_face_fallback(self):
         raw=self.jpeg();name,record=self.face(raw);h=Handler()
         with patch.dict(sys.modules,{'phone_archive_catalog_v1':client}),patch.object(client,'read_asset',side_effect=client.Unavailable), \
