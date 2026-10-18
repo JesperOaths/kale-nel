@@ -38,6 +38,20 @@ class Gate(unittest.TestCase):
   self.assertFalse(result["qualified_for_automated_grouping"])
   self.assertFalse(result["identity_claims_enabled"])
   self.assertLess(result["false_acceptance_95pct_upper"],0.01)
+  self.assertGreater(result["true_positive_95pct_lower"],0.90)
+ def test_observed_ninety_percent_recall_is_not_ninety_percent_confident(self):
+  rows=[row(i,"same_person") for i in range(40)]+[
+       row(i+40,"different_people") for i in range(500)]
+  # 36/40 positives pass (observed 90 percent); confidence interval
+  # cannot support a claimed >=90% true positive rate.
+  for i in range(4):rows[i]["score"]=0.15
+  result=gate.evaluate(doc(rows))
+  self.assertEqual(result["true_positive_rate"],0.9)
+  self.assertLess(result["true_positive_95pct_lower"],0.9)
+  self.assertFalse(result["offline_thresholds_pass"])
+ def test_zero_positive_samples_lower_bound_is_zero(self):
+  self.assertEqual(gate.wilson_lower(0,0),0.0)
+  self.assertAlmostEqual(gate.wilson_lower(40,40),0.912,delta=.002)
  def test_false_acceptances_reject_corpus(self):
   rows=[row(i,"same_person") for i in range(40)]+[row(i+40,"different_people") for i in range(500)]
   rows[40]["score"]=0.99
