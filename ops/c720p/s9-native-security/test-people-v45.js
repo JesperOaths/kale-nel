@@ -17,8 +17,11 @@ assert(!/\.innerHTML\s*=/.test(js));
 assert(!/id="unassignedFolder"|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
 for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing rendered control '+id);
-for(const label of ['Activity &amp; scan status','Review recordings','People','Your people and groups'])
+for(const label of ['Processing coverage','Review recordings','People','People A–Z'])
  assert(html.includes(label),label);
+assert(js.includes('limit:100')&&html.includes('value="100" selected'),'Page size must default to 100');
+assert(js.includes('batch.revision!==next.revision'),'Review pagination must not combine changed revisions');
+assert(js.includes('viewerFile')&&html.includes('id="viewerFile"'),'Video filing must be actionable');
 assert(!html.includes('id="approvalConfirmed"'),'Remove redundant second confirmation checkbox');
 assert(js.includes('state.lastFolder=folder||state.lastFolder'),'Review queue must retain last selected person');
 const keepMarkup=html.split('<dialog id="approvalDialog"')[1]?.split('</dialog>')[0]||'';
