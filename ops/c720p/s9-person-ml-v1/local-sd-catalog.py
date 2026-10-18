@@ -14,6 +14,10 @@ NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 TRACK_VERSION="sampled_box_tracklets_v1"
 COLOURS={"black","white","gray","red","orange","yellow","green","blue","purple_or_pink","brown","uncertain"}
 DIRECTIONS={"image_left","image_right","image_up","image_down","diagonal","stationary_or_uncertain","insufficient_samples"}
+# Compressed byte size is not a face-quality measurement. The signed relay
+# verifies the actual JPEG's digest and native crop dimensions before serving.
+FACE_SNAPSHOT_MIN_BYTES=512
+FACE_SNAPSHOT_MAX_BYTES=2200000
 def safe_image_track_metric(value,maximum):
  """Finite bounded camera-image evidence, not physical speed, gait or identity."""
  if isinstance(value,bool) or not isinstance(value,(float,int)):return None
@@ -223,7 +227,7 @@ def safe_capture_event_metadata(manifest, current_name):
 def safe_face_review_metadata(m):
  """Strictly allowlisted human-readable phone metadata. Never copy embeddings or JPEGs."""
  result={"face_review_status":"not_available_in_original_review",
-         "face_review_sampled_frames":None,"face_snapshots_saved":0,"face_candidates":[],
+         "face_review_sampled_frames":None,"face_snapshots_saved":0,"face_candidate_records":0,"face_candidates":[],
          "face_deep_review_version":None,
          "face_crop_geometry_version":None,
          "face_evidence_outcome":"not_reviewed",
@@ -327,7 +331,7 @@ def safe_face_review_metadata(m):
       and snap.startswith(base+"__"))
   size=row.get("snapshot_size_bytes")
   digest=row.get("snapshot_sha256")
-  if not (valid_snapshot and type(size) is int and 2000<=size<=2200000
+  if not (valid_snapshot and type(size) is int and FACE_SNAPSHOT_MIN_BYTES<=size<=FACE_SNAPSHOT_MAX_BYTES
           and isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest)):
    snap=None;size=None;digest=None
   out.append({"person_id":key,"candidate_name":label,"match_status":status,
@@ -337,7 +341,8 @@ def safe_face_review_metadata(m):
     "snapshot_on_s9":snap is not None,
     "snapshot_name":snap,"snapshot_size":size,"snapshot_sha256":digest})
  result["face_candidates"]=out
- result["face_snapshots_saved"]=len(out)
+ result["face_candidate_records"]=len(out)
+ result["face_snapshots_saved"]=sum(row["snapshot_on_s9"] for row in out)
  return result
 
 def adb(*args):
@@ -510,3 +515,4 @@ def main():
  part=dest.with_suffix(".json.tmp");part.write_text(json.dumps(out,indent=2)+"\n");os.replace(part,dest)
  print("LOCAL_SD_INDEXED",len(rows),"errors",problems[:4])
 if __name__=="__main__":main()
+
