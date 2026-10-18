@@ -6,6 +6,7 @@ on:
       - 'ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py'
       - 'ops/c720p/s9-native-security/verify-security-step4-v59-browser-readonly.py'
       - 'ops/c720p/s9-native-security/security-step4-cdp-safe.py'
+      - 'ops/c720p/s9-native-security/test-step4-v59-route-idempotency.py'
   push:
     branches: [main]
     paths:
@@ -37,6 +38,7 @@ jobs:
           node --check "$tmp/ops/c720p/s9-native-security/security-people-v45.js"
           (cd "$tmp" && node ops/c720p/s9-native-security/test-people-v45.js)
           python3 -m py_compile ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py ops/c720p/s9-native-security/verify-security-step4-v59-browser-readonly.py ops/c720p/s9-native-security/security-step4-cdp-safe.py
+          python3 ops/c720p/s9-native-security/test-step4-v59-route-idempotency.py
           python3 - <<'PY'
           from pathlib import Path
           src=Path('ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py').read_text()
