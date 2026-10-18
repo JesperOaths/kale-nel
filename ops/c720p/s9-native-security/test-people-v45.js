@@ -59,7 +59,9 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
      {id:'Person 1',upper_clothing_colour:'blue',image_movement_direction:'image_left'},
      {id:'Person 2',upper_clothing_colour:'red',image_movement_direction:'insufficient_samples'}],
     face_candidates:[{snapshot_name:'motion_1792200000000__pending_1__6365_0.jpg',time_ms:6365,
-    face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
+    snapshot_size:120000,face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
+    {snapshot_name:'motion_1792200000000__pending_2__8300_0.jpg',time_ms:8300,
+    snapshot_size:50000,face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
     {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]}]})};
   throw Error('Unexpected request '+p);
  }};
@@ -75,10 +77,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
- assert.equal(el('faceCount').textContent,'1');
+ assert.equal(el('faceCount').textContent,'2');
  assert.equal(el('personScanLabel').textContent,'80 / 141');
  assert.equal(el('faceScanLabel').textContent,'1 / 1 · reviewed');
- assert.match(el('facePhotoStatus').textContent,/1 saved face images available · 1 candidate records have no saved image/);
+ assert.match(el('facePhotoStatus').textContent,/2 saved face images available · 1 candidate records have no saved image/);
  assert.equal(el('faceScanProgress').value,100);
  assert.equal(el('savedPreview').children.length,1,'Provisional clothing group must not appear as confirmed person');
  assert.equal(el('appearancePreview').children.length,1,'Unreviewed group is optional separate list');
@@ -137,10 +139,24 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('faces').hidden,false);
  assert.equal(el('faceGrid').children.length,1);
- const faceInspect=scan(el('faceGrid'),'Inspect image');
- assert(faceInspect,'Face gallery must allow inspection of original saved image');
+ assert.match(el('faceTotal').textContent,/2 images across 1 original recordings/);
+ assert.equal(el('faceGrouping').value,'','Initial select mock has no default value');
+ const faceInspect=scan(el('faceGrid'),'Inspect images');
+ assert(faceInspect,'Face gallery should group saved photos from the same recording');
  faceInspect.handlers.click();
  assert.equal(el('snapshotViewer').open,true,'Full-size image dialog must open');
+ assert.equal(el('snapshotPosition').textContent,'Image 1 of 2 in this recording');
+ assert.equal(el('snapshotPrev').disabled,true);
+ assert.equal(el('snapshotNext').disabled,false);
+ el('snapshotNext').handlers.click();
+ for(let i=0;i<4;i++)await flush();
+ assert.equal(el('snapshotPosition').textContent,'Image 2 of 2 in this recording');
+ assert.equal(el('snapshotNext').disabled,true);
+ assert.equal(el('snapshotPrev').disabled,false);
+ assert(decodeURIComponent(el('snapshotImage').src).includes('pending_2__8300_0.jpg'));
+ el('snapshotPrev').handlers.click();
+ for(let i=0;i<4;i++)await flush();
+ assert.equal(el('snapshotPosition').textContent,'Image 1 of 2 in this recording');
  for(let i=0;i<4;i++)await flush();
  assert(decodeURIComponent(el('snapshotImage').src).includes('/new/saved/face/'),
    'Saved face image must load through the existing authenticated relay');
@@ -152,6 +168,14 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(decodeURIComponent(el('video').src).includes('/new/saved/clip/'),
    'Original MP4 must open from the face snapshot inspector');
  el('viewer').close();
+ el('faceGrouping').value='images';el('faceGrouping').handlers.change();
+ assert.equal(el('faceGrid').children.length,2,'Individual image mode must show both saved crops');
+ el('faceSearch').value='not-a-recording';el('faceSearch').handlers.input();
+ assert.equal(el('faceGrid').children.length,1,'Search must filter the images and show empty state');
+ el('faceSearch').value='';el('faceSearch').handlers.input();
+ assert.equal(el('faceGrid').children.length,2);
+ el('faceGrouping').value='recording';el('faceGrouping').handlers.change();
+ assert.equal(el('faceGrid').children.length,1,'By-recording mode must collapse same-source crops');
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
