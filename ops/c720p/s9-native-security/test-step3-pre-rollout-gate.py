@@ -63,6 +63,23 @@ class Gate(unittest.TestCase):
  def test_scan_errors_block_even_with_all_clips_reported_as_v5(self):
   v=scan();v["phone_face_deep_errors"]=1
   self.assertFalse(m.check(release(),v,pairs(),archive())["current_v5_archive_complete"])
+ def test_genuine_offline_stats_can_pass_without_identity_approval(self):
+  evaluated={"positive_confirmed_pairs":40,"negative_confirmed_pairs":500,
+   "true_positive_95pct_lower":0.912,"false_acceptance_95pct_upper":0.0076,
+   "offline_thresholds_pass":True,"qualified_for_automated_grouping":False}
+  result=m.check(release(),scan(),evaluated,archive())
+  self.assertTrue(result["face_comparison_calibrated"],
+                  "Offline calibration cannot depend on identity rollout permission")
+  self.assertFalse(result["pair_gate_authorized_automated_identity_grouping"])
+  self.assertFalse(result["automatic_identity_rollout_ready"])
+  self.assertTrue(result["offline_validation_does_not_authorize_deployment"])
+  self.assertNotIn("independent_same_different_face_validation_missing",result["blockers"])
+  self.assertIn("real_field_pilot_not_verified",result["blockers"])
+ def test_high_raw_accuracy_with_insufficient_confidence_does_not_calibrate(self):
+  evaluated={"positive_confirmed_pairs":40,"negative_confirmed_pairs":500,
+   "true_positive_95pct_lower":0.82,"false_acceptance_95pct_upper":0.0076,
+   "offline_thresholds_pass":True,"qualified_for_automated_grouping":False}
+  self.assertFalse(m.check(release(),scan(),evaluated,archive())["face_comparison_calibrated"])
  def test_fake_human_scores_cannot_authorize_rollout(self):
   p={"positive_confirmed_pairs":100,"negative_confirmed_pairs":900,
      "qualified_for_automated_grouping":True,"offline_thresholds_pass":True}
