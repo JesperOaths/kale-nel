@@ -50,12 +50,14 @@ function imageFor(crop,alt,kind){
  return wrap;
 }
 function mediaForFace(f){
- const host=elt('div','', 'media');
+ const host=elt('div','','media');
  const img=elt('img');img.loading='lazy';img.decoding='async';img.alt='Captured face for manual review';
- host.append(img);
+ const loading=elt('span','Loading face image…','face-image-loading');
+ host.append(loading,img);
  Promise.resolve().then(()=>relay().url('/new/saved/face/'+encodeURIComponent(f.face.snapshot_name)))
- .then(url=>{if(img.isConnected)img.src=url}).catch(()=>{img.remove();host.append(elt('span','Image unavailable'))});
- img.addEventListener('error',()=>{img.remove();host.append(elt('span','Image unavailable'))},{once:true});
+ .then(url=>{if(img.isConnected)img.src=url}).catch(()=>{loading.textContent='Face image unavailable · inspect original recording';img.remove()});
+ img.addEventListener('load',()=>loading.remove(),{once:true});
+ img.addEventListener('error',()=>{img.remove();loading.textContent='Face image unavailable · inspect original recording'},{once:true});
  return host;
 }
 function badge(media,text){media.append(elt('span',text,'corner'))}
@@ -293,6 +295,15 @@ function profileRow(f){
   const img=im.querySelector('img');
   if(img)avatar.append(img);else avatar.append(elt('span',String(f.label||'?')[0]||'?'));
  }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
+ // Only use a face from an approved reference recording. This is a visual
+ // reference, never an automatic claim that the cropped face is this person.
+ const references=Array.isArray(f.previews)?f.previews:[];
+ const approvedClips=new Set(references.map(x=>String(x.clip||x.clip_no||x.source_clip||'')));
+ const portrait=state.faceList.find(x=>approvedClips.has(x.clip));
+ if(portrait){
+  avatar.replaceChildren(mediaForFace(portrait));
+  avatar.title='Face from an approved recording · verify which person appears';
+ }
  const info=elt('div');info.append(elt('strong',f.label),
   elt('small',num(f.approved_clips)+' reviewed '+(num(f.approved_clips)===1?'recording':'recordings')+
     (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')));
