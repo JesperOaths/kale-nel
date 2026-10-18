@@ -222,7 +222,7 @@ async function fetchFaces(){
   state.faceSummary={reviewed:v5Reviewed,total:data.events.length,
    snapshots:found.length,withoutSnapshot:Math.max(0,candidateRecords-found.length)};
   state.faceLoaded=true;
-  $('faceCount').textContent=String(found.length);
+  $('archiveCount').textContent=String(state.archiveClips.length);
   renderMetrics();
   if(state.doc)render();
  }catch(e){
@@ -230,7 +230,7 @@ async function fetchFaces(){
   state.faceSummary=null;
   state.clipEvidence=new Map();
  state.archiveClips=null;
-  $('faceCount').textContent='—';
+  $('archiveCount').textContent='—';
   $('faceScanLabel').textContent='Unavailable';
   $('facePhotoStatus').textContent='Face snapshot metadata is currently unavailable. Try Refresh.';
   // The separate crop gallery is intentionally retired; original recordings remain accessible.
@@ -432,7 +432,8 @@ function chosenPortrait(f){
 function choosePortrait(f,face){
  // The user, not the model, picks this folder's cover from an approved clip.
  const id=String(f.id||''),name=String(face?.face?.snapshot_name||'');
- if(!id||!faceName.test(name)||!state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
+ if(!id||!faceName.test(name)||!credibleFaceCrop(face)||
+     !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
   alertText('Choose a face image from an approved recording in this folder.');return;
  }
  const data={name,clip:face.clip};state.folderPortraits.set(id,data);
@@ -688,9 +689,8 @@ function inspectFaceSnapshot(f){
  $('snapshotPrev').disabled=index===0;
  $('snapshotNext').disabled=index>=clipFaces.length-1;
  const t=Number(String(f.clip).slice(7,20));
- $('snapshotTitle').textContent='Face image · '+stampMs(t);
- $('snapshotDescription').textContent='Saved from original 4K · '+(num(f.face.time_ms)/1000).toFixed(1)+
-  ' s into recording · manual inspection only · identity not established';
+ $('snapshotTitle').textContent='Face candidate · '+stampMs(t);
+ $('snapshotDescription').textContent='Original 4K · '+(num(f.face.time_ms)/1000).toFixed(1)+' s';
  $('snapshotStatus').textContent='Loading saved crop securely…';
  $('snapshotImage').removeAttribute('src');
  $('snapshotPlay').disabled=false;
@@ -815,7 +815,7 @@ $('snapshotViewer').addEventListener('close',()=>{
  state.snapshotSelected=null;
 });
 $('snapshotImage').addEventListener('load',()=>{
- if($('snapshotViewer').open)$('snapshotStatus').textContent='Original saved face crop · inspection only';
+ if($('snapshotViewer').open)$('snapshotStatus').textContent='Source image loaded';
 });
 $('snapshotImage').addEventListener('error',()=>{
  if($('snapshotViewer').open)$('snapshotStatus').textContent='Saved crop could not be displayed. Try the original video.';
