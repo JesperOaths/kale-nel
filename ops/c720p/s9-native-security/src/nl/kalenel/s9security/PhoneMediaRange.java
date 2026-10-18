@@ -26,6 +26,7 @@ final class PhoneMediaRange {
 
  static boolean handle(BufferedReader request,OutputStream out,String first,File folder)
      throws IOException {
+  if(PhoneArchiveCatalog.handle(out,first,folder))return true;
   if(!(first.startsWith("GET /clip/")||first.startsWith("HEAD /clip/")))return false;
   Matcher match=PATH.matcher(first);
   if(!match.matches()||folder==null){
@@ -112,3 +113,4 @@ final class PhoneMediaRange {
   out.flush();
  }
 }
+

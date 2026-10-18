@@ -97,9 +97,15 @@ def serve_face_snapshot(handler,name,record):
  if evidence is None:
   handler.js(404,{"ok":False,"error":"face_snapshot_not_indexed"});return
  try:
-  p=subprocess.run(["adb","-s",PHONE,"exec-out","cat",SECURITY_SD+"/FaceSnapshots/"+name],
-    stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=16,check=True)
-  data=p.stdout
+  try:
+   import phone_archive_catalog_v1 as phone_catalog
+   try:data=phone_catalog.read_asset(name)
+   except phone_catalog.Unavailable:data=None
+  except ImportError:data=None
+  if data is None:
+   p=subprocess.run(["adb","-s",PHONE,"exec-out","cat",SECURITY_SD+"/FaceSnapshots/"+name],
+     stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=16,check=True)
+   data=p.stdout
   if (len(data)!=evidence["snapshot_size"] or
       hashlib.sha256(data).hexdigest()!=evidence["snapshot_sha256"] or
       jpeg_snapshot_dimensions(data) is None):
@@ -496,4 +502,5 @@ def media_headers(handler,code,size,start,end,length,source="adb-legacy"):
  handler.send_header("X-Content-Type-Options","nosniff")
  if code==206:handler.send_header("Content-Range",f"bytes {start}-{end}/{size}")
  handler.end_headers()
+
 
