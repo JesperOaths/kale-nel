@@ -13,7 +13,7 @@ assert(js.includes("'/new/api/drive-saved'"),'Historical Drive catalog must be i
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
 assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
 assert(!/\.innerHTML\s*=/.test(js));
-assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
+assert(!/id="unassignedFolder"|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
 for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing rendered control '+id);
 for(const label of ['Activity &amp; scan status','Review recordings','People','Your people and groups'])
