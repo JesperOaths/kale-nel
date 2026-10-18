@@ -42,7 +42,7 @@ jobs:
           assert len(inline)==1
           assert 'security-video-playback.js' not in page
           Path('/tmp/ha-faces-gallery.js').write_text(inline[0])
-          assert 'v817 - Made by Bruis' in page
+          assert 'v818 - Made by Bruis' in page
           PY
           node --check /tmp/ha-faces-nav.js
           node --check /tmp/ha-faces-gallery.js
