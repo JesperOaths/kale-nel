@@ -1,0 +1,44 @@
+name: S9 V48 validation only - no deployment
+on:
+  push:
+    branches:
+      - feature/s9-step3-reviewed-face-pairs-v48-20261018
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-v48:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test browser comparison and original-video confirmation
+        run: |
+          set -euo pipefail
+          node --check ops/c720p/s9-native-security/security-people-v45.js
+          node ops/c720p/s9-native-security/test-people-v45.js
+      - name: Test private audit registry and guarded API
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-step3-face-pair-review.py
+          python3 ops/c720p/s9-native-security/test-step2-manual-evidence-cases.py
+          python3 -m py_compile \
+            ops/c720p/s9-person-ml-v1/s9_face_pair_review.py \
+            ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py \
+            ops/c720p/s9-native-security/deploy-step2-manual-cases-v1.py \
+            ops/c720p/s9-native-security/deploy-people-v45.py
+      - name: Verify rollout remains disabled
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          files = [
+            Path("ops/c720p/s9-person-ml-v1/s9_face_pair_review.py"),
+            Path("ops/c720p/s9-native-security/security-people-v45.js"),
+          ]
+          content = "\n".join(p.read_text() for p in files)
+          assert "manual-originals-pair-v1" in content
+          assert "no_identity_grouping_enabled" in content
+          assert "s9-human-confirmed-face-pairs-v1.json" not in content
+          print("S9_V48_PRE_ROLLOUT_NO_AUTOMATED_IDENTITY_PASS")
+          PY
