@@ -35,7 +35,7 @@ async function run(){
  assert.equal(win.C720PSecurityLiveOnly.version,1);
  const img=new Image();
  img.src='/new/live.mjpg';
- await Promise.resolve();await Promise.resolve();
+ for(let i=0;i<8&&!calls.some(x=>x.startsWith('image:https://secure.test/'));i++)await new Promise(resolve=>setImmediate(resolve));
  assert(calls.includes('sign:/new/live.mjpg'),'live stream must be signed');
  assert.equal(img._src,'https://secure.test/new/live.mjpg');
  assert.equal(img.dataset.securityProfile,'live-mjpeg-native');
