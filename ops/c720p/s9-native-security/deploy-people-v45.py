@@ -3,7 +3,7 @@
 
 Immutable Git commit source, transactional disk backups, verified HTTP readback,
 and exact route version bump. Does NOT touch S9 APK, 4K media, scan indices,
-people approvals, private review API, or any other Security tab.
+people approvals, private review API, or the movement detector.
 """
 import argparse
 import datetime as dt
@@ -20,18 +20,20 @@ ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
 DEST={
  "html":ROOT/"security-people-v45.html",
  "js":ROOT/"security-people-v45.js",
+ "tracks":ROOT/"security-tracks-v7.html",
  "hub":ROOT/"security-hub-v30.js",
  "entry":ROOT/"security-hub-v30.html",
 }
 ORIG={
  "html":"ops/c720p/s9-native-security/security-people-v45.html",
  "js":"ops/c720p/s9-native-security/security-people-v45.js",
+ "tracks":"ops/c720p/s9-native-security/security-tracks-v7.html",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
-OLD="security-people-v45.html?v=s9pf-v47-clip-context-20261018&"
-NEW="security-people-v45.html?v=s9pf-v48-recording-gallery-20261018&"
-ENTRY_OLD="security-hub-v30.js?v=people-faces-v47-clip-context-20261018"
-ENTRY_NEW="security-hub-v30.js?v=people-faces-v48-recording-gallery-20261018"
+OLD="security-people-v45.html?v=s9pf-v48-recording-gallery-20261018&"
+NEW="security-people-v45.html?v=s9pf-v49-folder-first-20261018&"
+ENTRY_OLD="security-hub-v30.js?v=people-faces-v48-recording-gallery-20261018"
+ENTRY_NEW="security-hub-v30.js?v=people-faces-v49-folder-first-20261018"
 MARK="s9-people-v45-real-route"
 def digest(b):return hashlib.sha256(b).hexdigest()
 def get(url,limit=220000):
@@ -83,10 +85,13 @@ def main():
    for phrase in (b'id="reviewPreview"',b'id="snapshotViewer"',b'id="snapshotImage"',b'id="snapshotPlay"',b'id="personScanProgress"',b'id="faceScanProgress"',b'id="facePhotoStatus"',b'id="reviewAlerts"',b'id="folderRecheck"',b'id="savedPreview"',b'id="faceGrid"',
                   b'id="approvalConfirmed"',b'id="faceGrouping"',b'id="faceSearch"',b'id="snapshotPrev"',b'id="snapshotNext"',b"security-people-v45.js",b"step3-evidence"):
     if phrase not in b:raise RuntimeError("html_interface_contract_missing")
-  else:
+  elif k=="js":
    for phrase in (b"clip_folders_v40",b"manual-attributes-v36",
                   b"human_confirmed:true",b"loadView()",b"fetchFaces()",b"inspectFaceSnapshot(f)",b"facesInRecording(clip)",b"step3ClipEvidence(item)"):
     if phrase not in b:raise RuntimeError("js_review_contract_missing")
+  else:
+   for phrase in (b'data-summary-view="people"',b'data-summary-view="review"',b'data-summary-view="excluded"',b'data-view="excluded"',b"function selectView(view)"):
+    if phrase not in b:raise RuntimeError("tracks_navigation_contract_missing")
   out[k]=b
  hub=prior["hub"][0].decode("utf-8")
  if MARK not in hub:raise RuntimeError("expected_existing_v45_hub")
@@ -142,7 +147,7 @@ def main():
    "source_ref":args.ref,"clip_count":len(new_clips),
    "served_sha16":served,"rollback":str(folder),"original_videos_modified":False,
    "camera_modified":False,"existing_approvals_modified":False,
-   "clip_scoped_step3_review_enabled":True,"automatic_identity_grouping_enabled":False}),flush=True)
+   "clip_scoped_step3_review_enabled":True,"tracks_navigation_enabled":True,"automatic_identity_grouping_enabled":False}),flush=True)
  except BaseException:
   for k in reversed(changed):
    path=DEST[k];b,owner=prior[k]
