@@ -41,7 +41,7 @@ class V7Tests(unittest.TestCase):
   self.assertIn('id="driveMonthSelect"',page)
   self.assertIn('id="driveRefresh"',page)
   self.assertIn('role="tablist"',page)
-  self.assertIn("showSource('drive');",page)
+  # Native S9+ should be selected on load; historical Drive remains accessible.\n  self.assertIn("showSource('local');",page)\n  self.assertIn("showSource('drive')",page)
   self.assertIn("a.fetch('/new/api/drive-saved'",page)
   self.assertIn("a.fetch('/new/api/saved'",page)
   self.assertIn("a.url('/new/drive/saved/clip/'",page)
