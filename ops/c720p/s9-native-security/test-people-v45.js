@@ -13,6 +13,10 @@ assert(js.includes("'/new/api/drive-saved'"),'Historical Drive catalog must be i
 assert(js.includes("'/new/api/s9-manual-recording-links'"),'Use isolated authenticated assignment route');
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
 assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
+assert(js.includes('function folderApprovedSDClips(')&&js.includes('folderApprovedSDClips(state.folder)'),
+ 'Folder face images must include source-qualified manual SD links');
+assert(js.includes("if(item?.source==='drive')return null;"),
+ 'Same-name Drive originals must not inherit SD face evidence');
 assert(!/\.innerHTML\s*=/.test(js));
 assert(!js.includes("groupRows($('clothingList'))"),'Legacy provisional groups cannot masquerade as scored outfit matches');
 assert(!/id="unassignedFolder"|Clothing appearances grouped into folders/.test(html));
@@ -117,7 +121,11 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    {clip_no:otherClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]},
    {clip_no:extraClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]},
    {clip_no:candidateClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]},
-   {clip_no:pendingOutfitClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]}]})};
+   {clip_no:pendingOutfitClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',
+     face_candidates:[{snapshot_name:'motion_1792000000000__verified_1__6365_0.jpg',
+      snapshot_sha256:'c'.repeat(64),snapshot_size:32000,
+      snapshot_on_s9:true,face_crop_requires_manual_review:false,
+      face_crop_padded_context_only:false,match_status:'new_anonymous_candidate',time_ms:6365}]}]})};
   if(p.startsWith('/new/saved/face/'))return {ok:true,status:200};
   throw Error('Unexpected request '+p);
  }};
@@ -140,13 +148,13 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('reviewTabCount').textContent,' · 27');
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
- assert.equal(el('approvalCount').textContent,'3');
+ assert.equal(el('approvalCount').textContent,'1','Only one verified legacy original is present, despite stale backend folder count of three');
  assert.equal(el('archiveCount').textContent,'7','All SD originals plus two historical Drive originals appear in archive');
  assert(!html.includes('data-pane="faces"'),'Face gallery tab must be removed');
  assert(!html.includes('id="faceGrid"'),'Invalid gallery not to be retained');
  assert.equal(el('personScanLabel').textContent,'80 / 141');
  assert.equal(el('faceScanLabel').textContent,'5 / 5 · reviewed');
- assert.match(el('facePhotoStatus').textContent,/2 candidate crops/);
+ assert.match(el('facePhotoStatus').textContent,/3 candidate crops/);
  assert.equal(el('faceScanProgress').value,100);
  panes[0].handlers.click();
  for(let i=0;i<5;i++)await flush();
@@ -305,6 +313,32 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
   'Returned native original must be available for review');
  assert(!el('reviewGrid').children.some(x=>x.dataset.clip===clip&&x.dataset.source==='drive'),
   'Same-name Drive original remains assigned');
+ // A human-filed S9+ original absent from the old approved folder rows
+ // must still show its own face evidence in the saved person folder.
+ const qualifiedRow=el('reviewGrid').children.find(x=>x.dataset.clip===pendingOutfitClip&&x.dataset.source==='sd');
+ assert(qualifiedRow,'Unassigned native clip with qualified face evidence remains available');
+ scan(qualifiedRow,'✓ File under person').handlers.click();
+ el('approvalFolder').value='G123';
+ await el('approvalForm').handlers.submit({preventDefault(){}});
+ for(let i=0;i<6;i++)await flush();
+ assert.equal(linkItems['sd:'+pendingOutfitClip].folder,'G123');
+ panes[2].handlers.click();for(let i=0;i<5;i++)await flush();
+ el('savedList').children[0].handlers.click();for(let i=0;i<6;i++)await flush();
+ assert(el('folderGrid').children.some(x=>x.dataset.clip===pendingOutfitClip&&x.dataset.source==='sd'),
+   'Manually assigned native original listed in its saved person');
+ assert.equal(el('folderFaces').hidden,false,
+   'Face images for manually linked native originals must appear in the person');
+ assert.equal(el('folderFaceGrid').children.length,1,
+   'Manual face evidence must not rely on the legacy approved-list page');
+ const chosen=scan(el('folderFaceGrid'),'✓ Cover photo')||scan(el('folderFaceGrid'),'Change cover photo');
+ assert(chosen,'Eligible face crop has an explicit folder-cover action');
+ chosen.handlers.click();
+ const pendingInPerson=el('folderGrid').children.find(x=>x.dataset.clip===pendingOutfitClip&&x.dataset.source==='sd');
+ scan(pendingInPerson,'↩ Return to review queue').handlers.click();
+ for(let i=0;i<6;i++)await flush();
+ assert.equal(linkItems['sd:'+pendingOutfitClip].folder,null);
+ assert.equal(el('folderFaces').hidden,true,
+   'Returned SD clip must remove its face evidence from the saved person');
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
