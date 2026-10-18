@@ -190,7 +190,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[1].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false);
- assert(el('reviewGrid').children.length>=2,'Show unassigned SD and historical Drive footage');
+ assert(el('reviewGrid').children.length>=1,'Only recordings not already filed under a person remain; historical Drive stays available');
  assert(el('reviewGrid').children.some(x=>x.dataset.clip===driveClip),
   'Historical verified Drive video must appear');
  assert(el('pageSize').value==='','Select mock has no initial value');
