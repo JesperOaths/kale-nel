@@ -41,6 +41,8 @@ def _record(value):
     thumb=value.get("thumbnail_version")
     if not isinstance(thumb,str) or not re.fullmatch(r"(?:[0-9]{4,7}:[0-9]{10,16})?",thumb):
         raise ValueError("phone_catalog_invalid_thumbnail")
+    if value["thumbnail"]!=bool(thumb) or (thumb and not 4000<int(thumb.split(":")[0])<2200000):
+        raise ValueError("phone_catalog_thumbnail_contract")
     return name,value
 
 def _cached(path):
@@ -155,6 +157,7 @@ def cache_thumbnail(entry,destination,previous_version):
         return True,wanted
     try:
         raw=read_asset(entry["name"]+".thumb.jpg")
+        if len(raw)!=int(wanted.split(":")[0]):raise Unavailable("phone_thumbnail_changed_during_snapshot")
         destination.parent.mkdir(parents=True,exist_ok=True)
         if not exists or destination.read_bytes()!=raw:
             tmp=destination.with_suffix(".jpg.phone-tmp");tmp.write_bytes(raw);os.replace(tmp,destination)

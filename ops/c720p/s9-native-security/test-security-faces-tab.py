@@ -53,5 +53,9 @@ class Tests(unittest.TestCase):
   self.assertEqual(len(inline),1)
   self.assertEqual(len(local),0,'Retired smooth copies must not load in the legacy gallery')
   self.assertNotIn('security-video-playback.js',source)
+  self.assertIn('v818 - Made by Bruis',source)
+  self.assertIn("for(const img of gallery.querySelectorAll('img[data-relay-path]'))loadImage(img);",source)
+  self.assertNotIn('new IntersectionObserver(',source)
+  self.assertNotIn('Try original 4K instead',source)
 
 if __name__=='__main__':unittest.main(verbosity=2)

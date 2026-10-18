@@ -131,7 +131,11 @@ final class PhoneArchiveCatalog {
  private static void asset(OutputStream out,String name,File folder,boolean head)throws Exception{
   File home=folder.getCanonicalFile(),asset;
   if(name.matches("motion_[0-9]{13}[.]mp4[.]thumb[.]jpg"))asset=new File(home,name);
-  else if(FACE.matcher(name).matches()) {home=new File(home,"FaceSnapshots").getCanonicalFile();asset=new File(home,name);}
+  else if(FACE.matcher(name).matches()) {
+   File faces=new File(home,"FaceSnapshots").getCanonicalFile();
+   if(!faces.getParentFile().equals(home)){send(out,404,"image/jpeg",new byte[0],head);return;}
+   home=faces;asset=new File(home,name);
+  }
   else{send(out,404,"image/jpeg",new byte[0],head);return;}
   if(!asset.getCanonicalFile().getParentFile().equals(home)||!asset.isFile()||asset.length()<512||asset.length()>2200000){send(out,404,"image/jpeg",new byte[0],head);return;}
   byte[] jpeg=read(asset,2200000);
