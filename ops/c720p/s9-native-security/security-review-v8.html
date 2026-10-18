@@ -78,6 +78,14 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 /* Distinct longitudinal analysis; all values are counts of archived recordings. */
 .analytics{display:none}
 .evidence-mode .analytics{display:grid;gap:15px;margin:16px 0 24px}
+.evidence-mode .evidence-summary,.evidence-mode .statrow,.evidence-mode .filters,.evidence-mode #results,.evidence-mode .layout{display:none!important}
+.distribution{display:grid;gap:14px}
+.distribution-row{display:grid;grid-template-columns:minmax(95px,170px) 1fr 68px;gap:12px;align-items:center;font-size:12px}
+.distribution-track{height:18px;border-radius:6px;background:#213b49;overflow:hidden}
+.distribution-track>i{display:block;height:100%;background:#73d8c0;min-width:0}
+.distribution-row strong{font-variant-numeric:tabular-nums;text-align:right}
+.analytics-help{margin:12px 0;padding:12px 16px;border:1px solid #3e6171;border-radius:11px;font-size:12px;color:#cae1e8}
+@media(max-width:620px){.distribution-row{grid-template-columns:90px 1fr 43px;gap:7px}}
 .analytics-heading{display:flex;align-items:start;justify-content:space-between;gap:15px;flex-wrap:wrap}
 .analytics-heading h2{margin:0;font-size:18px}
 .analytics-heading p,.chart-subtitle{font-size:12px;color:#afc8d0;line-height:1.5;margin:5px 0 0}
@@ -138,7 +146,11 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
  <div class="chart-key"><span><i class="chart-swatch person"></i>Possible person</span><span><i class="chart-swatch other"></i>Other or not assessed</span></div></section>
  </div>
  <div class="chart-selection"><span id="chartSelection">Showing all indexed recordings.</span><button id="clearChartSelection" class="analytics-clear" type="button" hidden>Clear chart filter</button></div>
- <p class="analytics-note">A recording counts once at its start time, using Europe/Amsterdam including seasonal clock changes. Detector evidence is unverified; a zero count means no matching indexed recording, not proof of no real-world activity. Historical Drive videos are outside this S9+ microSD dataset.</p>
+ <div class="analytics-panels">
+ <section class="analytics-panel" aria-labelledby="sourceTitle"><h3 id="sourceTitle">Where recordings are stored</h3><p class="chart-subtitle">Source coverage across the historical archive and the current camera.</p><div id="sourceDistribution" class="distribution"></div></section>
+ <section class="analytics-panel" aria-labelledby="durationTitle"><h3 id="durationTitle">Recording length</h3><p class="chart-subtitle">Identify suspiciously short recordings and missing duration metadata. Only measured lengths are categorized.</p><div id="durationDistribution" class="distribution"></div></section>
+ </div><div class="analytics-help" id="analyticInsight" role="status">Checking original archive coverage…</div>
+ <p class="analytics-note">Both S9+ microSD and historical Google Drive recordings are included where their indexes are accessible. Drive clips without a completed person review count as unassessed, not as a negative detection. Times use Europe/Amsterdam. These charts count recordings, not distinct people.</p>
 </section>
 
 <section class="evidence-summary" aria-label="Evidence review shortcuts">
@@ -159,7 +171,7 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 const $=id=>document.getElementById(id),mode=new URLSearchParams(location.search).get('mode')==='evidence'?'evidence':'today';
 const native=/^motion_[0-9]{13}[.]mp4$/,legacy=/^rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}[.]mp4$/;
 const SAFE=/^(?:motion_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4[.]thumb[.]jpg$/;
-const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null,chartHour:null,chartDay:null};
+const state={all:[],visible:[],selected:null,refreshing:false,activeVideo:null,chartHour:null,chartDay:null,driveStatus:'not_checked'};
 if(mode==='evidence')document.body.classList.add('evidence-mode');
 const evidenceButtons=document.querySelectorAll('[data-evidence-filter]');
 function syncEvidenceButtons(){
@@ -178,9 +190,9 @@ try{if(window.parent!==window&&window.parent.C720PSecureRelay?.url)return window
 function stamp(rec){const n=String(rec.clip_no||'');if(native.test(n))return Number(n.slice(7,20));if(legacy.test(n)){const m=n.match(/^rec_([0-9]{4}-[0-9]{2}-[0-9]{2})_([0-9]{2})-([0-9]{2})/);if(m)return Date.parse(m[1]+'T'+m[2]+':'+m[3]+':00+02:00')||0;}const t=Date.parse(String(rec.timestamp||''));return Number.isFinite(t)?t:0}
 function day(ms){if(!ms)return '';const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms));const k=Object.fromEntries(f.map(a=>[a.type,a.value]));return k.year+'-'+k.month+'-'+k.day}
 function today(){return day(Date.now())}
-function name(rec){return String(rec.clip_no||'')}
+function name(rec){return String(rec.clip_no||rec.remote_name||rec.name||'')}
 function fmt(rec){let ms=stamp(rec);return ms?new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(ms):String(rec.timestamp||'Unknown time')}
-function label(rec){const p=Number(rec.person_count||0);return p>1?p+' possible people':p>0?'Person candidate':rec.scene_category==='unreviewed'?'Awaiting review':'Motion · unverified'}
+function label(rec){if(rec.source==='drive'&&!(Number(rec.sampled_frames)>0))return 'Historical Drive · not assessed';const p=Number(rec.person_count||0);return p>1?p+' possible people':p>0?'Person candidate':rec.scene_category==='unreviewed'?'Awaiting review':'Motion · unverified'}
 function pct(n){return Number.isFinite(n)?(100*n).toFixed(1)+'%':'Not measured'}
 function text(tag,value,cls){const el=document.createElement(tag);if(cls)el.className=cls;el.textContent=String(value??'');return el}
 function pic(rec,host){const n=String(rec.snapshot_name||'');const outer=text('div','','pic');const fallback=text('span','No scene thumbnail','none');outer.append(fallback);if(SAFE.test(n)){
@@ -188,7 +200,7 @@ function pic(rec,host){const n=String(rec.snapshot_name||'');const outer=text('d
  img.onload=()=>fallback.remove();img.onerror=()=>img.remove();outer.append(img);
  }host.append(outer)}
 function metric(parent,value,title){const div=text('div','','metric');div.append(text('b',value),text('span',title));parent.append(div)}
-function entryKey(rec){return name(rec)}
+function entryKey(rec){return String(rec.source||'sd')+':'+name(rec)}
 function playbackStop(){if(state.activeVideo){state.activeVideo.pause();state.activeVideo.removeAttribute('src');state.activeVideo.load();state.activeVideo=null}}
 async function open(rec){
  state.selected=entryKey(rec);
@@ -280,6 +292,16 @@ function selectedAnalyticsClips(){
  return state.all.filter(rec=>scope==='person'?Number(rec.person_count)>0:
   scope==='reviewed'?Number(rec.sampled_frames)>0:true);
 }
+function renderDistribution(host,items){
+ host.replaceChildren();
+ const peak=Math.max(1,...items.map(x=>x[1]));
+ for(const [label,count] of items){
+  const row=text('div','','distribution-row');
+  const track=text('span','','distribution-track'),fill=text('i');
+  fill.style.width=(100*count/peak).toFixed(1)+'%';track.append(fill);
+  row.append(text('span',label),track,text('strong',count.toLocaleString()));host.append(row);
+ }
+}
 function drawAnalytics(){
  if(mode!=='evidence')return;
  const subset=selectedAnalyticsClips(),times=subset.map(x=>({rec:x,time:localClipTime(x)})).filter(x=>x.time);
@@ -298,6 +320,22 @@ function drawAnalytics(){
  $('akPeak').textContent=peak?String(top).padStart(2,'0')+':00':'—';
  const reviewed=times.filter(x=>Number(x.rec.sampled_frames)>0).length;
  $('akCoverage').textContent=times.length?Math.round(100*reviewed/times.length)+'%':'—';
+ renderDistribution($('sourceDistribution'),[
+  ['S9+ microSD',times.filter(x=>x.rec.source!=='drive').length],
+  ['Google Drive',times.filter(x=>x.rec.source==='drive').length]]);
+ const bounds=[['Under 10 sec',0],['10–19 sec',0],['20–59 sec',0],['1 min or more',0],['Not measured',0]];
+ for(const {rec} of times){
+  const ms=Number(rec.duration_ms)||Number(rec.duration_seconds)*1000||0;
+  const idx=ms<=0?4:ms<10000?0:ms<20000?1:ms<60000?2:3;
+  bounds[idx][1]++;
+ }
+ renderDistribution($('durationDistribution'),bounds);
+ const missingDrive=state.driveStatus!=='ready';
+ const short=bounds[0][1],unknown=bounds[4][1];
+ $('analyticInsight').textContent=short+' recordings shorter than 10 seconds; '+unknown+
+  ' lack measured duration. '+(missingDrive?'Drive index currently unavailable: charts may undercount historical activity.':
+  times.filter(x=>x.rec.source==='drive').length+' historical Drive recordings included in this selection.')+
+  ' Continue investigating individual clips in Archive; identify people only after human review.';
  $('hourAxis').replaceChildren();$('heatDays').replaceChildren();$('heatCells').replaceChildren();
  for(let h=0;h<24;h+=3)$('hourAxis').append(text('span',String(h).padStart(2,'0')));
  for(const label of weekdayNames)$('heatDays').append(text('span',label));
@@ -358,6 +396,11 @@ if(mode==='evidence'){
 function render(){
  const query=$('search').value.toLowerCase().trim(),type=$('type').value,order=$('order').value;
  if(mode==='evidence'){
+  // Analytics has no second recording browser; the Recordings and Archive
+  // tabs remain the only places showing clip cards and playback.
+  return;
+ }
+ if(false){
   const all=state.all;
   $('ePeople').textContent=all.filter(x=>Number(x.person_count)>0).length;
   $('eUnreviewed').textContent=all.filter(x=>!(Number(x.sampled_frames)>0)).length;
@@ -399,16 +442,44 @@ function render(){
  if(state.selected&&!result.some(x=>name(x)===state.selected))playbackStop();
 }
 async function refresh(){
- if(state.refreshing)return;state.refreshing=true;$('sync').textContent='Refreshing verified S9+ archive…';
- try{const r=relay();if(!r?.fetch)throw Error('secure_relay_unavailable');
- const resp=await r.fetch('/new/api/saved',{cache:'no-store'});
- if(!resp.ok)throw Error('archive_status_'+resp.status);
- const d=await resp.json();if(d.archive_mode!=='S9-microSD-only'||!Array.isArray(d.events))throw Error('wrong_archive');
- state.all=d.events.filter(x=>native.test(name(x))||legacy.test(name(x)));
- $('sync').textContent='S9+ microSD connected · '+state.all.length+' recordings indexed · original 4K retained';
- render();drawAnalytics();
- }catch(e){$('sync').textContent='Archive metadata unavailable · '+String(e.message||e);if(!state.all.length)$('list').replaceChildren(text('div','Connection error; recordings remain on the phone.','empty'))}
- finally{state.refreshing=false}}
+ if(state.refreshing)return;state.refreshing=true;$('sync').textContent='Refreshing S9+ and Drive archives…';
+ try{
+  const r=relay();if(!r?.fetch)throw Error('secure_relay_unavailable');
+  const [local,drive]=await Promise.allSettled([
+   r.fetch('/new/api/saved',{cache:'no-store'}),
+   mode==='evidence'?r.fetch('/new/api/drive-saved',{cache:'no-store'}):Promise.resolve(null)
+  ]);
+  const accepted=[];
+  if(local.status==='fulfilled'&&local.value?.ok){
+   const d=await local.value.json();
+   if(Array.isArray(d.events))accepted.push(...d.events.filter(x=>native.test(name(x))||legacy.test(name(x))).map(x=>({...x,source:'sd'})));
+  }
+  if(mode==='evidence'){
+   state.driveStatus='unavailable';
+   if(drive.status==='fulfilled'&&drive.value?.ok){
+    const d=await drive.value.json();
+    if(Array.isArray(d.events)){
+     for(const entry of d.events){
+      const n=String(entry.remote_name||entry.name||'');
+      if(!/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(n)||n.includes('..'))continue;
+      const time=Date.parse(String(entry.timestamp||entry.date||''));
+      if(!Number.isFinite(time)||time<=0)continue;
+      accepted.push({...entry,source:'drive',remote_name:n,timestamp:new Date(time).toISOString()});
+     }
+     state.driveStatus='ready';
+    }
+   }
+  }
+  if(local.status!=='fulfilled'&&state.driveStatus!=='ready')throw Error('both_archive_indexes_unavailable');
+  if(!accepted.length&&state.driveStatus!=='ready')throw Error('no_accessible_archive_metadata');
+  state.all=accepted;
+  const localCount=accepted.filter(x=>x.source==='sd').length,driveCount=accepted.length-localCount;
+  $('sync').textContent=localCount+' S9+ recordings · '+driveCount+' Drive recordings'+
+   (state.driveStatus==='unavailable'?' · Drive unavailable':'')+' · original media preserved';
+  render();drawAnalytics();
+ }catch(e){$('sync').textContent='Archive metadata unavailable · '+String(e.message||e)}
+ finally{state.refreshing=false}
+}
 $('refresh').onclick=refresh;
 for(const id of ['search','type','order'])$(id).addEventListener(id==='search'?'input':'change',render);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)state.activeVideo?.pause();else if(!state.all.length)refresh()});
