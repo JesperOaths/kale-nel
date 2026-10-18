@@ -140,11 +140,31 @@ def detection_metrics(row):
          "person_presence_percent":coverage,"duration_ms":duration,
          "review_backend":backend,"person_event_category":event}
 
+def historical_drive_origin_path(path,query):
+ """Return the original Drive handler path, never a filesystem path."""
+ if query:return None
+ if path=="/new/api/drive-saved":return "/new/api/saved"
+ match=re.fullmatch(r"/new/drive/saved/(clip|snap)/([A-Za-z0-9._-]{1,180})",path)
+ if not match:return None
+ kind,name=match.groups()
+ if ".." in name or not name.endswith(".mp4" if kind=="clip" else ".jpg"):
+  return None
+ return "/new/saved/"+kind+"/"+name
+
 def install_local_sd(H):
  original=H.go
  def go(self):
   url=urllib.parse.urlsplit(self.path)
   path=url.path
+  # ARCHIVE_HISTORICAL_DRIVE_ALIAS_V1: preserve the pre-S9 archive handler.
+  # S9+ overlays /new/api/saved; remap only explicitly bounded historical
+  # routes back to the original Drive server, without touching Drive files.
+  original_path=historical_drive_origin_path(path,url.query)
+  if original_path is not None:
+   before=self.path
+   self.path=original_path
+   try:return original(self)
+   finally:self.path=before
   data=rows()
   previews=preview_rows()
   if path=="/new/api/live-person-watch":
