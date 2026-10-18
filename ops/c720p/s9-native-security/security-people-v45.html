@@ -44,6 +44,11 @@ html.security-embedded body{padding-top:16px}
 .surface{border:1px solid var(--border);background:#121f29;border-radius:13px;padding:16px;min-width:0}
 .side-column{display:grid;gap:15px}
 .overview-feed{display:grid;gap:9px}
+.archive-source-status{display:grid;gap:7px;font-size:13px}
+.archive-source-status>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #35515e;border-radius:9px;background:#18313b}
+.archive-source-status strong{font-variant-numeric:tabular-nums}
+.archive-source-status .unavailable{color:#f3bfaa;border-color:#845c52}
+#reviewPreview .status{margin:0 0 8px}
 .review-row{display:grid;grid-template-columns:128px minmax(0,1fr);gap:13px;align-items:center;padding:9px;background:#1a2a35;border:1px solid #344d5b;border-radius:10px;min-width:0}
 .review-row .media{height:112px;width:128px;border-radius:7px;overflow:hidden}
 .recheck-alerts{display:grid;gap:8px;margin-bottom:12px}
@@ -232,15 +237,15 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <button class="metric" type="button" data-go="review"><strong id="archiveCount">—</strong><span>Original recordings</span></button>
 </section>
  <div class="overview-layout">
-  <section class="surface" aria-label="Latest recordings requiring review">
-   <div class="section-head"><div><h2>Recent recordings</h2></div><button id="openReview" type="button" class="secondary">View all →</button></div>
+  <section class="surface" aria-label="Analysis requiring attention">
+   <div class="section-head"><div><h2>What needs attention</h2></div><button id="openReview" type="button" class="secondary">Review queue →</button></div>
    <div id="reviewAlerts" class="recheck-alerts" aria-live="polite" hidden></div>
-   <div id="reviewPreview" class="overview-feed"><div class="empty">Loading reviewable recordings…</div></div>
+   <div id="reviewPreview" class="overview-feed" role="status">Checking analysis coverage…</div>
   </section>
   <div class="side-column">
-   <section class="surface" aria-label="Saved people">
-    <div class="section-head"><div><h2>People</h2></div><button id="openPeople" class="secondary" type="button">View all →</button></div>
-    <div id="savedPreview" class="profile-list"></div>
+   <section class="surface" aria-label="Available archive sources">
+    <div class="section-head"><div><h2>Archive source coverage</h2></div><button id="openPeople" class="secondary" type="button">People →</button></div>
+    <div id="savedPreview" class="archive-source-status" role="status"></div>
    </section>
    <section class="surface" aria-label="Analysis notes">
     <div class="section-head"><div><span class="kicker">SCAN PROGRESS</span><h2>Evidence quality</h2></div></div>
