@@ -50,9 +50,12 @@ def run_case(legacy,expected=True):
    assert "S9_PEOPLE_V45_LIVE_ROUTE_DRY_RUN_PASS" in output.getvalue()
    assert '"legacy"' in output.getvalue()
    assert '"tracks50"' in output.getvalue()
+   if "Unknown custom page" in legacy:
+    assert '"known_people_page": false' in output.getvalue()
+    assert '"html_bytes": 32' in output.getvalue()
 
 run_case("<html><body>People & faces · Saved folders · Review candidate recordings</body></html>")
 run_case('<html><script>location.replace("/local/frontyard-security-new/security-people-v45.html?v=route-v50-20261018")</script></html>')
 run_case('<html><script>location.replace("security-people-v50.html?v=security-visible-route-v50-20261018")</script></html>')
-run_case("<html>Unknown custom page</html>",False)
+run_case("<html>Unknown custom page</html>",True)  # Unknown legacy content is preserved, not overwritten.
 print("SECURITY_V50_REDEPLOY_DRY_RUN_PASS")
