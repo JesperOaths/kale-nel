@@ -9,12 +9,12 @@ new vm.Script(js,{filename:'security-people-v45.js'});
 assert(js.includes('function sceneFor(item)'),'Review must show a full recording scene, not only a tight detection crop');
 assert(js.includes('function automaticPortrait(f)'),'Automatic folder portrait required');
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
-assert(html.includes('automatically')&&js.includes('Change cover photo'),'Automatic covers with optional override required');
+assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
 assert(!/\.innerHTML\s*=/.test(js));
 assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
 for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing rendered control '+id);
-for(const label of ['Activity &amp; scan status','Review recordings','People','Face images','Needs your decision','Your people and groups'])
+for(const label of ['Activity &amp; scan status','Review recordings','People','Your people and groups'])
  assert(html.includes(label),label);
 assert(!html.includes('id="approvalConfirmed"'),'Remove redundant second confirmation checkbox');
 assert(js.includes('state.lastFolder=id||result.folder'),'Review queue must retain last selected person');
@@ -45,9 +45,10 @@ class E{
  load(){}pause(){}remove(){}get duration(){return 20}set currentTime(x){this.seek=x}
 }
 const idMap=new Map();const el=id=>{if(!idMap.has(id))idMap.set(id,new E());return idMap.get(id)};
-const panes=['overview','review','people','faces','clothing'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
+const panes=['overview','review','people','clothing'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
 const document={getElementById:el,createElement:t=>new E(t),querySelectorAll:q=>q==='[data-pane]'?panes:[],addEventListener(){}};
 const clip='motion_1792200000000.mp4';
+const otherClip='motion_1792200500000.mp4';
 const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observation:'v1',signature:'b'.repeat(64),
  full_crop:{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg',time_ms:2500},video_path:'/new/saved/clip/'+clip,
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
@@ -79,7 +80,8 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     snapshot_size:120000,face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
     {snapshot_name:'motion_1792200000000__pending_2__8300_0.jpg',time_ms:8300,
     snapshot_size:50000,face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
-    {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]}]})};
+    {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]},
+   {clip_no:otherClip,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]}]})};
   if(p.startsWith('/new/saved/face/'))return {ok:true,status:200};
   throw Error('Unexpected request '+p);
  }};
@@ -100,10 +102,12 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
- assert.equal(el('faceCount').textContent,'2');
+ assert.equal(el('archiveCount').textContent,'2');
+ assert(!html.includes('data-pane="faces"'),'Face gallery tab must be removed');
+ assert(!html.includes('id="faceGrid"'),'Invalid gallery not to be retained');
  assert.equal(el('personScanLabel').textContent,'80 / 141');
- assert.equal(el('faceScanLabel').textContent,'1 / 1 · reviewed');
- assert.match(el('facePhotoStatus').textContent,/2 saved face images available · 1 candidate records have no saved image/);
+ assert.equal(el('faceScanLabel').textContent,'2 / 2 · reviewed');
+ assert.match(el('facePhotoStatus').textContent,/2 candidate crops/);
  assert.equal(el('faceScanProgress').value,100);
  panes[0].handlers.click();
  for(let i=0;i<5;i++)await flush();
@@ -142,33 +146,21 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
  const folderGrid=el('folderGrid');
  assert(folderGrid.children.length,'Saved folder must show original recording rows');
- assert.equal(el('folderFaces').hidden,false,'Saved folder should display original face evidence when it exists');
- assert.equal(el('folderFaceGrid').children.length,2,'Show actual face images linked to reviewed recordings');
- const coverAction=el('folderFaceGrid').children[0].children[1];
- assert(coverAction&&coverAction.textContent==='✓ Cover photo','Folder automatically displays a representative face');
- const writesBeforePortrait=posts.length;
- coverAction.handlers.click();
- assert.equal(posts.length,writesBeforePortrait,'Choosing a folder photo must not alter approvals or videos');
- assert.equal(el('folderFaceGrid').children[0].children[1].getAttribute('aria-pressed'),'true');
- const faceContext=scan(folderGrid,'Inspect face 1');
- assert(faceContext,'Step 3 must link exact same-recording face snapshot for human review');
- let lines=[];
- function collect(x){if(x.textContent)lines.push(x.textContent);
-  for(const child of x.children||[])collect(child)}
- collect(folderGrid);
- assert(lines.some(x=>x.includes('2 temporary within-clip tracks')));
- assert(lines.some(x=>x.includes('clothing blue')&&x.includes('moves left across image')));
- assert(lines.some(x=>x.includes('clothing red')&&x.includes('direction not measured')));
- assert(lines.some(x=>x.includes('Body pose and gait: not verified')));
- assert(!lines.some(x=>x.includes('face matches track 1')),'Do not invent face-to-track associations');
- faceContext.handlers.click();
- assert.equal(el('snapshotViewer').open,true);
- el('snapshotViewer').close();
+ assert.equal(el('folderFaces').hidden,true,'Unverified context crops must not masquerade as faces');
+ assert.equal(el('folderFaceGrid').children.length,0);
+ assert(!scan(folderGrid,'View face candidate 1'),'Do not surface scenery as a verified face');
+ assert.equal(el('savedList').children[0].children[0].children[0].tagName,'SPAN',
+  'Saved folder portrait must be a neutral initial, not a crop of bicycles');
 
  panes[1].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false);
- assert.equal(el('reviewGrid').children.length,1);
+ assert.equal(el('reviewGrid').children.length,2,'All original S9 footage must appear');
+ assert.equal(el('reviewTotal').textContent,'2 original recordings');
+ assert(!scan(el('reviewGrid'),'View face candidate 1'),'Background crops must not be called faces');
+ const archiveEntry=el('reviewGrid').children[0];
+ assert(scan(archiveEntry,'▶ Play'),'Unindexed originals still available for playback');
+ assert(!scan(archiveEntry,'✓ Choose person / folder'),'Unindexed items cannot be falsely assigned');
  // Main requirement: save from Review recordings, stay on Review recordings,
  // and preselect the last-used person to speed up review of the next clip.
  const nextKeep=scan(el('reviewGrid'),'✓ Choose person / folder');assert(nextKeep);
@@ -179,54 +171,14 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('review').hidden,false,'Confirm & keep must not navigate into a folder');
  assert.equal(el('folderView').hidden,true,'Saved clips must not hijack the current review queue');
  assert.equal(posts.at(-1).payload.folder,'G123');
- panes[3].handlers.click();
- for(let i=0;i<5;i++)await flush();
- assert.equal(el('faces').hidden,false);
- assert.equal(el('faceGrid').children.length,1);
- assert.match(el('faceTotal').textContent,/2 images across 1 original recordings/);
- assert.equal(el('faceGrouping').value,'','Initial select mock has no default value');
- const faceInspect=scan(el('faceGrid'),'Inspect images');
- assert(faceInspect,'Face gallery should group saved photos from the same recording');
- faceInspect.handlers.click();
- assert.equal(el('snapshotViewer').open,true,'Full-size image dialog must open');
- assert.equal(el('snapshotPosition').textContent,'Image 1 of 2 in this recording');
- assert.equal(el('snapshotPrev').disabled,true);
- assert.equal(el('snapshotNext').disabled,false);
- el('snapshotNext').handlers.click();
- for(let i=0;i<4;i++)await flush();
- assert.equal(el('snapshotPosition').textContent,'Image 2 of 2 in this recording');
- assert.equal(el('snapshotNext').disabled,true);
- assert.equal(el('snapshotPrev').disabled,false);
- assert(decodeURIComponent(el('snapshotImage').src).includes('pending_2__8300_0.jpg'));
- el('snapshotPrev').handlers.click();
- for(let i=0;i<4;i++)await flush();
- assert.equal(el('snapshotPosition').textContent,'Image 1 of 2 in this recording');
- for(let i=0;i<4;i++)await flush();
- assert(decodeURIComponent(el('snapshotImage').src).includes('/new/saved/face/'),
-   'Saved face image must load through the existing authenticated relay');
- assert.match(el('snapshotDescription').textContent,/identity not established/);
- el('snapshotPlay').handlers.click();
- for(let i=0;i<4;i++)await flush();
- assert.equal(el('snapshotViewer').open,false);
- assert.equal(el('viewer').open,true);
- assert(decodeURIComponent(el('video').src).includes('/new/saved/clip/'),
-   'Original MP4 must open from the face snapshot inspector');
- el('viewer').close();
- el('faceGrouping').value='images';el('faceGrouping').handlers.change();
- assert.equal(el('faceGrid').children.length,2,'Individual image mode must show both saved crops');
- el('faceSearch').value='not-a-recording';el('faceSearch').handlers.input();
- assert.equal(el('faceGrid').children.length,1,'Search must filter the images and show empty state');
- el('faceSearch').value='';el('faceSearch').handlers.input();
- assert.equal(el('faceGrid').children.length,2);
- el('faceGrouping').value='recording';el('faceGrouping').handlers.change();
- assert.equal(el('faceGrid').children.length,1,'By-recording mode must collapse same-source crops');
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
- assert.equal(el('savedList').children[0].children[0].children[0].className,'media','Saved folder should display face automatically from approved footage');
+ assert.equal(el('savedList').children[0].children[0].children[0].tagName,'SPAN',
+  'Only a real, qualified face can replace the folder initials');
  // Navigate to a provisional group; explicit manual approval must remain
  // possible without claiming an automatic same-person identity.
- panes[4].handlers.click();
+ panes[3].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('clothing').hidden,false,'Clothing matches deserve their own tab');
  assert.equal(el('people').hidden,true);
@@ -234,7 +186,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  group.handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('folderView').hidden,false);
- assert.equal(panes[4].attributes['aria-selected'],'true','Clothing group keeps its navigation context');
+ assert.equal(panes[3].attributes['aria-selected'],'true','Clothing group keeps its navigation context');
  const provisionalKeep=scan(el('folderGrid'),'✓ Keep here');assert(provisionalKeep);
  provisionalKeep.handlers.click();
  assert(el('approvalFolder').children.some(x=>x.value==='P345'),
@@ -249,10 +201,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(releaseHeldAll,'Old request must be deliberately paused');
  el('reviewMode').value='inbox';el('reviewMode').handlers.change();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'27 matching recordings');
+ assert.equal(el('reviewTotal').textContent,'27 recordings');
  holdAll=false;releaseHeldAll();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'27 matching recordings',
+ assert.equal(el('reviewTotal').textContent,'27 recordings',
   'Stale responses must not replace current tab data');
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});

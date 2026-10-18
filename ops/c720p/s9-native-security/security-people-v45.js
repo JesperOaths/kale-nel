@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people'};
+ faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -130,6 +130,27 @@ function queueVisibleFace(img,source,host){
  },{rootMargin:'280px'});
  observer.observe(host);
 }
+// The S9+ sometimes saves manually-rescued *context* crops containing clothes,
+// bicycles or scenery. An original JPEG is NOT proof of a detected face.
+// Only crops produced by a reliable 4K embedding-grade face observation may
+// receive an automatic face thumbnail. No identity link is implied.
+const strongFaceStatuses=new Set([
+ 'new_anonymous_candidate','anonymous_similarity_unverified',
+ 'reference_similarity_unverified']);
+function credibleFaceCrop(f){
+ const face=f?.face||{};
+ return face.face_crop_requires_manual_review===false&&
+  face.face_crop_padded_context_only===false&&
+  strongFaceStatuses.has(String(face.match_status||''))&&
+  face.snapshot_on_s9!==false&&faceName.test(String(face.snapshot_name||''));
+}
+function reliableFaces(clip){
+ const seen=new Set();
+ return state.faceList.filter(f=>f.clip===clip&&credibleFaceCrop(f)).filter(f=>{
+  const key=String(f.face.snapshot_sha256||f.face.snapshot_name);
+  if(seen.has(key))return false;seen.add(key);return true;
+ });
+}
 function mediaForFace(f){
  const host=elt('div','','media');
  const img=elt('img');img.loading='lazy';img.decoding='async';img.alt='Captured face for manual review';
@@ -161,8 +182,10 @@ async function loadView(){
   if(!res.ok||next.ok!==true||!Array.isArray(next.folders)||!Array.isArray(next.items))
    throw Error(next.error||'The review archive is unavailable.');
   state.doc=next;
-  if(state.offset>=num(next.total)&&num(next.total)>0){
-   state.offset=Math.max(0,Math.floor((next.total-1)/state.limit)*state.limit);
+  const pageTotal=state.tab==='all'&&state.archiveClips?
+   state.archiveClips.length:num(next.total);
+  if(state.offset>=pageTotal&&pageTotal>0){
+   state.offset=Math.max(0,Math.floor((pageTotal-1)/state.limit)*state.limit);
    state.loading=false;return loadView();
   }
   render();
@@ -194,21 +217,23 @@ async function fetchFaces(){
    }
   }
   state.clipEvidence=byClip;
+  state.archiveClips=[...byClip.keys()].sort((a,b)=>b.localeCompare(a));
   state.faceList=found.sort((a,b)=>String(b.clip).localeCompare(String(a.clip)));
   state.faceSummary={reviewed:v5Reviewed,total:data.events.length,
    snapshots:found.length,withoutSnapshot:Math.max(0,candidateRecords-found.length)};
   state.faceLoaded=true;
-  $('faceCount').textContent=String(found.length);
+  $('archiveCount').textContent=String(state.archiveClips.length);
   renderMetrics();
   if(state.doc)render();
  }catch(e){
   if(requestToken!==state.faceFetchToken)return;
   state.faceSummary=null;
   state.clipEvidence=new Map();
-  $('faceCount').textContent='—';
+ state.archiveClips=null;
+  $('archiveCount').textContent='—';
   $('faceScanLabel').textContent='Unavailable';
   $('facePhotoStatus').textContent='Face snapshot metadata is currently unavailable. Try Refresh.';
-  if(state.pane==='faces')$('faceGrid').replaceChildren(elt('p','Face images could not be loaded right now.','empty'));
+  // The separate crop gallery is intentionally retired; original recordings remain accessible.
  }
 }
 async function action(data,after){
@@ -231,9 +256,9 @@ async function action(data,after){
  finally{state.busy=false;state.loading=false;await loadView()}
 }
 function openReview(mode){
- state.pane='review';state.folder='';state.tab=mode||'inbox';state.offset=0;
+ state.pane='review';state.folder='';state.tab=mode||'all';state.offset=0;
  $('reviewMode').value=state.tab;
- selectPane('review');loadView();
+ selectPane('review');loadView();fetchFaces();
 }
 function openFolder(id,tab){
  const f=state.doc?.folders.find(f=>f.id===id);if(!f)return;
@@ -244,10 +269,10 @@ function openFolder(id,tab){
 }
 function openHome(pane){
  state.pane=pane;state.folder='';state.tab='inbox';state.offset=0;
- selectPane(pane);loadView();if(pane==='faces'||pane==='people'||pane==='clothing')fetchFaces();
+ selectPane(pane);loadView();if(pane==='people'||pane==='clothing'||pane==='review')fetchFaces();
 }
 function selectPane(pane){
- for(const name of ['overview','review','people','faces','clothing','folderView'])
+ for(const name of ['overview','review','people','clothing','folderView'])
   $(name).hidden=(name!==(pane==='folder'?'folderView':pane));
  for(const b of document.querySelectorAll('[data-pane]')){
   const expected=pane==='folder'?state.folderReturnPane:pane;
@@ -319,7 +344,7 @@ function step3ClipEvidence(item){
  const heading=elt('summary','Face and movement evidence · Expand details');
  root.append(heading);
  const details=elt('div','','step3-evidence-lines');
- const faces=state.faceList.filter(f=>f.clip===clip).slice(0,8);
+ const faces=reliableFaces(clip).slice(0,8);
  const tracks=record&&Array.isArray(record.anonymous_tracks)?
   record.anonymous_tracks.slice(0,8):[];
  if(!record){
@@ -327,8 +352,7 @@ function step3ClipEvidence(item){
    'Additional face and movement metadata unavailable for this clip':
    'Loading independent face and movement observations…'));
  }else{
-  details.append(elt('span',faces.length+' saved face '+(faces.length===1?'image':'images')+
-   ' · '+tracks.length+' temporary within-clip '+(tracks.length===1?'track':'tracks')));
+  details.append(elt('span',tracks.length+' person tracks · '+faces.length+' usable face candidates'));
   if(tracks.length){
    for(const [i,track] of tracks.entries()){
     const shade=String(track?.upper_clothing_colour||'').toLowerCase();
@@ -343,22 +367,21 @@ function step3ClipEvidence(item){
  if(faces.length){
   const buttons=elt('div','','step3-face-links');
   for(const [i,face] of faces.entries())
-   buttons.append(control('Inspect face '+(i+1),()=>inspectFaceSnapshot(face),'secondary'));
+   buttons.append(control('View face candidate '+(i+1),()=>inspectFaceSnapshot(face),'secondary'));
   root.append(buttons);
  }
  return root;
 }
 function reviewFacesForClip(item){
- const faces=state.faceList.filter(f=>f.clip===item.clip).slice(0,3);
+ const faces=reliableFaces(item.clip).slice(0,3);
  if(!faces.length)return null;
  const host=elt('div','','review-face-evidence');
- host.append(elt('small',faces.length+' saved face '+(faces.length===1?'image':'images')+
-  ' from this recording · verify who appears'));
+ host.append(elt('small','Face candidates'));
  const group=elt('div','','review-face-strip');
  for(const [i,face] of faces.entries()){
   const button=control('',()=>inspectFaceSnapshot(face),'review-face-button');
   button.setAttribute('aria-label','Inspect captured face '+(i+1));
-  button.replaceChildren(mediaForFace(face),elt('small','Face '+(i+1)));
+  button.replaceChildren(mediaForFace(face));
   group.append(button);
  }
  host.append(group);
@@ -368,16 +391,18 @@ function reviewItem(item,compact){
  const root=elt('article','',compact?'review-row':'evidence');
  const media=sceneFor(item);
  const info=elt('div','',compact?'row-info':'body');
- badge(media, item.person_recheck_required?'RECHECK':item.decision==='approved'?'APPROVED':item.temporal_support?'PERSON CLUE':'WEAK EVIDENCE');
+ badge(media,item.unindexed?'ARCHIVE':item.person_recheck_required?'RECHECK':item.decision==='approved'?'SAVED':item.temporal_support?'PERSON':'REVIEW');
  const main=elt('strong',date(item));
  info.append(main);
  if(!compact){const faceEvidence=reviewFacesForClip(item);if(faceEvidence)info.append(faceEvidence)}
- if(item.person_recheck_required)info.append(elt('p','Previously kept, but current person detection needs checking.'));
- else if(!item.temporal_support)info.append(elt('p','Limited observations · inspect the original video.'));
- else info.append(elt('p','Original 4K · '+(item.entry_zone||'front garden').replaceAll('_',' ')+' · visual evidence'));
+ if(item.unindexed)info.append(elt('p','Analysis pending'));
+ else if(item.person_recheck_required)info.append(elt('p','Person evidence needs recheck'));
+ else if(!item.temporal_support)info.append(elt('p','Person evidence uncertain'));
  const tools=elt('div','','actions');
  tools.append(control('▶ Play',()=>startVideo(item)));
- if(item.decision==='approved'){
+ if(item.unindexed){
+  tools.append(elt('small','Not indexed for assignment'));
+ }else if(item.decision==='approved'){
   tools.append(control('Saved ✓',()=>{},'secondary'));tools.lastChild.disabled=true;
  }else if(['rejected','skipped'].includes(item.decision)){
   tools.append(control('Restore',()=>restore(item),'secondary'));
@@ -388,7 +413,7 @@ function reviewItem(item,compact){
  if(state.folder&&state.doc?.reference_examples?.length&&item.decision!=='approved')
   tools.append(control('Compare',()=>compare(item)));
  info.append(tools);
- if(!compact)info.append(step3ClipEvidence(item));
+ // Detailed track analytics remain on Tracks & Movements, not each card.
  if(compact)root.append(media,info);
  else root.append(media,info);
  return root;
@@ -402,12 +427,13 @@ function chosenPortrait(f){
   try{saved=JSON.parse(localStorage.getItem(portraitKey(id))||'null')}catch(_){}
  }
  if(!saved||!faceName.test(String(saved.name||''))||!clipName.test(String(saved.clip||'')))return null;
- return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name)||null;
+ return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&credibleFaceCrop(x))||null;
 }
 function choosePortrait(f,face){
  // The user, not the model, picks this folder's cover from an approved clip.
  const id=String(f.id||''),name=String(face?.face?.snapshot_name||'');
- if(!id||!faceName.test(name)||!state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
+ if(!id||!faceName.test(name)||!credibleFaceCrop(face)||
+     !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
   alertText('Choose a face image from an approved recording in this folder.');return;
  }
  const data={name,clip:face.clip};state.folderPortraits.set(id,data);
@@ -434,10 +460,34 @@ function automaticPortrait(f){
    approved.add(item.clip);
  }
  if(!approved.size)return null;
- return state.faceList.filter(x=>approved.has(x.clip)).sort((a,b)=>
-  Number(a.face.face_crop_padded_context_only===true)-Number(b.face.face_crop_padded_context_only===true)||
-  num(b.face.snapshot_size)-num(a.face.snapshot_size)||
-  String(a.face.snapshot_name).localeCompare(String(b.face.snapshot_name)))[0]||null;
+ // Never recycle the same face between people or guess from group footage.
+ const proposed=new Map();
+ const reserved=new Set();
+ for(const folder of savedFolders().slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
+  const source=new Set((Array.isArray(folder.previews)?folder.previews:[])
+   .map(approvedPreviewClip).filter(Boolean));
+  if(state.folder===folder.id)for(const x of state.doc?.items||[])
+   if(x.decision==='approved'&&clipName.test(String(x.clip||'')))source.add(x.clip);
+  const options=[];
+  for(const clip of source){
+   const faces=reliableFaces(clip);
+   // A crop in a multi-person recording cannot be assigned to an individual.
+   const rec=state.clipEvidence.get(clip);
+   const tracks=rec?.anonymous_tracks||rec?.person_tracks||[];
+   if(faces.length!==1||tracks.length>1)continue;
+   const key=String(faces[0].face.snapshot_sha256||faces[0].face.snapshot_name);
+   if(!reserved.has(key))options.push(faces[0]);
+  }
+  options.sort((a,b)=>num(b.face.snapshot_size)-num(a.face.snapshot_size)||
+   String(a.face.snapshot_name).localeCompare(String(b.face.snapshot_name)));
+  const selected=options[0]||null;
+  if(selected){
+   const key=String(selected.face.snapshot_sha256||selected.face.snapshot_name);
+   reserved.add(key);
+  }
+  proposed.set(folder.id,selected);
+ }
+ return proposed.get(f.id)||null;
 }
 function profileRow(f){
  const b=control('',()=>openFolder(f.id),'profile');b.replaceChildren();
@@ -445,12 +495,12 @@ function profileRow(f){
  const face=chosenPortrait(f)||automaticPortrait(f);
  if(face){
   avatar.append(mediaForFace(face));
-  avatar.title='Photo from reviewed footage · illustrative, not independently identified';
+  avatar.title='Candidate from a reviewed recording';
  }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
  const info=elt('div');info.append(elt('strong',f.label),
   elt('small',num(f.approved_clips)+' reviewed '+(num(f.approved_clips)===1?'recording':'recordings')+
     (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')),
-  elt('small',face?'Photo chosen from reviewed footage':'No saved face photo available'));
+  elt('small',face?'Portrait from reviewed recording':'No verified face portrait yet'));
  b.append(avatar,info,elt('span','Open recordings →','arrow'));
  return b;
 }
@@ -501,8 +551,7 @@ function renderMetrics(){
   $('faceScanLabel').textContent=reviewed+' / '+fs.total+
    (reviewed===fs.total?' · reviewed':' · remaining '+(fs.total-reviewed));
   $('faceScanProgress').value=Math.round(100*reviewed/fs.total);
-  $('facePhotoStatus').textContent=fs.snapshots+' saved face images available · '+
-   fs.withoutSnapshot+' candidate records have no saved image. Images are for manual review, not identity matches.';
+  $('facePhotoStatus').textContent=fs.snapshots+' candidate crops · only face-qualified crops are shown';
  }else if(!state.faceLoaded){
   $('faceScanLabel').textContent='Loading…';
   $('faceScanProgress').value=0;
@@ -540,11 +589,26 @@ function paginate(host,total,onPage){
 }
 function renderReview(){
  $('reviewMode').value=state.tab;
- $('reviewTotal').textContent=num(state.doc?.total)+' matching recordings';
  const host=$('reviewGrid');host.replaceChildren();
- for(const item of state.doc?.items||[])host.append(reviewItem(item,false));
- if(!host.children.length)host.append(elt('p','No recordings match this view.','empty'));
- paginate($('reviewPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
+ if(state.tab==='all'&&state.archiveClips){
+  // The review API indexes only person events; include every original video.
+  // Clips without signed person evidence are read-only: never forge approvals.
+  const indexed=new Map((state.doc?.items||[]).map(x=>[x.clip,x]));
+  const all=state.archiveClips;
+  for(const clip of all.slice(state.offset,state.offset+state.limit)){
+   host.append(reviewItem(indexed.get(clip)||{
+    clip,recorded_ms:Number(clip.slice(7,20)),unindexed:true,
+    decision:null,temporal_support:false
+   },false));
+  }
+  $('reviewTotal').textContent=all.length+' original recordings';
+  paginate($('reviewPage'),all.length,n=>{state.offset=n;loadView()});
+ }else{
+  $('reviewTotal').textContent=num(state.doc?.total)+' recordings';
+  for(const item of state.doc?.items||[])host.append(reviewItem(item,false));
+  paginate($('reviewPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
+ }
+ if(!host.children.length)host.append(elt('p','No recordings in this view.','empty'));
 }
 function renderPeople(){
  const saved=$('savedList');saved.replaceChildren();
@@ -578,7 +642,7 @@ function renderFolder(){
  // A linked recording can still contain a different person: never label a crop as an identified face.
  const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
  const clips=new Set((state.doc?.items||[]).filter(x=>x.decision==='approved').map(x=>String(x.clip||'')));
- const faceMatches=state.faceList.filter(x=>clips.has(x.clip)).slice(0,16);
+ const faceMatches=state.faceList.filter(x=>clips.has(x.clip)&&credibleFaceCrop(x)).slice(0,16);
  facePanel.hidden=state.tab!=='approved'||faceMatches.length===0;
  if(!facePanel.hidden)for(const face of faceMatches){
   const cell=elt('div','','folder-photo-choice');
@@ -604,14 +668,6 @@ function facesInRecording(clip){
    num(a.face.time_ms)-num(b.face.time_ms)||
    String(a.face.snapshot_name).localeCompare(String(b.face.snapshot_name)));
 }
-function representativeFace(list){
- // Prefer non-padded saved crops, then a larger saved crop for a usable preview.
- const sorted=[...list].sort((a,b)=>
-  Number(a.face.face_crop_padded_context_only===true)-
-   Number(b.face.face_crop_padded_context_only===true)||
-  num(b.face.snapshot_size)-num(a.face.snapshot_size));
- return sorted[0];
-}
 function advanceFaceSnapshot(direction){
  const current=state.snapshotSelected;
  if(!current)return;
@@ -633,9 +689,8 @@ function inspectFaceSnapshot(f){
  $('snapshotPrev').disabled=index===0;
  $('snapshotNext').disabled=index>=clipFaces.length-1;
  const t=Number(String(f.clip).slice(7,20));
- $('snapshotTitle').textContent='Face image · '+stampMs(t);
- $('snapshotDescription').textContent='Saved from original 4K · '+(num(f.face.time_ms)/1000).toFixed(1)+
-  ' s into recording · manual inspection only · identity not established';
+ $('snapshotTitle').textContent='Face candidate · '+stampMs(t);
+ $('snapshotDescription').textContent='Original 4K · '+(num(f.face.time_ms)/1000).toFixed(1)+' s';
  $('snapshotStatus').textContent='Loading saved crop securely…';
  $('snapshotImage').removeAttribute('src');
  $('snapshotPlay').disabled=false;
@@ -654,69 +709,6 @@ function closeFaceSnapshot(){
  $('snapshotImage').removeAttribute('src');
  state.snapshotSelected=null;
 }
-function renderFaces(){
- const mode=$('faceMode').value;
- const needle=String($('faceSearch').value||'').trim().toLowerCase().slice(0,120);
- const images=state.faceList.filter(f=>{
-  const suggested=['anonymous_similarity_unverified','reference_similarity_unverified'].includes(
-    String(f.face.match_status||''))&&
-    f.face.face_crop_requires_manual_review!==true&&
-    f.face.face_crop_padded_context_only!==true;
-  if(mode==='suggested'&&!suggested)return false;
-  if(mode==='manual'&&suggested)return false;
-  if(needle){
-   const clipDate=stampMs(Number(f.clip.slice(7,20))).toLowerCase();
-   if(!f.clip.toLowerCase().includes(needle)&&!clipDate.includes(needle))return false;
-  }
-  return true;
- });
- const grouping=$('faceGrouping').value==='images'?'images':'recording';
- const groups=new Map();
- for(const f of images){
-  if(!groups.has(f.clip))groups.set(f.clip,[]);
-  groups.get(f.clip).push(f);
- }
- const grouped=[...groups.entries()].map(([clip,faces])=>
-  ({clip,faces,preview:representativeFace(faces)}));
- const entries=grouping==='recording'?grouped:images.map(f=>
-  ({clip:f.clip,faces:[f],preview:f}));
- $('faceTotal').textContent=images.length+' images across '+groups.size+' original recordings';
- $('faceGroupingNote').textContent=grouping==='recording'?
-  'One card per original recording. Multiple crops can show different people; grouping does not identify anyone.':
-  'One card per saved face crop. These images are not automatic same-person matches.';
- const host=$('faceGrid');host.replaceChildren();
- const start=state.facePage*24;
- const visible=entries.slice(start,start+24);
- for(const row of visible){
-  const f=row.preview;
-  const card=elt('article','','evidence'),media=mediaForFace(f);
-  badge(media,grouping==='recording'?row.faces.length+' FACE IMAGES':'FACE IMAGE');
-  const box=elt('div','','body');
-  const timestamp=Number(String(row.clip).slice(7,20));
-  box.append(elt('strong',stampMs(timestamp)),
-    elt('p',row.faces.length+' saved '+(row.faces.length===1?'image':'images')+
-    ' · original 4K · no identity grouping'));
-  const tools=elt('div','','actions');
-  tools.append(control(grouping==='recording'?'Inspect images':'Inspect image',
-    ()=>inspectFaceSnapshot(f),'secondary'));
-  tools.append(control('▶ Play recording',()=>playVideo('/new/saved/clip/'+encodeURIComponent(row.clip),
-   'Original 4K recording · '+stampMs(timestamp),num(f.face.time_ms)/1000)));
-  box.append(tools);card.append(media,box);host.append(card);
- }
- if(!entries.length)host.append(elt('p',state.faceLoaded?
-   'No face images match these filters. Try All captured images or clear the recording search.':
-   'Loading face-image evidence…','empty'));
- const bar=$('facePage');bar.replaceChildren();
- if(entries.length>24){
-  const prev=control('← Previous',()=>{state.facePage=Math.max(0,state.facePage-1);renderFaces()});
-  prev.disabled=state.facePage===0;
-  const next=control('Next →',()=>{state.facePage++;renderFaces()});
-  next.disabled=start+24>=entries.length;
-  bar.append(prev,elt('span',Math.min(start+1,entries.length)+'–'+
-    Math.min(start+24,entries.length)+' / '+entries.length+
-    ' '+(grouping==='recording'?'recordings':'images')),next);
- }
-}
 function render(){
  if(!state.doc)return;
  renderMetrics();
@@ -724,7 +716,6 @@ function render(){
  if(state.pane==='review')renderReview();
  if(state.pane==='people')renderPeople();
  if(state.pane==='folder')renderFolder();
- if(state.pane==='faces')renderFaces();
  if(state.pane==='clothing')renderClothing();
 }
 function compare(item){
@@ -755,9 +746,9 @@ function openFolderEditor(mode){
 }
 function stopVideo(){++state.playSerial;const v=$('video');v.pause();v.removeAttribute('src');v.load()}
 for(const b of document.querySelectorAll('[data-pane]'))b.addEventListener('click',()=>{
- const p=b.dataset.pane;if(p==='review')openReview('inbox');else openHome(p);
+ const p=b.dataset.pane;if(p==='review')openReview('all');else openHome(p);
 });
-$('openReview').addEventListener('click',()=>openReview('inbox'));
+$('openReview').addEventListener('click',()=>openReview('all'));
 $('peopleReviewNow').addEventListener('click',()=>openReview('inbox'));
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
@@ -765,13 +756,11 @@ $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
 $('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
-$('faceMode').addEventListener('change',()=>{state.facePage=0;renderFaces()});
-$('faceGrouping').addEventListener('change',()=>{state.facePage=0;renderFaces()});
-$('faceSearch').addEventListener('input',()=>{state.facePage=0;renderFaces()});
 $('refresh').addEventListener('click',()=>{
  state.faceLoaded=false;
  state.faceSummary=null;
  state.clipEvidence=new Map();
+ state.archiveClips=null;
  loadView();
  fetchFaces();
 });
@@ -826,7 +815,7 @@ $('snapshotViewer').addEventListener('close',()=>{
  state.snapshotSelected=null;
 });
 $('snapshotImage').addEventListener('load',()=>{
- if($('snapshotViewer').open)$('snapshotStatus').textContent='Original saved face crop · inspection only';
+ if($('snapshotViewer').open)$('snapshotStatus').textContent='Source image loaded';
 });
 $('snapshotImage').addEventListener('error',()=>{
  if($('snapshotViewer').open)$('snapshotStatus').textContent='Saved crop could not be displayed. Try the original video.';
@@ -843,8 +832,8 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer'
 window.addEventListener('pagehide',stopVideo);
 document.querySelectorAll('[data-go]').forEach(button=>button.addEventListener('click',()=>{
  const pane=button.dataset.go;
- if(pane==='review')openReview('inbox');
- else if(pane==='people'||pane==='faces'||pane==='clothing')openHome(pane);
+ if(pane==='review')openReview('all');
+ else if(pane==='people'||pane==='clothing')openHome(pane);
 }));
 selectPane('people');loadView();fetchFaces();
 })();
