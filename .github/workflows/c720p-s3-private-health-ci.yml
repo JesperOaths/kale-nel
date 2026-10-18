@@ -1,0 +1,23 @@
+name: S3 private motion health semantics
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s3-motion-readonly-health.py'
+      - 'ops/c720p/test-s3-motion-private-health-v1.py'
+      - '.github/workflows/c720p-s3-private-health-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s3-motion-readonly-health.py'
+      - 'ops/c720p/test-s3-motion-private-health-v1.py'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 -m py_compile ops/c720p/s3-motion-readonly-health.py ops/c720p/test-s3-motion-private-health-v1.py
+          python3 ops/c720p/test-s3-motion-private-health-v1.py
