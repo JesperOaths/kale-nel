@@ -68,7 +68,7 @@ def main():
           "Nice=12\nIOSchedulingClass=idle\n"
           "NoNewPrivileges=yes\n").encode()
  timer=("[Unit]\nDescription=Check S9+ thermal/idle window for V5 archive review\n"
-        "[Timer]\nOnCalendar=*:0/5\n"
+        "[Timer]\nOnActiveSec=2min\nOnUnitActiveSec=5min\nOnCalendar=*:0/5\n"
         "AccuracySec=1min\nRandomizedDelaySec=2min\n"
         "Persistent=true\nUnit="+UNIT+".service\n"
         "[Install]\nWantedBy=timers.target\n").encode()
@@ -88,9 +88,10 @@ def main():
   if enabled!="enabled" or active!="active":
    raise RuntimeError("systemd_timer_not_persistently_enabled")
   metadata=run("systemctl","--user","show",UNIT+".timer",
-               "--property=SubState,NextElapseUSecRealtime","--no-pager")
+               "--property=SubState,NextElapseUSecRealtime,NextElapseUSecMonotonic","--no-pager")
   values=dict(line.split("=",1) for line in metadata.splitlines() if "=" in line)
-  if values.get("SubState")!="waiting" or not values.get("NextElapseUSecRealtime"):
+  has_future=bool(values.get("NextElapseUSecRealtime") or values.get("NextElapseUSecMonotonic"))
+  if values.get("SubState")!="waiting" or not has_future:
    # Diagnostic enums only: do not leak journal content, device paths or
    # camera metadata. A boot-time catch-up may briefly run the oneshot worker.
    current=values.get("SubState","unknown")
@@ -104,7 +105,7 @@ def main():
     service_state="unknown"
    raise RuntimeError("calendar_timer_not_rearmed_state_"+current+
       "_service_"+service_state+
-      "_future_"+str(bool(values.get("NextElapseUSecRealtime"))).lower())
+      "_future_"+str(has_future).lower())
  except Exception:
   for target,old in previous.items():
    if old is None:
@@ -120,6 +121,7 @@ def main():
     "run_on":"C720P_user_systemd","camera_apk_changed":False,
     "recordings_modified":False,"initial_scan_started":False,
     "check_interval_minutes":5,"timer_substate":values["SubState"],
-    "has_next_calendar_deadline":True},sort_keys=True),flush=True)
+    "has_next_scheduled_deadline":True,
+    "timer_clock":"realtime" if values.get("NextElapseUSecRealtime") else "monotonic"},sort_keys=True),flush=True)
 
 if __name__=="__main__":main()
