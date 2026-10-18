@@ -1358,6 +1358,9 @@ public final class CameraService extends Service {
    d.put("continuous_4k_dropped_output_frames",continuous4K==null?0:continuous4K.droppedOutputFrames());
    d.put("continuous_4k_error",continuous4K==null?"":continuous4K.error());
    d.put("continuous_4k_completed",continuous4KCompleted);
+   d.put("continuous_4k_last_completed_clip",continuous4K==null?"":continuous4K.lastCompletedClip());
+   d.put("continuous_4k_last_completed_prefix_ms",continuous4K==null?0:continuous4K.lastCompletedPrefixMs());
+   d.put("continuous_4k_last_completed_live_ms",continuous4K==null?0:continuous4K.lastCompletedLiveMs());
    d.put("continuous_4k_failures",continuous4KFailures);
    d.put("continuous_4k_recovery_attempts",continuous4KRecoveryAttempts);
    d.put("continuous_4k_retry_after_ms",continuous4KRetryAfterMs);
