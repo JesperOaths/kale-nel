@@ -109,7 +109,9 @@ def main():
   "shell_tracks_url":"security-tracks-v7.html" in shell,
   "hub_people_legacy":"security-people-v33.html" in hub,
   "hub_people_v45":"security-people-v45.html" in hub,
-  "hub_tracks_url":"security-tracks-v7.html" in hub}),flush=True)
+  "hub_tracks_url":"security-tracks-v7.html" in hub,
+  "entry_tracks_url":"security-tracks-v7.html" in entry,
+  "entry_people_legacy":"security-people-v33.html" in entry}),flush=True)
  if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
  # Normalize both the legacy V33 route shown in the screenshots and
  # the V49 route from the previous failed-to-display deployment.
@@ -120,7 +122,8 @@ def main():
   return src
  hub=upgrade_faces_route(hub)
  shell=upgrade_faces_route(shell)
- if "security-people-v45.html?" not in hub:
+ entry=upgrade_faces_route(entry)
+ if not any("security-people-v45.html?" in page for page in (hub,shell,entry)):
   raise RuntimeError("no_known_people_navigation_route")
  def patch_tracks_route(match):
   return "const TRACKS='"+"/local/frontyard-security-new/security-tracks-v7.html?v="+TRACKS_QUERY+"';"
@@ -130,9 +133,10 @@ def main():
   if track_urls!=1:raise RuntimeError("active_shell_tracks_iframe_route_not_found_"+str(track_urls))
  hub_tracks_re=re.compile(r"security-tracks-v7\.html(?:\?v=[A-Za-z0-9._-]+)?")
  hub,hub_track_urls=hub_tracks_re.subn("security-tracks-v7.html?v="+TRACKS_QUERY,hub)
- if track_urls+hub_track_urls==0:
+ entry,entry_track_urls=hub_tracks_re.subn("security-tracks-v7.html?v="+TRACKS_QUERY,entry)
+ if track_urls+hub_track_urls+entry_track_urls==0:
   raise RuntimeError("no_active_tracks_navigation_url")
- if "security-people-v33.html" in hub or "security-people-v33.html" in shell:
+ if any("security-people-v33.html" in page for page in (hub,shell,entry)):
   raise RuntimeError("legacy_people_frame_still_referenced")
  if ENTRY_OLD in entry:
   entry=update(entry,ENTRY_OLD,ENTRY_NEW,"entry")
@@ -145,13 +149,13 @@ def main():
  out["entry"]=entry.encode("utf-8")
  # Verify the actual selectors used by the screenshot's sidebar route, not
  # merely that an unused secondary V45 page was written to disk.
- if "security-people-v45.html?v="+PEOPLE_QUERY not in hub:
+ if not any("security-people-v45.html?v="+PEOPLE_QUERY in page for page in (hub,shell,entry)):
   raise RuntimeError("visible_people_route_not_updated")
  if active_shell and 's9FacesGalleryFrame' not in shell:
   raise RuntimeError("legacy_shell_faces_iframe_not_present")
  if "security-people-v33.html" in shell:
   raise RuntimeError("live_faces_iframe_uses_old_page")
- if "security-tracks-v7.html?v="+TRACKS_QUERY not in hub and not (active_shell and "security-tracks-v7.html?v="+TRACKS_QUERY in shell):
+ if not any("security-tracks-v7.html?v="+TRACKS_QUERY in page for page in (hub,shell,entry)):
   raise RuntimeError("visible_tracks_route_not_updated")
  if args.dry_run:
   print("S9_PEOPLE_V45_LIVE_ROUTE_DRY_RUN_PASS "+json.dumps({
@@ -185,7 +189,7 @@ def main():
    b=get(url,850000 if k=="shell" else 220000)
    if digest(b)!=digest(out[k]):raise RuntimeError("HA_not_serving_new_version_"+k)
    served[k]=digest(b)[:16]
-  if b"security-people-v33.html" in out["hub"] or b"security-people-v33.html" in out["shell"]:
+  if any(b"security-people-v33.html" in out[k] for k in ("hub","entry","shell")):
    raise RuntimeError("legacy_frame_in_deployed_files")
   new_clips=archive()
   if not old_clips.issubset(new_clips):raise RuntimeError("archive_records_disappeared")
@@ -195,7 +199,7 @@ def main():
    "served_sha16":served,"rollback":str(folder),"original_videos_modified":False,
    "camera_modified":False,"existing_approvals_modified":False,
    "visible_people_route_verified":True,"visible_tracks_route_verified":True,
-   "active_shell":active_shell,"updated_hub_tracks_routes":hub_track_urls,"updated_shell_tracks_routes":track_urls,
+   "active_shell":active_shell,"updated_hub_tracks_routes":hub_track_urls,"updated_entry_tracks_routes":entry_track_urls,"updated_shell_tracks_routes":track_urls,
    "clip_scoped_step3_review_enabled":True,"tracks_navigation_enabled":True,"automatic_identity_grouping_enabled":False}),flush=True)
  except BaseException:
   for k in reversed(changed):
