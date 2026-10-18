@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Provenance, ranking and honest sampled-event semantics; no private media."""
 import copy
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 PATH = Path(__file__).resolve().parents[1] / 's9-person-ml-v1/s9_evidence_quality_v1.py'
 spec = importlib.util.spec_from_file_location('quality', PATH)
@@ -173,6 +175,80 @@ class QualityTests(unittest.TestCase):
                 self.assertEqual(handler.go(), 'previous')
         finally:
             q.REPORT = original
+
+
+class IncrementalWorkerTests(unittest.TestCase):
+    def test_fully_cached_archive_needs_no_phone_model_download_or_cache_write(self):
+        events = source()['events']
+        face = events[0]['face_candidates'][0]
+        cache = {q.image_key(face): {'content_status': 'no_secondary_face_confirmation'}}
+        with patch.object(q, 'camera_healthy') as health, patch.object(q, 'load_screen') as model, \
+             patch.object(q, 'fetch') as fetch, patch.object(q, 'atomic_json') as checkpoint:
+            stats = q.measure_pending(events * 174, cache, Path('cache'), Path('model'), float('inf'))
+        health.assert_not_called()
+        model.assert_not_called()
+        fetch.assert_not_called()
+        checkpoint.assert_not_called()
+        self.assertEqual(stats['state'], 'complete')
+        self.assertEqual(stats['images_attempted'], 0)
+        self.assertFalse(stats['detector_loaded'])
+
+    def test_new_image_checked_once_and_transient_errors_retried(self):
+        events = source()['events']
+        data = b'x' * 1500
+        face = events[0]['face_candidates'][0]
+        face['snapshot_sha256'] = hashlib.sha256(data).hexdigest()
+        key = q.image_key(face)
+        cache = {key: {'content_status': 'image_unavailable', 'quality_score': 0}}
+        screen = Mock()
+        screen.measure.return_value = {'content_status': 'secondary_detector_supported_face', 'quality_score': 80}
+        with patch.object(q, 'camera_healthy', return_value=True) as health, \
+             patch.object(q, 'load_screen', return_value=screen) as model, \
+             patch.object(q, 'fetch', return_value=data), patch.object(q, 'atomic_json') as checkpoint:
+            stats = q.measure_pending(events, cache, Path('cache'), Path('model'), float('inf'))
+        health.assert_called_once()
+        model.assert_called_once()
+        checkpoint.assert_called_once()
+        self.assertEqual(cache[key]['content_status'], 'secondary_detector_supported_face')
+        self.assertEqual(stats['images_attempted'], 1)
+
+    def test_camera_busy_or_unavailable_preserves_existing_cache_and_defers(self):
+        for health_result in [False]:
+            cache = {}
+            with patch.object(q, 'camera_healthy', return_value=health_result), \
+                 patch.object(q, 'load_screen') as model, patch.object(q, 'fetch') as fetch, \
+                 patch.object(q, 'atomic_json') as checkpoint:
+                stats = q.measure_pending(source()['events'], cache, Path('cache'), Path('model'), float('inf'))
+            self.assertEqual(cache, {})
+            self.assertEqual(stats['state'], 'deferred_camera_not_idle_or_healthy')
+            model.assert_not_called()
+            fetch.assert_not_called()
+            checkpoint.assert_not_called()
+
+    def test_budget_expired_skips_phone_and_model(self):
+        with patch.object(q, 'camera_healthy') as health, patch.object(q, 'load_screen') as model:
+            stats = q.measure_pending(source()['events'], {}, Path('cache'), Path('model'), -1)
+        health.assert_not_called()
+        model.assert_not_called()
+        self.assertEqual(stats['state'], 'budget_exhausted')
+
+    def test_digest_mismatch_never_reaches_detector_and_remains_retryable(self):
+        screen = Mock()
+        cache = {}
+        with patch.object(q, 'camera_healthy', return_value=True), \
+             patch.object(q, 'load_screen', return_value=screen), \
+             patch.object(q, 'fetch', return_value=b'x' * 1500), patch.object(q, 'atomic_json'):
+            stats = q.measure_pending(source()['events'], cache, Path('cache'), Path('model'), float('inf'))
+        screen.measure.assert_not_called()
+        self.assertEqual(stats['image_errors'], 1)
+        self.assertEqual(next(iter(cache.values()))['content_status'], 'image_unavailable')
+
+    def test_missing_or_invalid_phone_status_defers_without_exception(self):
+        with patch.object(q, 'fetch', side_effect=TimeoutError()):
+            self.assertFalse(q.camera_healthy())
+        for body in [b'[]', b'not json', b'null']:
+            with patch.object(q, 'fetch', return_value=body):
+                self.assertFalse(q.camera_healthy())
 
 
 class GapBenchmarkTests(unittest.TestCase):
