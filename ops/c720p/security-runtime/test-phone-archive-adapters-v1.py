@@ -51,7 +51,7 @@ class Tests(unittest.TestCase):
             calls.append(args)
             if args[:3]==('shell','ls','-1'):return (NAME+'\n').encode() if 'Security4K' in args[-1] else b''
             raise OSError('legacy_source_absent')
-        with patch.object(self.catalog,'ROOT',self.root),patch.object(self.catalog,'PRIVATE_FALLBACK',self.root/'fallback.json'),patch.object(self.catalog,'CATALOG_LOCK',self.root/'shared.lock'), \
+        with patch.object(self.catalog,'ROOT',self.root),patch.object(self.catalog,'PRIVATE_FALLBACK',self.root/'fallback.json'),patch.object(self.catalog,'CATALOG_LOCK',self.root/'shared.lock'),patch.object(self.catalog,'PRIVATE_OBSERVATIONS',self.root/'private-observations.json'), \
              patch.object(self.catalog,'adb',side_effect=adb),patch.object(self.catalog.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=b'device')), \
              patch.object(client,'load_catalog',return_value=snapshot), \
              patch.object(client,'read_summary',return_value={'recordings':1,'snapshot_id':'1'*64,
@@ -60,7 +60,7 @@ class Tests(unittest.TestCase):
         result=json.loads((self.root/'s9-phone-events.json').read_text())
         self.assertEqual(result['total_phone_files'],1);self.assertEqual(result['errors'],[])
         self.assertFalse(any(NAME in str(args) for args in calls))
-        observations=json.loads((self.root/'s9-native-observations.json').read_text())
+        observations=json.loads((self.root/'private-observations.json').read_text())
         self.assertEqual(observations['recordings'],1)
         self.assertEqual(observations['daily_recording_counts'],{'2026-10-19':1})
         self.assertIn('generated_at_utc',observations)
