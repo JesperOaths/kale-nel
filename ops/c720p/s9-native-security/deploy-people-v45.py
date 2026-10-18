@@ -16,11 +16,13 @@ import stat
 import tempfile
 import urllib.request
 
-ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
+WWW=Path("/opt/homeassistant/config/www")
+ROOT=WWW/"frontyard-security-new"
 DEST={
  "html":ROOT/"security-people-v45.html",
  "js":ROOT/"security-people-v45.js",
  "tracks":ROOT/"security-tracks-v7.html",
+ "shell":WWW/"c720p-surveillance.html",
  "hub":ROOT/"security-hub-v30.js",
  "entry":ROOT/"security-hub-v30.html",
 }
@@ -30,10 +32,12 @@ ORIG={
  "tracks":"ops/c720p/s9-native-security/security-tracks-v7.html",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
-OLD="security-people-v45.html?v=s9pf-v48-recording-gallery-20261018&"
-NEW="security-people-v45.html?v=s9pf-v49-folder-first-20261018&"
-ENTRY_OLD="security-hub-v30.js?v=people-faces-v48-recording-gallery-20261018"
-ENTRY_NEW="security-hub-v30.js?v=people-faces-v49-folder-first-20261018"
+PEOPLE_QUERY="s9pf-v50-visible-route-20261018"
+TRACKS_QUERY="s9-v50-clickable-tracks-20261018"
+ENTRY_OLD="security-hub-v30.js?v=people-faces-v49-folder-first-20261018"
+ENTRY_NEW="security-hub-v30.js?v=people-faces-v50-visible-route-20261018"
+LEGACY_PEOPLE=re.compile(r"security-people-v33\.html(?:\?v=[A-Za-z0-9._-]+&)?")
+TRACKS_ENTRY=re.compile(r"const TRACKS=(['\"])/local/frontyard-security-new/security-tracks-v7\.html(?:\?[^'\"]*)?\1;")
 MARK="s9-people-v45-real-route"
 def digest(b):return hashlib.sha256(b).hexdigest()
 def get(url,limit=220000):
@@ -94,23 +98,41 @@ def main():
     if phrase not in b:raise RuntimeError("tracks_navigation_contract_missing")
   out[k]=b
  hub=prior["hub"][0].decode("utf-8")
- if MARK not in hub:raise RuntimeError("expected_existing_v45_hub")
- if NEW in hub:
-  out["hub"]=prior["hub"][0]
- else:
-  out["hub"]=update(hub,OLD,NEW,"hub").encode("utf-8")
+ shell=prior["shell"][0].decode("utf-8") if prior["shell"][0] else ""
  entry=prior["entry"][0].decode("utf-8")
+ if MARK not in hub:raise RuntimeError("expected_existing_v45_hub")
+ if "s9v7-root-script" not in shell or "s9v5-command-script" not in shell:
+  raise RuntimeError("actual_outer_security_page_unknown")
  if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
- if ENTRY_NEW in entry:
-  out["entry"]=prior["entry"][0]
- else:
-  out["entry"]=update(entry,ENTRY_OLD,ENTRY_NEW,"entry").encode("utf-8")
- if OLD.encode() in out["hub"] or (ENTRY_OLD+'"').encode() in out["entry"]:
-  raise RuntimeError("old_route_retained_in_staged_assets")
+ if LEGACY_PEOPLE.search(hub):
+  hub=LEGACY_PEOPLE.sub("security-people-v45.html?v="+PEOPLE_QUERY+"&",hub)
+ elif "security-people-v45.html?" not in hub:
+  raise RuntimeError("no_known_people_navigation_route")
+ if LEGACY_PEOPLE.search(shell):
+  shell=LEGACY_PEOPLE.sub("security-people-v45.html?v="+PEOPLE_QUERY+"&",shell)
+ def patch_tracks_route(match):
+  return "const TRACKS='"+"/local/frontyard-security-new/security-tracks-v7.html?v="+TRACKS_QUERY+"';"
+ shell,track_urls=TRACKS_ENTRY.subn(patch_tracks_route,shell)
+ if track_urls!=1:raise RuntimeError("tracks_iframe_route_not_found_"+str(track_urls))
+ if "security-people-v33.html" in hub or "security-people-v33.html" in shell:
+  raise RuntimeError("legacy_people_frame_still_referenced")
+ if ENTRY_OLD in entry:
+  entry=update(entry,ENTRY_OLD,ENTRY_NEW,"entry")
+ elif ENTRY_NEW not in entry:
+  raise RuntimeError("unknown_entry_script_version")
+ out["hub"]=hub.encode("utf-8")
+ out["shell"]=shell.encode("utf-8")
+ out["entry"]=entry.encode("utf-8")
+ # Verify the actual selectors used by the screenshot's sidebar route, not
+ # merely that an unused secondary V45 page was written to disk.
+ if "security-people-v45.html?v="+PEOPLE_QUERY not in hub:
+  raise RuntimeError("visible_people_route_not_updated")
+ if "security-tracks-v7.html?v="+TRACKS_QUERY not in shell:
+  raise RuntimeError("visible_tracks_route_not_updated")
  if args.dry_run:
   print("S9_PEOPLE_V45_LIVE_ROUTE_DRY_RUN_PASS "+json.dumps({
    "source_ref":args.ref,"originals":len(old_clips),
-   "routes_patched":['hub','entry'],"new_media_written":False,
+   "routes_patched":['hub','shell','entry'],"new_media_written":False,
    "assets":{k:len(v) for k,v in out.items()}}),flush=True)
   return
  BACK.mkdir(parents=True,exist_ok=True);os.chmod(BACK,0o700)
@@ -134,12 +156,13 @@ def main():
     raise RuntimeError("installed_readback_invalid_"+k)
   served={}
   for k,path in DEST.items():
-   url="http://127.0.0.1:8123/local/frontyard-security-new/"+path.name+"?version="+args.ref[:12]
+   prefix="/local/" if k=="shell" else "/local/frontyard-security-new/"
+   url="http://127.0.0.1:8123"+prefix+path.name+"?version="+args.ref[:12]
    b=get(url)
    if digest(b)!=digest(out[k]):raise RuntimeError("HA_not_serving_new_version_"+k)
    served[k]=digest(b)[:16]
-  if OLD.encode() in out["hub"] or (ENTRY_OLD+'"').encode() in out["entry"]:
-   raise RuntimeError("old_route_retained")
+  if b"security-people-v33.html" in out["hub"] or b"security-people-v33.html" in out["shell"]:
+   raise RuntimeError("legacy_frame_in_deployed_files")
   new_clips=archive()
   if not old_clips.issubset(new_clips):raise RuntimeError("archive_records_disappeared")
   print("S9_PEOPLE_FACES_V45_ACTUAL_HUB_DEPLOY_VERIFIED "+json.dumps({
@@ -147,6 +170,7 @@ def main():
    "source_ref":args.ref,"clip_count":len(new_clips),
    "served_sha16":served,"rollback":str(folder),"original_videos_modified":False,
    "camera_modified":False,"existing_approvals_modified":False,
+   "visible_people_route_verified":True,"visible_tracks_route_verified":True,
    "clip_scoped_step3_review_enabled":True,"tracks_navigation_enabled":True,"automatic_identity_grouping_enabled":False}),flush=True)
  except BaseException:
   for k in reversed(changed):
