@@ -88,7 +88,7 @@ function pumpFaces(){
    }
   };
   img.addEventListener('load',finish,{once:true});
-  img.addEventListener('error',failed,{once:true});
+  img.addEventListener('error',failed);
   Promise.resolve().then(()=>relay().url(source))
    .then(url=>{if(img.isConnected)img.src=url;else finish()})
    .catch(failed);
@@ -396,10 +396,12 @@ function groupRows(host){
  if(!groups.length){host.append(elt('p','No provisional groups available.','status'));return}
  for(const f of groups){
   const b=control('',()=>openFolder(f.id,'suggestions'),'candidate-folder');
-  b.replaceChildren(
-   Array.isArray(f.previews)&&f.previews.length?imageFor(f.previews[0],'Appearance evidence; no identity confirmed'):
-    elt('span','No preview available','candidate-empty'),
-   elt('strong',f.label),
+  const preview=Array.isArray(f.previews)&&f.previews.length?f.previews[0]:null;
+  const match=/^(motion_[0-9]{13}[.]mp4)(?:[.]|$)/.exec(String(preview?.name||''));
+  const picture=preview?
+   (match?sceneFor({clip:match[1],full_crop:preview}):imageFor(preview,'Appearance evidence, not identified')):
+   elt('span','No preview available','candidate-empty');
+  b.replaceChildren(picture,elt('strong',f.label),
    elt('small',num(f.suggested_clips)+' unverified suggestions · Open to review'));
   host.append(b);
  }
