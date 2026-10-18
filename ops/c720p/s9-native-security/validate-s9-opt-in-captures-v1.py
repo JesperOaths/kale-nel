@@ -72,7 +72,8 @@ def summarize(doc,archive):
       p["consent_human_verified"] is not True or
       p["consent_scope"]!=PURPOSE):
    raise ValueError("valid_specific_opt_in_consent_missing")
-  consents[code]=p["withdrawn"] is False
+  if type(p["withdrawn"]) is not bool:raise ValueError("consent_withdrawal_flag_invalid")
+  consents[code]=not p["withdrawn"]
  captures=Counter()
  clips=set()
  days=set()
@@ -103,7 +104,7 @@ def summarize(doc,archive):
  active=sum(consents.values())
  n=sum(captures.values())
  pos=sum(k*(k-1)//2 for k in captures.values())
- neg=sum((n*n-sum(k*k for k in captures.values()))//2 for _ in [0])
+ neg=(n*n-sum(k*k for k in captures.values()))//2
  result.update(status="opt_in_review_candidates_present" if n else
                "no_explicit_opt_in_captures_yet",
     opted_in_participants=active,verified_original_clip_samples=n,
