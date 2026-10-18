@@ -119,7 +119,7 @@ function pumpFaces(){
     }
    }catch(e){failure(e)}
   })();
-  setTimeout(finish,30000);
+  if(typeof setTimeout==='function')setTimeout(finish,30000);
  }
 }
 function queueVisibleFace(img,source,host){
