@@ -81,16 +81,16 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 #driveEmpty{color:var(--soft);font-size:13px;padding:26px 0}
 @media(max-width:750px){.source-switch{gap:6px;margin-bottom:12px}.source-switch button{flex:1;padding:9px;min-width:140px;font-size:12px}.drive-toolbar{margin-bottom:12px}#driveMonthSelect{flex:1}}
 </style>
-<script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
+<!-- Original MP4 via secure range relay; disabled unreliable smooth-copy playback override. -->
 </head>
 <body>
 <main id="archive" data-archive-ui-version="v11-date-tile-gallery"><div class="wrap">
 <header class="heading"><h1>Archive</h1><div class="controls source-controls" id="localControls" hidden><select id="monthSelect" aria-label="Choose archive month"><option value="all">All dates</option></select><button id="refresh" class="subtle-button" type="button" aria-label="Refresh local archive">↻</button></div></header>
 <nav class="source-switch" role="tablist" aria-label="Archived recording source">
-<button id="driveTab" role="tab" type="button" aria-selected="true" aria-controls="driveLibrary">Google Drive <small>Historical saved clips</small></button>
-<button id="localTab" role="tab" type="button" aria-selected="false" aria-controls="localLibrary" tabindex="-1">S9+ microSD <small>Native camera archive</small></button>
+<button id="driveTab" role="tab" type="button" aria-selected="false" tabindex="-1" aria-controls="driveLibrary">Google Drive <small>Historical saved clips</small></button>
+<button id="localTab" role="tab" type="button" aria-selected="true" aria-controls="localLibrary" tabindex="-1">S9+ microSD <small>Native camera archive</small></button>
 </nav>
-<section id="driveLibrary" class="source-view" role="tabpanel" aria-labelledby="driveTab">
+<section id="driveLibrary" class="source-view" role="tabpanel" aria-labelledby="driveTab" hidden>
 <div class="drive-toolbar"><p class="drive-hint"><b>Historical Google Drive videos</b> · Stored separately from microSD. Open a date to browse recordings.</p>
 <div class="controls"><select id="driveMonthSelect" aria-label="Choose historical Drive month"><option value="all">All dates</option></select>
 <button id="driveRefresh" class="subtle-button" type="button" aria-label="Refresh Google Drive recordings">↻</button></div></div>
@@ -98,12 +98,12 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 <div id="driveTimeline" aria-label="Expandable Google Drive recording date tiles"></div>
 <div id="driveEmpty" hidden>No historical Drive recordings found.</div>
 </section>
-<section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab" hidden>
+<section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab">
 <div id="status" class="status" role="status">Loading local recordings…</div>
 <div id="timeline" aria-label="Expandable S9+ recording date tiles"></div><div id="empty" hidden>No local recordings found</div>
 </section>
 </div></main>
-<dialog id="viewer" aria-label="Saved recording"><div class="dialog-head"><strong id="viewerTitle">Recording</strong><button id="close" class="close" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><div id="playerState"></div></dialog>
+<dialog id="viewer" aria-label="Saved recording"><div class="dialog-head"><strong id="viewerTitle">Recording</strong><button id="close" class="close" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><div id="filePersonPanel"></div><div id="playerState"></div></dialog>
 <script id="s9v7-archive-script">
 (()=>{
 'use strict';
@@ -148,6 +148,7 @@ picture.append(f,img);b.append(picture);
 const meta=create('span','meta');meta.append(create('b','',time(r)),create('span','',category(r)));b.append(meta);
 b.addEventListener('click',()=>play(r));preview(img,r);return b;}
 async function play(r){const a=relay(),n=name(r),token=++playing;
+$('filePersonPanel').replaceChildren(personFilingControls('sd',n));
 $('viewerTitle').textContent=formatDay(day(r))+' · '+time(r);
 $('playerState').textContent='Opening original S9+ video…';const v=$('video');v.pause();v.removeAttribute('src');v.load();
 if(!$('viewer').open)$('viewer').showModal();
@@ -217,6 +218,7 @@ function driveCard(r){
 }
 async function playDrive(r){
  const a=relay(),n=driveVideoName(r),token=++playing;
+ $('filePersonPanel').replaceChildren(personFilingControls('drive',n));
  $('viewerTitle').textContent=formatDay(driveDate(r))+' · '+driveTime(r);
  $('playerState').textContent='Opening original Google Drive recording…';
  const v=$('video');v.pause();v.removeAttribute('src');v.load();
@@ -270,7 +272,7 @@ async function refreshDrive(){
   const res=await a.fetch('/new/api/drive-saved',{cache:'no-store'});
   if(!res.ok)throw Error('HTTP '+res.status);
   const j=await res.json();
-  if(j.ok!==true||!Array.isArray(j.events)||j.archive_mode==='S9-microSD-only')throw Error('Drive catalog invalid');
+  if(j.ok!==true||!Array.isArray(j.events)||false /* Primary S9+ storage mode does not describe Drive archive availability */)throw Error('Drive catalog invalid');
   driveRecords=j.events.filter(r=>driveSafe.test(driveVideoName(r))&&!driveVideoName(r).includes('..')&&driveDate(r))
    .sort((a,b)=>String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
   driveRendered=false;driveMonths();renderDrive();
@@ -295,9 +297,60 @@ $('video').addEventListener('error',()=>{if($('viewer').open)$('playerState').te
 $('close').addEventListener('click',()=>$('viewer').close());
 $('viewer').addEventListener('close',()=>{++playing;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
-showSource('drive');
-})();
+showSource('local');
 
+function personFilingControls(source,name){
+ const panel=document.createElement('div');
+ panel.style.cssText='display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid #45616e';
+ if(!(source==='sd'?/^motion_[0-9]{13}[.]mp4$/.test(name):/^[A-Za-z0-9._-]{1,180}[.]mp4$/.test(name)&&!name.includes('..')))return panel;
+ const mk=(tag,label)=>{const e=document.createElement(tag);e.textContent=label||'';return e};
+ const load=mk('button','File under person…'),person=mk('select'),save=mk('button','Confirm person'),
+   undo=mk('button','Return to review queue'),message=mk('span','');
+ person.setAttribute('aria-label','Person');message.setAttribute('role','status');
+ message.style.fontSize='12px';person.hidden=save.hidden=undo.hidden=true;
+ panel.append(load,person,save,undo,message);
+ let revision=null,busy=false;
+ load.addEventListener('click',async()=>{
+  if(busy)return;busy=true;load.disabled=true;message.textContent='Loading people…';
+  try{
+   const api=relay();if(!api?.fetch)throw Error('Secure relay unavailable');
+   const [a,b]=await Promise.all([
+    api.fetch('/new/api/visual-review?workflow=clip_folders_v40&tab=inbox&offset=0&limit=1',{cache:'no-store'}),
+    api.fetch('/new/api/s9-manual-recording-links',{cache:'no-store'})]);
+   const [people,links]=await Promise.all([a.json(),b.json()]);
+   if(!a.ok||!b.ok||people.ok!==true||links.ok!==true||!Array.isArray(people.folders)||
+      links.manual_links_only!==true||!Number.isInteger(links.revision))throw Error('Person index unavailable');
+   revision=links.revision;person.replaceChildren();
+   const known=people.folders.filter(p=>!p.automatic_appearance_group||Number(p.approved_clips)>0)
+    .sort((a,b)=>String(a.label||'').localeCompare(String(b.label||''),'en',{sensitivity:'base'}));
+   for(const entry of known){const o=mk('option',String(entry.label||''));o.value=entry.id;person.append(o)}
+   if(!known.length){message.textContent='Add a person in People & Faces first';return}
+   const assigned=links.items?.[source+':'+name]?.folder;
+   if(assigned&&known.some(x=>x.id===assigned))person.value=assigned;
+   person.hidden=save.hidden=false;undo.hidden=!assigned;
+   message.textContent='Choose the person visible in this original recording';
+  }catch(e){message.textContent=String(e.message||e)}
+  finally{busy=false;load.disabled=false}
+ });
+ async function commit(personId){
+  if(busy||revision===null)return;busy=true;save.disabled=undo.disabled=true;
+  message.textContent='Saving human-confirmed decision…';
+  try{
+   const result=await relay().fetch('/new/api/s9-manual-recording-links',{
+    method:'POST',headers:{'Content-Type':'application/json','X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
+    body:JSON.stringify({action:personId?'assign':'return_to_queue',source,name,folder:personId||null,
+      revision,human_confirmed:true})});
+   const out=await result.json();if(!result.ok||out.ok!==true)throw Error(out.error||'Unable to save');
+   revision=out.revision;undo.hidden=!personId;
+   message.textContent=personId?'Filed under selected person':'Returned to review queue';
+  }catch(e){message.textContent=String(e.message||e)+' · reload people and retry'}
+  finally{busy=false;save.disabled=undo.disabled=false}
+ }
+ save.addEventListener('click',()=>{if(person.value)commit(person.value)});
+ undo.addEventListener('click',()=>commit(null));
+ return panel;
+}
+})();
 const GEJAST_PAGE_VERSION='v817';
 </script>
 <div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#647c89;font-size:10px;pointer-events:none">v817 - Made by Bruis</div>
