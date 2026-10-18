@@ -145,12 +145,12 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  el('approvalFolder').value='G123';
  await el('approvalForm').handlers.submit({preventDefault(){}});
  for(let i=0;i<5;i++)await flush();
- assert.equal(posts.length,1);
+ assert.equal(linkPosts.length,1);
  assert.equal(el('overview').hidden,false,'Keep from overview must not redirect');
- assert.equal(posts[0].payload.action,'approve_clip');
- assert.equal(posts[0].payload.folder,'G123');
- assert.equal(posts[0].payload.human_confirmed,true);
- assert.equal(posts[0].opts.headers['X-S9-Visual-Review-Intent'],'manual-attributes-v36');
+ assert.equal(linkPosts[0].payload.action,'assign');
+ assert.equal(linkPosts[0].payload.folder,'G123');
+ assert.equal(linkPosts[0].payload.source,'sd');
+ assert.equal(linkPosts[0].opts.headers['X-S9-Manual-Link-Intent'],'manual-original-review-links-v1');
  // Creating a new folder also preserves the review context.
  keep=scan(el('reviewPreview'),'✓ Choose person / folder');
  keep.handlers.click();
@@ -158,7 +158,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  el('approvalLabel').value='New reviewed visitor';
  await el('approvalForm').handlers.submit({preventDefault(){}});
  for(let i=0;i<5;i++)await flush();
- assert.equal(posts[1].payload.action,'seed_folder');
+ assert.equal(posts.at(-1).payload.action,'create_folder');
+ assert.equal(linkPosts.at(-1).payload.action,'assign');
  assert.equal(el('overview').hidden,false,'New folder must not redirect from queue');
  el('savedPreview').children[0].handlers.click();
  for(let i=0;i<5;i++)await flush();
@@ -175,12 +176,19 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[1].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false);
- assert.equal(el('reviewGrid').children.length,2,'All original S9 footage must appear');
- assert.equal(el('reviewTotal').textContent,'2 original recordings');
+ assert(el('reviewGrid').children.length>=2,'Show unassigned SD and historical Drive footage');
+ assert(el('reviewGrid').children.some(x=>x.dataset.clip===driveClip),
+  'Historical verified Drive video must appear');
+ assert(el('pageSize').value==='','Select mock has no initial value');
+ el('pageSize').value='96';el('pageSize').handlers.change();
+ for(let i=0;i<4;i++)await flush();
+ assert(fetches.some(p=>p.includes('limit=48')),'Bounding page size protects v40 backend');
+ assert.match(el('reviewTotal').textContent,/unassigned recordings/);
  assert(!scan(el('reviewGrid'),'View face candidate 1'),'Background crops must not be called faces');
  const archiveEntry=el('reviewGrid').children[0];
  assert(scan(archiveEntry,'▶ Play'),'Unindexed originals still available for playback');
- assert(!scan(archiveEntry,'✓ Choose person / folder'),'Unindexed items cannot be falsely assigned');
+ assert(scan(archiveEntry,'✓ Choose person / folder'),
+   'Unindexed original clips must be manually assignable');
  // Main requirement: save from Review recordings, stay on Review recordings,
  // and preselect the last-used person to speed up review of the next clip.
  const nextKeep=scan(el('reviewGrid'),'✓ Choose person / folder');assert(nextKeep);
@@ -190,7 +198,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false,'Confirm & keep must not navigate into a folder');
  assert.equal(el('folderView').hidden,true,'Saved clips must not hijack the current review queue');
- assert.equal(posts.at(-1).payload.folder,'G123');
+ assert.equal(linkPosts.at(-1).payload.folder,'G123');
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
