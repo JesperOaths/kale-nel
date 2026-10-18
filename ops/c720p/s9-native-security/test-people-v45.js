@@ -148,7 +148,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('reviewTabCount').textContent,' · 27');
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
- assert.equal(el('approvalCount').textContent,'3');
+ assert.equal(el('approvalCount').textContent,'1','Only one verified legacy original is present, despite stale backend folder count of three');
  assert.equal(el('archiveCount').textContent,'7','All SD originals plus two historical Drive originals appear in archive');
  assert(!html.includes('data-pane="faces"'),'Face gallery tab must be removed');
  assert(!html.includes('id="faceGrid"'),'Invalid gallery not to be retained');
