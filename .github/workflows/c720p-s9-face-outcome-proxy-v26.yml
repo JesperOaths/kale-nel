@@ -1,5 +1,6 @@
 name: S9 V26 face evidence diagnostics proxy
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
@@ -26,7 +27,8 @@ jobs:
           python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-face-ui-v26.py
   publish:
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    # Combined legacy UI publishers require explicit operator dispatch.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
     runs-on: ubuntu-latest
     timeout-minutes: 11
     env:
