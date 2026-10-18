@@ -64,7 +64,7 @@ def timer_service_readback():
  props={
   "timer":("ActiveState","SubState","LastTriggerUSec","NextElapseUSecRealtime",
      "NextElapseUSecMonotonic","TimersCalendar","TimersMonotonic",
-     "FragmentPath","NeedDaemonReload","LoadState"),
+     "FragmentPath","NeedDaemonReload","LoadState","DropInPaths"),
   "service":("ActiveState","SubState","Result","ExecMainStatus",
              "ExecMainStartTimestamp","ExecMainExitTimestamp")
  }
@@ -81,7 +81,10 @@ def timer_service_readback():
     key,sep,value=line.partition("=")
     if (sep and key in fields and len(value)<=240 and
         all(ch.isprintable() for ch in value)):
-     result[unit+"_"+key]=value
+     if key=="DropInPaths":
+      result["timer_has_unit_dropins"]=bool(value.strip())
+     else:
+      result[unit+"_"+key]=value
   except (OSError,subprocess.TimeoutExpired):
    continue
  # Fixed, non-sensitive scheduling fields from the intended user unit.
@@ -100,6 +103,29 @@ def timer_service_readback():
   result["timer_fragment_is_user_file"]=(
       result.get("timer_FragmentPath")==str(unit))
  except (OSError,ValueError):
+  pass
+ return result
+
+def effective_timer_rules():
+ """Parse only timer directives from systemd's loaded unit/drop-in view."""
+ unit="c720p-s9-face-v5-cool-window.timer"
+ result={"timer_effective_rule_available":False}
+ try:
+  proc=subprocess.run(["systemctl","--user","cat",unit,"--no-pager"],
+                      capture_output=True,text=True,timeout=12)
+  if proc.returncode or len(proc.stdout)>12000:return result
+  allowed={"OnBootSec","OnStartupSec","OnUnitInactiveSec",
+           "OnUnitActiveSec","OnActiveSec","OnCalendar"}
+  selected=[]
+  for line in proc.stdout.splitlines():
+   key,sep,value=line.strip().partition("=")
+   if sep and key in allowed and len(value)<=48:
+    selected.append(key+"="+value)
+  result["timer_effective_rule_available"]=True
+  result["timer_effective_rule_declarations"]=selected[:15]
+  result["timer_effective_rule_reset_present"]=any(
+      entry.endswith("=") for entry in selected)
+ except (OSError,subprocess.TimeoutExpired):
   pass
  return result
 
@@ -136,6 +162,7 @@ def deployment_state():
      capture_output=True,text=True,timeout=12)
  result["timer_enabled"]=proc.returncode==0 and proc.stdout.strip()=="active"
  result.update(timer_service_readback())
+ result.update(effective_timer_rules())
  try:
   log=subprocess.run(["journalctl","--user","-u","c720p-s9-face-v5-cool-window.service",
        "-n","30","--no-pager","-o","cat"],capture_output=True,text=True,timeout=15)
