@@ -117,7 +117,9 @@ async function refreshArchiveReviewSources(folders){
  }
  if(jobs[1].status!=='fulfilled')state.driveStatus='unavailable';
  makeArchiveRows();
- if(state.doc)render()async function manualLink(item,folder){
+ if(state.doc)render();
+}
+async function manualLink(item,folder){
  if(state.busy||!state.extraLinks)return false;
  const data={action:folder?'assign':'return_to_queue',
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
@@ -136,8 +138,6 @@ async function refreshArchiveReviewSources(folders){
   return true;
  }catch(error){alertText(String(error.message||error));return false}
  finally{state.busy=false;await loadView();if(state.doc)render()}
-}
-}
 }
 
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
