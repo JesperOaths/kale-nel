@@ -38,10 +38,10 @@ ORIG={
  "archive":"ops/c720p/s9-native-security/security-archive-v7.html",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
-OLD="security-people-v50.html?v=security-visible-route-v56-20261018&"
-NEW="security-people-v50.html?v=security-visible-route-v57-20261018&"
-ENTRY_OLD="security-hub-v30.js?v=security-visible-route-v56-20261018"
-ENTRY_NEW="security-hub-v30.js?v=security-visible-route-v57-20261018"
+OLD="security-people-v50.html?v=security-visible-route-v57-20261018&"
+NEW="security-people-v50.html?v=security-visible-route-v58-20261018&"
+ENTRY_OLD="security-hub-v30.js?v=security-visible-route-v57-20261018"
+ENTRY_NEW="security-hub-v30.js?v=security-visible-route-v58-20261018"
 MARK="s9-people-v45-real-route"
 def digest(b):return hashlib.sha256(b).hexdigest()
 def get(url,limit=220000):
@@ -90,12 +90,12 @@ def main():
  for k,source in ORIG.items():
   b=get("https://raw.githubusercontent.com/JesperOaths/kale-nel/"+args.ref+"/"+source)
   if k=="html":
-   for phrase in (b'id="reviewPreview"',b'id="snapshotViewer"',b'id="snapshotImage"',b'id="snapshotPlay"',b'id="personScanProgress"',b'id="faceScanProgress"',b'id="facePhotoStatus"',b'id="reviewAlerts"',b'id="folderRecheck"',b'id="savedPreview"',b'id="faceGrid"',
-                  b'id="approvalFolder"',b'id="clothing"',b'id="clothingList"',b'id="faceGrouping"',b'id="faceSearch"',b'id="snapshotPrev"',b'id="snapshotNext"',b"security-people-v45.js",b"step3-evidence"):
+   for phrase in (b'id="reviewPreview"',b'id="snapshotViewer"',b'id="snapshotImage"',b'id="snapshotPlay"',b'id="personScanProgress"',b'id="faceScanProgress"',b'id="facePhotoStatus"',b'id="reviewAlerts"',b'id="folderRecheck"',b'id="savedPreview"',b'id="archiveCount"',
+                  b'id="approvalFolder"',b'id="clothing"',b'id="clothingList"',b'id="snapshotPrev"',b'id="snapshotNext"',b"security-people-v45.js",b"step3-evidence"):
     if phrase not in b:raise RuntimeError("html_interface_contract_missing")
   elif k=="js":
    for phrase in (b"clip_folders_v40",b"manual-attributes-v36",
-                  b"human_confirmed:true",b"loadView()",b"fetchFaces()",b"inspectFaceSnapshot(f)",b"facesInRecording(clip)",b"step3ClipEvidence(item)",b"automaticPortrait(f)",b"renderClothing()",b"state.lastFolder"):
+                  b"human_confirmed:true",b"loadView()",b"fetchFaces()",b"inspectFaceSnapshot(f)",b"facesInRecording(clip)",b"credibleFaceCrop(f)",b"reliableFaces(clip)",b"automaticPortrait(f)",b"renderClothing()",b"state.archiveClips",b"state.lastFolder"):
     if phrase not in b:raise RuntimeError("js_review_contract_missing")
   elif k=="tracks":
    for phrase in (b'data-summary-view="people"',b'data-summary-view="review"',b'data-summary-view="excluded"',b'data-view="excluded"',b"function selectView(view)"):
@@ -108,7 +108,7 @@ def main():
  # older HTML document even when Home Assistant has already updated the file.
  people_v50=out["html"].replace(
   b"security-people-v45.js?v=v56-20261018-keep-dialog-form-only",
-  b"security-people-v45.js?v=security-face-review-v57-20261018")
+  b"security-people-v45.js?v=security-face-review-v58-20261018")
  if people_v50==out["html"]:raise RuntimeError("people_js_version_contract_missing")
  out["people50"]=people_v50
  out["tracks50"]=out["tracks"]
@@ -133,10 +133,10 @@ def main():
   '<!doctype html><html lang="en"><head><meta charset="utf-8">'
   '<meta name="robots" content="noindex,nofollow">'
   '<meta http-equiv="Cache-Control" content="no-store">'
-  '<meta http-equiv="refresh" content="0;url=security-people-v50.html?v=security-visible-route-v57-20261018">'
+  '<meta http-equiv="refresh" content="0;url=security-people-v50.html?v=security-visible-route-v58-20261018">'
   '<title>Opening People &amp; Faces</title></head><body>'
-  '<p>Opening <a href="security-people-v50.html?v=security-visible-route-v57-20261018">People &amp; Faces</a>...</p>'
-  '<script>location.replace("security-people-v50.html?v=security-visible-route-v57-20261018")</script>'
+  '<p>Opening <a href="security-people-v50.html?v=security-visible-route-v58-20261018">People &amp; Faces</a>...</p>'
+  '<script>location.replace("security-people-v50.html?v=security-visible-route-v58-20261018")</script>'
   '</body></html>').encode()
  if not legacy_known:
   out["legacy"]=legacy_bytes
@@ -145,9 +145,9 @@ def main():
  if NEW not in hub:
   hub,n=re.subn(r"security-people-v(?:45|50)[.]html[?]v=[A-Za-z0-9._-]+&",NEW,hub)
   if n!=1:raise RuntimeError("unrecognized_people_hub_route_"+str(n))
- if "security-tracks-v50.html?v=security-visible-route-v56-20261018&" not in hub:
+ if "security-tracks-v50.html?v=security-visible-route-v58-20261018&" not in hub:
   hub,n=re.subn(r"security-tracks-v(?:7|50)[.]html[?](?:v=[A-Za-z0-9._-]+&)?",
-                "security-tracks-v50.html?v=security-visible-route-v56-20261018&",hub)
+                "security-tracks-v50.html?v=security-visible-route-v58-20261018&",hub)
   if n!=1:raise RuntimeError("unrecognized_tracks_hub_route_"+str(n))
  hub=re.sub(r"security-review-v8[.]html[?]mode=evidence(?:&v=[A-Za-z0-9._-]+)?&",
             "security-review-v8.html?mode=evidence&v=security-analytics-v52-20261018&",hub)
@@ -158,7 +158,7 @@ def main():
  if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
  if ENTRY_NEW not in entry:
   entry,n=re.subn(
-    r"security-hub-v30[.]js[?]v=(?:people-faces-v49-folder-first|people-faces-v50-route-correction|people-faces-v50-visible-route|security-visible-route-v5[0-7])-20261018",
+    r"security-hub-v30[.]js[?]v=(?:people-faces-v49-folder-first|people-faces-v50-route-correction|people-faces-v50-visible-route|security-visible-route-v5[0-8])-20261018",
     ENTRY_NEW,entry)
   if n!=1:raise RuntimeError("unrecognized_hub_entry_route_"+str(n))
  out["entry"]=entry.encode("utf-8")
@@ -167,16 +167,16 @@ def main():
  # Do not require speculative outer-shell marker strings.
  shell,nold=re.subn(
   r"security-people-v33[.]html(?:[?]v=[A-Za-z0-9._-]+)?",
-  "security-people-v50.html?v=security-visible-route-v57-20261018",shell)
+  "security-people-v50.html?v=security-visible-route-v58-20261018",shell)
  shell,nprevious=re.subn(
   r"security-people-v(?:45|50)[.]html[?]v=[A-Za-z0-9._-]+",
-  "security-people-v50.html?v=security-visible-route-v57-20261018",shell)
+  "security-people-v50.html?v=security-visible-route-v58-20261018",shell)
  shell,ntracks=re.subn(
   r"security-tracks-v(?:7|50)[.]html(?:[?]v=[A-Za-z0-9._-]+)?",
-  "security-tracks-v50.html?v=security-visible-route-v56-20261018",shell)
+  "security-tracks-v50.html?v=security-visible-route-v58-20261018",shell)
  updated,count=re.subn(
   r"(security-hub-v30[.](?:js|html))(?:[?]v=[A-Za-z0-9._-]+)?",
-  lambda m:m.group(1)+"?v=security-visible-route-v56-20261018",
+  lambda m:m.group(1)+"?v=security-visible-route-v58-20261018",
   shell)
  updated=re.sub(r"security-review-v8[.]html[?]mode=evidence(?:&v=[A-Za-z0-9._-]+)?",
             "security-review-v8.html?mode=evidence&v=security-analytics-v52-20261018",updated)
