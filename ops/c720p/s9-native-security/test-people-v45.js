@@ -126,6 +126,9 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('savedList').children.length,1,'Show saved person folders immediately');
  assert.equal(el('peopleReviewSummary').textContent,'27 recordings need review');
  assert.equal(el('peopleReviewNotice').hidden,false);
+ assert.equal(el('peopleRecheckNotice').hidden,false,'Previously kept clips needing recheck must be visible on People landing');
+ assert.equal(el('peopleRecheckSummary').textContent,'3 confirmed recordings need evidence rechecking');
+ assert(el('peopleRecheckNow').handlers.click,'Recheck button must lead to person originals');
  assert.equal(el('reviewTabCount').textContent,' · 27');
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
