@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
+ faceSummary:null,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -118,6 +118,7 @@ async function refreshArchiveReviewSources(folders){
  if(jobs[1].status!=='fulfilled')state.driveStatus='unavailable';
  makeArchiveRows();
  if(state.doc)render();
+ if(state.pane==='clothing')searchClothingMatches();
 }
 async function manualLink(item,folder){
  if(state.busy||!state.extraLinks)return false;
@@ -412,6 +413,7 @@ function openFolder(id,tab){
 function openHome(pane){
  state.pane=pane;state.folder='';state.tab='inbox';state.offset=0;
  selectPane(pane);loadView();if(pane==='people'||pane==='clothing'||pane==='review')fetchFaces();
+ if(pane==='clothing'&&state.assignedReady)searchClothingMatches();
 }
 function selectPane(pane){
  for(const name of ['overview','review','people','clothing','folderView'])
@@ -785,9 +787,90 @@ function renderPeople(){
  if(!saved.children.length)saved.append(elt('p','No saved people. Add a person or file a reviewed recording to get started.','empty'));
  // Clothing suggestions are not mixed into the saved-people list.
 }
+async function searchClothingMatches(force=false){
+ if(state.clothingBusy||!state.assignedReady||!state.extraLinks)return;
+ if(state.clothingMatches&&!force)return;
+ const token=++state.clothingToken;
+ state.clothingBusy=true;state.clothingError='';state.clothingMatches=null;renderClothing();
+ const sources=state.archiveEntries.filter(x=>x.source==='sd'&&assignedFolder(x)&&
+    state.clipEvidence.has(x.clip)&&num(state.clipEvidence.get(x.clip).person_count)===1&&
+    num(state.clipEvidence.get(x.clip).frames_with_distinct_multiple_person_boxes)===0);
+ // At most one explicitly approved, single-person reference per person.
+ const used=new Set(),references=[];
+ for(const ref of sources){
+  const id=assignedFolder(ref);
+  if(used.has(id))continue;
+  const person=savedFolders().find(x=>x.id===id);
+  if(!person)continue;
+  used.add(id);references.push({ref,person});
+  if(references.length>=10)break;
+ }
+ const matches=new Map();let failures=0,checked=0;
+ for(const {ref,person} of references){
+  if(token!==state.clothingToken)break;
+  try{
+   const make=category=>'/new/api/appearance-search?'+new URLSearchParams({
+    clip:ref.clip,category,method:'bhattacharyya',limit:'50'}).toString();
+   // Serial calls keep comparison work bounded on the camera phone.
+   const upperResponse=await relay().fetch(make('upper_clothing'),{cache:'no-store'});
+   const lowerResponse=await relay().fetch(make('lower_clothing'),{cache:'no-store'});
+   const upper=await upperResponse.json(),lower=await lowerResponse.json();
+   if(!upperResponse.ok||!lowerResponse.ok||upper.ok!==true||lower.ok!==true||
+       upper.appearance_only!==true||lower.appearance_only!==true)
+    throw Error('Phone appearance index unavailable');
+   checked++;
+   const lowers=new Map((lower.results||[]).map(hit=>[hit.clip_name,hit]));
+   for(const hit of upper.results||[]){
+    const clip=String(hit.clip_name||''),bottom=lowers.get(clip);
+    if(!clipName.test(clip)||!bottom||clip===ref.clip)continue;
+    if(assignedFolder({source:'sd',name:clip,clip}))continue;
+    const u=Number(hit.similarity),l=Number(bottom.similarity);
+    if(!Number.isFinite(u)||!Number.isFinite(l)||u<.90||l<.88||u>1||l>1)continue;
+    if(hit.zone&&bottom.zone&&hit.zone!==bottom.zone)continue;
+    if(!state.clipEvidence.has(clip))continue;
+    // A match describes the same clothing colours across two videos only.
+    const score=.62*u+.38*l,key=person.id+':'+clip,prior=matches.get(key);
+    if(prior&&prior.score>=score)continue;
+    matches.set(key,{clip,person,reference:ref.clip,upper:u,lower:l,score,
+      recorded_ms:Number(clip.slice(7,20)),source:'sd',name:clip,
+      video_path:'/new/saved/clip/'+encodeURIComponent(clip)});
+   }
+  }catch(_){failures++}
+ }
+ if(token===state.clothingToken){
+  state.clothingMatches=[...matches.values()].sort((a,b)=>b.score-a.score).slice(0,80);
+  state.clothingError=failures?'Could not compare '+failures+' of '+references.length+
+    ' references. Try refreshing when the S9+ is available.':'';
+  if(!references.length)state.clothingError='No eligible approved single-person reference recordings yet.';
+  else if(!checked)state.clothingError='S9+ outfit comparison index is unavailable. No speculative matches are shown.';
+  state.clothingBusy=false;renderClothing();
+ }
+}
 function renderClothing(){
- groupRows($('clothingList'));
- $('clothingTotal').textContent=tentativeFolders().length+' provisional groups · not identified people';
+ const host=$('clothingList');host.replaceChildren();
+ const matches=state.clothingMatches||[];
+ $('groupCount').textContent=state.clothingMatches?String(matches.length):'—';
+ $('clothingTabCount').textContent=matches.length?' · '+matches.length:'';
+ $('clothingTotal').textContent=state.clothingBusy?'Comparing approved reference recordings on S9+…':
+  state.clothingError||matches.length+' two-piece outfit suggestions · all require human review';
+ if(!state.clothingMatches){
+  host.append(elt('p',state.clothingBusy?'Checking upper and lower clothing against confirmed reference clips…':
+   'Select Refresh matches to compare approved single-person recordings.','empty'));return;
+ }
+ if(!matches.length){host.append(elt('p','No credible two-piece clothing matches in the indexed videos. Matching outfits do not establish identities.','empty'));return}
+ for(const match of matches){
+  const card=elt('article','','evidence');
+  const media=sceneFor(match);
+  const body=elt('div','','body');
+  body.append(elt('strong','Possible outfit similar to '+match.person.label),
+   elt('p',date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+
+    Math.round(match.lower*100)+'%'),elt('p','Clothing resemblance only · identity not verified'));
+  const actions=elt('div','','actions');
+  actions.append(control('▶ Review original',()=>startVideo(match),'primary'),
+   control('Compare reference',()=>startVideo({clip:match.reference,source:'sd',
+    name:match.reference,recorded_ms:Number(match.reference.slice(7,20))}),'secondary'));
+  body.append(actions);card.append(media,body);host.append(card);
+ }
 }
 function renderFolder(){
  const f=actualFolder();
@@ -937,6 +1020,7 @@ $('openReview').addEventListener('click',()=>openReview('all'));
 $('peopleReviewNow').addEventListener('click',()=>openReview('inbox'));
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
+$('refreshClothing').addEventListener('click',()=>searchClothingMatches(true));
 $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
 $('pageSize').addEventListener('change',()=>{
@@ -951,7 +1035,8 @@ $('refresh').addEventListener('click',()=>{
  state.faceSummary=null;
  state.clipEvidence=new Map();
  state.archiveClips=null;state.archiveEntries=[];state.driveRecords=[];
- state.extraLinks=null;state.assignedReady=false;
+ state.extraLinks=null;state.assignedReady=false;state.clothingMatches=null;
+ state.clothingToken++;state.clothingBusy=false;state.archiveToken=0;
  loadView();
  fetchFaces();
 });
