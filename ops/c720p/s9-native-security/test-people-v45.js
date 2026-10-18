@@ -93,7 +93,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    if(tab==='all'&&holdAll)await new Promise(resolve=>{releaseHeldAll=resolve});
    return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],person_detection:
     {assessed_clips:80,total_clips:141,clips_with_supported_people:29,status:'in_progress'},
-    inbox_clips:27,total:tab==='inbox'?27:tab==='approved'?1:1,
+    inbox_clips:27,total:tab==='inbox'?1:tab==='approved'?1:1,
     items:tab==='approved'?[{...item,decision:'approved'}]:[item],
     reference_examples:tab==='suggestions'?[item]:[]})};
   }
