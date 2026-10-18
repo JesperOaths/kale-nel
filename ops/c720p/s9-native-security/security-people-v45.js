@@ -67,7 +67,7 @@ function makeArchiveRows(){
  $('archiveCount').textContent=String(state.archiveEntries.length);
 }
 async function fetchExtraLinks(){
- const response=await relay().fetch('/new/api/visual-review?workflow=manual_recording_links_v1',{cache:'no-store'});
+ const response=await relay().fetch('/new/api/s9-evidence-cases?workflow=manual_recording_links_v1',{cache:'no-store'});
  const data=await response.json();
  if(!response.ok||data.ok!==true||!data.manual_links_only||!data.items)
   throw Error('Manual recording links unavailable');
@@ -117,16 +117,14 @@ async function refreshArchiveReviewSources(folders){
  }
  if(jobs[1].status!=='fulfilled')state.driveStatus='unavailable';
  makeArchiveRows();
- if(state.doc)render();
-}
-async function manualLink(item,folder){
+ if(state.doc)render()async function manualLink(item,folder){
  if(state.busy||!state.extraLinks)return false;
  const data={action:folder?'assign':'return_to_queue',
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
    folder:folder||null,revision:state.linksRevision,human_confirmed:true};
  state.busy=true;
  try{
-  const response=await relay().fetch('/new/api/visual-review/review',{
+  const response=await relay().fetch('/new/api/s9-evidence-cases',{
    method:'POST',headers:{'Content-Type':'application/json',
     'X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
    body:JSON.stringify(data)});
@@ -138,6 +136,8 @@ async function manualLink(item,folder){
   return true;
  }catch(error){alertText(String(error.message||error));return false}
  finally{state.busy=false;await loadView();if(state.doc)render()}
+}
+}
 }
 
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
