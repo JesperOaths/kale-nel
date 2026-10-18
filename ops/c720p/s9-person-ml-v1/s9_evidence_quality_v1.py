@@ -17,6 +17,7 @@ import tempfile
 import time
 import urllib.parse
 import urllib.request
+from zoneinfo import ZoneInfo
 
 VERSION = 's9_evidence_quality_v1'
 MODEL_SHA = '8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4'
@@ -129,6 +130,40 @@ def event_evidence(event):
             'physical_speed_status': 'not_measured', 'people_count_status': 'not_established'}
 
 
+def activity_analysis(records):
+    """New event-level aggregates with explicit observation/coverage limits."""
+    zone = ZoneInfo('Europe/Amsterdam')
+    days = {}
+    for record in records:
+        epoch_ms = int(record['clip_no'][7:-4])
+        local = datetime.datetime.fromtimestamp(epoch_ms/1000, datetime.timezone.utc).astimezone(zone)
+        day = (local-datetime.timedelta(hours=6)).date().isoformat()
+        buckets = days.setdefault(day, {hour: {'hour': hour, 'recordings': 0,
+            'recordings_with_supported_face': 0, 'recordings_with_repeated_person_candidates': 0,
+            'recorded_video_seconds': 0.0} for hour in range(24)})
+        bucket = buckets[local.hour]
+        bucket['recordings'] += 1
+        bucket['recordings_with_supported_face'] += bool(record['best_supported_snapshots'])
+        bucket['recordings_with_repeated_person_candidates'] += (
+            record['event_evidence']['sample_observation_status'] == 'repeated_person_candidate')
+        bucket['recorded_video_seconds'] = round(bucket['recorded_video_seconds']+record['duration_ms']/1000, 3)
+    durations = sorted(record['duration_ms']/1000 for record in records)
+    middle = len(durations)//2
+    median = durations[middle] if len(durations)%2 else (durations[middle-1]+durations[middle])/2
+    return {'timezone': 'Europe/Amsterdam', 'daily_boundary_local_hour': 6,
+            'metric': 'indexed_motion_recording_counts_not_people_counts',
+            'observation_coverage_hours': None, 'zero_recordings_does_not_prove_no_activity': True,
+            'hour_order': list(range(6, 24))+list(range(6)),
+            'day_hour_activity': [{'day_start_date': day, 'hours': [buckets[hour]
+                for hour in list(range(6, 24))+list(range(6))]}
+                for day, buckets in sorted(days.items())],
+            'duration_seconds': {'minimum': durations[0], 'median': round(median, 3),
+                'p90': durations[min(len(durations)-1, math.ceil(len(durations)*.9)-1)],
+                'maximum': durations[-1], 'total_recorded_video': round(sum(durations), 3)},
+            'recordings_with_supported_face': sum(bool(r['best_supported_snapshots']) for r in records),
+            'recordings_prioritized_for_source_review': sum(r['targeted_rescan_priority'] for r in records)}
+
+
 def build_report(archive, measurements, content_audit=None):
     events = validate_sources(archive)
     records = []
@@ -176,6 +211,7 @@ def build_report(archive, measurements, content_audit=None):
             'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'original_recordings': len(events), **totals, 'recordings': records,
             'content_benchmark': benchmark,
+            'activity_analysis': activity_analysis(records),
             'model_scores_are_not_calibrated_probabilities': True,
             'secondary_non_detection_does_not_prove_no_face': True,
             'sampled_frames_do_not_establish_absence_or_continuous_dwell': True,
@@ -287,9 +323,17 @@ def install(handler_class, phone_rows):
                           pending_new_recordings=len(set(current)-{r['clip_no'] for r in output}),
                           totals_describe_generated_snapshot=True)
             report['currently_matching_image_references'] = sum(len(r['images']) for r in output)
+            current_images = {(f.get('snapshot_name'), f.get('snapshot_sha256'))
+                for source in current.values() for f in source.get('face_candidates', [])
+                if isinstance(f, dict) and isinstance(f.get('snapshot_name'), str)
+                and isinstance(f.get('snapshot_sha256'), str)}
+            represented_images = {(f['snapshot_name'], f['snapshot_sha256'])
+                for record in output for f in record['images']}
+            report['pending_current_image_references'] = len(current_images-represented_images)
             report['source_changed_since_analysis'] = (
                 report['currently_matching_image_references'] != report['images_measured']
-                or len(current) != report['original_recordings'])
+                or len(current) != report['original_recordings']
+                or current_images != represented_images)
             gap_path = STATE/'original-gap-benchmark.json'
             if gap_path.is_file() and not gap_path.is_symlink() and gap_path.stat().st_size < 1000000:
                 gap = json.loads(gap_path.read_text())

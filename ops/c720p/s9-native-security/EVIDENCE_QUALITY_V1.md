@@ -37,6 +37,11 @@ windows when present. It explicitly leaves continuous dwell time, zone
 presence, physical speed and unique people counts unmeasured. Sparse detector
 samples cannot establish those measurements or prove absence.
 
+`activity_analysis` adds day-by-hour motion-clip counts, face-evidence yield,
+repeated person-candidate recording counts and recording-duration summaries.
+Days run from 06:00 to 06:00 in Europe/Amsterdam. These are indexed recording
+counts, not visitor counts or activity rates adjusted for camera coverage.
+
 Private `content-benchmark.json` can hold visual content labels keyed to the
 exact source image key. Its `image_labels` map accepts `visible_face`,
 `not_a_face` and `uncertain`. This records image content only and does not

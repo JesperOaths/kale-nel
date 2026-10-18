@@ -107,6 +107,28 @@ class QualityTests(unittest.TestCase):
         changed = q.build_report(archive, measurements, {key: 'visible_face'})
         self.assertEqual(changed['content_benchmark']['visible_face_labels'], 0)
 
+    def test_activity_uses_amsterdam_six_to_six_days_and_counts_clips(self):
+        archive = source()
+        # 03:30 UTC = 05:30 Amsterdam in October: belongs to previous 06:00 day.
+        at = __import__('datetime').datetime(2026, 10, 18, 3, 30,
+            tzinfo=__import__('datetime').timezone.utc)
+        clip = 'motion_'+str(int(at.timestamp()*1000))+'.mp4'
+        archive['events'][0].update(clip_no=clip, face_candidates=[])
+        report = q.build_report(archive, {})
+        activity = report['activity_analysis']
+        day = activity['day_hour_activity'][0]
+        self.assertEqual(day['day_start_date'], '2026-10-17')
+        self.assertEqual(next(h for h in day['hours'] if h['hour'] == 5)['recordings'], 1)
+        self.assertIsNone(activity['observation_coverage_hours'])
+        self.assertTrue(activity['zero_recordings_does_not_prove_no_activity'])
+
+    def test_heatmap_totals_and_duration_quantiles_match_actual_recordings(self):
+        report = q.build_report(source(), {})
+        activity = report['activity_analysis']
+        self.assertEqual(sum(h['recordings'] for d in activity['day_hour_activity'] for h in d['hours']), 1)
+        self.assertEqual(activity['duration_seconds']['median'], 16)
+        self.assertEqual(activity['duration_seconds']['total_recorded_video'], 16)
+
     def test_atomic_report_is_private_and_nan_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'report.json'
@@ -136,6 +158,7 @@ class QualityTests(unittest.TestCase):
                 row = handler.result[1]['recordings'][0]
                 self.assertEqual(row['images'], [])
                 self.assertEqual(row['best_supported_snapshots'], [])
+                self.assertTrue(handler.result[1]['source_changed_since_analysis'])
                 handler.path = '/unchanged'
                 self.assertEqual(handler.go(), 'previous')
         finally:
