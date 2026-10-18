@@ -13,6 +13,7 @@ PHONE="http://127.0.0.1:18808/status"
 ARCHIVE="http://127.0.0.1:8795/new/api/saved"
 FACE_VERSION="s9_onphone_36_samples_overlapping_tiles_v5"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4")
+SNAPSHOT=re.compile(r"motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg")
 SAFE_MATCHES={
  "not_comparable_model_unavailable","not_comparable_manual_review","not_tested_no_usable_face",
  "reference_similarity_unverified",
@@ -40,7 +41,7 @@ def audit(phone,archive):
  pipeline=Counter()
  diagnostics=Counter()
  seen=set()
- snapshots=0
+ snapshots=set()
  weak=0
  recognized=0
  manual=0
@@ -71,13 +72,26 @@ def audit(phone,archive):
   crops=clip.get("face_candidates")
   if not isinstance(crops,list) or len(crops)>16:
    raise RuntimeError("sanitized_face_candidate_shape_changed")
-  snapshots+=len(crops)
-  if len(crops)>0:pipeline["clips_with_crops"]+=1
+  pipeline["face_candidate_records"]+=len(crops)
+  if crops:pipeline["clips_with_candidates"]+=1
+  clip_has_snapshot=False
   if len(crops)==0 and clip.get("face_evidence_outcome")=="face_candidates_rejected_in_sampling":
    pipeline["detected_but_unusable_face"]+=1
   for face in crops:
    if not isinstance(face,dict) or BIOMETRIC_FIELDS.intersection(face):
     raise RuntimeError("biometric_data_exposed_through_hub")
+   # Match the review UI's filename and clip association checks. A candidate
+   # or the phone's saved counter does not establish an indexed image.
+   snapshot=face.get("snapshot_name")
+   if snapshot is None or snapshot=="":
+    pipeline["candidate_records_without_saved_image"]+=1
+   elif (not isinstance(snapshot,str) or not SNAPSHOT.fullmatch(snapshot) or
+         not snapshot.startswith(name[:-4]+"__")):
+    pipeline["candidate_records_invalid_snapshot_reference"]+=1
+   else:
+    clip_has_snapshot=True
+    if snapshot in snapshots:pipeline["duplicate_snapshot_references"]+=1
+    snapshots.add(snapshot)
    state=str(face.get("match_status","missing"))
    if state not in SAFE_MATCHES:raise RuntimeError("unknown_face_match_status")
    matches[state]+=1
@@ -88,6 +102,7 @@ def audit(phone,archive):
     if not face.get("face_crop_requires_manual_review") and not face.get("face_crop_padded_context_only"):
      strict_pairs+=1
    elif state=="new_anonymous_candidate":weak+=1
+  if clip_has_snapshot:pipeline["clips_with_crops"]+=1
  camera_ready=phone.get("native_4k_enabled") is True and phone.get("continuous_4k_ready") is True
  known_thermal_fallback=(
    phone.get("native_4k_enabled") is True and
@@ -137,7 +152,13 @@ def audit(phone,archive):
   "awaiting_latest_4k_face_pass":pipeline["awaiting_4k_face_review"],
   "remaining_current_v5_face_pass":len(clips)-pipeline["v5_reviewed"],
   "clips_with_face_crops":pipeline["clips_with_crops"],
-  "cropped_faces_visible_in_hub":snapshots,
+  "clips_with_face_candidates":pipeline["clips_with_candidates"],
+  "face_candidate_records":pipeline["face_candidate_records"],
+  "cropped_faces_visible_in_hub":len(snapshots),
+  "candidate_records_without_saved_image":pipeline["candidate_records_without_saved_image"],
+  "candidate_records_invalid_snapshot_reference":pipeline["candidate_records_invalid_snapshot_reference"],
+  "duplicate_snapshot_references":pipeline["duplicate_snapshot_references"],
+  "snapshot_file_availability_checked":False,
   "clipped_face_detections_rejected":pipeline["detected_but_unusable_face"],
   "phone_embedding_model_state_by_clip":dict(statuses),
   "candidate_match_state_counts":dict(matches),
@@ -160,3 +181,4 @@ def main():
 
 if __name__=="__main__":
  main()
+
