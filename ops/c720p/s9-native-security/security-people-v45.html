@@ -124,6 +124,14 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 .step3-evidence-lines span{display:block}
 .step3-face-links{display:flex;gap:7px;flex-wrap:wrap}
 .step3-face-links button{min-height:33px;font-size:12px;padding:5px 9px}
+.step3-pairbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#142631;border:1px solid #385866;border-radius:10px;padding:13px;margin:12px 0;flex-wrap:wrap}
+.step3-pairbar p{font-size:12px;color:var(--muted);margin-top:3px}
+.step3-pair-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:12px 0}
+.step3-pair-columns section{min-width:0;padding:12px;border:1px solid #355265;border-radius:10px;background:#162833}
+.step3-pair-image{height:210px;overflow:hidden;background:#07141c;border-radius:8px;margin:8px 0}
+.step3-pair-image .media{width:100%;height:100%}.step3-pair-image img{width:100%;height:100%;object-fit:contain}
+.pair-ack{display:flex;align-items:center;gap:8px;margin:12px 0}.pair-ack input{width:19px;height:19px;min-height:19px}
+@media(max-width:600px){.step3-pair-columns{grid-template-columns:1fr}}
 </style>
 <script defer src="/local/frontyard-security-new/security-people-v45.js?v=v46-20261018-snapshot-inspector-r1"></script>
 <script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
@@ -193,6 +201,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <section id="faces" hidden aria-label="Original-4K face image evidence">
  <div class="section-head"><div><span class="kicker">IMAGE EVIDENCE</span><h2>Face images</h2><p>Each image belongs to one recording. There are no automatic same-person folders.</p></div><span id="faceTotal" class="status"></span></div>
  <div class="filters"><label>Filter<select id="faceMode"><option value="all">All captured images</option><option value="manual">Manual review needed</option><option value="suggested">Comparison suggested</option></select></label></div>
+ <div class="step3-pairbar"><div><strong>Compare two images</strong><p id="pairFirstStatus">Choose first image below</p><p id="pairReviewSummary">Loading review history…</p></div><button id="pairClear" type="button">Clear selection</button></div>
  <div id="faceGrid" class="grid"></div><div id="facePage" class="pagebar"></div>
 </section>
 <section id="folderView" hidden aria-label="Selected reviewed folder">
@@ -214,6 +223,17 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <dialog id="folderDialog" class="dialog"><form id="folderForm"><div class="head"><h2 id="folderDialogTitle">New folder</h2><button id="cancelFolder" type="button">✕</button></div>
  <label>Folder name<input id="folderLabel" maxlength="100" required></label><label>Notes<textarea id="folderNotes" maxlength="2000" rows="3"></textarea></label>
  <div class="actions"><button class="primary" type="submit">Save folder</button></div></form></dialog>
+<dialog id="pairDialog" class="dialog">
+ <div class="head"><h2>Compare images</h2><button id="pairCancel" type="button">Close</button></div>
+ <p class="subnotice">Compare images from two separate original recordings. Review both videos before recording your judgement.</p>
+ <div class="step3-pair-columns">
+  <section><h3>First recording</h3><div id="pairImage0" class="step3-pair-image"></div><p id="pairTimestamp0"></p><button id="pairOriginal0" type="button">Open original video 1</button><p id="pairViewed0">Not opened</p></section>
+  <section><h3>Second recording</h3><div id="pairImage1" class="step3-pair-image"></div><p id="pairTimestamp1"></p><button id="pairOriginal1" type="button">Open original video 2</button><p id="pairViewed1">Not opened</p></section>
+ </div>
+ <label>Decision<select id="pairDecision"><option value="uncertain">Uncertain</option><option value="same_person">Same person</option><option value="different_people">Different people</option></select></label>
+ <label class="pair-ack"><input type="checkbox" id="pairConfirm"/> I have inspected both original recordings and confirm this is my own manual judgement.</label>
+ <p id="pairStatus" role="status"></p><button id="pairSubmit" type="button" class="primary">Save comparison</button>
+</dialog>
 <dialog id="snapshotViewer" class="dialog" aria-label="Original face snapshot inspection">
   <div class="head"><h2 id="snapshotTitle">Captured face image</h2><button id="closeSnapshot" type="button">Close</button></div>
   <div class="snapshot-stage"><img id="snapshotImage" alt="Saved face crop for manual inspection" loading="eager" /></div>
