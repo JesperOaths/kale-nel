@@ -835,15 +835,19 @@ async function searchClothingMatches(force=false){
  const sources=state.archiveEntries.filter(x=>x.source==='sd'&&assignedFolder(x)&&
     state.clipEvidence.has(x.clip)&&num(state.clipEvidence.get(x.clip).person_count)===1&&
     num(state.clipEvidence.get(x.clip).frames_with_distinct_multiple_person_boxes)===0);
- // At most one explicitly approved, single-person reference per person.
- const used=new Set(),references=[];
+ // Reviewed single-person clips act as labelled examples, not biometric
+ // training data. Use up to three distinct time-separated references per
+ // person, rather than one outfit/photo being treated as their identity.
+ const perPerson=new Map(),references=[];
  for(const ref of sources){
   const id=assignedFolder(ref);
-  if(used.has(id))continue;
+  const prior=perPerson.get(id)||[];
+  if(prior.length>=3)continue;
+  if(prior.some(x=>Math.abs(x.recorded_ms-ref.recorded_ms)<15*60*1000))continue;
   const person=savedFolders().find(x=>x.id===id);
   if(!person)continue;
-  used.add(id);references.push({ref,person});
-  if(references.length>=10)break;
+  prior.push(ref);perPerson.set(id,prior);references.push({ref,person});
+  if(references.length>=18)break;
  }
  const matches=new Map();let failures=0,checked=0;
  for(const {ref,person} of references){
@@ -874,15 +878,28 @@ async function searchClothingMatches(force=false){
        num(observed.frames_with_distinct_multiple_person_boxes)>0)continue;
     // A match describes the same clothing colours across two videos only.
     const score=.62*u+.38*l,key=person.id+':'+clip,prior=matches.get(key);
-    if(prior&&prior.score>=score)continue;
-    matches.set(key,{clip,person,reference:ref.clip,upper:u,lower:l,score,
+    if(prior){
+     // Independent confirmed reference agreements strengthen *outfit*
+     // evidence but do not establish a person identity.
+     if(prior.references.includes(ref.clip))continue;
+     prior.references.push(ref.clip);
+     prior.bestScore=Math.max(prior.bestScore,score);
+     prior.sumScore+=score;
+     if(score>prior.score){prior.score=score;prior.reference=ref.clip;
+      prior.upper=u;prior.lower=l;}
+    }else matches.set(key,{clip,person,reference:ref.clip,references:[ref.clip],
+      upper:u,lower:l,score,bestScore:score,sumScore:score,
       recorded_ms:Number(clip.slice(7,20)),source:'sd',name:clip,
       video_path:'/new/saved/clip/'+encodeURIComponent(clip)});
    }
   }catch(_){failures++}
  }
  if(token===state.clothingToken){
-  state.clothingMatches=[...matches.values()].sort((a,b)=>b.score-a.score).slice(0,80);
+  state.clothingMatches=[...matches.values()].map(match=>({
+   ...match,referenceSupport:match.references.length,
+   meanSimilarity:match.sumScore/match.references.length
+  })).sort((a,b)=>b.referenceSupport-a.referenceSupport||
+    b.meanSimilarity-a.meanSimilarity||b.bestScore-a.bestScore).slice(0,80);
   state.clothingError=failures?'Could not compare '+failures+' of '+references.length+
     ' references. Try refreshing when the S9+ is available.':'';
   if(!references.length)state.clothingError='No eligible approved single-person reference recordings yet.';
@@ -908,7 +925,11 @@ function renderClothing(){
   const body=elt('div','','body');
   body.append(elt('strong','Possible outfit similar to '+match.person.label),
    elt('p',date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+
-    Math.round(match.lower*100)+'%'),elt('p','Clothing resemblance only · identity not verified'));
+    Math.round(match.lower*100)+'%'),
+   elt('p','Matched '+match.referenceSupport+' approved example'+
+    (match.referenceSupport===1?'':'s')+' · average outfit similarity '+
+    Math.round(match.meanSimilarity*100)+'%'),
+   elt('p','Appearance resemblance only · never automatic identity verification'));
   const actions=elt('div','','actions');
   actions.append(control('▶ Review original',()=>startVideo(match),'primary'),
    control('Compare reference',()=>startVideo({clip:match.reference,source:'sd',
