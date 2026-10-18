@@ -134,7 +134,7 @@ async function manualLink(item,folder){
   if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not save folder link');
   await fetchExtraLinks();
   state.lastFolder=folder||state.lastFolder;
-  notification(folder?'Recording saved':'Recording returned to review');
+  notification(folder?'Recording filed under person':'Recording returned to review');
   return true;
  }catch(error){alertText(String(error.message||error));return false}
  finally{state.busy=false;await loadView();if(state.doc)render()}
@@ -433,7 +433,7 @@ function openApproval(item){
  if(state.folder)select.value=state.folder;
  else if(state.lastFolder&&savedFolders().some(f=>f.id===state.lastFolder))select.value=state.lastFolder;
  const assigned=assignedFolder(item);
- if(assigned&&[...select.options].some(o=>o.value===assigned))select.value=assigned;
+ if(assigned&&Array.from(select.options||select.children).some(o=>o.value===assigned))select.value=assigned;
  $('newLabel').hidden=!!select.value;
  $('approvalDialog').showModal();
  const main=$('approvalDialog').querySelector('.approval-main');
@@ -559,13 +559,13 @@ function reviewItem(item,compact){
     ()=>manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},null),'secondary'));
   else tools.append(control('Saved ✓',()=>{},'secondary'));
  }else if(item.unindexed||item.source==='drive'){
-  tools.append(control('✓ Choose person / folder',()=>openApproval(item),'primary'));
+  tools.append(control('✓ File under person',()=>openApproval(item),'primary'));
  }else if(item.decision==='approved'){
   tools.append(control('Saved ✓',()=>{},'secondary'));tools.lastChild.disabled=true;
  }else if(['rejected','skipped'].includes(item.decision)){
   tools.append(control('Restore',()=>restore(item),'secondary'));
  }else{
-  tools.append(control(state.folder?'✓ Keep here':'✓ Choose person / folder',()=>openApproval(item),'primary'),
+  tools.append(control(state.folder?'✓ Keep here':'✓ File under person',()=>openApproval(item),'primary'),
    control('↷ Skip for now',()=>dismiss(item),'danger'));
  }
  if(state.folder&&state.doc?.reference_examples?.length&&item.decision!=='approved')
@@ -665,7 +665,7 @@ function profileRow(f){
 function groupRows(host){
  host.replaceChildren();
  const groups=tentativeFolders();
- if(!groups.length){host.append(elt('p','No provisional groups available.','status'));return}
+ if(!groups.length){host.append(elt('p','No appearance suggestions available.','status'));return}
  for(const f of groups){
   const b=control('',()=>openFolder(f.id,'suggestions'),'candidate-folder');
   const preview=Array.isArray(f.previews)&&f.previews.length?f.previews[0]:null;
@@ -733,7 +733,7 @@ function renderOverview(){
  if(!preview.length)host.append(elt('p','No supported recordings waiting for review.','empty'));
  const saved=$('savedPreview');saved.replaceChildren();
  for(const f of savedFolders().slice(0,4))saved.append(profileRow(f));
- if(!saved.children.length)saved.append(elt('p','No saved groups yet. Use Keep after reviewing a recording.','empty'));
+ if(!saved.children.length)saved.append(elt('p','No saved people yet. File a recording after reviewing it.','empty'));
  // Clothing suggestions are accessible in their own tab.
 }
 function paginate(host,total,onPage){
@@ -780,7 +780,7 @@ function renderReview(){
 function renderPeople(){
  const saved=$('savedList');saved.replaceChildren();
  for(const f of savedFolders())saved.append(profileRow(f));
- if(!saved.children.length)saved.append(elt('p','No reviewed folders. Create a folder or keep a recording to get started.','empty'));
+ if(!saved.children.length)saved.append(elt('p','No saved people. Add a person or file a reviewed recording to get started.','empty'));
  // Clothing suggestions are not mixed into the saved-people list.
 }
 function renderClothing(){
@@ -922,7 +922,7 @@ function compare(item){
 function openFolderEditor(mode){
  state.editMode=mode;
  const f=actualFolder();
- $('folderDialogTitle').textContent=mode==='edit'?'Edit saved folder':'New saved folder';
+ $('folderDialogTitle').textContent=mode==='edit'?'Edit person':'New person';
  $('folderLabel').value=mode==='edit'&&f?f.label:'';
  $('folderNotes').value=mode==='edit'&&f?f.note||'':'';
  $('folderDialog').showModal();
@@ -985,7 +985,7 @@ $('folderForm').addEventListener('submit',async e=>{
  if(!name){alertText('Choose a folder name');return}
  const payload={action:state.editMode==='edit'?'edit_folder':'create_folder',
   folder:state.editMode==='edit'?state.folder:'',label:name,note:$('folderNotes').value.slice(0,2000)};
- const ok=await action(payload,result=>{notification('Folder saved.');if(result.folder&&state.editMode==='create'){
+ const ok=await action(payload,result=>{notification('Person saved.');if(result.folder&&state.editMode==='create'){
   state.folder=result.folder;state.pane='folder';state.tab='suggestions';selectPane('folder')
  }});
  if(ok)$('folderDialog').close();
