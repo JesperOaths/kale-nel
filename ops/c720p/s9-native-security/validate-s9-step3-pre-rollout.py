@@ -36,6 +36,7 @@ def check(release,scan,calibration,archive):
   raise RuntimeError("duplicate_source_recordings")
  reviewed=sum(x.get("face_deep_review_version")==FACE_VERSION for x in clips)
  metadata_images=0
+ full_size_proxy=0
  small=0
  invalid=0
  duplicate=0
@@ -75,10 +76,10 @@ def check(release,scan,calibration,archive):
    digest=face.get("snapshot_sha256")
    if face.get("snapshot_on_s9") is not True or type(size) is not int or not SHA.fullmatch(str(digest)):
     invalid+=1;continue
-   if size<2000:
-    small+=1
-   elif size<=2200000:
+   if 500<=size<=2200000:
     metadata_images+=1
+    if size<2000:small+=1
+    else:full_size_proxy+=1
    else:invalid+=1
  signed=(
    release.get("matches_current_pinned_signed_release") is True and
@@ -102,7 +103,7 @@ def check(release,scan,calibration,archive):
  if not signed:blockers.append("signed_4k_install_or_scheduler_not_verified")
  if not complete:blockers.append("incomplete_original_4k_review_or_processing_errors")
  if not privacy:blockers.append("untrusted_or_leaking_clip_evidence")
- if small:blockers.append("undersized_face_crops_require_quality_triage")
+ if small:blockers.append("small_jpeg_images_need_resolution_quality_review")
  if metadata_images==0:blockers.append("no_valid_face_image_metadata")
  if not calibrated:blockers.append("independent_same_different_face_validation_missing")
  # Explicit acceptance gates cannot be inferred from empty metadata or
@@ -121,8 +122,10 @@ def check(release,scan,calibration,archive):
   "current_v5_archive_complete":bool(complete),
   "original_4k_clips":len(clips),
   "current_v5_reviewed":reviewed,
-  "face_images_indexable_by_metadata":metadata_images,
+  "face_images_with_valid_source_metadata":metadata_images,
+  "face_images_2000_bytes_or_larger":full_size_proxy,
   "face_images_under_2000_bytes":small,
+  "jpeg_byte_size_is_not_a_integrity_failure":True,
   "invalid_face_references":invalid,
   "duplicate_face_references":duplicate,
   "exposed_biometric_fields":forbidden,
