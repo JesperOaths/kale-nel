@@ -4,10 +4,10 @@
    No recording is changed or assigned automatically. */
 const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
-const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:48,doc:null,
+const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,recheckOnly:false,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
+ faceSummary:null,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -50,14 +50,16 @@ function makeArchiveRows(){
   video_path:'/new/saved/clip/'+encodeURIComponent(clip),
   temporal_support:!!state.clipEvidence.get(clip)?.person_event_category
  }));
- const byName=new Map(sd.map(e=>[e.name,e]));
+ const byName=new Map(sd.map(e=>['sd:'+e.name,e]));
  for(const rec of state.driveRecords||[]){
   const name=String(rec.remote_name||'');
-  if(!driveName.test(name)||name.includes('..')||byName.has(name))continue;
+  if(!driveName.test(name)||name.includes('..')||byName.has('drive:'+name))continue;
   const timestamp=Date.parse(String(rec.timestamp||rec.date||''));
-  if(!Number.isFinite(timestamp)||timestamp<=0)continue;
-  byName.set(name,{
-   source:'drive',name,clip:name,recorded_ms:timestamp,unindexed:true,
+  // Historical Drive files without reliable timestamps are still originals:
+  // show them in Review instead of silently losing them from the archive.
+  const recordedMs=Number.isFinite(timestamp)&&timestamp>0?timestamp:0;
+  byName.set('drive:'+name,{
+   source:'drive',name,clip:name,recorded_ms:recordedMs,unindexed:true,
    video_path:'/new/drive/saved/clip/'+encodeURIComponent(name),
    snapshot_name:rec.snapshot_name,temporal_support:false
   });
@@ -77,7 +79,7 @@ async function fetchDriveArchive(){
  const response=await relay().fetch('/new/api/drive-saved',{cache:'no-store'});
  const data=await response.json();
  if(!response.ok||data.ok!==true||!Array.isArray(data.events)||
-    data.archive_mode==='S9-microSD-only')throw Error('Drive archive unavailable');
+    !data.events)throw Error('Drive archive unavailable');
  state.driveRecords=data.events;
  state.driveStatus='ready';
 }
@@ -118,8 +120,10 @@ async function refreshArchiveReviewSources(folders){
  if(jobs[1].status!=='fulfilled')state.driveStatus='unavailable';
  makeArchiveRows();
  if(state.doc)render();
+ if(state.pane==='clothing')searchClothingMatches();
 }
 async function manualLink(item,folder){
+ let errorAfterReload='';
  if(state.busy||!state.extraLinks)return false;
  const data={action:folder?'assign':'return_to_queue',
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
@@ -131,18 +135,48 @@ async function manualLink(item,folder){
     'X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
    body:JSON.stringify(data)});
   const outcome=await response.json();
-  if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not save folder link');
-  await fetchExtraLinks();
+  if(response.status===409){
+   let refreshed=false;
+   try{await fetchExtraLinks();refreshed=true}catch(_){}
+   throw Error(refreshed?
+    'Another review changed the assignments. Check the person and try again.':
+    'Another review changed the assignments. Refresh before retrying.');
+  }
+  if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not file recording under person');
+  // A successful POST is a committed review change. A subsequent GET failure
+  // must never turn its success into an apparent failed save and a duplicate retry.
+  if(!Number.isSafeInteger(outcome.revision)||outcome.revision<=data.revision||
+     (outcome.folder||null)!==data.folder)
+   throw Error('Saved response could not be verified. Refresh before retrying.');
+  const key=data.source+':'+data.name;
+  state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder};
+  state.extraLinks.revision=outcome.revision;
+  state.linksRevision=outcome.revision;
   state.lastFolder=folder||state.lastFolder;
-  notification(folder?'Recording saved':'Recording returned to review');
+  const label=folder?'Recording filed under person':'Recording returned to review';
+  try{await fetchExtraLinks()}
+  catch(_){
+   notification(label+' · Saved, but the latest assignments could not be refreshed. Refresh to sync.');
+   return true;
+  }
+  notification(label);
   return true;
- }catch(error){alertText(String(error.message||error));return false}
- finally{state.busy=false;await loadView();if(state.doc)render()}
+ }catch(error){errorAfterReload=String(error.message||error);return false}
+ finally{
+  state.busy=false;
+  await loadView();
+  if(state.doc)render();
+  // loadView clears ordinary transient messages, but a failed write/409
+  // requires an actionable explanation after the automatic redraw.
+  if(errorAfterReload)alertText(errorAfterReload);
+ }
 }
 
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
 function isSaved(f){return !f.automatic_appearance_group||num(f.approved_clips)>0}
-function savedFolders(){return (state.doc?.folders||[]).filter(isSaved).sort((a,b)=>num(b.approved_clips)-num(a.approved_clips))}
+function savedFolders(){return (state.doc?.folders||[]).filter(isSaved).sort((a,b)=>
+ String(a.label||'').localeCompare(String(b.label||''),'en',{sensitivity:'base',numeric:true})||
+ String(a.id||'').localeCompare(String(b.id||'')))}
 function tentativeFolders(){return (state.doc?.folders||[]).filter(f=>!isSaved(f)).sort((a,b)=>num(b.suggested_clips)-num(a.suggested_clips))}
 function imageFor(crop,alt,kind){
  const wrap=elt('div','',kind||'media');
@@ -213,6 +247,7 @@ function pumpFaces(){
    complete=true;faceWorkers=Math.max(0,faceWorkers-1);facePending.delete(img);pumpFaces();
   };
   const failure=e=>{
+   if(complete)return;
    if(!img.isConnected){finish();return}
    img.remove();
    const message=String(e?.message||'Unable to load');
@@ -234,16 +269,18 @@ function pumpFaces(){
     }
    }catch(e){failure(e)}
   })();
-  if(typeof setTimeout==='function')setTimeout(finish,30000);
+  if(typeof setTimeout==='function')setTimeout(()=>failure(Error('Face JPEG load timed out')),20000);
  }
 }
 function queueVisibleFace(img,source,host){
- const queue=()=>{if(facePending.has(img))return;facePending.add(img);faceQueue.push({img,source,host});pumpFaces()};
- if(typeof IntersectionObserver==='undefined'){queue();return}
- const observer=new IntersectionObserver(items=>{
-  if(items.some(x=>x.isIntersecting)){observer.disconnect();queue()}
- },{rootMargin:'280px'});
- observer.observe(host);
+ const queue=()=>{
+  if(!img.isConnected||facePending.has(img))return;
+  facePending.add(img);faceQueue.push({img,source,host});pumpFaces();
+ };
+ // The parent People tab lives in an iframe that can be hidden when created.
+ // IntersectionObserver can therefore never fire, leaving a blank face tile.
+ // Schedule after DOM insertion and bound actual requests to two workers.
+ Promise.resolve().then(queue);
 }
 // The S9+ sometimes saves manually-rescued *context* crops containing clothes,
 // bicycles or scenery. An original JPEG is NOT proof of a detected face.
@@ -292,12 +329,32 @@ async function loadView(){
  }
  try{
   const res=await relay().fetch('/new/api/visual-review?'+q.toString(),{cache:'no-store'});
-  const next=await res.json();
+  let next=await res.json();
   if(token!==state.serial)return;
+  // The v40 API caps replies at 24. Assemble a complete 100+ item UI page.
+  if(state.tab!=='all'&&res.ok&&next.ok===true&&Array.isArray(next.items)){
+   const all=[...next.items];
+   while(all.length<state.limit&&state.offset+all.length<num(next.total)){
+    if(!all.length&&num(next.total)>0)throw Error('Review service returned an empty page');
+    const page=new URLSearchParams(q);
+    page.set('offset',String(state.offset+all.length));
+    page.set('limit',String(Math.min(24,state.limit-all.length)));
+    const more=await relay().fetch('/new/api/visual-review?'+page,{cache:'no-store'});
+    const batch=await more.json();
+    if(token!==state.serial)return;
+    if(!more.ok||batch.ok!==true||!Array.isArray(batch.items)||
+       batch.revision!==next.revision||batch.items.length===0)
+      throw Error('Review page changed while loading. Refresh and retry.');
+    all.push(...batch.items);
+   }
+   next={...next,items:all};
+  }
   if(!res.ok||next.ok!==true||!Array.isArray(next.folders)||!Array.isArray(next.items))
    throw Error(next.error||'The review archive is unavailable.');
   state.doc=next;
-  if(state.pane==='review'&&!state.assignedReady&&state.archiveEntries.length===0)
+  // Initialize both archives whichever of the face scan or folder index loads
+  // first. The People landing page must not hide Drive until Review opens.
+  if(state.faceLoaded&&!state.assignedReady&&state.archiveToken===0)
    refreshArchiveReviewSources(next.folders);
   const pageTotal=state.tab==='all'&&state.archiveEntries?
    state.archiveEntries.length:num(next.total);
@@ -378,18 +435,22 @@ function openReview(mode){
  state.pane='review';state.folder='';state.tab=mode||'all';state.offset=0;
  $('reviewMode').value=state.tab;
  selectPane('review');loadView();fetchFaces();
- if(state.doc)refreshArchiveReviewSources(state.doc.folders);
+ // Existing complete index is still valid; do not blank the review queue
+ // and rescan every approved person each time the Review tab is opened.
+ if(state.doc&&!state.assignedReady&&state.archiveToken===0)
+  refreshArchiveReviewSources(state.doc.folders);
 }
-function openFolder(id,tab){
+function openFolder(id,tab,recheckOnly=false){
  const f=state.doc?.folders.find(f=>f.id===id);if(!f)return;
  state.folderReturnPane=f.automatic_appearance_group&&!isSaved(f)?'clothing':'people';
  state.pane='folder';state.folder=id;state.tab=tab|| (num(f.approved_clips)?'approved':'suggestions');
- state.offset=0;state.facePage=0;$('folderMode').value=state.tab;
+ state.offset=0;state.facePage=0;state.recheckOnly=!!recheckOnly;$('folderMode').value=state.tab;
  selectPane('folder');loadView();
 }
 function openHome(pane){
  state.pane=pane;state.folder='';state.tab='inbox';state.offset=0;
  selectPane(pane);loadView();if(pane==='people'||pane==='clothing'||pane==='review')fetchFaces();
+ if(pane==='clothing'&&state.assignedReady)searchClothingMatches();
 }
 function selectPane(pane){
  for(const name of ['overview','review','people','clothing','folderView'])
@@ -403,7 +464,7 @@ function openApproval(item){
  state.approvalItem=item;
  $('approvalClip').textContent='Recording · '+date(item);
  const select=$('approvalFolder');select.replaceChildren();
- select.add(new Option('Create a new folder',''));
+ select.add(new Option('Create a new person',''));
  for(const f of savedFolders())select.add(new Option(f.label,f.id));
  if(state.folder){
   const f=actualFolder();
@@ -412,6 +473,8 @@ function openApproval(item){
  $('approvalLabel').value='';
  if(state.folder)select.value=state.folder;
  else if(state.lastFolder&&savedFolders().some(f=>f.id===state.lastFolder))select.value=state.lastFolder;
+ const assigned=assignedFolder(item);
+ if(assigned&&Array.from(select.options||select.children).some(o=>o.value===assigned))select.value=assigned;
  $('newLabel').hidden=!!select.value;
  $('approvalDialog').showModal();
  const main=$('approvalDialog').querySelector('.approval-main');
@@ -422,7 +485,7 @@ function dismiss(item){
  const currentFolder=state.folder;
  const code=currentFolder?'reject_clip':'skip_clip';
  action({action:code,folder:currentFolder,...fields(item)},()=>{
-  notification('Clip removed from the current review queue.',
+  notification('Skipped for now: hidden from Needs review, not deleted. Restore from Skipped.',
     ()=>action({action:currentFolder?'restore_clip':'restore_inbox_clip',folder:currentFolder,...fields(item)}));
  });
 }
@@ -442,6 +505,14 @@ async function playVideo(path,title,seconds){
  const ticket=++state.playSerial;
  if(typeof path!=='string'||!path.startsWith('/new/')){alertText('Invalid clip path');return}
  const modal=$('viewer');$('videoTitle').textContent=title;
+ const filename=decodeURIComponent(path.split('/').pop()||'');
+ const source=path.startsWith('/new/drive/')?'drive':'sd';
+ const key=source+':'+filename;
+ const row=state.archiveEntries.find(x=>assignmentKey(x)===key);
+ const reviewed=source==='sd'?(state.doc?.items||[]).find(x=>x.clip===filename):null;
+ state.playingItem=row|| (reviewed?{...reviewed,source,name:filename}:null);
+ $('viewerFile').hidden=!state.playingItem;
+ $('viewerReturn').hidden=!state.playingItem||!assignedFolder(state.playingItem);
  $('videoStatus').textContent='Opening original recording…';state.playTime=Math.max(0,seconds||0);
  if(!modal.open)modal.showModal();
  try{
@@ -513,6 +584,7 @@ function reviewFacesForClip(item){
 function reviewItem(item,compact){
  const root=elt('article','',compact?'review-row':'evidence');
  root.dataset.clip=String(item.clip||'');
+ root.dataset.source=item.source==='drive'?'drive':'sd';
  const media=sceneFor(item);
  const info=elt('div','',compact?'row-info':'body');
  badge(media,item.source==='drive'?'GOOGLE DRIVE':item.unindexed?'S9+ MICROSD':item.decision==='approved'?'SAVED':item.person_recheck_required?'RECHECK':'S9+');
@@ -520,23 +592,26 @@ function reviewItem(item,compact){
  info.append(main);
  if(!compact){const faceEvidence=reviewFacesForClip(item);if(faceEvidence)info.append(faceEvidence)}
  if(item.unindexed)info.append(elt('p',item.source==='drive'?'Google Drive':'Person analysis unavailable'));
- else if(item.person_recheck_required)info.append(elt('p','Person evidence needs recheck'));
+ else if(item.person_recheck_required){
+  info.append(elt('p','Person evidence needs recheck · inspect video and detector observations'));
+  if(!compact)info.append(step3ClipEvidence(item));
+ }
  else if(!item.temporal_support)info.append(elt('p','Person evidence uncertain'));
  const tools=elt('div','','actions');
- tools.append(control('▶ Play',()=>startVideo(item)));
+ tools.append(control(item.person_recheck_required?'🔎 Recheck person evidence':'▶ Play',()=>startVideo(item)));
  if(item.decision==='approved'){
-  if(state.folder)tools.append(control('↩ Return to recordings',
+  if(state.folder)tools.append(control('↩ Return to review queue',
     ()=>manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},null),'secondary'));
   else tools.append(control('Saved ✓',()=>{},'secondary'));
  }else if(item.unindexed||item.source==='drive'){
-  tools.append(control('✓ Choose person / folder',()=>openApproval(item),'primary'));
+  tools.append(control('✓ File under person',()=>openApproval(item),'primary'));
  }else if(item.decision==='approved'){
   tools.append(control('Saved ✓',()=>{},'secondary'));tools.lastChild.disabled=true;
  }else if(['rejected','skipped'].includes(item.decision)){
   tools.append(control('Restore',()=>restore(item),'secondary'));
  }else{
-  tools.append(control(state.folder?'✓ Keep here':'✓ Choose person / folder',()=>openApproval(item),'primary'),
-   control('✕ Skip',()=>dismiss(item),'danger'));
+  tools.append(control(state.folder?'✓ Keep here':'✓ File under person',()=>openApproval(item),'primary'),
+   control('↷ Skip for now',()=>dismiss(item),'danger'));
  }
  if(state.folder&&state.doc?.reference_examples?.length&&item.decision!=='approved')
   tools.append(control('Compare',()=>compare(item)));
@@ -562,14 +637,14 @@ function choosePortrait(f,face){
  const id=String(f.id||''),name=String(face?.face?.snapshot_name||'');
  if(!id||!faceName.test(name)||!credibleFaceCrop(face)||
      !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
-  alertText('Choose a face image from an approved recording in this folder.');return;
+  alertText('Choose a face image from a recording confirmed for this person.');return;
  }
  const data={name,clip:face.clip};state.folderPortraits.set(id,data);
  if(typeof localStorage!=='undefined'){
   try{localStorage.setItem(portraitKey(id),JSON.stringify(data))}
-  catch(_){notification('Folder photo selected for this session; browser storage is unavailable.')}
+  catch(_){notification('Person portrait selected for this session; browser storage is unavailable.')}
  }
- notification('Folder photo selected on this browser. Your review approvals were not changed.');
+ notification('Person portrait selected on this browser. Review decisions were not changed.');
  renderFolder();
 }
 function approvedPreviewClip(preview){
@@ -635,7 +710,7 @@ function profileRow(f){
 function groupRows(host){
  host.replaceChildren();
  const groups=tentativeFolders();
- if(!groups.length){host.append(elt('p','No provisional groups available.','status'));return}
+ if(!groups.length){host.append(elt('p','No appearance suggestions available.','status'));return}
  for(const f of groups){
   const b=control('',()=>openFolder(f.id,'suggestions'),'candidate-folder');
   const preview=Array.isArray(f.previews)&&f.previews.length?f.previews[0]:null;
@@ -656,6 +731,9 @@ function renderMetrics(){
  $('reviewTabCount').textContent=queue?' · '+queue:'';
  $('peopleReviewNotice').hidden=queue===0;
  $('peopleReviewSummary').textContent=queue+(queue===1?' recording needs':' recordings need')+' review';
+ const recheck=saved.reduce((n,x)=>n+num(x.approvals_needing_person_recheck),0);
+ $('peopleRecheckNotice').hidden=recheck===0;
+ $('peopleRecheckSummary').textContent=recheck+' confirmed recording'+(recheck===1?' needs':'s need')+' evidence rechecking';
  $('personCount').textContent=String(saved.length);
  $('approvalCount').textContent=String(saved.reduce((n,x)=>n+num(x.approved_clips),0));
  $('groupCount').textContent=String(tentativeFolders().length);
@@ -698,13 +776,34 @@ function renderOverview(){
  }
  reviewAlerts.hidden=flagged.length===0;
  const host=$('reviewPreview');host.replaceChildren();
- const preview=state.doc?.items||[];
- for(const item of preview.slice(0,4))host.append(reviewItem(item,true));
- if(!preview.length)host.append(elt('p','No supported recordings waiting for review.','empty'));
+ const waiting=num(state.doc?.inbox_clips);
+ const personPending=Math.max(0,num(state.doc?.person_detection?.total_clips)-
+  num(state.doc?.person_detection?.assessed_clips));
+ const facePending=state.faceSummary?
+  Math.max(0,num(state.faceSummary.total)-num(state.faceSummary.reviewed)):null;
+ host.append(elt('p',
+  waiting+' recording'+(waiting===1?'':'s')+' awaiting human review · '+
+  personPending+' awaiting person detection · '+
+  (facePending===null?'Face scan coverage unavailable':facePending+' awaiting deep face review'),
+  'status'));
+ if(waiting)host.append(control('Review '+waiting+' recording'+(waiting===1?'':'s')+' →',
+  ()=>openReview('all'),'primary'));
+ if(!flagged.length&&!waiting&&!personPending&&!facePending)
+  host.append(elt('p','No current review or scan backlog detected.','status'));
  const saved=$('savedPreview');saved.replaceChildren();
- for(const f of savedFolders().slice(0,4))saved.append(profileRow(f));
- if(!saved.children.length)saved.append(elt('p','No saved groups yet. Use Keep after reviewing a recording.','empty'));
- // Clothing suggestions are accessible in their own tab.
+ const sd=state.archiveEntries.filter(x=>x.source==='sd').length;
+ const drive=state.archiveEntries.filter(x=>x.source==='drive').length;
+ function sourceRow(label,value,warning=false){
+  const row=elt('div','',''+(warning?'unavailable':''));
+  row.append(elt('span',label),elt('strong',value));saved.append(row);
+ }
+ sourceRow('S9+ microSD originals',state.faceLoaded?String(sd):'Loading…');
+ sourceRow('Historical Google Drive originals',
+  state.driveStatus==='ready'?String(drive):state.driveStatus==='unavailable'?'Unavailable':'Loading…',
+  state.driveStatus==='unavailable');
+ sourceRow('Manual person assignments',String(num(state.doc?.folders?.reduce((count,f)=>
+  count+num(f.approved_clips),0))));
+ // Overview deliberately has no second list of recordings or people.
 }
 function paginate(host,total,onPage){
  host.replaceChildren();const page=state.offset/state.limit;
@@ -740,7 +839,7 @@ function renderReview(){
  }else{
   const unsaved=(state.doc?.items||[]).filter(item=>
    !assignedFolder({source:'sd',name:item.clip,clip:item.clip}));
-  $('reviewTotal').textContent=unsaved.length+' review items';
+  $('reviewTotal').textContent=unsaved.length+' review '+(unsaved.length===1?'item':'items');
   for(const item of unsaved)host.append(reviewItem(item,false));
   paginate($('reviewPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
  }
@@ -748,18 +847,147 @@ function renderReview(){
 }
 
 function renderPeople(){
+ const review=$('peopleRecheckActions');review.replaceChildren();
+ const flagged=savedFolders().filter(x=>num(x.approvals_needing_person_recheck)>0);
+ for(const person of flagged){
+  const number=num(person.approvals_needing_person_recheck);
+  review.append(control('Recheck '+person.label+' · '+number+' recording'+(number===1?'':'s'),
+   ()=>openFolder(person.id,'approved',true),'secondary'));
+ }
+ review.hidden=flagged.length===0;
  const saved=$('savedList');saved.replaceChildren();
  for(const f of savedFolders())saved.append(profileRow(f));
- if(!saved.children.length)saved.append(elt('p','No reviewed folders. Create a folder or keep a recording to get started.','empty'));
+ if(!saved.children.length)saved.append(elt('p','No saved people. Add a person or file a reviewed recording to get started.','empty'));
  // Clothing suggestions are not mixed into the saved-people list.
 }
+async function searchClothingMatches(force=false){
+ if(state.clothingBusy||!state.assignedReady||!state.extraLinks)return;
+ if(state.clothingMatches&&!force)return;
+ const token=++state.clothingToken;
+ state.clothingBusy=true;state.clothingError='';state.clothingMatches=null;renderClothing();
+ const sources=state.archiveEntries.filter(x=>x.source==='sd'&&assignedFolder(x)&&
+    state.clipEvidence.has(x.clip)&&num(state.clipEvidence.get(x.clip).person_count)===1&&
+    num(state.clipEvidence.get(x.clip).frames_with_distinct_multiple_person_boxes)===0);
+ // Reviewed single-person clips act as labelled examples, not biometric
+ // training data. Use up to three distinct time-separated references per
+ // person, rather than one outfit/photo being treated as their identity.
+ const perPerson=new Map(),references=[];
+ for(const ref of sources){
+  const id=assignedFolder(ref);
+  const prior=perPerson.get(id)||[];
+  if(prior.length>=3)continue;
+  if(prior.some(x=>Math.abs(x.recorded_ms-ref.recorded_ms)<15*60*1000))continue;
+  const person=savedFolders().find(x=>x.id===id);
+  if(!person)continue;
+  prior.push(ref);perPerson.set(id,prior);references.push({ref,person});
+  if(references.length>=18)break;
+ }
+ const matches=new Map();let failures=0,checked=0;
+ for(const {ref,person} of references){
+  if(token!==state.clothingToken)break;
+  try{
+   const make=category=>'/new/api/appearance-search?'+new URLSearchParams({
+    clip:ref.clip,category,method:'bhattacharyya',limit:'50'}).toString();
+   // Serial calls keep comparison work bounded on the camera phone.
+   const upperResponse=await relay().fetch(make('upper_clothing'),{cache:'no-store'});
+   const lowerResponse=await relay().fetch(make('lower_clothing'),{cache:'no-store'});
+   const upper=await upperResponse.json(),lower=await lowerResponse.json();
+   if(!upperResponse.ok||!lowerResponse.ok||upper.ok!==true||lower.ok!==true||
+       upper.appearance_only!==true||lower.appearance_only!==true)
+    throw Error('Phone appearance index unavailable');
+   checked++;
+   const lowers=new Map((lower.results||[]).map(hit=>[hit.clip_name,hit]));
+   for(const hit of upper.results||[]){
+    const clip=String(hit.clip_name||''),bottom=lowers.get(clip);
+    if(!clipName.test(clip)||!bottom||clip===ref.clip)continue;
+    if(assignedFolder({source:'sd',name:clip,clip}))continue;
+    const u=Number(hit.similarity),l=Number(bottom.similarity);
+    if(!Number.isFinite(u)||!Number.isFinite(l)||u<.90||l<.88||u>1||l>1)continue;
+    if(hit.zone&&bottom.zone&&hit.zone!==bottom.zone)continue;
+    const observed=state.clipEvidence.get(clip);
+    // Different detected people inside one candidate clip may each supply
+    // one half of the outfit: never combine those colours into one match.
+    if(!observed||num(observed.person_count)!==1||
+       num(observed.frames_with_distinct_multiple_person_boxes)>0)continue;
+    // A match describes the same clothing colours across two videos only.
+    const score=.62*u+.38*l,key=person.id+':'+clip,prior=matches.get(key);
+    if(prior){
+     // Independent confirmed reference agreements strengthen *outfit*
+     // evidence but do not establish a person identity.
+     if(prior.references.includes(ref.clip))continue;
+     prior.references.push(ref.clip);
+     prior.bestScore=Math.max(prior.bestScore,score);
+     prior.sumScore+=score;
+     if(score>prior.score){prior.score=score;prior.reference=ref.clip;
+      prior.upper=u;prior.lower=l;}
+    }else matches.set(key,{clip,person,reference:ref.clip,references:[ref.clip],
+      upper:u,lower:l,score,bestScore:score,sumScore:score,
+      recorded_ms:Number(clip.slice(7,20)),source:'sd',name:clip,
+      video_path:'/new/saved/clip/'+encodeURIComponent(clip)});
+   }
+  }catch(_){failures++}
+ }
+ if(token===state.clothingToken){
+  const allMatches=[...matches.values()].map(match=>({
+   ...match,referenceSupport:match.references.length,
+   meanSimilarity:match.sumScore/match.references.length
+  }));
+  // A common blue jacket is not unique to one reviewed person. Surface
+  // conflicting outfit labels explicitly rather than ranking one as an ID.
+  for(const match of allMatches){
+   const competitors=allMatches.filter(other=>other.clip===match.clip&&
+    other.person.id!==match.person.id&&
+    other.meanSimilarity>=match.meanSimilarity-.035&&
+    other.referenceSupport>=match.referenceSupport-1);
+   match.ambiguousPeople=competitors.map(other=>other.person.label).slice(0,3);
+  }
+  state.clothingMatches=allMatches.sort((a,b)=>
+    a.ambiguousPeople.length-b.ambiguousPeople.length||
+    b.referenceSupport-a.referenceSupport||
+    b.meanSimilarity-a.meanSimilarity||b.bestScore-a.bestScore).slice(0,80);
+  state.clothingError=failures?'Could not compare '+failures+' of '+references.length+
+    ' references. Try refreshing when the S9+ is available.':'';
+  if(!references.length)state.clothingError='No eligible approved single-person reference recordings yet.';
+  else if(!checked)state.clothingError='S9+ outfit comparison index is unavailable. No speculative matches are shown.';
+  state.clothingBusy=false;renderClothing();
+ }
+}
 function renderClothing(){
- groupRows($('clothingList'));
- $('clothingTotal').textContent=tentativeFolders().length+' provisional groups · not identified people';
+ const host=$('clothingList');host.replaceChildren();
+ const matches=state.clothingMatches||[];
+ $('groupCount').textContent=state.clothingMatches?String(matches.length):'—';
+ $('clothingTabCount').textContent=matches.length?' · '+matches.length:'';
+ $('clothingTotal').textContent=state.clothingBusy?'Comparing approved reference recordings on S9+…':
+  state.clothingError||matches.length+' two-piece outfit suggestions · all require human review';
+ if(!state.clothingMatches){
+  host.append(elt('p',state.clothingBusy?'Checking upper and lower clothing against confirmed reference clips…':
+   'Select Refresh matches to compare approved single-person recordings.','empty'));return;
+ }
+ if(!matches.length){host.append(elt('p','No credible two-piece clothing matches in the indexed videos. Matching outfits do not establish identities.','empty'));return}
+ for(const match of matches){
+  const card=elt('article','','evidence');
+  const media=sceneFor(match);
+  const body=elt('div','','body');
+  const ambiguous=match.ambiguousPeople.length>0;
+  body.append(elt('strong',ambiguous?'Common outfit · resembles several saved people':
+   'Possible outfit resemblance to '+match.person.label),
+   elt('p',date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+
+    Math.round(match.lower*100)+'%'),
+   elt('p','Matched '+match.referenceSupport+' approved example'+
+    (match.referenceSupport===1?'':'s')+' · average outfit similarity '+
+    Math.round(match.meanSimilarity*100)+'%'),
+   elt('p',ambiguous?'Also resembles '+match.ambiguousPeople.join(', ')+
+    ' · cannot distinguish people from this outfit':'Appearance resemblance only · identity not verified'));
+  const actions=elt('div','','actions');
+  actions.append(control('▶ Review original',()=>startVideo(match),'primary'),
+   control('Compare reference',()=>startVideo({clip:match.reference,source:'sd',
+    name:match.reference,recorded_ms:Number(match.reference.slice(7,20))}),'secondary'));
+  body.append(actions);card.append(media,body);host.append(card);
+ }
 }
 function renderFolder(){
  const f=actualFolder();
- if(!f){alertText('This folder is no longer available');return}
+ if(!f){alertText('This person is no longer available');return}
  $('folderTitle').textContent=f.label;
  $('folderDescription').textContent=num(f.approved_clips)+' saved recording links · '+
   num(f.suggested_clips)+' appearance suggestions'+
@@ -767,6 +995,8 @@ function renderFolder(){
  $('folderRecheck').hidden=!num(f.approvals_needing_person_recheck);
  $('folderRecheck').textContent=num(f.approvals_needing_person_recheck)+
   ' saved clip(s) need rechecking against the original recording; a previous approval is not a current detector confirmation.';
+ $('folderRecheckFilter').hidden=state.tab!=='approved'||!num(f.approvals_needing_person_recheck);
+ $('folderRecheckOnly').checked=state.recheckOnly;
  $('folderMode').value=state.tab;
  const suggestions=state.tab==='suggestions';
  for(const id of ['distanceLabel','weakLabel','routeLabel'])$(id).hidden=!suggestions;
@@ -774,21 +1004,25 @@ function renderFolder(){
  $('folderContextText').textContent='Provisional clothing match. These recordings must be reviewed separately; this folder is NOT an automatically identified person.';
  const host=$('folderGrid');host.replaceChildren();
  for(const item of state.doc?.items||[]){
+  if(state.tab==='approved'&&state.recheckOnly&&!item.person_recheck_required)continue;
   if(state.tab==='approved'&&state.extraLinks?.items?.['sd:'+item.clip]?.folder!==undefined&&
      state.extraLinks.items['sd:'+item.clip].folder!==state.folder)continue;
   host.append(reviewItem({...item,source:'sd',name:item.clip},false));
  }
- if(state.tab==='approved'){
+ if(state.tab==='approved'&&!state.recheckOnly){
   // New manual links (Drive, unindexed SD, and corrected folder moves).
   for(const entry of state.archiveEntries){
    const override=state.extraLinks?.items?.[assignmentKey(entry)];
    if(!override||override.folder!==state.folder)continue;
-   if(host.children.some?.(x=>x.dataset?.clip===entry.clip))continue;
+   if(Array.from(host.children).some(x=>x.dataset?.clip===entry.clip&&
+      x.dataset?.source===entry.source))continue;
    host.append(reviewItem({...entry,decision:'approved',
      manualAssignment:true,unindexed:entry.source==='drive'||!state.clipEvidence.has(entry.clip)},false));
   }
  }
- if(!host.children.length)host.append(elt('p',suggestions?'No appearance suggestions.':'No recordings in this folder.','empty'));
+ if(!host.children.length)host.append(elt('p',suggestions?'No appearance suggestions.':
+  state.recheckOnly?'No flagged recordings on this page. Use Next or clear the recheck filter.':
+  'No recordings filed under this person.','empty'));
  // Only show images linked to manually approved recordings in this folder.
  // A linked recording can still contain a different person: never label a crop as an identified face.
  const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
@@ -892,7 +1126,7 @@ function compare(item){
 function openFolderEditor(mode){
  state.editMode=mode;
  const f=actualFolder();
- $('folderDialogTitle').textContent=mode==='edit'?'Edit saved folder':'New saved folder';
+ $('folderDialogTitle').textContent=mode==='edit'?'Edit person':'New person';
  $('folderLabel').value=mode==='edit'&&f?f.label:'';
  $('folderNotes').value=mode==='edit'&&f?f.note||'':'';
  $('folderDialog').showModal();
@@ -903,23 +1137,33 @@ for(const b of document.querySelectorAll('[data-pane]'))b.addEventListener('clic
 });
 $('openReview').addEventListener('click',()=>openReview('all'));
 $('peopleReviewNow').addEventListener('click',()=>openReview('inbox'));
+$('peopleRecheckNow').addEventListener('click',()=>{
+ const person=savedFolders().find(x=>num(x.approvals_needing_person_recheck)>0);
+ if(person)openFolder(person.id,'approved');
+});
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
+$('refreshClothing').addEventListener('click',()=>searchClothingMatches(true));
 $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
 $('pageSize').addEventListener('change',()=>{
  const value=Number($('pageSize').value);
- if(value!==48&&value!==96)return;
+ if(![100,150,200].includes(value))return;
  state.limit=value;state.offset=0;loadView();
 });
-$('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
+$('folderMode').addEventListener('change',()=>{
+ state.tab=$('folderMode').value;state.recheckOnly=false;state.offset=0;loadView()});
+$('folderRecheckOnly').addEventListener('change',()=>{
+ state.recheckOnly=$('folderRecheckOnly').checked;state.offset=0;loadView();
+});
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('refresh').addEventListener('click',()=>{
  state.faceLoaded=false;
  state.faceSummary=null;
  state.clipEvidence=new Map();
  state.archiveClips=null;state.archiveEntries=[];state.driveRecords=[];
- state.extraLinks=null;state.assignedReady=false;
+ state.extraLinks=null;state.assignedReady=false;state.clothingMatches=null;
+ state.clothingToken++;state.clothingBusy=false;state.archiveToken=0;
  loadView();
  fetchFaces();
 });
@@ -937,13 +1181,13 @@ $('approvalForm').addEventListener('submit',async e=>{
  const label=$('approvalLabel').value.trim();
  // Confirm & keep is the explicit human-review decision; the second checkbox
  // previously required for the exact same decision is removed.
- if(!id&&(!label||label.length>100)){alertText('Enter a name for the new folder.');return}
+ if(!id&&(!label||label.length>100)){alertText('Enter a name for the new person.');return}
  let folder=id;
  if(!folder){
   let created='';
   const done=await action({action:'create_folder',folder:'',label,note:''},result=>{
    created=String(result.folder||'');});
-  if(!done||!created){alertText('Could not create a folder.');return}
+  if(!done||!created){alertText('Could not create a person.');return}
   folder=created;
  }
  const ok=await manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},folder);
@@ -952,15 +1196,24 @@ $('approvalForm').addEventListener('submit',async e=>{
 $('folderForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const name=$('folderLabel').value.trim();
- if(!name){alertText('Choose a folder name');return}
+ if(!name){alertText('Choose a person name');return}
  const payload={action:state.editMode==='edit'?'edit_folder':'create_folder',
   folder:state.editMode==='edit'?state.folder:'',label:name,note:$('folderNotes').value.slice(0,2000)};
- const ok=await action(payload,result=>{notification('Folder saved.');if(result.folder&&state.editMode==='create'){
+ const ok=await action(payload,result=>{notification('Person saved.');if(result.folder&&state.editMode==='create'){
   state.folder=result.folder;state.pane='folder';state.tab='suggestions';selectPane('folder')
  }});
  if(ok)$('folderDialog').close();
 });
 $('closeVideo').addEventListener('click',()=>$('viewer').close());
+$('viewerFile').addEventListener('click',()=>{
+ const item=state.playingItem;if(!item)return;
+ $('viewer').close();openApproval(item);
+});
+$('viewerReturn').addEventListener('click',()=>{
+ const item=state.playingItem;if(!item||!assignedFolder(item))return;
+ if(!confirm('Return this recording to the unassigned review queue?'))return;
+ $('viewer').close();manualLink(item,null);
+});
 $('viewer').addEventListener('close',stopVideo);
 $('video').addEventListener('loadedmetadata',()=>{const v=$('video');
  if(state.playTime>0&&Number.isFinite(v.duration))v.currentTime=Math.min(state.playTime,Math.max(0,v.duration-.1));
