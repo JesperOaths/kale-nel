@@ -104,6 +104,12 @@ class ManualLinkCases(unittest.TestCase):
   self.assertFalse(mod.matching_drive_catalogs({"ok":True,"events":[]},
     {"ok":True,"events":[]}))
   self.assertFalse(mod.matching_drive_catalogs({"ok":False,"events":[{} for _ in range(94)]},drive))
+ def test_backend_rollout_retains_real_drive_inventory(self):
+  code=Path(__file__).with_name("deploy-manual-recording-links-v1.py").read_text()
+  self.assertIn('drive_count_before=len(drive_before["events"])',code)
+  self.assertIn('len(drive_catalog["events"])<drive_count_before',code)
+  self.assertIn("verified_historical_drive_baseline_unavailable",code)
+  self.assertNotIn('len(drive_catalog["events"])<100',code)
  def test_route_does_not_recognize_or_modify_people(self):
   src=SRC.read_text()
   for forbidden in ("cv2.imread","face_embedding","rclone delete",
