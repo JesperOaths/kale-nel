@@ -62,7 +62,8 @@ def timer_service_readback():
  service exit status distinguish an idle timer from a failing service.
  """
  props={
-  "timer":("ActiveState","SubState","LastTriggerUSec","NextElapseUSecRealtime"),
+  "timer":("ActiveState","SubState","LastTriggerUSec","NextElapseUSecRealtime",
+     "NextElapseUSecMonotonic"),
   "service":("ActiveState","SubState","Result","ExecMainStatus",
              "ExecMainStartTimestamp","ExecMainExitTimestamp")
  }
