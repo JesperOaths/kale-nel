@@ -59,6 +59,7 @@ const driveClip='historical_2026-05-12_08-30-00.mp4';
 const otherClip='motion_1792200500000.mp4';
 const extraClip='motion_1792201000000.mp4';
 const candidateClip='motion_1792100000000.mp4';
+const pendingOutfitClip='motion_1792000000000.mp4';
 const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observation:'v1',signature:'b'.repeat(64),
  full_crop:{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg',time_ms:2500},video_path:'/new/saved/clip/'+clip,
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
@@ -85,7 +86,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
   if(p==='/new/api/s9-manual-recording-links')
    return {ok:true,json:async()=>({ok:true,revision:linkRevision,items:linkItems,
      manual_links_only:true,automatic_identity_matching:false})};
-  if(p.startsWith('/new/api/appearance-search?'))return {ok:true,json:async()=>({ok:true,appearance_only:true,results:[{clip_name:candidateClip,similarity:.97,zone:'front_garden'}]})};
+  if(p.startsWith('/new/api/appearance-search?'))return {ok:true,json:async()=>({ok:true,appearance_only:true,results:[{clip_name:pendingOutfitClip,similarity:.97,zone:'front_garden'}]})};
   if(p==='/new/api/drive-saved')return {ok:true,json:async()=>({
     ok:true,archive_mode:'historical-google-drive',events:[
       {remote_name:driveClip,timestamp:'2026-05-12T08:30:00',snapshot_name:'history.jpg'}
@@ -111,7 +112,8 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]},
    {clip_no:otherClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]},
    {clip_no:extraClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]},
-   {clip_no:candidateClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]}]})};
+   {clip_no:candidateClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]},
+   {clip_no:pendingOutfitClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]}]})};
   if(p.startsWith('/new/saved/face/'))return {ok:true,status:200};
   throw Error('Unexpected request '+p);
  }};
@@ -135,11 +137,11 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
- assert.equal(el('archiveCount').textContent,'5','All SD originals plus historical Drive appear in archive');
+ assert.equal(el('archiveCount').textContent,'6','All SD originals plus historical Drive appear in archive');
  assert(!html.includes('data-pane="faces"'),'Face gallery tab must be removed');
  assert(!html.includes('id="faceGrid"'),'Invalid gallery not to be retained');
  assert.equal(el('personScanLabel').textContent,'80 / 141');
- assert.equal(el('faceScanLabel').textContent,'4 / 4 · reviewed');
+ assert.equal(el('faceScanLabel').textContent,'5 / 5 · reviewed');
  assert.match(el('facePhotoStatus').textContent,/2 candidate crops/);
  assert.equal(el('faceScanProgress').value,100);
  panes[0].handlers.click();
