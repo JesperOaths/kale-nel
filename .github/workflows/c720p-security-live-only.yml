@@ -4,12 +4,14 @@ on:
     paths:
       - 'ops/c720p/security-runtime/security-live-mjpeg-only-v1.js'
       - 'ops/c720p/security-runtime/test-live-only-mjpeg-v1.js'
+      - 'ops/c720p/security-runtime/deploy-security-live-only-v1.py'
       - '.github/workflows/c720p-security-live-only.yml'
   push:
     branches: [main]
     paths:
       - 'ops/c720p/security-runtime/security-live-mjpeg-only-v1.js'
       - 'ops/c720p/security-runtime/test-live-only-mjpeg-v1.js'
+      - 'ops/c720p/security-runtime/deploy-security-live-only-v1.py'
       - '.github/workflows/c720p-security-live-only.yml'
 permissions:
   contents: read
@@ -24,3 +26,4 @@ jobs:
           set -euo pipefail
           node --check ops/c720p/security-runtime/security-live-mjpeg-only-v1.js
           node ops/c720p/security-runtime/test-live-only-mjpeg-v1.js
+          python3 -m py_compile ops/c720p/security-runtime/deploy-security-live-only-v1.py
