@@ -21,6 +21,7 @@ TIMER=UNITS/"c720p-s9-face-v5-cool-window.timer"
 GITHUB="https://raw.githubusercontent.com/JesperOaths/kale-nel/"
 WORKER="ops/c720p/s9-native-security/s9-v5-cool-window-worker.py"
 UNIT="c720p-s9-face-v5-cool-window"
+OVERLAY=UNITS/(UNIT+".timer.d")/"zzzz-s9-v5-signed-release-schedule.conf"
 
 def run(*args):
  result=subprocess.run(args,capture_output=True,text=True,timeout=45)
@@ -59,7 +60,9 @@ def main():
  config={"ref":args.ref,"build_sha256":args.build_sha,
          "install_sha256":args.installer_sha}
  program=(BIN.read_bytes() if BIN.exists() else None)
- previous={p:(p.read_bytes() if p.exists() else None) for p in (BIN,CONF,SERVICE,TIMER)}
+ if OVERLAY.parent.is_symlink():raise RuntimeError("timer_dropin_directory_symlink")
+ previous={p:(p.read_bytes() if p.exists() else None)
+           for p in (BIN,CONF,SERVICE,TIMER,OVERLAY)}
  service=("[Unit]\nDescription=S9 V5 4K face archive guarded deployment window\n"
           "After=network-online.target\n"
           "[Service]\nType=oneshot\n"
@@ -72,11 +75,19 @@ def main():
         "AccuracySec=1min\nRandomizedDelaySec=2min\n"
         "Persistent=true\nUnit="+UNIT+".service\n"
         "[Install]\nWantedBy=timers.target\n").encode()
+ # A previous drop-in contains OnUnitInactiveSec= (empty), which clears
+ # ALL timer triggers, then re-adds only the expired inactivity trigger.
+ # This owned lexically-later drop-in restores the desired schedule.
+ override=("[Timer]\nOnUnitInactiveSec=\nOnActiveSec=2min\n"
+           "OnUnitActiveSec=5min\nOnCalendar=*:0/5\n").encode()
+ if OVERLAY.exists() and OVERLAY.read_bytes()!=override:
+  raise RuntimeError("unowned_existing_timer_schedule_override")
  try:
   stage_atomic(BIN,raw,0o700)
   stage_atomic(CONF,(json.dumps(config,sort_keys=True)+"\n").encode(),0o600)
   stage_atomic(SERVICE,service,0o644)
   stage_atomic(TIMER,timer,0o644)
+  stage_atomic(OVERLAY,override,0o644)
   run("systemctl","--user","daemon-reload")
   run("systemctl","--user","enable","--now",UNIT+".timer")
   # Re-arm the TIMER unit itself: enable --now does not re-schedule an
@@ -88,10 +99,18 @@ def main():
   if enabled!="enabled" or active!="active":
    raise RuntimeError("systemd_timer_not_persistently_enabled")
   metadata=run("systemctl","--user","show",UNIT+".timer",
-               "--property=SubState,NextElapseUSecRealtime,NextElapseUSecMonotonic","--no-pager")
+               "--property=SubState,NextElapseUSecRealtime,NextElapseUSecMonotonic,TimersMonotonic,TimersCalendar","--no-pager")
   values=dict(line.split("=",1) for line in metadata.splitlines() if "=" in line)
-  has_future=bool(values.get("NextElapseUSecRealtime") or values.get("NextElapseUSecMonotonic"))
-  if values.get("SubState")!="waiting" or not has_future:
+  def finite_due(value):
+   return bool(value) and value not in ("infinity","n/a","0","-")
+  has_future=finite_due(values.get("NextElapseUSecRealtime")) or finite_due(
+      values.get("NextElapseUSecMonotonic"))
+  loaded_m=values.get("TimersMonotonic","")
+  loaded_c=values.get("TimersCalendar","")
+  loaded_recurrence=("OnActiveUSec=" in loaded_m or
+                     "OnUnitActiveUSec=" in loaded_m or
+                     "OnCalendar=" in loaded_c)
+  if values.get("SubState")!="waiting" or not has_future or not loaded_recurrence:
    # Diagnostic enums only: do not leak journal content, device paths or
    # camera metadata. A boot-time catch-up may briefly run the oneshot worker.
    current=values.get("SubState","unknown")
@@ -137,6 +156,7 @@ def main():
     "recordings_modified":False,"initial_scan_started":False,
     "check_interval_minutes":5,"timer_substate":values["SubState"],
     "has_next_scheduled_deadline":True,
+    "owned_override_verified":True,"effective_recurrence_loaded":True,
     "timer_clock":"realtime" if values.get("NextElapseUSecRealtime") else "monotonic"},sort_keys=True),flush=True)
 
 if __name__=="__main__":main()
