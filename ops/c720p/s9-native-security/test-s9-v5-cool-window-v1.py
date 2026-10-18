@@ -189,6 +189,24 @@ class LocalCoolWindow(unittest.TestCase):
   self.assertIn('S9_FACE_RECALL_V27_DEVICE_VERIFIED',s)
   self.assertIn('"original_apk_restored":True',s)
   self.assertIn('rollback_microSD_final_checksum_mismatch',s)
+ def test_owned_timer_dropin_replaces_legacy_trigger_reset(self):
+  source=INSTALLER.read_text()
+  tree=ast.parse(source)
+  definitions=[n for n in ast.walk(tree) if isinstance(n,ast.Assign) and
+               any(isinstance(t,ast.Name) and t.id=="override" for t in n.targets)]
+  self.assertEqual(len(definitions),1)
+  expression=definitions[0].value
+  self.assertIsInstance(expression,ast.Call)
+  text=ast.literal_eval(expression.func.value)
+  self.assertEqual(text.splitlines(),[
+      "[Timer]","OnUnitInactiveSec=","OnActiveSec=2min",
+      "OnUnitActiveSec=5min","OnCalendar=*:0/5"])
+  self.assertIn('stage_atomic(OVERLAY,override,0o644)',source)
+  self.assertIn('for p in (BIN,CONF,SERVICE,TIMER,OVERLAY)',source)
+  self.assertIn('OVERLAY.parent.is_symlink()',source)
+  self.assertIn('unowned_existing_timer_schedule_override',source)
+  self.assertIn('value not in ("infinity","n/a","0","-")',source)
+  self.assertIn('loaded_recurrence',source)
  def test_c720p_timer_is_local_not_chatgpt_task(self):
   src=INSTALLER.read_text()
   for mark in ('systemctl","--user","enable","--now"',
