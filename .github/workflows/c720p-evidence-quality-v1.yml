@@ -1,0 +1,26 @@
+name: S9 evidence content and event semantics
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_evidence_quality_v1.py'
+      - 'ops/c720p/s9-native-security/*evidence-quality-v1.py'
+      - 'ops/c720p/s9-native-security/rescan-original4k-face-gaps-v1.py'
+      - '.github/workflows/c720p-evidence-quality-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_evidence_quality_v1.py'
+      - 'ops/c720p/s9-native-security/*evidence-quality-v1.py'
+      - 'ops/c720p/s9-native-security/rescan-original4k-face-gaps-v1.py'
+      - '.github/workflows/c720p-evidence-quality-v1.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 ops/c720p/s9-native-security/test-evidence-quality-v1.py
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_evidence_quality_v1.py
