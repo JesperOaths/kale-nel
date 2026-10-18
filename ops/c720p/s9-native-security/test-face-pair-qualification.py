@@ -12,11 +12,15 @@ def row(i,truth):
  start=1792200000000+i*86400000
  end=1792200060000+i*86400000
  return dict(left_clip=f"motion_{start}.mp4",right_clip=f"motion_{end}.mp4",
+  left_snapshot_name=f"motion_{start}__review_a__3500_0.jpg",
+  right_snapshot_name=f"motion_{end}__review_b__3600_0.jpg",
+  left_snapshot_sha256="b"*64,right_snapshot_sha256="c"*64,
   truth=truth,category="anonymous",score=.98 if truth=="same_person" else .23,
   margin=.08,human_confirmed=True,original_4k_verified=True,
-  phone_model_verified=True)
+  phone_model_verified=True,independent_reviewer_verified=True,
+  pair_score_origin="s9_local_exact_face_pair_score_v1")
 def doc(rows):
- return dict(version=1,origin="independent_human_confirmed_4k_pair_review",
+ return dict(version=2,origin="independent_human_confirmed_4k_face_pair_review",
   model_sha256="a"*64,pairs=rows)
 
 class Gate(unittest.TestCase):
@@ -46,10 +50,26 @@ class Gate(unittest.TestCase):
    [dict(base,human_confirmed=False)],
    [dict(base,phone_model_verified=False)],
    [dict(base,truth="unknown")],
-   [dict(base,margin=float("nan"))]
+   [dict(base,margin=float("nan"))],
+   [dict(base,independent_reviewer_verified=False)],
+   [dict(base,pair_score_origin="unverified_similarity")],
+   [dict(base,left_snapshot_name=base["right_snapshot_name"])],
+   [dict(base,left_snapshot_sha256="not-verified")],
+   [dict(base,right_snapshot_name=base["left_snapshot_name"])]
   ]
   for rows in cases:
    with self.subTest(rows=rows),self.assertRaises(ValueError):gate.evaluate(doc(rows))
+ def test_legacy_clip_only_pairs_cannot_qualify_face_matching(self):
+  legacy=doc([row(0,"same_person")])
+  legacy["version"]=1
+  legacy["origin"]="independent_human_confirmed_4k_pair_review"
+  for item in legacy["pairs"]:
+   for k in ("left_snapshot_name","right_snapshot_name",
+             "left_snapshot_sha256","right_snapshot_sha256",
+             "independent_reviewer_verified","pair_score_origin"):
+    item.pop(k,None)
+  with self.assertRaisesRegex(ValueError,"provenance"):
+   gate.evaluate(legacy)
  def test_manual_case_folders_are_not_ground_truth(self):
   with self.assertRaisesRegex(ValueError,"provenance"):
    gate.evaluate(dict(version=1,origin="human_reviewed_recording_folder",
