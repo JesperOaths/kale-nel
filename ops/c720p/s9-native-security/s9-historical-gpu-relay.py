@@ -29,6 +29,7 @@ SAFE_ID=re.compile(r"[a-f0-9]{64}\Z")
 MAX_BYTES=650*1024*1024
 RECHECK_VERSION="v28_s9_gpu_historical_person_review_v1"
 DIRECT_IMPORT_MAX_BYTES=96*1024*1024
+DRIVE_THUMB_CACHE=Path("/tmp/c720p-drive-archive-thumbs-new")
 DIRECT_IMPORT_OPT_IN=os.environ.get("S9_DIRECT_H264_IMPORT")=="1"
 APP_STATUS="http://127.0.0.1:18808/status"
 
@@ -364,7 +365,7 @@ def reuse_native_drive_thumbnail(key,source):
   name=matching[0].get("snapshot_name")
   if not isinstance(name,str) or ".." in name or not re.fullmatch(r"[A-Za-z0-9._-]{1,180}[.]jpe?g",name,re.I):
    return False
-  cache=Path("/tmp/c720p-drive-archive-thumbs-new")
+  cache=DRIVE_THUMB_CACHE
   cache.mkdir(parents=True,exist_ok=True)
   target=cache/name
   if target.is_symlink():return False
