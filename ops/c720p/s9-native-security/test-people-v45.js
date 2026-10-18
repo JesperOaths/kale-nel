@@ -6,6 +6,10 @@ const vm=require('node:vm');
 const html=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.html','utf8');
 const js=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.js','utf8');
 new vm.Script(js,{filename:'security-people-v45.js'});
+assert(js.includes('function sceneFor(item)'),'Review must show a full recording scene, not only a tight detection crop');
+assert(js.includes('function choosePortrait(f,face)'),'Manual folder portrait selection required');
+assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
+assert(html.includes('Use as folder photo')||js.includes('Use as folder photo'),'Folder portrait control missing');
 assert(!/\.innerHTML\s*=/.test(js));
 assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
@@ -126,6 +130,12 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(folderGrid.children.length,'Saved folder must show original recording rows');
  assert.equal(el('folderFaces').hidden,false,'Saved folder should display original face evidence when it exists');
  assert.equal(el('folderFaceGrid').children.length,2,'Show actual face images linked to reviewed recordings');
+ const coverAction=el('folderFaceGrid').children[0].children[1];
+ assert(coverAction&&coverAction.textContent==='Use as folder photo','Each approved face should allow manual portrait choice');
+ const writesBeforePortrait=posts.length;
+ coverAction.handlers.click();
+ assert.equal(posts.length,writesBeforePortrait,'Choosing a folder photo must not alter approvals or videos');
+ assert.equal(el('folderFaceGrid').children[0].children[1].getAttribute('aria-pressed'),'true');
  const faceContext=scan(folderGrid,'Inspect face 1');
  assert(faceContext,'Step 3 must link exact same-recording face snapshot for human review');
  let lines=[];
@@ -189,6 +199,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
+ assert.equal(el('savedList').children[0].children[0].children[0].className,'media','Saved folder must display selected face photograph');
  // Navigate to a provisional group; explicit manual approval must remain
  // possible without claiming an automatic same-person identity.
  const group=el('candidateList').children[0];assert(group);
