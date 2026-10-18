@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script src="/gejast-auth-gate.js?v817"></script>
+<script src="/gejast-auth-gate.js?v818"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta http-equiv="Cache-Control" content="no-store">
-<script>const GEJAST_PAGE_VERSION="v817";</script>
+<script>const GEJAST_PAGE_VERSION="v818";</script>
 <title>People &amp; Faces · Review workspace V45</title>
 <style id="s9-people-v45-style">
 :root{color-scheme:dark;--bg:#0e1720;--panel:#152430;--panel2:#1b2e3a;--border:#304958;--text:#eff8fa;--muted:#a4bec9;--mint:#81daca;--warn:#f2c98f;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
@@ -208,13 +208,12 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 </head>
 <body>
 <header class="top">
- <div><span class="kicker">S9+ · People evidence</span><h1>People &amp; faces</h1><p>Browse your saved people and reviewed clips. Investigate new evidence separately.</p></div>
+ <div><span class="kicker">S9+ · People evidence</span><h1>People &amp; faces</h1></div>
  <div class="top-actions"><button id="newFolder" type="button" class="secondary">+ New folder</button><button id="refresh" type="button" class="secondary">↻ Refresh</button></div>
 </header>
 <nav class="tabs" aria-label="People and faces workspace">
  <button type="button" data-pane="people" aria-selected="true">People</button>
  <button type="button" data-pane="review" aria-selected="false">Review recordings <span id="reviewTabCount"></span></button>
- <button type="button" data-pane="faces" aria-selected="false">Face images</button>
  <button type="button" data-pane="clothing" aria-selected="false">Possible clothing matches <span id="clothingTabCount"></span></button>
  <button type="button" data-pane="overview" aria-selected="false">Activity &amp; scan status</button>
 </nav>
@@ -226,17 +225,17 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <button class="metric" type="button" data-go="review"><strong id="queueCount">—</strong><span>Recording decisions pending</span></button>
  <button class="metric" type="button" data-go="people"><strong id="personCount">—</strong><span>Saved folders</span></button>
  <button class="metric" type="button" data-go="people"><strong id="approvalCount">—</strong><span>Saved clip links</span></button>
- <button class="metric" type="button" data-go="faces"><strong id="faceCount">—</strong><span>Captured face images</span></button>
+ <button class="metric" type="button" data-go="review"><strong id="archiveCount">—</strong><span>Original recordings</span></button>
 </section>
  <div class="overview-layout">
   <section class="surface" aria-label="Latest recordings requiring review">
-   <div class="section-head"><div><span class="kicker">PRIORITY</span><h2>Needs your decision</h2><p>A short queue of recordings, not another folder of unknown people.</p></div><button id="openReview" type="button" class="secondary">Review all →</button></div>
+   <div class="section-head"><div><h2>Recent recordings</h2></div><button id="openReview" type="button" class="secondary">View all →</button></div>
    <div id="reviewAlerts" class="recheck-alerts" aria-live="polite" hidden></div>
    <div id="reviewPreview" class="overview-feed"><div class="empty">Loading reviewable recordings…</div></div>
   </section>
   <div class="side-column">
    <section class="surface" aria-label="Saved people">
-    <div class="section-head"><div><span class="kicker">ORGANIZED</span><h2>Saved people &amp; groups</h2><p>Only folders you've created or approved.</p></div><button id="openPeople" class="secondary" type="button">View all →</button></div>
+    <div class="section-head"><div><h2>People</h2></div><button id="openPeople" class="secondary" type="button">View all →</button></div>
     <div id="savedPreview" class="profile-list"></div>
    </section>
    <section class="surface" aria-label="Analysis notes">
@@ -246,52 +245,39 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
       <progress id="personScanProgress" max="100" value="0"></progress>
       <div class="pf-scan-line"><strong>Original-4K face review</strong><span id="faceScanLabel">Loading…</span></div>
       <progress id="faceScanProgress" max="100" value="0"></progress>
-      <p id="facePhotoStatus" class="subnotice">Checking saved face images…</p>
+      <p id="facePhotoStatus" class="subnotice"></p>
     </div>
-    <p id="scanStatus" class="status">Person and face scanning are separate processes. A completed person scan does not imply face recognition is complete.</p>
-    <p class="subnotice">Face images and clothing similarities are observations, not confirmed identities.</p>
+    <p id="scanStatus" class="status"></p>
+    
     <button id="openClothing" class="secondary" type="button">View possible clothing matches →</button>
    </section>
   </div>
  </div>
 </section>
 <section id="review" hidden aria-label="Recording review queue">
- <div class="section-head"><div><span class="kicker">RECORDING REVIEW</span><h2>Review recordings</h2><p>1. Inspect the original video. 2. Choose the person or folder. 3. Confirm &amp; keep, then continue with the next recording. You stay in this queue.</p></div><span id="reviewTotal" class="status"></span></div>
- <div class="filters"><label>Show<select id="reviewMode"><option value="inbox">Needs review</option><option value="all">All supported recordings</option><option value="skipped">Dismissed</option></select></label></div>
+ <div class="section-head"><div><h2>Review recordings</h2></div><span id="reviewTotal" class="status"></span></div>
+ <div class="filters"><label>Show<select id="reviewMode"><option value="all" selected>All recordings</option><option value="inbox">Needs review</option><option value="skipped">Skipped</option></select></label></div>
  <div id="reviewGrid" class="grid"></div><div id="reviewPage" class="pagebar"></div>
 </section>
 <section id="people" aria-label="Saved people and provisional groups">
- <div class="people-review-notice" id="peopleReviewNotice" hidden><div><strong id="peopleReviewSummary"></strong><span>New recordings remain separate from saved people until reviewed.</span></div><button id="peopleReviewNow" type="button" class="primary">Review recordings →</button></div>
- <div class="section-head"><div><span class="kicker">SAVED FOLDERS</span><h2>Your people and groups</h2><p>Choose a folder to open its recordings and images. Only you can confirm who appears in a video.</p></div><button id="newFolderInline" type="button">+ Create folder</button></div>
+ <div class="people-review-notice" id="peopleReviewNotice" hidden><strong id="peopleReviewSummary"></strong><button id="peopleReviewNow" type="button" class="primary">Review →</button></div>
+ <div class="section-head"><div><h2>Your people and groups</h2></div><button id="newFolderInline" type="button">+ Create folder</button></div>
  <div id="savedList" class="profile-list" aria-live="polite"></div>
 </section>
 <section id="clothing" hidden aria-label="Possible clothing matches">
- <div class="section-head"><div><span class="kicker">APPEARANCE EVIDENCE</span>
- <h2>Possible clothing matches <span id="groupCount">—</span></h2>
- <p>These are provisional clothing and route similarities, not identified people. Choose a group to review its recordings.</p></div>
+ <div class="section-head"><div><h2>Possible clothing matches <span id="groupCount">—</span></h2></div>
  <span id="clothingTotal" class="status"></span></div>
  <div id="clothingList" class="group-list"></div>
 </section>
-<section id="faces" hidden aria-label="Original-4K face image evidence">
- <div class="section-head"><div><span class="kicker">IMAGE EVIDENCE</span><h2>Face images</h2><p>Each image belongs to one recording. There are no automatic same-person folders.</p></div><span id="faceTotal" class="status"></span></div>
- <div class="filters">
- <label>Find recording<input id="faceSearch" type="search" placeholder="Recording date or clip ID" aria-label="Find face evidence by recording"></label>
- <label>Show<select id="faceMode"><option value="all">All captured images</option><option value="manual">Manual review needed</option><option value="suggested">Comparison suggested</option></select></label>
- <label>Organize<select id="faceGrouping"><option value="recording">By original recording</option><option value="images">Individual images</option></select></label>
- </div>
- <p class="subnotice" id="faceGroupingNote">A recording may contain multiple images and different people. This groups the source footage, not identities.</p>
- <div id="faceGrid" class="grid"></div><div id="facePage" class="pagebar"></div>
-</section>
 <section id="folderView" hidden aria-label="Selected reviewed folder">
  <button id="backFolders" class="back" type="button">← Back to People &amp; groups</button>
- <div class="section-head"><div><span class="kicker">REVIEWED FOLDER</span><h2 id="folderTitle">Folder</h2><p id="folderDescription"></p></div><button id="editFolder" type="button">Edit folder</button></div>
+ <div class="section-head"><div><h2 id="folderTitle">Folder</h2><p id="folderDescription"></p></div><button id="editFolder" type="button">Edit folder</button></div>
  <div id="folderRecheck" class="folder-recheck" role="status" hidden></div>
- <p class="subnotice">Videos saved to this folder are selected manually. Its cover photo is selected automatically from available face crops in saved footage, for illustration only. Appearance clues are not confirmed identities.</p>
  <div class="filters"><label>Show<select id="folderMode"><option value="approved">Approved recordings</option><option value="suggestions">Suggested appearances</option><option value="assign">Add from queue</option><option value="rejected">Rejected</option></select></label>
  <label id="distanceLabel">Colour distance<select id="distance"><option value="0.15">Close</option><option value="0.35" selected>Similar</option><option value="0.65">Broad</option><option value="1">Any colour</option></select></label>
  <label id="weakLabel">Low-confidence detections<select id="weak"><option value="0" selected>Exclude</option><option value="1">Include</option></select></label>
  <label id="routeLabel">Route<select id="route"><option value="0">Any</option><option value="1">Same</option></select></label></div>
- <section id="folderFaces" class="folder-faces" hidden aria-label="Saved face images from recordings in this folder"><div class="section-head"><div><h3>Face images in these recordings</h3><p>Images belong to the linked videos, not necessarily the same person.</p></div></div><p class="subnotice">The cover photo is already chosen automatically from approved footage when possible. If it shows the wrong face, optionally change it here. A recording can contain several people.</p><div id="folderFaceGrid" class="folder-face-grid"></div></section>
+ <section id="folderFaces" class="folder-faces" hidden aria-label="Usable face candidates from this folder"><div class="section-head"><div><h3>Usable face candidates</h3></div></div><div id="folderFaceGrid" class="folder-face-grid"></div></section>
  <div id="folderContext" class="callout" hidden><p id="folderContextText"></p></div>
  <div class="folder-layout"><div><div id="folderGrid" class="grid"></div><div id="folderPage" class="pagebar"></div></div><aside id="references" class="folder-aside" hidden><h3>Approved reference clips</h3><p class="status">Human-reviewed examples for visual comparison only.</p><div id="referenceList" class="reference-list"></div></aside></div>
 </section>
@@ -299,11 +285,11 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <div class="head"><h2 id="approvalTitle">Choose person or folder</h2><button id="cancelApproval" type="button" aria-label="Close without saving">✕</button></div>
  <div class="approval-main">
   <p id="approvalClip" class="approval-reference"></p>
-  <p class="approval-note">Select where this recording belongs. Confirm &amp; keep saves your reviewed decision and returns you to the same queue. The folder cover is chosen automatically when a saved face is available.</p>
+  
   <div class="approval-video"><button id="approvalPlay" type="button" class="secondary">▶ Play original recording</button></div>
   <label>Person / folder<select id="approvalFolder"></select></label>
   <label id="newLabel">New folder name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
-  <p class="approval-note">Clicking <strong>Confirm &amp; keep</strong> means you personally reviewed the original recording. No automatic person identity is asserted.</p>
+  
  </div>
  <div class="approval-footer"><button id="approvalCancelFooter" type="button">Cancel</button><button class="primary" type="submit">Confirm &amp; keep · next recording</button></div>
  </form></dialog>
@@ -318,12 +304,12 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <span id="snapshotPosition" role="status">Image 1 of 1 in this recording</span>
  <button id="snapshotNext" type="button" class="secondary">Next image →</button>
  </div>
-  <p id="snapshotDescription" class="subnotice">An individual saved frame, not a verified person identity.</p>
+  <p id="snapshotDescription" class="subnotice"></p>
   <p id="snapshotStatus" class="status" role="status"></p>
   <div class="actions"><button id="snapshotPlay" type="button" class="primary">▶ Play original 4K at this moment</button></div>
 </dialog>
 <dialog id="viewer" class="dialog"><div class="head"><h2 id="videoTitle">Original video</h2><button id="closeVideo" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><p id="videoStatus" class="status"></p></dialog>
 <dialog id="compareDialog" class="dialog"><div class="head"><h2>Compare original evidence</h2><button id="closeCompare" type="button">Close</button></div><div id="compareGrid" class="compare-columns"></div><p class="subnotice">Appearance comparison never establishes the identity of a person.</p></dialog>
-<footer>PEOPLE &amp; FACES V45 · Manual visual review · Original recordings remain on S9+ microSD · <span class="version-watermark">v817 - Made by Bruis</span></footer>
+<footer><span class="version-watermark">v818 - Made by Bruis</span></footer>
 </body>
 </html>
