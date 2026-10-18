@@ -105,7 +105,8 @@ class CoverageTests(unittest.TestCase):
             calls.append((port, route))
             if route == '/status': return {'ok': True, 'native_4k_enabled': True, 'mode': 'watching'}
             if route == '/new/api/saved': return {'events': []}
-            if route == '/new/api/visual-review?limit=1': return {'folders': [{}, {}], 'pending_views': 17}
+            if route == '/new/api/visual-review?limit=1': return {'folders': [{}, {},
+                {'automatic_appearance_group': True, 'approved_clips': 0}], 'pending_views': 17}
             return {'source_changed_since_analysis': False, 'supported_face_candidates': 3}
         with tempfile.TemporaryDirectory() as folder, patch.object(q, 'OUT', Path(folder)/'report.json'), \
              patch.object(q, 'read', side_effect=read):

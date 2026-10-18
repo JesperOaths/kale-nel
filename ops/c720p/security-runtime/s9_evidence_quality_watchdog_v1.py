@@ -58,7 +58,8 @@ def audit():
   "face_supported_candidates":supported,
   "face_quality_source_current":quality.get("source_changed_since_analysis") is False,
   "manual_profile_count_is_not_verified_identity_count":True,
-  "confirmed_profiles":len(folders),
+  "confirmed_profiles":sum(isinstance(f,dict) and (not f.get("automatic_appearance_group")
+    or type(f.get("approved_clips")) is int and f["approved_clips"]>0) for f in folders),
   "unassigned_appearances":review.get("pending_views"),
   "identity_warning":"Clothing, apparent movement and pose are observational evidence, not identity proof",
   "cannot_infer_person_from_absence_of_frontal_face":True,
