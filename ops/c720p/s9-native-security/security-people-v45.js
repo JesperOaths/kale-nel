@@ -89,7 +89,7 @@ async function scanApprovedFolders(folders){
   let offset=0,total=0;
   do{
    const q=new URLSearchParams({workflow:'clip_folders_v40',tab:'approved',
-       folder:String(folder.id),offset:String(offset),limit:'48'});
+       folder:String(folder.id),offset:String(offset),limit:'24'});
    const response=await relay().fetch('/new/api/visual-review?'+q,{cache:'no-store'});
    const data=await response.json();
    if(!response.ok||data.ok!==true||!Array.isArray(data.items))
@@ -285,7 +285,7 @@ async function loadView(){
  // Latest request wins. View switches must not inherit the old tab's response.
  state.loading=true;const token=++state.serial;alertText('');
  const q=new URLSearchParams({workflow:'clip_folders_v40',tab:state.tab,
-  offset:String(state.offset),limit:String(Math.min(48,state.limit))});
+  offset:String(state.offset),limit:String(Math.min(24,state.limit))});
  if(state.folder)q.set('folder',state.folder);
  if(state.tab==='suggestions'){
   q.set('distance',$('distance').value);q.set('weak',$('weak').value);q.set('route',$('route').value)
