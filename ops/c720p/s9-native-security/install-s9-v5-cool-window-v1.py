@@ -40,6 +40,12 @@ def stage_atomic(path,data,permissions):
  os.chmod(name,permissions)
  os.replace(name,path)
 
+def timer_armed(timer_state,has_future,loaded_recurrence,service_state):
+ """Only a scheduled timer OR its first active guarded worker is acceptable."""
+ return bool(loaded_recurrence and (
+   (timer_state=="waiting" and has_future) or
+   (timer_state=="running" and service_state in ("active","activating"))))
+
 def main():
  a=argparse.ArgumentParser()
  for field in ("ref","worker_sha","build_sha","installer_sha"):
@@ -110,7 +116,14 @@ def main():
   loaded_recurrence=("OnActiveUSec=" in loaded_m or
                      "OnUnitActiveUSec=" in loaded_m or
                      "OnCalendar=" in loaded_c)
-  if values.get("SubState")!="waiting" or not has_future or not loaded_recurrence:
+  first_worker_running=False
+  if values.get("SubState")=="running" and loaded_recurrence:
+   active_raw=run("systemctl","--user","show",UNIT+".service",
+                  "--property=ActiveState","--no-pager")
+   first_worker_running=timer_armed("running",False,True,
+       active_raw.partition("=")[2].strip())
+  if not timer_armed(values.get("SubState"),has_future,loaded_recurrence,
+                     "activating" if first_worker_running else "inactive"):
    # Diagnostic enums only: do not leak journal content, device paths or
    # camera metadata. A boot-time catch-up may briefly run the oneshot worker.
    current=values.get("SubState","unknown")
@@ -155,8 +168,11 @@ def main():
     "run_on":"C720P_user_systemd","camera_apk_changed":False,
     "recordings_modified":False,"initial_scan_started":False,
     "check_interval_minutes":5,"timer_substate":values["SubState"],
-    "has_next_scheduled_deadline":True,
+    "has_next_scheduled_deadline":has_future,
+    "first_guarded_worker_running":first_worker_running,
     "owned_override_verified":True,"effective_recurrence_loaded":True,
-    "timer_clock":"realtime" if values.get("NextElapseUSecRealtime") else "monotonic"},sort_keys=True),flush=True)
+    "timer_clock":("realtime" if finite_due(values.get("NextElapseUSecRealtime"))
+                    else "monotonic" if finite_due(values.get("NextElapseUSecMonotonic"))
+                    else "pending_first_worker_completion")},sort_keys=True),flush=True)
 
 if __name__=="__main__":main()

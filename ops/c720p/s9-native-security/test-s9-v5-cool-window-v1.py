@@ -207,6 +207,21 @@ class LocalCoolWindow(unittest.TestCase):
   self.assertIn('unowned_existing_timer_schedule_override',source)
   self.assertIn('value not in ("infinity","n/a","0","-")',source)
   self.assertIn('loaded_recurrence',source)
+ def test_timer_restart_accepts_real_first_worker_but_not_elapsed_timer(self):
+  from importlib.util import spec_from_file_location,module_from_spec
+  spec=spec_from_file_location("s9_timer_rearm",str(INSTALLER))
+  module=module_from_spec(spec);spec.loader.exec_module(module)
+  self.assertTrue(module.timer_armed("running",False,True,"activating"))
+  self.assertTrue(module.timer_armed("running",False,True,"active"))
+  self.assertTrue(module.timer_armed("waiting",True,True,"inactive"))
+  for timer_state,deadline,loaded,service in (
+     ("elapsed",False,True,"inactive"),
+     ("running",False,False,"activating"),
+     ("running",False,True,"inactive"),
+     ("waiting",False,True,"inactive"),
+     ("waiting",True,False,"inactive")):
+   with self.subTest(timer_state=timer_state,service=service):
+    self.assertFalse(module.timer_armed(timer_state,deadline,loaded,service))
  def test_c720p_timer_is_local_not_chatgpt_task(self):
   src=INSTALLER.read_text()
   for mark in ('systemctl","--user","enable","--now"',
