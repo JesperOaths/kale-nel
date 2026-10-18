@@ -1054,7 +1054,7 @@ $('pageSize').addEventListener('change',()=>{
 $('folderMode').addEventListener('change',()=>{
  state.tab=$('folderMode').value;state.recheckOnly=false;state.offset=0;loadView()});
 $('folderRecheckOnly').addEventListener('change',()=>{
- state.recheckOnly=$('folderRecheckOnly').checked;state.offset=0;renderFolder();
+ state.recheckOnly=$('folderRecheckOnly').checked;state.offset=0;loadView();
 });
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('refresh').addEventListener('click',()=>{
