@@ -11,6 +11,7 @@ SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
 ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
 # Metadata only. Preview image bytes stay exclusively on S9+ microSD.
 PRIVATE_FALLBACK=Path("/home/jespern/c720p-home-hub/state/s9-fallback-evidence.json")
+PRIVATE_OBSERVATIONS=Path("/home/jespern/c720p-home-hub/state/s9-native-observations.json")
 CATALOG_LOCK=Path("/home/jespern/c720p-home-hub/state/s9-native-catalog.lock")
 RE_PREVIEW=re.compile(r"^preview_motion_([0-9]{13})[.]jpg$")
 NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
@@ -552,7 +553,8 @@ def build_catalog():
    if overview["recordings"]!=accepted:
     raise ValueError("phone_summary_not_equal_to_accepted_recordings")
    overview["generated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
-   observations=ROOT/"s9-native-observations.json"
+   observations=PRIVATE_OBSERVATIONS
+   observations.parent.mkdir(parents=True,exist_ok=True)
    tmp_observations=observations.with_suffix(".json.partial")
    tmp_observations.write_text(json.dumps(overview,separators=(",",":"),sort_keys=True)+"\n")
    os.chmod(tmp_observations,0o600)
