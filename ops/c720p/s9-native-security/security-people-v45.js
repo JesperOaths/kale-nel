@@ -88,7 +88,7 @@ function pumpFaces(){
    }
   };
   img.addEventListener('load',finish,{once:true});
-  img.addEventListener('error',failed,{once:true});
+  img.addEventListener('error',failed);
   Promise.resolve().then(()=>relay().url(source))
    .then(url=>{if(img.isConnected)img.src=url;else finish()})
    .catch(failed);
