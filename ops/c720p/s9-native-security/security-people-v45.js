@@ -218,6 +218,7 @@ function pumpFaces(){
    complete=true;faceWorkers=Math.max(0,faceWorkers-1);facePending.delete(img);pumpFaces();
   };
   const failure=e=>{
+   if(complete)return;
    if(!img.isConnected){finish();return}
    img.remove();
    const message=String(e?.message||'Unable to load');
@@ -239,16 +240,18 @@ function pumpFaces(){
     }
    }catch(e){failure(e)}
   })();
-  if(typeof setTimeout==='function')setTimeout(finish,30000);
+  if(typeof setTimeout==='function')setTimeout(()=>failure(Error('Face JPEG load timed out')),20000);
  }
 }
 function queueVisibleFace(img,source,host){
- const queue=()=>{if(facePending.has(img))return;facePending.add(img);faceQueue.push({img,source,host});pumpFaces()};
- if(typeof IntersectionObserver==='undefined'){queue();return}
- const observer=new IntersectionObserver(items=>{
-  if(items.some(x=>x.isIntersecting)){observer.disconnect();queue()}
- },{rootMargin:'280px'});
- observer.observe(host);
+ const queue=()=>{
+  if(!img.isConnected||facePending.has(img))return;
+  facePending.add(img);faceQueue.push({img,source,host});pumpFaces();
+ };
+ // The parent People tab lives in an iframe that can be hidden when created.
+ // IntersectionObserver can therefore never fire, leaving a blank face tile.
+ // Schedule after DOM insertion and bound actual requests to two workers.
+ Promise.resolve().then(queue);
 }
 // The S9+ sometimes saves manually-rescued *context* crops containing clothes,
 // bicycles or scenery. An original JPEG is NOT proof of a detected face.
