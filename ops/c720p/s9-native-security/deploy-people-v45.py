@@ -23,6 +23,7 @@ DEST={
  "js":ROOT/"security-people-v45.js",
  "tracks":ROOT/"security-tracks-v7.html",
  "shell":WWW/"c720p-surveillance.html",
+ "alias":ROOT/"security-people-v33.html",
  "hub":ROOT/"security-hub-v30.js",
  "entry":ROOT/"security-hub-v30.html",
 }
@@ -32,10 +33,11 @@ ORIG={
  "tracks":"ops/c720p/s9-native-security/security-tracks-v7.html",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
-PEOPLE_QUERY="s9pf-v50-visible-route-20261018"
-TRACKS_QUERY="s9-v50-clickable-tracks-20261018"
-ENTRY_OLD="security-hub-v30.js?v=people-faces-v49-folder-first-20261018"
-ENTRY_NEW="security-hub-v30.js?v=people-faces-v50-visible-route-20261018"
+PEOPLE_QUERY="s9pf-v51-verified-route-20261018"
+TRACKS_QUERY="s9-v51-verified-tracks-20261018"
+ENTRY_NEW="security-hub-v30.js?v=people-faces-v51-verified-route-20261018"
+ENTRY_PATTERN=re.compile(r"security-hub-v30\\.js\\?v=people-faces-v(?:49-folder-first|50-route-correction|50-visible-route|51-verified-route)-20261018")
+HUB_TRACKS=re.compile(r"security-tracks-v7\\.html\\?(?:v=[A-Za-z0-9._-]+&)?")
 LEGACY_PEOPLE=re.compile(r"security-people-v33\.html(?:\?v=[A-Za-z0-9._-]+&)?")
 TRACKS_ENTRY=re.compile(r"const TRACKS=(['\"])/local/frontyard-security-new/security-tracks-v7\.html(?:\?[^'\"]*)?\1;")
 MARK="s9-people-v45-real-route"
@@ -101,7 +103,7 @@ def main():
  shell=prior["shell"][0].decode("utf-8") if prior["shell"][0] else ""
  entry=prior["entry"][0].decode("utf-8")
  if MARK not in hub:raise RuntimeError("expected_existing_v45_hub")
- if "s9v7-root-script" not in shell or "s9v5-command-script" not in shell:
+ if "<html" not in shell.lower() or "security-hub-v30" not in shell:
   raise RuntimeError("actual_outer_security_page_unknown")
  if MARK not in entry:raise RuntimeError("expected_existing_v45_entry")
  # Normalize both the legacy V33 route shown in the screenshots and
@@ -115,16 +117,31 @@ def main():
  shell=upgrade_faces_route(shell)
  if "security-people-v45.html?" not in hub:
   raise RuntimeError("no_known_people_navigation_route")
+ # The active Security sidebar lives in security-hub-v30.js, not in the
+ # small c720p-surveillance.html wrapper. Update its actual Tracks tab.
+ hub,hub_track_count=HUB_TRACKS.subn("security-tracks-v7.html?v="+TRACKS_QUERY+"&",hub)
+ if hub_track_count!=1:raise RuntimeError("hub_tracks_route_not_found_"+str(hub_track_count))
+ # Older installations may still embed a Tracks constant in the outer
+ # shell. Refresh it where present without requiring obsolete markup.
  def patch_tracks_route(match):
-  return "const TRACKS='"+"/local/frontyard-security-new/security-tracks-v7.html?v="+TRACKS_QUERY+"';"
- shell,track_urls=TRACKS_ENTRY.subn(patch_tracks_route,shell)
- if track_urls!=1:raise RuntimeError("tracks_iframe_route_not_found_"+str(track_urls))
+  return "const TRACKS='/local/frontyard-security-new/security-tracks-v7.html?v="+TRACKS_QUERY+"';"
+ shell,shell_track_count=TRACKS_ENTRY.subn(patch_tracks_route,shell)
+ if shell_track_count>1:raise RuntimeError("multiple_outer_tracks_routes")
  if "security-people-v33.html" in hub or "security-people-v33.html" in shell:
   raise RuntimeError("legacy_people_frame_still_referenced")
- if ENTRY_OLD in entry:
-  entry=update(entry,ENTRY_OLD,ENTRY_NEW,"entry")
- elif ENTRY_NEW not in entry:
-  raise RuntimeError("unknown_entry_script_version")
+ entry,entry_count=ENTRY_PATTERN.subn(ENTRY_NEW,entry)
+ if entry_count!=1:raise RuntimeError("unknown_entry_script_version_"+str(entry_count))
+ # Keep legacy cached v33 iframe URLs safe: redirect to the verified V45
+ # gallery rather than continuing to serve the old review-first interface.
+ prior_alias=prior["alias"][0].decode("utf-8") if prior["alias"][0] else ""
+ if "Review candidate recordings" not in prior_alias and "security-people-v45.html" not in prior_alias:
+  raise RuntimeError("unrecognized_legacy_people_alias")
+ destination="/local/frontyard-security-new/security-people-v45.html?v="+PEOPLE_QUERY
+ legacy_alias=('<!doctype html><html lang="en"><head><meta charset="utf-8">'
+  '<meta name="robots" content="noindex,nofollow"><meta http-equiv="Cache-Control" content="no-store">'
+  '<title>People &amp; faces</title><script>location.replace('+json.dumps(destination)+')</script></head>'
+  '<body><a href="'+destination+'">Open People &amp; faces</a></body></html>')
+ out["alias"]=legacy_alias.encode("utf-8")
  out["hub"]=hub.encode("utf-8")
  out["shell"]=shell.encode("utf-8")
  out["entry"]=entry.encode("utf-8")
@@ -132,12 +149,14 @@ def main():
  # merely that an unused secondary V45 page was written to disk.
  if "security-people-v45.html?v="+PEOPLE_QUERY not in hub:
   raise RuntimeError("visible_people_route_not_updated")
- if 's9FacesGalleryFrame' not in shell:
+ if 's9FacesGalleryFrame' not in shell+hub:
   raise RuntimeError("actual_faces_iframe_not_present")
  if "security-people-v33.html" in shell:
   raise RuntimeError("live_faces_iframe_uses_old_page")
- if "security-tracks-v7.html?v="+TRACKS_QUERY not in shell:
+ if "security-tracks-v7.html?v="+TRACKS_QUERY not in hub:
   raise RuntimeError("visible_tracks_route_not_updated")
+ if destination not in legacy_alias:
+  raise RuntimeError("legacy_alias_not_redirected")
  if args.dry_run:
   print("S9_PEOPLE_V45_LIVE_ROUTE_DRY_RUN_PASS "+json.dumps({
    "source_ref":args.ref,"originals":len(old_clips),
@@ -172,6 +191,8 @@ def main():
    served[k]=digest(b)[:16]
   if b"security-people-v33.html" in out["hub"] or b"security-people-v33.html" in out["shell"]:
    raise RuntimeError("legacy_frame_in_deployed_files")
+ if b"Review candidate recordings" in out["alias"] or PEOPLE_QUERY.encode() not in out["alias"]:
+   raise RuntimeError("legacy_alias_readback_invalid")
   new_clips=archive()
   if not old_clips.issubset(new_clips):raise RuntimeError("archive_records_disappeared")
   print("S9_PEOPLE_FACES_V45_ACTUAL_HUB_DEPLOY_VERIFIED "+json.dumps({
@@ -179,7 +200,7 @@ def main():
    "source_ref":args.ref,"clip_count":len(new_clips),
    "served_sha16":served,"rollback":str(folder),"original_videos_modified":False,
    "camera_modified":False,"existing_approvals_modified":False,
-   "visible_people_route_verified":True,"visible_tracks_route_verified":True,
+   "visible_people_route_verified":True,"visible_tracks_route_verified":True,"legacy_alias_redirect_verified":True,
    "clip_scoped_step3_review_enabled":True,"tracks_navigation_enabled":True,"automatic_identity_grouping_enabled":False}),flush=True)
  except BaseException:
   for k in reversed(changed):
