@@ -239,7 +239,12 @@ def atomic_json(path, value):
 
 
 def camera_healthy():
-    status = json.loads(fetch('http://127.0.0.1:18808/status', 180000))
+    try:
+        status = json.loads(fetch('http://127.0.0.1:18808/status', 180000))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(status, dict):
+        return False
     return (status.get('ok') is True and status.get('mode') == 'watching'
             and status.get('continuous_4k_ready') is True
             and status.get('continuous_4k_dropped_output_frames') == 0
@@ -351,6 +356,68 @@ def install(handler_class, phone_rows):
     handler_class.go = go
 
 
+def load_screen(model):
+    """Download/verify the pinned model only when uncached work needs it."""
+    if model.is_symlink():
+        raise ValueError('unexpected_model_symlink')
+    if not model.exists():
+        data = fetch(MODEL_URL, 232589)
+        if len(data) != 232589 or hashlib.sha256(data).hexdigest() != MODEL_SHA:
+            raise ValueError('face_detector_model_checksum_mismatch')
+        model.write_bytes(data)
+        model.chmod(0o600)
+    return FaceScreen(model)
+
+
+def measure_pending(events, cache, cache_file, model, deadline):
+    """Cached metadata refreshes need neither phone polls nor OpenCV/model IO."""
+    screen = None
+    stats = {'state': 'complete', 'camera_status_checks': 0, 'images_attempted': 0,
+             'image_errors': 0, 'cache_checkpoints': 0, 'detector_loaded': False}
+    for event in events:
+        pending = [face for face in event['face_candidates']
+                   if image_key(face) not in cache
+                   or cache[image_key(face)].get('content_status') == 'image_unavailable']
+        if not pending:
+            continue
+        if time.monotonic() > deadline:
+            stats['state'] = 'budget_exhausted'
+            break
+        stats['camera_status_checks'] += 1
+        if not camera_healthy():
+            stats['state'] = 'deferred_camera_not_idle_or_healthy'
+            break
+        changed = False
+        for face in pending:
+            if time.monotonic() > deadline:
+                stats['state'] = 'budget_exhausted'
+                break
+            if screen is None:
+                screen = load_screen(model)
+                stats['detector_loaded'] = True
+            if time.monotonic() > deadline:
+                stats['state'] = 'budget_exhausted'
+                break
+            key = image_key(face)
+            stats['images_attempted'] += 1
+            try:
+                data = fetch('http://127.0.0.1:8795/new/saved/face/' + face['snapshot_name'], 2200000)
+                if len(data) != face['snapshot_size'] or hashlib.sha256(data).hexdigest() != face['snapshot_sha256']:
+                    raise ValueError('image_provenance_mismatch')
+                cache[key] = screen.measure(data)
+            except (OSError, ValueError, RuntimeError):
+                cache[key] = {'content_status': 'image_unavailable', 'quality_score': 0}
+                stats['image_errors'] += 1
+            changed = True
+        if changed:
+            atomic_json(cache_file, {'analysis_version': VERSION,
+                'detector_model_sha256': MODEL_SHA, 'images': cache})
+            stats['cache_checkpoints'] += 1
+        if stats['state'] == 'budget_exhausted':
+            break
+    return stats
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--budget-seconds', type=int, default=540)
@@ -362,14 +429,6 @@ def main():
     lock = (STATE / 'worker.lock').open('a+')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     model = STATE / 'yunet-2023mar.onnx'
-    if model.is_symlink():
-        raise ValueError('unexpected_model_symlink')
-    if not model.exists():
-        data = fetch(MODEL_URL, 232589)
-        if len(data) != 232589 or hashlib.sha256(data).hexdigest() != MODEL_SHA:
-            raise ValueError('face_detector_model_checksum_mismatch')
-        model.write_bytes(data)
-        model.chmod(0o600)
     cache_file = STATE / 'measurements.json'
     try:
         if cache_file.is_symlink() or cache_file.stat().st_size > 6000000:
@@ -380,31 +439,15 @@ def main():
         cache = {}
     archive = json.loads(fetch('http://127.0.0.1:8795/new/api/saved', 6000000))
     events = validate_sources(archive)
-    screen = FaceScreen(model)
     deadline = time.monotonic() + args.budget_seconds
-    for event in events:
-        if time.monotonic() > deadline or not camera_healthy():
-            break
-        for face in event['face_candidates']:
-            key = image_key(face)
-            if key in cache and cache[key].get('content_status') != 'image_unavailable':
-                continue
-            if time.monotonic() > deadline:
-                break
-            try:
-                data = fetch('http://127.0.0.1:8795/new/saved/face/' + face['snapshot_name'], 2200000)
-                if len(data) != face['snapshot_size'] or hashlib.sha256(data).hexdigest() != face['snapshot_sha256']:
-                    raise ValueError('image_provenance_mismatch')
-                cache[key] = screen.measure(data)
-            except (OSError, ValueError, RuntimeError):
-                cache[key] = {'content_status': 'image_unavailable', 'quality_score': 0}
-        atomic_json(cache_file, {'analysis_version': VERSION, 'detector_model_sha256': MODEL_SHA, 'images': cache})
+    worker_run = measure_pending(events, cache, cache_file, model, deadline)
     try:
         audit = json.loads((STATE/'content-benchmark.json').read_text())
         audit_labels = audit['image_labels'] if audit.get('detector_model_sha256') == MODEL_SHA else {}
     except (OSError, ValueError, TypeError, KeyError):
         audit_labels = {}
     report = build_report(archive, cache, audit_labels)
+    report['worker_run'] = worker_run
     atomic_json(REPORT, report)
     print('S9_EVIDENCE_QUALITY', json.dumps({key: value for key, value in report.items() if key != 'recordings'}), flush=True)
 

@@ -345,6 +345,16 @@ def safe_face_review_metadata(m):
  result["face_snapshots_saved"]=sum(row["snapshot_on_s9"] for row in out)
  return result
 
+
+MANIFEST_MAX_BYTES=32768
+
+def decode_manifest(raw):
+ if not isinstance(raw,bytes) or len(raw)>MANIFEST_MAX_BYTES:
+  raise ValueError("manifest_too_large_or_invalid")
+ value=json.loads(raw)
+ if not isinstance(value,dict):raise ValueError("manifest_not_object")
+ return value
+
 def adb(*args):
  p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
  if p.returncode:raise OSError("phone_adb_offline")
@@ -359,8 +369,7 @@ def main():
   if not NAMES.fullmatch(name):continue
   try:
    b=adb("exec-out","cat",SD+"/"+name+".verified.json")
-   if len(b)>14000:raise ValueError("manifest too large")
-   m=json.loads(b)
+   m=decode_manifest(b)
    size=int(m.get("bytes",0))
    if m.get("name")!=name or size<10000 or not re.fullmatch("[a-f0-9]{64}",str(m.get("sha256",""))):raise ValueError("manifest")
    actual=int(adb("shell","stat","-c","%s",SD+"/"+name).strip())
@@ -429,7 +438,7 @@ def main():
  for name in recorded:
   if not re.fullmatch(r"motion_[0-9]{13}[.]mp4",name):continue
   try:
-   m=json.loads(adb("exec-out","cat",native_security+"/"+name+".verified.json"))
+   m=decode_manifest(adb("exec-out","cat",native_security+"/"+name+".verified.json"))
    size=int(m.get("bytes",0));digest=str(m.get("sha256","")).lower()
    if m.get("name")!=name or not re.fullmatch(r"[a-f0-9]{64}",digest) or not 100000<size<800000000:
     raise ValueError("security_manifest_invalid")
