@@ -47,12 +47,11 @@ class Tests(unittest.TestCase):
   self.assertNotIn('http://',source)
   self.assertNotIn('innerHTML=',source)
   scripts=re.findall(r'<script\b([^>]*)>(.*?)</script>',source,re.S)
-  self.assertEqual(len(scripts),2)
+  self.assertEqual(len(scripts),1)
   inline=[body for attributes,body in scripts if not re.search(r'\bsrc=',attributes)]
   local=[attributes for attributes,body in scripts if re.search(r'\bsrc=',attributes)]
   self.assertEqual(len(inline),1)
-  self.assertEqual(len(local),1)
-  self.assertRegex(local[0],r'src="/local/security-video-playback[.]js[?]v=[A-Za-z0-9_-]+"')
-  self.assertRegex(local[0],r'\bdefer\b')
+  self.assertEqual(len(local),0,'Retired smooth copies must not load in the legacy gallery')
+  self.assertNotIn('security-video-playback.js',source)
 
 if __name__=='__main__':unittest.main(verbosity=2)
