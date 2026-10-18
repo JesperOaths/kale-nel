@@ -401,7 +401,10 @@ function openReview(mode){
  state.pane='review';state.folder='';state.tab=mode||'all';state.offset=0;
  $('reviewMode').value=state.tab;
  selectPane('review');loadView();fetchFaces();
- if(state.doc)refreshArchiveReviewSources(state.doc.folders);
+ // Existing complete index is still valid; do not blank the review queue
+ // and rescan every approved person each time the Review tab is opened.
+ if(state.doc&&!state.assignedReady&&state.archiveToken===0)
+  refreshArchiveReviewSources(state.doc.folders);
 }
 function openFolder(id,tab,recheckOnly=false){
  const f=state.doc?.folders.find(f=>f.id===id);if(!f)return;
