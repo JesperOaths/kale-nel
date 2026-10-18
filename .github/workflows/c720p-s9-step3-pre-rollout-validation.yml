@@ -29,6 +29,23 @@ jobs:
           python3 ops/c720p/s9-native-security/test-face-pair-qualification.py
           python3 ops/c720p/s9-native-security/test-step2-live-graduation.py
           python3 -m py_compile ops/c720p/s9-native-security/validate-s9-step3-pre-rollout.py
+  test-unreleased-v48:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      # This SHA is the as-yet-unreleased UI/API comparison prototype.
+      # No secrets or deployment steps are used for its validation.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: e00d6e3cf68f146a20eb02df0f99b3d8e0d2ae59
+          persist-credentials: false
+      - name: Validate staging UI and local review persistence only
+        run: |
+          set -euo pipefail
+          node --check ops/c720p/s9-native-security/security-people-v45.js
+          node ops/c720p/s9-native-security/test-people-v45.js
+          python3 ops/c720p/s9-native-security/test-step3-face-pair-review.py
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_face_pair_review.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
   audit:
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
