@@ -230,7 +230,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(fetches.some(p=>p.includes('/new/api/appearance-search?')&&p.includes('lower_clothing')),
   'Must corroborate with indexed lower clothing');
  assert(scan(el('clothingList'),'▶ Review original'),
-  'Suggestions must return to source evidence for confirmation');
+  'Suggestions must return to source evidence for confirmation: '+el('clothingTotal').textContent+
+  '; items='+el('clothingList').children.length+'; requests='+fetches.filter(p=>p.includes('/appearance-search?')).length);
  assert.match(el('clothingTotal').textContent,/human review/);
  // Simulate a slow previous tab request arriving after a newer navigation.
  panes[1].handlers.click();
