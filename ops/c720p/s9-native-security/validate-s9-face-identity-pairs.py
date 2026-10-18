@@ -29,12 +29,21 @@ def wilson_upper(failures,total,z=1.96):
  radius=z*sqrt(max(0,p*(1-p)/total+z*z/(4*total*total)))
  return min(1.0,(center+radius)/den)
 
+def wilson_lower(successes,total,z=1.96):
+ if total<=0:return 0.0
+ p=successes/total
+ den=1+z*z/total
+ center=p+z*z/(2*total)
+ radius=z*sqrt(max(0,p*(1-p)/total+z*z/(4*total*total)))
+ return max(0.0,(center-radius)/den)
+
 def evaluate(doc):
  base={"qualification_version":GATE_VERSION,"qualified_for_automated_grouping":False,
    "identity_claims_enabled":False,"reason":"verified_labels_unavailable",
    "positive_confirmed_pairs":0,"negative_confirmed_pairs":0,
    "calibration_false_acceptances":None,"calibration_false_rejections":None,
    "false_acceptance_95pct_upper":1.0,
+   "true_positive_95pct_lower":0.0,
    "biometric_templates_exported":False,"original_video_modified":False}
  if doc is None:return base
  if not isinstance(doc,dict) or doc.get("version")!=2 or doc.get("origin")!="independent_human_confirmed_4k_face_pair_review":
@@ -95,14 +104,16 @@ def evaluate(doc):
  false_reject=len(pos)-sum(pos)
  far_upper=wilson_upper(false_accept,len(neg))
  tpr=(sum(pos)/len(pos)) if pos else 0
+ tpr_lower=wilson_lower(sum(pos),len(pos))
  base.update(positive_confirmed_pairs=len(pos),negative_confirmed_pairs=len(neg),
    distinct_source_clips=len(clips),distinct_capture_days=len(days),
    calibration_false_acceptances=false_accept,
    calibration_false_rejections=false_reject,
    false_acceptance_95pct_upper=round(far_upper,5),
    true_positive_rate=round(tpr,5),
+   true_positive_95pct_lower=round(tpr_lower,5),
    model_sha256_prefix=doc["model_sha256"][:12])
- meets=len(pos)>=MIN_POS and len(neg)>=MIN_NEG and len(clips)>=60 and len(days)>=3 and far_upper<=MAX_FAR_95_UPPER and tpr>=MIN_TPR
+ meets=len(pos)>=MIN_POS and len(neg)>=MIN_NEG and len(clips)>=60 and len(days)>=3 and far_upper<=MAX_FAR_95_UPPER and tpr_lower>=MIN_TPR
  # Validation alone does NOT authorize autonomous identity decisions: a
  # separate explicit approval and genuine field pilot are required.
  base["reason"]="passed_offline_calibration_requires_independent_approval" if meets else "insufficient_or_failed_real_pair_validation"
