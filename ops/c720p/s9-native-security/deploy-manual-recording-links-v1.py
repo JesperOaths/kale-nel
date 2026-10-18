@@ -80,6 +80,13 @@ def main():
   raise RuntimeError("checksums_required")
  before=api("/new/api/saved")
  if before.get("archive_mode")!="S9-microSD-only":raise RuntimeError("archive_scope_changed")
+ # Historical Drive retention legitimately changes the catalog size.
+ # Verify its real upstream baseline across restarts, never a fixed floor.
+ previous_drive=api("/new/api/drive-saved")
+ if (previous_drive.get("ok") is not True or
+     not isinstance(previous_drive.get("events"),list) or
+     len(previous_drive["events"])<1):
+  raise RuntimeError("historical_drive_baseline_missing")
  clips={e.get("clip_no") for e in before.get("events",[]) if isinstance(e,dict)}
  if not clips:raise RuntimeError("empty_archive_refuse_mutation")
  staged={}
@@ -136,7 +143,7 @@ def main():
   if (drive_catalog.get("ok") is not True or
       drive_catalog.get("archive_mode")=="S9-microSD-only" or
       not isinstance(drive_catalog.get("events"),list) or
-      len(drive_catalog["events"])<100):
+      len(drive_catalog["events"])!=len(previous_drive["events"])):
    raise RuntimeError("historical_drive_catalog_missing_after_proxy_restart")
   direct=api("/new/api/s9-manual-recording-links")
   if direct.get("manual_links_only") is not True or direct.get("automatic_identity_matching") is not False:
@@ -151,6 +158,7 @@ def main():
    "already":False,"originals":len(after),"manual_link_route_active":True,
    "backup":str(folder),"ref":args.ref,
    "camera_modified":False,"recordings_modified":False,
+   "historical_drive_source_count":len(drive_catalog["events"]),
    "face_models_modified":False,"biometric_identity_enabled":False,
    "existing_link_state_preserved":True}),flush=True)
  except BaseException:
