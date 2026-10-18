@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people'};
+ faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -182,8 +182,10 @@ async function loadView(){
   if(!res.ok||next.ok!==true||!Array.isArray(next.folders)||!Array.isArray(next.items))
    throw Error(next.error||'The review archive is unavailable.');
   state.doc=next;
-  if(state.offset>=num(next.total)&&num(next.total)>0){
-   state.offset=Math.max(0,Math.floor((next.total-1)/state.limit)*state.limit);
+  const pageTotal=state.tab==='all'&&state.archiveClips?
+   state.archiveClips.length:num(next.total);
+  if(state.offset>=pageTotal&&pageTotal>0){
+   state.offset=Math.max(0,Math.floor((pageTotal-1)/state.limit)*state.limit);
    state.loading=false;return loadView();
   }
   render();
@@ -215,6 +217,7 @@ async function fetchFaces(){
    }
   }
   state.clipEvidence=byClip;
+  state.archiveClips=[...byClip.keys()].sort((a,b)=>b.localeCompare(a));
   state.faceList=found.sort((a,b)=>String(b.clip).localeCompare(String(a.clip)));
   state.faceSummary={reviewed:v5Reviewed,total:data.events.length,
    snapshots:found.length,withoutSnapshot:Math.max(0,candidateRecords-found.length)};
@@ -226,6 +229,7 @@ async function fetchFaces(){
   if(requestToken!==state.faceFetchToken)return;
   state.faceSummary=null;
   state.clipEvidence=new Map();
+ state.archiveClips=null;
   $('faceCount').textContent='—';
   $('faceScanLabel').textContent='Unavailable';
   $('facePhotoStatus').textContent='Face snapshot metadata is currently unavailable. Try Refresh.';
@@ -254,7 +258,7 @@ async function action(data,after){
 function openReview(mode){
  state.pane='review';state.folder='';state.tab=mode||'all';state.offset=0;
  $('reviewMode').value=state.tab;
- selectPane('review');loadView();
+ selectPane('review');loadView();fetchFaces();
 }
 function openFolder(id,tab){
  const f=state.doc?.folders.find(f=>f.id===id);if(!f)return;
@@ -387,16 +391,18 @@ function reviewItem(item,compact){
  const root=elt('article','',compact?'review-row':'evidence');
  const media=sceneFor(item);
  const info=elt('div','',compact?'row-info':'body');
- badge(media, item.person_recheck_required?'RECHECK':item.decision==='approved'?'APPROVED':item.temporal_support?'PERSON CLUE':'WEAK EVIDENCE');
+ badge(media,item.unindexed?'ARCHIVE':item.person_recheck_required?'RECHECK':item.decision==='approved'?'SAVED':item.temporal_support?'PERSON':'REVIEW');
  const main=elt('strong',date(item));
  info.append(main);
  if(!compact){const faceEvidence=reviewFacesForClip(item);if(faceEvidence)info.append(faceEvidence)}
- if(item.person_recheck_required)info.append(elt('p','Previously kept, but current person detection needs checking.'));
- else if(!item.temporal_support)info.append(elt('p','Limited observations · inspect the original video.'));
- else info.append(elt('p','Original 4K · '+(item.entry_zone||'front garden').replaceAll('_',' ')+' · visual evidence'));
+ if(item.unindexed)info.append(elt('p','Analysis pending'));
+ else if(item.person_recheck_required)info.append(elt('p','Person evidence needs recheck'));
+ else if(!item.temporal_support)info.append(elt('p','Person evidence uncertain'));
  const tools=elt('div','','actions');
  tools.append(control('▶ Play',()=>startVideo(item)));
- if(item.decision==='approved'){
+ if(item.unindexed){
+  tools.append(elt('small','Not indexed for assignment'));
+ }else if(item.decision==='approved'){
   tools.append(control('Saved ✓',()=>{},'secondary'));tools.lastChild.disabled=true;
  }else if(['rejected','skipped'].includes(item.decision)){
   tools.append(control('Restore',()=>restore(item),'secondary'));
@@ -582,11 +588,26 @@ function paginate(host,total,onPage){
 }
 function renderReview(){
  $('reviewMode').value=state.tab;
- $('reviewTotal').textContent=num(state.doc?.total)+' matching recordings';
  const host=$('reviewGrid');host.replaceChildren();
- for(const item of state.doc?.items||[])host.append(reviewItem(item,false));
- if(!host.children.length)host.append(elt('p','No recordings match this view.','empty'));
- paginate($('reviewPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
+ if(state.tab==='all'&&state.archiveClips){
+  // The review API indexes only person events; include every original video.
+  // Clips without signed person evidence are read-only: never forge approvals.
+  const indexed=new Map((state.doc?.items||[]).map(x=>[x.clip,x]));
+  const all=state.archiveClips;
+  for(const clip of all.slice(state.offset,state.offset+state.limit)){
+   host.append(reviewItem(indexed.get(clip)||{
+    clip,recorded_ms:Number(clip.slice(7,20)),unindexed:true,
+    decision:null,temporal_support:false
+   },false));
+  }
+  $('reviewTotal').textContent=all.length+' original recordings';
+  paginate($('reviewPage'),all.length,n=>{state.offset=n;loadView()});
+ }else{
+  $('reviewTotal').textContent=num(state.doc?.total)+' recordings';
+  for(const item of state.doc?.items||[])host.append(reviewItem(item,false));
+  paginate($('reviewPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
+ }
+ if(!host.children.length)host.append(elt('p','No recordings in this view.','empty'));
 }
 function renderPeople(){
  const saved=$('savedList');saved.replaceChildren();
@@ -739,6 +760,7 @@ $('refresh').addEventListener('click',()=>{
  state.faceLoaded=false;
  state.faceSummary=null;
  state.clipEvidence=new Map();
+ state.archiveClips=null;
  loadView();
  fetchFaces();
 });
