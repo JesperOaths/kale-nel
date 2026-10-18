@@ -4,7 +4,7 @@
    No recording is changed or assigned automatically. */
 const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
-const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,doc:null,
+const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,recheckOnly:false,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
  faceSummary:null,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
@@ -403,11 +403,11 @@ function openReview(mode){
  selectPane('review');loadView();fetchFaces();
  if(state.doc)refreshArchiveReviewSources(state.doc.folders);
 }
-function openFolder(id,tab){
+function openFolder(id,tab,recheckOnly=false){
  const f=state.doc?.folders.find(f=>f.id===id);if(!f)return;
  state.folderReturnPane=f.automatic_appearance_group&&!isSaved(f)?'clothing':'people';
  state.pane='folder';state.folder=id;state.tab=tab|| (num(f.approved_clips)?'approved':'suggestions');
- state.offset=0;state.facePage=0;$('folderMode').value=state.tab;
+ state.offset=0;state.facePage=0;state.recheckOnly=!!recheckOnly;$('folderMode').value=state.tab;
  selectPane('folder');loadView();
 }
 function openHome(pane){
@@ -554,7 +554,10 @@ function reviewItem(item,compact){
  info.append(main);
  if(!compact){const faceEvidence=reviewFacesForClip(item);if(faceEvidence)info.append(faceEvidence)}
  if(item.unindexed)info.append(elt('p',item.source==='drive'?'Google Drive':'Person analysis unavailable'));
- else if(item.person_recheck_required)info.append(elt('p','Person evidence needs recheck'));
+ else if(item.person_recheck_required){
+  info.append(elt('p','Person evidence needs recheck · inspect video and detector observations'));
+  if(!compact)info.append(step3ClipEvidence(item));
+ }
  else if(!item.temporal_support)info.append(elt('p','Person evidence uncertain'));
  const tools=elt('div','','actions');
  tools.append(control(item.person_recheck_required?'🔎 Recheck person evidence':'▶ Play',()=>startVideo(item)));
@@ -785,6 +788,14 @@ function renderReview(){
 }
 
 function renderPeople(){
+ const review=$('peopleRecheckActions');review.replaceChildren();
+ const flagged=savedFolders().filter(x=>num(x.approvals_needing_person_recheck)>0);
+ for(const person of flagged){
+  const number=num(person.approvals_needing_person_recheck);
+  review.append(control('Recheck '+person.label+' · '+number+' recording'+(number===1?'':'s'),
+   ()=>openFolder(person.id,'approved',true),'secondary'));
+ }
+ review.hidden=flagged.length===0;
  const saved=$('savedList');saved.replaceChildren();
  for(const f of savedFolders())saved.append(profileRow(f));
  if(!saved.children.length)saved.append(elt('p','No saved people. Add a person or file a reviewed recording to get started.','empty'));
@@ -885,6 +896,8 @@ function renderFolder(){
  $('folderRecheck').hidden=!num(f.approvals_needing_person_recheck);
  $('folderRecheck').textContent=num(f.approvals_needing_person_recheck)+
   ' saved clip(s) need rechecking against the original recording; a previous approval is not a current detector confirmation.';
+ $('folderRecheckFilter').hidden=state.tab!=='approved'||!num(f.approvals_needing_person_recheck);
+ $('folderRecheckOnly').checked=state.recheckOnly;
  $('folderMode').value=state.tab;
  const suggestions=state.tab==='suggestions';
  for(const id of ['distanceLabel','weakLabel','routeLabel'])$(id).hidden=!suggestions;
@@ -892,11 +905,12 @@ function renderFolder(){
  $('folderContextText').textContent='Provisional clothing match. These recordings must be reviewed separately; this folder is NOT an automatically identified person.';
  const host=$('folderGrid');host.replaceChildren();
  for(const item of state.doc?.items||[]){
+  if(state.tab==='approved'&&state.recheckOnly&&!item.person_recheck_required)continue;
   if(state.tab==='approved'&&state.extraLinks?.items?.['sd:'+item.clip]?.folder!==undefined&&
      state.extraLinks.items['sd:'+item.clip].folder!==state.folder)continue;
   host.append(reviewItem({...item,source:'sd',name:item.clip},false));
  }
- if(state.tab==='approved'){
+ if(state.tab==='approved'&&!state.recheckOnly){
   // New manual links (Drive, unindexed SD, and corrected folder moves).
   for(const entry of state.archiveEntries){
    const override=state.extraLinks?.items?.[assignmentKey(entry)];
@@ -906,7 +920,9 @@ function renderFolder(){
      manualAssignment:true,unindexed:entry.source==='drive'||!state.clipEvidence.has(entry.clip)},false));
   }
  }
- if(!host.children.length)host.append(elt('p',suggestions?'No appearance suggestions.':'No recordings for this person.','empty'));
+ if(!host.children.length)host.append(elt('p',suggestions?'No appearance suggestions.':
+  state.recheckOnly?'No flagged recordings on this page. Use Next or clear the recheck filter.':
+  'No recordings filed under this person.','empty'));
  // Only show images linked to manually approved recordings in this folder.
  // A linked recording can still contain a different person: never label a crop as an identified face.
  const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
@@ -1035,7 +1051,11 @@ $('pageSize').addEventListener('change',()=>{
  if(![100,150,200].includes(value))return;
  state.limit=value;state.offset=0;loadView();
 });
-$('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
+$('folderMode').addEventListener('change',()=>{
+ state.tab=$('folderMode').value;state.recheckOnly=false;state.offset=0;loadView()});
+$('folderRecheckOnly').addEventListener('change',()=>{
+ state.recheckOnly=$('folderRecheckOnly').checked;state.offset=0;renderFolder();
+});
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('refresh').addEventListener('click',()=>{
  state.faceLoaded=false;
