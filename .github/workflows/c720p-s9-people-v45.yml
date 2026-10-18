@@ -6,6 +6,7 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v45.js'
       - 'ops/c720p/s9-native-security/test-people-v45.js'
       - 'ops/c720p/s9-native-security/deploy-people-v45.py'
+      - 'ops/c720p/s9-native-security/test-route-v50-idempotent.py'
       - '.github/workflows/c720p-s9-people-v45.yml'
   push:
     branches: [main]
@@ -29,6 +30,7 @@ jobs:
           node --check ops/c720p/s9-native-security/security-people-v45.js
           node ops/c720p/s9-native-security/test-people-v45.js
           python3 -m py_compile ops/c720p/s9-native-security/deploy-people-v45.py
+          python3 ops/c720p/s9-native-security/test-route-v50-idempotent.py
           python3 - <<'PY'
           from pathlib import Path
           d=Path("ops/c720p/s9-native-security/deploy-people-v45.py").read_text()
