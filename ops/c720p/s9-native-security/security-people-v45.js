@@ -50,15 +50,15 @@ function makeArchiveRows(){
   video_path:'/new/saved/clip/'+encodeURIComponent(clip),
   temporal_support:!!state.clipEvidence.get(clip)?.person_event_category
  }));
- const byName=new Map(sd.map(e=>[e.name,e]));
+ const byName=new Map(sd.map(e=>['sd:'+e.name,e]));
  for(const rec of state.driveRecords||[]){
   const name=String(rec.remote_name||'');
-  if(!driveName.test(name)||name.includes('..')||byName.has(name))continue;
+  if(!driveName.test(name)||name.includes('..')||byName.has('drive:'+name))continue;
   const timestamp=Date.parse(String(rec.timestamp||rec.date||''));
   // Historical Drive files without reliable timestamps are still originals:
   // show them in Review instead of silently losing them from the archive.
   const recordedMs=Number.isFinite(timestamp)&&timestamp>0?timestamp:0;
-  byName.set(name,{
+  byName.set('drive:'+name,{
    source:'drive',name,clip:name,recorded_ms:recordedMs,unindexed:true,
    video_path:'/new/drive/saved/clip/'+encodeURIComponent(name),
    snapshot_name:rec.snapshot_name,temporal_support:false
