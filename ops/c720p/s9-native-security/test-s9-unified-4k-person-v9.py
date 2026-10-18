@@ -13,7 +13,7 @@ class UnifiedReleaseSafety(unittest.TestCase):
  def test_pinned_model_preservation(self):
   for needle in ('S9_UNIFIED_REF','person_spatiotemporal_transport_v9',
        'transportDominates','garden_person_transport_conflicts_total',
-       'QUIET_MS=10000,MAX_MS=120000','TARGET_US=5000000L',
+       'QUIET_MS=5000,MIN_EVENT_RECORD_MS=10000,MAX_MS=120000','TARGET_US=5000000L',
        'MIN_VALID_US=4400000L','changed_model_manifest_or_native_lib',
        'models_native_and_manifest_preserved','APK_SIGNER_CHANGED'):
    self.assertIn(needle,BUILDER,needle)
