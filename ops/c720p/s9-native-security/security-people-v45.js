@@ -738,13 +738,34 @@ function renderOverview(){
  }
  reviewAlerts.hidden=flagged.length===0;
  const host=$('reviewPreview');host.replaceChildren();
- const preview=state.doc?.items||[];
- for(const item of preview.slice(0,4))host.append(reviewItem(item,true));
- if(!preview.length)host.append(elt('p','No supported recordings waiting for review.','empty'));
+ const waiting=num(state.doc?.inbox_clips);
+ const personPending=Math.max(0,num(state.doc?.person_detection?.total_clips)-
+  num(state.doc?.person_detection?.assessed_clips));
+ const facePending=state.faceSummary?
+  Math.max(0,num(state.faceSummary.total)-num(state.faceSummary.reviewed)):null;
+ host.append(elt('p',
+  waiting+' recording'+(waiting===1?'':'s')+' awaiting human review · '+
+  personPending+' awaiting person detection · '+
+  (facePending===null?'Face scan coverage unavailable':facePending+' awaiting deep face review'),
+  'status'));
+ if(waiting)host.append(control('Review '+waiting+' recording'+(waiting===1?'':'s')+' →',
+  ()=>openReview('all'),'primary'));
+ if(!flagged.length&&!waiting&&!personPending&&!facePending)
+  host.append(elt('p','No current review or scan backlog detected.','status'));
  const saved=$('savedPreview');saved.replaceChildren();
- for(const f of savedFolders().slice(0,4))saved.append(profileRow(f));
- if(!saved.children.length)saved.append(elt('p','No saved people yet. File a recording after reviewing it.','empty'));
- // Clothing suggestions are accessible in their own tab.
+ const sd=state.archiveEntries.filter(x=>x.source==='sd').length;
+ const drive=state.archiveEntries.filter(x=>x.source==='drive').length;
+ function sourceRow(label,value,warning=false){
+  const row=elt('div','',''+(warning?'unavailable':''));
+  row.append(elt('span',label),elt('strong',value));saved.append(row);
+ }
+ sourceRow('S9+ microSD originals',state.faceLoaded?String(sd):'Loading…');
+ sourceRow('Historical Google Drive originals',
+  state.driveStatus==='ready'?String(drive):state.driveStatus==='unavailable'?'Unavailable':'Loading…',
+  state.driveStatus==='unavailable');
+ sourceRow('Manual person assignments',String(num(state.doc?.folders?.reduce((count,f)=>
+  count+num(f.approved_clips),0))));
+ // Overview deliberately has no second list of recordings or people.
 }
 function paginate(host,total,onPage){
  host.replaceChildren();const page=state.offset/state.limit;
