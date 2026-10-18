@@ -93,6 +93,17 @@ class ManualLinkCases(unittest.TestCase):
   installer=Path(__file__).with_name("deploy-manual-recording-links-v1.py").read_text()
   self.assertIn('api("/new/api/drive-saved")',installer)
   self.assertIn("historical_drive_catalog_missing_after_proxy_restart",installer)
+ def test_relay_health_uses_actual_historical_archive_size(self):
+  path=Path(__file__).with_name("deploy-manual-recording-links-relay-v2.py")
+  spec=importlib.util.spec_from_file_location("s9_manual_relay_install",path)
+  mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+  drive={"ok":True,"events":[{} for _ in range(94)]}
+  self.assertTrue(mod.matching_drive_catalogs(drive,drive),
+    "94 legitimate remaining Drive originals must not be rejected")
+  self.assertFalse(mod.matching_drive_catalogs({"ok":True,"events":[{} for _ in range(93)]},drive))
+  self.assertFalse(mod.matching_drive_catalogs({"ok":True,"events":[]},
+    {"ok":True,"events":[]}))
+  self.assertFalse(mod.matching_drive_catalogs({"ok":False,"events":[{} for _ in range(94)]},drive))
  def test_route_does_not_recognize_or_modify_people(self):
   src=SRC.read_text()
   for forbidden in ("cv2.imread","face_embedding","rclone delete",
