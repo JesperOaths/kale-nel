@@ -1,0 +1,141 @@
+name: Guarded one-time Security V59 Step 4 UI and browser acceptance
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/security-step4-v59-release-20261019.yml'
+      - 'ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py'
+      - 'ops/c720p/s9-native-security/verify-security-step4-v59-browser-readonly.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/security-step4-v59-release-20261019.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-security-step4-v59-one-time-rollout
+  cancel-in-progress: false
+env:
+  TARGET_SHA: eaf8a58f1c733dbc9109348725669917eab1bb5b
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate pinned source and People & Faces behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          mkdir -p "$tmp/ops/c720p/s9-native-security"
+          for file in security-people-v45.js security-people-v45.html test-people-v45.js; do
+            curl -fSsL --retry 2 --max-time 30 "https://raw.githubusercontent.com/JesperOaths/kale-nel/$TARGET_SHA/ops/c720p/s9-native-security/$file" -o "$tmp/ops/c720p/s9-native-security/$file"
+          done
+          node --check "$tmp/ops/c720p/s9-native-security/security-people-v45.js"
+          (cd "$tmp" && node ops/c720p/s9-native-security/test-people-v45.js)
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py ops/c720p/s9-native-security/verify-security-step4-v59-browser-readonly.py
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py').read_text()
+          ui=Path('ops/c720p/s9-native-security/verify-security-step4-v59-browser-readonly.py').read_text()
+          for term in ('SOURCE_BASE','SOURCE_NEW','STEP4_V59_DEPLOY_ROLLED_BACK','write_atomic('): assert term in src,term
+          for term in ('STEP4_V59_BROWSER_READONLY_ACCEPTANCE_PASS','Target.closeTarget','driveWithoutNativeFaceStrip'): assert term in ui,term
+          for term in ('s9-manual-recording-links','review/review','video.play(','.write_bytes(','.submit('): assert term not in ui,term
+          PY
+          echo 'STEP4_V59_UI_PINNED_SOURCE_VALIDATED'
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Pinned dry-run and transactional live UI installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          file='ops/c720p/s9-native-security/deploy-security-step4-v59-ui-only.py'
+          sha="$(sha256sum "$file" | cut -d' ' -f1)"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+          dest="/tmp/c720p-security-step4-v59-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 35 '$uri' -o '$dest' && printf '%s  %s\\n' '$sha' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest' --dry-run && /usr/bin/python3 '$dest'"
+          idem="security-step4-v59-ui-once-${TARGET_SHA:0:18}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-v59-ui','deployment',:'cmd',290,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "STEP4_V59_UI_JOB=$id"
+          for i in $(seq 1 70); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              out="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 14000)"
+              echo "$out"
+              [[ "$status" == 'done|0' ]]
+              grep -q 'STEP4_V59_UI_DRY_RUN_PASS' <<< "$out"
+              grep -q 'STEP4_V59_UI_DEPLOY_VERIFIED' <<< "$out"
+              echo 'STEP4_V59_UI_ROLLOUT_VERIFIED'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+  inspect:
+    needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify every saved person folder without review writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          directory="ops/c720p/s9-native-security"
+          probe="$directory/verify-security-step4-v59-browser-readonly.py"
+          library="$directory/security-v8-real-browser-probe.py"
+          a="$(sha256sum "$probe" | cut -d' ' -f1)"
+          b="$(sha256sum "$library" | cut -d' ' -f1)"
+          tmp="/tmp/security-step4-v59-browser-${GITHUB_SHA:0:12}"
+          origin="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$directory"
+          cmd="mkdir -p '$tmp' && curl -fSsL --max-time 30 '$origin/verify-security-step4-v59-browser-readonly.py' -o '$tmp/verify-security-step4-v59-browser-readonly.py' && curl -fSsL --max-time 30 '$origin/security-v8-real-browser-probe.py' -o '$tmp/security-v8-real-browser-probe.py' && printf '%s  %s\\n' '$a' '$tmp/verify-security-step4-v59-browser-readonly.py' | sha256sum -c - >/dev/null && printf '%s  %s\\n' '$b' '$tmp/security-v8-real-browser-probe.py' | sha256sum -c - >/dev/null && /usr/bin/python3 '$tmp/verify-security-step4-v59-browser-readonly.py'"
+          idem="security-step4-v59-browser-audit-${GITHUB_SHA:0:18}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-v59-browser','diagnostic',:'cmd',235,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "STEP4_V59_BROWSER_AUDIT_JOB=$id"
+          for i in $(seq 1 55); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              out="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 14000)"
+              echo "$out"
+              [[ "$status" == 'done|0' ]]
+              grep -q 'STEP4_V59_BROWSER_READONLY_ACCEPTANCE_PASS' <<< "$out"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
