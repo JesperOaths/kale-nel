@@ -898,10 +898,22 @@ async function searchClothingMatches(force=false){
   }catch(_){failures++}
  }
  if(token===state.clothingToken){
-  state.clothingMatches=[...matches.values()].map(match=>({
+  const allMatches=[...matches.values()].map(match=>({
    ...match,referenceSupport:match.references.length,
    meanSimilarity:match.sumScore/match.references.length
-  })).sort((a,b)=>b.referenceSupport-a.referenceSupport||
+  }));
+  // A common blue jacket is not unique to one reviewed person. Surface
+  // conflicting outfit labels explicitly rather than ranking one as an ID.
+  for(const match of allMatches){
+   const competitors=allMatches.filter(other=>other.clip===match.clip&&
+    other.person.id!==match.person.id&&
+    other.meanSimilarity>=match.meanSimilarity-.035&&
+    other.referenceSupport>=match.referenceSupport-1);
+   match.ambiguousPeople=competitors.map(other=>other.person.label).slice(0,3);
+  }
+  state.clothingMatches=allMatches.sort((a,b)=>
+    a.ambiguousPeople.length-b.ambiguousPeople.length||
+    b.referenceSupport-a.referenceSupport||
     b.meanSimilarity-a.meanSimilarity||b.bestScore-a.bestScore).slice(0,80);
   state.clothingError=failures?'Could not compare '+failures+' of '+references.length+
     ' references. Try refreshing when the S9+ is available.':'';
@@ -926,13 +938,16 @@ function renderClothing(){
   const card=elt('article','','evidence');
   const media=sceneFor(match);
   const body=elt('div','','body');
-  body.append(elt('strong','Possible outfit similar to '+match.person.label),
+  const ambiguous=match.ambiguousPeople.length>0;
+  body.append(elt('strong',ambiguous?'Common outfit · resembles several saved people':
+   'Possible outfit resemblance to '+match.person.label),
    elt('p',date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+
     Math.round(match.lower*100)+'%'),
    elt('p','Matched '+match.referenceSupport+' approved example'+
     (match.referenceSupport===1?'':'s')+' · average outfit similarity '+
     Math.round(match.meanSimilarity*100)+'%'),
-   elt('p','Appearance resemblance only · never automatic identity verification'));
+   elt('p',ambiguous?'Also resembles '+match.ambiguousPeople.join(', ')+
+    ' · cannot distinguish people from this outfit':'Appearance resemblance only · identity not verified'));
   const actions=elt('div','','actions');
   actions.append(control('▶ Review original',()=>startVideo(match),'primary'),
    control('Compare reference',()=>startVideo({clip:match.reference,source:'sd',
