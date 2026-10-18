@@ -1341,6 +1341,47 @@ public final class CameraService extends Service {
   lastFailure=text;failed++;
   if(e==null)Log.w(TAG,text);else Log.e(TAG,text,e);
  }
+ private static volatile String nativePlaybackCapabilityCache=null;
+ /** Read-only hardware inventory. Never creates a MediaCodec instance, decoder,
+  * video derivative, audio output, or concurrent capture workload.
+  * Size support is not proof that simultaneous 4K recording is safe.
+  */
+ private static JSONObject nativePlaybackCapabilities(){
+  String cached=nativePlaybackCapabilityCache;
+  if(cached!=null)try{return new JSONObject(cached);}catch(Exception ignored){}
+  synchronized(CameraService.class){
+   if(nativePlaybackCapabilityCache!=null)
+    try{return new JSONObject(nativePlaybackCapabilityCache);}catch(Exception ignored){}
+   boolean decode4k=false,encode360=false,encode480=false;
+   String error="";
+   try{
+    for(MediaCodecInfo info:new MediaCodecList(MediaCodecList.REGULAR_CODECS).getCodecInfos()){
+     if(!info.isHardwareAccelerated())continue;
+     for(String mime:info.getSupportedTypes()){
+      if(!"video/avc".equalsIgnoreCase(mime))continue;
+      MediaCodecInfo.VideoCapabilities video=info.getCapabilitiesForType(mime).getVideoCapabilities();
+      if(video==null)continue;
+      if(info.isEncoder()){
+       if(video.areSizeAndRateSupported(640,360,24))encode360=true;
+       if(video.areSizeAndRateSupported(848,480,24))encode480=true;
+      }else if(video.areSizeAndRateSupported(3840,2160,30))decode4k=true;
+     }
+    }
+   }catch(Exception unavailable){error=unavailable.getClass().getSimpleName();}
+   JSONObject result=new JSONObject();
+   try{
+    result.put("hardware_avc_4k30_decoder_advertised",decode4k);
+    result.put("hardware_avc_640x360_24_encoder_advertised",encode360);
+    result.put("hardware_avc_848x480_24_encoder_advertised",encode480);
+    result.put("phone_playback_conversion_enabled",false);
+    result.put("codec_inventory_read_only",true);
+    result.put("capture_concurrency_not_certified",true);
+    result.put("probe_error_type",error);
+   }catch(Exception ignored){}
+   nativePlaybackCapabilityCache=result.toString();
+   return result;
+  }
+ }
  private JSONObject state(){
   JSONObject d=new JSONObject();
   try{
@@ -1349,6 +1390,7 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
+   d.put("playback_copy_hardware_probe",nativePlaybackCapabilities());
    d.put("preroll_version",continuous4KTrial?"continuous_native_4k_h264_ring_v1":GardenPreRoll.VERSION);
    d.put("continuous_4k_trial_active",continuous4KTrial);
    d.put("continuous_4k_production_persisted",getSharedPreferences("native",MODE_PRIVATE).getBoolean("continuous_4k_production_enabled",false));
