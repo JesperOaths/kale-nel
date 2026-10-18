@@ -4,7 +4,7 @@
    No recording is changed or assigned automatically. */
 const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
-const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:48,doc:null,
+const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
  faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
@@ -142,7 +142,9 @@ async function manualLink(item,folder){
 
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
 function isSaved(f){return !f.automatic_appearance_group||num(f.approved_clips)>0}
-function savedFolders(){return (state.doc?.folders||[]).filter(isSaved).sort((a,b)=>num(b.approved_clips)-num(a.approved_clips))}
+function savedFolders(){return (state.doc?.folders||[]).filter(isSaved).sort((a,b)=>
+ String(a.label||'').localeCompare(String(b.label||''),'en',{sensitivity:'base',numeric:true})||
+ String(a.id||'').localeCompare(String(b.id||'')))}
 function tentativeFolders(){return (state.doc?.folders||[]).filter(f=>!isSaved(f)).sort((a,b)=>num(b.suggested_clips)-num(a.suggested_clips))}
 function imageFor(crop,alt,kind){
  const wrap=elt('div','',kind||'media');
@@ -292,8 +294,26 @@ async function loadView(){
  }
  try{
   const res=await relay().fetch('/new/api/visual-review?'+q.toString(),{cache:'no-store'});
-  const next=await res.json();
+  let next=await res.json();
   if(token!==state.serial)return;
+  // The v40 API caps replies at 24. Assemble a complete 100+ item UI page.
+  if(state.tab!=='all'&&res.ok&&next.ok===true&&Array.isArray(next.items)){
+   const all=[...next.items];
+   while(all.length<state.limit&&state.offset+all.length<num(next.total)){
+    if(!all.length&&num(next.total)>0)throw Error('Review service returned an empty page');
+    const page=new URLSearchParams(q);
+    page.set('offset',String(state.offset+all.length));
+    page.set('limit',String(Math.min(24,state.limit-all.length)));
+    const more=await relay().fetch('/new/api/visual-review?'+page,{cache:'no-store'});
+    const batch=await more.json();
+    if(token!==state.serial)return;
+    if(!more.ok||batch.ok!==true||!Array.isArray(batch.items)||
+       batch.revision!==next.revision||batch.items.length===0)
+      throw Error('Review page changed while loading. Refresh and retry.');
+    all.push(...batch.items);
+   }
+   next={...next,items:all};
+  }
   if(!res.ok||next.ok!==true||!Array.isArray(next.folders)||!Array.isArray(next.items))
    throw Error(next.error||'The review archive is unavailable.');
   state.doc=next;
@@ -403,7 +423,7 @@ function openApproval(item){
  state.approvalItem=item;
  $('approvalClip').textContent='Recording · '+date(item);
  const select=$('approvalFolder');select.replaceChildren();
- select.add(new Option('Create a new folder',''));
+ select.add(new Option('Create a new person',''));
  for(const f of savedFolders())select.add(new Option(f.label,f.id));
  if(state.folder){
   const f=actualFolder();
@@ -412,6 +432,8 @@ function openApproval(item){
  $('approvalLabel').value='';
  if(state.folder)select.value=state.folder;
  else if(state.lastFolder&&savedFolders().some(f=>f.id===state.lastFolder))select.value=state.lastFolder;
+ const assigned=assignedFolder(item);
+ if(assigned&&[...select.options].some(o=>o.value===assigned))select.value=assigned;
  $('newLabel').hidden=!!select.value;
  $('approvalDialog').showModal();
  const main=$('approvalDialog').querySelector('.approval-main');
@@ -422,7 +444,7 @@ function dismiss(item){
  const currentFolder=state.folder;
  const code=currentFolder?'reject_clip':'skip_clip';
  action({action:code,folder:currentFolder,...fields(item)},()=>{
-  notification('Clip removed from the current review queue.',
+  notification('Skipped for now: hidden from Needs review, not deleted. Restore from Skipped.',
     ()=>action({action:currentFolder?'restore_clip':'restore_inbox_clip',folder:currentFolder,...fields(item)}));
  });
 }
@@ -442,6 +464,14 @@ async function playVideo(path,title,seconds){
  const ticket=++state.playSerial;
  if(typeof path!=='string'||!path.startsWith('/new/')){alertText('Invalid clip path');return}
  const modal=$('viewer');$('videoTitle').textContent=title;
+ const filename=decodeURIComponent(path.split('/').pop()||'');
+ const source=path.startsWith('/new/drive/')?'drive':'sd';
+ const key=source+':'+filename;
+ const row=state.archiveEntries.find(x=>assignmentKey(x)===key);
+ const reviewed=source==='sd'?(state.doc?.items||[]).find(x=>x.clip===filename):null;
+ state.playingItem=row|| (reviewed?{...reviewed,source,name:filename}:null);
+ $('viewerFile').hidden=!state.playingItem;
+ $('viewerReturn').hidden=!state.playingItem||!assignedFolder(state.playingItem);
  $('videoStatus').textContent='Opening original recording…';state.playTime=Math.max(0,seconds||0);
  if(!modal.open)modal.showModal();
  try{
@@ -536,7 +566,7 @@ function reviewItem(item,compact){
   tools.append(control('Restore',()=>restore(item),'secondary'));
  }else{
   tools.append(control(state.folder?'✓ Keep here':'✓ Choose person / folder',()=>openApproval(item),'primary'),
-   control('✕ Skip',()=>dismiss(item),'danger'));
+   control('↷ Skip for now',()=>dismiss(item),'danger'));
  }
  if(state.folder&&state.doc?.reference_examples?.length&&item.decision!=='approved')
   tools.append(control('Compare',()=>compare(item)));
@@ -909,7 +939,7 @@ $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
 $('pageSize').addEventListener('change',()=>{
  const value=Number($('pageSize').value);
- if(value!==48&&value!==96)return;
+ if(![100,150,200].includes(value))return;
  state.limit=value;state.offset=0;loadView();
 });
 $('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
@@ -961,6 +991,15 @@ $('folderForm').addEventListener('submit',async e=>{
  if(ok)$('folderDialog').close();
 });
 $('closeVideo').addEventListener('click',()=>$('viewer').close());
+$('viewerFile').addEventListener('click',()=>{
+ const item=state.playingItem;if(!item)return;
+ $('viewer').close();openApproval(item);
+});
+$('viewerReturn').addEventListener('click',()=>{
+ const item=state.playingItem;if(!item||!assignedFolder(item))return;
+ if(!confirm('Return this recording to the unassigned review queue?'))return;
+ $('viewer').close();manualLink(item,null);
+});
 $('viewer').addEventListener('close',stopVideo);
 $('video').addEventListener('loadedmetadata',()=>{const v=$('video');
  if(state.playTime>0&&Number.isFinite(v.duration))v.currentTime=Math.min(state.playTime,Math.max(0,v.duration-.1));
