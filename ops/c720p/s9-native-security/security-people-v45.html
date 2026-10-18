@@ -54,6 +54,8 @@ html.security-embedded body{padding-top:16px}
 .folder-recheck{color:#ffe1ae;border-left:3px solid #d6ad65;background:#30291e;border-radius:7px;padding:12px;margin-bottom:12px;font-size:12px}
 .media{background:linear-gradient(145deg,#223d48,#0b1a24);position:relative;display:flex;align-items:center;justify-content:center;color:#bed2d9;font-size:11px}
 .media img{width:100%;height:100%;display:block;object-fit:contain;background:#0a1720}
+.scene-media{background:#0d1d27!important}
+.scene-media img{object-fit:contain!important;object-position:center center}
 .review-row .media,.evidence>.media{background:#0b1721}
 .evidence>.media{height:235px}
 #reviewGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
@@ -167,7 +169,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 .step3-face-links{display:flex;gap:7px;flex-wrap:wrap}
 .step3-face-links button{min-height:33px;font-size:12px;padding:5px 9px}
 </style>
-<script defer src="/local/frontyard-security-new/security-people-v45.js?v=v51-20261018-image-framing"></script>
+<script defer src="/local/frontyard-security-new/security-people-v45.js?v=v52-20261018-folder-portrait"></script>
 <script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
 <script>if(window.parent!==window)document.documentElement.classList.add('security-embedded');</script>
 </head>
@@ -254,7 +256,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <label id="distanceLabel">Colour distance<select id="distance"><option value="0.15">Close</option><option value="0.35" selected>Similar</option><option value="0.65">Broad</option><option value="1">Any colour</option></select></label>
  <label id="weakLabel">Low-confidence detections<select id="weak"><option value="0" selected>Exclude</option><option value="1">Include</option></select></label>
  <label id="routeLabel">Route<select id="route"><option value="0">Any</option><option value="1">Same</option></select></label></div>
- <section id="folderFaces" class="folder-faces" hidden aria-label="Saved face images from recordings in this folder"><div class="section-head"><div><h3>Face images in these recordings</h3><p>Images belong to the linked videos, not necessarily the same person.</p></div></div><div id="folderFaceGrid" class="folder-face-grid"></div></section>
+ <section id="folderFaces" class="folder-faces" hidden aria-label="Saved face images from recordings in this folder"><div class="section-head"><div><h3>Face images in these recordings</h3><p>Images belong to the linked videos, not necessarily the same person.</p></div></div><p class="subnotice">Choose a face image from an approved recording to use as this folder’s photo. A recording can contain multiple people; this choice is manual and saved in this browser.</p><div id="folderFaceGrid" class="folder-face-grid"></div></section>
  <div id="folderContext" class="callout" hidden><p id="folderContextText"></p></div>
  <div class="folder-layout"><div><div id="folderGrid" class="grid"></div><div id="folderPage" class="pagebar"></div></div><aside id="references" class="folder-aside" hidden><h3>Approved reference clips</h3><p class="status">Human-reviewed examples for visual comparison only.</p><div id="referenceList" class="reference-list"></div></aside></div>
 </section>
