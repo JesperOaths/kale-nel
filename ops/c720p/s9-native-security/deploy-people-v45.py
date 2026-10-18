@@ -36,8 +36,8 @@ BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
 PEOPLE_QUERY="s9pf-v51-verified-route-20261018"
 TRACKS_QUERY="s9-v51-verified-tracks-20261018"
 ENTRY_NEW="security-hub-v30.js?v=people-faces-v51-verified-route-20261018"
-ENTRY_PATTERN=re.compile(r"security-hub-v30\\.js\\?v=people-faces-v(?:49-folder-first|50-route-correction|50-visible-route|51-verified-route)-20261018")
-HUB_TRACKS=re.compile(r"security-tracks-v7\\.html\\?(?:v=[A-Za-z0-9._-]+&)?")
+ENTRY_PATTERN=re.compile(r"security-hub-v30\.js\?v=people-faces-v(?:49-folder-first|50-route-correction|50-visible-route|51-verified-route)-20261018")
+HUB_TRACKS=re.compile(r"security-tracks-v7\.html\?(?:v=[A-Za-z0-9._-]+&)?")
 LEGACY_PEOPLE=re.compile(r"security-people-v33\.html(?:\?v=[A-Za-z0-9._-]+&)?")
 TRACKS_ENTRY=re.compile(r"const TRACKS=(['\"])/local/frontyard-security-new/security-tracks-v7\.html(?:\?[^'\"]*)?\1;")
 MARK="s9-people-v45-real-route"
