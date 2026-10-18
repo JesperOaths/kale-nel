@@ -64,6 +64,7 @@ class ReleaseProofTests(TestCase):
     mock.Mock(returncode=0,stdout=service)]) as proc:
    data=m.timer_service_readback()
   self.assertEqual(data["timer_SubState"],"waiting")
+  self.assertIn("NextElapseUSecMonotonic",P.read_text())
   self.assertEqual(data["service_Result"],"exit-code")
   self.assertEqual(data["service_ExecMainStatus"],"1")
   self.assertTrue(data["timer_LastTriggerUSec"].startswith("Sun"))
