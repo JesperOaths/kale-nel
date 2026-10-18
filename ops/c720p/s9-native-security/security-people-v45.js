@@ -557,7 +557,7 @@ function reviewItem(item,compact){
  else if(item.person_recheck_required)info.append(elt('p','Person evidence needs recheck'));
  else if(!item.temporal_support)info.append(elt('p','Person evidence uncertain'));
  const tools=elt('div','','actions');
- tools.append(control('▶ Play',()=>startVideo(item)));
+ tools.append(control(item.person_recheck_required?'🔎 Recheck person evidence':'▶ Play',()=>startVideo(item)));
  if(item.decision==='approved'){
   if(state.folder)tools.append(control('↩ Return to recordings',
     ()=>manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},null),'secondary'));
@@ -874,7 +874,7 @@ function renderClothing(){
 }
 function renderFolder(){
  const f=actualFolder();
- if(!f){alertText('This folder is no longer available');return}
+ if(!f){alertText('This person is no longer available');return}
  $('folderTitle').textContent=f.label;
  $('folderDescription').textContent=num(f.approved_clips)+' saved recording links · '+
   num(f.suggested_clips)+' appearance suggestions'+
@@ -898,7 +898,7 @@ function renderFolder(){
   for(const entry of state.archiveEntries){
    const override=state.extraLinks?.items?.[assignmentKey(entry)];
    if(!override||override.folder!==state.folder)continue;
-   if(host.children.some?.(x=>x.dataset?.clip===entry.clip))continue;
+   if(Array.from(host.children).some(x=>x.dataset?.clip===entry.clip))continue;
    host.append(reviewItem({...entry,decision:'approved',
      manualAssignment:true,unindexed:entry.source==='drive'||!state.clipEvidence.has(entry.clip)},false));
   }
