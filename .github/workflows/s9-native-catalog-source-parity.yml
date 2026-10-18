@@ -4,6 +4,10 @@ on:
     paths:
       - 'ops/c720p/security-runtime/phone_archive_catalog_v1.py'
       - 'ops/c720p/security-runtime/test-phone-archive-catalog-v1.py'
+      - 'ops/c720p/security-runtime/test-phone-archive-adapters-v1.py'
+      - 'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py'
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
       - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java'
       - '.github/workflows/s9-native-catalog-source-parity.yml'
   push:
@@ -11,6 +15,10 @@ on:
     paths:
       - 'ops/c720p/security-runtime/phone_archive_catalog_v1.py'
       - 'ops/c720p/security-runtime/test-phone-archive-catalog-v1.py'
+      - 'ops/c720p/security-runtime/test-phone-archive-adapters-v1.py'
+      - 'ops/c720p/s9-native-security/fast-recent-s9-clip-index.py'
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
       - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java'
       - '.github/workflows/s9-native-catalog-source-parity.yml'
 permissions:
@@ -26,6 +34,8 @@ jobs:
           set -euo pipefail
           python3 -m py_compile ops/c720p/security-runtime/phone_archive_catalog_v1.py
           python3 ops/c720p/security-runtime/test-phone-archive-catalog-v1.py
+          python3 ops/c720p/security-runtime/test-phone-archive-adapters-v1.py
+          python3 -m py_compile ops/c720p/s9-native-security/fast-recent-s9-clip-index.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
           python3 - <<'PY'
           from pathlib import Path
           src=Path('ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java').read_text()
