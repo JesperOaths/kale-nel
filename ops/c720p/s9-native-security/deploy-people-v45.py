@@ -28,10 +28,10 @@ ORIG={
  "js":"ops/c720p/s9-native-security/security-people-v45.js",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
-OLD="security-people-v45.html?v=s9pf-v48-pair-view-20261018&"
-NEW="security-people-v45.html?v=s9pf-v47-clip-context-20261018&"
-ENTRY_OLD="security-hub-v30.js?v=people-faces-v48-pair-view-20261018"
-ENTRY_NEW="security-hub-v30.js?v=people-faces-v47-clip-context-20261018"
+OLD="security-people-v45.html?v=s9pf-v47-clip-context-20261018&"
+NEW="security-people-v45.html?v=s9pf-v48-pair-view-20261018&"
+ENTRY_OLD="security-hub-v30.js?v=people-faces-v47-clip-context-20261018"
+ENTRY_NEW="security-hub-v30.js?v=people-faces-v48-pair-view-20261018"
 MARK="s9-people-v45-real-route"
 def digest(b):return hashlib.sha256(b).hexdigest()
 def get(url,limit=220000):
