@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null};
+ faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:''};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -243,10 +243,10 @@ function openFolder(id,tab){
 }
 function openHome(pane){
  state.pane=pane;state.folder='';state.tab='inbox';state.offset=0;
- selectPane(pane);loadView();if(pane==='faces')fetchFaces();
+ selectPane(pane);loadView();if(pane==='faces'||pane==='people'||pane==='clothing')fetchFaces();
 }
 function selectPane(pane){
- for(const name of ['overview','review','people','faces','folderView'])
+ for(const name of ['overview','review','people','faces','clothing','folderView'])
   $(name).hidden=(name!==(pane==='folder'?'folderView':pane));
  for(const b of document.querySelectorAll('[data-pane]')){
   const expected=pane==='folder'?'people':pane;
@@ -258,12 +258,15 @@ function openApproval(item){
  $('approvalClip').textContent='Recording · '+date(item);
  const select=$('approvalFolder');select.replaceChildren();
  select.add(new Option('Create a new folder',''));
- for(const f of (state.doc?.folders||[]))if(isSaved(f)||f.id===state.folder)
-  select.add(new Option(f.automatic_appearance_group?'Manually keep in '+f.label:f.label,f.id));
+ for(const f of savedFolders())select.add(new Option(f.label,f.id));
+ if(state.folder){
+  const f=actualFolder();
+  if(f?.automatic_appearance_group)select.add(new Option('Keep in '+f.label+' (reviewed)',f.id));
+ }
  $('approvalLabel').value='';
  if(state.folder)select.value=state.folder;
+ else if(state.lastFolder&&savedFolders().some(f=>f.id===state.lastFolder))select.value=state.lastFolder;
  $('newLabel').hidden=!!select.value;
- $('approvalConfirmed').checked=false;
  $('approvalDialog').showModal();
  const main=$('approvalDialog').querySelector('.approval-main');
  if(main&&typeof main.scrollTop==='number')main.scrollTop=0;
@@ -361,7 +364,7 @@ function reviewItem(item,compact){
  }else if(['rejected','skipped'].includes(item.decision)){
   tools.append(control('Restore',()=>restore(item),'secondary'));
  }else{
-  tools.append(control(state.folder?'✓ Keep here':'✓ Keep',()=>openApproval(item),'primary'),
+  tools.append(control(state.folder?'✓ Keep here':'✓ Choose person / folder',()=>openApproval(item),'primary'),
    control('✕ Skip',()=>dismiss(item),'danger'));
  }
  if(state.folder&&state.doc?.reference_examples?.length&&item.decision!=='approved')
@@ -446,8 +449,8 @@ function renderMetrics(){
  $('peopleReviewSummary').textContent=queue+(queue===1?' recording needs':' recordings need')+' review';
  $('personCount').textContent=String(saved.length);
  $('approvalCount').textContent=String(saved.reduce((n,x)=>n+num(x.approved_clips),0));
- $('appearanceCount').textContent=String(tentativeFolders().length);
  $('groupCount').textContent=String(tentativeFolders().length);
+ $('clothingTabCount').textContent=tentativeFolders().length?' · '+tentativeFolders().length:'';
  const scan=state.doc?.person_detection;
  if(scan&&num(scan.total_clips)){
   const total=num(scan.total_clips),reviewed=Math.min(total,num(scan.assessed_clips));
@@ -493,7 +496,7 @@ function renderOverview(){
  const saved=$('savedPreview');saved.replaceChildren();
  for(const f of savedFolders().slice(0,4))saved.append(profileRow(f));
  if(!saved.children.length)saved.append(elt('p','No saved groups yet. Use Keep after reviewing a recording.','empty'));
- groupRows($('appearancePreview'));
+ // Clothing suggestions are accessible in their own tab.
 }
 function paginate(host,total,onPage){
  host.replaceChildren();const page=state.offset/state.limit;
@@ -516,7 +519,11 @@ function renderPeople(){
  const saved=$('savedList');saved.replaceChildren();
  for(const f of savedFolders())saved.append(profileRow(f));
  if(!saved.children.length)saved.append(elt('p','No reviewed folders. Create a folder or keep a recording to get started.','empty'));
- groupRows($('candidateList'));
+ // Clothing suggestions are not mixed into the saved-people list.
+}
+function renderClothing(){
+ groupRows($('clothingList'));
+ $('clothingTotal').textContent=tentativeFolders().length+' provisional groups · not identified people';
 }
 function renderFolder(){
  const f=actualFolder();
@@ -687,6 +694,7 @@ function render(){
  if(state.pane==='people')renderPeople();
  if(state.pane==='folder')renderFolder();
  if(state.pane==='faces')renderFaces();
+ if(state.pane==='clothing')renderClothing();
 }
 function compare(item){
  const examples=(state.doc?.reference_examples||[]).slice(0,3);
@@ -721,6 +729,7 @@ for(const b of document.querySelectorAll('[data-pane]'))b.addEventListener('clic
 $('openReview').addEventListener('click',()=>openReview('inbox'));
 $('peopleReviewNow').addEventListener('click',()=>openReview('inbox'));
 $('openPeople').addEventListener('click',()=>openHome('people'));
+$('openClothing').addEventListener('click',()=>openHome('clothing'));
 $('backFolders').addEventListener('click',()=>openHome('people'));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
 $('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
@@ -747,16 +756,14 @@ $('approvalForm').addEventListener('submit',async e=>{
  e.preventDefault();const item=state.approvalItem;if(!item)return;
  const id=$('approvalFolder').value;
  const label=$('approvalLabel').value.trim();
- if(!$('approvalConfirmed').checked){alertText('Confirm that you reviewed the original recording before keeping it.');return}
+ // Confirm & keep is the explicit human-review decision; the second checkbox
+ // previously required for the exact same decision is removed.
  if(!id&&(!label||label.length>100)){alertText('Enter a name for the new folder.');return}
  const ok=await action(id?{action:'approve_clip',folder:id,...fields(item)}:
   {action:'seed_folder',folder:'',label,...fields(item)},result=>{
-   notification('Recording kept in the chosen folder.');
-   const chosen=id||result.folder;
-   if(chosen){
-    state.folder=chosen;state.pane='folder';state.tab='approved';state.offset=0;
-    $('folderMode').value='approved';selectPane('folder');
-   }
+   notification('Recording kept. Continue with the next recording.');
+   state.lastFolder=id||result.folder||'';
+   // Never redirect review queues into the chosen folder.
  });
  if(ok)$('approvalDialog').close();
 });
@@ -806,7 +813,7 @@ window.addEventListener('pagehide',stopVideo);
 document.querySelectorAll('[data-go]').forEach(button=>button.addEventListener('click',()=>{
  const pane=button.dataset.go;
  if(pane==='review')openReview('inbox');
- else if(pane==='people'||pane==='faces')openHome(pane);
+ else if(pane==='people'||pane==='faces'||pane==='clothing')openHome(pane);
 }));
 selectPane('people');loadView();fetchFaces();
 })();
