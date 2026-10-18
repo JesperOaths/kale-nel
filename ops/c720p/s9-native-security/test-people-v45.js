@@ -134,7 +134,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(!html.includes('data-pane="faces"'),'Face gallery tab must be removed');
  assert(!html.includes('id="faceGrid"'),'Invalid gallery not to be retained');
  assert.equal(el('personScanLabel').textContent,'80 / 141');
- assert.equal(el('faceScanLabel').textContent,'2 / 2 · reviewed');
+ assert.equal(el('faceScanLabel').textContent,'3 / 3 · reviewed');
  assert.match(el('facePhotoStatus').textContent,/2 candidate crops/);
  assert.equal(el('faceScanProgress').value,100);
  panes[0].handlers.click();
