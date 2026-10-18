@@ -640,5 +640,10 @@ $('snapshotPlay').addEventListener('click',()=>{
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
 window.addEventListener('pagehide',stopVideo);
-selectPane('overview');loadView();fetchFaces();
+document.querySelectorAll('[data-go]').forEach(button=>button.addEventListener('click',()=>{
+ const pane=button.dataset.go;
+ if(pane==='review')openReview('inbox');
+ else if(pane==='people'||pane==='faces')openHome(pane);
+}));
+selectPane('people');loadView();fetchFaces();
 })();
