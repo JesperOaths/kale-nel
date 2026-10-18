@@ -163,6 +163,21 @@ def deployment_state():
  result["timer_enabled"]=proc.returncode==0 and proc.stdout.strip()=="active"
  result.update(timer_service_readback())
  result.update(effective_timer_rules())
+ def finite_deadline(value):
+  return bool(value) and value not in ("infinity","n/a","0","-")
+ next_due=(finite_deadline(result.get("timer_NextElapseUSecRealtime")) or
+           finite_deadline(result.get("timer_NextElapseUSecMonotonic")))
+ active_rules=result.get("timer_effective_rule_declarations") or []
+ active_new_rules=any(row.startswith(("OnActiveSec=","OnUnitActiveSec=","OnCalendar="))
+                      and not row.endswith("=") for row in active_rules)
+ timer_state=result.get("timer_SubState")
+ service_state=result.get("service_ActiveState")
+ result["timer_finite_future_deadline"]=next_due
+ result["timer_guarded_worker_running"]=(timer_state=="running" and
+       service_state in ("active","activating") and active_new_rules)
+ result["timer_healthy_recurrence"]=(active_new_rules and
+       ((timer_state=="waiting" and next_due) or
+        result["timer_guarded_worker_running"]))
  try:
   log=subprocess.run(["journalctl","--user","-u","c720p-s9-face-v5-cool-window.service",
        "-n","30","--no-pager","-o","cat"],capture_output=True,text=True,timeout=15)
