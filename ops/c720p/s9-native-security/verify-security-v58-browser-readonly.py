@@ -127,7 +127,7 @@ def main():
         print("SECURITY_V58_BROWSER_BOTH_SOURCES",json.dumps(expanded,sort_keys=True),flush=True)
 
         # Open a historical Drive video only to inspect controls and metadata.
-        # Do not call video.play(), save, return, skip, or submit a review.
+        # Do not start playback, save, return, skip, or submit a review.
         clicked=probe(page, """
           const d=pfDoc();
           const row=[...d.querySelectorAll('#reviewGrid article')].find(x=>x.dataset.source==='drive');
