@@ -229,10 +229,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(releaseHeldAll,'Old request must be deliberately paused');
  el('reviewMode').value='inbox';el('reviewMode').handlers.change();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'27 recordings');
+ assert.equal(el('reviewTotal').textContent,'0 review items');
  holdAll=false;releaseHeldAll();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'27 recordings',
+ assert.equal(el('reviewTotal').textContent,'0 review items',
   'Stale responses must not replace current tab data');
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
