@@ -51,14 +51,48 @@ def serve_preview(handler,name,item):
  if handler.command!="HEAD":handler.wfile.write(blob)
 
 FACE_NAME=re.compile(r"motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg")
+FACE_SNAPSHOT_MIN_BYTES=512
+FACE_SNAPSHOT_MAX_BYTES=2200000
+
+def jpeg_snapshot_dimensions(data):
+ """Read bounded JPEG frame dimensions; never infer detail from file size.
+
+ S9+ saves square native-pixel crops, at least 70 pixels per side. This
+ structural check supplements the exact native-manifest size and SHA-256.
+ It is not a claim that the image shows a person or establishes identity.
+ """
+ if (not isinstance(data,bytes) or not FACE_SNAPSHOT_MIN_BYTES<=len(data)<=FACE_SNAPSHOT_MAX_BYTES
+     or not data.startswith(b"\xff\xd8\xff") or not data.endswith(b"\xff\xd9")):
+  return None
+ pos=2
+ for _ in range(256):
+  if pos>=len(data) or data[pos]!=255:return None
+  while pos<len(data) and data[pos]==255:pos+=1
+  if pos>=len(data):return None
+  marker=data[pos];pos+=1
+  if marker in (0,0xd8,0xd9,0xda):return None
+  if marker==1 or 0xd0<=marker<=0xd7:continue
+  if pos+2>len(data):return None
+  length=int.from_bytes(data[pos:pos+2],"big")
+  if length<2 or pos+length>len(data):return None
+  if marker in (0xc0,0xc1,0xc2):
+   if length<8 or data[pos+2]!=8:return None
+   height=int.from_bytes(data[pos+3:pos+5],"big")
+   width=int.from_bytes(data[pos+5:pos+7],"big")
+   components=data[pos+7]
+   if components not in (1,3) or length!=8+3*components:return None
+   return (width,height) if 70<=width==height<=4096 else None
+  pos+=length
+ return None
+
 def serve_face_snapshot(handler,name,record):
  """Relay indexed S9 microSD JPEG only on signed request, with SHA-256 verification.
  Not a face inference service; never writes image data to the C720P filesystem.
  """
  evidence=next((entry for entry in record.get("face_candidates",[]) if
                 entry.get("snapshot_name")==name and entry.get("snapshot_on_s9")
-                and isinstance(entry.get("snapshot_size"),int)
-                and 2000<=entry["snapshot_size"]<=2200000
+                and type(entry.get("snapshot_size")) is int
+                and FACE_SNAPSHOT_MIN_BYTES<=entry["snapshot_size"]<=FACE_SNAPSHOT_MAX_BYTES
                 and re.fullmatch(r"[a-f0-9]{64}",str(entry.get("snapshot_sha256","")))),None)
  if evidence is None:
   handler.js(404,{"ok":False,"error":"face_snapshot_not_indexed"});return
@@ -68,7 +102,7 @@ def serve_face_snapshot(handler,name,record):
   data=p.stdout
   if (len(data)!=evidence["snapshot_size"] or
       hashlib.sha256(data).hexdigest()!=evidence["snapshot_sha256"] or
-      not (data.startswith(b"\xff\xd8\xff") and data.endswith(b"\xff\xd9"))):
+      jpeg_snapshot_dimensions(data) is None):
    raise ValueError("face_snapshot_integrity_mismatch")
  except (OSError,ValueError,subprocess.SubprocessError):
   handler.js(503,{"ok":False,"error":"phone_face_snapshot_unavailable"});return
@@ -259,6 +293,7 @@ def install_local_sd(H):
       "face_deep_tiled_scene_samples":r.get("face_deep_tiled_scene_samples"),
       "face_deep_second_person_roi_samples":r.get("face_deep_second_person_roi_samples"),
       "face_snapshots_saved":r.get("face_snapshots_saved",0),
+      "face_candidate_records":r.get("face_candidate_records",len(r.get("face_candidates",[]))),
       "face_candidates":r.get("face_candidates",[]),**detection_metrics(r)})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
      "events":events,"fallback_previews":list(previews.values())})
@@ -411,3 +446,4 @@ def media_headers(handler,code,size,start,end,length,source="adb-legacy"):
  handler.send_header("X-Content-Type-Options","nosniff")
  if code==206:handler.send_header("Content-Range",f"bytes {start}-{end}/{size}")
  handler.end_headers()
+

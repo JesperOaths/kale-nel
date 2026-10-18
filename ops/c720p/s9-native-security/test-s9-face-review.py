@@ -38,7 +38,8 @@ class FaceReviewTests(unittest.TestCase):
        "snapshot":"face.jpg","cosine_similarity":.943}
      ]}
   safe=self.catalog.safe_face_review_metadata(m)
-  self.assertEqual(safe["face_snapshots_saved"],2)
+  self.assertEqual(safe["face_candidate_records"],2)
+  self.assertEqual(safe["face_snapshots_saved"],0)
   self.assertEqual(safe["face_candidates"][0]["person_id"],"unknown_00001")
   self.assertEqual(safe["face_candidates"][1]["candidate_name"],"Alice")
   output=json.dumps(safe)
@@ -120,7 +121,9 @@ class FaceReviewTests(unittest.TestCase):
   from types import SimpleNamespace
   key="motion_1791600000000.mp4"
   filename="motion_1791600000000__unknown_00001__1600_0.jpg"
-  jpeg=b"\xff\xd8\xff"+b"A"*2400+b"\xff\xd9"
+  # Exercise a real native-size JPEG, rather than a signature-wrapped byte
+  # string that the relay must reject under its image-structure contract.
+  jpeg=load(HERE/"test-face-snapshot-integrity-v1.py","native_crop_fixture").JPEG
   manifest={"name":key,"face_review_version":"s9_face_review_v1",
     "face_review_status":"face_embedding_unavailable_snapshots_only",
     "face_review_sampled_frames":12,
@@ -219,3 +222,4 @@ class FaceReviewTests(unittest.TestCase):
 
 
 if __name__=="__main__":unittest.main(verbosity=2)
+
