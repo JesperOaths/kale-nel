@@ -36,7 +36,7 @@ jobs:
           d=Path("ops/c720p/s9-native-security/deploy-people-v45.py").read_text()
           for marker in ("c720p-surveillance.html", "security-people-v33.html",
                          "security-people-v50.html", "security-tracks-v50.html",
-                         "security-visible-route-v53-20261018", "legacy_route_redirected",
+                         "security-visible-route-v54-20261018", "legacy_route_redirected",
                          "fresh_iframe_assets_installed", "archive_records_disappeared",
                          "HA_not_serving_new_version_", "S9_PEOPLE_V45_DEPLOY_ROLLED_BACK"):
               assert marker in d,marker
