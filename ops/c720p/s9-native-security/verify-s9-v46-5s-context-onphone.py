@@ -19,7 +19,7 @@ BASE="http://127.0.0.1:18808"
 PHONE="192.168.178.250:5555"
 ARCHIVE="http://127.0.0.1:8795/new/api/saved"
 PHONE_DIR="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
-NAME=re.compile(r"diagnostic_preroll_[0-9]{13}\\.mp4\\Z")
+NAME=re.compile(r"diagnostic_preroll_[0-9]{13}\.mp4\Z")
 
 def status():
     with urllib.request.urlopen(BASE+"/status",timeout=12) as response:
@@ -40,18 +40,18 @@ def count():
     if payload.get("archive_mode")!="S9-microSD-only":
         raise RuntimeError("unexpected_original_archive")
     return {rec["clip_no"] for rec in payload.get("events",[])
-            if isinstance(rec,dict) and re.fullmatch(r"motion_[0-9]{13}\\.mp4",str(rec.get("clip_no") or ""))}
+            if isinstance(rec,dict) and re.fullmatch(r"motion_[0-9]{13}\.mp4",str(rec.get("clip_no") or ""))}
 
 def healthy(state):
-    return state.get("ok") is True and state.get("mode")=="watching" and \\
-      state.get("continuous_4k_ready") is True and \\
-      state.get("continuous_4k_trial_active") is True and \\
-      state.get("preroll_in_original_mp4") is True and \\
-      int(state.get("continuous_4k_buffered_ms") or 0)>=4400 and \\
-      int(state.get("continuous_4k_dropped_output_frames") or 0)==0 and \\
-      float(state.get("temperature_c") or 100)<40 and \\
-      int(state.get("sd_free_bytes") or 0)>20*1024**3 and \\
-      state.get("person_post_motion_hold_ms")==5000 and \\
+    return state.get("ok") is True and state.get("mode")=="watching" and \
+      state.get("continuous_4k_ready") is True and \
+      state.get("continuous_4k_trial_active") is True and \
+      state.get("preroll_in_original_mp4") is True and \
+      int(state.get("continuous_4k_buffered_ms") or 0)>=4400 and \
+      int(state.get("continuous_4k_dropped_output_frames") or 0)==0 and \
+      float(state.get("temperature_c") or 100)<40 and \
+      int(state.get("sd_free_bytes") or 0)>20*1024**3 and \
+      state.get("person_post_motion_hold_ms")==5000 and \
       state.get("minimum_main_recording_ms")==10000
 
 def video_info(path):
@@ -95,7 +95,7 @@ def main():
       headers={"Content-Type":"application/json"})
     with urllib.request.urlopen(request,timeout=14) as response:
         ack=json.load(response)
-    if not ack.get("ok") or ack.get("excluded_from_security_archive") is not True or \\
+    if not ack.get("ok") or ack.get("excluded_from_security_archive") is not True or \
        ack.get("requested_post_motion_hold_ms")!=5000:
         raise RuntimeError("safe_diagnostic_rejected:"+str(ack)[:200])
     clip=""
