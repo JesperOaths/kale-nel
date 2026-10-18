@@ -1,0 +1,72 @@
+name: C720P S9 Face Snapshot LAN Relay V55
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-face-snapshot-lan-relay-v55.py'
+      - 'ops/c720p/s9-native-security/test-face-snapshot-lan-relay-v55.py'
+      - '.github/workflows/c720p-face-snapshot-lan-relay-v55.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-face-snapshot-lan-relay-v55.py'
+      - 'ops/c720p/s9-native-security/test-face-snapshot-lan-relay-v55.py'
+      - '.github/workflows/c720p-face-snapshot-lan-relay-v55.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-face-relay-v55
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check read-only authenticated face route and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-face-snapshot-lan-relay-v55.py
+          python3 ops/c720p/s9-native-security/test-face-snapshot-lan-relay-v55.py
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Guarded LAN relay fix and real image verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          src='ops/c720p/s9-native-security/deploy-face-snapshot-lan-relay-v55.py'
+          expected="$(sha256sum "$src" | cut -d' ' -f1)"
+          dest="/tmp/s9-face-relay-v55-${GITHUB_SHA:0:12}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+          cmd="curl -fSsL --max-time 45 '$uri' -o '$dest' && printf '%s  %s\n' '$expected' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest' --apply"
+          idem="s9-face-relay-v55-${GITHUB_SHA:0:22}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-face-relay-v55','deployment',:'cmd',300,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_FACE_RELAY_V55_JOB=$id"
+          for i in $(seq 1 80); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n 1)"
+            if [[ "$status" == done\|* || "$status" == error\|* || "$status" == failed\|* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 8000)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]]
+              grep -Eq 'SECURITY_S9_FACE_RELAY_V55_(VERIFIED|ALREADY_VERIFIED)' <<< "$output"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo 'Guarded face relay verification timed out.'
+          exit 1
