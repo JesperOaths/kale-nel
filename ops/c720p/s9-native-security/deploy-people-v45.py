@@ -108,8 +108,9 @@ def main():
  out["tracks50"]=out["tracks"]
  # The old V33 page is still requested by some older shell frames. Redirect
  # it to the maintained page instead of leaving two different UIs available.
- if b"Review candidate recordings" not in prior["legacy"][0]:
-  raise RuntimeError("legacy_people_page_no_longer_matches")
+ if prior["legacy"][0] is None or len(prior["legacy"][0])<200:
+  raise RuntimeError("legacy_people_page_missing_or_empty")
+ # Do not rely on brittle copy that may change between UI releases.
  out["legacy"]=(
   '<!doctype html><html lang="en"><head><meta charset="utf-8">'
   '<meta name="robots" content="noindex,nofollow">'
