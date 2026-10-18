@@ -82,6 +82,13 @@ def main():
  if before.get("archive_mode")!="S9-microSD-only":raise RuntimeError("archive_scope_changed")
  clips={e.get("clip_no") for e in before.get("events",[]) if isinstance(e,dict)}
  if not clips:raise RuntimeError("empty_archive_refuse_mutation")
+ drive_before=api("/new/api/drive-saved")
+ if (drive_before.get("ok") is not True or
+     not isinstance(drive_before.get("events"),list) or
+     not drive_before["events"] or
+     drive_before.get("archive_mode")=="S9-microSD-only"):
+  raise RuntimeError("verified_historical_drive_baseline_unavailable")
+ drive_count_before=len(drive_before["events"])
  staged={}
  for k,(path,source) in TARGETS.items():
   if (k!="backend" and (not path.is_file() or path.is_symlink())) or path.is_symlink():
@@ -131,12 +138,13 @@ def main():
    "archive_mode":str(drive_catalog.get("archive_mode",""))[:60],
    "ok":drive_catalog.get("ok"),
    "event_count":len(drive_catalog.get("events",[])) if isinstance(drive_catalog.get("events"),list) else None,
+   "drive_count_before":drive_count_before,
    "archive_keys":sorted(k for k in drive_catalog if k in
       ("ok","archive_mode","events","error","source"))}),flush=True)
   if (drive_catalog.get("ok") is not True or
       drive_catalog.get("archive_mode")=="S9-microSD-only" or
       not isinstance(drive_catalog.get("events"),list) or
-      len(drive_catalog["events"])<100):
+      len(drive_catalog["events"])<drive_count_before):
    raise RuntimeError("historical_drive_catalog_missing_after_proxy_restart")
   direct=api("/new/api/s9-manual-recording-links")
   if direct.get("manual_links_only") is not True or direct.get("automatic_identity_matching") is not False:
