@@ -149,8 +149,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(el('reviewPreview').children.length>=1,'Coverage summary must display outstanding work');
  assert.equal(el('reviewAlerts').children.length,1,'The existing Jesper review issue must be highlighted as an action');
  assert(scan(el('reviewAlerts'),'Inspect originals →'),'Saved clips flagged for person recheck must be actionable');
- let keep=scan(el('peopleReviewNotice'),'Review →');
- assert(keep,'Review action must remain accessible without a duplicate recording list');
+ assert(el('peopleReviewNow').handlers.click,'Review action must remain accessible without a duplicate recording list');
+ let keep;
  el('openReview').handlers.click();for(let i=0;i<4;i++)await flush();
  keep=scan(el('reviewGrid'),'✓ File under person');assert(keep,'Primary review action');
  keep.handlers.click();
