@@ -28,9 +28,9 @@ ORIG={
  "js":"ops/c720p/s9-native-security/security-people-v45.js",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
-OLD="security-people-v45.html?v=s9pf-v46-inspect-original-crop-20261018&"
+OLD="security-people-v45.html?v=s9pf-v48-pair-view-20261018&"
 NEW="security-people-v45.html?v=s9pf-v47-clip-context-20261018&"
-ENTRY_OLD="security-hub-v30.js?v=people-faces-v46-inspect-original-crop-20261018"
+ENTRY_OLD="security-hub-v30.js?v=people-faces-v48-pair-view-20261018"
 ENTRY_NEW="security-hub-v30.js?v=people-faces-v47-clip-context-20261018"
 MARK="s9-people-v45-real-route"
 def digest(b):return hashlib.sha256(b).hexdigest()
@@ -81,11 +81,11 @@ def main():
   b=get("https://raw.githubusercontent.com/JesperOaths/kale-nel/"+args.ref+"/"+source)
   if k=="html":
    for phrase in (b'id="reviewPreview"',b'id="snapshotViewer"',b'id="snapshotImage"',b'id="snapshotPlay"',b'id="personScanProgress"',b'id="faceScanProgress"',b'id="facePhotoStatus"',b'id="reviewAlerts"',b'id="folderRecheck"',b'id="savedPreview"',b'id="faceGrid"',
-                  b'id="approvalConfirmed"',b"security-people-v45.js",b"step3-evidence"):
+                  b'id="approvalConfirmed"',b"security-people-v45.js",b"step3-evidence",b'id="pairDialog"'):
     if phrase not in b:raise RuntimeError("html_interface_contract_missing")
   else:
    for phrase in (b"clip_folders_v40",b"manual-attributes-v36",
-                  b"human_confirmed:true",b"loadView()",b"fetchFaces()",b"inspectFaceSnapshot(f)",b"step3ClipEvidence(item)"):
+                  b"human_confirmed:true",b"loadView()",b"fetchFaces()",b"inspectFaceSnapshot(f)",b"step3ClipEvidence(item)",b"commitFacePair()"):
     if phrase not in b:raise RuntimeError("js_review_contract_missing")
   out[k]=b
  hub=prior["hub"][0].decode("utf-8")
