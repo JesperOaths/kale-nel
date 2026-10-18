@@ -142,7 +142,7 @@ footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
 </dialog>
 <footer>Faces and video stay in the phone's existing microSD archive. Face crops are streamed only when visible and are not permanently cached by this page. Original 4K recordings are preserved.</footer>
 <script id="s9-faces-appearances-gallery-v1">
-window.GEJAST_PAGE_VERSION='v817';
+window.GEJAST_PAGE_VERSION='v818';
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
