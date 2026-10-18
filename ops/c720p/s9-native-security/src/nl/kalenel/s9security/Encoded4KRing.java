@@ -21,7 +21,7 @@ public final class Encoded4KRing {
  public static final int WIDTH=3840, HEIGHT=2160, FPS=30, BITRATE=24000000;
  public static final long HISTORY_US=7000000L;
  public static final long TARGET_US=5000000L;
- public static final long MIN_VALID_US=4400000L;
+ public static final long MIN_VALID_US=5000000L;
  public static final int MAX_BYTES=48*1024*1024;
  private static final int MAX_FRAMES=270;
 
@@ -79,11 +79,9 @@ public final class Encoded4KRing {
   // The preceding IDR preserves the requested historical time window.
   for(int i=0;i<a.size();i++)
    if(a.get(i).key && a.get(i).ptsUs<=cutoff)chosen=i;
-  if(chosen<0){
-   // Cold start or pressure trim: earliest independently decodable IDR.
-   for(int i=0;i<a.size();i++)
-    if(a.get(i).key){chosen=i;break;}
-  }
+  // Do not silently shorten a five-second request at cold start.
+  // A complete preceding IDR must already exist at or before the
+  // five-second cutoff; otherwise wait for more encoded frames.
   if(chosen<0||a.size()-chosen<6)return null;
   List<Sample> selected=new ArrayList<>(a.subList(chosen,a.size()));
   long duration=selected.get(selected.size()-1).ptsUs-selected.get(0).ptsUs;
