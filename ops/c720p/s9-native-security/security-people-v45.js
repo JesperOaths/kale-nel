@@ -690,6 +690,9 @@ function renderMetrics(){
  $('reviewTabCount').textContent=queue?' · '+queue:'';
  $('peopleReviewNotice').hidden=queue===0;
  $('peopleReviewSummary').textContent=queue+(queue===1?' recording needs':' recordings need')+' review';
+ const recheck=saved.reduce((n,x)=>n+num(x.approvals_needing_person_recheck),0);
+ $('peopleRecheckNotice').hidden=recheck===0;
+ $('peopleRecheckSummary').textContent=recheck+' confirmed recording'+(recheck===1?' needs':'s need')+' evidence rechecking';
  $('personCount').textContent=String(saved.length);
  $('approvalCount').textContent=String(saved.reduce((n,x)=>n+num(x.approved_clips),0));
  $('groupCount').textContent=String(tentativeFolders().length);
@@ -1018,6 +1021,10 @@ for(const b of document.querySelectorAll('[data-pane]'))b.addEventListener('clic
 });
 $('openReview').addEventListener('click',()=>openReview('all'));
 $('peopleReviewNow').addEventListener('click',()=>openReview('inbox'));
+$('peopleRecheckNow').addEventListener('click',()=>{
+ const person=savedFolders().find(x=>num(x.approvals_needing_person_recheck)>0);
+ if(person)openFolder(person.id,'approved');
+});
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
 $('refreshClothing').addEventListener('click',()=>searchClothingMatches(true));
