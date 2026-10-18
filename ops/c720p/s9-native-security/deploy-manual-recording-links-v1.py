@@ -127,6 +127,12 @@ def main():
   # Collision check: never claim successful deployment if the live loader
   # still routes this endpoint to the old visual-review handler.
   drive_catalog=api("/new/api/drive-saved")
+  print("S9_DRIVE_ALIAS_READBACK "+json.dumps({
+   "archive_mode":str(drive_catalog.get("archive_mode",""))[:60],
+   "ok":drive_catalog.get("ok"),
+   "event_count":len(drive_catalog.get("events",[])) if isinstance(drive_catalog.get("events"),list) else None,
+   "archive_keys":sorted(k for k in drive_catalog if k in
+      ("ok","archive_mode","events","error","source"))}),flush=True)
   if (drive_catalog.get("ok") is not True or
       drive_catalog.get("archive_mode")=="S9-microSD-only" or
       not isinstance(drive_catalog.get("events"),list) or
