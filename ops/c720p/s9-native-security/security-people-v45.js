@@ -67,7 +67,7 @@ function makeArchiveRows(){
  $('archiveCount').textContent=String(state.archiveEntries.length);
 }
 async function fetchExtraLinks(){
- const response=await relay().fetch('/new/api/visual-review?workflow=manual_recording_links_v1',{cache:'no-store'});
+ const response=await relay().fetch('/new/api/s9-manual-recording-links',{cache:'no-store'});
  const data=await response.json();
  if(!response.ok||data.ok!==true||!data.manual_links_only||!data.items)
   throw Error('Manual recording links unavailable');
@@ -89,7 +89,7 @@ async function scanApprovedFolders(folders){
   let offset=0,total=0;
   do{
    const q=new URLSearchParams({workflow:'clip_folders_v40',tab:'approved',
-       folder:String(folder.id),offset:String(offset),limit:'48'});
+       folder:String(folder.id),offset:String(offset),limit:'24'});
    const response=await relay().fetch('/new/api/visual-review?'+q,{cache:'no-store'});
    const data=await response.json();
    if(!response.ok||data.ok!==true||!Array.isArray(data.items))
@@ -126,7 +126,7 @@ async function manualLink(item,folder){
    folder:folder||null,revision:state.linksRevision,human_confirmed:true};
  state.busy=true;
  try{
-  const response=await relay().fetch('/new/api/visual-review/review',{
+  const response=await relay().fetch('/new/api/s9-manual-recording-links',{
    method:'POST',headers:{'Content-Type':'application/json',
     'X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
    body:JSON.stringify(data)});
@@ -285,7 +285,7 @@ async function loadView(){
  // Latest request wins. View switches must not inherit the old tab's response.
  state.loading=true;const token=++state.serial;alertText('');
  const q=new URLSearchParams({workflow:'clip_folders_v40',tab:state.tab,
-  offset:String(state.offset),limit:String(Math.min(48,state.limit))});
+  offset:String(state.offset),limit:String(Math.min(24,state.limit))});
  if(state.folder)q.set('folder',state.folder);
  if(state.tab==='suggestions'){
   q.set('distance',$('distance').value);q.set('weak',$('weak').value);q.set('route',$('route').value)

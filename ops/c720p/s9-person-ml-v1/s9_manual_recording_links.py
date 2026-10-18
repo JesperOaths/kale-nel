@@ -20,8 +20,8 @@ STORE=BASE/"state/s9-manual-recording-links-v1.json"
 AUDIT=BASE/"state/s9-manual-recording-links-v1.audit.jsonl"
 LOCK=BASE/"state/s9-manual-recording-links-v1.lock"
 DRIVE=BASE/"state/drive-security-archive.json"
-ROUTE="/new/api/visual-review"
-WRITE="/new/api/visual-review/review"
+ROUTE="/new/api/s9-manual-recording-links"
+WRITE="/new/api/s9-manual-recording-links"
 WORKFLOW="manual_recording_links_v1"
 INTENT="manual-original-review-links-v1"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
@@ -130,7 +130,7 @@ def install(H,sd_names):
  previous_post=H.do_POST
  def get(self):
   route=urlsplit(self.path)
-  if route.path!=ROUTE or route.query!="workflow="+WORKFLOW:
+  if route.path!=ROUTE or route.query:
    return previous_get(self)
   if self.command=="HEAD":return self.js(200,{"ok":True})
   try:self.js(200,report())

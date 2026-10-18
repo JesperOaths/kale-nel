@@ -10,6 +10,7 @@ assert(js.includes('function sceneFor(item)'),'Review must show a full recording
 assert(js.includes('function automaticPortrait(f)'),'Automatic folder portrait required');
 assert(js.includes('function scanApprovedFolders('),'Full folder assignment scan required');
 assert(js.includes("'/new/api/drive-saved'"),'Historical Drive catalog must be included');
+assert(js.includes("'/new/api/s9-manual-recording-links'"),'Use isolated authenticated assignment route');
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
 assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
 assert(!/\.innerHTML\s*=/.test(js));
@@ -61,7 +62,7 @@ let posts=[],linkPosts=[],fetches=[],holdAll=false,releaseHeldAll=null,linkRevis
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
-  if(p.startsWith('/new/api/visual-review/review')){
+  if(p==='/new/api/visual-review/review'||p==='/new/api/s9-manual-recording-links'&&opts.method==='POST'){
    const payload=JSON.parse(opts.body);
    if(opts.headers?.['X-S9-Manual-Link-Intent']){
     linkPosts.push({payload,opts});
@@ -75,7 +76,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    posts.push({payload,opts});
    return {ok:true,json:async()=>({ok:true,folder:payload.folder||'G123'})};
   }
-  if(p==='/new/api/visual-review?workflow=manual_recording_links_v1')
+  if(p==='/new/api/s9-manual-recording-links')
    return {ok:true,json:async()=>({ok:true,revision:linkRevision,items:linkItems,
      manual_links_only:true,automatic_identity_matching:false})};
   if(p==='/new/api/drive-saved')return {ok:true,json:async()=>({
@@ -182,7 +183,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(el('pageSize').value==='','Select mock has no initial value');
  el('pageSize').value='96';el('pageSize').handlers.change();
  for(let i=0;i<4;i++)await flush();
- assert(fetches.some(p=>p.includes('limit=48')),'Bounding page size protects v40 backend');
+ assert(fetches.some(p=>p.includes('limit=24')),'Bounding page size protects v40 backend');
  assert.match(el('reviewTotal').textContent,/unassigned recordings/);
  assert(!scan(el('reviewGrid'),'View face candidate 1'),'Background crops must not be called faces');
  const archiveEntry=el('reviewGrid').children[0];
