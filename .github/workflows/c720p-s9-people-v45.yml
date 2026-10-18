@@ -29,3 +29,13 @@ jobs:
           node --check ops/c720p/s9-native-security/security-people-v45.js
           node ops/c720p/s9-native-security/test-people-v45.js
           python3 -m py_compile ops/c720p/s9-native-security/deploy-people-v45.py
+          python3 - <<'PY'
+          from pathlib import Path
+          d=Path("ops/c720p/s9-native-security/deploy-people-v45.py").read_text()
+          for marker in ("c720p-surveillance.html", "s9FacesGalleryFrame",
+                         "LEGACY_PEOPLE.sub(", "TRACKS_ENTRY.subn(",
+                         "visible_people_route_verified", "visible_tracks_route_verified",
+                         "legacy_frame_in_deployed_files", "850000 if k==\"shell\" else 220000"):
+              assert marker in d,marker
+          print("S9_VISIBLE_IFRAME_ROUTE_CONTRACT_PASS")
+          PY
