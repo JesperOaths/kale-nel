@@ -68,7 +68,7 @@ def main():
           "Nice=12\nIOSchedulingClass=idle\n"
           "NoNewPrivileges=yes\n").encode()
  timer=("[Unit]\nDescription=Check S9+ thermal/idle window for V5 archive review\n"
-        "[Timer]\nOnBootSec=5min\nOnUnitInactiveSec=5min\n"
+        "[Timer]\nOnCalendar=*:0/5\n"
         "AccuracySec=1min\nRandomizedDelaySec=2min\n"
         "Persistent=true\nUnit="+UNIT+".service\n"
         "[Install]\nWantedBy=timers.target\n").encode()
@@ -79,10 +79,19 @@ def main():
   stage_atomic(TIMER,timer,0o644)
   run("systemctl","--user","daemon-reload")
   run("systemctl","--user","enable","--now",UNIT+".timer")
+  # Re-arm the TIMER unit itself: enable --now does not re-schedule an
+  # already-active timer stuck in SubState=elapsed. Never restart the
+  # Camera2 phone app or the service from this bootstrap.
+  run("systemctl","--user","restart",UNIT+".timer")
   enabled=run("systemctl","--user","is-enabled",UNIT+".timer")
   active=run("systemctl","--user","is-active",UNIT+".timer")
   if enabled!="enabled" or active!="active":
    raise RuntimeError("systemd_timer_not_persistently_enabled")
+  metadata=run("systemctl","--user","show",UNIT+".timer",
+               "--property=SubState,NextElapseUSecRealtime","--no-pager")
+  values=dict(line.split("=",1) for line in metadata.splitlines() if "=" in line)
+  if values.get("SubState")!="waiting" or not values.get("NextElapseUSecRealtime"):
+   raise RuntimeError("calendar_timer_not_rearmed_with_future_deadline")
  except Exception:
   for target,old in previous.items():
    if old is None:
@@ -97,6 +106,7 @@ def main():
     "timer_active":True,"timer_enabled":True,
     "run_on":"C720P_user_systemd","camera_apk_changed":False,
     "recordings_modified":False,"initial_scan_started":False,
-    "check_interval_minutes":5},sort_keys=True),flush=True)
+    "check_interval_minutes":5,"timer_substate":values["SubState"],
+    "has_next_calendar_deadline":True},sort_keys=True),flush=True)
 
 if __name__=="__main__":main()
