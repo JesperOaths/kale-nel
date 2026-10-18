@@ -584,6 +584,7 @@ function reviewFacesForClip(item){
 function reviewItem(item,compact){
  const root=elt('article','',compact?'review-row':'evidence');
  root.dataset.clip=String(item.clip||'');
+ root.dataset.source=item.source==='drive'?'drive':'sd';
  const media=sceneFor(item);
  const info=elt('div','',compact?'row-info':'body');
  badge(media,item.source==='drive'?'GOOGLE DRIVE':item.unindexed?'S9+ MICROSD':item.decision==='approved'?'SAVED':item.person_recheck_required?'RECHECK':'S9+');
@@ -1013,7 +1014,8 @@ function renderFolder(){
   for(const entry of state.archiveEntries){
    const override=state.extraLinks?.items?.[assignmentKey(entry)];
    if(!override||override.folder!==state.folder)continue;
-   if(Array.from(host.children).some(x=>x.dataset?.clip===entry.clip))continue;
+   if(Array.from(host.children).some(x=>x.dataset?.clip===entry.clip&&
+      x.dataset?.source===entry.source))continue;
    host.append(reviewItem({...entry,decision:'approved',
      manualAssignment:true,unindexed:entry.source==='drive'||!state.clipEvidence.has(entry.clip)},false));
   }
