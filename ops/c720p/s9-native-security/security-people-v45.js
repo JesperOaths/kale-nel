@@ -400,26 +400,39 @@ function choosePortrait(f,face){
  notification('Folder photo selected on this browser. Your review approvals were not changed.');
  renderFolder();
 }
+function approvedPreviewClip(preview){
+ for(const value of [preview?.clip,preview?.clip_no,preview?.source_clip,preview?.name]){
+  const m=/^(motion_[0-9]{13}[.]mp4)(?:[.]|$)/.exec(String(value||''));
+  if(m)return m[1];
+ }
+ return '';
+}
+function automaticPortrait(f){
+ if(!f||!num(f.approved_clips))return null;
+ const approved=new Set((Array.isArray(f.previews)?f.previews:[])
+  .map(approvedPreviewClip).filter(Boolean));
+ if(state.folder===f.id){
+  for(const item of state.doc?.items||[])if(item.decision==='approved'&&clipName.test(String(item.clip||'')))
+   approved.add(item.clip);
+ }
+ if(!approved.size)return null;
+ return state.faceList.filter(x=>approved.has(x.clip)).sort((a,b)=>
+  Number(a.face.face_crop_padded_context_only===true)-Number(b.face.face_crop_padded_context_only===true)||
+  num(b.face.snapshot_size)-num(a.face.snapshot_size)||
+  String(a.face.snapshot_name).localeCompare(String(b.face.snapshot_name)))[0]||null;
+}
 function profileRow(f){
  const b=control('',()=>openFolder(f.id),'profile');b.replaceChildren();
  const avatar=elt('div','', 'avatar');
- const face=chosenPortrait(f);
+ const face=chosenPortrait(f)||automaticPortrait(f);
  if(face){
   avatar.append(mediaForFace(face));
+  avatar.title='Photo from reviewed footage · illustrative, not independently identified';
  }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
- // Only use a face from an approved reference recording. This is a visual
- // reference, never an automatic claim that the cropped face is this person.
- const references=Array.isArray(f.previews)?f.previews:[];
- const approvedClips=new Set(references.map(x=>String(x.clip||x.clip_no||x.source_clip||'')));
- const portrait=state.faceList.find(x=>approvedClips.has(x.clip));
- if(portrait&&!face){
-  avatar.replaceChildren(mediaForFace(portrait));
-  avatar.title='Face from an approved recording · verify which person appears';
- }
  const info=elt('div');info.append(elt('strong',f.label),
   elt('small',num(f.approved_clips)+' reviewed '+(num(f.approved_clips)===1?'recording':'recordings')+
     (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')),
-  elt('small',face?'Manually selected folder photo':'Open folder to choose face photo'));
+  elt('small',face?'Photo chosen from reviewed footage':'No saved face photo available'));
  b.append(avatar,info,elt('span','Open recordings →','arrow'));
  return b;
 }
@@ -553,8 +566,8 @@ function renderFolder(){
   const cell=elt('div','','folder-photo-choice');
   const button=control('',()=>inspectFaceSnapshot(face),'folder-face');
   button.replaceChildren(mediaForFace(face),elt('small',stampMs(Number(face.clip.slice(7,20)))+' · View'));
-  const selected=chosenPortrait(f)?.face.snapshot_name===face.face.snapshot_name;
-  const set=control(selected?'✓ Folder photo':'Use as folder photo',()=>choosePortrait(f,face),'secondary');
+  const selected=(chosenPortrait(f)||automaticPortrait(f))?.face.snapshot_name===face.face.snapshot_name;
+  const set=control(selected?'✓ Cover photo':'Change cover photo',()=>choosePortrait(f,face),'secondary');
   set.setAttribute('aria-pressed',String(selected));
   cell.append(button,set);faceGrid.append(cell);
  }
