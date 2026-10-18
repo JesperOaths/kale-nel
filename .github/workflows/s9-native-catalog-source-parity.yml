@@ -1,0 +1,37 @@
+name: S9 native archive catalog source parity
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/phone_archive_catalog_v1.py'
+      - 'ops/c720p/security-runtime/test-phone-archive-catalog-v1.py'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java'
+      - '.github/workflows/s9-native-catalog-source-parity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/phone_archive_catalog_v1.py'
+      - 'ops/c720p/security-runtime/test-phone-archive-catalog-v1.py'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java'
+      - '.github/workflows/s9-native-catalog-source-parity.yml'
+permissions:
+  contents: read
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify private S9 native catalog parsing and thumbnail integrity
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/phone_archive_catalog_v1.py
+          python3 ops/c720p/security-runtime/test-phone-archive-catalog-v1.py
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java').read_text()
+          for marker in ('s9_native_archive_catalog_v1','loopback','MAX_TOTAL','snapshot_id'):
+              assert marker in src, marker
+          for forbidden in ('WhisperService','AudioRecord','recognizePersonByName'):
+              assert forbidden not in src
+          print('S9_SOURCE_ONLY_CATALOG_PARITY_PASS')
+          PY
