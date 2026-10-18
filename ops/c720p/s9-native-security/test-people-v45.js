@@ -31,15 +31,24 @@ const idMap=new Map();const el=id=>{if(!idMap.has(id))idMap.set(id,new E());retu
 const panes=['overview','review','people','faces'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
 const document={getElementById:el,createElement:t=>new E(t),querySelectorAll:q=>q==='[data-pane]'?panes:[],addEventListener(){}};
 const clip='motion_1792200000000.mp4';
+const secondClip='motion_1792200300000.mp4';
 const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observation:'v1',signature:'b'.repeat(64),
  full_crop:{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg',time_ms:2500},video_path:'/new/saved/clip/'+clip,
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
 const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
-let posts=[],fetches=[],holdAll=false,releaseHeldAll=null;
+let posts=[],pairPosts=[],fetches=[],holdAll=false,releaseHeldAll=null;
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
+  if(p==='/new/api/s9-face-pair-review'&&opts.method==='POST'){
+   const payload=JSON.parse(opts.body);pairPosts.push({payload,opts});
+   return {ok:true,json:async()=>({ok:true,revision:1,manual_visual_review_only:true})};
+  }
+  if(p==='/new/api/s9-face-pair-review')
+   return {ok:true,json:async()=>({ok:true,revision:pairPosts.length,pairs:[],
+       counts:{same_person:pairPosts.length,different_people:0,uncertain:0},
+       no_automatic_identity_matching:true})};
   if(p.startsWith('/new/api/visual-review/review')){
    const payload=JSON.parse(opts.body);posts.push({payload,opts});
    return {ok:true,json:async()=>({ok:true,folder:payload.folder||'G123'})};
@@ -60,7 +69,11 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
      {id:'Person 2',upper_clothing_colour:'red',image_movement_direction:'insufficient_samples'}],
     face_candidates:[{snapshot_name:'motion_1792200000000__pending_1__6365_0.jpg',time_ms:6365,
     face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
-    {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]}]})};
+    {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]},
+   {clip_no:secondClip,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',
+    face_candidates:[{snapshot_name:'motion_1792200300000__pending_1__3200_0.jpg',
+     time_ms:3200,face_crop_requires_manual_review:true,
+     match_status:'not_tested_no_usable_face'}]}]})};
   throw Error('Unexpected request '+p);
  }};
 const window={C720PSecureRelay:relay};window.parent=window;window.addEventListener=()=>{};
@@ -75,10 +88,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
- assert.equal(el('faceCount').textContent,'1');
+ assert.equal(el('faceCount').textContent,'2');
  assert.equal(el('personScanLabel').textContent,'80 / 141');
- assert.equal(el('faceScanLabel').textContent,'1 / 1 · reviewed');
- assert.match(el('facePhotoStatus').textContent,/1 saved face images available · 1 candidate records have no saved image/);
+ assert.equal(el('faceScanLabel').textContent,'2 / 2 · reviewed');
+ assert.match(el('facePhotoStatus').textContent,/2 saved face images available · 1 candidate records have no saved image/);
  assert.equal(el('faceScanProgress').value,100);
  assert.equal(el('savedPreview').children.length,1,'Provisional clothing group must not appear as confirmed person');
  assert.equal(el('appearancePreview').children.length,1,'Unreviewed group is optional separate list');
@@ -136,7 +149,33 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[3].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('faces').hidden,false);
- assert.equal(el('faceGrid').children.length,1);
+ assert.equal(el('faceGrid').children.length,2);
+ assert(scan(el('faceGrid'),'Select first face'),'Comparison selector available in face gallery');
+ let chosen=scan(el('faceGrid'),'Select first face');chosen.handlers.click();
+ assert.match(el('pairFirstStatus').textContent,/First face:/);
+ const compare=scan(el('faceGrid'),'Compare with first face');
+ assert(compare,'Second recording can be selected for paired review');
+ compare.handlers.click();
+ assert(el('pairDialog').open);
+ assert(el('pairImage0').children.length&&el('pairImage1').children.length);
+ el('pairDecision').value='same_person';
+ el('pairSubmit').handlers.click();
+ for(let i=0;i<3;i++)await flush();
+ assert.equal(pairPosts.length,0,'Pair review must not save before both source recordings opened');
+ el('pairOriginal0').handlers.click();
+ el('viewer').close();
+ el('pairOriginal1').handlers.click();
+ el('viewer').close();
+ el('pairConfirm').checked=true;
+ el('pairSubmit').handlers.click();
+ for(let i=0;i<8;i++)await flush();
+ assert.equal(pairPosts.length,1,'Explicitly reviewed pair saved exactly once');
+ assert.equal(pairPosts[0].payload.decision,'same_person');
+ assert.equal(pairPosts[0].payload.left_original_viewed,true);
+ assert.equal(pairPosts[0].payload.right_original_viewed,true);
+ assert.equal(pairPosts[0].opts.headers['X-S9-Face-Pair-Intent'],'manual-originals-pair-v1');
+ assert.equal(el('pairDialog').open,false);
+ assert.match(el('pairReviewSummary').textContent,/1 same/);
  const faceInspect=scan(el('faceGrid'),'Inspect image');
  assert(faceInspect,'Face gallery must allow inspection of original saved image');
  faceInspect.handlers.click();
