@@ -38,6 +38,24 @@ class Step2(unittest.TestCase):
   self.assertTrue(status["installer_timer_active"])
   self.assertEqual(status["installer_last_event"],"deferred_motion_or_background_work")
   self.assertTrue(status["installer_state_ref_matches_current"])
+ def test_current_signed_release_and_healthy_recurring_timer_are_independent_of_face_validation(self):
+  self.release["deployment"].update(
+       worker_ref_matches_pin=True,worker_state="complete",
+       timer_healthy_recurrence=True,timer_finite_future_deadline=True)
+  actual=mod.summarize(self.release,self.face,self.pairs)
+  self.assertTrue(actual["signed_upgrade_complete"])
+  self.assertTrue(actual["installer_recurring_after_first_worker"])
+  self.assertTrue(actual["installer_has_future_deadline"])
+  self.assertTrue(actual["original_4k_replay_complete"])
+  self.assertTrue(actual["real_face_pair_validation_complete"])
+  self.assertFalse(actual["automatic_identity_grouping_authorized"])
+  self.assertEqual(actual["status"],"not_complete")
+ def test_stale_signed_worker_state_not_counted_as_completed_release(self):
+  self.release["deployment"].update(worker_ref_matches_pin=False,
+                                   worker_state="stale_other_revision")
+  actual=mod.summarize(self.release,self.face,self.pairs)
+  self.assertTrue(actual["signed_release_installed"])
+  self.assertFalse(actual["signed_upgrade_complete"])
  def test_missing_ground_truth_disables_identity_even_if_camera_healthy(self):
   self.pairs={"reason":"verified_labels_unavailable"}
   output=mod.summarize(self.release,self.face,self.pairs)

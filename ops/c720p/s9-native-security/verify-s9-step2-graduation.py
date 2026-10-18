@@ -26,12 +26,22 @@ def summarize(release,face,pairs):
  actual_negative=int(pairs.get("negative_confirmed_pairs",0))
  calibrated=pairs.get("offline_thresholds_pass") is True
  approved=pairs.get("qualified_for_automated_grouping") is True
+ signed_upgrade_complete=(signed and recording and
+      release.get("deployment",{}).get("worker_ref_matches_pin") is True and
+      release.get("deployment",{}).get("worker_state")=="complete")
+ archive_replay_complete=(counts_consistent and remaining==0 and error_free)
+ real_validation_complete=(actual_positive>0 and actual_negative>0 and calibrated)
  # Keep approval fail-closed even for synthetic threshold passing fixtures.
- completed=bool(signed and recording and remaining==0 and counts_consistent and error_free and
-                actual_positive>0 and actual_negative>0 and calibrated and approved)
+ completed=bool(signed_upgrade_complete and archive_replay_complete and
+                real_validation_complete and approved)
  return {
   "status":"complete" if completed else "not_complete",
   "signed_release_installed":signed,
+  "signed_upgrade_complete":signed_upgrade_complete,
+  "installer_recurring_after_first_worker":release.get("deployment",{}).get("timer_healthy_recurrence") is True,
+  "installer_has_future_deadline":release.get("deployment",{}).get("timer_finite_future_deadline") is True,
+  "original_4k_replay_complete":archive_replay_complete,
+  "real_face_pair_validation_complete":real_validation_complete,
   "continuous_4k_healthy":recording,
   "current_v5_originals_reviewed":current,
   "source_original_4k_clips":total,
