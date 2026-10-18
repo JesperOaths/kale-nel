@@ -67,6 +67,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     {snapshot_name:'motion_1792200000000__pending_2__8300_0.jpg',time_ms:8300,
     snapshot_size:50000,face_crop_requires_manual_review:true,match_status:'not_tested_no_usable_face'},
     {snapshot_name:null,time_ms:7200,match_status:'not_tested_no_usable_face'}]}]})};
+  if(p.startsWith('/new/saved/face/'))return {ok:true,status:200};
   throw Error('Unexpected request '+p);
  }};
 const window={C720PSecureRelay:relay};window.parent=window;window.addEventListener=()=>{};

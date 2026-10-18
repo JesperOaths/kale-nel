@@ -65,34 +65,61 @@ function sceneFor(item){
 }
 // Delay signed face URLs until on-screen, and limit simultaneous on-phone loads.
 const faceQueue=[],facePending=new Set();let faceWorkers=0;
+// Fetch JPEG bytes through the authenticated relay header rather than putting
+// short-lived query tokens in <img src>. Verify MIME type and size first.
+async function authenticatedFaceImageURL(source){
+ const r=relay();
+ if(!r?.fetch)throw Error('Secure relay unavailable');
+ const response=await r.fetch(source,{cache:'no-store'});
+ if(!response.ok)throw Error('Face endpoint HTTP '+response.status);
+ if(typeof response.blob!=='function'||typeof URL==='undefined'||typeof URL.createObjectURL!=='function')
+  return r.url(source); // Node regression mock / older browsers only
+ const blob=await response.blob();
+ if(blob.type!=='image/jpeg'||blob.size<512||blob.size>2200000)
+  throw Error('Invalid face JPEG response');
+ return URL.createObjectURL(blob);
+}
+function installFaceURL(img,url){
+ img.src=url;
+ if(typeof url==='string'&&url.startsWith('blob:')){
+  // Retain the decoded frame, but release its temporary Blob URL.
+  img.addEventListener('load',()=>setTimeout(()=>URL.revokeObjectURL(url),1800),{once:true});
+  img.addEventListener('error',()=>URL.revokeObjectURL(url),{once:true});
+ }
+}
 function pumpFaces(){
  while(faceWorkers<2&&faceQueue.length){
   const {img,source,host}=faceQueue.shift();
   if(!img.isConnected){facePending.delete(img);continue}
   faceWorkers++;
-  let finished=false,retried=false;
+  let complete=false;
   const finish=()=>{
-   if(finished)return;
-   finished=true;faceWorkers=Math.max(0,faceWorkers-1);facePending.delete(img);pumpFaces();
+   if(complete)return;
+   complete=true;faceWorkers=Math.max(0,faceWorkers-1);facePending.delete(img);pumpFaces();
   };
-  const failed=()=>{
-   if(!retried&&img.isConnected){
-    retried=true;
-    // Get a fresh signed URL on transient connection failures.
-    Promise.resolve().then(()=>relay().url(source))
-     .then(url=>{if(img.isConnected)img.src=url;else finish()})
-     .catch(()=>{if(img.isConnected){img.remove();host.append(elt('span','Face image unavailable · inspect original video'))}finish()});
-   }else{
-    if(img.isConnected){img.remove();host.append(elt('span','Face image unavailable · inspect original video'))}
-    finish();
-   }
+  const failure=e=>{
+   if(!img.isConnected){finish();return}
+   img.remove();
+   const message=String(e?.message||'Unable to load');
+   const placeholder=host.querySelector('.face-image-loading');
+   if(placeholder)placeholder.textContent=message.startsWith('Face endpoint HTTP')?message+' · Open recording':'Face image unavailable · Open recording';
+   else host.append(elt('span','Face image unavailable · Open recording'));
+   finish();
   };
   img.addEventListener('load',finish,{once:true});
-  img.addEventListener('error',failed);
-  Promise.resolve().then(()=>relay().url(source))
-   .then(url=>{if(img.isConnected)img.src=url;else finish()})
-   .catch(failed);
-  if(typeof setTimeout==='function')setTimeout(finish,25000);
+  img.addEventListener('error',()=>failure(Error('JPEG decoding failed')),{once:true});
+  (async()=>{
+   try{
+    let url;
+    try{url=await authenticatedFaceImageURL(source)}
+    catch(_){url=await authenticatedFaceImageURL(source)} // one authenticated retry
+    if(img.isConnected)installFaceURL(img,url);else{
+     if(url.startsWith('blob:'))URL.revokeObjectURL(url);
+     finish();
+    }
+   }catch(e){failure(e)}
+  })();
+  if(typeof setTimeout==='function')setTimeout(finish,30000);
  }
 }
 function queueVisibleFace(img,source,host){
@@ -228,7 +255,7 @@ function selectPane(pane){
 }
 function openApproval(item){
  state.approvalItem=item;
- $('approvalPreview').replaceChildren(imageFor(item.full_crop,'Clip to review'));
+ $('approvalPreview').replaceChildren(sceneFor(item));
  const select=$('approvalFolder');select.replaceChildren();
  select.add(new Option('Create a new folder',''));
  for(const f of (state.doc?.folders||[]))if(isSaved(f)||f.id===state.folder)
@@ -238,6 +265,7 @@ function openApproval(item){
  $('newLabel').hidden=!!select.value;
  $('approvalConfirmed').checked=false;
  $('approvalDialog').showModal();
+ if(typeof $('approvalFolder').focus==='function')$('approvalFolder').focus();
 }
 function dismiss(item){
  const currentFolder=state.folder;
@@ -379,7 +407,7 @@ function profileRow(f){
  const references=Array.isArray(f.previews)?f.previews:[];
  const approvedClips=new Set(references.map(x=>String(x.clip||x.clip_no||x.source_clip||'')));
  const portrait=state.faceList.find(x=>approvedClips.has(x.clip));
- if(portrait){
+ if(portrait&&!face){
   avatar.replaceChildren(mediaForFace(portrait));
   avatar.title='Face from an approved recording · verify which person appears';
  }
@@ -572,9 +600,13 @@ function inspectFaceSnapshot(f){
  $('snapshotImage').removeAttribute('src');
  $('snapshotPlay').disabled=false;
  const dialog=$('snapshotViewer');if(!dialog.open)dialog.showModal();
- Promise.resolve().then(()=>relay().url('/new/saved/face/'+encodeURIComponent(f.face.snapshot_name)))
- .then(url=>{if(ticket===state.snapshotRequest&&dialog.open)$('snapshotImage').src=url})
- .catch(()=>{if(ticket===state.snapshotRequest)$('snapshotStatus').textContent='Image unavailable. The original recording remains accessible.'});
+ Promise.resolve().then(()=>authenticatedFaceImageURL('/new/saved/face/'+encodeURIComponent(f.face.snapshot_name)))
+ .then(url=>{
+  if(ticket===state.snapshotRequest&&dialog.open)installFaceURL($('snapshotImage'),url);
+  else if(url.startsWith('blob:'))URL.revokeObjectURL(url);
+ })
+ .catch(e=>{if(ticket===state.snapshotRequest)$('snapshotStatus').textContent=
+   (String(e?.message||'Face image unavailable'))+'. Original recording remains accessible.'});
 }
 function closeFaceSnapshot(){
  ++state.snapshotRequest;
@@ -655,14 +687,21 @@ function render(){
  if(state.pane==='faces')renderFaces();
 }
 function compare(item){
- const examples=state.doc?.reference_examples||[];
+ const examples=(state.doc?.reference_examples||[]).slice(0,3);
  if(!examples.length)return;
- const ref=examples[0],host=$('compareGrid');host.replaceChildren();
- for(const [name,entry] of [['Already approved (reference)',ref],['Proposed appearance (unverified)',item]]){
-  const col=elt('div');col.append(elt('h3',name),imageFor(entry.full_crop,name),
-   elt('p',date(entry),'status'),control('▶ Play original',()=>startVideo(entry)));
+ const host=$('compareGrid');host.replaceChildren();
+ for(const [i,entry] of examples.entries()){
+  const col=elt('div');
+  col.append(elt('h3','Reviewed reference '+(i+1)),
+   sceneFor(entry),elt('p',date(entry)+' · approved example, not automatic identity','status'),
+   control('▶ View reference recording',()=>startVideo(entry)));
   host.append(col);
  }
+ const proposed=elt('div');
+ proposed.append(elt('h3','New clip to compare · unverified'),
+  sceneFor(item),elt('p',date(item)+' · colour alone is unreliable','status'),
+  control('▶ View new recording',()=>startVideo(item)));
+ host.append(proposed);
  $('compareDialog').showModal();
 }
 function openFolderEditor(mode){
@@ -700,6 +739,8 @@ $('editFolder').addEventListener('click',()=>openFolderEditor('edit'));
 $('cancelFolder').addEventListener('click',()=>$('folderDialog').close());
 $('cancelApproval').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalFolder').addEventListener('change',()=>{$('newLabel').hidden=!!$('approvalFolder').value});
+$('approvalPlay').addEventListener('click',()=>{if(state.approvalItem)startVideo(state.approvalItem)});
+$('approvalCancelFooter').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalForm').addEventListener('submit',async e=>{
  e.preventDefault();const item=state.approvalItem;if(!item)return;
  const id=$('approvalFolder').value;
@@ -709,8 +750,9 @@ $('approvalForm').addEventListener('submit',async e=>{
  const ok=await action(id?{action:'approve_clip',folder:id,...fields(item)}:
   {action:'seed_folder',folder:'',label,...fields(item)},result=>{
    notification('Recording kept in the chosen folder.');
-   if(!id&&result.folder){
-    state.folder=result.folder;state.pane='folder';state.tab='approved';state.offset=0;
+   const chosen=id||result.folder;
+   if(chosen){
+    state.folder=chosen;state.pane='folder';state.tab='approved';state.offset=0;
     $('folderMode').value='approved';selectPane('folder');
    }
  });
