@@ -126,7 +126,9 @@ def main():
   "has_pf_navigation":"pfnav" in legacy_text,
   "is_existing_v50_redirect":"security-people-v50.html" in legacy_text,
   "html_bytes":len(legacy_bytes)}),flush=True)
- if not legacy_known:raise RuntimeError("legacy_people_page_identity_unverified")
+ # Unrecognized stub/redirect at the exact V33 path is preserved unchanged.
+ # The currently served navigation is updated to the new V50 filenames below.
+ # Do not overwrite a file merely because its historical name ends in V33.
  out["legacy"]=(
   '<!doctype html><html lang="en"><head><meta charset="utf-8">'
   '<meta name="robots" content="noindex,nofollow">'
@@ -136,6 +138,8 @@ def main():
   '<p>Opening <a href="security-people-v50.html?v=security-visible-route-v50-20261018">People &amp; Faces</a>...</p>'
   '<script>location.replace("security-people-v50.html?v=security-visible-route-v50-20261018")</script>'
   '</body></html>').encode()
+ if not legacy_known:
+  out["legacy"]=legacy_bytes
  hub=prior["hub"][0].decode("utf-8")
  if MARK not in hub:raise RuntimeError("expected_existing_v45_hub")
  if NEW not in hub:
@@ -222,7 +226,7 @@ def main():
    "source_ref":args.ref,"clip_count":len(new_clips),
    "served_sha16":served,"rollback":str(folder),"original_videos_modified":False,
    "camera_modified":False,"existing_approvals_modified":False,
-   "clip_scoped_step3_review_enabled":True,"tracks_navigation_enabled":True,"legacy_route_redirected":True,"fresh_iframe_assets_installed":True,"evidence_archive_ui_updated":True,"automatic_identity_grouping_enabled":False}),flush=True)
+   "clip_scoped_step3_review_enabled":True,"tracks_navigation_enabled":True,"legacy_route_redirected":legacy_known,"legacy_unknown_preserved":not legacy_known,"fresh_iframe_assets_installed":True,"evidence_archive_ui_updated":True,"automatic_identity_grouping_enabled":False}),flush=True)
  except BaseException:
   for k in reversed(changed):
    path=DEST[k];b,owner=prior[k]
