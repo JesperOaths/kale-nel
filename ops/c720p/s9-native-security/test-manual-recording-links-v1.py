@@ -93,6 +93,16 @@ class ManualLinkCases(unittest.TestCase):
   installer=Path(__file__).with_name("deploy-manual-recording-links-v1.py").read_text()
   self.assertIn('api("/new/api/drive-saved")',installer)
   self.assertIn("historical_drive_catalog_missing_after_proxy_restart",installer)
+ def test_drive_preservation_uses_actual_verified_baseline(self):
+  backend=Path(__file__).with_name("deploy-manual-recording-links-v1.py").read_text()
+  relay=Path(__file__).with_name("deploy-manual-recording-links-relay-v2.py").read_text()
+  self.assertIn('drive_baseline=len(before_drive["events"])',backend)
+  self.assertIn('drive_baseline=len(upstream_drive["events"])',relay)
+  self.assertIn('len(drive_catalog["events"])<drive_baseline',backend)
+  self.assertIn('len(drive["events"])<drive_baseline',relay)
+  self.assertNotIn('len(drive["events"])<100',relay)
+  self.assertNotIn('len(drive_catalog["events"])<100',backend)
+  self.assertIn("existing_archive_source_regressed",relay)
  def test_route_does_not_recognize_or_modify_people(self):
   src=SRC.read_text()
   for forbidden in ("cv2.imread","face_embedding","rclone delete",
