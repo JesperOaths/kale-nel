@@ -77,5 +77,13 @@ class Tests(unittest.TestCase):
             for name in ["../secret","motion_1792000000000.mp4","FaceSnapshots/face.jpg"]:
                 with self.assertRaises(ValueError):m.read_asset(name)
             request.assert_not_called()
+    def test_phone_vectors_and_unknown_nested_features_never_enter_hub_cache(self):
+        source=record();source['manifest'].update(appearance_vector=[.5],possible_same_outfit_clips=['other'],
+            face_candidates=[{'snapshot':'crop.jpg','embedding':[1,2],'template':'private'}],
+            anonymous_tracks=[{'id':'Person 1','appearance_vector':[3]}])
+        self.load([page([source])]);cached=self.cache.read_text()
+        self.assertNotIn('embedding',cached);self.assertNotIn('template',cached)
+        self.assertNotIn('appearance_vector',cached);self.assertNotIn('possible_same_outfit',cached)
+        self.assertIn('crop.jpg',cached);self.assertIn('Person 1',cached)
 
 if __name__=="__main__":unittest.main()

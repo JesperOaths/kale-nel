@@ -19,6 +19,36 @@ CACHE=Path("/home/jespern/c720p-home-hub/state/s9-native-archive-client.json")
 NAME=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
 DIGEST=re.compile(r"[a-f0-9]{64}\Z")
 MAX_BYTES=16*1024*1024
+# Match the existing catalog's metadata-only boundary before any disk cache.
+# In particular, native appearance vectors and cross-clip suggestions stay on
+# the phone; no raw face embeddings/templates are transported into hub state.
+METADATA_KEYS=set(('name bytes sha256 width height scene_category person_count categories '
+ 'person_confidence sampled_frame_count duration_ms person_frames_at_050 backend person_event_category '
+ 'capture_event_version capture_event_id capture_segment_index capture_segment_transition capture_previous_segment '
+ 'capture_segment_gap_from_previous_ms thumbnail_rank_version thumbnail_sharpness '
+ 'anonymous_tracking_version anonymous_track_scope anonymous_track_count anonymous_tracks '
+ 'face_review_version face_review_status face_review_sampled_frames face_candidates face_deep_review_version '
+ 'face_crop_geometry_version face_evidence_outcome face_model_state face_shadow_review_version '
+ 'face_shadow_model_trials face_shadow_model_succeeded face_shadow_model_failed face_shadow_matches_created '
+ 'face_shadow_vectors_persisted face_detector_raw_hits face_rejected_confidence_or_size '
+ 'face_rejected_low_confidence face_rejected_small_face face_manual_review_rescue_candidates '
+ 'face_rejected_looking_away_or_roll face_rejected_crop_geometry face_rejected_dark_or_blurry '
+ 'face_crop_padded_manual_count face_rejected_insufficient_native_eye_detail face_deep_detector_anchor_frames '
+ 'face_deep_person_roi_anchors face_deep_multiple_person_anchors face_deep_multiscale_refinement_passes '
+ 'face_deep_tiled_scene_samples face_deep_second_person_roi_samples').split())
+FACE_KEYS=set(('match_status time_ms person_id candidate_name cosine_similarity snapshot snapshot_size_bytes '
+ 'snapshot_sha256 face_crop_requires_manual_review face_crop_padded_context_only').split())
+TRACK_KEYS=set(('temporary_track_id id cross_recording_identity first_sample_ms last_sample_ms sample_count '
+ 'peak_detection_score upper_clothing_colour image_movement_direction image_speed_body_heights_per_second '
+ 'image_path_straightness image_detector_box_aspect_ratio').split())
+
+def safe_metadata(manifest):
+    result={k:v for k,v in manifest.items() if k in METADATA_KEYS}
+    for key,allowed,maximum in [('face_candidates',FACE_KEYS,16),('anonymous_tracks',TRACK_KEYS,64)]:
+        if key not in result:continue
+        rows=result[key]
+        result[key]=[{k:v for k,v in row.items() if k in allowed} for row in rows if isinstance(row,dict)] if isinstance(rows,list) and len(rows)<=maximum else []
+    return result
 
 class Unavailable(RuntimeError):pass
 
@@ -43,7 +73,7 @@ def _record(value):
         raise ValueError("phone_catalog_invalid_thumbnail")
     if value["thumbnail"]!=bool(thumb) or (thumb and not 4000<int(thumb.split(":")[0])<2200000):
         raise ValueError("phone_catalog_thumbnail_contract")
-    return name,value
+    return name,{k:value[k] for k in ('name','bytes','version','thumbnail','thumbnail_version')}|{'manifest':safe_metadata(m)}
 
 def _cached(path):
     if not path.is_file() or path.stat().st_size>MAX_BYTES:return None
@@ -52,7 +82,7 @@ def _cached(path):
         if value.get("schema_version")!=VERSION or not DIGEST.fullmatch(str(value.get("snapshot_id",""))):return None
         records=value.get("records")
         if not isinstance(records,dict) or len(records)>2000:return None
-        if any(_record(v)[0]!=k for k,v in records.items()):return None
+        if any(_record(v)!=(k,v) for k,v in records.items()):return None
         return value
     except (ValueError,TypeError,OSError):return None
 
