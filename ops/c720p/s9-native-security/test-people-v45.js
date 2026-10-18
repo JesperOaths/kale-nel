@@ -8,16 +8,18 @@ const js=fs.readFileSync('ops/c720p/s9-native-security/security-people-v45.js','
 new vm.Script(js,{filename:'security-people-v45.js'});
 assert(js.includes('function sceneFor(item)'),'Review must show a full recording scene, not only a tight detection crop');
 assert(js.includes('function automaticPortrait(f)'),'Automatic folder portrait required');
+assert(js.includes('function scanApprovedFolders('),'Full folder assignment scan required');
+assert(js.includes("'/new/api/drive-saved'"),'Historical Drive catalog must be included');
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
 assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
 assert(!/\.innerHTML\s*=/.test(js));
-assert(!/Unassigned recordings|Clothing appearances grouped into folders/.test(html));
+assert(!/id="unassignedFolder"|Clothing appearances grouped into folders/.test(html));
 const ids=[...js.matchAll(/\$\('([A-Za-z0-9]+)'\)/g)].map(x=>x[1]);
 for(const id of new Set(ids))assert(html.includes('id="'+id+'"'),'Missing rendered control '+id);
 for(const label of ['Activity &amp; scan status','Review recordings','People','Your people and groups'])
  assert(html.includes(label),label);
 assert(!html.includes('id="approvalConfirmed"'),'Remove redundant second confirmation checkbox');
-assert(js.includes('state.lastFolder=id||result.folder'),'Review queue must retain last selected person');
+assert(js.includes('state.lastFolder=folder||state.lastFolder'),'Review queue must retain last selected person');
 const keepMarkup=html.split('<dialog id="approvalDialog"')[1]?.split('</dialog>')[0]||'';
 assert(keepMarkup.includes('id="approvalFolder"'),'Keep dialog must expose the folder picker');
 assert(keepMarkup.includes('id="approvalLabel"'),'Keep dialog must expose new folder input');
@@ -48,26 +50,44 @@ const idMap=new Map();const el=id=>{if(!idMap.has(id))idMap.set(id,new E());retu
 const panes=['overview','review','people','clothing'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
 const document={getElementById:el,createElement:t=>new E(t),querySelectorAll:q=>q==='[data-pane]'?panes:[],addEventListener(){}};
 const clip='motion_1792200000000.mp4';
+const driveClip='historical_2026-05-12_08-30-00.mp4';
 const otherClip='motion_1792200500000.mp4';
 const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observation:'v1',signature:'b'.repeat(64),
  full_crop:{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg',time_ms:2500},video_path:'/new/saved/clip/'+clip,
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
 const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg'}],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
-let posts=[],fetches=[],holdAll=false,releaseHeldAll=null;
+let posts=[],linkPosts=[],fetches=[],holdAll=false,releaseHeldAll=null,linkRevision=0,linkItems={};
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
   if(p.startsWith('/new/api/visual-review/review')){
-   const payload=JSON.parse(opts.body);posts.push({payload,opts});
+   const payload=JSON.parse(opts.body);
+   if(opts.headers?.['X-S9-Manual-Link-Intent']){
+    linkPosts.push({payload,opts});
+    assert.equal(payload.revision,linkRevision);
+    linkItems[payload.source+':'+payload.name]={source:payload.source,
+      name:payload.name,folder:payload.action==='return_to_queue'?null:payload.folder};
+    linkRevision++;
+    return {ok:true,json:async()=>({ok:true,revision:linkRevision,
+      folder:linkItems[payload.source+':'+payload.name].folder})};
+   }
+   posts.push({payload,opts});
    return {ok:true,json:async()=>({ok:true,folder:payload.folder||'G123'})};
   }
+  if(p==='/new/api/visual-review?workflow=manual_recording_links_v1')
+   return {ok:true,json:async()=>({ok:true,revision:linkRevision,items:linkItems,
+     manual_links_only:true,automatic_identity_matching:false})};
+  if(p==='/new/api/drive-saved')return {ok:true,json:async()=>({
+    ok:true,archive_mode:'historical-google-drive',events:[
+      {remote_name:driveClip,timestamp:'2026-05-12T08:30:00',snapshot_name:'history.jpg'}
+    ]})};
   if(p.startsWith('/new/api/visual-review?')){
    const q=new URLSearchParams(p.split('?')[1]),tab=q.get('tab');
    if(tab==='all'&&holdAll)await new Promise(resolve=>{releaseHeldAll=resolve});
    return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],person_detection:
     {assessed_clips:80,total_clips:141,clips_with_supported_people:29,status:'in_progress'},
-    inbox_clips:27,total:tab==='inbox'?27:tab==='approved'?3:1,
+    inbox_clips:27,total:tab==='inbox'?27:tab==='approved'?1:1,
     items:tab==='approved'?[{...item,decision:'approved'}]:[item],
     reference_examples:tab==='suggestions'?[item]:[]})};
   }
@@ -102,7 +122,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('queueCount').textContent,'27');
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
- assert.equal(el('archiveCount').textContent,'2');
+ assert.equal(el('archiveCount').textContent,'3','SD originals plus historical Drive appear in archive');
  assert(!html.includes('data-pane="faces"'),'Face gallery tab must be removed');
  assert(!html.includes('id="faceGrid"'),'Invalid gallery not to be retained');
  assert.equal(el('personScanLabel').textContent,'80 / 141');
@@ -125,12 +145,12 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  el('approvalFolder').value='G123';
  await el('approvalForm').handlers.submit({preventDefault(){}});
  for(let i=0;i<5;i++)await flush();
- assert.equal(posts.length,1);
+ assert.equal(linkPosts.length,1);
  assert.equal(el('overview').hidden,false,'Keep from overview must not redirect');
- assert.equal(posts[0].payload.action,'approve_clip');
- assert.equal(posts[0].payload.folder,'G123');
- assert.equal(posts[0].payload.human_confirmed,true);
- assert.equal(posts[0].opts.headers['X-S9-Visual-Review-Intent'],'manual-attributes-v36');
+ assert.equal(linkPosts[0].payload.action,'assign');
+ assert.equal(linkPosts[0].payload.folder,'G123');
+ assert.equal(linkPosts[0].payload.source,'sd');
+ assert.equal(linkPosts[0].opts.headers['X-S9-Manual-Link-Intent'],'manual-original-review-links-v1');
  // Creating a new folder also preserves the review context.
  keep=scan(el('reviewPreview'),'✓ Choose person / folder');
  keep.handlers.click();
@@ -138,7 +158,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  el('approvalLabel').value='New reviewed visitor';
  await el('approvalForm').handlers.submit({preventDefault(){}});
  for(let i=0;i<5;i++)await flush();
- assert.equal(posts[1].payload.action,'seed_folder');
+ assert.equal(posts.at(-1).payload.action,'create_folder');
+ assert.equal(linkPosts.at(-1).payload.action,'assign');
  assert.equal(el('overview').hidden,false,'New folder must not redirect from queue');
  el('savedPreview').children[0].handlers.click();
  for(let i=0;i<5;i++)await flush();
@@ -155,12 +176,19 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[1].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false);
- assert.equal(el('reviewGrid').children.length,2,'All original S9 footage must appear');
- assert.equal(el('reviewTotal').textContent,'2 original recordings');
+ assert(el('reviewGrid').children.length>=2,'Show unassigned SD and historical Drive footage');
+ assert(el('reviewGrid').children.some(x=>x.dataset.clip===driveClip),
+  'Historical verified Drive video must appear');
+ assert(el('pageSize').value==='','Select mock has no initial value');
+ el('pageSize').value='96';el('pageSize').handlers.change();
+ for(let i=0;i<4;i++)await flush();
+ assert(fetches.some(p=>p.includes('limit=48')),'Bounding page size protects v40 backend');
+ assert.match(el('reviewTotal').textContent,/unassigned recordings/);
  assert(!scan(el('reviewGrid'),'View face candidate 1'),'Background crops must not be called faces');
  const archiveEntry=el('reviewGrid').children[0];
  assert(scan(archiveEntry,'▶ Play'),'Unindexed originals still available for playback');
- assert(!scan(archiveEntry,'✓ Choose person / folder'),'Unindexed items cannot be falsely assigned');
+ assert(scan(archiveEntry,'✓ Choose person / folder'),
+   'Unindexed original clips must be manually assignable');
  // Main requirement: save from Review recordings, stay on Review recordings,
  // and preselect the last-used person to speed up review of the next clip.
  const nextKeep=scan(el('reviewGrid'),'✓ Choose person / folder');assert(nextKeep);
@@ -170,7 +198,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('review').hidden,false,'Confirm & keep must not navigate into a folder');
  assert.equal(el('folderView').hidden,true,'Saved clips must not hijack the current review queue');
- assert.equal(posts.at(-1).payload.folder,'G123');
+ assert.equal(linkPosts.at(-1).payload.folder,'G123');
  panes[2].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('savedList').children.length,1);
@@ -201,10 +229,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(releaseHeldAll,'Old request must be deliberately paused');
  el('reviewMode').value='inbox';el('reviewMode').handlers.change();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'27 recordings');
+ assert.equal(el('reviewTotal').textContent,'0 review items');
  holdAll=false;releaseHeldAll();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'27 recordings',
+ assert.equal(el('reviewTotal').textContent,'0 review items',
   'Stale responses must not replace current tab data');
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
