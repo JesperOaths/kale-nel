@@ -20,6 +20,8 @@ import urllib.request
 HOME=Path("/home/jespern/c720p-home-hub")
 WWW=Path("/opt/homeassistant/config/www/frontyard-security-new")
 TARGETS={
+ "facepairs":(HOME/"bin/s9_face_pair_review.py",
+    "ops/c720p/s9-person-ml-v1/s9_face_pair_review.py"),
  "backend":(HOME/"bin/s9_manual_evidence_cases.py",
     "ops/c720p/s9-person-ml-v1/s9_manual_evidence_cases.py"),
  "proxy":(HOME/"bin/s9_sd_proxy_extension.py",
@@ -90,6 +92,7 @@ def main():
   body=fetch(URL+args.ref+"/"+source,130000)
   if sha(body)!=expected[k]:raise RuntimeError("source_hash_mismatch_"+k)
   required={"backend":b"manual_collection_only",
+    "facepairs":b"not_qualified_model_calibration",
     "proxy":b"s9_manual_evidence_cases.install(H)",
     "ui":b'id="casesTab"'}[k]
   if required not in body:raise RuntimeError("source_contract_missing_"+k)
@@ -135,6 +138,9 @@ def main():
   cases=api("/new/api/s9-evidence-cases")
   if cases.get("ok") is not True or cases.get("manual_collection_only") is not True or cases.get("auto_identity") is not False:
    raise RuntimeError("private_case_route_not_verified")
+  pair_review=api("/new/api/s9-face-pair-review")
+  if pair_review.get("ok") is not True or pair_review.get("no_automatic_identity_matching") is not True:
+   raise RuntimeError("new_pair_review_route_unavailable")
   web=fetch("http://127.0.0.1:8123/local/frontyard-security-new/security-face-folders-v22.html?cases="+args.ref[:12],130000)
   if sha(web)!=expected["ui"]:raise RuntimeError("homeassistant_ui_hash_mismatch")
   print("S9_STEP2_PERSISTENT_CASES_DEPLOY_VERIFIED "+json.dumps({
