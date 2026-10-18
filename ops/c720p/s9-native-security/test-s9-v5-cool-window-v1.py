@@ -192,10 +192,10 @@ class LocalCoolWindow(unittest.TestCase):
  def test_c720p_timer_is_local_not_chatgpt_task(self):
   src=INSTALLER.read_text()
   for mark in ('systemctl","--user","enable","--now"',
-               'OnCalendar=*:0/5','Persistent=true',
+               'OnCalendar=*:0/5','OnActiveSec=2min','OnUnitActiveSec=5min','Persistent=true',
                'NoNewPrivileges=yes','S9_V5_LOCAL_TIMER_VERIFIED',
                'run("systemctl","--user","restart",UNIT+".timer")',
-               'calendar_timer_not_rearmed_state_'):
+               'calendar_timer_not_rearmed_state_','NextElapseUSecMonotonic'):
    self.assertIn(mark,src)
   self.assertNotIn('OnUnitInactiveSec=5min',src)
   self.assertNotIn('run("systemctl","--user","restart",UNIT+".service")',src)
