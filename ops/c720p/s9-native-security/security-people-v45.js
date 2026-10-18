@@ -70,10 +70,29 @@ function pumpFaces(){
   const {img,source,host}=faceQueue.shift();
   if(!img.isConnected){facePending.delete(img);continue}
   faceWorkers++;
+  let finished=false,retried=false;
+  const finish=()=>{
+   if(finished)return;
+   finished=true;faceWorkers=Math.max(0,faceWorkers-1);facePending.delete(img);pumpFaces();
+  };
+  const failed=()=>{
+   if(!retried&&img.isConnected){
+    retried=true;
+    // Get a fresh signed URL on transient connection failures.
+    Promise.resolve().then(()=>relay().url(source))
+     .then(url=>{if(img.isConnected)img.src=url;else finish()})
+     .catch(()=>{if(img.isConnected){img.remove();host.append(elt('span','Face image unavailable · inspect original video'))}finish()});
+   }else{
+    if(img.isConnected){img.remove();host.append(elt('span','Face image unavailable · inspect original video'))}
+    finish();
+   }
+  };
+  img.addEventListener('load',finish,{once:true});
+  img.addEventListener('error',failed,{once:true});
   Promise.resolve().then(()=>relay().url(source))
-   .then(url=>{if(img.isConnected)img.src=url})
-   .catch(()=>{if(img.isConnected){img.remove();host.append(elt('span','Image unavailable · original video preserved'))}})
-   .finally(()=>{faceWorkers--;facePending.delete(img);pumpFaces()});
+   .then(url=>{if(img.isConnected)img.src=url;else finish()})
+   .catch(failed);
+  if(typeof setTimeout==='function')setTimeout(finish,25000);
  }
 }
 function queueVisibleFace(img,source,host){
