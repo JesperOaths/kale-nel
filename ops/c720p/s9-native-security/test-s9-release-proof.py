@@ -96,6 +96,29 @@ class ReleaseProofTests(TestCase):
   with mock.patch.object(m.subprocess,"run",return_value=
       mock.Mock(returncode=1,stdout="")):
    self.assertFalse(m.effective_timer_rules()["timer_effective_rule_available"])
+ def test_repaired_timer_recurs_after_first_worker_or_during_execution(self):
+  stages=[
+   ({"timer_SubState":"running","service_ActiveState":"activating",
+     "timer_effective_rule_declarations":["OnUnitInactiveSec=",
+        "OnActiveSec=2min","OnUnitActiveSec=5min","OnCalendar=*:0/5"],
+     "timer_NextElapseUSecMonotonic":"infinity"},True,False,True),
+   ({"timer_SubState":"waiting","service_ActiveState":"inactive",
+     "timer_effective_rule_declarations":["OnActiveSec=2min","OnUnitActiveSec=5min"],
+     "timer_NextElapseUSecMonotonic":"123456789"},True,True,False),
+   ({"timer_SubState":"elapsed","service_ActiveState":"inactive",
+     "timer_effective_rule_declarations":["OnBootSec=5min","OnUnitInactiveSec=5min"],
+     "timer_NextElapseUSecMonotonic":"infinity"},False,False,False),
+   ({"timer_SubState":"waiting","service_ActiveState":"inactive",
+     "timer_effective_rule_declarations":["OnActiveSec=2min"],
+     "timer_NextElapseUSecRealtime":""},False,False,False),
+   ({"timer_SubState":"running","service_ActiveState":"inactive",
+     "timer_effective_rule_declarations":["OnActiveSec=2min"]},False,False,False)]
+  for data,healthy,future,running in stages:
+   with self.subTest(data=data):
+    got=m.timer_health_flags(data)
+    self.assertEqual(got["timer_healthy_recurrence"],healthy)
+    self.assertEqual(got["timer_finite_future_deadline"],future)
+    self.assertEqual(got["timer_guarded_worker_running"],running)
  def test_worker_state_distinguishes_old_revision_from_pinned_release(self):
   source=P.read_text()
   for name in ("worker_ref_matches_pin","worker_state_source_ref",
