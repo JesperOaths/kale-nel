@@ -183,7 +183,7 @@ evidenceButtons.forEach(b=>b.addEventListener('click',()=>{
 }));
 if(mode==='evidence')document.body.classList.add('evidence-mode');
 $('title').textContent=mode==='today'?"Today's recordings":"Evidence & analytics";
-$('intro').textContent=mode==='today'?'Clips recorded today, Amsterdam time. Historical clips remain in Archive.':'Browse recordings by evidence category; inspect the original video and measured detection results on the right.';
+$('intro').textContent=mode==='today'?'Clips recorded today, Amsterdam time. Historical clips remain in Archive.':'Activity statistics across S9+ microSD and the historical Drive archive.';
 $('cliplabel').textContent=mode==='today'?'Today’s clips':'Indexed clips';
 function relay(){if(window.C720PSecureRelay?.url&&window.C720PSecureRelay?.fetch)return window.C720PSecureRelay;
 try{if(window.parent!==window&&window.parent.C720PSecureRelay?.url)return window.parent.C720PSecureRelay}catch(_){}return null}
@@ -432,8 +432,8 @@ function render(){
  const host=$('list');host.replaceChildren();
  if(!result.length){host.append(text('div',mode==='today'?'No indexed clips today yet. Camera status is independent of recording count.':'No matching recordings.','empty'));return;}
  for(const rec of result.slice(0,400)){
-  const card=text('button','','clip');card.type='button';card.dataset.clip=name(rec);
-  card.setAttribute('aria-selected',String(state.selected===name(rec)));pic(rec,card);
+  const card=text('button','','clip');card.type='button';card.dataset.clip=entryKey(rec);
+  card.setAttribute('aria-selected',String(state.selected===entryKey(rec)));pic(rec,card);
   const labels=text('div','','clip-label');labels.append(text('strong',fmt(rec)),text('small',label(rec)));
   const cs=text('div','','chips');cs.append(text('span',Number(rec.sampled_frames||0)>0?'Reviewed '+rec.sampled_frames+' frames':'Unreviewed','chip'));
   if(rec.person_score!==null&&rec.person_score!==undefined&&Number.isFinite(Number(rec.person_score)))cs.append(text('span','Peak '+(Number(rec.person_score)*100).toFixed(0)+'%','chip'));
