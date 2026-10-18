@@ -26,7 +26,8 @@ jobs:
           const source=fs.readFileSync('ops/c720p/s9-native-security/face-appearances.html.txt','utf8');
           for(const x of ['.more[hidden]','/new/saved/snap/','/new/saved/clip/',
            'data-kind="review"','Recording ready','<div id="playerState"',
-           'security-video-playback.js', 'id="playerLoading"', 'id="playerOriginal"'])assert(source.includes(x),x);
+           'id="playerLoading"', 'id="playerOriginal"'])assert(source.includes(x),x);
+          assert(!source.includes('security-video-playback.js'),'Smooth derived playback must remain retired');
           for(const m of source.matchAll(/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);
           console.log('PEOPLE_FACES_PER_CLIP_V19_HTML_JS_PASS');
           JS
@@ -40,7 +41,8 @@ jobs:
           PY
   deploy:
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    # Retired V19 must never overwrite the current People & Faces V45/V50 interface.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
