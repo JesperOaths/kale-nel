@@ -118,6 +118,12 @@ details summary{user-select:none}
 footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 @media(max-width:1000px){.overview-layout{grid-template-columns:1fr}.side-column{grid-template-columns:1fr 1fr}.folder-layout{grid-template-columns:1fr}.folder-aside{position:static}}
 @media(max-width:650px){body{padding:12px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.side-column{grid-template-columns:1fr}.top{align-items:start}.tabs button{flex:1;padding:7px;font-size:12px}.review-row{grid-template-columns:105px minmax(0,1fr)}.review-row .media{width:105px;height:120px}.review-row .actions button{flex:1}.compare-columns{grid-template-columns:1fr}}
+.step3-evidence{margin-top:12px;border-top:1px solid #38566a;padding-top:10px;display:grid;gap:8px}
+.step3-evidence>strong{font-size:12px;letter-spacing:.02em;color:var(--mint)}
+.step3-evidence-lines{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.step3-evidence-lines span{display:block}
+.step3-face-links{display:flex;gap:7px;flex-wrap:wrap}
+.step3-face-links button{min-height:33px;font-size:12px;padding:5px 9px}
 </style>
 <script defer src="/local/frontyard-security-new/security-people-v45.js?v=v46-20261018-snapshot-inspector-r1"></script>
 <script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
@@ -193,6 +199,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <button id="backFolders" class="back" type="button">← Back to People &amp; groups</button>
  <div class="section-head"><div><span class="kicker">REVIEWED FOLDER</span><h2 id="folderTitle">Folder</h2><p id="folderDescription"></p></div><button id="editFolder" type="button">Edit folder</button></div>
  <div id="folderRecheck" class="folder-recheck" role="status" hidden></div>
+ <p class="subnotice">Step 3 evidence: saved face crops, clothing and measured image movement appear alongside the exact original 4K recording. A clip may contain several people: these observations are not automatically associated with any individual or across recordings.</p>
  <div class="filters"><label>Show<select id="folderMode"><option value="approved">Approved recordings</option><option value="suggestions">Suggested appearances</option><option value="assign">Add from queue</option><option value="rejected">Rejected</option></select></label>
  <label id="distanceLabel">Colour distance<select id="distance"><option value="0.15">Close</option><option value="0.35" selected>Similar</option><option value="0.65">Broad</option><option value="1">Any colour</option></select></label>
  <label id="weakLabel">Low-confidence detections<select id="weak"><option value="0" selected>Exclude</option><option value="1">Include</option></select></label>

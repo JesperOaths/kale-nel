@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'overview',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,faceFetchToken:0,snapshotRequest:0,snapshotSelected:null};
+ faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -95,10 +95,12 @@ async function fetchFaces(){
   if(!r.ok||data.archive_mode!=='S9-microSD-only'||!Array.isArray(data.events))
    throw Error('S9+ face image archive unavailable');
   const found=[];
+  const byClip=new Map();
   let candidateRecords=0;
   const v5Reviewed=data.events.filter(rec=>rec.face_deep_review_version==='s9_onphone_36_samples_overlapping_tiles_v5').length;
   for(const rec of data.events){
    if(!clipName.test(String(rec.clip_no||'')))continue;
+   byClip.set(rec.clip_no,rec);
    const candidates=Array.isArray(rec.face_candidates)?rec.face_candidates:[];
    candidateRecords+=candidates.length;
    for(const face of candidates.slice(0,48)){
@@ -107,16 +109,18 @@ async function fetchFaces(){
     found.push({clip:rec.clip_no,face,recording:rec});
    }
   }
+  state.clipEvidence=byClip;
   state.faceList=found.sort((a,b)=>String(b.clip).localeCompare(String(a.clip)));
   state.faceSummary={reviewed:v5Reviewed,total:data.events.length,
    snapshots:found.length,withoutSnapshot:Math.max(0,candidateRecords-found.length)};
   state.faceLoaded=true;
   $('faceCount').textContent=String(found.length);
   renderMetrics();
-  if(state.pane==='faces')renderFaces();
+  if(state.doc)render();
  }catch(e){
   if(requestToken!==state.faceFetchToken)return;
   state.faceSummary=null;
+  state.clipEvidence=new Map();
   $('faceCount').textContent='—';
   $('faceScanLabel').textContent='Unavailable';
   $('facePhotoStatus').textContent='Face snapshot metadata is currently unavailable. Try Refresh.';
@@ -207,6 +211,51 @@ async function playVideo(path,title,seconds){
   $('video').src=url;$('video').load();
  }catch(e){if(ticket===state.playSerial)$('videoStatus').textContent='Could not access the recording: '+e.message}
 }
+// Step 3: display observations anchored to the EXACT original clip. A
+// recording may contain multiple people; NEVER pair a face with a particular
+// track or declare the same person across recordings from these observations.
+const movementLabels=Object.freeze({
+ image_left:'moves left across image',image_right:'moves right across image',
+ image_up:'moves upward in image',image_down:'moves downward in image',
+ stationary:'little image movement',insufficient_samples:'direction not measured'
+});
+const colourLabels=new Set(['black','white','grey','gray','blue','red','green','yellow',
+ 'orange','purple','pink','brown','tan','beige','multicolour','multicolor']);
+function step3ClipEvidence(item){
+ const clip=String(item?.clip||'');
+ const record=clipName.test(clip)?state.clipEvidence.get(clip):null;
+ const root=elt('div','','step3-evidence');
+ root.append(elt('strong','Evidence from this recording'));
+ const details=elt('div','','step3-evidence-lines');
+ const faces=state.faceList.filter(f=>f.clip===clip).slice(0,8);
+ const tracks=record&&Array.isArray(record.anonymous_tracks)?
+  record.anonymous_tracks.slice(0,8):[];
+ if(!record){
+  details.append(elt('span',state.faceLoaded?
+   'Additional face and movement metadata unavailable for this clip':
+   'Loading independent face and movement observations…'));
+ }else{
+  details.append(elt('span',faces.length+' saved face '+(faces.length===1?'image':'images')+
+   ' · '+tracks.length+' temporary within-clip '+(tracks.length===1?'track':'tracks')));
+  if(tracks.length){
+   for(const [i,track] of tracks.entries()){
+    const shade=String(track?.upper_clothing_colour||'').toLowerCase();
+    const colour=colourLabels.has(shade)?shade:'colour not measured';
+    const direction=movementLabels[track?.image_movement_direction]||'direction not measured';
+    details.append(elt('span','Track '+(i+1)+' · clothing '+colour+' · '+direction));
+   }
+  }
+  details.append(elt('span','Body pose and gait: not verified · No cross-clip identity claim'));
+ }
+ root.append(details);
+ if(faces.length){
+  const buttons=elt('div','','step3-face-links');
+  for(const [i,face] of faces.entries())
+   buttons.append(control('Inspect face '+(i+1),()=>inspectFaceSnapshot(face),'secondary'));
+  root.append(buttons);
+ }
+ return root;
+}
 function reviewItem(item,compact){
  const root=elt('article','',compact?'review-row':'evidence');
  const media=imageFor(item.full_crop,'Cropped evidence from original recording');
@@ -230,6 +279,7 @@ function reviewItem(item,compact){
  if(state.folder&&state.doc?.reference_examples?.length&&item.decision!=='approved')
   tools.append(control('Compare',()=>compare(item)));
  info.append(tools);
+ if(!compact)info.append(step3ClipEvidence(item));
  if(compact)root.append(media,info);
  else root.append(media,info);
  return root;
@@ -462,6 +512,7 @@ $('faceMode').addEventListener('change',()=>{state.facePage=0;renderFaces()});
 $('refresh').addEventListener('click',()=>{
  state.faceLoaded=false;
  state.faceSummary=null;
+ state.clipEvidence=new Map();
  loadView();
  fetchFaces();
 });

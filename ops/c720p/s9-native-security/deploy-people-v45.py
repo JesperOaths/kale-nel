@@ -28,10 +28,10 @@ ORIG={
  "js":"ops/c720p/s9-native-security/security-people-v45.js",
 }
 BACK=Path("/home/jespern/c720p-home-hub/backups/s9-people-v45-real-route")
-OLD="security-people-v45.html?v=s9pf-v46-face-coverage-20261018&"
-NEW="security-people-v45.html?v=s9pf-v46-inspect-original-crop-20261018&"
-ENTRY_OLD="security-hub-v30.js?v=people-faces-v46-coverage-20261018"
-ENTRY_NEW="security-hub-v30.js?v=people-faces-v46-inspect-original-crop-20261018"
+OLD="security-people-v45.html?v=s9pf-v46-inspect-original-crop-20261018&"
+NEW="security-people-v45.html?v=s9pf-v47-clip-context-20261018&"
+ENTRY_OLD="security-hub-v30.js?v=people-faces-v46-inspect-original-crop-20261018"
+ENTRY_NEW="security-hub-v30.js?v=people-faces-v47-clip-context-20261018"
 MARK="s9-people-v45-real-route"
 def digest(b):return hashlib.sha256(b).hexdigest()
 def get(url,limit=220000):
@@ -81,11 +81,11 @@ def main():
   b=get("https://raw.githubusercontent.com/JesperOaths/kale-nel/"+args.ref+"/"+source)
   if k=="html":
    for phrase in (b'id="reviewPreview"',b'id="snapshotViewer"',b'id="snapshotImage"',b'id="snapshotPlay"',b'id="personScanProgress"',b'id="faceScanProgress"',b'id="facePhotoStatus"',b'id="reviewAlerts"',b'id="folderRecheck"',b'id="savedPreview"',b'id="faceGrid"',
-                  b'id="approvalConfirmed"',b"security-people-v45.js"):
+                  b'id="approvalConfirmed"',b"security-people-v45.js",b"step3-evidence"):
     if phrase not in b:raise RuntimeError("html_interface_contract_missing")
   else:
    for phrase in (b"clip_folders_v40",b"manual-attributes-v36",
-                  b"human_confirmed:true",b"loadView()",b"fetchFaces()",b"inspectFaceSnapshot(f)"):
+                  b"human_confirmed:true",b"loadView()",b"fetchFaces()",b"inspectFaceSnapshot(f)",b"step3ClipEvidence(item)"):
     if phrase not in b:raise RuntimeError("js_review_contract_missing")
   out[k]=b
  hub=prior["hub"][0].decode("utf-8")
@@ -141,7 +141,8 @@ def main():
    "served_route":"security-hub-v30.html -> security-hub-v30.js -> security-people-v45.html -> security-people-v45.js",
    "source_ref":args.ref,"clip_count":len(new_clips),
    "served_sha16":served,"rollback":str(folder),"original_videos_modified":False,
-   "camera_modified":False,"existing_approvals_modified":False}),flush=True)
+   "camera_modified":False,"existing_approvals_modified":False,
+   "clip_scoped_step3_review_enabled":True,"automatic_identity_grouping_enabled":False}),flush=True)
  except BaseException:
   for k in reversed(changed):
    path=DEST[k];b,owner=prior[k]
