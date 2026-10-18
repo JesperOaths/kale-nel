@@ -132,7 +132,7 @@ async function manualLink(item,folder){
     'X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
    body:JSON.stringify(data)});
   const outcome=await response.json();
-  if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not save folder link');
+  if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not file recording under person');
   await fetchExtraLinks();
   state.lastFolder=folder||state.lastFolder;
   notification(folder?'Recording filed under person':'Recording returned to review');
@@ -559,7 +559,7 @@ function reviewItem(item,compact){
  const tools=elt('div','','actions');
  tools.append(control(item.person_recheck_required?'🔎 Recheck person evidence':'▶ Play',()=>startVideo(item)));
  if(item.decision==='approved'){
-  if(state.folder)tools.append(control('↩ Return to recordings',
+  if(state.folder)tools.append(control('↩ Return to review queue',
     ()=>manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},null),'secondary'));
   else tools.append(control('Saved ✓',()=>{},'secondary'));
  }else if(item.unindexed||item.source==='drive'){
@@ -596,14 +596,14 @@ function choosePortrait(f,face){
  const id=String(f.id||''),name=String(face?.face?.snapshot_name||'');
  if(!id||!faceName.test(name)||!credibleFaceCrop(face)||
      !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
-  alertText('Choose a face image from an approved recording in this folder.');return;
+  alertText('Choose a face image from a recording confirmed for this person.');return;
  }
  const data={name,clip:face.clip};state.folderPortraits.set(id,data);
  if(typeof localStorage!=='undefined'){
   try{localStorage.setItem(portraitKey(id),JSON.stringify(data))}
-  catch(_){notification('Folder photo selected for this session; browser storage is unavailable.')}
+  catch(_){notification('Person portrait selected for this session; browser storage is unavailable.')}
  }
- notification('Folder photo selected on this browser. Your review approvals were not changed.');
+ notification('Person portrait selected on this browser. Review decisions were not changed.');
  renderFolder();
 }
 function approvedPreviewClip(preview){
@@ -903,7 +903,7 @@ function renderFolder(){
      manualAssignment:true,unindexed:entry.source==='drive'||!state.clipEvidence.has(entry.clip)},false));
   }
  }
- if(!host.children.length)host.append(elt('p',suggestions?'No appearance suggestions.':'No recordings in this folder.','empty'));
+ if(!host.children.length)host.append(elt('p',suggestions?'No appearance suggestions.':'No recordings for this person.','empty'));
  // Only show images linked to manually approved recordings in this folder.
  // A linked recording can still contain a different person: never label a crop as an identified face.
  const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
@@ -1054,13 +1054,13 @@ $('approvalForm').addEventListener('submit',async e=>{
  const label=$('approvalLabel').value.trim();
  // Confirm & keep is the explicit human-review decision; the second checkbox
  // previously required for the exact same decision is removed.
- if(!id&&(!label||label.length>100)){alertText('Enter a name for the new folder.');return}
+ if(!id&&(!label||label.length>100)){alertText('Enter a name for the new person.');return}
  let folder=id;
  if(!folder){
   let created='';
   const done=await action({action:'create_folder',folder:'',label,note:''},result=>{
    created=String(result.folder||'');});
-  if(!done||!created){alertText('Could not create a folder.');return}
+  if(!done||!created){alertText('Could not create a person.');return}
   folder=created;
  }
  const ok=await manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},folder);
@@ -1069,7 +1069,7 @@ $('approvalForm').addEventListener('submit',async e=>{
 $('folderForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const name=$('folderLabel').value.trim();
- if(!name){alertText('Choose a folder name');return}
+ if(!name){alertText('Choose a person name');return}
  const payload={action:state.editMode==='edit'?'edit_folder':'create_folder',
   folder:state.editMode==='edit'?state.folder:'',label:name,note:$('folderNotes').value.slice(0,2000)};
  const ok=await action(payload,result=>{notification('Person saved.');if(result.folder&&state.editMode==='create'){
