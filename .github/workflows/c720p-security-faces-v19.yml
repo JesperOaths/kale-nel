@@ -25,7 +25,7 @@ jobs:
           const fs=require('fs'),vm=require('vm'),assert=require('assert');
           const source=fs.readFileSync('ops/c720p/s9-native-security/face-appearances.html.txt','utf8');
           for(const x of ['.more[hidden]','/new/saved/snap/','/new/saved/clip/',
-           'data-kind="review"','Recording ready','<div id="playerState"',
+           'data-kind="review"','Original recording ready','<div id="playerState"',
            'id="playerLoading"'])assert(source.includes(x),x);
           assert(!source.includes('id="playerOriginal"'),'Obsolete video fallback button must stay removed');
           assert(!source.includes('security-video-playback.js'),'Smooth derived playback must remain retired');
