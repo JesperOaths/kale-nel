@@ -351,8 +351,7 @@ function profileRow(f){
  const avatar=elt('div','', 'avatar');
  const face=chosenPortrait(f);
  if(face){
-  const media=mediaForFace(face),img=media.querySelector('img');
-  if(img)avatar.append(img);else avatar.append(elt('span','Portrait unavailable'));
+  avatar.append(mediaForFace(face));
  }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
  const info=elt('div');info.append(elt('strong',f.label),
   elt('small',num(f.approved_clips)+' reviewed '+(num(f.approved_clips)===1?'recording':'recordings')+
