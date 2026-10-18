@@ -22,7 +22,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: c720p-s9-people-faces-unified
+  group: c720p-s9-people-faces-unified-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   verify:
