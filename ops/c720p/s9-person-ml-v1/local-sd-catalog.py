@@ -11,6 +11,7 @@ SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
 ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
 # Metadata only. Preview image bytes stay exclusively on S9+ microSD.
 PRIVATE_FALLBACK=Path("/home/jespern/c720p-home-hub/state/s9-fallback-evidence.json")
+PRIVATE_OBSERVATIONS=Path("/home/jespern/c720p-home-hub/state/s9-native-observations.json")
 CATALOG_LOCK=Path("/home/jespern/c720p-home-hub/state/s9-native-catalog.lock")
 RE_PREVIEW=re.compile(r"^preview_motion_([0-9]{13})[.]jpg$")
 NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
@@ -542,6 +543,24 @@ def build_catalog():
       "total_phone_files":len(rows),"archived_total":len(rows),"errors":problems}
  dest=ROOT/"s9-phone-events.json"
  part=dest.with_suffix(".json.tmp");part.write_text(json.dumps(out,indent=2)+"\n");os.replace(part,dest)
+ # Publish phone-local 06:00 operating-day and SD health metrics from the
+ # exact native snapshot. No MP4 decode, review, retention or source mutation.
+ # Missing phone data preserves earlier timestamped observations unchanged.
+ if native_snapshot is not None:
+  try:
+   overview=phone_catalog.read_summary(native_snapshot["snapshot_id"])
+   accepted=sum(1 for row in rows if "phone_catalog_version" in row)
+   if overview["recordings"]!=accepted:
+    raise ValueError("phone_summary_not_equal_to_accepted_recordings")
+   overview["generated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
+   observations=PRIVATE_OBSERVATIONS
+   observations.parent.mkdir(parents=True,exist_ok=True)
+   tmp_observations=observations.with_suffix(".json.partial")
+   tmp_observations.write_text(json.dumps(overview,separators=(",",":"),sort_keys=True)+"\n")
+   os.chmod(tmp_observations,0o600)
+   os.replace(tmp_observations,observations)
+  except (ValueError,TypeError,OSError,phone_catalog.Unavailable,BlockingIOError) as error:
+   print("S9_NATIVE_OBSERVATIONS_DEFERRED",type(error).__name__,flush=True)
  print("LOCAL_SD_INDEXED",len(rows),"errors",problems[:4])
 def main():
  CATALOG_LOCK.parent.mkdir(parents=True,exist_ok=True)

@@ -106,6 +106,50 @@ class Tests(unittest.TestCase):
             self.assertEqual(m.cache_thumbnail(entry,path,"5000:1792000000000"),
                              (True,"5000:1792000000000"))
         self.assertEqual(path.read_bytes(),previous)
+    def summary(self):
+        return {"ok":True,"schema_version":"s9_native_archive_summary_v1",
+            "snapshot_id":"1"*64,"source":"S9_native_microSD_sidecar_metadata",
+            "timezone":"Europe/Amsterdam","operating_day_start_hour":6,
+            "read_only":True,"video_decode_performed":False,
+            "media_digest_recheck_performed":False,
+            "counts_are_recordings_not_distinct_people":True,
+            "recordings":2,"sidecar_claimed_video_bytes":400000,
+            "manifest_duration_ms_total":20000,"duration_measurement_count":2,
+            "thumbnail_present_count":1,"person_candidate_recording_count":1,
+            "pending_sidecar_count":0,"catalog_error_count":0,
+            "sd_usable_bytes":1000000000,"sd_total_bytes":2000000000,
+            "hourly_recording_counts":{"2026-10-25T02+0200":1,"2026-10-25T02+0100":1},
+            "daily_recording_counts":{"2026-10-24":2}}
+
+    def test_phone_summary_validates_dst_and_six_am_operating_day(self):
+        data=self.summary()
+        with patch.object(m.urllib.request,"urlopen") as req:
+            req.return_value.__enter__.return_value.read.return_value=json.dumps(data).encode()
+            observed=m.read_summary("1"*64)
+        self.assertEqual(observed["recordings"],2)
+        self.assertEqual(sum(observed["hourly_recording_counts"].values()),2)
+        self.assertIn("2026-10-24",observed["daily_recording_counts"])
+
+    def test_phone_summary_rejects_mixed_snapshot_and_invented_or_invalid_metrics(self):
+        data=self.summary()
+        variants=[
+            lambda x:x.update(person_candidate_recording_count=3),
+            lambda x:x.update(video_decode_performed=True),
+            lambda x:x.update(sd_usable_bytes=3000000000),
+            lambda x:x.update(hourly_recording_counts={"2026-10-25T02":2}),
+            lambda x:x.update(daily_recording_counts={"2026-10-24":1}),
+            lambda x:x.update(media_digest_recheck_performed=True),
+            lambda x:x.update(recordings=False),
+        ]
+        for mutate in variants:
+            payload=self.summary();mutate(payload)
+            with self.subTest(payload=payload),patch.object(m.urllib.request,"urlopen") as req:
+                req.return_value.__enter__.return_value.read.return_value=json.dumps(payload).encode()
+                with self.assertRaises(ValueError):m.read_summary()
+        with patch.object(m.urllib.request,"urlopen") as req:
+            req.return_value.__enter__.return_value.read.return_value=json.dumps(data).encode()
+            with self.assertRaises(BlockingIOError):m.read_summary("2"*64)
+
     def test_asset_path_validation_never_contacts_phone(self):
         with patch.object(m.urllib.request,"urlopen") as request:
             for name in ["../secret","motion_1792000000000.mp4","FaceSnapshots/face.jpg"]:

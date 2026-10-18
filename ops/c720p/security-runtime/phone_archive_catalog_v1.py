@@ -165,6 +165,57 @@ def _load_pages(cache,old):
         tmp=cache.with_suffix(".partial");tmp.write_text(raw);os.chmod(tmp,0o600);os.replace(tmp,cache)
     return result
 
+def read_summary(expected_snapshot_id=None):
+    """Validated S9-only recording/space/hour summaries; never touch user reviews."""
+    if expected_snapshot_id is not None and not DIGEST.fullmatch(str(expected_snapshot_id)):
+        raise ValueError("phone_summary_bad_expected_snapshot")
+    try:
+        with urllib.request.urlopen(BASE+"/archive/summary",timeout=18) as response:
+            raw=response.read(1024*1024+1)
+        if len(raw)>1024*1024:raise ValueError("phone_summary_too_large")
+        value=_object(raw)
+    except (urllib.error.HTTPError,urllib.error.URLError,TimeoutError) as error:
+        raise Unavailable("phone_summary_unavailable") from error
+    if (value.get("ok") is not True or value.get("schema_version")!="s9_native_archive_summary_v1"
+        or not DIGEST.fullmatch(str(value.get("snapshot_id","")))
+        or value.get("source")!="S9_native_microSD_sidecar_metadata"
+        or value.get("timezone")!="Europe/Amsterdam"
+        or type(value.get("operating_day_start_hour")) is not int
+        or value["operating_day_start_hour"]!=6
+        or value.get("read_only") is not True or value.get("video_decode_performed") is not False
+        or value.get("media_digest_recheck_performed") is not False
+        or value.get("counts_are_recordings_not_distinct_people") is not True):
+        raise ValueError("phone_summary_contract")
+    if expected_snapshot_id and value["snapshot_id"]!=expected_snapshot_id:
+        raise BlockingIOError("phone_summary_mixed_snapshot")
+    counts={}
+    for key,pattern in (
+        ("hourly_recording_counts",r"20[0-9]{2}-[0-9]{2}-[0-9]{2}T(?:[01][0-9]|2[0-3])[+-][0-9]{4}"),
+        ("daily_recording_counts",r"20[0-9]{2}-[0-9]{2}-[0-9]{2}")):
+        bucket=value.get(key)
+        if not isinstance(bucket,dict) or len(bucket)>2000:
+            raise ValueError("phone_summary_invalid_buckets")
+        if any(not re.fullmatch(pattern,str(k)) or type(v) is not int or not 1<=v<=2000
+               for k,v in bucket.items()):
+            raise ValueError("phone_summary_invalid_count")
+        counts[key]=sum(bucket.values())
+    names=("recordings","sidecar_claimed_video_bytes","manifest_duration_ms_total",
+           "duration_measurement_count","thumbnail_present_count",
+           "person_candidate_recording_count","pending_sidecar_count","catalog_error_count",
+           "sd_usable_bytes","sd_total_bytes")
+    if any(type(value.get(k)) is not int or value[k]<0 for k in names):
+        raise ValueError("phone_summary_invalid_metrics")
+    n=value["recordings"]
+    if (n>2000 or counts["hourly_recording_counts"]!=n or counts["daily_recording_counts"]!=n
+        or any(value[k]>n for k in ("duration_measurement_count","thumbnail_present_count",
+                                     "person_candidate_recording_count"))
+        or value["pending_sidecar_count"]>2000 or value["catalog_error_count"]>2000
+        or value["sd_usable_bytes"]>value["sd_total_bytes"]
+        or value["sidecar_claimed_video_bytes"]>=n*800000000+(n==0)
+        or value["manifest_duration_ms_total"]>value["duration_measurement_count"]*120000):
+        raise ValueError("phone_summary_inconsistent_metrics")
+    return value
+
 def read_asset(name):
     if not (re.fullmatch(r"motion_[0-9]{13}[.]mp4[.]thumb[.]jpg",name) or
             re.fullmatch(r"motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg",name)):
