@@ -64,14 +64,48 @@ class Tests(unittest.TestCase):
         with self.assertRaises(m.Unavailable):self.load([BlockingIOError(),BlockingIOError()])
     def test_failed_thumbnail_refresh_retries_and_keeps_previous(self):
         entry=record();entry.update(thumbnail=True,thumbnail_version="5000:1792000000000")
-        path=Path(self.tmp.name)/"thumb.jpg";path.write_bytes(b"previous")
+        path=Path(self.tmp.name)/"thumb.jpg"
+        previous=b"\xff\xd8\xff"+b"p"*4995+b"\xff\xd9"
+        path.write_bytes(previous)
         with patch.object(m,"read_asset",side_effect=m.Unavailable):
             available,version=m.cache_thumbnail(entry,path,"old")
-        self.assertTrue(available);self.assertEqual(version,"old");self.assertEqual(path.read_bytes(),b"previous")
-        raw=b"\xff\xd8\xff"+b"x"*4997
+        self.assertTrue(available);self.assertEqual(version,"old")
+        self.assertEqual(path.read_bytes(),previous)
+        raw=b"\xff\xd8\xff"+b"x"*4995+b"\xff\xd9"
         with patch.object(m,"read_asset",return_value=raw) as fetch:
             self.assertEqual(m.cache_thumbnail(entry,path,version),(True,entry["thumbnail_version"]))
-            m.cache_thumbnail(entry,path,entry["thumbnail_version"]);self.assertEqual(fetch.call_count,1)
+            m.cache_thumbnail(entry,path,entry["thumbnail_version"])
+            self.assertEqual(fetch.call_count,1)
+
+    def test_corrupted_cached_thumbnail_refetched_even_for_unchanged_version(self):
+        entry=record();entry.update(thumbnail=True,thumbnail_version="5000:1792000000000")
+        path=Path(self.tmp.name)/"thumb.jpg"
+        path.write_bytes(b"\xff\xd8\xff"+b"x"*4997)  # same length, missing JPEG terminator
+        valid=b"\xff\xd8\xff"+b"y"*4995+b"\xff\xd9"
+        with patch.object(m,"read_asset",return_value=valid) as fetch:
+            self.assertEqual(m.cache_thumbnail(entry,path,entry["thumbnail_version"]),(True,entry["thumbnail_version"]))
+            fetch.assert_called_once()
+        self.assertEqual(path.read_bytes(),valid)
+        self.assertTrue(m.valid_cached_thumbnail(path,entry["thumbnail_version"]))
+
+    def test_invalid_cached_and_invalid_phone_jpeg_never_claim_success(self):
+        entry=record();entry.update(thumbnail=True,thumbnail_version="5000:1792000000000")
+        path=Path(self.tmp.name)/"thumb.jpg"
+        path.write_bytes(b"\xff\xd8\xff"+b"x"*4997)
+        with patch.object(m,"read_asset",side_effect=m.Unavailable):
+            self.assertEqual(m.cache_thumbnail(entry,path,entry["thumbnail_version"]),(False,""))
+        with patch.object(m,"read_asset",return_value=b"\xff\xd8\xff"+b"x"*4997):
+            self.assertEqual(m.cache_thumbnail(entry,path,entry["thumbnail_version"]),(False,""))
+
+    def test_invalid_phone_jpeg_preserves_valid_previous_version(self):
+        entry=record();entry.update(thumbnail=True,thumbnail_version="5000:1792000000001")
+        path=Path(self.tmp.name)/"thumb.jpg"
+        previous=b"\xff\xd8\xff"+b"p"*4995+b"\xff\xd9"
+        path.write_bytes(previous)
+        with patch.object(m,"read_asset",side_effect=ValueError("bad_phone_image")):
+            self.assertEqual(m.cache_thumbnail(entry,path,"5000:1792000000000"),
+                             (True,"5000:1792000000000"))
+        self.assertEqual(path.read_bytes(),previous)
     def test_asset_path_validation_never_contacts_phone(self):
         with patch.object(m.urllib.request,"urlopen") as request:
             for name in ["../secret","motion_1792000000000.mp4","FaceSnapshots/face.jpg"]:
