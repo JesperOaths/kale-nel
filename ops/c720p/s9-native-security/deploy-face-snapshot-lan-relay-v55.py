@@ -81,6 +81,10 @@ def jpeg(port,name):
 def healthy(original_clips,samples):
  now,faces=inventory()
  if not original_clips.issubset(now):raise RuntimeError("original_recordings_regressed")
+ data,_=request(8794,"/new/api/saved",3500000)
+ indexed=json.loads(data).get("events",[])
+ if not isinstance(indexed,list) or len(indexed)<len(original_clips):
+  raise RuntimeError("browser_relay_archive_regressed")
  upstream=[jpeg(8795,name) for name in samples]
  downstream=[jpeg(8794,name) for name in samples]
  if [x["digest16"] for x in upstream]!=[x["digest16"] for x in downstream]:
@@ -115,7 +119,7 @@ def main():
  if not TARGET.is_file() or TARGET.is_symlink():raise RuntimeError("relay_source_missing")
  if service("is-active")!="active":raise RuntimeError("relay_inactive_before")
  originals,faces=inventory()
- samples=list(dict.fromkeys(faces[::max(1,len(faces)//6)][:4]+faces[:2]))
+ samples=list(dict.fromkeys([faces[0],faces[len(faces)//2],faces[-1]]))
  for name in samples:jpeg(8795,name)
  prior=TARGET.read_bytes()
  meta=TARGET.stat()
