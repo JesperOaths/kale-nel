@@ -228,7 +228,7 @@ function selectPane(pane){
 }
 function openApproval(item){
  state.approvalItem=item;
- $('approvalPreview').replaceChildren(imageFor(item.full_crop,'Clip to review'));
+ $('approvalPreview').replaceChildren(sceneFor(item));
  const select=$('approvalFolder');select.replaceChildren();
  select.add(new Option('Create a new folder',''));
  for(const f of (state.doc?.folders||[]))if(isSaved(f)||f.id===state.folder)
@@ -238,6 +238,7 @@ function openApproval(item){
  $('newLabel').hidden=!!select.value;
  $('approvalConfirmed').checked=false;
  $('approvalDialog').showModal();
+ $('approvalFolder').focus();
 }
 function dismiss(item){
  const currentFolder=state.folder;
@@ -379,7 +380,7 @@ function profileRow(f){
  const references=Array.isArray(f.previews)?f.previews:[];
  const approvedClips=new Set(references.map(x=>String(x.clip||x.clip_no||x.source_clip||'')));
  const portrait=state.faceList.find(x=>approvedClips.has(x.clip));
- if(portrait){
+ if(portrait&&!face){
   avatar.replaceChildren(mediaForFace(portrait));
   avatar.title='Face from an approved recording · verify which person appears';
  }
@@ -698,6 +699,8 @@ $('editFolder').addEventListener('click',()=>openFolderEditor('edit'));
 $('cancelFolder').addEventListener('click',()=>$('folderDialog').close());
 $('cancelApproval').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalFolder').addEventListener('change',()=>{$('newLabel').hidden=!!$('approvalFolder').value});
+$('approvalPlay').addEventListener('click',()=>{if(state.approvalItem)startVideo(state.approvalItem)});
+$('approvalCancelFooter').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalForm').addEventListener('submit',async e=>{
  e.preventDefault();const item=state.approvalItem;if(!item)return;
  const id=$('approvalFolder').value;
@@ -707,8 +710,9 @@ $('approvalForm').addEventListener('submit',async e=>{
  const ok=await action(id?{action:'approve_clip',folder:id,...fields(item)}:
   {action:'seed_folder',folder:'',label,...fields(item)},result=>{
    notification('Recording kept in the chosen folder.');
-   if(!id&&result.folder){
-    state.folder=result.folder;state.pane='folder';state.tab='approved';state.offset=0;
+   const chosen=id||result.folder;
+   if(chosen){
+    state.folder=chosen;state.pane='folder';state.tab='approved';state.offset=0;
     $('folderMode').value='approved';selectPane('folder');
    }
  });
