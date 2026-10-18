@@ -313,6 +313,9 @@ def install_local_sd(H):
  # Audited manually reviewed event cases (not biometric identities).
  import s9_manual_evidence_cases
  s9_manual_evidence_cases.install(H)
+ # Human face-image pair decisions; never feed the biometric score gate directly.
+ import s9_face_pair_review
+ s9_face_pair_review.install(H)
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
