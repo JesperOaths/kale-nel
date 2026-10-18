@@ -7,7 +7,8 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'overview',folder:'',tab:'inbox',offset:0,limit:24,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null};
+ faceSummary:null,clipEvidence:new Map(),faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,
+ pairFirst:null,pairSecond:null,pairRevision:null,pairBusy:false,pairSeen:[false,false]};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -437,6 +438,76 @@ function closeFaceSnapshot(){
  $('snapshotImage').removeAttribute('src');
  state.snapshotSelected=null;
 }
+async function fetchPairReview(){
+ try{
+  const response=await relay().fetch('/new/api/s9-face-pair-review',{cache:'no-store'});
+  const doc=await response.json();
+  if(!response.ok||doc.ok!==true||!Number.isInteger(doc.revision)||!Array.isArray(doc.pairs))
+   throw Error('Pair review state unavailable');
+  state.pairRevision=doc.revision;
+  const count=doc.counts||{};
+  $('pairReviewSummary').textContent='Reviewed pairs: '+num(count.same_person)+' same · '+
+   num(count.different_people)+' different · '+num(count.uncertain)+' uncertain'+
+   ' · visual observations, not verified model identities';
+ }catch(e){state.pairRevision=null;
+  $('pairReviewSummary').textContent='Pair review storage unavailable; no changes can be saved.';}
+}
+function showPairSelection(){
+ $('pairFirstStatus').textContent=state.pairFirst?
+  'First face: '+stampMs(Number(state.pairFirst.clip.slice(7,20)))+
+  ' · select a face from another recording':'Choose the first face below';
+}
+function beginFacePair(first,second){
+ if(!first||!second||first.clip===second.clip){
+  alertText('Choose faces from two different original recordings.');return;
+ }
+ state.pairFirst=first;state.pairSecond=second;state.pairSeen=[false,false];
+ $('pairDecision').value='uncertain';$('pairConfirm').checked=false;
+ $('pairStatus').textContent='Inspect both original 4K videos before confirming a visual decision.';
+ for(const [idx,face] of [first,second].entries()){
+  $('pairImage'+idx).replaceChildren(mediaForFace(face));
+  $('pairTimestamp'+idx).textContent=stampMs(Number(face.clip.slice(7,20)))+
+    ' · '+(num(face.face.time_ms)/1000).toFixed(1)+' s';
+  $('pairViewed'+idx).textContent='Original not opened';
+ }
+ $('pairSubmit').disabled=false;$('pairDialog').showModal();
+}
+function closeFacePair(){
+ if($('pairDialog').open)$('pairDialog').close();
+ state.pairSecond=null;state.pairSeen=[false,false];
+}
+async function commitFacePair(){
+ if(state.pairBusy||!state.pairFirst||!state.pairSecond)return;
+ if(state.pairRevision===null){$('pairStatus').textContent='Review endpoint unavailable. Refresh.';return;}
+ if(!state.pairSeen.every(Boolean)||!$('pairConfirm').checked){
+  $('pairStatus').textContent='Open both original videos and confirm your decision.';return;
+ }
+ const left=state.pairFirst,right=state.pairSecond;
+ state.pairBusy=true;$('pairSubmit').disabled=true;
+ try{
+  const res=await relay().fetch('/new/api/s9-face-pair-review',{
+   method:'POST',headers:{'Content-Type':'application/json',
+    'X-S9-Face-Pair-Intent':'manual-originals-pair-v1'},
+   body:JSON.stringify({left_image:left.face.snapshot_name,
+    right_image:right.face.snapshot_name,decision:$('pairDecision').value,
+    revision:state.pairRevision,left_original_viewed:true,
+    right_original_viewed:true,human_confirmed:true})});
+  const result=await res.json();
+  if(!res.ok||result.ok!==true)throw Error(result.error||'Could not save review');
+  closeFacePair();notification('Face-pair review saved. No identity group was created.');
+  await fetchPairReview();
+ }catch(e){$('pairStatus').textContent='Not saved: '+String(e.message||e)+'. Refresh if another review changed.';}
+ finally{state.pairBusy=false;$('pairSubmit').disabled=false;}
+}
+function openPairOriginal(index){
+ if(!state.pairSecond)return;
+ const face=index===0?state.pairFirst:state.pairSecond;
+ if(!face)return;
+ state.pairSeen[index]=true;
+ $('pairViewed'+index).textContent='Original opened · inspect before confirming';
+ playVideo('/new/saved/clip/'+encodeURIComponent(face.clip),
+   'Original 4K · '+stampMs(Number(face.clip.slice(7,20))),num(face.face.time_ms)/1000);
+}
 function renderFaces(){
  const faceMode=$('faceMode').value;
  const list=state.faceList.filter(f=>{
@@ -458,6 +529,12 @@ function renderFaces(){
   tools.append(control('Inspect image',()=>inspectFaceSnapshot(f),'secondary'));
   tools.append(control('▶ View clip',()=>playVideo('/new/saved/clip/'+encodeURIComponent(f.clip),
    'Original 4K recording · '+stampMs(timestamp),num(f.face.time_ms)/1000)));
+  if(state.pairFirst){
+   if(f.clip!==state.pairFirst.clip)
+    tools.append(control('Compare with first face',()=>beginFacePair(state.pairFirst,f),'primary'));
+  }else tools.append(control('Select first face',()=>{
+   state.pairFirst=f;showPairSelection();renderFaces();
+  },'secondary'));
   box.append(tools);card.append(media,box);host.append(card);
  }
  if(!list.length)host.append(elt('p',state.faceLoaded?'No face images match this filter.':'Loading face image evidence…','empty'));
@@ -509,9 +586,15 @@ $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;s
 $('folderMode').addEventListener('change',()=>{state.tab=$('folderMode').value;state.offset=0;loadView()});
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('faceMode').addEventListener('change',()=>{state.facePage=0;renderFaces()});
+$('pairClear').addEventListener('click',()=>{state.pairFirst=null;showPairSelection();renderFaces()});
+$('pairCancel').addEventListener('click',closeFacePair);
+$('pairSubmit').addEventListener('click',commitFacePair);
+$('pairOriginal0').addEventListener('click',()=>openPairOriginal(0));
+$('pairOriginal1').addEventListener('click',()=>openPairOriginal(1));
 $('refresh').addEventListener('click',()=>{
  state.faceLoaded=false;
  state.faceSummary=null;
+ state.pairFirst=null;showPairSelection();fetchPairReview();
  state.clipEvidence=new Map();
  loadView();
  fetchFaces();
@@ -579,5 +662,5 @@ $('snapshotPlay').addEventListener('click',()=>{
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('viewer').open)$('viewer').close()});
 window.addEventListener('pagehide',stopVideo);
-selectPane('overview');loadView();fetchFaces();
+selectPane('overview');showPairSelection();fetchPairReview();loadView();fetchFaces();
 })();
