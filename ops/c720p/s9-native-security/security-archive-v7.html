@@ -18,7 +18,18 @@ h1{font-size:23px;letter-spacing:-.035em;margin:0;font-weight:740}
 select,.subtle-button{background:#182835;border:1px solid #314653;border-radius:10px;padding:10px 14px;min-height:42px}
 .subtle-button{font-size:12px;color:#b9c9d3}
 .status{font-size:12px;color:var(--soft);margin:0 0 18px}
-.month{font-size:12px;font-weight:760;color:#8faab6;letter-spacing:.06em;text-transform:uppercase;margin:28px 3px 13px}
+.month{grid-column:1/-1;font-size:13px;font-weight:760;color:#a3bec9;letter-spacing:.07em;text-transform:uppercase;margin:14px 2px 1px;padding-top:9px;border-top:1px solid #293f4c}
+#timeline,#driveTimeline{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,275px),1fr));gap:11px;align-items:start;padding-bottom:20px}
+#timeline .day,#driveTimeline .day{margin:0;min-width:0}
+#timeline .day[open],#driveTimeline .day[open]{grid-column:1/-1;border-color:#5aa89b;box-shadow:0 2px 12px #06101665}
+#timeline .day:not([open])>summary,#driveTimeline .day:not([open])>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:4px 8px;min-height:95px;padding:15px 17px;background:linear-gradient(145deg,#1c303c,#14232d)}
+#timeline .day:not([open]) .date,#driveTimeline .day:not([open]) .date{grid-column:1;font-size:16px}
+#timeline .day:not([open]) .summary-end,#driveTimeline .day:not([open]) .summary-end{grid-column:1;grid-row:2;color:#a4c7c8}
+#timeline .day:not([open]) .arrow,#driveTimeline .day:not([open]) .arrow{grid-column:2;grid-row:1/3;align-self:center}
+#timeline .day[open]>summary,#driveTimeline .day[open]>summary{background:#1c383b}
+#timeline .day>summary:hover,#driveTimeline .day>summary:hover{border-color:#7dd6bf;background:#25413e}
+@media(max-width:720px){#timeline,#driveTimeline{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:450px){#timeline,#driveTimeline{grid-template-columns:1fr}}
 .day{border:1px solid var(--edge);background:var(--panel);border-radius:14px;margin-bottom:12px;overflow:hidden}
 .day>summary{min-height:69px;display:flex;align-items:center;gap:18px;padding:15px 23px;list-style:none;cursor:pointer}
 .day>summary::-webkit-details-marker{display:none}
@@ -31,7 +42,7 @@ select,.subtle-button{background:#182835;border:1px solid #314653;border-radius:
 .clips{padding:21px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,235px),1fr));gap:18px;align-items:start}
 .clip{min-width:0;text-align:left;border:0;padding:0;background:transparent;color:inherit}
 .picture{display:block;position:relative;border-radius:11px;overflow:hidden;border:1px solid #344755;background:#223542;aspect-ratio:16/10}
-.picture img{width:100%;height:100%;display:block;object-fit:cover}
+.picture img{width:100%;height:100%;display:block;object-fit:contain}
 .picture .fallback{position:absolute;inset:0;display:grid;place-items:center;color:#607e90;font-size:24px}
 .picture img{position:relative}
 .clip:hover .picture{border-color:#79c2b6}
@@ -65,7 +76,7 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 <script defer src="/local/security-video-playback.js?v=C720P_SECURITY_CACHED_480P30_ALL_TABS_V9_20261011"></script>
 </head>
 <body>
-<main id="archive" data-archive-ui-version="v10"><div class="wrap">
+<main id="archive" data-archive-ui-version="v11-date-tile-gallery"><div class="wrap">
 <header class="heading"><h1>Archive</h1><div class="controls source-controls" id="localControls" hidden><select id="monthSelect" aria-label="Choose archive month"><option value="all">All dates</option></select><button id="refresh" class="subtle-button" type="button" aria-label="Refresh local archive">↻</button></div></header>
 <nav class="source-switch" role="tablist" aria-label="Archived recording source">
 <button id="driveTab" role="tab" type="button" aria-selected="true" aria-controls="driveLibrary">Google Drive <small>Historical saved clips</small></button>
@@ -76,12 +87,12 @@ video{width:100%;max-height:min(55dvh,420px);display:block;background:#04080c;bo
 <div class="controls"><select id="driveMonthSelect" aria-label="Choose historical Drive month"><option value="all">All dates</option></select>
 <button id="driveRefresh" class="subtle-button" type="button" aria-label="Refresh Google Drive recordings">↻</button></div></div>
 <div id="driveStatus" role="status">Loading historical Drive recordings…</div>
-<div id="driveTimeline" aria-label="Historical Google Drive recording dates"></div>
+<div id="driveTimeline" aria-label="Expandable Google Drive recording date tiles"></div>
 <div id="driveEmpty" hidden>No historical Drive recordings found.</div>
 </section>
 <section id="localLibrary" class="source-view" role="tabpanel" aria-labelledby="localTab" hidden>
 <div id="status" class="status" role="status">Loading local recordings…</div>
-<div id="timeline" aria-label="S9+ local recording dates"></div><div id="empty" hidden>No local recordings found</div>
+<div id="timeline" aria-label="Expandable S9+ recording date tiles"></div><div id="empty" hidden>No local recordings found</div>
 </section>
 </div></main>
 <dialog id="viewer" aria-label="Saved recording"><div class="dialog-head"><strong id="viewerTitle">Recording</strong><button id="close" class="close" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><div id="playerState"></div></dialog>
@@ -135,7 +146,7 @@ if(!$('viewer').open)$('viewer').showModal();
 try{if(!a?.url)throw Error('relay');const src=await a.url('/new/saved/clip/'+encodeURIComponent(n));if(token!==playing)return;v.src=src;v.load();$('playerState').textContent='';}
 catch(_){if(token===playing)$('playerState').textContent='Recording unavailable';}}
 function dayBox(d,items,initial){const detail=create('details','day');detail.open=initial;const summary=create('summary');
-summary.append(create('span','date',formatDay(d)),create('span','summary-end',items.length+' clips'),create('span','arrow','⌄'));detail.append(summary);
+summary.append(create('span','date',formatDay(d)),create('span','summary-end',items.length+(items.length===1?' recording':' recordings')),create('span','arrow','⌄'));detail.append(summary);
 const cards=create('div','clips');detail.append(cards);
 let populated=false;const populate=()=>{if(populated)return;populated=true;for(const r of items)cards.append(card(r))};
 if(initial)populate();
@@ -232,7 +243,7 @@ function renderDrive(){
   if(d.slice(0,7)!==lastMonth){target.append(create('div','month',formatMonth(d)));lastMonth=d.slice(0,7)}
   const details=create('details','day');details.open=driveOpenDays.has(d);
   const summary=create('summary');
-  summary.append(create('span','date',formatDay(d)),create('span','summary-end',groups.get(d).length+' clips'),create('span','arrow','⌄'));
+  summary.append(create('span','date',formatDay(d)),create('span','summary-end',groups.get(d).length+(groups.get(d).length===1?' recording':' recordings')),create('span','arrow','⌄'));
   details.append(summary);
   const cards=create('div','clips');details.append(cards);let loadedCards=false;
   const populate=()=>{if(loadedCards)return;loadedCards=true;for(const r of groups.get(d))cards.append(driveCard(r))};
