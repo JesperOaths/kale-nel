@@ -127,6 +127,10 @@ def main():
  # merely that an unused secondary V45 page was written to disk.
  if "security-people-v45.html?v="+PEOPLE_QUERY not in hub:
   raise RuntimeError("visible_people_route_not_updated")
+ if 's9FacesGalleryFrame' not in shell:
+  raise RuntimeError("actual_faces_iframe_not_present")
+ if "security-people-v33.html" in shell:
+  raise RuntimeError("live_faces_iframe_uses_old_page")
  if "security-tracks-v7.html?v="+TRACKS_QUERY not in shell:
   raise RuntimeError("visible_tracks_route_not_updated")
  if args.dry_run:
@@ -158,7 +162,7 @@ def main():
   for k,path in DEST.items():
    prefix="/local/" if k=="shell" else "/local/frontyard-security-new/"
    url="http://127.0.0.1:8123"+prefix+path.name+"?version="+args.ref[:12]
-   b=get(url)
+   b=get(url,850000 if k=="shell" else 220000)
    if digest(b)!=digest(out[k]):raise RuntimeError("HA_not_serving_new_version_"+k)
    served[k]=digest(b)[:16]
   if b"security-people-v33.html" in out["hub"] or b"security-people-v33.html" in out["shell"]:
