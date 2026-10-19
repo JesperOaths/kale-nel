@@ -48,7 +48,7 @@ def phone_sha(path):
  if proc.returncode==1 and not proc.stderr.strip():return None
  if proc.returncode:raise RuntimeError("unavailable_phone_model_or_dex")
  out=adb("shell","sha256sum "+path)
- m=re.match(r"^([a-f0-9]{64})\\s+",out)
+ m=re.fullmatch(r"([a-f0-9]{64})\s+\S+",out.strip())
  if not m:raise RuntimeError("invalid_phone_sha")
  return m.group(1)
 
