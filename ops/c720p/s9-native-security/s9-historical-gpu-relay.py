@@ -192,6 +192,15 @@ def mark_v28_failed_source(error):
   return {"clip_id_prefix":key[:12],"attempts":attempts,"retry_limit":3,
           "error_type":type(error).__name__}
 
+def scoped_historical_candidates(options,main_camera_only=False):
+ """Narrow an explicit experimental stage run without changing usual timers.
+
+ The S3 legacy branch remains fully supported in the existing workflow; this
+ opt-in pilot is restricted to the requested front-garden camera only.
+ """
+ if not main_camera_only:return list(options)
+ return [source for source in options if source.get("camera")=="new"]
+
 def stage_one(rescan_v28=False):
  import urllib.request
  with urllib.request.urlopen(APP_STATUS,timeout=9) as res:
@@ -217,6 +226,10 @@ def stage_one(rescan_v28=False):
   verified=m.original_verified()
   rows=m.read_catalog()["items"]
   options=v28_candidates(verified,rows) if rescan_v28 else m.sorted_candidates(verified,rows)
+  # The special S9-only pilot never stages a bedroom/S3 Drive source.
+  # No change to the normal historical timer or S3 processing branches.
+  options=scoped_historical_candidates(options,
+    main_camera_only=os.environ.get("S9_HISTORICAL_MAIN_CAMERA_ONLY")=="1")
   # V28 visits verified, previously classified originals; ordinary mode unchanged.
   source=options[0] if rescan_v28 and options else options[-1] if options else None
  if source is None:
