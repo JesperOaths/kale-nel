@@ -27,3 +27,55 @@ jobs:
           python3 ops/c720p/s9-native-security/test-security-drive-person-v66.py
           python3 ops/c720p/s9-native-security/test-manual-recording-links-v1.py
           python3 -m py_compile ops/c720p/s9-native-security/deploy-security-drive-person-v66.py ops/c720p/s9-native-security/verify-security-drive-person-v66.py
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    concurrency:
+      group: c720p-security-drive-person-v66
+      cancel-in-progress: false
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Deploy exact-source-guarded V66 metadata and UI, then test disk persistence in isolated browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          root='ops/c720p/s9-native-security'
+          staging="/tmp/security-drive-person-v66-${GITHUB_SHA:0:12}"
+          cmd="mkdir -p '$staging'"
+          for script in deploy-security-drive-person-v66.py deploy-security-filing-v65.py verify-security-drive-person-v66.py verify-security-filing-v65.py security-step4-cdp-safe.py; do
+            src="$root/$script"
+            dig="$(sha256sum "$src" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+            cmd="$cmd && curl -fSsL --max-time 40 '$url' -o '$staging/$script' && printf '%s  %s\n' '$dig' '$staging/$script' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && python3 '$staging/deploy-security-drive-person-v66.py' --ref '${GITHUB_SHA}' && python3 '$staging/deploy-security-drive-person-v66.py' --ref '${GITHUB_SHA}' --apply && python3 '$staging/verify-security-drive-person-v66.py'"
+          idem="security-drive-person-v66-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-drive-person-v66','deployment',:'cmd',480,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "SECURITY_DRIVE_PERSON_V66_JOB=$id"
+          for i in $(seq 1 120); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              out="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 15000)"
+              err="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stderr,'') from c720p_agent.jobs where id=$id" | head -c 4500)"
+              echo "$out"
+              if [[ "$status" != 'done|0' ]]; then echo "$err"; exit 1; fi
+              grep -q 'DRIVE_PERSON_V66_DEPLOY_VERIFIED' <<< "$out"
+              grep -q 'DRIVE_PERSON_V66_BROWSER_PERSISTENCE_PASS' <<< "$out"
+              grep -q '"real_registry_unchanged": true' <<< "$out"
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
