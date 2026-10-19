@@ -1,0 +1,24 @@
+name: Security private recording analytics route
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
+      - 'ops/c720p/s9-person-ml-v1/test-security-recording-activity-route-v1.py'
+      - '.github/workflows/security-recording-activity-route.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
+      - 'ops/c720p/s9-person-ml-v1/test-security-recording-activity-route-v1.py'
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
+          python3 ops/c720p/s9-person-ml-v1/test-security-recording-activity-route-v1.py
