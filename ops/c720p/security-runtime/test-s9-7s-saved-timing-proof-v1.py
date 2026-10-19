@@ -25,7 +25,34 @@ class Tests(unittest.TestCase):
   self.assertEqual(result["eligible_count"],3)
   self.assertGreaterEqual(result["estimated_prefix_median_ms"],6700)
   self.assertEqual(result["quiet_tail_10_to_15_seconds"],3)
+  self.assertEqual(result["joint_prefix_and_tail_count"],3)
+  self.assertTrue(result["joint_same_recording_required"])
   self.assertFalse(result["full_frame_decode_verified"])
+ def test_disjoint_good_prefix_and_tail_must_not_pass(self):
+  # Former bug: >=3 long prefixes and >=3 quiet holds belonged to
+  # DIFFERENT clips, with only 1 satisfying both; median still exceeded 6.7s.
+  rows=[clip(7200,8900),clip(7200,9000),clip(7200,9800),
+        clip(5300,10200),clip(5500,10800),clip(7200,10700)]
+  result=m.assess(catalog(*rows))
+  self.assertEqual(result["eligible_count"],6)
+  self.assertEqual(result["prefix_at_least_6700ms"],4)
+  self.assertEqual(result["quiet_tail_10_to_15_seconds"],3)
+  self.assertGreater(result["estimated_prefix_median_ms"],6700)
+  self.assertEqual(result["joint_prefix_and_tail_count"],1)
+  self.assertTrue(result["joint_same_recording_required"])
+  self.assertFalse(result["complete"])
+ def test_three_joint_clips_prove_both_requirements(self):
+  result=m.assess(catalog(clip(7200,10100),clip(7100,11900),
+                            clip(6850,14500),clip(7000,9200)))
+  self.assertTrue(result["complete"])
+  self.assertEqual(result["joint_prefix_and_tail_count"],3)
+  self.assertEqual(result["prefix_at_least_6700ms"],4)
+  self.assertEqual(result["quiet_tail_10_to_15_seconds"],3)
+ def test_joints_exclude_boundary_failure(self):
+  result=m.assess(catalog(clip(6700,10000),clip(6700,15000),
+                            clip(6699,14500),clip(6800,15001)))
+  self.assertFalse(result["complete"])
+  self.assertEqual(result["joint_prefix_and_tail_count"],2)
  def test_five_second_old_prefix_not_proved(self):
   data=m.assess(catalog(clip(5300),clip(5450),clip(5050)))
   self.assertFalse(data["complete"])
@@ -63,6 +90,7 @@ class Tests(unittest.TestCase):
    self.assertNotIn(token,src)
   self.assertIn("no_video_bytes_read",src)
   self.assertIn("os.fchmod(out.fileno(),0o600)",src)
+  self.assertIn('prior.get("joint_same_recording_required") is True',src)
  def test_interval_and_nonpersistent_timer(self):
   timer=(ROOT/"c720p-s9-native-timing-proof-v1.timer").read_text()
   self.assertIn("OnUnitInactiveSec=2h",timer)
