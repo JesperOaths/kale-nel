@@ -1,0 +1,95 @@
+name: Deploy guarded S9 post-upgrade saved timing proof V128
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/deploy-s9-proof-freshness-v128.py'
+      - 'ops/c720p/security-runtime/test-deploy-s9-proof-freshness-v128.py'
+      - '.github/workflows/s9-saved-timing-freshness-release-v128.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/deploy-s9-proof-freshness-v128.py'
+      - 'ops/c720p/security-runtime/test-deploy-s9-proof-freshness-v128.py'
+      - '.github/workflows/s9-saved-timing-freshness-release-v128.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-proof-freshness-v128
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify no original MP4 mutation or pre-upgrade proof
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/deploy-s9-proof-freshness-v128.py"
+          python3 "$d/test-deploy-s9-proof-freshness-v128.py"
+          python3 "$d/test-s9-7s-saved-timing-proof-v1.py"
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Backup and replace only known C720P timing-proof worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          dir=ops/c720p/security-runtime
+          oldref=a5cc07059e34eb357f9797db072730b8f4d704c1
+          stage="/tmp/s9-proof-freshness-${GITHUB_SHA:0:15}"
+          mkdir -p "$stage"
+          file="$dir/deploy-s9-proof-freshness-v128.py"
+          new="$dir/s9_7s_saved_timing_proof_v1.py"
+          old="$dir/s9_7s_saved_timing_proof_v1.py"
+          sum="$(sha256sum "$file" | cut -d' ' -f1)"
+          newhash="$(sha256sum "$new" | cut -d' ' -f1)"
+          oldurl="https://raw.githubusercontent.com/JesperOaths/kale-nel/$oldref/$old"
+          newurl="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$new"
+          installerurl="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+          cmd="mkdir -p '$stage' && curl -fsSL --max-time 35 '$installerurl' -o '$stage/installer.py' && printf '%s  %s\\n' '$sum' '$stage/installer.py' | sha256sum -c - >/dev/null"
+          cmd="$cmd && curl -fsSL --max-time 35 '$newurl' -o '$stage/target.py' && printf '%s  %s\\n' '$newhash' '$stage/target.py' | sha256sum -c - >/dev/null"
+          cmd="$cmd && curl -fsSL --max-time 35 '$oldurl' -o '$stage/original.py' && oldsha=\$(sha256sum '$stage/original.py' | cut -d' ' -f1)"
+          cmd="$cmd && /usr/bin/python3 '$stage/installer.py' --old '$stage/original.py' --new '$stage/target.py' --old-sha \$oldsha --new-sha '$newhash'"
+          cmd="$cmd && /usr/bin/python3 '$stage/installer.py' --old '$stage/original.py' --new '$stage/target.py' --old-sha \$oldsha --new-sha '$newhash' --apply"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="s9-proof-fresh-v128-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-saved-proof-v128','deployment',:'cmd',360,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_SAVED_PROOF_V128_JOB=$id"
+          for attempt in $(seq 1 145); do
+            result="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$result" == done* || "$result" == error* || "$result" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3600)"
+              echo "$output"
+              [[ "$result" == 'done|0' ]] || exit 1
+              if grep -q 'S9_SAVED_PROOF_V128_VERIFIED' <<< "$output"; then
+                grep -q '"freshness_guard_active": true' <<< "$output"
+                grep -q '"originals_modified": false' <<< "$output"
+                grep -q '"camera_apk_modified": false' <<< "$output"
+                echo "New timing proof explicitly gated to genuine post-upgrade recordings"
+              elif grep -q 'S9_SAVED_PROOF_V128_DEFERRED' <<< "$output"; then
+                grep -q '"modified": false' <<< "$output"
+                echo "Metadata worker busy; no live update claimed"
+              else
+                echo "Unknown C720P saved-proof deployment result"; exit 1
+              fi
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "S9 saved proof management job timed out"; exit 1
