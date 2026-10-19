@@ -8,6 +8,7 @@ on:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-hsv-two-v102.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-hsv-two-v102.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-hsv-schedule-idempotency-v112.py'
       - '.github/workflows/s9-v3-hsv-two-v102.yml'
   push:
     branches: [main]
@@ -33,6 +34,7 @@ jobs:
           python3 -m py_compile "$d/run-s9-v3-hsv-two-v102.py" "$d/test-s9-v3-hsv-two-v102.py"
           python3 "$d/test-s9-v3-hsv-two-v102.py"
           python3 "$d/test-s9-hsv32-uniform-v2.py"
+          python3 "$d/test-s9-v3-hsv-schedule-idempotency-v112.py"
           python3 - <<'PY'
           from pathlib import Path
           s=Path('ops/c720p/s9-native-security/offline-worker/run-s9-v3-hsv-two-v102.py').read_text()
@@ -74,7 +76,12 @@ jobs:
             cmd="$cmd && curl -fsSL --retry 2 --max-time 35 '$url' -o '$stage/$script' && printf '%s  %s\\n' '$digest' '$stage/$script' | sha256sum -c - >/dev/null"
           done
           cmd="$cmd && /usr/bin/python3 '$stage/run-s9-v3-hsv-two-v102.py'"
-          idem="s9-v3-two-hsv-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          # The scheduler fires six times daily on the SAME commit. A constant
+          # SHA+attempt idempotency key replays the first (possibly deferred)
+          # job forever. The GitHub run ID separates distinct cron executions;
+          # the per-run attempt still distinguishes an explicit retry.
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="s9-v3-two-hsv-${GITHUB_SHA:0:20}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(
             'github-actions-s9-v3-hsv-two-real-sidecars','deployment',:'cmd',780,:'idem');
