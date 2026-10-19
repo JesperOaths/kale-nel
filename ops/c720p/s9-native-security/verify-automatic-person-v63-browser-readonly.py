@@ -59,8 +59,26 @@ def main():
   until(page,"return !!document.querySelector('#s9v5-nav button[data-view=faces]')",
         lambda x:x is True)
   eval_script(page,"document.querySelector('#s9v5-nav button[data-view=faces]').click();return true;")
-  until(page,"return !!findPeople()&&!!findPeople().querySelector('[data-pane=automatic]')",
-        lambda x:x is True)
+  try:
+   until(page,"return !!findPeople()&&!!findPeople().querySelector('[data-pane=automatic]')",
+         lambda x:x is True)
+  except RuntimeError:
+   inventory=eval_script(page,"""const seen=new Set(),queue=[document],found=[];
+     for(let i=0;i<queue.length&&i<24;i++){
+      const d=queue[i];if(!d||seen.has(d))continue;seen.add(d);
+      const div=d.getElementById('reviewGrid');
+      const auto=d.querySelector('[data-pane=automatic]');
+      const src=d.URL||'';
+      found.push({people:!!div,automatic:!!auto,
+        children:d.querySelectorAll('iframe').length,
+        routeKnown:/security-people-v(?:45|50)[.]html/.test(src)});
+      for(const frame of d.querySelectorAll('iframe')){
+       try{if(frame.contentDocument)queue.push(frame.contentDocument)}catch(_){}
+      }
+     }
+     return {frames:found};""")
+   print("SECURITY_AUTO_PERSON_FRAME_DIAGNOSTIC "+json.dumps(inventory,sort_keys=True),flush=True)
+   raise
   eval_script(page,"findPeople().querySelector('[data-pane=automatic]').click();return true;")
   state=until(page,"""const d=findPeople();
    if(!d)return null;
