@@ -1,0 +1,85 @@
+name: Verify installed C720P legacy JPEG bridge in authenticated browser V190
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/smoke-c720p-legacy-jpeg-browser-v190.py'
+      - 'ops/c720p/security-runtime/test-smoke-c720p-legacy-jpeg-browser-v190.py'
+      - '.github/workflows/c720p-legacy-jpeg-real-browser-v190.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/smoke-c720p-legacy-jpeg-browser-v190.py'
+      - 'ops/c720p/security-runtime/test-smoke-c720p-legacy-jpeg-browser-v190.py'
+      - '.github/workflows/c720p-legacy-jpeg-real-browser-v190.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-legacy-jpeg-real-browser-v190
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Synthetic browser proof with no media or person operations
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/smoke-c720p-legacy-jpeg-browser-v190.py"
+          python3 "$d/test-smoke-c720p-legacy-jpeg-browser-v190.py"
+          node "$d/test-c720p-migrated-snapshot-display-v182.mjs"
+  physical:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read-only actual-served static pages and six signed S9 thumbnails in disposable HA Chromium tab
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          stage="/tmp/c720p-jpeg-browser-v190-${GITHUB_SHA:0:12}"
+          cmd="umask 077 && install -d -m 700 '$stage'"
+          for file in \
+            "ops/c720p/security-runtime/smoke-c720p-legacy-jpeg-browser-v190.py" \
+            "ops/c720p/security-runtime/smoke-c720p-legacy-auth-browser-v136.py"; do
+            digest="$(sha256sum "$file" | cut -d' ' -f1)"
+            name="$(basename "$file")"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+            cmd="$cmd && curl -fsSL --max-time 35 '$url' -o '$stage/$name' && printf '%s  %s\\n' '$digest' '$stage/$name' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/smoke-c720p-legacy-jpeg-browser-v190.py' && /usr/bin/python3 '$stage/smoke-c720p-legacy-jpeg-browser-v190.py' --run"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-legacy-jpeg-browser-v190-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-jpeg-real-browser-v190','diagnostic',:'cmd',490,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "C720P_LEGACY_JPEG_BROWSER_V190_JOB=$job"
+          for attempt in $(seq 1 160); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 4300)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'C720P_LEGACY_JPEG_BROWSER_V190_VERIFIED' <<< "$output"
+              grep -q '"authenticated_s9_thumbnails_loaded": 6' <<< "$output"
+              grep -q '"late_dynamic_image_verified": true' <<< "$output"
+              grep -q '"reversible_local_fallback_simulated": true' <<< "$output"
+              grep -q '"original_kiosk_restored": true' <<< "$output" 
+              grep -q '"capture_dropped_frames_after": 0' <<< "$output"
+              grep -q '"originals_remain_required": true' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Authenticated legacy JPEG browser proof incomplete";exit 1
