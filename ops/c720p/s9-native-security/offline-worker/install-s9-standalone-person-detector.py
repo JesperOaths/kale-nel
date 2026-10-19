@@ -8,6 +8,7 @@ an APK or touches the camera service, media, or review databases.
 import argparse
 import hashlib
 import io
+import os
 import json
 import pathlib
 import shutil
@@ -22,7 +23,7 @@ MODEL_SHA="e4b118e5e4531945de2e659742c7c590f7536f8d0ed26d135abcfe83b4779d13"
 LABEL_SHA="c7e79c855f73cbba9f33d649d60e1676eb0a974021a41696d1ac0d4b7f7e0211"
 API="2.16.1"
 MAVEN="https://repo.maven.apache.org/maven2/org/tensorflow"
-ANDROID_JAR="/usr/lib/android-sdk/platforms/android-36/android.jar"
+ANDROID_JAR=os.environ.get("S9_ANDROID_SDK_JAR","/usr/lib/android-sdk/platforms/android-36/android.jar")
 SRC=pathlib.Path(__file__).with_name("S9StandalonePersonRoi.java")
 MODEL_FILES={
  "person_detect.tflite":("assets/detect.tflite",MODEL_SHA),
