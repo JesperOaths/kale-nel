@@ -86,10 +86,19 @@ jobs:
               if [[ "$status" != 'done|0' ]]; then
                 echo "Private S9 HSV32 gate stopped; no further processing authorized"; exit 1
               fi
-              grep -q 'S9_V3_HSV32_TWO_VERIFIED' <<< "$output"
-              grep -q '"camera_apk_changed": false' <<< "$output"
-              grep -q '"manual_reviews_unchanged": true' <<< "$output"
-              grep -q '"private_identifiers_disclosed": false' <<< "$output"
+              if grep -q 'S9_V3_HSV32_TWO_VERIFIED' <<< "$output"; then
+                grep -q '"camera_apk_changed": false' <<< "$output"
+                grep -q '"manual_reviews_unchanged": true' <<< "$output"
+                grep -q '"private_identifiers_disclosed": false' <<< "$output"
+                echo "S9 V3 verified sidecar batch accepted"
+              elif grep -q 'S9_V3_HSV32_TWO_DEFERRED' <<< "$output"; then
+                grep -q '"verified_batch_completed": false' <<< "$output"
+                grep -q '"retry_only_after_new_capture_readiness": true' <<< "$output"
+                grep -q '"private_output_suppressed": true' <<< "$output"
+                echo "S9 V3 phone too warm or recorder unavailable: zero completed-batch claims"
+              else
+                echo "S9 V3 result not verified or safely deferred"; exit 1
+              fi
               exit 0
             fi
             sleep 4
