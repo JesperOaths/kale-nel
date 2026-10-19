@@ -28,7 +28,8 @@ CLIP=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
 REMOTE=re.compile(r"[A-Za-z0-9._-]{1,180}[.]mp4\Z")
 FOLDER=re.compile(r"[A-Za-z0-9_-]{1,100}\Z")
 ORIGINS={"https://kalenel.nl","https://www.kalenel.nl",
-         "http://localhost","http://127.0.0.1"}
+         "http://localhost","http://127.0.0.1",
+         "http://localhost:8123","http://127.0.0.1:8123"}
 
 def initial():return {"version":1,"revision":0,"items":{}}
 
@@ -83,7 +84,7 @@ def mutate(body,sd_names):
  if not isinstance(body,dict) or set(body)!={"action","source","name","folder","revision","human_confirmed"}:
   return 400,{"ok":False,"error":"wrong_fields"}
  action,source,name=body["action"],body["source"],body["name"]
- if action not in ("assign","return_to_queue"):
+ if action not in ("assign","return_to_queue","skip","reject"):
   return 400,{"ok":False,"error":"wrong_action"}
  if not isinstance(name,str) or not source_known(source,name,sd_names):
   return 404,{"ok":False,"error":"source_not_in_verified_archive"}
@@ -92,7 +93,7 @@ def mutate(body,sd_names):
  folder=body["folder"]
  if action=="assign" and (not isinstance(folder,str) or not FOLDER.fullmatch(folder)):
   return 400,{"ok":False,"error":"unknown_folder_format"}
- if action=="return_to_queue" and folder is not None:
+ if action!="assign" and folder is not None:
   return 400,{"ok":False,"error":"return_requires_null_folder"}
  if type(body["revision"]) is not int:
   return 400,{"ok":False,"error":"revision_required"}
@@ -106,13 +107,17 @@ def mutate(body,sd_names):
   key=source+":"+name
   old=before["items"].get(key)
   entry={"folder":folder if action=="assign" else None,
-         "source":source,"name":name}
+         "source":source,"name":name,
+         "review_status":{"assign":"assigned","return_to_queue":"inbox",
+                          "skip":"skipped","reject":"rejected"}[action]}
   updated={"version":1,"revision":before["revision"]+1,
            "items":{**before["items"],key:entry}}
   log={"at":dt.datetime.now(dt.timezone.utc).isoformat(),"source":source,
        "name":name,"from":old.get("folder") if isinstance(old,dict) else None,
        "to":entry["folder"],"revision":updated["revision"],
-       "manual":True}
+       "manual":True,"action":action,"from_review_status":
+       old.get("review_status") if isinstance(old,dict) else None,
+       "to_review_status":entry["review_status"]}
   try:
    atomic(updated)
    fd=os.open(AUDIT,os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW,0o600)
@@ -123,7 +128,7 @@ def mutate(body,sd_names):
     atomic(before);raise
   except OSError:return 503,{"ok":False,"error":"metadata_persistence_failed"}
   return 200,{"ok":True,"revision":updated["revision"],
-    "folder":entry["folder"],"manual_links_only":True}
+    "folder":entry["folder"],"review_status":entry["review_status"],"manual_links_only":True}
 
 def install(H,sd_names):
  previous_get=H.go

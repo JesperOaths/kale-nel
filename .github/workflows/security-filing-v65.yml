@@ -1,0 +1,32 @@
+name: Security filing, review dismissal and origin V65
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.*'
+      - 'ops/c720p/s9-native-security/test-people-v45.js'
+      - 'ops/c720p/s9-native-security/*filing-v65.py'
+      - 'ops/c720p/s9-native-security/*manual-recording-links*.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_manual_recording_links.py'
+      - '.github/workflows/security-filing-v65.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/*filing-v65.py'
+      - '.github/workflows/security-filing-v65.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+      - name: Exercise reviewed filing, dismissal, source separation and origin guards
+        run: |
+          node --check ops/c720p/s9-native-security/security-people-v45.js
+          node ops/c720p/s9-native-security/test-people-v45.js
+          python3 ops/c720p/s9-native-security/test-manual-recording-links-v1.py
+          python3 ops/c720p/s9-native-security/test-security-filing-v65.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-security-filing-v65.py ops/c720p/s9-native-security/verify-security-filing-v65.py
