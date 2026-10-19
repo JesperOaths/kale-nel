@@ -44,6 +44,16 @@ class AllBrowserSafety(unittest.TestCase):
   self.assertNotIn("v.play(",js)
   self.assertIn("filenames_not_returned:true",js)
 
+ def test_no_private_data_in_failure_codes(self):
+  self.assertEqual(s.safe_failure_reason(RuntimeError(
+   "all_migrated_browser_ranges_not_verified_range_contract_failed")),
+   "all_migrated_browser_ranges_not_verified_range_contract_failed")
+  self.assertEqual(s.safe_failure_reason(RuntimeError(
+   "private-name.mp4?ticket=secret-and-identity")),
+   "other_no_private_detail")
+  self.assertEqual(s.safe_failure_reason(RuntimeError(
+   "s9_capture_unhealthy_busy_or_hot")), "s9_capture_unhealthy_busy_or_hot")
+
  def test_existing_browser_worker_and_live_page_unchanged(self):
   src=FILE.read_text()
   for forbidden in ("adb push","pm install","ffmpeg","--delete",
