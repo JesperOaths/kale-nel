@@ -1,8 +1,8 @@
 name: S9 V3 progressive appearance rankings cool-window publisher V113
 on:
   schedule:
-    # Follows the V102 descriptor attempt; repeat only in new, capture-safe windows.
-    - cron: '31 1,5,9,13,17,21 * * *'
+    # Follows OSNet :05 and HSV32 :20; publish only in a fresh safe 4K window.
+    - cron: '40 1,5,9,13,17,21 * * *'
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-progressive-ranking-v113.py'
