@@ -164,6 +164,9 @@ def backup(path,raw,folder):
  require(target.read_bytes()==raw,"backup_integrity_failed")
 
 def apply():
+ # An unexpected symlink must not redirect a writable lock or private backup.
+ require(not LOCK.is_symlink() and LOCK.parent.is_dir(),
+         "unsafe_index_guard_lock")
  with LOCK.open("a+") as lk:
   try:fcntl.flock(lk,fcntl.LOCK_EX|fcntl.LOCK_NB)
   except BlockingIOError:raise Refused("legacy_index_guard_busy")
@@ -171,7 +174,12 @@ def apply():
   temperature=camera_ok()
   require(os.statvfs(str(WEB)).f_bavail*os.statvfs(str(WEB)).f_frsize>650*1024*1024,
           "hub_disk_low")
+  require(not BACKUPS.is_symlink()
+          and (not BACKUPS.exists() or BACKUPS.is_dir()),
+          "unsafe_private_backup_directory")
   BACKUPS.mkdir(parents=True,exist_ok=True,mode=0o700)
+  require(not BACKUPS.is_symlink() and BACKUPS.is_dir(),
+          "unsafe_private_backup_directory")
   os.chmod(BACKUPS,0o700)
   folder=Path(tempfile.mkdtemp(prefix="snapshot-v187-",dir=BACKUPS))
   os.chmod(folder,0o700)
