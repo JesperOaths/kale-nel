@@ -103,8 +103,18 @@ class RankerSafety(unittest.TestCase):
             with patch.object(sys,"argv",["runner.py","--apply"]), \
                  patch.object(m,"capture_rank_safe") as guard, \
                  patch.object(m,"rank") as rank:
-                with self.assertRaises(BlockingIOError):
-                    m.run()
+                # Busy shared lock is an expected, pre-phone-work deferral.
+                from contextlib import redirect_stdout
+                output=io.StringIO()
+                with redirect_stdout(output):
+                    with self.assertRaises(SystemExit) as halted:
+                        m.run()
+                self.assertEqual(halted.exception.code,75)
+                status=json.loads(output.getvalue().split(
+                    "S9_V3_RANKER_DEFERRED ",1)[1].strip())
+                self.assertEqual(status["reason"],"shared_archive_worker_busy")
+                self.assertFalse(status["rankings_published"])
+                self.assertEqual(status["automatic_person_assignments"],0)
                 guard.assert_not_called()
                 rank.assert_not_called()
         finally:
