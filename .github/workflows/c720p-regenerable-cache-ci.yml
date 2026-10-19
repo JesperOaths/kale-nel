@@ -1,0 +1,23 @@
+name: C720P protected cache reclaim
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/reclaim-regenerable-chromium-cache.py'
+      - 'ops/c720p/s9-native-security/test-regenerable-cache-reclaim-v1.py'
+      - '.github/workflows/c720p-regenerable-cache-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/reclaim-regenerable-chromium-cache.py'
+      - 'ops/c720p/s9-native-security/test-regenerable-cache-reclaim-v1.py'
+permissions:
+  contents: read
+jobs:
+  safe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 -m py_compile ops/c720p/s9-native-security/reclaim-regenerable-chromium-cache.py
+          python3 ops/c720p/s9-native-security/test-regenerable-cache-reclaim-v1.py
