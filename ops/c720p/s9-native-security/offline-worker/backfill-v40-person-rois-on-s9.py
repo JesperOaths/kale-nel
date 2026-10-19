@@ -59,14 +59,14 @@ def record_index():
 
 
 def catalog_items():
-    first=req_json("/new/api/visual-review?workflow=clip_folders_v40&tab=all&offset=0&limit=150")
+    first=req_json("/new/api/visual-review?workflow=clip_folders_v40&tab=all&offset=0&limit=100")
     total=first.get("total")
     if not isinstance(total,int) or not 0<=total<=5000:
         raise RuntimeError("Unexpected V40 item count")
     items=first.get("items")
     if not isinstance(items,list):raise RuntimeError("V40 items unavailable")
-    for offset in range(len(items),total,150):
-        page=req_json("/new/api/visual-review?workflow=clip_folders_v40&tab=all&offset="+str(offset)+"&limit=150")
+    for offset in range(len(items),total,100):
+        page=req_json("/new/api/visual-review?workflow=clip_folders_v40&tab=all&offset="+str(offset)+"&limit=100")
         items+=page.get("items",[])
     if len(items)!=total:raise RuntimeError("Incomplete V40 person crop inventory")
     return items
