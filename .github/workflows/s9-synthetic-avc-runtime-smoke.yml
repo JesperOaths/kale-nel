@@ -1,0 +1,28 @@
+name: S9 synthetic AVC runtime smoke source safety
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9AvcRuntimeSmoke.java'
+      - '.github/workflows/s9-synthetic-avc-runtime-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9AvcRuntimeSmoke.java'
+permissions:
+  contents: read
+jobs:
+  android-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          sdk="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          jar="$(find "$sdk/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$jar"
+          javac -source 8 -target 8 -cp "$jar" -d "$work" \
+            ops/c720p/s9-native-security/offline-worker/S9AvcRuntimeSmoke.java
+          test -s "$work/nl/kalenel/s9offline/S9AvcRuntimeSmoke.class"
