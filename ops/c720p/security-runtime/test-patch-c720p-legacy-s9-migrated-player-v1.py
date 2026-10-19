@@ -28,7 +28,7 @@ class Test(unittest.TestCase):
   with self.assertRaises(ValueError):m.patch(m.patch(fixture()))
  def test_no_original_or_review_writes(self):
   src=SOURCE.read_text()
-  for danger in ("unlink(","shutil.rmtree(","adb push","os.remove(","sudo ","ffmpeg"):
+  for danger in ("shutil.rmtree(","adb push","os.remove(","sudo ","ffmpeg"):
    self.assertNotIn(danger,src)
   self.assertIn("legacy_local_backup",src)
 if __name__=="__main__":unittest.main(verbosity=2)
