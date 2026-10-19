@@ -108,6 +108,9 @@ function startLive(img,options={}){
   byImage.set(img,state);active.add(state);
  }
  if(options.status)state.status=options.status;
+ // A previously stopped IMG keeps its WeakMap entry. Re-register it so
+ // visibility scanning and reconnect resume when the same node is reused.
+ active.add(state);
  state.wanted=true;connect(state);return state;
 }
 Object.defineProperty(image,'src',{...imageSrc,set(value){
