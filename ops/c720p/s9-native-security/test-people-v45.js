@@ -182,6 +182,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('reviewGrid').children.length,2);
  assert(el('reviewGrid').children.every(x=>x.dataset.source==='drive'));
  assert.match(el('reviewTotal').textContent,/2 Drive/);
+ el('reviewMode').value='skipped';el('reviewMode').handlers.change();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('reviewSource').value,'sd','Skipped view must truthfully label its native-only source');
+ assert.equal(el('reviewSource').disabled,true);
  el('reviewMode').value='inbox';el('reviewMode').handlers.change();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('reviewGrid').children.length,2,'Needs review includes both unassigned Drive originals');

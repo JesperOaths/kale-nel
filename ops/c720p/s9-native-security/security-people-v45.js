@@ -854,7 +854,7 @@ function paginate(host,total,onPage){
 }
 function renderReview(){
  $('reviewMode').value=state.tab;
- $('reviewSource').value=state.reviewSource;
+ $('reviewSource').value=state.tab==='skipped'?'sd':state.reviewSource;
  $('reviewSource').disabled=state.tab==='skipped';
  const host=$('reviewGrid');host.replaceChildren();
  if(state.tab==='all'||state.tab==='inbox'){
