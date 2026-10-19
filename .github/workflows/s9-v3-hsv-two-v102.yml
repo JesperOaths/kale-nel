@@ -36,7 +36,10 @@ jobs:
                             '.write_text(','review_decide','assign_person','run-s9-uniform-appearance-rankings'):
               assert forbidden not in s, forbidden
           assert 'missing[:2]' in s
-          assert 'MAX_C=42.0' in s and 'INITIAL_MAX_C=41.5' in s
+          assert 'MAX_C=42.0' in s and 'INITIAL_MAX_C=39.5' in s
+          assert 'capture_healthy()' in s and 'preroll_version' in s
+          assert 'continuous_4k_production_persisted' in s
+          assert 'continuous_4k_buffered_ms' in s
           assert 'fcntl.flock' in s and 'safe_visual' in s and 'v2_histogram' in s
           assert 'private_identifiers_disclosed' in s
           print('S9_V3_HSV_TWO_SAFE_SOURCE_CONTRACT_PASS')

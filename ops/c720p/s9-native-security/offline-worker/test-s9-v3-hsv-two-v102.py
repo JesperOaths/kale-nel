@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """No-device tests for two-crop phone HSV32 preservation and thermal gates."""
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -11,9 +12,28 @@ SRC=Path(__file__).with_name("run-s9-v3-hsv-two-v102.py")
 spec=importlib.util.spec_from_file_location("v102_hsv",SRC)
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
+class FakeResp:
+    status=200
+    def __init__(self,payload):self.data=json.dumps(payload).encode()
+    def __enter__(self):return self
+    def __exit__(self,*args):return False
+    def read(self,limit):return self.data[:limit]
+
+def good_capture(**changes):
+    status={"ok":True,"mode":"watching","native_4k_enabled":True,
+            "continuous_4k_ready":True,"continuous_4k_buffered_ms":7000,
+            "continuous_4k_production_persisted":True,
+            "preroll_version":"continuous_native_4k_h264_ring_v1",
+            "continuous_4k_dropped_output_frames":0,"continuous_4k_error":"",
+            "continuous_4k_trial_active":True,"recording_active":False,
+            "preroll_ready":False,"preroll_buffered_ms":0,
+            "temperature_c":38.0}
+    status.update(changes)
+    return status
+
 class FakeH:
     ROOT="/data/local/tmp/s9_worker"
-    def __init__(self, temp=40.0, count=76, initially_missing=18):
+    def __init__(self, temp=38.0, count=76, initially_missing=18):
         self.temp=temp
         self.pid="8088"
         self.rows=[{"key":f"{i+1:064x}","crop_sha256":"f"*64,
@@ -61,8 +81,12 @@ class Tests(unittest.TestCase):
         m.LOCK=Path(self.t.name)/"archive.lock"
         self.disk=patch.object(m.shutil,"disk_usage",return_value=SimpleNamespace(free=3_000_000_000))
         self.disk.start()
+        self.http=patch.object(m.urllib.request,"urlopen",
+             return_value=FakeResp(good_capture()))
+        self.http.start()
     def tearDown(self):
         self.disk.stop()
+        self.http.stop()
         m.LOCK=self.old_lock
         self.t.cleanup()
     def test_exact_two_real_sidecars_and_resume(self):
@@ -97,6 +121,29 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"camera_pid_missing"):
             m.run(h,FakeCtrl())
         self.assertEqual(h.new,[])
+    def test_refuses_hot_or_degraded_capture_without_descriptor_writes(self):
+        for attrs,expected in [
+          ({"temperature_c":41.5},"camera_too_warm"),
+          ({"continuous_4k_ready":False},"camera_capture"),
+          ({"continuous_4k_buffered_ms":1000},"camera_capture"),
+          ({"preroll_version":"legacy_preroll"},"camera_capture"),
+          ({"continuous_4k_production_persisted":False},"camera_capture"),
+          ({"recording_active":True},"camera_capture"),
+          ({"continuous_4k_dropped_output_frames":2},"camera_capture"),
+          ({"mode":"restarting"},"camera_capture")]:
+            with self.subTest(attrs=attrs):
+                h=FakeH()
+                with patch.object(m.urllib.request,"urlopen",
+                                  return_value=FakeResp(good_capture(**attrs))):
+                    with self.assertRaisesRegex(RuntimeError,expected):
+                        m.run(h,FakeCtrl())
+                self.assertEqual(h.new,[])
+    def test_camera_guard_can_resume_after_stable_cool_buffer(self):
+        with patch.object(m.urllib.request,"urlopen",
+                          return_value=FakeResp(good_capture(
+                            temperature_c=39.5,continuous_4k_buffered_ms=6000))):
+            self.assertEqual(m.run(FakeH(temp=39.5),FakeCtrl())["new_verified_histograms"],2)
+
     def test_source_key_validation_prevents_writes(self):
         h=FakeH()
         h.rows[0]["key"]="../bad"
