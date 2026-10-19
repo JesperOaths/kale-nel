@@ -73,6 +73,11 @@ def from_phone(phone,now_ms=None):
           phone.get("garden_person_gate_stale_dropped"),0,1000000000),
       "hub_frame_decoding":False,"last_sample_at_ms":now_ms,
       "last_sample_age_ms":0,"samples":checked,"failures":failures,
+      # SECURITY_NATIVE_CAPTURE_TELEMETRY_V1
+      "native_4k_enabled":phone.get("native_4k_enabled") if type(phone.get("native_4k_enabled")) is bool else None,
+      "continuous_4k_ready":phone.get("continuous_4k_ready") if type(phone.get("continuous_4k_ready")) is bool else None,
+      "continuous_4k_buffered_ms":_sensor_value(phone.get("continuous_4k_buffered_ms"),0,120000),
+      "continuous_4k_dropped_output_frames":_sensor_value(phone.get("continuous_4k_dropped_output_frames"),0,1000000000),
       "camera_mode":phone["mode"],"camera_temperature_c":phone.get("temperature_c"),
       # S9+ removable microSD capacity is measured on the phone, never guessed by the hub.
       "sd_free_bytes":_sensor_value(phone.get("sd_free_bytes"),0,1000000000000000),

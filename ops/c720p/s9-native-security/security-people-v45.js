@@ -1010,6 +1010,18 @@ function renderPeople(){
  if(!saved.children.length)saved.append(elt('p','No saved people. Add a person or file a reviewed recording to get started.','empty'));
  // Clothing suggestions are not mixed into the saved-people list.
 }
+// SECURITY_OUTFIT_REVIEW_FINALITY_V1
+function outfitReviewEligible(clip){
+ const item={source:'sd',name:clip,clip},key=assignmentKey(item);
+ const explicit=state.extraLinks?.items?.[key];
+ if(explicit!==undefined&&explicit!==null){
+  // Only an explicit empty inbox state reopens a completed manual decision.
+  if(typeof explicit!=='object'||Array.isArray(explicit)||explicit.review_status!=='inbox')return false;
+  if(explicit.folder!=null||!(explicit.folders==null||Array.isArray(explicit.folders)&&explicit.folders.length===0))return false;
+ }
+ return !assignedFolders(item).length&&reviewDecision(item)==='inbox';
+}
+
 async function searchClothingMatches(force=false){
  if(state.clothingBusy||!state.assignedReady||!state.extraLinks)return;
  if(state.clothingMatches&&!force)return;
@@ -1061,7 +1073,7 @@ async function searchClothingMatches(force=false){
     const candidateTime=Number(clip.slice(7,20));
     if(!Number.isFinite(candidateTime)||
        Math.abs(candidateTime-ref.recorded_ms)>72*60*60*1000)continue;
-    if(assignedFolder({source:'sd',name:clip,clip}))continue;
+    if(!outfitReviewEligible(clip))continue;
     const u=Number(hit.similarity),l=Number(bottom.similarity);
     if(!Number.isFinite(u)||!Number.isFinite(l)||u<.90||l<.88||u>1||l>1)continue;
     if(hit.zone&&bottom.zone&&hit.zone!==bottom.zone)continue;
@@ -1219,7 +1231,7 @@ function renderAutomatic(){
 }
 function renderClothing(){
  const host=$('clothingList');host.replaceChildren();
- const matches=state.clothingMatches||[];
+ const matches=(state.clothingMatches||[]).filter(match=>outfitReviewEligible(match.clip));
  $('groupCount').textContent=state.clothingMatches?String(matches.length):'—';
  $('clothingTabCount').textContent=matches.length?' · '+matches.length:'';
  $('clothingTotal').textContent=state.clothingBusy?'Comparing approved reference recordings on S9+…':

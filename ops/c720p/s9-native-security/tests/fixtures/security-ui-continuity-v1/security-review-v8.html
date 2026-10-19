@@ -1,0 +1,76 @@
+<!doctype html>
+<script id="s9-aux-recovery-ui">
+(()=>{
+const $=id=>document.getElementById(id);
+const panel=$('auxRecovery'),list=$('auxRecoveryList'),status=$('auxRecoveryStatus');
+if(!panel)return;
+const count=$('auxRecoveryCount'),search=$('auxRecoverySearch'),label=$('auxRecoveryPage'),prev=$('auxRecoveryPrev'),next=$('auxRecoveryNext');
+const datefmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',dateStyle:'medium',timeStyle:'short'});
+let files=[],page=0,loaded=false,loading=false,player=null,serial=0;
+const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);return e};
+function stop(){serial++;if(player){player.pause();player.removeAttribute('src');player.load();player.remove();player=null}}
+function render(){
+ stop();list.replaceChildren();
+ const filter=search.value.toLowerCase().trim();
+ const found=files.filter(f=>{
+  const day=datefmt.format(new Date(Number(f.name.slice(7,20)))).toLowerCase();
+  return !filter||f.role.includes(filter)||day.includes(filter)||f.name.includes(filter);
+ });
+ const pages=Math.max(1,Math.ceil(found.length/24));
+ page=Math.max(0,Math.min(page,pages-1));
+ label.textContent=found.length+' items · page '+(page+1)+' of '+pages;
+ prev.disabled=page===0;next.disabled=page===pages-1;
+ if(!found.length){list.append(node('p','No matching footage.'));return}
+ for(const f of found.slice(page*24,page*24+24)){
+  const row=node('div');row.className='aux-row';
+  const meta=node('div',(f.role==='preroll'?'Pre-event buffer':'Completed companion')+' · '+datefmt.format(new Date(Number(f.name.slice(7,20)))));
+  meta.append(node('small',f.duration_s.toFixed(1)+'s · '+f.width+' × '+f.height+' · H.264'));
+  const open=node('button','Preview');open.type='button';
+  open.addEventListener('click',async()=>{
+   stop();const id=serial;open.disabled=true;
+   try{
+    const relay=window.C720PSecureRelay;
+    if(!relay?.url)throw Error('Secure relay unavailable');
+    const url=await relay.url('/new/saved/recovery/clip/'+encodeURIComponent(f.name));
+    if(id!==serial)return;
+    const video=node('video');video.className='aux-player';
+    video.controls=true;video.preload='metadata';video.playsInline=true;video.src=url;
+    row.append(video);player=video;
+    video.addEventListener('error',()=>{if(player===video)status.textContent='Playback unavailable; original files remain preserved'});
+   }catch(e){status.textContent='Cannot open recovery footage through the authenticated relay'}
+   finally{open.disabled=false}
+  });
+  row.append(meta,open);list.append(row);
+ }
+}
+async function load(){
+ if(loaded||loading)return;
+ loading=true;status.textContent='Loading recoverable footage…';
+ try{
+  const relay=window.C720PSecureRelay;
+  if(!relay?.fetch)throw Error('Secure relay unavailable');
+  const response=await relay.fetch('/new/api/s9-auxiliary-recovery',{cache:'no-store'});
+  if(!response.ok)throw Error('Recovery data unavailable');
+  const data=await response.json();
+  const good=f=>f&&typeof f.name==='string'&&/^motion_[0-9]{13}\.mp4\.(?:preroll|complete)\.mp4$/.test(f.name)
+   &&(f.role==='preroll'||f.role==='complete')&&Number.isFinite(f.duration_s)&&f.duration_s>0&&f.duration_s<3600
+   &&Number.isSafeInteger(f.bytes)&&f.bytes>=10000&&f.bytes<=32000000;
+  if(data.ok!==true||data.schema_version!=='s9_auxiliary_recovery_metadata_v1'||
+   data.not_verified_original_recordings!==true||data.not_counted_in_archive_or_person_analytics!==true||
+   data.no_human_identity_approval!==true||data.full_frame_decode_verified!==false||
+   !Array.isArray(data.files)||data.files.length>400||data.files.length!==data.structural_candidates||
+   !data.files.every(good))throw Error('Invalid recovery report');
+  files=data.files.sort((a,b)=>b.name.localeCompare(a.name));
+  count.textContent='· '+files.length;
+  status.textContent='Separate evidence only · no automatic person labels or extra original recordings';
+  loaded=true;render();
+ }catch(e){status.textContent='Recoverable evidence unavailable · '+String(e.message||e)}
+ finally{loading=false}
+}
+panel.addEventListener('toggle',()=>{if(panel.open)load();else stop()});
+search.addEventListener('input',()=>{page=0;if(loaded)render()});
+prev.addEventListener('click',()=>{if(page>0){page--;render()}});
+next.addEventListener('click',()=>{page++;render()});
+window.addEventListener('pagehide',stop);
+})();
+</script>

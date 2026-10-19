@@ -1,0 +1,6 @@
+<!doctype html><script>
+const category=r=>{const g=String(r.person_event_category||r.scene_category||'').toLowerCase(),tags=Array.isArray(r.content_categories)?r.content_categories.map(String):[];
+if(g.includes('person')||Number(r.person_count)>0)return 'Person';
+if(g.includes('animal')||tags.includes('animal'))return 'Animal';
+if(g.includes('vehicle')||tags.includes('vehicle'))return 'Vehicle';return 'Motion'};
+</script>
