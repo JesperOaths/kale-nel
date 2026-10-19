@@ -882,16 +882,22 @@ async function searchClothingMatches(force=false){
  // Reviewed single-person clips act as labelled examples, not biometric
  // training data. Use up to three distinct time-separated references per
  // person, rather than one outfit/photo being treated as their identity.
- const perPerson=new Map(),references=[];
+ // Sample one independent reference per saved person before selecting
+ // the second and third. Otherwise the first people in reverse chronology
+ // exhaust the reference budget and hide equally valid reviewed people.
+ const perPerson=new Map(savedFolders().map(person=>[person.id,{person,refs:[]}]));
  for(const ref of sources){
-  const id=assignedFolder(ref);
-  const prior=perPerson.get(id)||[];
-  if(prior.length>=3)continue;
-  if(prior.some(x=>Math.abs(x.recorded_ms-ref.recorded_ms)<15*60*1000))continue;
-  const person=savedFolders().find(x=>x.id===id);
-  if(!person)continue;
-  prior.push(ref);perPerson.set(id,prior);references.push({ref,person});
-  if(references.length>=18)break;
+  const group=perPerson.get(assignedFolder(ref));
+  if(!group||group.refs.length>=3)continue;
+  if(group.refs.some(x=>Math.abs(x.recorded_ms-ref.recorded_ms)<15*60*1000))continue;
+  group.refs.push(ref);
+ }
+ const references=[];
+ for(let pass=0;pass<3&&references.length<18;pass++){
+  for(const group of perPerson.values()){
+   if(group.refs[pass])references.push({ref:group.refs[pass],person:group.person});
+   if(references.length>=18)break;
+  }
  }
  const matches=new Map();let failures=0,checked=0;
  for(const {ref,person} of references){
@@ -911,6 +917,11 @@ async function searchClothingMatches(force=false){
    for(const hit of upper.results||[]){
     const clip=String(hit.clip_name||''),bottom=lowers.get(clip);
     if(!clipName.test(clip)||!bottom||clip===ref.clip)continue;
+    // Similar clothing weeks apart is not reliable person evidence. Only
+    // surface time-nearby outfit comparisons, never an identity assertion.
+    const candidateTime=Number(clip.slice(7,20));
+    if(!Number.isFinite(candidateTime)||
+       Math.abs(candidateTime-ref.recorded_ms)>72*60*60*1000)continue;
     if(assignedFolder({source:'sd',name:clip,clip}))continue;
     const u=Number(hit.similarity),l=Number(bottom.similarity);
     if(!Number.isFinite(u)||!Number.isFinite(l)||u<.90||l<.88||u>1||l>1)continue;
@@ -969,7 +980,7 @@ function renderClothing(){
  $('groupCount').textContent=state.clothingMatches?String(matches.length):'—';
  $('clothingTabCount').textContent=matches.length?' · '+matches.length:'';
  $('clothingTotal').textContent=state.clothingBusy?'Comparing approved reference recordings on S9+…':
-  state.clothingError||matches.length+' two-piece outfit suggestions · all require human review';
+  state.clothingError||matches.length+' two-piece outfit comparisons within 72 hours · human review required; not identity matches';
  if(!state.clothingMatches){
   host.append(elt('p',state.clothingBusy?'Checking upper and lower clothing against confirmed reference clips…':
    'Select Refresh matches to compare approved single-person recordings.','empty'));return;
