@@ -45,7 +45,7 @@ def checked_status(doc):
                  "review_decisions_modified"):
         if doc.get(name) is not False:
             raise RuntimeError("reported_mutation_"+name)
-    if doc.get("selected")!=1 or not isinstance(doc.get("counts"),dict):
+    if type(doc.get("selected")) is not int or doc["selected"]!=1 or not isinstance(doc.get("counts"),dict):
         raise RuntimeError("unexpected_pilot_batch")
     allowed={"already_verified","new_real_512d_vector","no_qualified_person_box"}
     counts=doc["counts"]
