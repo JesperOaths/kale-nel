@@ -39,7 +39,16 @@ SHA=re.compile(r"[a-f0-9]{64}")
 def digest(blob):return hashlib.sha256(blob).hexdigest()
 def call(argv,seconds=90):
  p=subprocess.run(argv,capture_output=True,text=True,timeout=seconds)
- if p.returncode:raise RuntimeError("separate_phone_operation_failed")
+ if p.returncode:
+  # The S9 shell may terminate app_process with status 137 before the
+  # detector initializes. This is not evidence of a bad human image and
+  # must never trigger a retry or enrollment. Do not echo private argv
+  # (which can contain a face JPEG filename) or device stderr to logs.
+  if (argv and argv[0]=="adb" and any("app_process" in str(a) for a in argv)
+      and (p.returncode in (137,-9) or "killed" in
+           (p.stderr+" "+p.stdout).lower())):
+   raise RuntimeError("android_app_process_terminated_without_face_evidence")
+  raise RuntimeError("separate_phone_operation_failed")
  return p.stdout.strip()
 def adb(*cmd,timeout=26):
  return call(["adb","-s",PHONE,*cmd],timeout)
@@ -218,7 +227,8 @@ def main():
  except (RuntimeError,BlockingIOError) as e:
   label="another_s9_worker_active" if isinstance(e,BlockingIOError) else str(e)
   benign=("capture_not_cool_idle","no_source_qualified_unpadded_face_snapshot",
-          "hub_root_disk_reserve_low","another_s9_worker_active")
+          "hub_root_disk_reserve_low","another_s9_worker_active",
+          "android_app_process_terminated_without_face_evidence")
   if label in benign:
    print("S9_YUNET_REAL_ONE_SNAPSHOT_DEFERRED "+json.dumps({
     "reason":label,"executed":False,"camera_apk_modified":False,
