@@ -106,6 +106,40 @@ class Tests(unittest.TestCase):
             self.assertEqual(m.cache_thumbnail(entry,path,"5000:1792000000000"),
                              (True,"5000:1792000000000"))
         self.assertEqual(path.read_bytes(),previous)
+    def test_fresh_standalone_snapshot_must_match_private_camera_healthy_summary(self):
+        source=record()
+        catalog=Path(self.tmp.name)/"standalone.json"
+        summary=Path(self.tmp.name)/"summary.json"
+        meta={"schema_version":m.VERSION,"snapshot_id":"a"*64,
+              "records":{source["name"]:source}}
+        details={"catalog_snapshot_id":"a"*64,"recordings":1,
+          "source":"S9_native_microSD_sidecar_metadata",
+          "timezone":"Europe/Amsterdam","operating_day_start_hour":6,
+          "read_only":True,"video_bytes_transferred_to_hub":False,
+          "camera_4k_healthy_before_and_after":True}
+        catalog.write_text(json.dumps(meta))
+        summary.write_text(json.dumps(details))
+        catalog.chmod(0o600);summary.chmod(0o600)
+        self.assertEqual(set(m._fresh_standalone_catalog(catalog,summary)["records"]),{source["name"]})
+        details["camera_4k_healthy_before_and_after"]=False
+        summary.write_text(json.dumps(details))
+        self.assertIsNone(m._fresh_standalone_catalog(catalog,summary))
+        details["camera_4k_healthy_before_and_after"]=True
+        summary.write_text(json.dumps(details))
+        summary.chmod(0o644)
+        self.assertIsNone(m._fresh_standalone_catalog(catalog,summary))
+    def test_unavailable_native_endpoint_falls_back_only_to_verified_recent_snapshot(self):
+        source=record()
+        accepted={"schema_version":m.VERSION,"snapshot_id":"1"*64,
+                  "records":{source["name"]:source}}
+        with patch.object(m,"_read",side_effect=m.Unavailable("phone_catalog_endpoint_unavailable")),\
+             patch.object(m,"_fresh_standalone_catalog",return_value=accepted):
+            self.assertEqual(m.load_catalog(self.cache),accepted)
+        self.assertFalse(self.cache.exists())  # no unverified native writes
+        with patch.object(m,"_read",side_effect=m.Unavailable("phone_catalog_endpoint_unavailable")),\
+             patch.object(m,"_fresh_standalone_catalog",return_value=None):
+            with self.assertRaises(m.Unavailable):m.load_catalog(self.cache)
+
     def test_asset_path_validation_never_contacts_phone(self):
         with patch.object(m.urllib.request,"urlopen") as request:
             for name in ["../secret","motion_1792000000000.mp4","FaceSnapshots/face.jpg"]:
