@@ -9,11 +9,13 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-single-orphan-osnet-v113.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-single-orphan-osnet-v113.py'
       - '.github/workflows/s9-v3-single-orphan-osnet-v113.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py'
   push:
     branches: [main]
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-single-orphan-osnet-v113.py'
       - '.github/workflows/s9-v3-single-orphan-osnet-v113.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py'
 permissions:
   contents: read
 concurrency:
@@ -32,6 +34,7 @@ jobs:
           root=ops/c720p/s9-native-security/offline-worker
           python3 -m py_compile "$root/run-s9-v3-single-orphan-osnet-v113.py"
           python3 "$root/test-s9-v3-single-orphan-osnet-v113.py"
+          python3 ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py
           python3 "$root/test-s9-hsv-transport-v107.py"
           python3 "$root/test-s9-v3-partial-inventory.py"
           python3 - <<'PY'
