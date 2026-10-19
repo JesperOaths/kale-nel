@@ -25,6 +25,7 @@ class Tests(unittest.TestCase):
    new=importlib.util.module_from_spec(spec);spec.loader.exec_module(new)
    base=("<html><head>"+m.TITLE+"</head><body>"
         "<div>saveClip(1)</div><video src='clips/safe.mp4'></video>"
+        +("<p>thumbnail-test-row</p>"*35)
         "</body></html>").encode()
    both=new.new_html(base)
    self.assertEqual(both.count(m.VIDEO_TAG.encode()),1)
