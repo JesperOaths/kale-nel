@@ -536,6 +536,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  // a second person added via the repeatable + selector, and show it in both.
  driveOnlyPerson.automatic_appearance_group=false;
  panes[1].handlers.click();for(let i=0;i<8;i++)await flush();
+ // Earlier Drive-only source selection must not hide the synthetic SD group.
+ el('reviewSource').value='all';el('reviewSource').handlers.change();
  const groupRow=el('reviewGrid').children.find(x=>x.dataset.source==='sd'&&x.dataset.clip===otherClip);
  assert(groupRow,'Unassigned reviewed original for a group fixture must be present');
  const groupFile=scan(groupRow,'✓ File under person');
