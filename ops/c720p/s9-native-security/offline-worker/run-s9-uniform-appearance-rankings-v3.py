@@ -53,6 +53,27 @@ def exec_local(args,timeout=100):
     return result.stdout.strip()
 
 
+def trusted_pair_presence(module,inventory):
+    """Reuse the verified, transport-fail-closed 24-crop pair-mask protocol.
+
+    The physical V3 phone module exposes adb; minimalist historical unit-test
+    doubles expose remote_exists only. Never fall back on a *failed* ADB batch.
+    No private vectors or clip identifiers enter the presence response.
+    """
+    if callable(getattr(module,"adb",None)):
+        path=Path(__file__).with_name("run-s9-v3-hsv-two-v102.py")
+        spec=importlib.util.spec_from_file_location("s9_v3_batched_pair_mask",path)
+        helper=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        return helper.presence_inventory(module,inventory)
+    def historical_test_adapter(key,kind):
+        if kind not in ("visual","hsv") or not HEX.fullmatch(key):
+            raise RuntimeError("untrusted_descriptor_presence_lookup")
+        suffix="-visual.json" if kind=="visual" else "-hsv-v2.json"
+        return module.remote_exists(ROOT+"/features/"+key+suffix)
+    return historical_test_adapter
+
+
 def verified_ready_subset(module,inventory):
     """Include only complete on-phone descriptor pairs; never synthesize data.
 
@@ -62,6 +83,10 @@ def verified_ready_subset(module,inventory):
     """
     if not isinstance(inventory,list) or len(inventory)>400:
         raise RuntimeError("Unbounded source-qualified crop inventory")
+    # The phone's paired flags are checked in at most ceil(N/24) ADB
+    # roundtrips instead of two per crop. Every COMPLETE sidecar is still
+    # independently decoded, validated and SHA-256 verified below.
+    present=trusted_pair_presence(module,inventory)
     ready=[]
     for row in inventory:
         if not isinstance(row,dict):
@@ -72,7 +97,7 @@ def verified_ready_subset(module,inventory):
             or row.get("cohort") not in ("v40","approved_new","archive_unassigned")):
             raise RuntimeError("Invalid source qualified descriptor provenance")
         hsv_path=ROOT+"/features/"+key+"-hsv-v2.json"
-        if not module.remote_exists(hsv_path):
+        if not present(key,"hsv"):
             continue
         # The 76-crop inventory may contain a new V40 HSV32 descriptor
         # whose OSNet 512-D companion has not been completed yet. Confirm
@@ -81,7 +106,7 @@ def verified_ready_subset(module,inventory):
         # immutable V2 references. A future cool-window backfill may fill
         # the missing visual descriptor without overwriting existing HSV.
         visual_path=ROOT+"/features/"+key+"-visual.json"
-        if not module.remote_exists(visual_path):
+        if not present(key,"visual"):
             continue
         module.safe_visual(key,crop)
         hsv=module.phone_json(hsv_path)
