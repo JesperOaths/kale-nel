@@ -23,9 +23,13 @@ public final class PhoneArchiveCliInventoryTest {
        .put(new JSONObject().put("name",b));
    file(root,a);file(root,b);
    file(root,a+".preroll.mp4");
-   file(root,"motion_1792000006000.mp4.preroll.mp4");
-   file(root,a+".complete.mp4");
-   file(root,b+".complete.partial.mp4");
+   File orphan=file(root,"motion_1792000006000.mp4.preroll.mp4");
+   File complete=file(root,a+".complete.mp4");
+   File partial=file(root,b+".complete.partial.mp4");
+   long twoDaysAgo=System.currentTimeMillis()-2L*24*60*60*1000;
+   demand(orphan.setLastModified(twoDaysAgo),"orphan mtime");
+   demand(complete.setLastModified(twoDaysAgo),"complete mtime");
+   demand(partial.setLastModified(twoDaysAgo),"partial mtime");
    file(root,"diagnostic_preroll_check.mp4");
    file(root,"unexpected_safe_video.mp4");
    JSONObject result=PhoneArchiveCli.auxiliaryInventory(root,verified);
@@ -37,6 +41,11 @@ public final class PhoneArchiveCliInventoryTest {
    demand(result.getInt("partial_completion_mp4_files")==1,"partial not independently shown");
    demand(result.getInt("diagnostic_mp4_files")==1,"diagnostic not an event");
    demand(result.getInt("unverified_or_unknown_mp4_files")==1,"unknown kept visible");
+   demand(result.getInt("unpaired_preroll_older_than_24h_mtime")==1,"older orphan separately reported");
+   demand(result.getInt("completed_companion_older_than_24h_mtime")==1,"older completion reported");
+   demand(result.getInt("partial_companion_older_than_24h_mtime")==1,"older partial reported");
+   demand(result.getBoolean("mtime_age_only_not_integrity_verdict"),"age not corruption proof");
+   demand(result.getBoolean("no_media_quarantined_or_deleted"),"no media edits");
    demand(result.getBoolean("auxiliary_files_are_not_additional_recordings"),"semantics");
    new File(root,b).delete();
    boolean rejected=false;
