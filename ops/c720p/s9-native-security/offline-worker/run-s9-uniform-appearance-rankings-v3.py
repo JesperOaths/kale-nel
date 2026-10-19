@@ -225,9 +225,14 @@ def phone_temperature_c():
 def existing_sha(path):
     result=subprocess.run(["adb","-s",PHONE,"shell","test -s "+path],
                           capture_output=True,text=True,timeout=15)
-    if result.returncode==0:
-        return phone("shell","sha256sum "+path,timeout=30).split()[0]
-    return None
+    if result.returncode==1 and not result.stderr.strip():
+        return None
+    if result.returncode!=0:
+        raise RuntimeError("S9 ranker sidecar presence indeterminate")
+    fields=phone("shell","sha256sum "+path,timeout=30).split()
+    if len(fields)<2 or not HEX.fullmatch(fields[0]):
+        raise RuntimeError("S9 ranker sidecar checksum malformed")
+    return fields[0]
 
 
 def stage(remote,local):

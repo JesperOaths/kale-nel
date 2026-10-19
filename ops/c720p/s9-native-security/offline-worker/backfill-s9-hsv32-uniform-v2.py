@@ -64,7 +64,13 @@ def remote_sha(path):
 
 
 def remote_exists(path):
-    return adb("shell","test -s "+path,timeout=15,required=False).returncode==0
+    # The only proven absence is remote "test -s" exit 1 with no ADB stderr.
+    # Transport loss, shell permission errors or any other code must abort
+    # rather than silently discarding original verified descriptor rows.
+    result=adb("shell","test -s "+path,timeout=15,required=False)
+    if result.returncode==0:return True
+    if result.returncode==1 and not result.stderr.strip():return False
+    raise RuntimeError("S9 sidecar presence indeterminate, aborting verification")
 
 
 def safe_visual(key,cropsha):
