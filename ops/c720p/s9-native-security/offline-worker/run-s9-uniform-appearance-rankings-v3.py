@@ -49,25 +49,33 @@ def exec_local(args,timeout=100):
     return result.stdout.strip()
 
 
-def source_inventory():
-    helper=Path(__file__).with_name("backfill-s9-hsv32-uniform-v2.py")
-    spec=importlib.util.spec_from_file_location("s9_v2_uniform_catalog",helper)
-    module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module
-    spec.loader.exec_module(module)
-    rows=module.inventory(include_unreviewed=True)
-    cohort=Counter(x["cohort"] for x in rows)
-    if (not 58<=len(rows)<=400 or cohort["v40"]<51
-        or cohort["approved_new"]<6
-        or sum(cohort.values())!=len(rows)
-        or any(x not in {"v40","approved_new","archive_unassigned"} for x in cohort)):
-        raise RuntimeError("V3 requires all 57 V2 references and at least 58 real crops")
-    for row in rows:
-        module.safe_visual(row["key"],row["crop_sha256"])
-        hsv=module.phone_json(ROOT+"/features/"+row["key"]+"-hsv-v2.json")
+def verified_ready_subset(module,inventory):
+    """Include only complete on-phone descriptor pairs; never synthesize data.
+
+    Missing histogram files are pending backfill, not corrupt records. A
+    nonempty malformed histogram or 512D sidecar still fails closed. Original
+    V2 baseline retention is checked independently before any index writes.
+    """
+    if not isinstance(inventory,list) or len(inventory)>400:
+        raise RuntimeError("Unbounded source-qualified crop inventory")
+    ready=[]
+    for row in inventory:
+        if not isinstance(row,dict):
+            raise RuntimeError("Invalid source inventory record")
+        key=row.get("key");crop=row.get("crop_sha256")
+        if (not isinstance(key,str) or not HEX.fullmatch(key)
+            or not isinstance(crop,str) or not HEX.fullmatch(crop)
+            or row.get("cohort") not in ("v40","approved_new","archive_unassigned")):
+            raise RuntimeError("Invalid source qualified descriptor provenance")
+        hsv_path=ROOT+"/features/"+key+"-hsv-v2.json"
+        if not module.remote_exists(hsv_path):
+            continue
+        module.safe_visual(key,crop)
+        hsv=module.phone_json(hsv_path)
         values=hsv.get("upper_hsv32")
         if (hsv.get("schema")!=SCHEMA
-            or hsv.get("source_qualified_key")!=row["key"]
-            or hsv.get("crop_sha256")!=row["crop_sha256"]
+            or hsv.get("source_qualified_key")!=key
+            or hsv.get("crop_sha256")!=crop
             or hsv.get("method")!="hue8_saturation2_value2_center_torso_v2"
             or hsv.get("verified_same_person") is not False
             or hsv.get("identity_probability") is not False
@@ -76,15 +84,32 @@ def source_inventory():
                        for x in values)
             or abs(sum(values)-1)>0.0001
             or hsv.get("human_review_required") is not True):
-            raise RuntimeError("Real phone uniform histogram incomplete")
-        row["visual_sidecar_sha256"]=existing_sha(
-            ROOT+"/features/"+row["key"]+"-visual.json")
-        row["hsv_sidecar_sha256"]=existing_sha(
-            ROOT+"/features/"+row["key"]+"-hsv-v2.json")
-        if (not row["visual_sidecar_sha256"] or not row["hsv_sidecar_sha256"]
-            or not HEX.fullmatch(row["visual_sidecar_sha256"])
-            or not HEX.fullmatch(row["hsv_sidecar_sha256"])):
+            raise RuntimeError("Malformed existing real phone uniform HSV32 descriptor")
+        visual_sha=existing_sha(ROOT+"/features/"+key+"-visual.json")
+        hsv_sha=existing_sha(hsv_path)
+        if (not isinstance(visual_sha,str) or not HEX.fullmatch(visual_sha)
+            or not isinstance(hsv_sha,str) or not HEX.fullmatch(hsv_sha)):
             raise RuntimeError("Unverified source descriptor digest")
+        complete=dict(row)
+        complete["visual_sidecar_sha256"]=visual_sha
+        complete["hsv_sidecar_sha256"]=hsv_sha
+        ready.append(complete)
+    return ready
+
+
+def source_inventory():
+    helper=Path(__file__).with_name("backfill-s9-hsv32-uniform-v2.py")
+    spec=importlib.util.spec_from_file_location("s9_v2_uniform_catalog",helper)
+    module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module
+    spec.loader.exec_module(module)
+    all_rows=module.inventory(include_unreviewed=True)
+    rows=verified_ready_subset(module,all_rows)
+    cohort=Counter(x["cohort"] for x in rows)
+    if (not 58<=len(rows)<=400 or cohort["v40"]<51
+        or cohort["approved_new"]<6
+        or sum(cohort.values())!=len(rows)
+        or any(x not in {"v40","approved_new","archive_unassigned"} for x in cohort)):
+        raise RuntimeError("V3 requires complete original V2 references plus one extra real descriptor")
     return rows
 
 
@@ -273,6 +298,7 @@ def run():
         "cohorts":dict(Counter(x["cohort"] for x in rows)),
         "model_sha256":VISUAL,
         "v2_reference_baseline_preserved":True,
+        "missing_descriptors_can_be_deferred":True,
         "new_rankings_written":False,
         "old_rankings_modified":False}),flush=True)
     if not args.apply:return
