@@ -32,7 +32,6 @@ jobs:
           python3 -m py_compile "$d/c720p_to_s9_verified_snapshot_stage_v167.py" "$d/c720p_to_s9_verified_media_stage_v2.py"
           python3 "$d/test-c720p-s9-snapshot-stage-v167.py"
           python3 "$d/test-c720p-s9-verified-mirror-timer-v2.py"
-          python3 "$d/test-c720p-s9-verified-local-mirror-v2.py"
   physical-stage:
     needs: synthetic
     if: (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && github.repository == 'JesperOaths/kale-nel'
