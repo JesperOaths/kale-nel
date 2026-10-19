@@ -1,0 +1,43 @@
+name: S9 isolated offline multi-vector worker staging
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/**'
+      - '.github/workflows/s9-offline-multivector-stage.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/**'
+      - '.github/workflows/s9-offline-multivector-stage.yml'
+permissions:
+  contents: read
+jobs:
+  stage-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compile and verify Android-compatible cosine scoring independently
+        shell: bash
+        run: |
+          set -euo pipefail
+          area='ops/c720p/s9-native-security/offline-worker'
+          mkdir -p "$RUNNER_TEMP/s9-offline-classes"
+          javac -d "$RUNNER_TEMP/s9-offline-classes" \
+            "$area/PhoneOfflineSimilarity.java" "$area/PhoneOfflineSimilarityTest.java"
+          java -cp "$RUNNER_TEMP/s9-offline-classes" \
+            nl.kalenel.s9offline.PhoneOfflineSimilarityTest
+          python3 -m py_compile "$area/stage-s9-offline-models.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          code=Path('ops/c720p/s9-native-security/offline-worker/stage-s9-offline-models.py').read_text()
+          for marker in ('S9_ARCFACE_ASSET_PREFLIGHT_PASS',
+                         'S9_ARCFACE_ASSET_VERIFIED','sha256sum',
+                         '4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43',
+                         '174383860','/S9OfflineModels','--install'):
+              assert marker in code,marker
+          for forbidden in ('install -r','pm disable','am force-stop',
+                            '/Security4K/motion_', 'CameraService.java',
+                            'rm -rf', 'review/review', 'submit_approval'):
+              assert forbidden not in code,forbidden
+          print('S9_OFFLINE_MODEL_STAGE_SOURCE_SAFETY_PASS')
+          PY
