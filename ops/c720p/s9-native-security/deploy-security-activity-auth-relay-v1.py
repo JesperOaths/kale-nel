@@ -15,6 +15,7 @@ import re
 import stat
 import subprocess
 import tempfile
+import time
 import urllib.error
 import urllib.request
 
@@ -63,6 +64,19 @@ def camera():
         status.get("continuous_4k_dropped_output_frames")!=0):
         raise RuntimeError("capture_health_not_confirmed")
     return True
+
+def wait_relay_ready(seconds=24):
+    """Allow Python to rebind 8794 after systemd restart, but not hide route bugs."""
+    deadline=time.monotonic()+seconds
+    while time.monotonic()<deadline:
+        try:
+            if service("is-active")=="active":
+                with urllib.request.urlopen("http://127.0.0.1:8794/new/api/saved",timeout=3) as response:
+                    if response.status==200:return
+        except (RuntimeError,urllib.error.URLError,TimeoutError,OSError):
+            pass
+        time.sleep(0.5)
+    raise RuntimeError("security_relay_not_listening_after_restart")
 
 def health():
     upstream=fetch(8795,"/new/api/security-recording-activity")
@@ -134,10 +148,12 @@ def main():
     try:
         atomic(TARGET,new.encode("utf-8"),meta)
         service("restart")
+        wait_relay_ready()
         result=health()
     except Exception:
         atomic(TARGET,prior,meta)
         service("restart")
+        wait_relay_ready()
         raise
     print("SECURITY_ACTIVITY_AUTH_RELAY_DEPLOY_VERIFIED",
         json.dumps({**result,"backup":str(backup),"camera_apk_changed":False,
