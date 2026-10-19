@@ -23,6 +23,10 @@ class S9:
         if metadata:self.present.add(self.metadata)
         if jar:self.present.add(self.jar)
         self.transport_error=False
+    def readiness(self):
+        if self.transport_error:
+            raise RuntimeError("Camera readiness unavailable")
+        return "9341",31.0
     def adb(self,*args,**kwargs):
         if args[0]!="shell" or not args[1].startswith("test -s "):
             raise AssertionError("Unexpected ADB operation")
