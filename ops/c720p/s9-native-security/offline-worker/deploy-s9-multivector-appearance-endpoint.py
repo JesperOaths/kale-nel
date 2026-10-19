@@ -133,6 +133,10 @@ def main():
     if b"def install(H):" not in blob or b"appearance_only" not in blob:
         raise RuntimeError("Unverified private route source")
     map_bytes,rows=mapping()
+    before_sd=json.loads(fetch("http://127.0.0.1:8795/new/api/saved",5000000))
+    original_names={x.get("remote_name") or x.get("clip_no") for x in before_sd.get("events",[])
+                    if isinstance(x,dict)}
+    if len(original_names)<100:raise RuntimeError("Pre-release originals incomplete")
     txt=original.decode("utf-8")
     if NEW in txt:new_proxy=original
     elif txt.count(HOOK)==1:new_proxy=txt.replace(HOOK,NEW,1).encode()
@@ -166,10 +170,17 @@ def main():
             except (OSError,ValueError,RuntimeError):
                 time.sleep(1)
         if health is None:raise RuntimeError("Live archive appearance route not ready")
+        after_sd=json.loads(fetch("http://127.0.0.1:8795/new/api/saved",5000000))
+        after_names={x.get("remote_name") or x.get("clip_no") for x in after_sd.get("events",[])
+                     if isinstance(x,dict)}
+        if not original_names.issubset(after_names):
+            raise RuntimeError("Existing S9 archive index shrank after proxy restart")
         if PROXY.read_bytes()!=new_proxy or MODULE.read_bytes()!=blob or MAPPING.read_bytes()!=map_bytes:
             raise RuntimeError("Live route file integrity mismatch")
         print("S9_MULTIVECTOR_APPEARANCE_LIVE_API_VERIFIED "+json.dumps({
             "health":health,"rollback":str(backup),
+            "originals_before":len(original_names),
+            "originals_after":len(after_names),
             "files_changed":touched,
             "phone_did_scoring":True,
             "raw_vectors_exposed":False,
