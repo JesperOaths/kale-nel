@@ -104,6 +104,15 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    case["animal_confidence"]=0.0
    if confidence:case[confidence]=.7
    self.assertEqual(m.category_from_phone(case),expected)
+ def test_main_s9_camera_pilot_does_not_select_bedroom_media(self):
+  sources=[{"camera":"s3","clip_id":"bedroom"},
+           {"camera":"new","clip_id":"garden1"},
+           {"camera":"new","clip_id":"garden2"}]
+  main=m.scoped_historical_candidates(sources,main_camera_only=True)
+  self.assertEqual([x["clip_id"] for x in main],["garden1","garden2"])
+  self.assertEqual(m.scoped_historical_candidates(sources,False),sources)
+  self.assertEqual(len(sources),3)
+
  def test_direct_h264_avoids_hub_transcode_only_on_compatible_opt_in(self):
   with tempfile.TemporaryDirectory() as root:
    movie=Path(root)/'source.mp4';movie.write_bytes(b'x'*500000)
