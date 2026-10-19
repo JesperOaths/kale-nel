@@ -1,0 +1,27 @@
+name: S9 V3 persistent ledger and on-phone feature integrity rotation
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-resumable-archive.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-ledger-reconciliation.py'
+      - '.github/workflows/s9-v3-ledger-reconcile.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-resumable-archive.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-ledger-reconciliation.py'
+      - '.github/workflows/s9-v3-ledger-reconcile.yml'
+permissions:
+  contents: read
+jobs:
+  preserve-and-recheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Audit rotating ledger provenance without live writes
+        run: |
+          set -euo pipefail
+          p=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$p/run-s9-v3-resumable-archive.py"
+          python3 "$p/test-s9-v3-ledger-reconciliation.py"
+          python3 "$p/test-s9-v3-resumable-archive.py"

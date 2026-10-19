@@ -7,6 +7,8 @@ uses a per-source ledger, not a fragile numeric offset (new clips may arrive).
 Only --apply modifies private S9 offline feature sidecars and the new V3 index.
 """
 import argparse
+import bisect
+import hashlib
 import fcntl
 import importlib.util
 import json
@@ -14,14 +16,17 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import sys
 
 ROOT=Path(__file__).resolve().parent
 STATE=Path("/home/jespern/c720p-home-hub/state")
 LEDGER=STATE/"s9-v3-archive-backfill-ledger.jsonl"
 LOCK=STATE/"s9-v3-archive-backfill.lock"
+AUDIT=STATE/"s9-v3-ledger-audit-cursor.json"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
-ALLOWED={"already_verified","new_real_512d_vector","no_qualified_person_box"}
+WORKER_STATUSES={"already_verified","new_real_512d_vector","no_qualified_person_box"}
+ALLOWED=WORKER_STATUSES|{"stale_feature"}
 
 def helper(name,alias):
     path=ROOT/name
@@ -45,7 +50,7 @@ def reviewed_ledger():
         clip=data.get("clip") if isinstance(data,dict) else None
         status=data.get("status") if isinstance(data,dict) else None
         if (not isinstance(clip,str) or not CLIP.fullmatch(clip)
-            or status not in ALLOWED):
+            or data.get("source")!="s9_sd" or status not in ALLOWED):
             raise RuntimeError("Invalid prior source ledger entry")
         stored[clip]=status
     return stored
@@ -84,13 +89,90 @@ def single_status(doc):
     counts=doc.get("counts")
     if (doc.get("attempted")!=1 or not isinstance(counts,dict)
         or sum(v for v in counts.values() if type(v) is int)!=1
-        or any(x not in ALLOWED for x in counts)
+        or any(x not in WORKER_STATUSES for x in counts)
         or doc.get("human_review_required") is not True
         or doc.get("recordings_modified") is not False
         or doc.get("camera_apk_modified") is not False
         or doc.get("review_decisions_modified") is not False):
         raise RuntimeError("Untrusted S9 ROI/OSNet acceptance result")
     return next(iter(counts))
+
+def check_existing_feature(ctrl,clip):
+    """Bounded read-only validation of a previous phone-side success."""
+    if not CLIP.fullmatch(clip):raise RuntimeError("Invalid ledger source")
+    key=hashlib.sha256(("s9_sd\x00"+clip).encode()).hexdigest()
+    metadata=ctrl.ROOT+"/features/"+key+"-detector.json"
+    sidecar=ctrl.ROOT+"/features/"+key+"-visual.json"
+    for path,reason in ((metadata,"missing_detector"),
+                        (sidecar,"missing_visual")):
+        result=ctrl.adb("shell","test -s "+path,timeout=15,check=False)
+        if result.returncode:
+            # ADB transport errors are NOT evidence that features disappeared.
+            if result.stderr.strip() or result.returncode!=1:
+                raise RuntimeError("Phone ADB transport failed during ledger audit")
+            return reason
+    try:
+        crop_sha=ctrl.detector_provenance(clip,key,metadata)
+    except (ValueError,TypeError,KeyError,json.JSONDecodeError,RuntimeError):
+        return "invalid_detector_provenance"
+    try:
+        value=json.loads(ctrl.adb("exec-out","cat",sidecar,timeout=25).stdout)
+    except (TypeError,ValueError,json.JSONDecodeError):
+        return "invalid_visual_metadata"
+    if not ctrl.valid_visual(value,key,crop_sha):
+        return "invalid_visual_metadata"
+    return "verified"
+
+
+def reconcile_ledger(ctrl,existing,max_checks=12):
+    """Rotate across prior successes so phone-cache loss cannot be skipped.
+
+    Called only inside the archive lock. A recheck never touches the original
+    recordings or reviewed identities; stale private features are requeued.
+    """
+    positive=sorted(clip for clip,status in existing.items()
+                    if status in ("already_verified","new_real_512d_vector"))
+    if not positive:return {"checked":0,"stale":0,"reasons":{}}
+    if AUDIT.is_symlink():raise RuntimeError("Unsafe archive audit cursor")
+    if AUDIT.exists():
+        if AUDIT.stat().st_size>4096:
+            raise RuntimeError("Unbounded archive audit cursor")
+        previous=json.loads(AUDIT.read_text())
+        if previous.get("schema")!="s9_v3_ledger_audit_cursor_v1":
+            raise RuntimeError("Unknown audit cursor schema")
+        last=previous.get("last_clip","")
+        if last and not CLIP.fullmatch(last):
+            raise RuntimeError("Invalid audit cursor clip")
+    else:last=""
+    position=bisect.bisect_right(positive,last)%len(positive)
+    chosen=[positive[(position+i)%len(positive)]
+            for i in range(min(max_checks,len(positive)))]
+    camera=ctrl.adb("shell","pidof nl.kalenel.s9security",timeout=15).stdout.strip()
+    if not re.fullmatch(r"[0-9 ]+",camera):
+        raise RuntimeError("Live camera process unavailable for ledger audit")
+    failures={}
+    for clip in chosen:
+        reason=check_existing_feature(ctrl,clip)
+        if reason!="verified":
+            append_ledger(clip,"stale_feature")
+            existing[clip]="stale_feature"
+            failures[reason]=failures.get(reason,0)+1
+    if ctrl.adb("shell","pidof nl.kalenel.s9security",timeout=15).stdout.strip()!=camera:
+        raise RuntimeError("Camera PID changed during read-only ledger audit")
+    data=(json.dumps({"schema":"s9_v3_ledger_audit_cursor_v1",
+                      "last_clip":chosen[-1]},
+                     sort_keys=True,separators=(",",":"))+"\n").encode()
+    fd,tmp=tempfile.mkstemp(prefix=".s9-ledger-audit-",dir=STATE)
+    try:
+        with os.fdopen(fd,"wb") as dst:
+            dst.write(data);dst.flush();os.fsync(dst.fileno())
+        os.chmod(tmp,0o600)
+        os.replace(tmp,AUDIT)
+    finally:
+        if os.path.exists(tmp):os.unlink(tmp)
+    return {"checked":len(chosen),"stale":sum(failures.values()),
+            "reasons":failures}
+
 
 def main():
     opts=argparse.ArgumentParser()
@@ -110,12 +192,13 @@ def main():
         existing=reviewed_ledger()
         items=capture_candidate_list(ctrl)
         todo=[clip for _,clip,_ in items
-              if clip not in existing or
+              if clip not in existing or existing[clip]=="stale_feature" or
                  (args.retry_rejected and existing[clip]=="no_qualified_person_box")]
         print("S9_V3_ARCHIVE_RESUMABLE_DRY_RUN "+json.dumps({
             "eligible_originals":len(items),"previously_logged":len(existing),
             "pending":len(todo),"selected":todo[:args.limit],
-            "videos_modified":False,"human_reviews_modified":False}),flush=True)
+            "videos_modified":False,"human_reviews_modified":False,
+            "ledger_phone_integrity_checked":False}),flush=True)
         return
     STATE.mkdir(parents=True,exist_ok=True)
     if LOCK.is_symlink():raise RuntimeError("Archive pipeline lock symlink")
@@ -123,9 +206,10 @@ def main():
     with os.fdopen(fd,"rb") as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
         existing=reviewed_ledger()
+        audit=reconcile_ledger(ctrl,existing)
         items=capture_candidate_list(ctrl)
         pending=[clip for _,clip,_ in items
-                 if clip not in existing or
+                 if clip not in existing or existing[clip]=="stale_feature" or
                     (args.retry_rejected and existing[clip]=="no_qualified_person_box")]
         selected=pending[:args.limit]
         totals={};done=[]
@@ -207,6 +291,7 @@ def main():
                 raise RuntimeError("V3 API did not serve real active rankings")
         print("S9_V3_ARCHIVE_RESUMABLE_BATCH "+json.dumps({
             "selected":len(selected),"counts":totals,
+            "ledger_phone_integrity_audit":audit,
             "new_histograms":histograms,
             "missing_histograms_remaining":missing_remaining,
             "ranked_v3":ranked,
