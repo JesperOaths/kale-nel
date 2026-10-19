@@ -1,0 +1,29 @@
+name: S9 migrated JPEG relay rollout safety V177
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/deploy-s9-migrated-jpeg-relay-v177.py'
+      - 'ops/c720p/security-runtime/test-deploy-s9-migrated-jpeg-relay-v177.py'
+      - '.github/workflows/s9-snapshot-live-relay-v177.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/deploy-s9-migrated-jpeg-relay-v177.py'
+      - 'ops/c720p/security-runtime/test-deploy-s9-migrated-jpeg-relay-v177.py'
+      - '.github/workflows/s9-snapshot-live-relay-v177.yml'
+permissions:
+  contents: read
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate transactional rollout without live modifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir=ops/c720p/security-runtime
+          python3 -m py_compile "$dir/deploy-s9-migrated-jpeg-relay-v177.py"
+          python3 "$dir/test-deploy-s9-migrated-jpeg-relay-v177.py"
+          echo V177_SOURCE_ONLY_SAFETY_TESTS_PASSED
