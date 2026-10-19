@@ -176,6 +176,18 @@ class Tests(unittest.TestCase):
                             temperature_c=39.5,continuous_4k_buffered_ms=6000))):
             self.assertEqual(m.run(FakeH(temp=39.5),FakeCtrl())["new_verified_histograms"],2)
 
+    def test_shared_worker_lock_contention_is_deferred_without_writes(self):
+        h=FakeH()
+        with patch.object(m.fcntl,"flock",side_effect=BlockingIOError()):
+            with self.assertRaisesRegex(RuntimeError,"shared_archive_worker_busy"):
+                m.run(h,FakeCtrl())
+        self.assertEqual(h.new,[])
+        marker,data,status=m.classify_abort("shared_archive_worker_busy")
+        self.assertEqual(marker,m.DEFER)
+        self.assertEqual(status,0)
+        self.assertIs(data["verified_batch_completed"],False)
+        self.assertTrue(data["private_output_suppressed"])
+
     def test_thermal_deferral_is_not_a_completed_batch(self):
         for reason in ("camera_too_warm_for_offline_processing",
                        "phone_warm_before_batch",
