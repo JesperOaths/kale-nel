@@ -122,14 +122,51 @@ def run():
  mod.run()
  units()
 
+def safe_failure_reason(error):
+ # Produce only a bounded, authored enum; exceptions may contain private
+ # browser URLs or file names and must never be dumped to management logs.
+ message=str(error)
+ candidates=(
+  "all_migrated_browser_ranges_not_verified_authenticated_relay_unavailable",
+  "all_migrated_browser_ranges_not_verified_static_asset_unavailable",
+  "all_migrated_browser_ranges_not_verified_static_bridge_missing",
+  "all_migrated_browser_ranges_not_verified_manifest_http_unavailable",
+  "all_migrated_browser_ranges_not_verified_manifest_contract_invalid",
+  "all_migrated_browser_ranges_not_verified_unsafe_or_duplicate_manifest_name",
+  "all_migrated_browser_ranges_not_verified_signed_ticket_unavailable",
+  "all_migrated_browser_ranges_not_verified_range_contract_failed",
+  "all_migrated_browser_ranges_not_verified_range_body_short",
+  "all_migrated_browser_ranges_not_verified_metrics",
+  "regenerated_index_guard_not_active",
+  "missing_chromium_debugger_helper",
+  "authenticated_browser_security_page_not_ready",
+  "isolated_chromium_tab_not_available",
+  "legacy_static_file_untrusted",
+  "legacy_auth_bridge_not_installed",
+  "legacy_files_drifted_during_browser_probe",
+  "s9_capture_unhealthy_busy_or_hot",
+ )
+ for code in candidates:
+  if message.startswith(code):return code
+ return "other_no_private_detail"
+
 if __name__=="__main__":
  import argparse
  parser=argparse.ArgumentParser()
  parser.add_argument("--run",action="store_true")
  args=parser.parse_args()
- if args.run:run()
- else:
-  units()
-  print("C720P_MIGRATED_ALL_BROWSER_V146_PREFLIGHT "+json.dumps({
-   "index_regeneration_guard_active":True,
-   "media_modified":False,"browser_not_started":True},sort_keys=True),flush=True)
+ try:
+  if args.run:run()
+  else:
+   units()
+   print("C720P_MIGRATED_ALL_BROWSER_V146_PREFLIGHT "+json.dumps({
+    "index_regeneration_guard_active":True,
+    "media_modified":False,"browser_not_started":True},sort_keys=True),flush=True)
+ except Exception as error:
+  print("C720P_MIGRATED_ALL_BROWSER_V146_FAILURE "+json.dumps({
+   "reason_code":safe_failure_reason(error),
+   "exception_class":type(error).__name__,
+   "no_media_modified":True,
+   "no_manual_reviews_modified":True
+  },sort_keys=True),flush=True)
+  raise SystemExit(1)
