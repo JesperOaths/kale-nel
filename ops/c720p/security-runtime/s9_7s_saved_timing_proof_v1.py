@@ -34,6 +34,23 @@ def verified_new_rollout(path=ROLLOUT):
             d.get("candidate_sha256")==
                 "37091d542b8708db26f520a67af8a4edbb687c80d2b24c01d87bf1a2d8b5d059")
 
+def verified_rollout_epoch_ms(path=ROLLOUT):
+    # Never prove an upgrade using pre-upgrade recordings.
+    if path.is_symlink() or not path.is_file():return None
+    try:
+        doc=json.loads(path.read_text())
+        if (doc.get("schema_version")!="s9_native_7s_cool_rollout_v1"
+            or doc.get("state")!="done" or doc.get("installed") is not True
+            or doc.get("candidate_sha256")!=
+               "37091d542b8708db26f520a67af8a4edbb687c80d2b24c01d87bf1a2d8b5d059"):
+            return None
+        time=dt.datetime.fromisoformat(str(doc.get("updated_utc","")).replace("Z","+00:00"))
+        if time.tzinfo is None:return None
+        epoch=int(time.timestamp()*1000)
+        return epoch if 1700000000000<=epoch<=2100000000000 else None
+    except (OSError,ValueError,TypeError,OverflowError):
+        return None
+
 def sample(manifest):
     if not isinstance(manifest,dict):return None
     if manifest.get("capture_segment_end_reason")!="quiet_end":return None
@@ -53,21 +70,37 @@ def sample(manifest):
             "saved_mp4_duration_ms":d,"capture_segment_elapsed_ms":end-start,
             "quiet_end":True,"source":"verified_original_4k_sidecar"}
 
-def assess(catalog):
+def assess(catalog,after_rollout_ms=None):
     records=catalog.get("records")
     if catalog.get("schema_version")!="s9_native_archive_catalog_v1" or not isinstance(records,dict):
         raise ValueError("unrecognized_catalog_schema")
+    if after_rollout_ms is not None and (
+        type(after_rollout_ms) is not int or after_rollout_ms<1700000000000):
+        raise ValueError("invalid_rollout_cutoff")
     eligible=[]
+    count={"pre_upgrade_excluded":0,"new_clips_checked":0,
+           "missing_timing_metadata_or_ineligible":0}
     for name,record in sorted(records.items(),reverse=True):
         if not (isinstance(name,str) and name.startswith("motion_") and name.endswith(".mp4")
-                and len(name)==24 and isinstance(record,dict)):
+                and len(name)==24 and name[7:20].isdigit() and isinstance(record,dict)):
             continue
+        if after_rollout_ms is not None and int(name[7:20])<=after_rollout_ms:
+            count["pre_upgrade_excluded"]+=1
+            continue
+        count["new_clips_checked"]+=1
         m=record.get("manifest")
         row=sample(m)
         if row is not None:eligible.append(row)
+        else:count["missing_timing_metadata_or_ineligible"]+=1
         if len(eligible)>=24:break
     subset=eligible[:12]
-    if not subset:return {"ok":True,"complete":False,"eligible_count":0}
+    meta={"freshness_guard_active":after_rollout_ms is not None,
+          "pre_upgrade_excluded":count["pre_upgrade_excluded"],
+          "new_clips_checked":count["new_clips_checked"],
+          "missing_timing_metadata_or_ineligible":
+              count["missing_timing_metadata_or_ineligible"],
+          "private_clip_ids_disclosed":False}
+    if not subset:return {"ok":True,"complete":False,"eligible_count":0,**meta}
     prefixes=[x["estimated_saved_prefix_ms"] for x in subset]
     ages=[x["age_since_last_accepted_motion_ms"] for x in subset]
     med=statistics.median(prefixes)
@@ -76,7 +109,7 @@ def assess(catalog):
     return {"ok":True,"complete":len(subset)>=MIN_SAMPLES
             and count_good>=MIN_SAMPLES and count_tail>=MIN_SAMPLES
             and med>=MIN_PREFIX_MS,
-      "eligible_count":len(subset),
+      "eligible_count":len(subset),**meta,
       "estimated_prefix_median_ms":round(med),
       "estimated_prefix_min_ms":min(prefixes),
       "estimated_prefix_max_ms":max(prefixes),
@@ -106,13 +139,18 @@ def main():
             print("S9_SAVED_TIMING_PROOF_DEFERRED concurrent");return
         if OUT.is_file():
             prior=json.loads(OUT.read_text())
-            if prior.get("schema_version")==SCHEMA and prior.get("complete") is True:
+            if (prior.get("schema_version")==SCHEMA and prior.get("complete") is True
+                and prior.get("freshness_guard_active") is True):
                 print("S9_SAVED_TIMING_PROOF_ALREADY_COMPLETE");return
         if not verified_new_rollout():
             print("S9_SAVED_TIMING_PROOF_DEFERRED new_camera_not_yet_installed");return
         if CATALOG.is_symlink() or not CATALOG.is_file() or CATALOG.stat().st_size>5000000:
             print("S9_SAVED_TIMING_PROOF_DEFERRED catalog_unavailable");return
-        stats=assess(json.loads(CATALOG.read_text()))
+        cutoff=verified_rollout_epoch_ms()
+        if cutoff is None:
+            print("S9_SAVED_TIMING_PROOF_DEFERRED install_time_not_verified")
+            return
+        stats=assess(json.loads(CATALOG.read_text()),after_rollout_ms=cutoff)
         stats.update({"schema_version":SCHEMA,
             "checked_at_utc":dt.datetime.now(dt.timezone.utc).isoformat(),
             "records_read_only":True,"no_video_bytes_read":True,
