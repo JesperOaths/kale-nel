@@ -501,9 +501,9 @@ function startVideo(item){
  const path=item.video_path||(item.source==='drive'?
   '/new/drive/saved/clip/'+encodeURIComponent(item.name):
   '/new/saved/clip/'+encodeURIComponent(item.clip));
- playVideo(path,date(item),sec);
+ playVideo(path,date(item),sec,item);
 }
-async function playVideo(path,title,seconds){
+async function playVideo(path,title,seconds,originItem=null){
  const ticket=++state.playSerial;
  if(typeof path!=='string'||!path.startsWith('/new/')){alertText('Invalid clip path');return}
  const modal=$('viewer');$('videoTitle').textContent=title;
@@ -512,9 +512,16 @@ async function playVideo(path,title,seconds){
  const key=source+':'+filename;
  const row=state.archiveEntries.find(x=>assignmentKey(x)===key);
  const reviewed=source==='sd'?(state.doc?.items||[]).find(x=>x.clip===filename):null;
- state.playingItem=row|| (reviewed?{...reviewed,source,name:filename}:null);
+ const origin=originItem&&assignmentKey(originItem)===key?{...originItem,source,name:filename}:null;
+ const candidate=row|| (reviewed?{...reviewed,source,name:filename}:null)||origin;
+ // A saved Person folder is authoritative for its approved rows even when
+ // the background full-archive assignment scan has not completed yet.
+ const fromApproved=state.pane==='folder'&&state.tab==='approved'&&
+   !!state.folder&&!!origin&&candidate&&assignmentKey(candidate)===key;
+ state.playingItem=fromApproved?{...candidate,approvedFolderContext:state.folder}:candidate;
  $('viewerFile').hidden=!state.playingItem;
- $('viewerReturn').hidden=!state.playingItem||!assignedFolder(state.playingItem);
+ $('viewerReturn').hidden=!state.playingItem||
+   !(assignedFolder(state.playingItem)||state.playingItem.approvedFolderContext);
  $('videoStatus').textContent='Opening original recording…';state.playTime=Math.max(0,seconds||0);
  if(!modal.open)modal.showModal();
  try{
@@ -1232,7 +1239,7 @@ $('viewerFile').addEventListener('click',()=>{
  $('viewer').close();openApproval(item);
 });
 $('viewerReturn').addEventListener('click',()=>{
- const item=state.playingItem;if(!item||!assignedFolder(item))return;
+ const item=state.playingItem;if(!item||!(assignedFolder(item)||item.approvedFolderContext))return;
  if(!confirm('Return this recording to the unassigned review queue?'))return;
  $('viewer').close();manualLink(item,null);
 });
