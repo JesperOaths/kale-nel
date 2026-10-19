@@ -1,0 +1,45 @@
+name: S9 offline ROI three-plus-five rescue extractor
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9StandalonePersonRoiTemporalV2.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-roi-temporal-fallback-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-roi-temporal-fallback-v2.py'
+      - '.github/workflows/s9-offline-roi-fallback-v2.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9StandalonePersonRoiTemporalV2.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-roi-temporal-fallback-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-roi-temporal-fallback-v2.py'
+      - '.github/workflows/s9-offline-roi-rejection-audit-v1.yml'
+permissions:
+  contents: read
+jobs:
+  offline-only-auditor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Resolve Android SDK without touching private devices
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          d8="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$jar" && test -x "$d8"
+          echo "S9_ANDROID_SDK_JAR=$jar" >> "$GITHUB_ENV"
+          echo "$(dirname "$d8")" >> "$GITHUB_PATH"
+      - name: Verify no-image rejection reason taxonomy and source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$root/install-s9-roi-temporal-fallback-v2.py" "$root/backfill-s9-original-roi-osnet-temporal-v2.py"
+          python3 "$root/test-s9-roi-temporal-fallback-v2.py"
+      - name: Actually compile standalone Android TFLite diagnostic DEX
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/offline-worker/install-s9-roi-temporal-fallback-v2.py
