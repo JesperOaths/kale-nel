@@ -1,0 +1,28 @@
+name: S9 archive rescue into uniform HSV32 and V3 ranking
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-hsv32-uniform-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-archive-inventory.py'
+      - '.github/workflows/s9-v3-archive-inventory.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-hsv32-uniform-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-archive-inventory.py'
+      - '.github/workflows/s9-v3-archive-inventory.yml'
+permissions:
+  contents: read
+jobs:
+  offline-source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read-only archive and crop provenance regression
+        run: |
+          set -euo pipefail
+          cd ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile backfill-s9-hsv32-uniform-v2.py run-s9-uniform-appearance-rankings-v3.py
+          python3 test-s9-v3-archive-inventory.py
