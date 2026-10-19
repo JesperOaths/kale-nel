@@ -23,6 +23,7 @@ import zipfile
 PHONE="192.168.178.250:5555"
 ROOT="/data/local/tmp/s9_worker"
 STATE_DIR=Path("/home/jespern/c720p-home-hub/state")
+BASELINE_V2_MAP=STATE_DIR/"s9-multivector-crop-map-v2.json"
 ANDROID=os.environ.get("S9_ANDROID_SDK_JAR","/usr/lib/android-sdk/platforms/android-36/android.jar")
 VISUAL="ee5717ad7a90cf0c915afa1fb6a5399b966562c5d42aa6f4a0c6c84a5349e47d"
 HEX=re.compile(r"[a-f0-9]{64}\Z")
@@ -55,11 +56,11 @@ def source_inventory():
     spec.loader.exec_module(module)
     rows=module.inventory(include_unreviewed=True)
     cohort=Counter(x["cohort"] for x in rows)
-    if (not 58<=len(rows)<=400 or cohort["v40"]!=51
+    if (not 58<=len(rows)<=400 or cohort["v40"]<51
         or cohort["approved_new"]<6
         or sum(cohort.values())!=len(rows)
         or any(x not in {"v40","approved_new","archive_unassigned"} for x in cohort)):
-        raise RuntimeError("V3 needs at least one additional verified standalone crop beyond 57")
+        raise RuntimeError("V3 requires all 57 V2 references and at least 58 real crops")
     for row in rows:
         module.safe_visual(row["key"],row["crop_sha256"])
         hsv=module.phone_json(ROOT+"/features/"+row["key"]+"-hsv-v2.json")
@@ -85,6 +86,40 @@ def source_inventory():
             or not HEX.fullmatch(row["hsv_sidecar_sha256"])):
             raise RuntimeError("Unverified source descriptor digest")
     return rows
+
+
+def verified_v2_baseline(rows):
+    """V3 must include every original V2 crop key, SHA and source identity."""
+    if (BASELINE_V2_MAP.is_symlink() or not BASELINE_V2_MAP.is_file()
+        or not 128<=BASELINE_V2_MAP.stat().st_size<=600000):
+        raise RuntimeError("Immutable V2 reference map unavailable")
+    data=BASELINE_V2_MAP.read_bytes()
+    doc=json.loads(data)
+    old=doc.get("rows")
+    if (doc.get("schema")!="s9_multivector_source_map_v2"
+        or doc.get("visual_model_sha256")!=VISUAL
+        or doc.get("color_histogram_schema")!=SCHEMA
+        or doc.get("people_assigned_automatically")!=0
+        or not isinstance(old,list) or len(old)!=57
+        or Counter(x.get("cohort") for x in old if isinstance(x,dict))!={"v40":51,"approved_new":6}):
+        raise RuntimeError("Invalid historical V2 reference baseline")
+    current={x["key"]:x for x in rows}
+    seen=set()
+    for item in old:
+        if not isinstance(item,dict):
+            raise RuntimeError("Malformed V2 baseline row")
+        key=item.get("key")
+        if (not isinstance(key,str) or not HEX.fullmatch(key)
+            or item.get("source")!="s9_sd" or key in seen):
+            raise RuntimeError("Invalid immutable V2 source key")
+        seen.add(key)
+        row=current.get(key)
+        if (not isinstance(row,dict)
+            or any(row.get(attr)!=item.get(attr)
+                   for attr in ("clip","crop_sha256","cohort"))
+            or item.get("cohort") not in ("v40","approved_new")):
+            raise RuntimeError("Missing or altered original V2 source reference")
+    return digest(data)
 
 
 def compile_ranker(base):
@@ -232,10 +267,12 @@ def run():
     parser.add_argument("--apply",action="store_true")
     args=parser.parse_args()
     rows=source_inventory()
+    baseline_sha=verified_v2_baseline(rows)
     print("S9_V3_MULTIVECTOR_RANKING_PREFLIGHT "+json.dumps({
         "uniform_real_person_crop_records":len(rows),
         "cohorts":dict(Counter(x["cohort"] for x in rows)),
         "model_sha256":VISUAL,
+        "v2_reference_baseline_preserved":True,
         "new_rankings_written":False,
         "old_rankings_modified":False}),flush=True)
     if not args.apply:return
@@ -251,6 +288,7 @@ def run():
               "visual_sidecar_sha256":x["visual_sidecar_sha256"],
               "hsv_sidecar_sha256":x["hsv_sidecar_sha256"]} for x in rows]
     private_map={"schema":"s9_multivector_source_map_v3",
+                 "v2_baseline_source_map_sha256":baseline_sha,
                  "visual_model_sha256":VISUAL,
                  "color_histogram_schema":SCHEMA,
                  "people_assigned_automatically":0,
