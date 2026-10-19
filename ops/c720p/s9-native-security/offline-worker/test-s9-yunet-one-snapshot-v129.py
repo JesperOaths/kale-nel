@@ -145,4 +145,12 @@ class Tests(TestCase):
     with self.assertRaisesRegex(RuntimeError,"camera_pid_changed_after_yunet_termination"):
      m.main()
    self.assertNotIn("S9_YUNET_REAL_ONE_SNAPSHOT_DEFERRED",out.getvalue())
+ def test_subprocess_timeout_never_exposes_snapshot_name_or_command(self):
+  private="motion_1792200000000__private-name__1000_0.jpg"
+  cmd=["adb","-s","test-device","shell","app_process --audit-single "+private]
+  with patch.object(m.subprocess,"run",side_effect=m.subprocess.TimeoutExpired(cmd,5,output=private.encode())):
+   with self.assertRaisesRegex(RuntimeError,"^phone_or_build_operation_timeout_no_private_detail$") as got:
+    m.call(cmd,seconds=5)
+  self.assertNotIn(private,str(got.exception))
+  self.assertIsNone(got.exception.__cause__)
 if __name__=="__main__":main(verbosity=2)
