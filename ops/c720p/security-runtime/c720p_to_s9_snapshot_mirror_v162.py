@@ -143,7 +143,7 @@ def adb(*args,timeout=30):
     return p.stdout.strip()
 
 def phone_exists(path):
-    p=subprocess.run(["adb","-s",SERIAL,"shell","test","-f",path],
+    p=subprocess.run(["adb","-s",SERIAL,"shell","test","-e",path],
                      capture_output=True,timeout=12)
     if p.returncode in (0,1) and p.stderr==b"":
         return p.returncode==0
