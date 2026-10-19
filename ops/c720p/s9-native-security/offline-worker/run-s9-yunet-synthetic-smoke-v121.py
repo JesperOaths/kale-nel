@@ -52,6 +52,19 @@ def phone_sha(path):
  if not m:raise RuntimeError("invalid_phone_sha")
  return m.group(1)
 
+def phone_path_exists_safely(path):
+ # Reject both actual files and pre-existing zero-byte partial transfers.
+ # Never follow a symlink into an unrelated phone/media directory.
+ for flag in ("-L","-e"):
+  proc=subprocess.run(["adb","-s",PHONE,"shell","test "+flag+" "+path],
+                      capture_output=True,text=True,timeout=15)
+  if proc.returncode not in (0,1) or proc.stderr.strip():
+   raise RuntimeError("phone_temp_path_status_indeterminate")
+  if flag=="-L" and proc.returncode==0:
+   raise RuntimeError("unsafe_phone_worker_symlink")
+  if flag=="-e" and proc.returncode==0:return True
+ return False
+
 def sha(raw):return hashlib.sha256(raw).hexdigest()
 
 def health():
@@ -128,12 +141,14 @@ def test_phone(artifact):
  digest=sha(artifact.read_bytes())
  # A versioned, isolated jar, never s9-worker.jar or the camera APK.
  remote=ROOT+"/s9-yunet-smoke-"+digest[:16]+".jar"
+ if phone_path_exists_safely(remote) and phone_sha(remote) is None:
+  raise RuntimeError("unknown_non_regular_existing_phone_dex")
  before=phone_sha(remote)
  if before is not None and before!=digest:
   raise RuntimeError("existing_phone_dex_digest_mismatch")
  if before is None:
   part=remote+".pending"
-  if phone_sha(part) is not None:
+  if phone_path_exists_safely(part):
    raise RuntimeError("unknown_pending_dex_do_not_overwrite")
   run(["adb","-s",PHONE,"push",str(artifact),part],timeout=40)
   if phone_sha(part)!=digest:raise RuntimeError("unverified_phone_dex_upload")
