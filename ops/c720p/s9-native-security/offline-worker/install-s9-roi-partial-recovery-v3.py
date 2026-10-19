@@ -120,8 +120,13 @@ def compile_worker(folder):
     if not dex_file.is_file() or dex_file.stat().st_size<20_000:
         raise RuntimeError("Standalone TensorFlow Lite DEX is invalid")
     jar=folder/"s9-offline-person-roi-recovery-v3.jar"
-    with zipfile.ZipFile(jar,"w",zipfile.ZIP_DEFLATED) as z:
-        z.write(dex_file,"classes.dex")
+    # Stable ZIP metadata permits safe idempotent SHA comparison when the
+    # same private worker has already been staged on the S9+.
+    info=zipfile.ZipInfo("classes.dex",date_time=(1980,1,1,0,0,0))
+    info.compress_type=zipfile.ZIP_DEFLATED
+    info.external_attr=(0o600<<16)
+    with zipfile.ZipFile(jar,"w") as z:
+        z.writestr(info,dex_file.read_bytes())
     return jar,folder/"libtensorflowlite_jni.so",aars
 
 
