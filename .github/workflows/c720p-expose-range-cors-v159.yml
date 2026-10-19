@@ -1,0 +1,83 @@
+name: C720P authenticated browser Content-Range exposure V159
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/deploy-c720p-range-cors-v159.py'
+      - 'ops/c720p/security-runtime/test-deploy-c720p-range-cors-v159.py'
+      - '.github/workflows/c720p-expose-range-cors-v159.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/deploy-c720p-range-cors-v159.py'
+      - 'ops/c720p/security-runtime/test-deploy-c720p-range-cors-v159.py'
+      - '.github/workflows/c720p-expose-range-cors-v159.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-relay-authenticated-cors-range-v159
+  cancel-in-progress: false
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate only an allowlisted Content-Range browser header is added
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/deploy-c720p-range-cors-v159.py"
+          python3 "$d/test-deploy-c720p-range-cors-v159.py"
+          python3 "$d/test-deploy-c720p-migrated-auth-relay-v143.py"
+          python3 "$d/test-smoke-c720p-all-migrated-browser-v146.py"
+          python3 "$d/test-deploy-c720p-legacy-bridges-v133.py"
+  physical:
+    needs: synthetic
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify source SHA then backup, patch CORS and prove all six browser ranges
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          script=ops/c720p/security-runtime/deploy-c720p-range-cors-v159.py
+          hash="$(sha256sum "$script" | cut -d' ' -f1)"
+          stage="/tmp/c720p-cors-range-v159-${GITHUB_SHA:0:14}.py"
+          raw="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$script"
+          cmd="curl -fsSL --max-time 40 '$raw' -o '$stage' && printf '%s  %s\\n' '$hash' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage' && /usr/bin/python3 '$stage' --apply"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-range-cors-v159-${GITHUB_SHA:0:13}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-cors-range-v159','deployment',:'cmd',450,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "C720P_RANGE_CORS_V159_JOB=$id"
+          for i in $(seq 1 155); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3800)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'C720P_RANGE_CORS_V159_PREFLIGHT' <<< "$output"
+              grep -q 'C720P_CONTENT_RANGE_CORS_V159_VERIFIED' <<< "$output"
+              grep -q '"all_browser_headers_visible": true' <<< "$output"
+              grep -q '"migrated_ranges_verified": 6' <<< "$output"
+              grep -q '"relay_authorization_unchanged": true' <<< "$output"
+              grep -q '"videos_modified": false' <<< "$output"
+              grep -q '"camera_apk_modified": false' <<< "$output"
+              grep -q '"local_c720p_mp4s_preserved": true' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "CORS playback physical verification did not complete";exit 1
