@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline SHA, HEAD, negative Range and browser privacy proof for six JPEGs."""
 import ast
+from email.message import Message
 import hashlib
 import importlib.util
 import io
@@ -23,9 +24,10 @@ class Response:
  status=200
  def __init__(self,body,head=False):
   self.body=b"" if head else body
-  self.headers={"Content-Type":"image/jpeg",
-                "Content-Length":str(len(body)),
-                "Cache-Control":"private,no-store"}
+  self.headers=Message()
+  self.headers["Content-Type"]="image/jpeg"
+  self.headers["Content-Length"]=str(len(body))
+  self.headers["Cache-Control"]="private,no-store"
  def __enter__(self):return self
  def __exit__(self,*args):return False
  def read(self,limit=-1):return self.body[:limit]
