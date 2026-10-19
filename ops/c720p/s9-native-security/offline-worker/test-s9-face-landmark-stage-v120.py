@@ -37,6 +37,18 @@ class Tests(unittest.TestCase):
       return_value=Response(camera(**overrides))):
     with self.assertRaisesRegex(RuntimeError,"capture_not_cool_idle_healthy"):
      m.health()
+ def test_adb_transport_failure_never_means_missing_model(self):
+  from types import SimpleNamespace
+  with patch.object(m.subprocess,"run",return_value=SimpleNamespace(
+    returncode=1,stderr="ADB connection refused",stdout="")):
+   with self.assertRaisesRegex(RuntimeError,"presence_indeterminate"):
+    m.digest(m.ROOT+"/"+m.NAME)
+ def test_verified_remote_absence_does_not_hash(self):
+  from types import SimpleNamespace
+  with patch.object(m.subprocess,"run",return_value=SimpleNamespace(
+    returncode=1,stderr="",stdout="")) as run:
+   self.assertIsNone(m.digest(m.ROOT+"/"+m.NAME))
+   self.assertEqual(run.call_count,1)
  def test_script_never_touches_camera_or_review_files(self):
   code=path.read_text()
   for banned in ("am force-stop","pm install","Camera2.apk","Security4K",
