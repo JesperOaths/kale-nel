@@ -155,20 +155,37 @@ def copy_one(path,stat,digest):
     partial=dest+".partial"
     partial_exists=subprocess.run(["adb","-s",SERIAL,"shell","test","-e",partial],
                                    capture_output=True,timeout=12)
+    if not camera_ready():
+        raise RuntimeError("camera_became_unhealthy_or_hot")
+
+    # Interrupted ADB copies may already be complete. NEVER delete or overwrite
+    # an existing phone-side partial: prove exact source size and SHA256 first.
     if partial_exists.returncode==0:
-        raise RuntimeError("preexisting_partial_preserved")
-    if not camera_ready():raise RuntimeError("camera_became_unhealthy_or_hot")
-    adb("push",str(path),partial,timeout=350)
-    if not phone_file_matches(partial,digest,stat.st_size):
-        raise RuntimeError("partial_copy_did_not_verify")
+        if not phone_file_matches(partial,digest,stat.st_size):
+            raise RuntimeError("preexisting_partial_not_matching_preserved")
+        result="verified_partial_promoted"
+    else:
+        adb("push",str(path),partial,timeout=350)
+        if not phone_file_matches(partial,digest,stat.st_size):
+            raise RuntimeError("partial_copy_did_not_verify")
+        result="copied_and_verified"
+
+    # Require a stable, unchanged source and healthy recorder even AFTER the
+    # transfer/phone-side SHA calculation before final rename.
     if path.stat().st_size!=stat.st_size or path.stat().st_mtime_ns!=stat.st_mtime_ns:
         raise RuntimeError("source_changed_during_copy")
     if sha256_file(path)!=digest:
         raise RuntimeError("source_digest_changed_during_copy")
+    if not camera_ready():
+        raise RuntimeError("camera_became_unhealthy_before_promotion")
+    final_exists=subprocess.run(["adb","-s",SERIAL,"shell","test","-e",dest],
+                                capture_output=True,timeout=12)
+    if final_exists.returncode==0:
+        raise RuntimeError("destination_appeared_during_copy_preserved")
     adb("shell","mv",partial,dest)
     if not phone_file_matches(dest,digest,stat.st_size):
         raise RuntimeError("final_phone_hash_did_not_verify")
-    return "copied_and_verified"
+    return result
 
 def execute(action):
     STATE.mkdir(parents=True,exist_ok=True)
@@ -186,7 +203,7 @@ def execute(action):
                  "unindexed":sum(x.name not in idx for x,_ in found),
                  "candidate_bytes":sum(st.st_size for _,st in found),
                  "previously_imported":len(old["records"]),
-                 "verified_now":0,"copied_now":0,
+                 "verified_now":0,"copied_now":0,"resumed_now":0,
                  "local_deleted":0,"all_local_recordings_preserved":True,
                  "playback_remapping_required":True}
         if action=="preview":
@@ -225,6 +242,7 @@ def execute(action):
             atomic_write(old)
             summary["verified_now"]+=1
             if status=="copied_and_verified":summary["copied_now"]+=1
+            if status=="verified_partial_promoted":summary["resumed_now"]+=1
         else:
             summary["state"]="verified"
         summary["manifest_entries"]=len(old["records"])
