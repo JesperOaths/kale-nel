@@ -22,6 +22,18 @@ class Tests(unittest.TestCase):
   with patch.object(m.subprocess,"run",return_value=SimpleNamespace(
         returncode=1,stderr="",stdout="")):
    self.assertIsNone(m.phone_sha("/data/local/tmp/s9_worker/none"))
+ def test_unknown_zero_byte_partial_cannot_be_overwritten(self):
+  def fake(argv,**kwargs):
+   if "test -L" in argv[-1]:return SimpleNamespace(returncode=1,stderr="",stdout="")
+   if "test -e" in argv[-1]:return SimpleNamespace(returncode=0,stderr="",stdout="")
+   raise AssertionError("unexpected command")
+  with patch.object(m.subprocess,"run",side_effect=fake):
+   self.assertTrue(m.phone_path_exists_safely("/data/local/tmp/s9_worker/temp.pending"))
+ def test_unknown_phone_symlink_is_refused(self):
+  with patch.object(m.subprocess,"run",return_value=SimpleNamespace(
+       returncode=0,stderr="",stdout="")):
+   with self.assertRaisesRegex(RuntimeError,"unsafe_phone_worker_symlink"):
+    m.phone_path_exists_safely("/data/local/tmp/s9_worker/test.pending")
  def test_static_device_safety(self):
   text=source.read_text()
   for needed in ("continuous_4k_dropped_output_frames","temperature_c",
