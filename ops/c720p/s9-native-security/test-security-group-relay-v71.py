@@ -24,7 +24,7 @@ assert 'return self.empty(401)' in new.decode()
 assert 'return self.empty(403)' in new.decode()
 assert v71.patch_relay(new)==(new,True)
 scope={}
-compile(new.decode(),'synthetic_authenticated_relay.py','exec')
+compile('def handler(self,path,obj):\n'+new.decode(),'synthetic_authenticated_relay.py','exec')
 assert b'X-S9-Manual-Link-Intent' in new
 try:
     v71.patch_relay(old.replace(b'self.authorized()',b'not_authorized()'))
