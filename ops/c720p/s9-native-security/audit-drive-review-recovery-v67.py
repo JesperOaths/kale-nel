@@ -52,7 +52,7 @@ def main():
         if not isinstance(row,dict) or row.get('state')!='verified':continue
         camera,name=row.get('camera'),row.get('remote_name')
         if camera not in ('new','s3') or not isinstance(name,str):continue
-        key=hashlib.sha256((camera+'\\0'+name).encode()).hexdigest()
+        key=hashlib.sha256((camera+chr(0)+name).encode()).hexdigest()
         verified[key]=(camera,name)
     garden_names={name for camera,name in verified.values() if camera=='new'}
     new=load(NEW,{'revision':0,'items':{}})
