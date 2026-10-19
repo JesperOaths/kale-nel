@@ -39,21 +39,42 @@ def validated_record(name, records):
         raise ValueError("recording_source_integrity_unverified")
     return item
 
-def canonical_receipt(name,item,action,nonce):
+def canonical_receipt(name,item,action,nonce,*,status,source,durable,
+                      ledger_sequence,ledger_head_sha256):
+    """V2: the signed data includes EVERY field relevant to a claim of commit.
+
+    This HMAC verifies a *claim*, not the existence of a durable phone ledger.
+    A future authenticated S9 service must fsync, prevent nonce replay and
+    independently expose ledger consistency before enabling real actions.
+    """
     if action not in ("save","delete"):raise ValueError("unknown_action")
+    if not isinstance(name,str) or not NAME.fullmatch(name) or ".." in name:
+        raise ValueError("unsafe_recording_name")
+    if not isinstance(item,dict) or not isinstance(item.get("sha256"),str) or not SHA.fullmatch(item["sha256"]) or type(item.get("bytes")) is not int or not 10000<=item["bytes"]<=900*1024**2:
+        raise ValueError("untrusted_source_proof")
     if not isinstance(nonce,str) or not re.fullmatch(r"[0-9a-f]{32}",nonce):
         raise ValueError("invalid_server_nonce")
-    return json.dumps({"schema":"s9_c720p_migrated_action_v1",
+    if status not in ("pending","s9_committed") or source!="s9_microsd" or type(durable) is not bool:
+        raise ValueError("invalid_commit_claim")
+    if type(ledger_sequence) is not int or not 1<=ledger_sequence<=2**63-1:
+        raise ValueError("invalid_ledger_sequence")
+    if not isinstance(ledger_head_sha256,str) or not SHA.fullmatch(ledger_head_sha256):
+        raise ValueError("invalid_ledger_head")
+    return json.dumps({"schema":"s9_c720p_migrated_action_v2",
       "action":action,"name":name,"sha256":item["sha256"],
-      "bytes":item["bytes"],"nonce":nonce},
+      "bytes":item["bytes"],"nonce":nonce,
+      "status":status,"source":source,"durable":durable,
+      "ledger_sequence":ledger_sequence,
+      "ledger_head_sha256":ledger_head_sha256},
       sort_keys=True,separators=(",",":")).encode()
 
 def receipt_authorized(receipt,name,item,action,key):
-    """Hypothetical receipt verifier only. A FUTURE S9 service would need to
-    durably commit an action BEFORE signing, attest the original hash, retain
-    anti-replay state, and enforce authenticated authorization separately.
+    """Synthetic verification ONLY. Actual phone commit/authorization and
+    anti-replay cannot be established from an HMAC alone; no write endpoint
+    exists here and preview() never authorizes local original retirement.
     """
     if (not isinstance(receipt,dict) or type(key) is not bytes or len(key)<32
+      or receipt.get("schema")!="s9_c720p_migrated_action_v2"
       or receipt.get("status")!="s9_committed"
       or receipt.get("source")!="s9_microsd"
       or receipt.get("action")!=action
@@ -61,7 +82,11 @@ def receipt_authorized(receipt,name,item,action,key):
       or not isinstance(receipt.get("hmac_sha256"),str)
       or not SHA.fullmatch(receipt["hmac_sha256"])):
         return False
-    try:body=canonical_receipt(name,item,action,receipt.get("nonce"))
+    try:body=canonical_receipt(name,item,action,receipt.get("nonce"),
+      status=receipt.get("status"),source=receipt.get("source"),
+      durable=receipt.get("durable"),
+      ledger_sequence=receipt.get("ledger_sequence"),
+      ledger_head_sha256=receipt.get("ledger_head_sha256"))
     except (ValueError,KeyError,TypeError):return False
     return hmac.compare_digest(hmac.new(key,body,hashlib.sha256).hexdigest(),
                                receipt["hmac_sha256"])
