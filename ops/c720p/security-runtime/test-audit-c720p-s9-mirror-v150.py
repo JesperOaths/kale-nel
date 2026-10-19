@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """No-phone, no-media regression coverage for installed mirror inventory audit."""
+import ast
 import hashlib
 import importlib.util
 import json
@@ -55,10 +56,15 @@ class Tests(unittest.TestCase):
      s.manifest_summary()
  def test_diagnostic_cannot_delete_or_modify_media(self):
   src=SOURCE.read_text()
-  for bad in ("adb push","adb pull","subprocess.Popen","--copy\",action",
-              "shutil.rmtree(","os.remove(","path.unlink(","os.replace(",
-              "systemctl --user restart"):
-   self.assertNotIn(bad,src)
+  tree=ast.parse(src)
+  invoked=[]
+  for n in ast.walk(tree):
+   if isinstance(n,ast.Call):
+    f=n.func
+    if isinstance(f,ast.Attribute):
+     invoked.append(f.attr)
+  for forbidden in ("unlink","remove","rmtree","replace","Popen","system"):
+   self.assertNotIn(forbidden,invoked)
   self.assertIn('"originals_still_required":True',src)
   self.assertIn('"no_worker_copy_or_verify_run":True',src)
   self.assertIn('raise SystemExit(1)',src)
