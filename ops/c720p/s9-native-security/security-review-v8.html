@@ -149,10 +149,31 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 .verified-legend .sd{background:#74dcc3}.verified-legend .drive{background:#879ff0}
 @media(max-width:1020px){.verified-panels{grid-template-columns:1fr}}
 @media(max-width:580px){.verified-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.verified-activity{padding:10px}}
+
+#auxRecovery{margin:14px 0;border:1px solid #466977;border-radius:12px;background:#112834;padding:0 14px}
+.evidence-mode #auxRecovery{display:none}
+#auxRecovery>summary{cursor:pointer;padding:14px 0;font-weight:700}
+#auxRecovery p{font-size:12px;color:#aec6d3}
+#auxRecoverySearch{margin:8px 0;padding:8px;border-radius:7px;background:#183746;color:#e5f9fa;border:1px solid #416577;width:100%}
+#auxRecoveryList{display:grid;gap:7px;max-height:630px;overflow:auto}
+#auxRecoveryList .aux-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px;background:#1c3745;border-radius:8px;border:1px solid #3c5b6a;font-size:12px}
+#auxRecoveryList .aux-row small{display:block;color:#aac7d2;margin-top:3px}
+#auxRecovery button{padding:7px 10px;border:1px solid #5f8190;border-radius:8px;background:#25495a;color:#fff;cursor:pointer}
+#auxRecovery button:disabled{opacity:.5}
+#auxRecovery .aux-player{grid-column:1/-1;width:100%;max-height:380px;background:#060b10}
+#auxRecoveryPaging{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0}
+#auxRecoveryPaging span{font-size:11px;color:#aacbd4}
 </style><!-- Original MP4 via secure range relay; disabled unreliable smooth-copy playback override. -->
 </head><body><main>
 <header><div><div class="eyebrow">S9+ · microSD · local only</div><h1 id="title">Recordings</h1><p id="intro"></p></div><button type="button" id="refresh">Refresh</button></header>
 <div id="sync" role="status">Connecting to the phone archive…</div>
+<details id="auxRecovery" aria-label="Recoverable S9 auxiliary footage">
+ <summary>Recoverable footage <span id="auxRecoveryCount"></span></summary>
+ <p id="auxRecoveryStatus">Companion footage with missing original MP4s; excluded from verified recording and person totals.</p>
+ <input id="auxRecoverySearch" type="search" placeholder="Filter by date or type" aria-label="Filter recovery footage">
+ <div id="auxRecoveryList"></div>
+ <div id="auxRecoveryPaging"><button type="button" id="auxRecoveryPrev">Previous</button><span id="auxRecoveryPage">—</span><button type="button" id="auxRecoveryNext">Next</button></div>
+</details>
 
 <section class="analytics" id="activityAnalytics" aria-label="Activity patterns over time">
  <section class="verified-activity" aria-label="Verified source-reconciled recording activity">
@@ -749,4 +770,79 @@ function personFilingControls(source,name){
 }
 })();
 const GEJAST_PAGE_VERSION='v817';
+</script>
+<script id="s9-aux-recovery-ui">
+(()=>{
+const $=id=>document.getElementById(id);
+const panel=$('auxRecovery'),list=$('auxRecoveryList'),status=$('auxRecoveryStatus');
+if(!panel)return;
+const count=$('auxRecoveryCount'),search=$('auxRecoverySearch'),label=$('auxRecoveryPage'),prev=$('auxRecoveryPrev'),next=$('auxRecoveryNext');
+const datefmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',dateStyle:'medium',timeStyle:'short'});
+let files=[],page=0,loaded=false,loading=false,player=null,serial=0;
+const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);return e};
+function stop(){serial++;if(player){player.pause();player.removeAttribute('src');player.load();player.remove();player=null}}
+function render(){
+ stop();list.replaceChildren();
+ const filter=search.value.toLowerCase().trim();
+ const found=files.filter(f=>{
+  const day=datefmt.format(new Date(Number(f.name.slice(7,20)))).toLowerCase();
+  return !filter||f.role.includes(filter)||day.includes(filter)||f.name.includes(filter);
+ });
+ const pages=Math.max(1,Math.ceil(found.length/24));
+ page=Math.max(0,Math.min(page,pages-1));
+ label.textContent=found.length+' items · page '+(page+1)+' of '+pages;
+ prev.disabled=page===0;next.disabled=page===pages-1;
+ if(!found.length){list.append(node('p','No matching footage.'));return}
+ for(const f of found.slice(page*24,page*24+24)){
+  const row=node('div');row.className='aux-row';
+  const meta=node('div',(f.role==='preroll'?'Pre-event buffer':'Completed companion')+' · '+datefmt.format(new Date(Number(f.name.slice(7,20)))));
+  meta.append(node('small',f.duration_s.toFixed(1)+'s · '+f.width+' × '+f.height+' · H.264'));
+  const open=node('button','Preview');open.type='button';
+  open.addEventListener('click',async()=>{
+   stop();const id=serial;open.disabled=true;
+   try{
+    const relay=window.C720PSecureRelay;
+    if(!relay?.url)throw Error('Secure relay unavailable');
+    const url=await relay.url('/new/saved/recovery/clip/'+encodeURIComponent(f.name));
+    if(id!==serial)return;
+    const video=node('video');video.className='aux-player';
+    video.controls=true;video.preload='metadata';video.playsInline=true;video.src=url;
+    row.append(video);player=video;
+    video.addEventListener('error',()=>{if(player===video)status.textContent='Playback unavailable; original files remain preserved'});
+   }catch(e){status.textContent='Cannot open recovery footage through the authenticated relay'}
+   finally{open.disabled=false}
+  });
+  row.append(meta,open);list.append(row);
+ }
+}
+async function load(){
+ if(loaded||loading)return;
+ loading=true;status.textContent='Loading recoverable footage…';
+ try{
+  const relay=window.C720PSecureRelay;
+  if(!relay?.fetch)throw Error('Secure relay unavailable');
+  const response=await relay.fetch('/new/api/s9-auxiliary-recovery',{cache:'no-store'});
+  if(!response.ok)throw Error('Recovery data unavailable');
+  const data=await response.json();
+  const good=f=>f&&typeof f.name==='string'&&/^motion_[0-9]{13}\.mp4\.(?:preroll|complete)\.mp4$/.test(f.name)
+   &&(f.role==='preroll'||f.role==='complete')&&Number.isFinite(f.duration_s)&&f.duration_s>0&&f.duration_s<3600
+   &&Number.isSafeInteger(f.bytes)&&f.bytes>=10000&&f.bytes<=32000000;
+  if(data.ok!==true||data.schema_version!=='s9_auxiliary_recovery_metadata_v1'||
+   data.not_verified_original_recordings!==true||data.not_counted_in_archive_or_person_analytics!==true||
+   data.no_human_identity_approval!==true||data.full_frame_decode_verified!==false||
+   !Array.isArray(data.files)||data.files.length>400||data.files.length!==data.structural_candidates||
+   !data.files.every(good))throw Error('Invalid recovery report');
+  files=data.files.sort((a,b)=>b.name.localeCompare(a.name));
+  count.textContent='· '+files.length;
+  status.textContent='Separate evidence only · no automatic person labels or extra original recordings';
+  loaded=true;render();
+ }catch(e){status.textContent='Recoverable evidence unavailable · '+String(e.message||e)}
+ finally{loading=false}
+}
+panel.addEventListener('toggle',()=>{if(panel.open)load();else stop()});
+search.addEventListener('input',()=>{page=0;if(loaded)render()});
+prev.addEventListener('click',()=>{if(page>0){page--;render()}});
+next.addEventListener('click',()=>{page++;render()});
+window.addEventListener('pagehide',stop);
+})();
 </script><div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#7894a5;font-size:10px;pointer-events:none">v817 - Made by Bruis</div></body></html>

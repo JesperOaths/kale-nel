@@ -1,0 +1,25 @@
+name: Security recoverable auxiliary footage browser
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-review-v8.html'
+      - 'ops/c720p/s9-native-security/test-security-aux-recovery-ui.mjs'
+      - '.github/workflows/security-aux-recovery-ui.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/security-review-v8.html'
+      - 'ops/c720p/s9-native-security/test-security-aux-recovery-ui.mjs'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          node ops/c720p/s9-native-security/test-security-aux-recovery-ui.mjs
+          python3 ops/c720p/s9-native-security/test-security-v8.py
+          echo SECURITY_RECOVERABLE_AUXILIARY_VIEWER_SAFE
