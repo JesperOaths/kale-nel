@@ -20,6 +20,7 @@ STATE=Path("/home/jespern/c720p-home-hub/state")
 LOCK=STATE/"s9-v3-archive-backfill.lock"
 MARK="S9_V3_HSV32_TWO_VERIFIED "
 REJECT="S9_V3_HSV32_TWO_BLOCKED "
+DEFER="S9_V3_HSV32_TWO_DEFERRED "
 MAX_C=42.0
 INITIAL_MAX_C=39.5
 STATUS_URL="http://127.0.0.1:18808/status"
@@ -171,11 +172,20 @@ if __name__=="__main__":
         # Clip names, persons, sidecar paths and raw phone stderr must never
         # enter public CI logs. Expose only allowlisted policy reason codes.
         reason=str(error)
-        allowed={"hub_free_disk_guard","phone_warm_before_batch",
-                 "phone_warm_before_descriptor","phone_thermal_post_limit",
-                 "camera_too_warm_for_offline_processing",
-                 "camera_capture_not_stably_ready",
-                 "phone_transport_untrusted"}
+        temporary={"phone_warm_before_batch","phone_warm_before_descriptor",
+                   "phone_thermal_post_limit",
+                   "camera_too_warm_for_offline_processing",
+                   "camera_capture_not_stably_ready"}
+        if reason in temporary:
+            # A gate may fire after one append-only sidecar was written.
+            # Never claim no descriptors were written or that the batch passed.
+            print(DEFER+json.dumps({"reason":reason,
+                  "verified_batch_completed":False,
+                  "intermediate_sidecars_may_have_been_written":True,
+                  "retry_only_after_new_capture_readiness":True,
+                  "private_output_suppressed":True}),flush=True)
+            raise SystemExit(0)
+        allowed={"hub_free_disk_guard","phone_transport_untrusted"}
         print(REJECT+json.dumps({"reason":reason if reason in allowed else
              "verification_or_worker_failed",
              "private_output_suppressed":True,
