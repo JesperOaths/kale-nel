@@ -5,12 +5,16 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/S9OnnxCropWorker.java'
       - 'ops/c720p/s9-native-security/offline-worker/install-s9-real-crop-worker.py'
       - 'ops/c720p/s9-native-security/offline-worker/backfill-v40-person-rois-on-s9.py'
+      - 'ops/c720p/s9-native-security/offline-worker/S9AppearanceRankingWorker.java'
+      - 'ops/c720p/s9-native-security/offline-worker/deploy-s9-appearance-ranking.py'
       - '.github/workflows/s9-real-person-crop-backfill.yml'
   push:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/S9OnnxCropWorker.java'
       - 'ops/c720p/s9-native-security/offline-worker/install-s9-real-crop-worker.py'
       - 'ops/c720p/s9-native-security/offline-worker/backfill-v40-person-rois-on-s9.py'
+      - 'ops/c720p/s9-native-security/offline-worker/S9AppearanceRankingWorker.java'
+      - 'ops/c720p/s9-native-security/offline-worker/deploy-s9-appearance-ranking.py'
       - '.github/workflows/s9-real-person-crop-backfill.yml'
 permissions:
   contents: read
@@ -25,13 +29,15 @@ jobs:
         run: |
           set -euo pipefail
           folder=ops/c720p/s9-native-security/offline-worker
-          python3 -m py_compile "$folder/install-s9-real-crop-worker.py" "$folder/backfill-v40-person-rois-on-s9.py"
+          python3 -m py_compile "$folder/install-s9-real-crop-worker.py" "$folder/backfill-v40-person-rois-on-s9.py" "$folder/deploy-s9-appearance-ranking.py"
           python3 - <<'PY'
           from pathlib import Path
           folder=Path("ops/c720p/s9-native-security/offline-worker")
           worker=(folder/"S9OnnxCropWorker.java").read_text()
           backfill=(folder/"backfill-v40-person-rois-on-s9.py").read_text()
           install=(folder/"install-s9-real-crop-worker.py").read_text()
+          ranker=(folder/"S9AppearanceRankingWorker.java").read_text()
+          stage=(folder/"deploy-s9-appearance-ranking.py").read_text()
           for expected in ('visual_embedding','structural_crop_embedding',
                            'BitmapFactory.decodeFile','--extract',
                            's9_offline_appearance_embedding_v1',
@@ -43,8 +49,15 @@ jobs:
             assert expected in backfill,expected
           for expected in ('official','AAR_SHA','javac','d8','s9-crop-worker.jar'):
             assert expected.lower() in install.lower(),expected
+          for expected in ('visual_75_color_25','structural_70_visual_30',
+                           'PhoneOfflineSimilarity.compare','aligned_face_verified',
+                           'human_review_required','verified_same_person'):
+            assert expected in ranker, expected
+          for expected in ('upper_hsv32','S9_REAL_APPEARANCE_RANKINGS_VERIFIED',
+                           'ranking_computed_on','automatically_assigned_people'):
+            assert expected in stage, expected
           for bad in ('am force-stop','pm install','pm uninstall','review/review',
                       'CameraService.java','original.mp4.unlink'):
-            assert not any(bad in source for source in (worker,backfill,install)),bad
+            assert not any(bad in source for source in (worker,backfill,install,ranker,stage)),bad
           print('S9_REAL_CROP_BACKFILL_SOURCE_GATES_PASS')
           PY
