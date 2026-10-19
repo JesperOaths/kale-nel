@@ -1,0 +1,26 @@
+name: Guarded S9 v3 read-only API deployment contracts
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-api-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-multivector-api-deploy-v3.py'
+      - '.github/workflows/s9-v3-appearance-api-deploy.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-api-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-multivector-api-deploy-v3.py'
+      - '.github/workflows/s9-v3-appearance-api-deploy.yml'
+permissions:
+  contents: read
+jobs:
+  guarded-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate immutable module SHA, rollback and live-route contract
+        run: |
+          set -euo pipefail
+          p=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$p/deploy-s9-multivector-api-v3.py"
+          python3 "$p/test-s9-multivector-api-deploy-v3.py"
