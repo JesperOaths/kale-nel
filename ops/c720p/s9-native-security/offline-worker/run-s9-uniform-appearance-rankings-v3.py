@@ -10,6 +10,7 @@ from collections import Counter
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -64,10 +65,23 @@ def source_inventory():
         if (hsv.get("schema")!=SCHEMA
             or hsv.get("source_qualified_key")!=row["key"]
             or hsv.get("crop_sha256")!=row["crop_sha256"]
+            or hsv.get("method")!="hue8_saturation2_value2_center_torso_v2"
+            or hsv.get("verified_same_person") is not False
+            or hsv.get("identity_probability") is not False
             or not isinstance(values,list) or len(values)!=32
+            or not all(type(x) in (float,int) and math.isfinite(x) and 0<=x<=1
+                       for x in values)
             or abs(sum(values)-1)>0.0001
             or hsv.get("human_review_required") is not True):
             raise RuntimeError("Real phone uniform histogram incomplete")
+        row["visual_sidecar_sha256"]=existing_sha(
+            ROOT+"/features/"+row["key"]+"-visual.json")
+        row["hsv_sidecar_sha256"]=existing_sha(
+            ROOT+"/features/"+row["key"]+"-hsv-v2.json")
+        if (not row["visual_sidecar_sha256"] or not row["hsv_sidecar_sha256"]
+            or not HEX.fullmatch(row["visual_sidecar_sha256"])
+            or not HEX.fullmatch(row["hsv_sidecar_sha256"])):
+            raise RuntimeError("Unverified source descriptor digest")
     return rows
 
 
@@ -159,13 +173,17 @@ def run():
          ("rank-input-v1.jsonl","rankings-v1.json",
           "rank-input-v2.jsonl","rankings-v2.json")}
     if not all(old.values()):raise RuntimeError("Immutable v1/v2 phone indices unavailable")
-    entries=[{"key":x["key"],"aligned_face_verified":False} for x in rows]
+    entries=[{"key":x["key"],"aligned_face_verified":False,
+              "visual_sidecar_sha256":x["visual_sidecar_sha256"],
+              "hsv_sidecar_sha256":x["hsv_sidecar_sha256"]} for x in rows]
     private_map={"schema":"s9_multivector_source_map_v3",
                  "visual_model_sha256":VISUAL,
                  "color_histogram_schema":SCHEMA,
                  "people_assigned_automatically":0,
                  "rows":[{"key":x["key"],"clip":x["clip"],"source":"s9_sd",
-                          "crop_sha256":x["crop_sha256"],"cohort":x["cohort"]}
+                          "crop_sha256":x["crop_sha256"],"cohort":x["cohort"],
+                          "visual_sidecar_sha256":x["visual_sidecar_sha256"],
+                          "hsv_sidecar_sha256":x["hsv_sidecar_sha256"]}
                          for x in rows]}
     with tempfile.TemporaryDirectory(prefix="s9-multivector-v3-") as temp:
         work=Path(temp)
@@ -198,25 +216,25 @@ def run():
         or score.get("count")!=len(rows)
         or not isinstance(score.get("rankings"),list)
         or len(score["rankings"])!=len(rows)):
-        raise RuntimeError("Phone V2 index integrity checks failed")
+        raise RuntimeError("Phone V3 index integrity checks failed")
     known={x["key"] for x in rows};num=0
     for row in score["rankings"]:
         if row.get("reference_key") not in known:
-            raise RuntimeError("Phone v1/v2 indices contains foreign source reference")
+            raise RuntimeError("Phone V3 index contains foreign source reference")
         hits=row.get("similar_appearance_only")
         if not isinstance(hits,list) or len(hits)>5:
-            raise RuntimeError("Phone v2 ranked entries invalid")
+            raise RuntimeError("Phone V3 ranked entries invalid")
         for hit in hits:
             if (hit.get("candidate_key") not in known
                 or hit.get("human_review_required") is not True
                 or hit.get("verified_same_person") is not False
                 or hit.get("method")!="visual_75_color_25"):
-                raise RuntimeError("Unverified/unknown phone v2 comparison")
+                raise RuntimeError("Unverified/unknown phone V3 comparison")
             num+=1
     if phone("shell","pidof nl.kalenel.s9security",timeout=17)!=camera:
         raise RuntimeError("Live camera PID changed")
     if any(existing_sha(ROOT+"/"+k)!=v for k,v in old.items()):
-        raise RuntimeError("Existing v1 ranked index changed during v2 run")
+        raise RuntimeError("Existing v1/v2 ranked indices changed during v3 run")
     write_private_map(mapping,corpus_id)
     print("S9_V3_MODEL_BACKED_RANKINGS_PRODUCED "+json.dumps({
         "corpus_id":corpus_id,
