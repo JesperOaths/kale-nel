@@ -8,6 +8,7 @@ import fcntl
 import json
 import os
 import re
+import subprocess
 import time
 import urllib.error
 import urllib.parse
@@ -235,15 +236,26 @@ def valid_cached_thumbnail(destination,version=None):
     except (OSError,ValueError):
         return False
 
-def cache_thumbnail(entry,destination,previous_version):
-    """Self-heal invalid JPEGs and preserve only valid old thumbnails on failure."""
+def cache_thumbnail(entry,destination,previous_version,fallback_reader=None):
+    """Keep verified thumbnails available on older Camera2 installations.
+
+    Standalone catalogs do not add the native asset endpoint to the APK. The
+    indexer can supply its existing bounded ADB JPEG reader when that route is
+    unavailable. Both transports pass the same size/JPEG checks before writes.
+    """
     destination=Path(destination)
     if not entry["thumbnail"]:return False,""
     wanted=entry["thumbnail_version"]
     old_ok=valid_cached_thumbnail(destination,previous_version)
     if old_ok and previous_version==wanted:return True,wanted
     try:
-        raw=read_asset(entry["name"]+".thumb.jpg")
+        name=entry["name"]
+        if not isinstance(name,str) or not NAME.fullmatch(name):
+            raise ValueError("phone_thumbnail_invalid_name")
+        try:raw=read_asset(name+".thumb.jpg")
+        except Unavailable:
+            if fallback_reader is None:raise
+            raw=fallback_reader(name+".thumb.jpg")
         if (len(raw)!=int(wanted.split(":")[0]) or raw[:3]!=b"\xff\xd8\xff"
             or raw[-2:]!=b"\xff\xd9"):
             raise Unavailable("phone_thumbnail_invalid_or_changed")
@@ -256,5 +268,5 @@ def cache_thumbnail(entry,destination,previous_version):
             finally:
                 if tmp.exists():tmp.unlink()
         return True,wanted
-    except (Unavailable,ValueError,OSError):
+    except (RuntimeError,ValueError,OSError,subprocess.TimeoutExpired):
         return old_ok,(previous_version or "") if old_ok else ""

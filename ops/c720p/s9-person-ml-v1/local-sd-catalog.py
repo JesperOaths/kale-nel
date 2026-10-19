@@ -364,6 +364,23 @@ def adb(*args):
  p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
  if p.returncode:raise OSError("phone_adb_offline")
  return p.stdout
+
+def verify_catalog_continuity(previous_rows,rows,legacy_names,recorded,native_listing_ok,native_snapshot):
+ """A failed refresh is not evidence that an original was removed.
+
+ A successful directory listing can reconcile actual removals. If an indexed
+ video still exists but its sidecar/stat failed, keep the last complete index
+ byte-for-byte and retry later. Never publish a partial or invented archive.
+ """
+ if native_snapshot is None and not native_listing_ok:
+  raise RuntimeError("native_archive_unavailable_preserve_index")
+ refreshed={r["name"] for r in rows}
+ for name in previous_rows.keys()-refreshed:
+  if NAMES.fullmatch(name) and name not in legacy_names:continue
+  if (re.fullmatch(r"motion_[0-9]{13}[.]mp4",name)
+      and native_listing_ok and name not in recorded):continue
+  raise RuntimeError("incomplete_catalog_refresh_preserve_index")
+
 def build_catalog():
  state=subprocess.run(["adb","-s",ADDR,"get-state"],capture_output=True,timeout=6)
  if state.returncode or state.stdout.strip()!=b"device":
@@ -438,9 +455,16 @@ def build_catalog():
  if phone_catalog is not None:
   try:native_snapshot=phone_catalog.load_catalog()
   except phone_catalog.Unavailable:pass
- try:
-  previous_rows={r.get("name"):r for r in json.loads((ROOT/"s9-phone-events.json").read_text()).get("phone_recordings",[]) if isinstance(r,dict)}
- except (OSError,ValueError,TypeError):previous_rows={}
+ previous_index=ROOT/"s9-phone-events.json"
+ previous_rows={}
+ if previous_index.exists():
+  prior=json.loads(previous_index.read_text())
+  if prior.get("storage_policy")!="local_microSD" or not isinstance(prior.get("phone_recordings"),list):
+   raise RuntimeError("invalid_prior_catalog_preserve_index")
+  for row in prior["phone_recordings"]:
+   if not isinstance(row,dict) or not isinstance(row.get("name"),str) or row["name"] in previous_rows:
+    raise RuntimeError("invalid_prior_catalog_rows_preserve_index")
+   previous_rows[row["name"]]=row
  try:
   recorded=adb("shell","ls","-1",native_security).decode().splitlines()
   native_listing_ok=True
@@ -467,7 +491,8 @@ def build_catalog():
    try:
     dest=ROOT/"s9-phone-thumbs"/(name+".thumb.jpg")
     if native_entry is not None:
-     available,thumb_version=phone_catalog.cache_thumbnail(native_entry,dest,previous_rows.get(name,{}).get("phone_thumbnail_version"))
+     available,thumb_version=phone_catalog.cache_thumbnail(native_entry,dest,previous_rows.get(name,{}).get("phone_thumbnail_version"),
+      fallback_reader=lambda asset:adb("exec-out","cat",native_security+"/"+asset))
      raw=None
      if available:thumb="s9-phone-thumbs/"+dest.name
     else:raw=adb("exec-out","cat",native_security+"/"+name+".thumb.jpg")
@@ -491,6 +516,9 @@ def build_catalog():
      **({"phone_catalog_version":native_entry["version"],"phone_thumbnail_version":thumb_version} if native_entry is not None else {}),
      "storage":"S9 native 4K Security microSD"})
   except Exception as error:problems.append(name+":"+type(error).__name__)
+
+ # Validate before either public catalog or private preview metadata is written.
+ verify_catalog_continuity(previous_rows,rows,set(names),set(recorded),native_listing_ok,native_snapshot)
 
  # Still-image evidence from a motion event when a full 4K clip was blocked.
  # Never call these frames "video" or infer that a person is present.

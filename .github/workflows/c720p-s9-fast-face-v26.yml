@@ -73,7 +73,7 @@ jobs:
               output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 7000)"
               echo "$output"
               [[ "$state" == 'done|0' ]] || exit 1
-              grep -q 'S9_FACE_FAST_REFRESH_V26_DEPLOYED' <<< "$output"
+              grep -Eq 'S9_FACE_FAST_REFRESH_V26_(DEPLOYED|ALREADY_CURRENT)' <<< "$output"
               exit 0
             fi
             sleep 7

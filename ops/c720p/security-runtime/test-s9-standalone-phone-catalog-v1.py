@@ -80,5 +80,31 @@ class Tests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     m.run(Path("unused.dex"),"a"*64,True,Path(root))
             self.assertFalse((Path(root)/"s9-standalone-archive-catalog-v1.json").exists())
+    def test_new_verified_phone_original_is_discoverable_before_hub_index(self):
+        catalog,summary=m.parse((m.MARKER+json.dumps(sample())).encode())
+        newer="motion_1792000000001.mp4"
+        row=dict(catalog["records"][NAME]);row["name"]=newer
+        row["manifest"]={**row["manifest"],"name":newer}
+        catalog["records"][newer]=row
+        summary["recordings"]=2
+        with tempfile.TemporaryDirectory() as root:
+            with patch.object(m,"camera",return_value={"ok":True}), \
+                 patch.object(m,"hub_names",return_value={NAME}), \
+                 patch.object(m,"scan",return_value=(catalog,summary)):
+                self.assertTrue(m.run(Path("unused.dex"),"a"*64,True,Path(root)))
+            stored=json.loads((Path(root)/"s9-standalone-archive-catalog-v1.json").read_text())
+            self.assertEqual(set(stored["records"]),{NAME,newer})
+            details=json.loads((Path(root)/"s9-standalone-archive-summary-v1.json").read_text())
+            self.assertEqual(details["new_verified_originals"],1)
+    def test_archive_shrinking_during_scan_preserves_previous_results(self):
+        catalog,summary=m.parse((m.MARKER+json.dumps(sample())).encode())
+        with tempfile.TemporaryDirectory() as root:
+            target=Path(root)/"s9-standalone-archive-catalog-v1.json"
+            m.atomic(target,{"prior":"retained"});before=target.read_bytes()
+            with patch.object(m,"camera",return_value={"ok":True}), \
+                 patch.object(m,"hub_names",side_effect=[{NAME},set()]), \
+                 patch.object(m,"scan",return_value=(catalog,summary)):
+                with self.assertRaises(RuntimeError):m.run(Path("unused.dex"),"a"*64,True,Path(root))
+            self.assertEqual(target.read_bytes(),before)
 
 if __name__=="__main__":unittest.main(verbosity=2)

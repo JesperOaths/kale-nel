@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Deploy S9 incremental sidecar refresh on C720P, with script rollback."""
-import argparse,hashlib,json,os,re,stat,subprocess,tempfile,time,urllib.request
+import argparse,ast,hashlib,json,os,re,stat,subprocess,tempfile,time,urllib.request
 from pathlib import Path
 BASE=Path("/home/jespern/c720p-home-hub")
 BIN=BASE/"bin/s9-fast-recent-clip-index.py"
@@ -27,6 +27,14 @@ def replace(path,contents,mode):
  finally:
   if os.path.exists(tmp):os.unlink(tmp)
 def ctl(*parts):return run("systemctl","--user",*parts,timeout=75)
+def compatible_client(updated,client):
+ if b"fallback_reader=" not in updated:return
+ if client.is_symlink() or not client.is_file():raise RuntimeError("matching_phone_catalog_client_required")
+ tree=ast.parse(client.read_text())
+ for fn in tree.body:
+  if isinstance(fn,ast.FunctionDef) and fn.name=="cache_thumbnail":
+   if any(arg.arg=="fallback_reader" for arg in fn.args.args+fn.args.kwonlyargs):return
+ raise RuntimeError("grouped_catalog_release_required_before_fast_index")
 def main():
  p=argparse.ArgumentParser()
  p.add_argument("--ref",required=True)
@@ -45,6 +53,9 @@ def main():
  if b"S9_FAST_INDEX_TOTAL" not in original:raise RuntimeError("unexpected_live_fast_index")
  if updated==original:
   print("S9_FACE_FAST_REFRESH_V26_ALREADY_CURRENT",flush=True);return
+ # Keep the legacy one-file publisher from installing a newer indexer against
+ # an older client. The grouped catalog release installs both atomically.
+ compatible_client(updated,BASE/"bin/phone_archive_catalog_v1.py")
  prior=api()
  mode=stat.S_IMODE(BIN.stat().st_mode)
  # Check the replacement parser before stopping anything.

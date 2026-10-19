@@ -25,6 +25,9 @@ jobs:
           python3 ops/c720p/security-runtime/test-security-runtime.py
           python3 ops/c720p/security-runtime/test-cdp-transport-v1.py
           python3 ops/c720p/security-runtime/test-manifest-bounds-v1.py
+          python3 ops/c720p/security-runtime/test-phone-archive-catalog-v1.py
+          python3 ops/c720p/security-runtime/test-phone-archive-adapters-v1.py
+          python3 ops/c720p/security-runtime/test-s9-standalone-phone-catalog-v1.py
           python3 ops/c720p/s9-native-security/test-fast-recent-s9-clip-index.py
           python3 ops/c720p/s9-native-security/test-evidence-quality-v1.py
           python3 -m compileall -q ops/c720p/security-runtime
