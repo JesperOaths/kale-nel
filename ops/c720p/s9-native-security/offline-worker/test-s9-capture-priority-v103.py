@@ -44,6 +44,38 @@ class Tests(unittest.TestCase):
         self.assertEqual(m.classify(healthy(),None,True)["defer_reason"],"temperature_unavailable")
         self.assertFalse(m.classify(healthy(),39.6,True)["background_processing_permitted"])
         self.assertEqual(m.classify({**healthy(),"continuous_4k_buffered_ms":True},38.2,True)["defer_reason"],"pre_event_buffer_not_ready")
+    def test_thermal_fallback_legacy_preroll_is_distinct_from_4k_ring(self):
+        x=healthy()
+        x.update(continuous_4k_trial_active=False,continuous_4k_ready=False,
+                 continuous_4k_buffered_ms=0,
+                 continuous_4k_last_result="fallback_thermal_guard",
+                 continuous_4k_recovery_attempts=1,
+                 continuous_4k_retry_after_ms=487650123,
+                 sd_free_bytes=45*1024**3,
+                 preroll_ready=True,preroll_buffered_ms=7000)
+        result=m.classify(x,40.0,True)
+        self.assertFalse(result["background_processing_permitted"])
+        self.assertEqual(result["capture_buffer_source"],"legacy_on_phone_preroll")
+        self.assertEqual(result["last_4k_status_class"],"thermal_fallback")
+        self.assertTrue(result["4k_rearm_could_be_waiting_for_idle_or_cooldown"])
+        self.assertTrue(result["4k_microSD_reserve_adequate"])
+        self.assertFalse(result["continuous_4k_ready"])
+        self.assertNotIn("fallback_thermal_guard",str(result))
+
+    def test_hard_failure_and_missing_preroll_are_not_reported_as_healthy(self):
+        status=healthy()
+        status.update(continuous_4k_trial_active=False,continuous_4k_ready=False,
+                      continuous_4k_buffered_ms=0,preroll_ready=False,
+                      preroll_buffered_ms=0,continuous_4k_recovery_attempts=3,
+                      continuous_4k_last_result="random_private_motion_filename.mp4",
+                      sd_free_bytes=10*1024**3)
+        result=m.classify(status,39.0,True)
+        self.assertEqual(result["capture_buffer_source"],"no_verified_preroll")
+        self.assertEqual(result["last_4k_status_class"],"other_or_unavailable")
+        self.assertFalse(result["4k_rearm_could_be_waiting_for_idle_or_cooldown"])
+        self.assertFalse(result["4k_microSD_reserve_adequate"])
+        self.assertNotIn("private_motion_filename",str(result))
+
     def test_no_phone_mutations_in_source(self):
         text=P.read_text()
         for forbidden in ("--apply","adb push","adb install","am force-stop",

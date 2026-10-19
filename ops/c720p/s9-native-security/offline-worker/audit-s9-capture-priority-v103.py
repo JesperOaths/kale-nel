@@ -21,6 +21,53 @@ WHITELIST={"watching","recording","starting","stopping","opening","stopped","con
 def valid_numeric(value):
     return type(value) in (int,float) and 0<=value<=100
 
+def safe_nonnegative(value,maximum):
+    return type(value) is int and 0<=value<=maximum
+
+def recovery_diagnostics(camera,temperature_c):
+    """Bounded aggregate status only; no private clip/person/file identifiers."""
+    attempts=camera.get("continuous_4k_recovery_attempts")
+    attempts=attempts if safe_nonnegative(attempts,1000) else None
+    saved=camera.get("continuous_4k_production_persisted") is True
+    ready=camera.get("continuous_4k_ready") is True
+    legacy_ready=camera.get("preroll_ready") is True
+    legacy=camera.get("preroll_buffered_ms")
+    legacy=legacy if safe_nonnegative(legacy,20000) else None
+    free=camera.get("sd_free_bytes")
+    reserve_ok=safe_nonnegative(free,10*1024**4) and free>=15*1024**3
+    status=camera.get("continuous_4k_last_result")
+    if not isinstance(status,str):status=""
+    if status.startswith("fallback_thermal_guard"):
+        cause="thermal_fallback"
+    elif status=="rearmed_after_thermal_cooldown":
+        cause="rearmed_after_cooldown"
+    elif status=="boot_cooling_wait_for_4k":
+        cause="boot_cooling_wait"
+    elif status=="resuming_verified_4k_on_boot":
+        cause="boot_4k_resuming"
+    else:cause="other_or_unavailable"
+    retry=camera.get("continuous_4k_retry_after_ms")
+    retry_known=safe_nonnegative(retry,10**13)
+    return {
+        "capture_buffer_source":("continuous_h264_4k_ring" if ready else
+            "legacy_on_phone_preroll" if legacy_ready else "no_verified_preroll"),
+        "legacy_preroll_ready":legacy_ready,
+        "legacy_preroll_buffered_ms":legacy,
+        "last_4k_status_class":cause,
+        "4k_recovery_attempts":attempts,
+        "4k_retry_marker_available":retry_known,
+        "4k_rearm_thermal_threshold_c":40.5,
+        "4k_rearm_temperature_below_threshold":(
+            valid_numeric(temperature_c) and temperature_c<40.5),
+        "4k_microSD_reserve_adequate":reserve_ok,
+        "4k_production_preference_saved":saved,
+        "4k_rearm_could_be_waiting_for_idle_or_cooldown":(
+            saved and not ready and attempts is not None and attempts<3
+            and valid_numeric(temperature_c) and temperature_c<40.5),
+        "hub_initiated_camera_restart":False,
+    }
+
+
 def classify(camera,temperature_c,pid_present):
     if not isinstance(camera,dict):camera={}
     mode=camera.get("mode")
@@ -60,6 +107,7 @@ def classify(camera,temperature_c,pid_present):
        "review_decisions_modified":False,
        "camera_apk_modified":False,
        "private_clip_names_disclosed":False}
+    result.update(recovery_diagnostics(camera,temperature_c))
     return result
 
 def query():
