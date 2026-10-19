@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,recheckOnly:false,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
+ faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -368,6 +368,7 @@ async function loadView(){
 }
 async function fetchFaces(){
  if(state.faceLoaded)return;
+ state.faceFetchError=false;
  const requestToken=++state.faceFetchToken;
  try{
   const r=await relay().fetch('/new/api/saved',{cache:'no-store'});
@@ -397,18 +398,19 @@ async function fetchFaces(){
   state.faceList=found.sort((a,b)=>String(b.clip).localeCompare(String(a.clip)));
   state.faceSummary={reviewed:v5Reviewed,total:data.events.length,
    snapshots:found.length,withoutSnapshot:Math.max(0,candidateRecords-found.length)};
-  state.faceLoaded=true;
+  state.faceLoaded=true;state.faceFetchError=false;
   $('archiveCount').textContent=String(state.archiveClips.length);
   renderMetrics();
   if(state.doc)render();
  }catch(e){
   if(requestToken!==state.faceFetchToken)return;
-  state.faceSummary=null;
+  state.faceSummary=null;state.faceFetchError=true;
   state.clipEvidence=new Map();
  state.archiveClips=null;
   $('archiveCount').textContent='—';
   $('faceScanLabel').textContent='Unavailable';
   $('facePhotoStatus').textContent='Face snapshot metadata is currently unavailable. Try Refresh.';
+  renderMetrics();
   // The separate crop gallery is intentionally retired; original recordings remain accessible.
  }
 }
@@ -758,9 +760,18 @@ function renderMetrics(){
    (reviewed===fs.total?' · reviewed':' · remaining '+(fs.total-reviewed));
   $('faceScanProgress').value=Math.round(100*reviewed/fs.total);
   $('facePhotoStatus').textContent=fs.snapshots+' candidate crops · only face-qualified crops are shown';
+ }else if(state.faceFetchError){
+  $('faceScanLabel').textContent='Unavailable · retry Refresh';
+  $('faceScanProgress').value=0;
+  $('facePhotoStatus').textContent='S9+ original-4K face-review coverage could not be checked. No detection result is implied.';
  }else if(!state.faceLoaded){
   $('faceScanLabel').textContent='Loading…';
   $('faceScanProgress').value=0;
+  $('facePhotoStatus').textContent='';
+ }else{
+  $('faceScanLabel').textContent='No indexed originals';
+  $('faceScanProgress').value=0;
+  $('facePhotoStatus').textContent='No source recordings available for a coverage calculation.';
  }
 }
 function renderOverview(){
@@ -1159,7 +1170,7 @@ $('folderRecheckOnly').addEventListener('change',()=>{
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('refresh').addEventListener('click',()=>{
  state.faceLoaded=false;
- state.faceSummary=null;
+ state.faceSummary=null;state.faceFetchError=false;
  state.clipEvidence=new Map();
  state.archiveClips=null;state.archiveEntries=[];state.driveRecords=[];
  state.extraLinks=null;state.assignedReady=false;state.clothingMatches=null;

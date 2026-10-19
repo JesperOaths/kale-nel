@@ -65,7 +65,7 @@ const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observat
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
 const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg'}],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
-let posts=[],linkPosts=[],fetches=[],holdAll=false,releaseHeldAll=null,linkRevision=0,linkItems={},linkReadFailures=0;
+let posts=[],linkPosts=[],fetches=[],faceReadFailures=0,holdAll=false,releaseHeldAll=null,linkRevision=0,linkItems={},linkReadFailures=0;
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
@@ -104,7 +104,9 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     items:tab==='approved'?[{...item,decision:'approved'}]:[item],
     reference_examples:tab==='suggestions'?[item]:[]})};
   }
-  if(p==='/new/api/saved')return {ok:true,json:async()=>({archive_mode:'S9-microSD-only',events:[
+  if(p==='/new/api/saved'){
+   if(faceReadFailures>0){faceReadFailures--;throw Error('Synthetic S9+ source outage')}
+   return {ok:true,json:async()=>({archive_mode:'S9-microSD-only',events:[
    {clip_no:clip,person_count:1,frames_with_distinct_multiple_person_boxes:0,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',
     anonymous_tracks:[
      {id:'Person 1',upper_clothing_colour:'blue',image_movement_direction:'image_left'},
@@ -118,6 +120,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    {clip_no:extraClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]},
    {clip_no:candidateClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]},
    {clip_no:pendingOutfitClip,person_count:1,face_deep_review_version:'s9_onphone_36_samples_overlapping_tiles_v5',face_candidates:[]}]})};
+  }
   if(p.startsWith('/new/saved/face/'))return {ok:true,status:200};
   throw Error('Unexpected request '+p);
  }};
@@ -339,5 +342,17 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('reviewTotal').textContent,'1 review item',
   'Stale responses must not replace current tab data');
+ // Failed native face metadata is unknown coverage, never a false zero or
+ // an indefinitely spinning Loading state. Refresh repairs the display.
+ faceReadFailures=1;
+ el('refresh').handlers.click();
+ for(let i=0;i<9;i++)await flush();
+ assert.equal(el('faceScanLabel').textContent,'Unavailable · retry Refresh');
+ assert.match(el('facePhotoStatus').textContent,/could not be checked/);
+ assert.equal(el('faceScanProgress').value,0);
+ el('refresh').handlers.click();
+ for(let i=0;i<10;i++)await flush();
+ assert.equal(el('faceScanLabel').textContent,'5 / 5 · reviewed');
+ assert.equal(el('faceScanProgress').value,100);
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
