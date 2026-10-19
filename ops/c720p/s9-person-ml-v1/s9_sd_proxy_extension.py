@@ -480,6 +480,10 @@ def install_local_sd(H):
  # verified original 4K and manual person classification.
  import s9_c720p_imported_media_api_v1
  s9_c720p_imported_media_api_v1.install(H,play_sd)
+ # Read-only companion for separately SHA-verified migrated JPEG evidence.
+ # The authenticated 8794 relay needs its explicit route before deployment.
+ import s9_c720p_snapshots_v163
+ s9_c720p_snapshots_v163.install(H)
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
