@@ -75,8 +75,11 @@ def phone_audit(name,entry,dex=DEX):
     output=subprocess.run(["adb","-s",PHONE,"shell",script],
                           capture_output=True,timeout=125)
     if output.returncode:raise Deferred("phone_capture_priority_or_hash_unavailable")
-    if len(output.stdout)>8192:raise Deferred("unbounded_integrity_reply")
-    lines=[s[len(MARK):] for s in output.stdout.decode("UTF-8").splitlines() if s.startswith(MARK)]
+    return validate_phone_reply(output.stdout,name,entry)
+
+def validate_phone_reply(raw,name,entry):
+    if len(raw)>8192:raise Deferred("unbounded_integrity_reply")
+    lines=[s[len(MARK):] for s in raw.decode("UTF-8").splitlines() if s.startswith(MARK)]
     if len(lines)!=1:raise Deferred("missing_integrity_reply")
     data=json.loads(lines[0])
     matched=data.get("sha256_matches_verified_manifest")
@@ -90,6 +93,7 @@ def phone_audit(name,entry,dex=DEX):
         or data.get("result")!=("digest_match" if matched else "digest_mismatch_needs_manual_investigation")):
         raise Deferred("untrusted_integrity_reply")
     return matched
+
 
 def save_state(path,value):
     path.parent.mkdir(parents=True,exist_ok=True)
