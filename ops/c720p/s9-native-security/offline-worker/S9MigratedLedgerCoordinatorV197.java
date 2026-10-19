@@ -93,6 +93,11 @@ public final class S9MigratedLedgerCoordinatorV197 implements AutoCloseable {
             throws IOException {
         S9MigratedLedgerTrustedCheckpointV196.State state=anchor.read();
         journal.requireTrustedHead(state.sequence,state.headSha256);
+        // The empty genesis marker is unsigned. Only an independently
+        // controlled, one-time provisioner may establish the first signed
+        // journal/checkpoint pair. Never bootstrap via an action endpoint.
+        if(!state.durableAnchorVerified)
+            throw new IOException("dualstore_unsigned_genesis_requires_provisioner");
         return state;
     }
 
