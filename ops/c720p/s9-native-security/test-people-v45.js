@@ -532,5 +532,34 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<6;i++)await flush();
  assert.equal(el('approvalDialog').open,false);
  assert.equal(linkItems['drive:'+driveClip].folder,'G123');
+ // Group filing must persist one authoritative entry with two people, including
+ // a second person added via the repeatable + selector, and show it in both.
+ driveOnlyPerson.automatic_appearance_group=false;
+ panes[1].handlers.click();for(let i=0;i<8;i++)await flush();
+ const groupRow=el('reviewGrid').children.find(x=>x.dataset.source==='sd'&&x.dataset.clip===otherClip);
+ assert(groupRow,'Unassigned reviewed original for a group fixture must be present');
+ const groupFile=scan(groupRow,'✓ File under person');
+ assert(groupFile,'Group candidate must be fileable');
+ groupFile.handlers.click();el('approvalFolder').value='G123';
+ el('approvalAddPerson').handlers.click();
+ assert.equal(el('approvalMorePeople').children.length,1,'Plus inserts another person picker');
+ el('approvalMorePeople').children[0].children[0].value='GDRIVE';
+ await el('approvalForm').handlers.submit({preventDefault(){}});
+ for(let i=0;i<12;i++)await flush();
+ const groupPost=linkPosts.at(-1).payload;
+ assert.equal(groupPost.action,'assign_many');
+ assert.equal(groupPost.source,'sd');
+ assert.equal(groupPost.name,otherClip);
+ assert.equal(groupPost.folder,'G123');
+ assert.equal(groupPost.folders.join(','),'G123,GDRIVE');
+ assert.equal(linkItems['sd:'+otherClip].folders.join(','),'G123,GDRIVE');
+ panes[2].handlers.click();for(let i=0;i<9;i++)await flush();
+ const groupPeople=[...el('savedList').children];
+ assert(groupPeople.some(x=>x.children[1]?.children[0]?.textContent==='Drive-only person'),
+  'Secondary person must remain saved and accessible');
+ const secondary=groupPeople.find(x=>x.children[1]?.children[0]?.textContent==='Drive-only person');
+ secondary.handlers.click();for(let i=0;i<10;i++)await flush();
+ assert(el('folderGrid').children.some(x=>x.dataset.source==='sd'&&x.dataset.clip===otherClip),
+  'Second person folder must display the same manually group-assigned original');
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
