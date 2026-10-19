@@ -38,7 +38,7 @@ def classify(camera,temperature_c,pid_present):
     elif not temp_ok:reason="temperature_unavailable"
     elif temperature_c>MAX_OFFLINE_START_C:reason="thermal_headroom_required"
     elif mode!="watching":reason="capture_not_idle"
-    elif not on4k:reason="continuous_4k_not_ready"
+    elif camera.get("native_4k_enabled") is not True or not on4k:reason="continuous_4k_not_ready"
     elif not buffer_ok or buffered<MIN_BUFFER_MS:reason="pre_event_buffer_not_ready"
     elif drops is None or type(drops) is not int or drops!=0:reason="encoder_drops_detected_or_unknown"
     elif not known_error:reason="encoder_error_detected_or_unknown"
@@ -63,6 +63,10 @@ def classify(camera,temperature_c,pid_present):
     return result
 
 def query():
+    # Local ADB port forwarding does not alter Camera2 or any phone file.
+    forward=subprocess.run(["adb","-s",PHONE,"forward","tcp:18808","tcp:8808"],
+        capture_output=True,text=True,timeout=15)
+    if forward.returncode:raise RuntimeError("read_only_status_bridge_unavailable")
     with urllib.request.urlopen(STATUS,timeout=16) as response:
         if response.status!=200:raise RuntimeError("status_api_unavailable")
         body=response.read(120001)
