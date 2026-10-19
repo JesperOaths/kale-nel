@@ -184,11 +184,13 @@ async function manualLink(item,folder,reviewAction=null){
   if(!response.ok||outcome.ok!==true)throw Error(outcome.error||'Could not file recording under person');
   // A successful POST is a committed review change. A subsequent GET failure
   // must never turn its success into an apparent failed save and a duplicate retry.
-  if(!Number.isSafeInteger(outcome.revision)||outcome.revision<=data.revision||
+  if(outcome.persisted!==true||outcome.source!==data.source||outcome.name!==data.name||
+     outcome.manual_links_only!==true||
+     !Number.isSafeInteger(outcome.revision)||outcome.revision<=data.revision||
      (outcome.folder||null)!==data.folder||
      (data.action==='skip'&&outcome.review_status!=='skipped')||
      (data.action==='reject'&&outcome.review_status!=='rejected'))
-   throw Error('Saved response could not be verified. Refresh before retrying.');
+   throw Error('Save was not confirmed for this recording and person. Refresh and check before retrying.');
   const key=data.source+':'+data.name;
   state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder,
    review_status:outcome.review_status|| (folder?'assigned':'inbox')};
@@ -224,7 +226,35 @@ async function manualLink(item,folder,reviewAction=null){
 }
 
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
-function isSaved(f){return !f.automatic_appearance_group||num(f.approved_clips)>0}
+// Source-qualified evidence: Drive originals cannot inherit S9 face crops.
+function folderApprovedSDClips(id){
+ if(!state.assignedReady||!state.extraLinks)return new Set();
+ return new Set(state.archiveEntries.filter(row=>row.source==='sd'&&
+  assignedFolder(row)===id).map(row=>row.clip));
+}
+function assignedRecordingKeys(folder){
+ const keys=new Set();
+ for(const [key,legacy] of state.legacyAssigned){
+  const explicit=state.extraLinks?.items?.[key];
+  const assigned=explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder')?explicit.folder:legacy;
+  if(assigned&&(!folder||assigned===folder))keys.add(key);
+ }
+ for(const [key,entry] of Object.entries(state.extraLinks?.items||{}))
+  if(entry.folder&&(!folder||entry.folder===folder))keys.add(key);
+ return keys;
+}
+function folderAssignmentCount(f){
+ if(state.assignedReady&&state.extraLinks)return assignedRecordingKeys(f.id).size;
+ // While the complete native assignment scan is loading, manual links still
+ // establish that this person has filed originals (including Drive-only people).
+ const manual=Object.values(state.extraLinks?.items||{}).filter(x=>x.folder===f.id).length;
+ return Math.max(num(f.approved_clips),manual);
+}
+function totalAssignedCount(){
+ return state.assignedReady&&state.extraLinks?assignedRecordingKeys().size:
+  (state.doc?.folders||[]).reduce((n,f)=>n+folderAssignmentCount(f),0);
+}
+function isSaved(f){return !f.automatic_appearance_group||folderAssignmentCount(f)>0}
 function savedFolders(){return (state.doc?.folders||[]).filter(isSaved).sort((a,b)=>
  String(a.label||'').localeCompare(String(b.label||''),'en',{sensitivity:'base',numeric:true})||
  String(a.id||'').localeCompare(String(b.id||'')))}
@@ -504,7 +534,7 @@ function openReview(mode){
 function openFolder(id,tab,recheckOnly=false){
  const f=state.doc?.folders.find(f=>f.id===id);if(!f)return;
  state.folderReturnPane=f.automatic_appearance_group&&!isSaved(f)?'clothing':'people';
- state.pane='folder';state.folder=id;state.tab=tab|| (num(f.approved_clips)?'approved':'suggestions');
+ state.pane='folder';state.folder=id;state.tab=tab|| (isSaved(f)?'approved':'suggestions');
  state.offset=0;state.facePage=0;state.recheckOnly=!!recheckOnly;$('folderMode').value=state.tab;
  selectPane('folder');loadView();
 }
@@ -768,7 +798,7 @@ function profileRow(f){
   avatar.title='Candidate from a reviewed recording';
  }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
  const info=elt('div');info.append(elt('strong',f.label),
-  elt('small',num(f.approved_clips)+' reviewed '+(num(f.approved_clips)===1?'recording':'recordings')+
+  elt('small',folderAssignmentCount(f)+' reviewed '+(folderAssignmentCount(f)===1?'recording':'recordings')+
     (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')),
   elt('small',face?'Portrait from reviewed recording':'No verified face portrait yet'));
  b.append(avatar,info,elt('span','Open recordings →','arrow'));
@@ -803,7 +833,7 @@ function renderMetrics(){
  $('peopleRecheckNotice').hidden=recheck===0;
  $('peopleRecheckSummary').textContent=recheck+' confirmed recording'+(recheck===1?' needs':'s need')+' evidence rechecking';
  $('personCount').textContent=String(saved.length);
- $('approvalCount').textContent=String(saved.reduce((n,x)=>n+num(x.approved_clips),0));
+ $('approvalCount').textContent=String(totalAssignedCount());
  $('groupCount').textContent=String(tentativeFolders().length);
  $('clothingTabCount').textContent=tentativeFolders().length?' · '+tentativeFolders().length:'';
  const scan=state.doc?.person_detection;
@@ -879,8 +909,7 @@ function renderOverview(){
  sourceRow('Historical Google Drive originals',
   state.driveStatus==='ready'?String(drive):state.driveStatus==='unavailable'?'Unavailable':'Loading…',
   state.driveStatus==='unavailable');
- sourceRow('Manual person assignments',String(num(state.doc?.folders?.reduce((count,f)=>
-  count+num(f.approved_clips),0))));
+ sourceRow('Manual person assignments',String(totalAssignedCount()));
  // Overview deliberately has no second list of recordings or people.
 }
 function paginate(host,total,onPage){
@@ -1176,7 +1205,7 @@ function renderFolder(){
  const f=actualFolder();
  if(!f){alertText('This person is no longer available');return}
  $('folderTitle').textContent=f.label;
- $('folderDescription').textContent=num(f.approved_clips)+' saved recording links · '+
+ $('folderDescription').textContent=folderAssignmentCount(f)+' saved recording links · '+
   num(f.suggested_clips)+' appearance suggestions'+
   (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need person rechecking':'');
  $('folderRecheck').hidden=!num(f.approvals_needing_person_recheck);
@@ -1213,9 +1242,7 @@ function renderFolder(){
  // Only show images linked to manually approved recordings in this folder.
  // A linked recording can still contain a different person: never label a crop as an identified face.
  const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
- const clips=new Set((state.doc?.items||[]).filter(x=>x.decision==='approved'&&
-  (state.extraLinks?.items?.['sd:'+x.clip]?.folder===undefined||
-   state.extraLinks.items['sd:'+x.clip].folder===state.folder)).map(x=>String(x.clip||'')));
+ const clips=folderApprovedSDClips(state.folder);
  const faceMatches=state.faceList.filter(x=>clips.has(x.clip)&&credibleFaceCrop(x)).slice(0,16);
  facePanel.hidden=state.tab!=='approved'||faceMatches.length===0;
  if(!facePanel.hidden)for(const face of faceMatches){

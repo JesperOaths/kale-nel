@@ -95,7 +95,7 @@ def main():
  if active_backend.is_file() and b"FILING_REVIEW_VERSION=" in active_backend.read_bytes():
   if sha(active_backend.read_bytes())!=expected["backend"]:
    raise RuntimeError("modern_filing_requires_coordinated_deployer")
-  if b"security-filing-v65-20261019" not in (WWW/"security-people-v50.html").read_bytes():
+  if not re.search(rb"security-(?:filing-v65|drive-person-v66)-20261019",(WWW/"security-people-v50.html").read_bytes()):
    raise RuntimeError("modern_filing_ui_not_active")
   links=api("/new/api/s9-manual-recording-links")
   if links.get("ok") is not True or links.get("manual_links_only") is not True:

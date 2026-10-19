@@ -77,13 +77,13 @@ class Cases(unittest.TestCase):
   live=v64.patch_js(live,at(v64.BEFORE).decode(),at(BASE).decode())
   live,_=model.patch(live)
   self.assertEqual(v65.sha(live),v65.LIVE_JS)
-  new=v65.patch_js(live,at(BASE).decode(),(ROOT/'security-people-v45.js').read_text())
+  new=v65.patch_js(live,at(BASE).decode(),at('49f16744ed1beea14a5db17102f9ade004423230').decode())
   self.assertIn(b'addReviewedOsnetMatches',new)
   with tempfile.TemporaryDirectory() as directory:
    target=Path(directory)/PREFIX;target.mkdir(parents=True)
    (target/'security-people-v45.js').write_bytes(new)
    (target/'security-people-v45.html').write_bytes((ROOT/'security-people-v45.html').read_bytes())
-   harness=(ROOT/'test-people-v45.js').read_text().replace("assert.equal(el('approvalCount').textContent,'3');","assert.equal(el('approvalCount').textContent,'1');")
+   harness=at('49f16744ed1beea14a5db17102f9ade004423230','test-people-v45.js').decode().replace("assert.equal(el('approvalCount').textContent,'3');","assert.equal(el('approvalCount').textContent,'1');")
    (target/'test-people-v45.js').write_text(harness)
    subprocess.run(['node',PREFIX+'test-people-v45.js'],cwd=directory,check=True)
  def test_old_push_bootstrap_preserves_new_proxy_and_refuses_backend_downgrade(self):

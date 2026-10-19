@@ -1,0 +1,29 @@
+name: Security Drive-only person folders V66
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/test-people-v45.js'
+      - 'ops/c720p/s9-person-ml-v1/s9_manual_recording_links.py'
+      - 'ops/c720p/s9-native-security/*drive-person-v66.py'
+      - '.github/workflows/security-drive-person-v66.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/*drive-person-v66.py'
+      - '.github/workflows/security-drive-person-v66.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+      - run: |
+          node ops/c720p/s9-native-security/test-people-v45.js
+          python3 ops/c720p/s9-native-security/test-security-drive-person-v66.py
+          python3 ops/c720p/s9-native-security/test-manual-recording-links-v1.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-security-drive-person-v66.py ops/c720p/s9-native-security/verify-security-drive-person-v66.py
