@@ -3,11 +3,13 @@ on:
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/audit-auto-person-reference-readiness.py'
+      - 'ops/c720p/s9-native-security/test-auto-person-face-specific-audit-v117.py'
       - '.github/workflows/security-auto-person-reference-audit.yml'
   push:
     branches: [main]
     paths:
       - 'ops/c720p/s9-native-security/audit-auto-person-reference-readiness.py'
+      - 'ops/c720p/s9-native-security/test-auto-person-face-specific-audit-v117.py'
       - '.github/workflows/security-auto-person-reference-audit.yml'
 permissions:
   contents: read
@@ -25,6 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile ops/c720p/s9-native-security/audit-auto-person-reference-readiness.py
+          python3 ops/c720p/s9-native-security/test-auto-person-face-specific-audit-v117.py
           python3 - <<'PY'
           from pathlib import Path
           src=Path('ops/c720p/s9-native-security/audit-auto-person-reference-readiness.py').read_text()
