@@ -57,7 +57,7 @@ jobs:
             cmd="$cmd && curl -fsSL --max-time 35 '$uri' -o '$stage/$name' && printf '%s  %s\\n' '$digest' '$stage/$name' | sha256sum -c - >/dev/null"
           done
           # The Python helper reads its Java file only from this checked stage.
-          cmd="$cmd && /usr/bin/python3 '$stage/probe-s9-app-process-noimage-v166.py'"
+          cmd="$cmd && /usr/bin/python3 '$stage/probe-s9-app-process-noimage-v166.py' --native-env"
           [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
           idem="s9-art-noimage-v166-${GITHUB_SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
@@ -75,6 +75,7 @@ jobs:
               [[ "$state" == 'done|0' ]] || exit 1
               grep -q 'S9_APP_PROCESS_BASELINE_V166' <<< "$output"
               grep -q '"status":"physical_baseline_checked"' <<< "$output"
+              grep -q '"native_library_path_enabled":true' <<< "$output"
               grep -q '"launch_attempts":1' <<< "$output"
               grep -q '"yu_net_inference_executed":false' <<< "$output"
               grep -q '"model_or_image_opened":false' <<< "$output"
