@@ -80,6 +80,44 @@ def run_worker(filename,arguments,marker,timeout=450):
         raise RuntimeError("Malformed stage response")
     return payload
 
+def remote_file_present(ctrl,path):
+    """Distinguish missing private evidence from an ADB transport failure."""
+    result=ctrl.adb("shell","test -s "+path,timeout=15,check=False)
+    if result.returncode==0:return True
+    if result.returncode!=1 or result.stderr.strip():
+        raise RuntimeError("S9 ADB transport failed before recovery bootstrap")
+    return False
+
+
+def prepare_partial_recovery(ctrl,clip):
+    """Bootstrap independent recovery DEX only for one-sided ROI staging."""
+    if not CLIP.fullmatch(clip):
+        raise RuntimeError("Source-qualified archived clip invalid")
+    key=hashlib.sha256(("s9_sd\x00"+clip).encode()).hexdigest()
+    roi=ctrl.ROOT+"/inbox/"+key+".jpg"
+    meta=ctrl.ROOT+"/features/"+key+"-detector.json"
+    crop=remote_file_present(ctrl,roi)
+    evidence=remote_file_present(ctrl,meta)
+    if crop==evidence:return False
+    # Gate CPU-side compilation/staging on the same physical-model, live
+    # Camera2 PID and battery-temperature readiness used for ROI inference.
+    ctrl.readiness()
+    jar=ctrl.ROOT+"/s9-offline-person-roi-recovery-v3.jar"
+    if remote_file_present(ctrl,jar):return False
+    result=run_worker("install-s9-roi-partial-recovery-v3.py",
+                      ["--install"],"S9_ROI_PARTIAL_RECOVERY_V3_INSTALLED",
+                      timeout=400)
+    if (result.get("no_camera_apk_changes") is not True
+        or result.get("no_recording_changes") is not True
+        or result.get("no_review_changes") is not True
+        or not isinstance(result.get("dex_sha256"),str)
+        or not re.fullmatch(r"[a-f0-9]{64}",result["dex_sha256"])):
+        raise RuntimeError("Isolated ROI recovery installation was not verified")
+    if not remote_file_present(ctrl,jar):
+        raise RuntimeError("S9 private recovery DEX missing after install")
+    return True
+
+
 def capture_candidate_list(ctrl):
     events=ctrl.primary_events()
     approved=ctrl.approved_names()
@@ -221,8 +259,10 @@ def main():
                  if clip not in existing or existing[clip]=="stale_feature" or
                     (args.retry_rejected and existing[clip]=="no_qualified_person_box")]
         selected=pending[:args.limit]
-        totals={};done=[]
+        totals={};done=[];recovery_bootstraps=0
         for clip in selected:
+            if prepare_partial_recovery(ctrl,clip):
+                recovery_bootstraps+=1
             # Catalog can grow while active 4K recording continues. Re-select
             # by immutable original filename for each independent phone run.
             latest=capture_candidate_list(ctrl)
@@ -300,6 +340,7 @@ def main():
                 raise RuntimeError("V3 API did not serve real active rankings")
         print("S9_V3_ARCHIVE_RESUMABLE_BATCH "+json.dumps({
             "selected":len(selected),"counts":totals,
+            "recovery_worker_bootstraps":recovery_bootstraps,
             "ledger_phone_integrity_audit":audit,
             "new_histograms":histograms,
             "missing_histograms_remaining":missing_remaining,
