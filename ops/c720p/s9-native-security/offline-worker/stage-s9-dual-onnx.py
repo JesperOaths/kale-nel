@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 import urllib.request
 
 PHONE="192.168.178.250:5555"
@@ -79,39 +80,41 @@ def stage_file(name,bytes_count,expected_sha,reader):
                           capture_output=True,timeout=20)
     if exists.returncode==0:
         raise RuntimeError("Unknown partial model found; no overwrite")
-    proc=subprocess.Popen(
-        ["adb","-s",PHONE,"exec-in","sh","-c","umask 077; cat > '"+part+"'"],
-        stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
-    actual=hashlib.sha256();total=0
-    try:
-        while True:
-            chunk=reader.read(65536)
-            if not chunk:break
-            total+=len(chunk)
-            if total>bytes_count:raise RuntimeError("Bounded stream exceeded size")
-            actual.update(chunk)
-            proc.stdin.write(chunk)
-        proc.stdin.close()
-        if proc.wait(timeout=65):
-            raise RuntimeError("ADB stream failed")
+    if shutil.disk_usage("/tmp").free<bytes_count+250_000_000:
+        raise RuntimeError("Insufficient C720P /tmp reserve for safe verified transfer")
+    # ADB streaming returned truncated/corrupted phone bytes on first attempt.
+    # Stage to bounded ephemeral C720P scratch, checksum BEFORE adb push,
+    # checksum AGAIN on the phone, and never overwrite the target on failure.
+    with tempfile.TemporaryDirectory(prefix="s9-verified-onnx-") as directory:
+        file=Path(directory)/name
+        actual=hashlib.sha256();total=0
+        with file.open("wb") as out:
+            while True:
+                chunk=reader.read(65536)
+                if not chunk:break
+                total+=len(chunk)
+                if total>bytes_count:
+                    raise RuntimeError("Bounded ONNX stream exceeded expected size")
+                actual.update(chunk);out.write(chunk)
         if total!=bytes_count or actual.hexdigest()!=expected_sha:
-            raise RuntimeError("Artifact length or digest differs from pin")
-        remote=adb_shell("sha256sum "+part).split()[0]
-        if remote!=expected_sha:
-            raise RuntimeError("Phone did not receive exact verified model")
-        adb_shell("mv '"+part+"' '"+FOLDER+"/"+name+"'")
-        if remote_sha(name)!=expected_sha:
-            raise RuntimeError("Phone final digest mismatch")
-        return {"model":name,"result":"installed","sha256":expected_sha,
-                "bytes":total}
-    except BaseException:
+            raise RuntimeError("Downloaded artifact length or SHA256 mismatch")
         try:
-            if proc.poll() is None:proc.kill()
-            proc.wait(timeout=5)
-        except Exception:pass
-        try:adb_shell("rm -f '"+part+"'")
-        except Exception:pass
-        raise
+            proc=subprocess.run(["adb","-s",PHONE,"push",str(file),part],
+                                capture_output=True,text=True,timeout=200)
+            if proc.returncode:
+                raise RuntimeError("ADB push did not complete successfully")
+            result=adb_shell("sha256sum '"+part+"'").split()
+            if not result or result[0]!=expected_sha:
+                raise RuntimeError("Phone model checksum differs from verified original")
+            adb_shell("mv '"+part+"' '"+FOLDER+"/"+name+"'")
+            if remote_sha(name)!=expected_sha:
+                raise RuntimeError("Phone installed model SHA256 mismatch")
+        except BaseException:
+            try:adb_shell("rm -f '"+part+"'")
+            except Exception:pass
+            raise
+    return {"model":name,"result":"installed","sha256":expected_sha,
+            "bytes":total}
 
 
 def stage_visual(path,manifest_path):
