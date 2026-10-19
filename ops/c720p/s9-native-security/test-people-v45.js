@@ -72,6 +72,7 @@ const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observat
 const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg'}],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
 let posts=[],linkPosts=[],autoPosts=[],autoDenied=new Set(),fetches=[],faceReadFailures=0,holdAll=false,releaseHeldAll=null,linkRevision=0,linkItems={},linkReadFailures=0;
+let inboxOverride=null;
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
@@ -114,6 +115,12 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
   if(p.startsWith('/new/api/visual-review?')){
    const q=new URLSearchParams(p.split('?')[1]),tab=q.get('tab');
    if(tab==='all'&&holdAll)await new Promise(resolve=>{releaseHeldAll=resolve});
+   if(tab==='inbox'&&inboxOverride){
+    const start=Number(q.get('offset')),limit=Number(q.get('limit'));
+    return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],
+     inbox_clips:inboxOverride.length,total:inboxOverride.length,
+     items:inboxOverride.slice(start,start+limit),reference_examples:[]})};
+   }
    return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],person_detection:
     {assessed_clips:80,total_clips:141,clips_with_supported_people:29,status:'in_progress'},
     inbox_clips:27,total:tab==='inbox'?1:tab==='approved'?1:1,
@@ -151,13 +158,13 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<9;i++)await flush();
  assert.equal(el('people').hidden,false,'Saved people must be the landing page');
  assert.equal(el('savedList').children.length,1,'Show saved person folders immediately');
- assert.equal(el('peopleReviewSummary').textContent,'27 recordings need review');
+ assert.equal(el('peopleReviewSummary').textContent,'6 recordings need review');
  assert.equal(el('peopleReviewNotice').hidden,false);
  assert.equal(el('peopleRecheckNotice').hidden,false,'Previously kept clips needing recheck must be visible on People landing');
  assert.equal(el('peopleRecheckSummary').textContent,'3 confirmed recordings need evidence rechecking');
  assert(el('peopleRecheckNow').handlers.click,'Recheck button must lead to person originals');
- assert.equal(el('reviewTabCount').textContent,' · 27');
- assert.equal(el('queueCount').textContent,'27');
+ assert.equal(el('reviewTabCount').textContent,' · 6');
+ assert.equal(el('queueCount').textContent,'6');
  assert.equal(el('personCount').textContent,'1');
  assert.equal(el('approvalCount').textContent,'3');
  assert.equal(el('archiveCount').textContent,'7','All SD originals plus two historical Drive originals appear in archive');
@@ -167,6 +174,43 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('faceScanLabel').textContent,'5 / 5 · reviewed');
  assert.match(el('facePhotoStatus').textContent,/2 candidate crops/);
  assert.equal(el('faceScanProgress').value,100);
+ // Every entry point uses the same source-qualified archive. Drive must also
+ // remain actionable in Needs review, rather than existing only on old pages.
+ el('peopleReviewNow').handlers.click();for(let i=0;i<5;i++)await flush();
+ assert.equal(el('reviewMode').value,'all','People shortcut must open the combined unassigned queue');
+ el('reviewSource').value='drive';el('reviewSource').handlers.change();
+ assert.equal(el('reviewGrid').children.length,2);
+ assert(el('reviewGrid').children.every(x=>x.dataset.source==='drive'));
+ assert.match(el('reviewTotal').textContent,/2 Drive/);
+ el('reviewMode').value='skipped';el('reviewMode').handlers.change();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('reviewSource').value,'sd','Skipped view must truthfully label its native-only source');
+ assert.equal(el('reviewSource').disabled,true);
+ el('reviewMode').value='inbox';el('reviewMode').handlers.change();
+ for(let i=0;i<5;i++)await flush();
+ assert.equal(el('reviewGrid').children.length,2,'Needs review includes both unassigned Drive originals');
+ assert(el('reviewGrid').children.every(x=>scan(x,'✓ File under person')),
+  'Drive queue entries must retain actual filing actions');
+ inboxOverride=Array.from({length:125},(_,i)=>({...item,
+  clip:'motion_'+String(1792500000000+i)+'.mp4',recorded_ms:1792500000000+i}));
+ el('reviewSource').value='all';el('reviewSource').handlers.change();
+ el('reviewMode').value='inbox';el('reviewMode').handlers.change();
+ for(let i=0;i<16;i++)await flush();
+ assert.match(el('reviewTotal').textContent,/127 review items · 2 Drive/,
+  'Merge the complete paginated native inbox before applying UI page limits');
+ assert.equal(el('reviewGrid').children.length,100);
+ scan(el('reviewPage'),'Next →').handlers.click();
+ assert.equal(el('reviewGrid').children.length,27);
+ el('reviewSource').value='drive';el('reviewSource').handlers.change();
+ assert.equal(el('reviewGrid').children.length,2,'Changing source must reset combined pagination');
+ assert(el('reviewGrid').children.every(x=>x.dataset.source==='drive'));
+ inboxOverride=null;
+ el('reviewMode').value='inbox';el('reviewMode').handlers.change();
+ for(let i=0;i<5;i++)await flush();
+ el('reviewSource').value='sd';el('reviewSource').handlers.change();
+ assert.equal(el('reviewGrid').children.filter(x=>x.dataset.source==='drive').length,0);
+ el('reviewSource').value='all';el('reviewSource').handlers.change();
+ panes[2].handlers.click();for(let i=0;i<4;i++)await flush();
  panes[0].handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('overview').hidden,false);
@@ -375,10 +419,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(releaseHeldAll,'Old request must be deliberately paused');
  el('reviewMode').value='inbox';el('reviewMode').handlers.change();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'1 review item');
+ assert.equal(el('reviewTotal').textContent,'1 review item · 0 Drive');
  holdAll=false;releaseHeldAll();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'1 review item',
+ assert.equal(el('reviewTotal').textContent,'1 review item · 0 Drive',
   'Stale responses must not replace current tab data');
  // Failed native face metadata is unknown coverage, never a false zero or
  // an indefinitely spinning Loading state. Refresh repairs the display.

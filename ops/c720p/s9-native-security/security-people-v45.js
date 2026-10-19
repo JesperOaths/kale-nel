@@ -4,7 +4,7 @@
    No recording is changed or assigned automatically. */
 const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
-const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,recheckOnly:false,doc:null,
+const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,reviewSource:'all',recheckOnly:false,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
  faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0,automaticRows:[],automaticRevision:0,automaticStatus:'loading',automaticToken:0,automaticBusy:false};
@@ -43,6 +43,15 @@ function assignedFolder(item){
  const explicit=state.extraLinks?.items?.[key];
  if(explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder'))return explicit.folder||null;
  return state.legacyAssigned.get(key)||null;
+}
+function unassignedArchiveRows(){return state.archiveEntries.filter(item=>!assignedFolder(item))}
+function reviewQueueRows(){
+ const rows=state.tab==='all'?state.archiveEntries:[
+  ...(state.doc?.items||[]).map(item=>({...item,source:'sd',name:item.clip})),
+  ...state.archiveEntries.filter(item=>item.source==='drive')];
+ return rows.filter(item=>!assignedFolder(item)&&
+  (state.reviewSource==='all'||item.source===state.reviewSource)).sort((a,b)=>
+  num(b.recorded_ms)-num(a.recorded_ms)||assignmentKey(a).localeCompare(assignmentKey(b)));
 }
 function makeArchiveRows(){
  const sd=[...state.clipEvidence.keys()].map(clip=>({
@@ -322,8 +331,9 @@ async function loadView(){
  if(state.busy)return;
  // Latest request wins. View switches must not inherit the old tab's response.
  state.loading=true;const token=++state.serial;alertText('');
+ const combinedInbox=state.pane==='review'&&state.tab==='inbox';
  const q=new URLSearchParams({workflow:'clip_folders_v40',tab:state.tab,
-  offset:String(state.offset),limit:String(Math.min(24,state.limit))});
+  offset:String(combinedInbox?0:state.offset),limit:String(Math.min(24,state.limit))});
  if(state.folder)q.set('folder',state.folder);
  if(state.tab==='suggestions'){
   q.set('distance',$('distance').value);q.set('weak',$('weak').value);q.set('route',$('route').value)
@@ -334,12 +344,17 @@ async function loadView(){
   if(token!==state.serial)return;
   // The v40 API caps replies at 24. Assemble a complete 100+ item UI page.
   if(state.tab!=='all'&&res.ok&&next.ok===true&&Array.isArray(next.items)){
+   // The combined queue paginates locally, after source filtering. Collect
+   // the bounded native inbox before joining Drive so offsets cannot hide it.
+   if(combinedInbox&&num(next.total)>5000)throw Error('Review inbox is too large. Try Unassigned recordings.');
+   const wanted=combinedInbox?num(next.total):state.limit;
+   const start=combinedInbox?0:state.offset;
    const all=[...next.items];
-   while(all.length<state.limit&&state.offset+all.length<num(next.total)){
+   while(all.length<wanted&&start+all.length<num(next.total)){
     if(!all.length&&num(next.total)>0)throw Error('Review service returned an empty page');
     const page=new URLSearchParams(q);
-    page.set('offset',String(state.offset+all.length));
-    page.set('limit',String(Math.min(24,state.limit-all.length)));
+    page.set('offset',String(start+all.length));
+    page.set('limit',String(Math.min(24,wanted-all.length)));
     const more=await relay().fetch('/new/api/visual-review?'+page,{cache:'no-store'});
     const batch=await more.json();
     if(token!==state.serial)return;
@@ -355,7 +370,7 @@ async function loadView(){
   state.doc=next;
   // Initialize both archives whichever of the face scan or folder index loads
   // first. The People landing page must not hide Drive until Review opens.
-  if(state.faceLoaded&&!state.assignedReady&&state.archiveToken===0)
+  if(!state.assignedReady&&state.archiveToken===0)
    refreshArchiveReviewSources(next.folders);
   const pageTotal=state.tab==='all'&&state.archiveEntries?
    state.archiveEntries.length:num(next.total);
@@ -395,7 +410,8 @@ async function fetchFaces(){
   state.clipEvidence=byClip;
   state.archiveClips=[...byClip.keys()].sort((a,b)=>b.localeCompare(a));
   makeArchiveRows();
-  if(state.doc)refreshArchiveReviewSources(state.doc.folders);
+  if(state.doc&&!state.assignedReady&&state.archiveToken===0)
+   refreshArchiveReviewSources(state.doc.folders);
   state.faceList=found.sort((a,b)=>String(b.clip).localeCompare(String(a.clip)));
   state.faceSummary={reviewed:v5Reviewed,total:data.events.length,
    snapshots:found.length,withoutSnapshot:Math.max(0,candidateRecords-found.length)};
@@ -737,8 +753,9 @@ function groupRows(host){
 function renderMetrics(){
  const f=state.doc?.folders||[];
  const saved=f.filter(isSaved);
- $('queueCount').textContent=String(num(state.doc?.inbox_clips));
- const queue=num(state.doc?.inbox_clips);
+ const queue=state.assignedReady&&state.extraLinks?
+  unassignedArchiveRows().length:num(state.doc?.inbox_clips);
+ $('queueCount').textContent=String(queue);
  $('reviewTabCount').textContent=queue?' · '+queue:'';
  $('peopleReviewNotice').hidden=queue===0;
  $('peopleReviewSummary').textContent=queue+(queue===1?' recording needs':' recordings need')+' review';
@@ -796,7 +813,8 @@ function renderOverview(){
  }
  reviewAlerts.hidden=flagged.length===0;
  const host=$('reviewPreview');host.replaceChildren();
- const waiting=num(state.doc?.inbox_clips);
+ const waiting=state.assignedReady&&state.extraLinks?
+  unassignedArchiveRows().length:num(state.doc?.inbox_clips);
  const personPending=Math.max(0,num(state.doc?.person_detection?.total_clips)-
   num(state.doc?.person_detection?.assessed_clips));
  const facePending=state.faceSummary?
@@ -836,13 +854,17 @@ function paginate(host,total,onPage){
 }
 function renderReview(){
  $('reviewMode').value=state.tab;
+ $('reviewSource').value=state.tab==='skipped'?'sd':state.reviewSource;
+ $('reviewSource').disabled=state.tab==='skipped';
  const host=$('reviewGrid');host.replaceChildren();
- if(state.tab==='all'){
+ if(state.tab==='all'||state.tab==='inbox'){
   if(!state.assignedReady||!state.extraLinks){
    $('reviewTotal').textContent='Checking saved recordings…';
    host.append(elt('p','Loading the complete review queue…','empty'));return;
   }
-  const free=state.archiveEntries.filter(item=>!assignedFolder(item));
+  const free=reviewQueueRows();
+  if(state.offset>=free.length)state.offset=free.length?
+   Math.floor((free.length-1)/state.limit)*state.limit:0;
   const visible=free.slice(state.offset,state.offset+state.limit);
   for(const item of visible){
    const fromReview=(state.doc?.items||[]).find(x=>x.clip===item.clip);
@@ -854,7 +876,8 @@ function renderReview(){
   }
   const driveCount=free.filter(x=>x.source==='drive').length;
   const suffix=state.driveStatus==='unavailable'?' · Drive unavailable':' · '+driveCount+' Drive';
-  $('reviewTotal').textContent=free.length+' unassigned recordings'+suffix;
+  $('reviewTotal').textContent=free.length+(state.tab==='all'?' unassigned recordings':
+   ' review '+(free.length===1?'item':'items'))+suffix;
   paginate($('reviewPage'),free.length,n=>{state.offset=n;renderReview()});
  }else{
   const unsaved=(state.doc?.items||[]).filter(item=>
@@ -1272,7 +1295,7 @@ for(const b of document.querySelectorAll('[data-pane]'))b.addEventListener('clic
  const p=b.dataset.pane;if(p==='review')openReview('all');else openHome(p);
 });
 $('openReview').addEventListener('click',()=>openReview('all'));
-$('peopleReviewNow').addEventListener('click',()=>openReview('inbox'));
+$('peopleReviewNow').addEventListener('click',()=>openReview('all'));
 $('peopleRecheckNow').addEventListener('click',()=>{
  const person=savedFolders().find(x=>num(x.approvals_needing_person_recheck)>0);
  if(person)openFolder(person.id,'approved');
@@ -1283,6 +1306,11 @@ $('refreshClothing').addEventListener('click',()=>searchClothingMatches(true));
 $('refreshAutomatic').addEventListener('click',()=>fetchAutomatic());
 $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
+$('reviewSource').addEventListener('change',()=>{
+ const source=$('reviewSource').value;
+ if(!['all','sd','drive'].includes(source))return;
+ state.reviewSource=source;state.offset=0;renderReview();
+});
 $('pageSize').addEventListener('change',()=>{
  const value=Number($('pageSize').value);
  if(![100,150,200].includes(value))return;
