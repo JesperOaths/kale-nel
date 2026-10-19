@@ -19,6 +19,9 @@ import java.util.regex.Pattern;
 final class PhoneMediaRange {
  private static final Pattern PATH=Pattern.compile(
    "^(GET|HEAD) /clip/(motion_[0-9]{13}[.]mp4(?:[.]preroll[.]mp4)?) HTTP/1[.][01]$");
+ private static final Pattern PREVIEW=Pattern.compile(
+   "^(GET|HEAD) /preview/(motion_[0-9]{13}[.]mp4)[.](360p|480p)[.]mp4 HTTP/1[.][01]$");
+ private static final long MAX_PREVIEW_BYTES=100L*1024*1024;
  private static final Pattern RANGE=Pattern.compile("bytes=([0-9]*)-([0-9]*)");
  private static final long MAX_BYTES=4L*1024*1024*1024;
  private static final int COPY_SIZE=65536;
@@ -26,17 +29,34 @@ final class PhoneMediaRange {
 
  static boolean handle(BufferedReader request,OutputStream out,String first,File folder)
      throws IOException {
-  if(!(first.startsWith("GET /clip/")||first.startsWith("HEAD /clip/")))return false;
-  Matcher match=PATH.matcher(first);
-  if(!match.matches()||folder==null){
+  if(!(first.startsWith("GET /clip/")||first.startsWith("HEAD /clip/")||
+       first.startsWith("GET /preview/")||first.startsWith("HEAD /preview/")))return false;
+  Matcher match=PATH.matcher(first),preview=PREVIEW.matcher(first);
+  boolean original=match.matches(),derivative=preview.matches();
+  if((!original&&!derivative)||folder==null){
    respond(out,404,0,0,0,0,false,false);
    return true;
   }
-  boolean head="HEAD".equals(match.group(1));
-  File home=folder.getCanonicalFile();
-  File clip=new File(home,match.group(2)).getCanonicalFile();
-  if(!clip.getParentFile().equals(home)||!clip.isFile()||!clip.canRead()||
-      clip.length()<10000||clip.length()>MAX_BYTES){
+  boolean head="HEAD".equals(original?match.group(1):preview.group(1));
+  File home=folder.getCanonicalFile(),mediaHome=home,clip;
+  long maxAllowed=MAX_BYTES;
+  if(derivative){
+   mediaHome=new File(home,"PlaybackCopies").getCanonicalFile();
+   String sourceName=preview.group(2);
+   File source=new File(home,sourceName).getCanonicalFile();
+   File manifest=new File(home,sourceName+".verified.json").getCanonicalFile();
+   if(!mediaHome.getParentFile().equals(home)||
+      !source.getParentFile().equals(home)||!source.isFile()||
+      !manifest.getParentFile().equals(home)||!manifest.isFile()){
+    respond(out,404,0,0,0,0,false,head);return true;
+   }
+   maxAllowed=MAX_PREVIEW_BYTES;
+   clip=new File(mediaHome,sourceName+"."+preview.group(3)+".mp4").getCanonicalFile();
+  }else{
+   clip=new File(home,match.group(2)).getCanonicalFile();
+  }
+  if(!clip.getParentFile().equals(mediaHome)||!clip.isFile()||!clip.canRead()||
+      clip.length()<10000||clip.length()>maxAllowed){
    respond(out,404,0,0,0,0,false,head);
    return true;
   }
