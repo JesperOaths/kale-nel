@@ -92,6 +92,15 @@ class Tests(unittest.TestCase):
       D.main(Path("p"),Path("i"),Path("j"),True)
     self.assertEqual(originals,{f:f.read_bytes() for f in originals})
     self.assertFalse(D.JS.exists())
+ def test_all_live_baseline_sha256_are_64_hex_and_match_readonly_audit(self):
+  expected={
+   D.PAGE:"91d760a53b973cc4efd2c304ea52d39c281246bba9d5bc12027722f20f921a9b",
+   D.INDEX:"da5f846114d9b56a8ad9b531fb18aec61a743610244192125fe79ef0d71f2d7f",
+   D.GENERATOR:"f9e34bdb12b56678d7057a2e6f56aadac4f973b9d7d7ab90d630b94fe0cf3ad6"
+  }
+  self.assertEqual(D.EXPECTED_OLD,expected)
+  self.assertTrue(all(len(v)==64 and all(x in "0123456789abcdef" for x in v)
+      for v in D.EXPECTED_OLD.values()))
  def test_no_media_operations_or_camera_restart(self):
   source=(DIR/"deploy-c720p-legacy-bridges-v133.py").read_text()
   for forbidden in ("sudo ","pm install","adb install","am force-stop",
