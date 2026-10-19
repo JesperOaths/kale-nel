@@ -1,0 +1,90 @@
+name: S9 isolated first V3 crop V98
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-resumable-archive.py'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-one-clip-v98.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-one-clip-v98.py'
+      - '.github/workflows/s9-v3-one-clip-v98.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-one-clip-v98.py'
+      - '.github/workflows/s9-v3-one-clip-v98.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-v3-one-clip-physical
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify isolated one-clip thermal and ledger contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='ops/c720p/s9-native-security/offline-worker'
+          python3 -m py_compile "$root/run-s9-v3-one-clip-v98.py" "$root/run-s9-v3-resumable-archive.py"
+          python3 "$root/test-s9-v3-one-clip-v98.py"
+          python3 "$root/test-s9-v3-resumable-archive.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          d=Path('ops/c720p/s9-native-security/offline-worker/run-s9-v3-resumable-archive.py').read_text()
+          assert 'if args.roi_only:' in d
+          assert '"S9_V3_ARCHIVE_ROI_ONLY_BATCH "' in d
+          assert d.index('if args.roi_only:')<d.index('catalog=h.inventory(include_unreviewed=True)')
+          assert 'if args.roi_only and args.activate_api' in d
+          print('S9_FIRST_CROP_ROI_ONLY_NO_RANKING_GUARD_PASS')
+          PY
+  one-physical-crop:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Run at most one source-verified OSNet extraction on the S9
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          root='ops/c720p/s9-native-security/offline-worker'
+          stage="/tmp/s9-physical-v3-${GITHUB_SHA:0:12}"
+          cmd="mkdir -p '$stage'"
+          for script in run-s9-v3-one-clip-v98.py run-s9-v3-resumable-archive.py backfill-s9-original-roi-osnet-temporal-v2.py backfill-s9-hsv32-uniform-v2.py install-s9-roi-partial-recovery-v3.py S9StandalonePersonRoiRecoveryV3.java; do
+            src="$root/$script"
+            digest="$(sha256sum "$src" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+            cmd="$cmd && curl -fsSL --retry 2 --max-time 35 '$url' -o '$stage/$script' && printf '%s  %s\\n' '$digest' '$stage/$script' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/run-s9-v3-one-clip-v98.py'"
+          idem="s9-v3-first-private-crop-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-v3-one-physical-crop','deployment',:'cmd',840,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_V3_SINGLE_CROP_JOB=$id"
+          for attempt in $(seq 1 170); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3000)"
+              echo "$output"
+              if [[ "$status" != 'done|0' ]]; then echo "S9 first crop gate stopped safely"; exit 1; fi
+              grep -q 'S9_V3_ONE_CLIP_ROI_VERIFIED' <<< "$output"
+              grep -q '"camera_apk_changed": false' <<< "$output"
+              grep -q '"review_decisions_changed": false' <<< "$output"
+              grep -q '"private_names_disclosed": false' <<< "$output"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "S9 single-crop execution timed out"; exit 1

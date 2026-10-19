@@ -231,9 +231,13 @@ def main():
                       help="Retry clips rejected under a previous detector pass")
     opts.add_argument("--activate-api",action="store_true",
                       help="After V3 success, invoke guarded separate API install")
+    opts.add_argument("--roi-only",action="store_true",
+                      help="Extract private phone crops without histogram/ranking/API writes")
     args=opts.parse_args()
     if not 1<=args.limit<=5:
         raise RuntimeError("Archive run maximum five originals")
+    if args.roi_only and args.activate_api:
+        raise RuntimeError("ROI-only processing cannot activate the V3 API")
     ctrl=helper("backfill-s9-original-roi-osnet-temporal-v2.py","s9_archive_controller")
     h=helper("backfill-s9-hsv32-uniform-v2.py","s9_uniform_hsv")
     if not args.apply:
@@ -282,6 +286,19 @@ def main():
         # A prior snapshot is still valid if nothing new qualified; do not
         # endlessly recompute full historical rankings for empty detections.
         generated=totals.get("new_real_512d_vector",0)
+        # The first physical validation is deliberately restricted to an
+        # audited private phone-side crop and the resumable ledger. A
+        # separate pass must publish full appearance rankings and APIs.
+        if args.roi_only:
+            print("S9_V3_ARCHIVE_ROI_ONLY_BATCH "+json.dumps({
+                "selected":len(selected),"counts":totals,
+                "recovery_worker_bootstraps":recovery_bootstraps,
+                "ledger_phone_integrity_audit":audit,
+                "originals_modified":False,"camera_apk_modified":False,
+                "review_decisions_modified":False,
+                "appearance_rankings_modified":False,
+                "automatic_assignments_created":0}),flush=True)
+            return
         ranked=False;histograms=0;active=False
         catalog=h.inventory(include_unreviewed=True)
         if len(catalog)>400:
