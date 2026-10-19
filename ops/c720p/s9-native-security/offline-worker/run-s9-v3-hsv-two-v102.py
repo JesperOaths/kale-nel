@@ -160,6 +160,25 @@ def run(h,ctrl):
             "camera_apk_changed":False,"rankings_modified":False,
             "automatic_people_assigned":0,"private_identifiers_disclosed":False}
 
+def classify_abort(reason):
+    # Pure, privacy-bounded result contract; raw exception details never logged.
+    temporary={"phone_warm_before_batch","phone_warm_before_descriptor",
+               "phone_thermal_post_limit",
+               "camera_too_warm_for_offline_processing",
+               "camera_capture_not_stably_ready"}
+    if reason in temporary:
+        return DEFER,{"reason":reason,"verified_batch_completed":False,
+               "intermediate_sidecars_may_have_been_written":True,
+               "retry_only_after_new_capture_readiness":True,
+               "private_output_suppressed":True},0
+    expected={"hub_free_disk_guard","phone_transport_untrusted"}
+    return REJECT,{"reason":reason if reason in expected else
+                   "verification_or_worker_failed",
+                   "private_output_suppressed":True,
+                   "originals_not_intentionally_written":True,
+                   "existing_reviews_not_intentionally_written":True},2
+
+
 def main():
     h=helper("backfill-s9-hsv32-uniform-v2.py","s9_v3_hsv_guarded")
     ctrl=helper("backfill-s9-original-roi-osnet-temporal-v2.py","s9_v3_temporal_guarded")
@@ -171,24 +190,6 @@ if __name__=="__main__":
     except Exception as error:
         # Clip names, persons, sidecar paths and raw phone stderr must never
         # enter public CI logs. Expose only allowlisted policy reason codes.
-        reason=str(error)
-        temporary={"phone_warm_before_batch","phone_warm_before_descriptor",
-                   "phone_thermal_post_limit",
-                   "camera_too_warm_for_offline_processing",
-                   "camera_capture_not_stably_ready"}
-        if reason in temporary:
-            # A gate may fire after one append-only sidecar was written.
-            # Never claim no descriptors were written or that the batch passed.
-            print(DEFER+json.dumps({"reason":reason,
-                  "verified_batch_completed":False,
-                  "intermediate_sidecars_may_have_been_written":True,
-                  "retry_only_after_new_capture_readiness":True,
-                  "private_output_suppressed":True}),flush=True)
-            raise SystemExit(0)
-        allowed={"hub_free_disk_guard","phone_transport_untrusted"}
-        print(REJECT+json.dumps({"reason":reason if reason in allowed else
-             "verification_or_worker_failed",
-             "private_output_suppressed":True,
-             "originals_not_intentionally_written":True,
-             "existing_reviews_not_intentionally_written":True}),flush=True)
-        raise SystemExit(2)
+        marker,payload,exit_code=classify_abort(str(error))
+        print(marker+json.dumps(payload,sort_keys=True),flush=True)
+        raise SystemExit(exit_code)
