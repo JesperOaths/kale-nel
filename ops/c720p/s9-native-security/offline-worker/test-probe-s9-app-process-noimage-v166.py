@@ -141,4 +141,39 @@ class Tests(unittest.TestCase):
                  "native_4k_buffer_not_ready","native_4k_recording_in_progress",
                  "s9_background_work_queued"):
    self.assertIn(reason,source)
+ def test_native_library_path_mode_keeps_one_tiny_launch_and_no_model(self):
+  path=m.WORKER+"/safe-class.jar"
+  with patch.object(m,"adb",return_value=SimpleNamespace(
+       returncode=0,stdout=m.EXPECTED,stderr="")) as shell:
+   report=m.launch(path,True)
+  self.assertTrue(report["success"])
+  shell.assert_called_once()
+  cmd=shell.call_args.args[1]
+  self.assertIn("export LD_LIBRARY_PATH="+m.LIBS+";",cmd)
+  self.assertIn("-Djava.library.path="+m.LIBS+" ",cmd)
+  self.assertIn("--baseline-no-image",cmd)
+  for forbidden in ("face_five_point","motion_","FaceSnapshots/","--audit-single",
+                    "S9YuNetSingleSnapshotAudit"):
+   self.assertNotIn(forbidden,cmd)
+  with patch.object(m,"adb",return_value=SimpleNamespace(
+       returncode=137,stdout="",stderr="Killed")) as shell:
+   bad=m.launch(path,True)
+  self.assertEqual(bad,{"success":False,"reason":"android_baseline_terminated"})
+  shell.assert_called_once()
+
+ def test_native_env_run_path_does_not_repeat_art_launch(self):
+  import io,contextlib,tempfile
+  health={"temperature_c":31.1,"continuous_4k_dropped_output_frames":0}
+  with tempfile.TemporaryDirectory() as tmp:
+   lock=Path(tmp)/"lock";lock.write_text("")
+   with patch.object(m,"LOCK",lock),patch.object(m,"current_camera",return_value=health), \
+        patch.object(m,"must_adb",side_effect=["device","SM-G965F","1","1"]), \
+        patch.object(m,"build",return_value=Path(tmp)/"fake.jar"), \
+        patch.object(m,"stage",return_value=m.WORKER+"/fake.jar"), \
+        patch.object(m,"launch",return_value={"success":True,"reason":"java_baseline_pass"}) as launch:
+    report=m.run(native_env=True)
+   launch.assert_called_once_with(m.WORKER+"/fake.jar",True)
+   self.assertTrue(report["native_library_path_enabled"])
+   self.assertEqual(report["launch_attempts"],1)
+   self.assertFalse(report["model_or_image_opened"])
 if __name__=="__main__":unittest.main(verbosity=2)
