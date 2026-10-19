@@ -67,6 +67,7 @@ def main():
   b.restart()
   after=b.inventory()
   if any(not before[k]<=after[k] for k in before):raise RuntimeError('original_inventory_changed')
+  if reviews!=b.reviews():raise RuntimeError('review_registry_changed')
   for k,path in ASSETS.items():
    if k=='backend':continue
    if b.sha(b.read('http://127.0.0.1:8123/local/'+path.relative_to(b.WWW).as_posix()+'?v='+TAG))!=b.sha(desired[k]):
