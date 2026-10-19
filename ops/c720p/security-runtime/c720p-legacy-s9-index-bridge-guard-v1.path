@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch old C720P camera index for regeneration without interrupting recording
+
+[Path]
+PathChanged=/opt/homeassistant/config/www/frontyard-security-new/index.html
+Unit=c720p-legacy-s9-index-bridge-guard-v1.service
+MakeDirectory=false
+
+[Install]
+WantedBy=default.target

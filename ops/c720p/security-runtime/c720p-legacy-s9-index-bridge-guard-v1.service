@@ -1,0 +1,11 @@
+[Unit]
+Description=Restore verified S9+ media bridge to regenerated legacy C720P camera index
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/c720p_legacy_s9_index_bridge_guard_v1.py --apply
+TimeoutStartSec=22
+Nice=18
+IOSchedulingClass=idle
+NoNewPrivileges=yes
