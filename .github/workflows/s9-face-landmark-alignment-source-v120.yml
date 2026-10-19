@@ -1,0 +1,107 @@
+name: Isolated S9 true 5-point landmark model and geometry V120
+on:
+  schedule:
+    # Small verified model only; camera health gates are checked before transfer.
+    - cron: '47 3,9,15,21 * * *'
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGate.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGateTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoder.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoderTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9YuNetOnnxSyntheticSmoke.java'
+      - 'ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-face-landmark-stage-v120.py'
+      - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGate.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGateTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoder.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoderTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9YuNetOnnxSyntheticSmoke.java'
+      - 'ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-face-landmark-stage-v120.py'
+      - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-five-point-yunet-only-v120
+  cancel-in-progress: false
+jobs:
+  pure-synthetic-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test real-landmark requirements without human face images
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/stage-s9-five-point-yunet-v120.py"
+          python3 "$d/test-s9-face-landmark-stage-v120.py"
+          mkdir -p /tmp/s9-face-gate-v120
+          javac -d /tmp/s9-face-gate-v120 "$d/PhoneFaceLandmarkGate.java" "$d/PhoneFaceLandmarkGateTest.java" "$d/PhoneYuNetLandmarkDecoder.java" "$d/PhoneYuNetLandmarkDecoderTest.java"
+          java -cp /tmp/s9-face-gate-v120 nl.kalenel.s9offline.PhoneFaceLandmarkGateTest
+          java -cp /tmp/s9-face-gate-v120 nl.kalenel.s9offline.PhoneYuNetLandmarkDecoderTest
+          # Official ARM64/Java ORT AAR is only used for compilation here.
+          # The actual ONNX execution is gated separately on a cool S9+.
+          curl -fsSL --retry 2 --max-time 90             https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar             -o /tmp/s9-face-ort-v120.aar
+          echo '04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  /tmp/s9-face-ort-v120.aar' | sha256sum -c -
+          unzip -p /tmp/s9-face-ort-v120.aar classes.jar > /tmp/s9-face-ort-v120.jar
+          javac -source 8 -target 8 -cp /tmp/s9-face-ort-v120.jar -d /tmp/s9-face-gate-v120 "$d/S9YuNetOnnxSyntheticSmoke.java"
+          test -f /tmp/s9-face-gate-v120/nl/kalenel/s9offline/S9YuNetOnnxSyntheticSmoke.class
+
+  stage-only:
+    needs: pure-synthetic-only
+    if: (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Stage only checksum-verified ONNX landmark detector when 4K is cool
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          f=ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py
+          hash="$(sha256sum "$f" | cut -d' ' -f1)"
+          stage="/tmp/s9-yunet-face-model-v120-${GITHUB_SHA:0:15}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$f"
+          cmd="curl -fsSL --max-time 35 '$url' -o '$stage' && printf '%s  %s\\n' '$hash' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage' --install"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="s9-yunet-five-point-v120-${GITHUB_SHA:0:14}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-yunet-landmark-v120','deployment',:'cmd',230,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "S9_FIVE_POINT_YUNET_STAGE_JOB=$job"
+          for i in $(seq 1 75); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3000)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]] || exit 1
+              if grep -q 'S9_FIVE_POINT_YUNET_MODEL_VERIFIED' <<< "$output"; then
+                grep -q '"landmark_inference_verified": false' <<< "$output"
+                grep -q '"camera_apk_modified": false' <<< "$output"
+                echo "S9 five-landmark model staged or reverified; no identity inference run"
+              elif grep -q 'S9_FIVE_POINT_YUNET_DEFERRED' <<< "$output"; then
+                grep -q '"model_installed": false' <<< "$output"
+                echo "Cool 4K conditions not met; no staged model claimed"
+              else
+                echo "Unexpected phone-stage result"; exit 1
+              fi
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "S9 YuNet staging did not complete in bounded window"; exit 1
