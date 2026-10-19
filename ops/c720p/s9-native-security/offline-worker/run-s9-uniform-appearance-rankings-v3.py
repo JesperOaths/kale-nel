@@ -6,6 +6,7 @@ The hub receives only provenance mapping: source-qualified crop SHA->filename.
 V1 ranking output is never opened for write or deleted.
 """
 import argparse
+import fcntl
 from collections import Counter
 import hashlib
 import importlib.util
@@ -168,6 +169,64 @@ def write_private_map(data,corpus_id):
     return True
 
 
+def publish_verified_active(corpus_id,index_sha,map_sha,records):
+    """Promote only completed snapshots; historical v1/v2 maps stay immutable."""
+    if not re.fullmatch(r"[a-f0-9]{16}",corpus_id):
+        raise RuntimeError("Invalid content-addressed v3 corpus ID")
+    if not all(HEX.fullmatch(x) for x in (index_sha,map_sha)):
+        raise RuntimeError("Missing v3 ranking or mapping checksum")
+    if not 58<=records<=400:
+        raise RuntimeError("Active v3 reference count outside audited range")
+    pointer=STATE_DIR/"s9-multivector-v3-active.json"
+    lock=STATE_DIR/"s9-multivector-v3-active.lock"
+    doc={"schema":"s9_appearance_v3_active_v1",
+         "corpus_id":corpus_id,"map_sha256":map_sha,
+         "rankings_sha256":index_sha,"verified_crops":records,
+         "automatic_person_assignments":0,
+         "human_review_required":True}
+    data=(json.dumps(doc,sort_keys=True,separators=(",",":"))+"\n").encode()
+    STATE_DIR.mkdir(parents=True,exist_ok=True)
+    if pointer.is_symlink() or lock.is_symlink():
+        raise RuntimeError("Unsafe active v3 pointer/lock symlink")
+    fd=os.open(lock,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,"rb") as guard:
+        fcntl.flock(guard,fcntl.LOCK_EX)
+        previous=pointer.read_bytes() if pointer.exists() else None
+        if previous is not None:
+            try:older=json.loads(previous)
+            except Exception as e:raise RuntimeError("Corrupt existing v3 pointer") from e
+            if (older.get("schema")!="s9_appearance_v3_active_v1"
+                or older.get("human_review_required") is not True
+                or older.get("automatic_person_assignments")!=0
+                or type(older.get("verified_crops")) is not int
+                or older["verified_crops"]>records):
+                raise RuntimeError("Unsafe/regressive existing active v3 pointer")
+            if older["verified_crops"]==records and previous!=data:
+                raise RuntimeError("Same-size v3 corpus changed: manual review required")
+            if previous==data:return False
+            oldid=older.get("corpus_id","")
+            if not re.fullmatch(r"[a-f0-9]{16}",oldid):
+                raise RuntimeError("Old corpus ID invalid")
+            history=STATE_DIR/("s9-multivector-v3-retired-"+oldid+
+                               "-"+digest(previous)[:16]+".json")
+            if history.is_symlink():raise RuntimeError("Retired pointer symlink")
+            if not history.exists():
+                with history.open("xb") as writer:
+                    writer.write(previous);writer.flush();os.fsync(writer.fileno())
+                os.chmod(history,0o600)
+            elif history.read_bytes()!=previous:
+                raise RuntimeError("Retired pointer changed unexpectedly")
+        fdtmp,staged=tempfile.mkstemp(prefix=".s9-v3-active-",dir=STATE_DIR)
+        try:
+            with os.fdopen(fdtmp,"wb") as writer:
+                writer.write(data);writer.flush();os.fsync(writer.fileno())
+            os.chmod(staged,0o600)
+            os.replace(staged,pointer)
+        finally:
+            if os.path.exists(staged):os.unlink(staged)
+        return True
+
+
 def run():
     parser=argparse.ArgumentParser()
     parser.add_argument("--apply",action="store_true")
@@ -252,9 +311,15 @@ def run():
     if any(existing_sha(ROOT+"/"+k)!=v for k,v in old.items()):
         raise RuntimeError("Existing v1/v2 ranked indices changed during v3 run")
     write_private_map(mapping,corpus_id)
+    current_index_sha=existing_sha(output_remote)
+    if not current_index_sha or not HEX.fullmatch(current_index_sha):
+        raise RuntimeError("Phone ranking digest unavailable at pointer promotion")
+    activated=publish_verified_active(
+        corpus_id,current_index_sha,digest(mapping),len(rows))
     print("S9_V3_MODEL_BACKED_RANKINGS_PRODUCED "+json.dumps({
         "corpus_id":corpus_id,
         "index_path":output_remote,
+        "active_v3_published":activated,
         "verified_uniform_crop_records":len(rows),
         "appearance_comparisons":num,
         "phone_rankings_sha256":existing_sha(output_remote),

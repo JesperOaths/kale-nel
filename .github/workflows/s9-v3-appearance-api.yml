@@ -1,0 +1,29 @@
+name: S9 immutable V3 read-only appearance API and active pointer
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_multivector_appearance_api_v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-active-appearance-api.py'
+      - '.github/workflows/s9-v3-appearance-api.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_multivector_appearance_api_v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-active-appearance-api.py'
+      - '.github/workflows/s9-v3-appearance-api.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-v3-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate isolated API and immutable snapshot pointer
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$root/run-s9-uniform-appearance-rankings-v3.py" \
+            ops/c720p/s9-person-ml-v1/s9_multivector_appearance_api_v3.py
+          python3 "$root/test-s9-v3-active-appearance-api.py"
