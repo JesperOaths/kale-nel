@@ -983,6 +983,110 @@ async function searchClothingMatches(force=false){
   state.clothingBusy=false;renderClothing();
  }
 }
+const autoId=/^[a-f0-9]{64}$/;
+async function fetchAutomatic(){
+ const token=++state.automaticToken;
+ state.automaticStatus='loading';renderAutomatic();
+ try{
+  const r=await relay().fetch('/new/api/automatic-person',{cache:'no-store'});
+  const doc=await r.json();
+  if(token!==state.automaticToken)return;
+  if(!r.ok||doc.ok!==true||!Array.isArray(doc.items))throw Error('index unavailable');
+  state.automaticRevision=num(doc.revision);
+  state.automaticStatus=doc.status||'unavailable';
+  const saved=new Set(savedFolders().map(p=>p.id));
+  state.automaticRows=doc.items.filter(row=>
+   row.source==='sd'&&clipName.test(String(row.name||''))&&
+   autoId.test(String(row.id||''))&&saved.has(row.folder)&&
+   row.human_approved===false&&num(row.reference_count)>=2&&
+   num(row.score)>=.84&&num(row.margin)>=.08&&
+   !assignedFolder({source:'sd',name:row.name}));
+ }catch(_){
+  if(token!==state.automaticToken)return;
+  state.automaticRows=[];state.automaticStatus='unavailable';
+ }
+ renderAutomatic();
+}
+async function denyAutomatic(row){
+ if(state.automaticBusy||!autoId.test(String(row?.id||'')))return;
+ state.automaticBusy=true;
+ try{
+  const response=await relay().fetch('/new/api/automatic-person',{
+   method:'POST',headers:{'Content-Type':'application/json',
+    'X-S9-Automatic-Person-Intent':'human-automatic-person-denial-v1'},
+   body:JSON.stringify({action:'deny',id:row.id,revision:state.automaticRevision,
+    human_confirmed:true})});
+  const result=await response.json();
+  if(!response.ok||result.ok!==true)throw Error(response.status===409?
+   'A different review was saved. Refresh and check this match again.':
+   result.error||'Denial not saved');
+  state.automaticRevision=result.revision;
+  state.automaticRows=state.automaticRows.filter(x=>x.id!==row.id);
+  notification('Suggestion denied. Original remains in Review recordings.');
+ }catch(e){alertText(e.message||'Could not deny suggestion')}
+ finally{state.automaticBusy=false;renderAutomatic()}
+}
+async function approveAutomatic(row){
+ if(state.automaticBusy||!savedFolders().some(p=>p.id===row.folder))return;
+ const person=savedFolders().find(p=>p.id===row.folder);
+ if(!window.confirm('Approve this recording for '+person.label+'? This is a manual decision.'))return;
+ state.automaticBusy=true;
+ try{
+  const ok=await manualLink({source:'sd',clip:row.name,name:row.name},row.folder);
+  if(ok){
+   state.automaticRows=state.automaticRows.filter(x=>x.id!==row.id);
+   notification('Approved and filed under '+person.label+'.');
+  }
+ }finally{state.automaticBusy=false;renderAutomatic()}
+}
+function renderAutomatic(){
+ const host=$('automaticFolders');host.replaceChildren();
+ const records=state.automaticRows||[];
+ $('automaticTabCount').textContent=records.length?' · '+records.length:'';
+ const status=$('automaticStatus');
+ if(state.automaticStatus==='loading'){
+  status.textContent='Checking S9+ face matches…';return;
+ }
+ if(state.automaticStatus!=='ready'){
+  status.textContent='S9+ aligned-face recognition results are not ready. No guessed identities.';
+  host.append(elt('p','The phone must finish creating validated face embeddings before person-specific suggestions can appear.','empty'));
+  return;
+ }
+ if(!records.length){
+  status.textContent='No new face-based suggestions awaiting approval.';
+  host.append(elt('p','All unassigned originals remain available under Review recordings.','empty'));
+  return;
+ }
+ status.textContent=records.length+' suggested match'+(records.length===1?'':'es')+
+  ' requiring your decision · face cosine scores are not identity probabilities';
+ for(const person of savedFolders()){
+  const items=records.filter(x=>x.folder===person.id);
+  if(!items.length)continue;
+  const group=elt('section','','auto-person-group');
+  group.append(elt('h3',person.label+' · '+items.length+' pending'));
+  const cards=elt('div','','auto-person-cards');
+  for(const row of items){
+   const clip={source:'sd',name:row.name,clip:row.name,
+    recorded_ms:Number(row.name.slice(7,20)),
+    video_path:'/new/saved/clip/'+encodeURIComponent(row.name)};
+   const tile=elt('article','','evidence');
+   const media=sceneFor(clip);badge(media,'FACE SUGGESTION');
+   const body=elt('div','','body');
+   body.append(elt('strong',date(clip)),
+    elt('p','Face cosine '+Number(row.score).toFixed(3)+
+      ' · difference from next candidate '+Number(row.margin).toFixed(3)),
+    elt('p',num(row.reference_count)+' approved independent reference recordings'));
+   const actions=elt('div','','actions');
+   actions.append(control('▶ Play original',()=>startVideo(clip)));
+   const face=reliableFaces(row.name)[0];
+   if(face)actions.append(control('Inspect face',()=>inspectFaceSnapshot(face)));
+   actions.append(control('✓ Approve',()=>approveAutomatic(row),'primary'),
+     control('✕ Deny',()=>denyAutomatic(row),'danger'));
+   body.append(actions);tile.append(media,body);cards.append(tile);
+  }
+  group.append(cards);host.append(group);
+ }
+}
 function renderClothing(){
  const host=$('clothingList');host.replaceChildren();
  const matches=state.clothingMatches||[];
