@@ -1,0 +1,13 @@
+[Unit]
+Description=Refresh private S9 + verified historical Drive recording activity
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=4min
+RandomizedDelaySec=20s
+AccuracySec=15s
+Persistent=false
+Unit=c720p-s9-drive-activity-v1.service
+
+[Install]
+WantedBy=timers.target
