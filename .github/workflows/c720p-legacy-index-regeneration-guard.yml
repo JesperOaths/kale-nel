@@ -5,6 +5,7 @@ on:
       - 'ops/c720p/security-runtime/c720p_legacy_s9_index_bridge_guard_v1.py'
       - 'ops/c720p/security-runtime/test-c720p-legacy-s9-index-bridge-guard-v1.py'
       - 'ops/c720p/security-runtime/c720p-legacy-s9-index-bridge-guard-v1.*'
+      - 'ops/c720p/security-runtime/test-c720p-migrated-index-relay-v1.js'
       - '.github/workflows/c720p-legacy-index-regeneration-guard.yml'
   push:
     branches: [main]
@@ -22,4 +23,6 @@ jobs:
           set -euo pipefail
           python3 -m py_compile ops/c720p/security-runtime/c720p_legacy_s9_index_bridge_guard_v1.py
           python3 ops/c720p/security-runtime/test-c720p-legacy-s9-index-bridge-guard-v1.py
+          node --check ops/c720p/security-runtime/c720p-migrated-index-playback-v1.js
+          node ops/c720p/security-runtime/test-c720p-migrated-index-relay-v1.js
           echo C720P_LEGACY_S9_INDEX_NO_MEDIA_MUTATIONS
