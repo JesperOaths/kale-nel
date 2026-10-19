@@ -538,8 +538,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[1].handlers.click();for(let i=0;i<8;i++)await flush();
  // Earlier Drive-only source selection must not hide the synthetic SD group.
  el('reviewSource').value='all';el('reviewSource').handlers.change();
- console.log('GROUP_PREFLIGHT_FIXTURE',JSON.stringify({source:el('reviewSource').value,tab:el('reviewMode').value,total:el('reviewTotal').textContent,rows:el('reviewGrid').children.map(x=>({source:x.dataset.source,clip:x.dataset.clip,txt:x.textContent})),linkKeys:Object.keys(linkItems)}));
- const groupRow=el('reviewGrid').children.find(x=>x.dataset.source==='sd'&&x.dataset.clip===otherClip);
+ const groupRow=el('reviewGrid').children.find(x=>x.dataset.source==='sd'&&x.dataset.clip===clip);
  assert(groupRow,'Unassigned reviewed original for a group fixture must be present');
  const groupFile=scan(groupRow,'✓ File under person');
  assert(groupFile,'Group candidate must be fileable');
@@ -552,17 +551,17 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  const groupPost=linkPosts.at(-1).payload;
  assert.equal(groupPost.action,'assign_many');
  assert.equal(groupPost.source,'sd');
- assert.equal(groupPost.name,otherClip);
+ assert.equal(groupPost.name,clip);
  assert.equal(groupPost.folder,'G123');
  assert.equal(groupPost.folders.join(','),'G123,GDRIVE');
- assert.equal(linkItems['sd:'+otherClip].folders.join(','),'G123,GDRIVE');
+ assert.equal(linkItems['sd:'+clip].folders.join(','),'G123,GDRIVE');
  panes[2].handlers.click();for(let i=0;i<9;i++)await flush();
  const groupPeople=[...el('savedList').children];
  assert(groupPeople.some(x=>x.children[1]?.children[0]?.textContent==='Drive-only person'),
   'Secondary person must remain saved and accessible');
  const secondary=groupPeople.find(x=>x.children[1]?.children[0]?.textContent==='Drive-only person');
  secondary.handlers.click();for(let i=0;i<10;i++)await flush();
- assert(el('folderGrid').children.some(x=>x.dataset.source==='sd'&&x.dataset.clip===otherClip),
+ assert(el('folderGrid').children.some(x=>x.dataset.source==='sd'&&x.dataset.clip===clip),
   'Second person folder must display the same manually group-assigned original');
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
