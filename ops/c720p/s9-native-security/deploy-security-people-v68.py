@@ -46,17 +46,17 @@ def patch_js(live,old,new):
 def patch_html(raw):
  t=raw.decode()
  if 'id="approvalExtraPeople"' in t and 'id="approvalAddPerson"' in t:return raw
- candidates=list(re.finditer(r'<label id="newLabel">[^<]*<input id="approvalLabel"[^>]*>\\s*</label>',t))
+ candidates=list(re.finditer(r'<label id="newLabel">[^<]*<input id="approvalLabel"[^>]*>\s*</label>',t))
  if len(candidates)!=1:raise RuntimeError('unrecognized_people_form_markup')
  slot=candidates[0]
- controls=('\\n<div id="approvalExtraPeople" aria-live="polite"></div>'
-  '\\n<button id="approvalAddPerson" class="secondary" type="button">+ Add another person</button>')
+ controls=('\n<div id="approvalExtraPeople" aria-live="polite"></div>'
+  '\n<button id="approvalAddPerson" class="secondary" type="button">+ Add another person</button>')
  t=t[:slot.end()]+controls+t[slot.end():]
- css=('\\n#approvalExtraPeople{display:grid;gap:8px;margin:8px 0}'
-  '\\n.additional-person-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}'
-  '\\n.additional-person-row select{flex:1;min-width:140px}'
-  '\\n#approvalAddPerson{display:block;width:100%;margin-top:9px}'
-  '\\n')
+ css=('\n#approvalExtraPeople{display:grid;gap:8px;margin:8px 0}'
+  '\n.additional-person-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}'
+  '\n.additional-person-row select{flex:1;min-width:140px}'
+  '\n#approvalAddPerson{display:block;width:100%;margin-top:9px}'
+  '\n')
  if t.count('</style>')!=1:raise RuntimeError('people_style_missing')
  t=t.replace('</style>',css+'</style>',1)
  return t.encode()
