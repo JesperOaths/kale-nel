@@ -92,7 +92,7 @@ def main():
  # V65 is a coordinated UI/relay/backend repair. An older push-triggered
  # bootstrap must not replace its newer proxy extension with an older copy.
  active_backend=TARGETS["backend"][0]
- if active_backend.is_file() and b"FILING_REVIEW_VERSION=65" in active_backend.read_bytes():
+ if active_backend.is_file() and b"FILING_REVIEW_VERSION=" in active_backend.read_bytes():
   if sha(active_backend.read_bytes())!=expected["backend"]:
    raise RuntimeError("modern_filing_requires_coordinated_deployer")
   if b"security-filing-v65-20261019" not in (WWW/"security-people-v50.html").read_bytes():

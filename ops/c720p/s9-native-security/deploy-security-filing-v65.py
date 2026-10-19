@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -113,6 +114,33 @@ def probe():
   if response.status!=404 or d.get('error')!='source_not_in_verified_archive':raise RuntimeError('origin_save_path_probe_failed')
   outcomes.append({'port':port,'status':response.status,'error':d['error']})
  return outcomes
+def check_js(raw):
+ if shutil.which('node'):
+  with tempfile.TemporaryDirectory() as tmp:
+   js=Path(tmp)/'people.js';js.write_bytes(raw)
+   subprocess.run(['node','--check',str(js)],check=True,capture_output=True)
+  return
+ # The hub has Chromium but no Node. Compile with its V8 engine without
+ # running the script or touching the active Home Assistant tab.
+ spec=importlib.util.spec_from_file_location('filing_compile_cdp',Path(__file__).with_name('security-step4-cdp-safe.py'))
+ cdp=importlib.util.module_from_spec(spec);spec.loader.exec_module(cdp)
+ browser=cdp.Socket(cdp.get('json/version')['webSocketDebuggerUrl']);target=None;page=None
+ try:
+  target=browser.call('Target.createTarget',{'url':'about:blank','background':True})['targetId']
+  for _ in range(30):
+   tab=next((x for x in cdp.get('json/list') if x.get('id')==target),None)
+   if tab and tab.get('webSocketDebuggerUrl'):
+    page=cdp.Socket(tab['webSocketDebuggerUrl']);break
+   time.sleep(.1)
+  if page is None:raise RuntimeError('syntax_check_browser_unavailable')
+  page.call('Runtime.enable')
+  result=page.call('Runtime.compileScript',{'expression':raw.decode(),
+   'sourceURL':'security-people-v45.js','persistScript':False})
+  if result.get('exceptionDetails'):raise RuntimeError('javascript_compile_failed')
+ finally:
+  if page:page.close()
+  if target:browser.call('Target.closeTarget',{'targetId':target})
+  browser.close()
 def main():
  p=argparse.ArgumentParser();p.add_argument('--ref',required=True);p.add_argument('--before',required=True);p.add_argument('--apply',action='store_true');a=p.parse_args()
  if any(not re.fullmatch('[a-f0-9]{40}',s) for s in (a.ref,a.before)):raise RuntimeError('immutable_refs_required')
@@ -143,8 +171,7 @@ def main():
  desired['shell']=shell
  for key in ('backend','relay'):compile(desired[key],str(ASSETS[key]),'exec')
  # Validate Python/JS before changing any live file.
- with tempfile.TemporaryDirectory() as tmp:
-  js=Path(tmp)/'people.js';js.write_bytes(desired['js']);subprocess.run(['node','--check',str(js)],check=True,capture_output=True)
+ check_js(desired['js'])
  print('FILING_V65_PREFLIGHT '+json.dumps({'originals':{k:len(v) for k,v in before.items()},'sha256':{k:sha(v) for k,v in desired.items()},'apply':a.apply}),flush=True)
  if not a.apply:return
  backup=BASE/'backups/security-filing-v65'/dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
