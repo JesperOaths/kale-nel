@@ -46,11 +46,11 @@ jobs:
           assert v63.sha(v62_js)==v63.ACTIVE_V62_SHA
           before=v63.src(v63.BEFORE,'security-people-v45.js')
           after=v63.src(v63.AFTER,'security-people-v45.js')
-          patched,count=v63.add_diffs(v62_js,before,after)
+          patched,count=v63.patch_main_js(v62_js,before,after)
           assert count>=3 and b'function renderAutomatic()' in patched
           with urllib.request.urlopen(url+'security-people-v45.html',timeout=30) as r:
               base=r.read()
-          new_html,edits=v63.add_diffs(base,v63.src(v63.BEFORE,'security-people-v45.html'),v63.src(v63.AFTER,'security-people-v45.html'))
+          new_html,edits=v63.patch_main_html(base,v63.src(v63.BEFORE,'security-people-v45.html'),v63.src(v63.AFTER,'security-people-v45.html'))
           assert edits>=2 and b'data-pane="automatic"' in new_html
           assert b'id="automaticFolders"' in new_html
           print('SECURITY_AUTO_PERSON_V63_EXACT_SOURCE_PATCH_PASS',count,edits)
