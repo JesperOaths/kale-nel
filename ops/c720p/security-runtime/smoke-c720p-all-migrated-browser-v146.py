@@ -70,10 +70,16 @@ def script():
     const length=Number(mp4.headers.get('Content-Length')||0);
     const range=mp4.headers.get('Content-Range')||'';
     const type=(mp4.headers.get('Content-Type')||'').split(';')[0].trim().toLowerCase();
-    if(mp4.status!==206||length!==1024||
-       range!=='bytes 0-1023/'+String(f.bytes)||type!=='video/mp4'){
+    const checks={status_206:mp4.status===206,
+      length_1024:length===1024,
+      range_header_visible:range.length>0,
+      range_matches_manifest:range==='bytes 0-1023/'+String(f.bytes),
+      mime_mp4:type==='video/mp4'};
+    if(!Object.values(checks).every(Boolean)){
       try{await mp4.body?.cancel()}catch(_){}
-      return {ok:false,reason:'range_contract_failed',passed};
+      // Never return a source name, byte content, header value, or ticket.
+      return {ok:false,reason:'range_contract_failed',passed,
+        range_checks:checks};
     }
     const bytes=await mp4.arrayBuffer();
     if(bytes.byteLength!==1024)return {ok:false,reason:'range_body_short',passed};
@@ -88,6 +94,22 @@ def script():
 
 def validate(data):
  if not isinstance(data,dict):raise RuntimeError("browser_probe_missing")
+ # Private bounded diagnostics: expose only fixed boolean contract predicates,
+ # never the failing media name, HTTP header values, clip bytes or signed URL.
+ if data.get("reason")=="range_contract_failed":
+  checks=data.get("range_checks")
+  keys=("status_206","length_1024","range_header_visible",
+        "range_matches_manifest","mime_mp4")
+  passed=data.get("passed")
+  if (isinstance(checks,dict) and set(checks)==set(keys)
+      and all(type(checks[k]) is bool for k in keys)
+      and type(passed) is int and 0<=passed<=5000):
+   print("C720P_MIGRATED_ALL_RANGE_DIAGNOSTIC "+json.dumps({
+     "previous_ranges_verified":passed,
+     "contract_checks":{k:checks[k] for k in keys},
+     "private_filenames_returned":False,
+     "signed_urls_returned":False,
+     "media_modified":False},sort_keys=True),flush=True)
  if (data.get("ok") is not True or data.get("authenticated_relay") is not True
   or data.get("static_assets_served")!=3
   or type(data.get("manifest_count")) is not int or data["manifest_count"]<6
