@@ -171,6 +171,22 @@ def run(apply=False,ranker=None):
    json.dumps({"verified_crops":count,"work":plan,
                "rankings_published":False,"identities_assigned":0}),flush=True)
   return "preflight"
+ # Reading the full source inventory can take many ADB roundtrips. The
+ # first healthy Camera2 snapshot may be stale by the time scoring begins.
+ # Verify an additional fresh cool/idle 4K ring immediately before the
+ # child process. The ranker still independently rechecks under its lock.
+ try:
+  m.capture_rank_safe()
+  m.phone_temperature_c()
+ except RuntimeError as error:
+  reason=ALLOW_DEFERRALS.get(str(error))
+  if reason:
+   print("S9_V3_PROGRESSIVE_RANKING_DEFERRED "+
+     json.dumps({"reason":reason,"stage":"before_phone_scoring",
+                 "rankings_published":False,"capture_modified":False,
+                 "identities_assigned":0}),flush=True)
+   return "deferred"
+  raise
  try:
   result=guarded_publish(m,expected,count)
  except SharedWorkerBusy:
