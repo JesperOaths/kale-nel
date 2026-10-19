@@ -1,0 +1,101 @@
+name: Security People V62 guarded person-video and outfit UI
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-security-people-v62.py'
+      - '.github/workflows/security-people-v62-release.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/security-people-v62-release.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-security-people-v62-release
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Rebuild exact live V60 source and verify narrow V62 patch with workspace mock
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-security-people-v62.py
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          mkdir -p "$tmp/ops/c720p/s9-native-security"
+          base='https://raw.githubusercontent.com/JesperOaths/kale-nel/eaf8a58f1c733dbc9109348725669917eab1bb5b/ops/c720p/s9-native-security'
+          curl -fSsL --retry 2 --max-time 35 "$base/security-people-v45.js" -o "$tmp/v59.js"
+          cp ops/c720p/s9-native-security/security-people-v45.html ops/c720p/s9-native-security/test-people-v45.js "$tmp/ops/c720p/s9-native-security/"
+          python3 - "$tmp" <<'PY'
+          import importlib.util
+          import sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          def load(name,path):
+              spec=importlib.util.spec_from_file_location(name,path)
+              module=importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(module)
+              return module
+          home=Path('ops/c720p/s9-native-security')
+          v60=load('v60_coverage',home/'deploy-security-people-v60-coverage.py')
+          v62=load('v62_outfit',home/'deploy-security-people-v62.py')
+          live=v60.patch_coverage((root/'v59.js').read_bytes())
+          assert v62.sha(live)==v62.LIVE_V60_SHA256
+          old=v62.remote(v62.BASE_SHA)
+          new=v62.remote(v62.NEW_SHA)
+          result=v62.patched(live,old,new)
+          assert v62.sha(result)!=v62.sha(live)
+          assert b'approvedFolderContext' in result
+          assert b'72*60*60*1000' in result
+          (root/'ops/c720p/s9-native-security/security-people-v45.js').write_bytes(result)
+          print('SECURITY_V62_EXACT_SOURCE_PATCH_PASS')
+          PY
+          node --check "$tmp/ops/c720p/s9-native-security/security-people-v45.js"
+          (cd "$tmp" && node ops/c720p/s9-native-security/test-people-v45.js)
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Guarded V60 to V62 rollout with archive and decision preservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          script='ops/c720p/s9-native-security/deploy-security-people-v62.py'
+          hash="$(sha256sum "$script" | cut -d' ' -f1)"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$script"
+          dest="/tmp/security-people-v62-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 35 '$url' -o '$dest' && printf '%s  %s\n' '$hash' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest' && /usr/bin/python3 '$dest' --apply"
+          idem="security-people-v62-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-people-v62','deployment',:'cmd',260,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "SECURITY_PEOPLE_V62_JOB=$id"
+          for i in $(seq 1 60); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              out="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 15000)"
+              err="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stderr,'') from c720p_agent.jobs where id=$id" | head -c 2500)"
+              echo "$out"
+              if [[ "$status" != 'done|0' ]]; then echo "$err"; exit 1; fi
+              grep -q 'SECURITY_PEOPLE_V62_DRY_RUN_PASS' <<< "$out"
+              grep -q 'SECURITY_PEOPLE_V62_DEPLOY_VERIFIED' <<< "$out"
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
