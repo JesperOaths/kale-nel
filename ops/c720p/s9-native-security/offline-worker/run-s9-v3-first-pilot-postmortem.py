@@ -3,7 +3,7 @@
 
 Only aggregate counts and evidence-presence flags are emitted. No clip,
 person, embedding, crop image or raw exception is printed. Requires existing
-C720P archive + S9 ADB connection. Absolutely no --apply or device writes.
+C720P archive + S9 ADB connection. This worker only reads diagnostic evidence.
 """
 import hashlib
 import importlib.util
