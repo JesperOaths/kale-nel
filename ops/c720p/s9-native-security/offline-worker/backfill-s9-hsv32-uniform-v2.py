@@ -51,9 +51,31 @@ def adb(*args,timeout=90,required=True):
 
 
 def phone_json(path):
-    data=adb("exec-out","cat",path,timeout=25).stdout
-    if not 70<len(data)<140000:raise RuntimeError("Private feature sidecar invalid length")
-    return json.loads(data)
+    # Android ADB can return a successful but truncated/non-JSON exec-out
+    # payload during capture recovery. Do not call it a corrupt on-phone
+    # descriptor until the independently read on-phone SHA matches those
+    # exact received bytes. Never promote unverified metadata.
+    for attempt in range(2):
+        data=adb("exec-out","cat",path,timeout=25).stdout
+        if 70<len(data)<140000:
+            try:
+                parsed=json.loads(data)
+            except (ValueError,UnicodeError):
+                pass
+            else:
+                if not isinstance(parsed,dict):
+                    raise RuntimeError("Private feature sidecar was not a JSON object")
+                return parsed
+        # A too-short, oversize or non-JSON response is NOT automatically
+        # a missing descriptor. Independently distinguish damaged transport
+        # from a genuinely corrupt existing phone-side file.
+        remote=remote_sha(path)
+        received=hashlib.sha256(data.encode("utf-8")).hexdigest()
+        if remote==received:
+            raise RuntimeError("Verified phone descriptor is malformed; refuse index")
+        if attempt==1:
+            raise RuntimeError("S9 sidecar transfer indeterminate; no index published")
+    raise RuntimeError("Unreachable sidecar guard")
 
 
 def remote_sha(path):
