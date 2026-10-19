@@ -41,7 +41,8 @@ jobs:
           java -cp /tmp/s9-face-gate-v120 nl.kalenel.s9offline.PhoneYuNetLandmarkDecoderTest
           # Official ARM64/Java ORT AAR is only used for compilation here.
           # The actual ONNX execution is gated separately on a cool S9+.
-          curl -fsSL --retry 2 --max-time 90             https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.17.1/onnxruntime-android-1.17.1.aar             -o /tmp/s9-face-ort-v120.aar
+          curl -fsSL --retry 2 --max-time 90             https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar             -o /tmp/s9-face-ort-v120.aar
+          echo '04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  /tmp/s9-face-ort-v120.aar' | sha256sum -c -
           unzip -p /tmp/s9-face-ort-v120.aar classes.jar > /tmp/s9-face-ort-v120.jar
           javac -source 8 -target 8 -cp /tmp/s9-face-ort-v120.jar -d /tmp/s9-face-gate-v120 "$d/S9YuNetOnnxSyntheticSmoke.java"
           test -f /tmp/s9-face-gate-v120/nl/kalenel/s9offline/S9YuNetOnnxSyntheticSmoke.class
