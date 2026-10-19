@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,recheckOnly:false,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
+ faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0,automaticRows:[],automaticRevision:0,automaticStatus:'loading',automaticToken:0,automaticBusy:false};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -121,6 +121,7 @@ async function refreshArchiveReviewSources(folders){
  makeArchiveRows();
  if(state.doc)render();
  if(state.pane==='clothing')searchClothingMatches();
+ if(state.pane==='automatic')fetchAutomatic();
 }
 async function manualLink(item,folder){
  let errorAfterReload='';
@@ -451,11 +452,12 @@ function openFolder(id,tab,recheckOnly=false){
 }
 function openHome(pane){
  state.pane=pane;state.folder='';state.tab='inbox';state.offset=0;
- selectPane(pane);loadView();if(pane==='people'||pane==='clothing'||pane==='review')fetchFaces();
+ selectPane(pane);loadView();if(['people','clothing','review','automatic'].includes(pane))fetchFaces();
+ if(pane==='automatic')fetchAutomatic();
  if(pane==='clothing'&&state.assignedReady)searchClothingMatches();
 }
 function selectPane(pane){
- for(const name of ['overview','review','people','clothing','folderView'])
+ for(const name of ['overview','review','people','clothing','automatic','folderView'])
   $(name).hidden=(name!==(pane==='folder'?'folderView':pane));
  for(const b of document.querySelectorAll('[data-pane]')){
   const expected=pane==='folder'?state.folderReturnPane:pane;
@@ -1133,6 +1135,7 @@ function render(){
  if(state.pane==='people')renderPeople();
  if(state.pane==='folder')renderFolder();
  if(state.pane==='clothing')renderClothing();
+ if(state.pane==='automatic')renderAutomatic();
 }
 function compare(item){
  const examples=(state.doc?.reference_examples||[]).slice(0,3);
@@ -1173,6 +1176,7 @@ $('peopleRecheckNow').addEventListener('click',()=>{
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
 $('refreshClothing').addEventListener('click',()=>searchClothingMatches(true));
+$('refreshAutomatic').addEventListener('click',()=>fetchAutomatic());
 $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
 $('pageSize').addEventListener('change',()=>{
@@ -1193,8 +1197,10 @@ $('refresh').addEventListener('click',()=>{
  state.archiveClips=null;state.archiveEntries=[];state.driveRecords=[];
  state.extraLinks=null;state.assignedReady=false;state.clothingMatches=null;
  state.clothingToken++;state.clothingBusy=false;state.archiveToken=0;
+ state.automaticRows=[];state.automaticStatus='loading';state.automaticToken++;
  loadView();
  fetchFaces();
+ if(state.pane==='automatic')fetchAutomatic();
 });
 $('newFolder').addEventListener('click',()=>openFolderEditor('create'));
 $('newFolderInline').addEventListener('click',()=>openFolderEditor('create'));
