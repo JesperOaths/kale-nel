@@ -220,6 +220,32 @@ def compute_one(clip):
     roi=ROOT+"/inbox/"+key+".jpg"
     metadata=ROOT+"/features/"+key+"-detector.json"
     sidecar=ROOT+"/features/"+key+"-visual.json"
+    # A crash can leave exactly one of ROI JPEG / detector sidecar staged.
+    # Recover ONLY the missing artifact after independent re-detection and
+    # byte-for-byte SHA checking; never overwrite either existing artifact.
+    has_crop=adb("shell","test -s "+roi,check=False).returncode==0
+    has_detector=adb("shell","test -s "+metadata,check=False).returncode==0
+    if has_crop != has_detector:
+        jar=ROOT+"/s9-offline-person-roi-recovery-v3.jar"
+        if adb("shell","test -s "+jar,check=False).returncode:
+            raise RuntimeError("Private ROI recovery DEX not installed")
+        command=("export LD_LIBRARY_PATH="+ROOT+"/lib; "
+                 "export CLASSPATH="+jar+"; "
+                 "app_process -Djava.library.path="+ROOT+"/lib /system/bin "
+                 "nl.kalenel.s9offline.S9StandalonePersonRoiRecoveryV3 --recover "
+                 +VIDEO+clip+" "+roi+" "+metadata+" "+key)
+        result=adb("shell",command,timeout=140)
+        if "S9_OFFLINE_ROI_PARTIAL_REPAIRED" not in result.stdout:
+            raise RuntimeError("S9 could not reproduce missing private ROI evidence")
+        if (adb("shell","test -s "+roi,check=False).returncode or
+            adb("shell","test -s "+metadata,check=False).returncode):
+            raise RuntimeError("Recovered ROI still missing private evidence")
+    if has_crop and has_detector or has_crop != has_detector:
+        # The existing crop itself must still match its detector provenance;
+        # neither a stale ledger nor a valid vector substitutes for its SHA.
+        crop_sha=detector_provenance(clip,key,metadata)
+        if adb("shell","sha256sum "+roi,timeout=25).stdout.split()[0]!=crop_sha:
+            raise RuntimeError("Private ROI crop integrity mismatch")
     existing=adb("shell","test -s "+sidecar,check=False)
     if existing.returncode==0:
         # Previously generated features count only if detector provenance and
