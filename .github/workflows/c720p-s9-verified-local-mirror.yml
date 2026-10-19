@@ -1,0 +1,26 @@
+name: C720P ongoing safe S9 media mirror
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/c720p-s9-verified-local-mirror-v2.service'
+      - 'ops/c720p/security-runtime/c720p-s9-verified-local-mirror-v2.timer'
+      - 'ops/c720p/security-runtime/test-c720p-s9-verified-mirror-timer-v2.py'
+      - '.github/workflows/c720p-s9-verified-local-mirror.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/c720p-s9-verified-local-mirror-v2.service'
+      - 'ops/c720p/security-runtime/c720p-s9-verified-local-mirror-v2.timer'
+permissions:
+  contents: read
+jobs:
+  no-delete-thermal-gated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/c720p_to_s9_verified_media_stage_v2.py
+          python3 ops/c720p/security-runtime/test-c720p-s9-verified-mirror-timer-v2.py
+          echo S9_SAFE_AUTOMATIC_MIRROR_NO_LOCAL_DELETE_PASS
