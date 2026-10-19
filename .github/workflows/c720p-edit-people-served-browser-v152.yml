@@ -1,0 +1,82 @@
+name: C720P Edit people served and authenticated browser continuity V152
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/smoke-c720p-edit-people-presence-v152.py'
+      - 'ops/c720p/security-runtime/test-smoke-c720p-edit-people-presence-v152.py'
+      - '.github/workflows/c720p-edit-people-served-browser-v152.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/smoke-c720p-edit-people-presence-v152.py'
+      - 'ops/c720p/security-runtime/test-smoke-c720p-edit-people-presence-v152.py'
+      - '.github/workflows/c720p-edit-people-served-browser-v152.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-edit-people-presence-v152
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify exact approved-group UI and nonmutating source
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/smoke-c720p-edit-people-presence-v152.py"
+          python3 "$d/test-smoke-c720p-edit-people-presence-v152.py"
+          python3 "$d/test-smoke-c720p-legacy-auth-browser-v136.py"
+  physical:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read-only current HA and isolated browser acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          d="ops/c720p/security-runtime"
+          stage="/tmp/c720p-edit-browser-v152-${GITHUB_SHA:0:13}"
+          cmd="install -d -m 700 '$stage'"
+          for name in smoke-c720p-edit-people-presence-v152.py smoke-c720p-legacy-auth-browser-v136.py; do
+            digest="$(sha256sum "$d/$name" | cut -d' ' -f1)"
+            uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$d/$name"
+            cmd="$cmd && curl -fsSL --max-time 35 '$uri' -o '$stage/$name' && printf '%s  %s\\n' '$digest' '$stage/$name' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/smoke-c720p-edit-people-presence-v152.py' && /usr/bin/python3 '$stage/smoke-c720p-edit-people-presence-v152.py' --run"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-edit-people-v152-${GITHUB_SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-edit-people-v152','diagnostic',:'cmd',320,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "C720P_EDIT_PEOPLE_BROWSER_V152_JOB=$job"
+          for attempt in $(seq 1 105); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 4000)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]] || exit 1
+              grep -q 'C720P_EDIT_PEOPLE_SERVED_BROWSER_V152_VERIFIED' <<< "$output"
+              grep -q '"edit_people_action_served": true' <<< "$output"
+              grep -q '"group_picker_structure_retained": true' <<< "$output"
+              grep -q '"real_person_review_mutations": 0' <<< "$output"
+              grep -q '"browser_card_click_tested": false' <<< "$output"
+              grep -q '"capture_dropped_frames_after": 0' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Edit people served browser continuity unverified"; exit 1
