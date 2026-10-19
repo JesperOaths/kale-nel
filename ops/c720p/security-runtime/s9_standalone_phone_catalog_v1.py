@@ -106,6 +106,22 @@ def parse(raw):
         or s["sd_usable_bytes"]>s["sd_total_bytes"]
         or s["sidecar_claimed_video_bytes"]!=sum(x["bytes"] for x in records.values())):
         raise ValueError("standalone_summary_inconsistent")
+    auxiliary=s.get("auxiliary_mp4_inventory")
+    if auxiliary is not None:
+        fields=("raw_mp4_files_seen","verified_primary_events","preroll_segments",
+                "preroll_without_verified_primary","completed_companion_mp4_files",
+                "partial_completion_mp4_files","diagnostic_mp4_files",
+                "unverified_or_unknown_mp4_files")
+        if not isinstance(auxiliary,dict) or any(
+                type(auxiliary.get(field)) is not int or not 0<=auxiliary[field]<=20000
+                for field in fields) or auxiliary["verified_primary_events"]!=len(records):
+            raise ValueError("standalone_auxiliary_inventory_invalid")
+        if (auxiliary["raw_mp4_files_seen"]!=sum(auxiliary[k] for k in fields[1:] if
+                k!="preroll_without_verified_primary") or
+            auxiliary["preroll_without_verified_primary"]>auxiliary["preroll_segments"] or
+            auxiliary.get("auxiliary_files_are_not_additional_recordings") is not True or
+            auxiliary.get("inventory_does_not_hash_originals") is not True):
+            raise ValueError("standalone_auxiliary_inventory_counts_inconsistent")
     return {"schema_version":schema.VERSION,"snapshot_id":d["snapshot_id"],"records":records},s
 
 def adb(*args,timeout=25):
