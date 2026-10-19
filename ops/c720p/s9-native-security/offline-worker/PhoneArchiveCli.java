@@ -30,7 +30,7 @@ public final class PhoneArchiveCli {
   for(int i=0;i<verified.length();i++)primary.add(verified.getJSONObject(i).getString("name"));
   File[] items=archive.listFiles();
   if(items==null||items.length>20000)throw new IOException("sd_inventory_unavailable_or_unbounded");
-  int primaryFound=0,preroll=0,orphanPreroll=0,derivatives=0,diagnostics=0,other=0;
+  int primaryFound=0,preroll=0,orphanPreroll=0,completed=0,partial=0,diagnostics=0,other=0;
   for(File f:items) {
    if(!f.isFile()||java.nio.file.Files.isSymbolicLink(f.toPath()))continue;
    String name=f.getName();
@@ -42,19 +42,22 @@ public final class PhoneArchiveCli {
     preroll++;
     if(!primary.contains(name.substring(0,name.length()-".preroll.mp4".length())))
      orphanPreroll++;
-   }else if(name.matches("motion_[0-9]{13}[.]mp4[.][A-Za-z0-9_-]{1,32}[.]mp4")){
-    derivatives++;
+   }else if(name.matches("motion_[0-9]{13}[.]mp4[.]complete[.]mp4")){
+    completed++;
+   }else if(name.matches("motion_[0-9]{13}[.]mp4[.]complete[.]partial[.]mp4")){
+    partial++;
    }else if(name.matches("diagnostic_preroll_[A-Za-z0-9._-]{1,128}[.]mp4")){
     diagnostics++;
    }else other++;
   }
   if(primaryFound!=primary.size())throw new IOException("verified_original_missing_during_auxiliary_scan");
   return new JSONObject()
-   .put("raw_mp4_files_seen",primaryFound+preroll+derivatives+diagnostics+other)
+   .put("raw_mp4_files_seen",primaryFound+preroll+completed+partial+diagnostics+other)
    .put("verified_primary_events",primaryFound)
    .put("preroll_segments",preroll)
    .put("preroll_without_verified_primary",orphanPreroll)
-   .put("derivative_mp4_files",derivatives)
+   .put("completed_companion_mp4_files",completed)
+   .put("partial_completion_mp4_files",partial)
    .put("diagnostic_mp4_files",diagnostics)
    .put("unverified_or_unknown_mp4_files",other)
    .put("auxiliary_files_are_not_additional_recordings",true)
