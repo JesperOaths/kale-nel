@@ -35,10 +35,6 @@ jobs:
           install=Path("ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-appearance-endpoint.py").read_text()
           for term in ("verified_same_person","identity_probability",
                        "human_review_required","automatic_person_assignments",
-                       "appearance_only","Phone") if False else ():
-              pass
-          for term in ("verified_same_person","identity_probability",
-                       "human_review_required","automatic_person_assignments",
                        "appearance_only","s9_appearance_rankings_v1"):
               assert term in module,term
           for term in ("--apply","S9_MULTIVECTOR_APPEARANCE_LIVE_API_VERIFIED",
