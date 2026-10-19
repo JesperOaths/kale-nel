@@ -1,0 +1,12 @@
+[Unit]
+Description=Private S9 Security integrity, 4K, root and HTTPS clock health summary
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/security-health-diagnostics-v1.py
+TimeoutStartSec=45
+Nice=19
+CPUQuota=10%
+IOSchedulingClass=idle
+NoNewPrivileges=true
