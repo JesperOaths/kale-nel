@@ -14,17 +14,17 @@ public final class Encoded4KRingTest {
    check(r.offer(packet,i*STEP_US, i%30==0?1:0,i%30==0),"valid packet "+i);
   }
  }
- static void testFiveSecondsWithEarlierIdr() {
+ static void testSevenSecondsWithEarlierIdr() {
   Encoded4KRing ring=new Encoded4KRing();
   feed(ring,0,360,150000);
   Encoded4KRing.Frozen prefix=ring.freeze();
   check(prefix!=null,"cold ring must freeze when populated");
   check(prefix.samples.get(0).key,"first sample must be an IDR");
-  check(prefix.durationUs>=5_000_000L,"historical prefix <5s");
-  check(prefix.durationUs<=7_000_000L,"prefix exceeds memory window");
-  check(ring.bufferedUs()<=7_000_000L,"bounded by time");
+  check(prefix.durationUs>=7_000_000L,"historical prefix <7s");
+  check(prefix.durationUs<=9_000_000L,"prefix exceeds memory window");
+  check(ring.bufferedUs()<=9_000_000L,"bounded by time");
   check(ring.bytes()<=Encoded4KRing.MAX_BYTES,"bounded by bytes");
-  check(prefix.samples.get(0).ptsUs<=prefix.lastPtsUs-5_000_000L,
+  check(prefix.samples.get(0).ptsUs<=prefix.lastPtsUs-7_000_000L,
         "IDR selected AFTER desired start");
   long last=prefix.lastPtsUs;
   long total=prefix.samples.size();
@@ -35,7 +35,14 @@ public final class Encoded4KRingTest {
   for(Encoded4KRing.Sample s:now.samples)if(s.ptsUs>last)continuation.add(s);
   check(!continuation.isEmpty(),"event has additional frames");
   check(continuation.get(0).ptsUs>last,"strict monotonic event handoff");
-  check(total>=150,"pre-event frame count unexpectedly low");
+  check(total>=210,"pre-event frame count unexpectedly low");
+ }
+ static void testMatureBufferSevenSecondsAndEarlyFallback() {
+  Encoded4KRing ring=new Encoded4KRing();
+  feed(ring,0,270,90000);
+  Encoded4KRing.Frozen mature=ring.freeze();
+  check(mature!=null&&mature.durationUs>=7_000_000L,"mature ring must export >=7s");
+  check(mature.samples.get(0).key,"must start at decodable IDR");
  }
  static void testEarlyTriggerCannotSaveOneSecond() {
   Encoded4KRing ring=new Encoded4KRing();
@@ -74,7 +81,8 @@ public final class Encoded4KRingTest {
   check(ring.frames()==0&&ring.bufferedUs()==0,"clear must release data");
  }
  public static void main(String[] args){
-  testFiveSecondsWithEarlierIdr();
+  testSevenSecondsWithEarlierIdr();
+  testMatureBufferSevenSecondsAndEarlyFallback();
   testEarlyTriggerCannotSaveOneSecond();
   testPressureNeverSpills();
   testNoIdrCannotExport();
