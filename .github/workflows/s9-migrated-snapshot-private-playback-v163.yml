@@ -1,0 +1,31 @@
+name: S9 private replay of migrated C720P snapshots V163
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_c720p_snapshots_v163.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-c720p-snapshots-v163.py'
+      - '.github/workflows/s9-migrated-snapshot-private-playback-v163.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_c720p_snapshots_v163.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-c720p-snapshots-v163.py'
+      - '.github/workflows/s9-migrated-snapshot-private-playback-v163.yml'
+permissions:
+  contents: read
+jobs:
+  check-private-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Source and replay safety tests (no physical changes)
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-person-ml-v1
+          python3 -m py_compile "$root/s9_c720p_snapshots_v163.py" "$root/s9_sd_proxy_extension.py"
+          python3 "$root/test-s9-c720p-snapshots-v163.py"
+          python3 ops/c720p/security-runtime/test-c720p-to-s9-import-v2.py
+          grep -q '^def install(H):' "$root/s9_c720p_snapshots_v163.py"
+          echo S9_IMPORTED_JPEG_PRIVATE_PLAYBACK_SOURCE_SAFE
