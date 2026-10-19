@@ -1,0 +1,94 @@
+name: S9 V3 bounded HSV32 source-descriptor completion V102
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-hsv-two-v102.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-hsv-two-v102.py'
+      - '.github/workflows/s9-v3-hsv-two-v102.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-hsv-two-v102.py'
+      - '.github/workflows/s9-v3-hsv-two-v102.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-v3-two-hsv-real-phone-guarded
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Assert no identity assignment, no media, and bounded thermal checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/run-s9-v3-hsv-two-v102.py" "$d/test-s9-v3-hsv-two-v102.py"
+          python3 "$d/test-s9-v3-hsv-two-v102.py"
+          python3 "$d/test-s9-hsv32-uniform-v2.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('ops/c720p/s9-native-security/offline-worker/run-s9-v3-hsv-two-v102.py').read_text()
+          for forbidden in ('--apply','pm install','am force-stop','os.replace(','.write_bytes(',
+                            '.write_text(','review_decide','assign_person','run-s9-uniform-appearance-rankings'):
+              assert forbidden not in s, forbidden
+          assert 'missing[:2]' in s
+          assert 'MAX_C=42.0' in s and 'INITIAL_MAX_C=41.5' in s
+          assert 'fcntl.flock' in s and 'safe_visual' in s and 'v2_histogram' in s
+          assert 'private_identifiers_disclosed' in s
+          print('S9_V3_HSV_TWO_SAFE_SOURCE_CONTRACT_PASS')
+          PY
+  guarded-two-sidecars:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Process up to two real verified on-phone private HSV32 sidecars
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          root='ops/c720p/s9-native-security/offline-worker'
+          stage="/tmp/s9-v3-hsv-two-${GITHUB_SHA:0:12}"
+          cmd="mkdir -p '$stage'"
+          for script in run-s9-v3-hsv-two-v102.py backfill-s9-hsv32-uniform-v2.py backfill-v40-person-rois-on-s9.py backfill-s9-original-roi-osnet-temporal-v2.py; do
+            src="$root/$script"
+            digest="$(sha256sum "$src" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+            cmd="$cmd && curl -fsSL --retry 2 --max-time 35 '$url' -o '$stage/$script' && printf '%s  %s\\n' '$digest' '$stage/$script' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/run-s9-v3-hsv-two-v102.py'"
+          idem="s9-v3-two-hsv-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-v3-hsv-two-real-sidecars','deployment',:'cmd',780,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_V3_HSV_TWO_JOB=$id"
+          for attempt in $(seq 1 170); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 4000)"
+              echo "$output"
+              if [[ "$status" != 'done|0' ]]; then
+                echo "Private S9 HSV32 gate stopped; no further processing authorized"; exit 1
+              fi
+              grep -q 'S9_V3_HSV32_TWO_VERIFIED' <<< "$output"
+              grep -q '"camera_apk_changed": false' <<< "$output"
+              grep -q '"manual_reviews_unchanged": true' <<< "$output"
+              grep -q '"private_identifiers_disclosed": false' <<< "$output"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "Private S9 HSV32 gate timed out"; exit 1
