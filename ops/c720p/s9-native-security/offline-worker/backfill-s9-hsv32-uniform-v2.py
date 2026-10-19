@@ -81,7 +81,13 @@ def safe_visual(key,cropsha):
 
 def inventory(include_unreviewed=False):
     old=sibling("backfill-v40-person-rois-on-s9.py","s9_v40_uniform")
-    new=sibling("backfill-s9-original-person-roi-osnet.py","s9_original_uniform")
+    # Preserve V2's exact legacy-approved source behaviour by default.
+    # V3 archive expansion must use the newer zero-detection-aware temporal
+    # controller, not the historical approved-only selector.
+    new=(sibling("backfill-s9-original-roi-osnet-temporal-v2.py",
+                 "s9_temporal_original_uniform") if include_unreviewed
+         else sibling("backfill-s9-original-person-roi-osnet.py",
+                      "s9_original_uniform"))
     source_map=old.record_index()
     items=old.catalog_items()
     lookup={}
