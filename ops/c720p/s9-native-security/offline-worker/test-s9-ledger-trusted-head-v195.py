@@ -35,10 +35,7 @@ class TrustedHead(unittest.TestCase):
   for banned in ("Files.write(", "FileOutputStream", "delete(", "unlink(",
                  "new URL(", "System.exit(", "File.createTempFile"):
    self.assertNotIn(banned,body)
-  self.assertIn("trusted external head",TEST.read_text().lower()
-                .replace("trusted checkpoint","trusted external head")
-                if "trusted checkpoint" in TEST.read_text().lower()
-                else "trusted external head")
+  self.assertIn("external checkpoint catches",TEST.read_text().lower())
   self.assertNotIn("CameraManager",TEST.read_text())
   self.assertNotIn("MediaCodec",TEST.read_text())
   self.assertIn("prefix_not_crypto_valid",TEST.read_text())
