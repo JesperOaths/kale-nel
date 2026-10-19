@@ -1,0 +1,24 @@
+name: S9 read-only original digest catch-up rate
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/c720p-s9-original-hash-ledger-catchup-v2.conf'
+      - 'ops/c720p/security-runtime/test-c720p-s9-original-hash-ledger-catchup-v2.py'
+      - '.github/workflows/s9-original-hash-cadence.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/c720p-s9-original-hash-ledger-catchup-v2.conf'
+      - 'ops/c720p/security-runtime/test-c720p-s9-original-hash-ledger-catchup-v2.py'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Preserve on-phone camera thermal gate and exclusive integrity locks
+        run: |
+          python3 ops/c720p/security-runtime/test-c720p-s9-original-hash-ledger-catchup-v2.py
+          echo S9_INTEGRITY_CATCHUP_GUARDED
