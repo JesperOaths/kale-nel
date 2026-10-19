@@ -30,6 +30,19 @@ assert '// kept existing kiosk feature line' in patched_extra
 assert "if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;" in patched_extra
 assert "x.face.snapshot_on_s9!==false)||null;" in patched_extra
 assert "notification('Manually selected person portrait" in patched_extra
+# Exact live V70 guards inspected read-only in management job #11860.
+actual=old.replace(
+ " return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&credibleFaceCrop(x))||null;",
+ " if(!folderApprovedSDClips(id).has(saved.clip))return null;\\n"
+ " return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&credibleFaceCrop(x))||null;",1)
+actual=actual.replace("!state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')",
+ "!folderApprovedSDClips(id).has(face.clip)",1)
+result=v.patch_js(actual,old,new).decode()
+assert "if(!folderApprovedSDClips(id).has(saved.clip))return null;" in result
+assert "if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;" in result
+assert "if(!id||!faceName.test(name)||face?.face?.snapshot_on_s9===false||" in result
+assert "Use as portrait" in result
+
 
 
 assert 'assignedFolders(row).includes(id)' in new
