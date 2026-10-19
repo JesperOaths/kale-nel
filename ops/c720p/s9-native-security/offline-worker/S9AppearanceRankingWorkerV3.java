@@ -30,6 +30,13 @@ public final class S9AppearanceRankingWorkerV3 {
   static final Path FEATURE=ROOT.resolve("features");
   static final Pattern KEY=Pattern.compile("[a-f0-9]{64}");
   static final Pattern INPUT_NAME=Pattern.compile("rank-input-v3-([a-f0-9]{16})[.]jsonl");
+  static String sha(byte[] bytes) throws Exception {
+    byte[] output=java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
+    StringBuilder result=new StringBuilder(64);
+    for(byte x:output)result.append(String.format(Locale.US,"%02x",x&255));
+    return result.toString();
+  }
+
   static final String VISUAL_SHA="ee5717ad7a90cf0c915afa1fb6a5399b966562c5d42aa6f4a0c6c84a5349e47d";
   static final String STRUCT_SHA="4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43";
 
@@ -79,8 +86,10 @@ public final class S9AppearanceRankingWorkerV3 {
     Path sidecar=FEATURE.resolve(key+"-visual.json").normalize();
     expect(sidecar.startsWith(FEATURE)&&Files.isRegularFile(sidecar)
         &&!Files.isSymbolicLink(sidecar),"Missing verified visual metadata");
-    JSONObject v=new JSONObject(new String(Files.readAllBytes(sidecar),
-                                               StandardCharsets.UTF_8));
+    byte[] visualBytes=Files.readAllBytes(sidecar);
+    expect(sha(visualBytes).equals(entry.optString("visual_sidecar_sha256","")),
+           "Visual source sidecar differs from bound corpus");
+    JSONObject v=new JSONObject(new String(visualBytes,StandardCharsets.UTF_8));
     expect(key.equals(v.optString("source_qualified_key"))&&
            VISUAL_SHA.equals(v.optString("model_sha256")),
            "Visual feature provenance invalid");
@@ -91,8 +100,10 @@ public final class S9AppearanceRankingWorkerV3 {
     Path histogram=FEATURE.resolve(key+"-hsv-v2.json").normalize();
     expect(histogram.startsWith(FEATURE)&&Files.isRegularFile(histogram)
         &&!Files.isSymbolicLink(histogram),"Uniform torso HSV32 missing");
-    JSONObject h=new JSONObject(new String(Files.readAllBytes(histogram),
-                                               StandardCharsets.UTF_8));
+    byte[] hsvBytes=Files.readAllBytes(histogram);
+    expect(sha(hsvBytes).equals(entry.optString("hsv_sidecar_sha256","")),
+           "Torso histogram differs from bound corpus");
+    JSONObject h=new JSONObject(new String(hsvBytes,StandardCharsets.UTF_8));
     expect("s9_uniform_upper_torso_hsv32_v2".equals(h.optString("schema"))
         &&"hue8_saturation2_value2_center_torso_v2".equals(h.optString("method"))
         &&key.equals(h.optString("source_qualified_key"))
