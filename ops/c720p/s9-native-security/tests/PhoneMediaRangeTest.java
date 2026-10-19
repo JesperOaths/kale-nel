@@ -70,7 +70,13 @@ public final class PhoneMediaRangeTest {
    File manifest=new File(root,name+".verified.json");
    try(FileOutputStream out=new FileOutputStream(manifest)){out.write("verified".getBytes("UTF-8"));}
    File preview=new File(variants,name+".360p.mp4");
+   File previewVerified=new File(variants,name+".360p.mp4.verified.json");
    try(FileOutputStream out=new FileOutputStream(preview)){out.write(data);}
+   byte[] incomplete=serve(root,"GET /preview/"+name+".360p.mp4 HTTP/1.1\r\n\r\n");
+   check(headers(incomplete).contains("404 Not Found"),"incomplete preview not served");
+   try(FileOutputStream out=new FileOutputStream(previewVerified)){
+    out.write(("{\"schema_version\":\"s9_native_low_duty_preview_v1\",\"read_only\":true,\"original_4k_unchanged\":true}").getBytes("UTF-8"));
+   }
    byte[] previewPart=serve(root,"GET /preview/"+name+".360p.mp4 HTTP/1.1\r\nRange: bytes=512-1023\r\n\r\n");
    check(headers(previewPart).contains("206 Partial Content"),"preview range 206");
    check(previewPart.length-split(previewPart)==512,"preview exact 512 bytes");
@@ -81,7 +87,7 @@ public final class PhoneMediaRangeTest {
    manifest.delete();
    byte[] orphan=serve(root,"GET /preview/"+name+".360p.mp4 HTTP/1.1\r\n\r\n");
    check(headers(orphan).contains("404 Not Found"),"never serve orphan preview without verified source");
-   preview.delete();variants.delete();
+   previewVerified.delete();preview.delete();variants.delete();
    byte[] traversal=serve(root,"GET /clip/../secrets HTTP/1.1\r\n\r\n");
    check(headers(traversal).contains("404 Not Found"),"no traversal");
    byte[] unfinished=serve(root,"GET /clip/"+name+".recording HTTP/1.1\r\n\r\n");
