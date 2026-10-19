@@ -28,7 +28,7 @@ def patch_js(live,old,new):
  for start,end in (
   ('function folderApprovedSDClips(id){','function assignedRecordingKeys(folder){'),
   ('function chosenPortrait(f){','function approvedPreviewClip(preview){'),
-  ("  badge(media,item.source==='drive'","  if(item.decision==='approved'){"),
+  (" badge(media,item.source==='drive'"," if(item.decision==='approved'){"),
   (' const faceMatches=state.faceList.filter('," paginate($('folderPage')"),
  ):
   previous=b.block(old,start,end)
