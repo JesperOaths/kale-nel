@@ -53,6 +53,28 @@ class Tests(unittest.TestCase):
             data=sample();mutate(data)
             with self.subTest(data=data),self.assertRaises(ValueError):
                 m.parse((m.MARKER+json.dumps(data)).encode())
+    def test_auxiliary_mp4_files_are_metadata_not_extra_events(self):
+        item=sample()
+        aux={"raw_mp4_files_seen":5,"verified_primary_events":1,
+             "preroll_segments":1,"preroll_without_verified_primary":0,
+             "completed_companion_mp4_files":1,"partial_completion_mp4_files":1,
+             "diagnostic_mp4_files":1,"unverified_or_unknown_mp4_files":0,
+             "auxiliary_files_are_not_additional_recordings":True,
+             "inventory_does_not_hash_originals":True}
+        item["summary"]["auxiliary_mp4_inventory"]=aux
+        snapshot,summary=m.parse((m.MARKER+json.dumps(item)).encode())
+        self.assertEqual(len(snapshot["records"]),1)
+        self.assertEqual(summary["auxiliary_mp4_inventory"]["raw_mp4_files_seen"],5)
+        for corrupted in (
+            {"raw_mp4_files_seen":6},
+            {"verified_primary_events":2},
+            {"preroll_without_verified_primary":2},
+            {"auxiliary_files_are_not_additional_recordings":False},
+            {"partial_completion_mp4_files":-1}):
+            data=sample()
+            data["summary"]["auxiliary_mp4_inventory"]={**aux,**corrupted}
+            with self.subTest(corrupted=corrupted),self.assertRaises(ValueError):
+                m.parse((m.MARKER+json.dumps(data)).encode())
     def test_atomic_0600_and_non_symlink(self):
         with tempfile.TemporaryDirectory() as root:
             p=Path(root)/"report.json"
