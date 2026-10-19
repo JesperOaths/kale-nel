@@ -115,6 +115,15 @@ def check_existing_feature(ctrl,clip):
         crop_sha=ctrl.detector_provenance(clip,key,metadata)
     except (ValueError,TypeError,KeyError,json.JSONDecodeError,RuntimeError):
         return "invalid_detector_provenance"
+    roi=ctrl.ROOT+"/inbox/"+key+".jpg"
+    image=ctrl.adb("shell","test -s "+roi,timeout=15,check=False)
+    if image.returncode:
+        if image.stderr.strip() or image.returncode!=1:
+            raise RuntimeError("ADB lost while verifying private original ROI")
+        return "missing_roi"
+    observed=ctrl.adb("shell","sha256sum "+roi,timeout=25).stdout.split()
+    if len(observed)<1 or observed[0]!=crop_sha:
+        return "invalid_roi_checksum"
     try:
         value=json.loads(ctrl.adb("exec-out","cat",sidecar,timeout=25).stdout)
     except (TypeError,ValueError,json.JSONDecodeError):
