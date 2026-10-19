@@ -132,8 +132,15 @@ def main():
   '<option value="skipped">Skipped</option><option value="rejected">Rejected</option></select>')
  html=one(html,'<p id="approvalClip"','<p id="approvalStatus" class="status" role="alert"></p>\n  <p id="approvalClip"')
  desired['people']=cache(html,'security-people-v45.js')
- for key,asset in [('hub','security-people-v50.html'),('entry','security-hub-v30.js'),('shell','frontyard-security-new/security-hub-v30.html')]:
+ for key,asset in [('hub','security-people-v50.html'),('entry','security-hub-v30.js')]:
   desired[key]=cache(existing[key][0].decode(),asset)
+ # The outer HA shell can embed the hub directly or use its entry iframe.
+ shell=existing['shell'][0];routes=0
+ for asset in ('security-people-v50.html','security-hub-v30.js','security-hub-v30.html'):
+  if (asset+'?v=').encode() in shell:
+   shell=cache(shell.decode(),asset);routes+=1
+ if not routes:raise RuntimeError('unknown_outer_shell_route')
+ desired['shell']=shell
  for key in ('backend','relay'):compile(desired[key],str(ASSETS[key]),'exec')
  # Validate Python/JS before changing any live file.
  with tempfile.TemporaryDirectory() as tmp:

@@ -23,6 +23,7 @@ DRIVE=BASE/"state/drive-security-archive.json"
 ROUTE="/new/api/s9-manual-recording-links"
 WRITE="/new/api/s9-manual-recording-links"
 WORKFLOW="manual_recording_links_v1"
+FILING_REVIEW_VERSION=65
 INTENT="manual-original-review-links-v1"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
 REMOTE=re.compile(r"[A-Za-z0-9._-]{1,180}[.]mp4\Z")

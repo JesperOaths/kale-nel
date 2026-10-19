@@ -89,6 +89,21 @@ def main():
      drive_before.get("archive_mode")=="S9-microSD-only"):
   raise RuntimeError("verified_historical_drive_baseline_unavailable")
  drive_count_before=len(drive_before["events"])
+ # V65 is a coordinated UI/relay/backend repair. An older push-triggered
+ # bootstrap must not replace its newer proxy extension with an older copy.
+ active_backend=TARGETS["backend"][0]
+ if active_backend.is_file() and b"FILING_REVIEW_VERSION=65" in active_backend.read_bytes():
+  if sha(active_backend.read_bytes())!=expected["backend"]:
+   raise RuntimeError("modern_filing_requires_coordinated_deployer")
+  if b"security-filing-v65-20261019" not in (WWW/"security-people-v50.html").read_bytes():
+   raise RuntimeError("modern_filing_ui_not_active")
+  links=api("/new/api/s9-manual-recording-links")
+  if links.get("ok") is not True or links.get("manual_links_only") is not True:
+   raise RuntimeError("modern_filing_registry_unavailable")
+  print("S9_MANUAL_CLIP_LINKS_DEPLOY_VERIFIED "+json.dumps({
+   "already":True,"modern_filing_version":65,"proxy_preserved":True,
+   "originals":len(clips),"historical_drive_clips":drive_count_before}),flush=True)
+  return
  staged={}
  for k,(path,source) in TARGETS.items():
   if (k!="backend" and (not path.is_file() or path.is_symlink())) or path.is_symlink():

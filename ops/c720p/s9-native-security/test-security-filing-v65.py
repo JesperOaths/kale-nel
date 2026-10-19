@@ -86,6 +86,23 @@ class Cases(unittest.TestCase):
    harness=(ROOT/'test-people-v45.js').read_text().replace("assert.equal(el('approvalCount').textContent,'3');","assert.equal(el('approvalCount').textContent,'1');")
    (target/'test-people-v45.js').write_text(harness)
    subprocess.run(['node',PREFIX+'test-people-v45.js'],cwd=directory,check=True)
+ def test_old_push_bootstrap_preserves_new_proxy_and_refuses_backend_downgrade(self):
+  installer=load('deploy-manual-recording-links-v1')
+  base=Path(self.tmp.name);backend=base/'backend.py';proxy=base/'proxy.py';page=base/'security-people-v50.html'
+  backend.write_bytes(Path(m.__file__).read_bytes());proxy.write_text('newer unrelated proxy features')
+  page.write_text('security-filing-v65-20261019')
+  targets={'backend':(backend,'ignored'),'proxy':(proxy,'ignored')}
+  def api(path):
+   if path=='/new/api/saved':return {'ok':True,'archive_mode':'S9-microSD-only','events':[{'clip_no':self.name}]}
+   if path=='/new/api/drive-saved':return {'ok':True,'events':[{}]}
+   return {'ok':True,'manual_links_only':True}
+  args=['installer','--ref','a'*40,'--backend-sha',v65.sha(backend.read_bytes()),'--proxy-sha','b'*64]
+  with patch.object(installer,'TARGETS',targets),patch.object(installer,'WWW',base),patch.object(installer,'api',api),\
+       patch.object(installer,'fetch',side_effect=AssertionError('must not fetch obsolete proxy')),patch('sys.argv',args):
+   installer.main()
+   args[4]='c'*64
+   with self.assertRaisesRegex(RuntimeError,'coordinated_deployer'):installer.main()
+  self.assertEqual(proxy.read_text(),'newer unrelated proxy features')
  def test_relay_patch_keeps_authorization_and_exact_browser_origin_checks(self):
   old=(ROOT/'deploy-manual-recording-links-relay-v2.py').read_text()
   self.assertIn('if not self.authorized()',old)
