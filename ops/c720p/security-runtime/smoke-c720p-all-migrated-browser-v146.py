@@ -70,10 +70,13 @@ def script():
     const length=Number(mp4.headers.get('Content-Length')||0);
     const range=mp4.headers.get('Content-Range')||'';
     const type=(mp4.headers.get('Content-Type')||'').split(';')[0].trim().toLowerCase();
-    if(mp4.status!==206||length!==1024||
-       range!=='bytes 0-1023/'+String(f.bytes)||type!=='video/mp4'){
+    const failure=mp4.status!==206?'range_non206':
+      length!==1024?'range_bad_length':
+      range!=='bytes 0-1023/'+String(f.bytes)?'range_manifest_total_mismatch':
+      type!=='video/mp4'?'range_bad_mime':null;
+    if(failure){
       try{await mp4.body?.cancel()}catch(_){}
-      return {ok:false,reason:'range_contract_failed',passed};
+      return {ok:false,reason:failure,passed};
     }
     const bytes=await mp4.arrayBuffer();
     if(bytes.byteLength!==1024)return {ok:false,reason:'range_body_short',passed};
@@ -135,6 +138,10 @@ def safe_failure_reason(error):
   "all_migrated_browser_ranges_not_verified_unsafe_or_duplicate_manifest_name",
   "all_migrated_browser_ranges_not_verified_signed_ticket_unavailable",
   "all_migrated_browser_ranges_not_verified_range_contract_failed",
+  "all_migrated_browser_ranges_not_verified_range_non206",
+  "all_migrated_browser_ranges_not_verified_range_bad_length",
+  "all_migrated_browser_ranges_not_verified_range_manifest_total_mismatch",
+  "all_migrated_browser_ranges_not_verified_range_bad_mime",
   "all_migrated_browser_ranges_not_verified_range_body_short",
   "all_migrated_browser_ranges_not_verified_metrics",
   "regenerated_index_guard_not_active",
