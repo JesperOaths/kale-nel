@@ -27,6 +27,11 @@ CHECK="S9_V3_ORPHAN_OSNET_DRYRUN "
 DONE="S9_V3_ORPHAN_OSNET_RECOVERED "
 DEFER="S9_V3_ORPHAN_OSNET_DEFERRED "
 BLOCK="S9_V3_ORPHAN_OSNET_BLOCKED "
+STAGE={"value":"startup"}
+def mark(value):
+    # Only source-authored fixed stage names, never an exception or clip ID.
+    STAGE["value"]=value
+
 
 def helper(name,alias):
     p=HERE/name
@@ -102,18 +107,23 @@ def choose_v40_source(old,entry):
     return matches[0]
 
 def run(apply=False):
+    mark("hub_disk_preflight")
     if shutil.disk_usage("/").free<MIN_HUB_BYTES:
         raise RuntimeError("hub_disk_reserve_low")
     if LOCK.is_symlink() or not LOCK.parent.is_dir():
         raise RuntimeError("unsafe_shared_lock")
+    mark("shared_worker_lock")
     fd=os.open(LOCK,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     with os.fdopen(fd,"rb") as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        mark("camera_health")
         healthy()
+        mark("loading_source_dependencies")
         h=helper("backfill-s9-hsv32-uniform-v2.py","s9_one_orphan_hsv")
         old=helper("backfill-v40-person-rois-on-s9.py","s9_one_orphan_v40")
         ctrl=helper("backfill-s9-original-roi-osnet-temporal-v2.py","s9_one_orphan_provenance")
         rank=helper("run-s9-uniform-appearance-rankings-v3.py","s9_one_orphan_rank_validator")
+        mark("historical_v2_provenance")
         original_map=rank.BASELINE_V2_MAP
         if original_map.is_symlink() or not original_map.is_file():
             raise RuntimeError("immutable_v2_map_unavailable")
@@ -124,9 +134,13 @@ def run(apply=False):
         baseline=frozen.get("rows")
         if not isinstance(baseline,list) or len(baseline)!=57:
             raise RuntimeError("untrusted_historical_v2_rows")
+        mark("phone_model_and_dex_readiness")
         camera_id,_=ctrl.readiness()
+        mark("manual_review_registry")
         approved=ctrl.approved_names()
+        mark("verified_original_catalog")
         inventory_before=ctrl.primary_events()
+        mark("source_crop_inventory")
         rows=h.inventory(include_unreviewed=True)
         keyset={r.get("key") for r in rows}
         if len(keyset)!=len(rows):raise RuntimeError("duplicate_source_keys")
@@ -138,7 +152,9 @@ def run(apply=False):
         def present(key,kind):
             return h.remote_exists(h.ROOT+"/features/"+key+
                                    ("-visual.json" if kind=="visual" else "-hsv-v2.json"))
+        mark("v2_hsv_osnet_source_presence")
         orphan=choose_orphan(rows,[b["key"] for b in baseline],present)
+        mark("original_v40_crop_sha_provenance")
         old_source=choose_v40_source(old,orphan)
         if not apply:
             print(CHECK+json.dumps({"original_v2_preserved":True,
@@ -147,23 +163,29 @@ def run(apply=False):
                 "originals_modified":False,"reviews_modified":False,
                 "private_identifiers_disclosed":False}),flush=True)
             return
+        mark("pre_inference_capture_readiness")
         healthy()
+        mark("one_actual_on_phone_osnet_inference")
         result=old.extract_one(old_source)
         if result not in ("verified_new","already_indexed"):
             raise RuntimeError("on_phone_osnet_not_verified")
         # Re-read both real phone sidecars and their SHA256 hashes.
+        mark("persisted_visual_and_hsv_sha_readback")
         complete=rank.verified_ready_subset(h,[orphan])
         if len(complete)!=1 or complete[0]["key"]!=orphan["key"]:
             raise RuntimeError("post_processing_descriptor_pair_invalid")
+        mark("post_inference_camera_readiness")
         healthy()
         if ctrl.adb("shell","pidof nl.kalenel.s9security",timeout=15).stdout.strip()!=camera_id:
             raise RuntimeError("live_camera_pid_changed")
+        mark("post_inference_review_and_video_provenance")
         if ctrl.approved_names()!=approved:
             raise RuntimeError("manual_review_registry_changed")
         if not set(inventory_before).issubset(ctrl.primary_events()):
             raise RuntimeError("original_video_catalog_regressed")
         if original_map.read_bytes()!=frozen_bytes:
             raise RuntimeError("original_v2_baseline_changed")
+        mark("complete")
         print(DONE+json.dumps({
             "single_real_osnet_vector_verified":True,
             "existing_hsv32_matched_and_verified":True,
@@ -184,11 +206,11 @@ def main():
         reason=str(exc)
         temporary={"camera_too_warm","4k_capture_not_idle_ready"}
         if reason in temporary:
-            print(DEFER+json.dumps({"reason":reason,"completed":False,
+            print(DEFER+json.dumps({"reason":reason,"stage":STAGE["value"],"completed":False,
                 "may_have_written_one_real_sidecar":args.apply,
                 "private_identifiers_disclosed":False}),flush=True)
             return
-        print(BLOCK+json.dumps({"reason":reason if reason in
+        print(BLOCK+json.dumps({"stage":STAGE["value"],"reason":reason if reason in
              {"hub_disk_reserve_low","expected_exactly_one_orphan",
               "historical_v2_reference_missing","v40_crop_provenance_mismatch",
               "invalid_source_inventory_size"} else "private_verification_failed",
