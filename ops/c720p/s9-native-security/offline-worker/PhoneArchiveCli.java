@@ -20,6 +20,49 @@ public final class PhoneArchiveCli {
   if(pos<0||!raw.startsWith("HTTP/1.1 200 "))throw new IOException("phone_catalog_response_unavailable");
   return new JSONObject(raw.substring(pos+4));
  }
+ /**
+  * Inventory auxiliary video files by role, without counting them as separate
+  * events. A preroll is a capture segment, not an independent recording.
+  * Only basename shapes are inspected; no MP4/face data is read or transferred.
+  */
+ static JSONObject auxiliaryInventory(File archive,JSONArray verified)throws Exception {
+  Set<String> primary=new HashSet<>();
+  for(int i=0;i<verified.length();i++)primary.add(verified.getJSONObject(i).getString("name"));
+  File[] items=archive.listFiles();
+  if(items==null||items.length>20000)throw new IOException("sd_inventory_unavailable_or_unbounded");
+  int primaryFound=0,preroll=0,orphanPreroll=0,completed=0,partial=0,diagnostics=0,other=0;
+  for(File f:items) {
+   if(!f.isFile()||java.nio.file.Files.isSymbolicLink(f.toPath()))continue;
+   String name=f.getName();
+   if(!name.endsWith(".mp4"))continue;
+   if(name.matches("motion_[0-9]{13}[.]mp4")){
+    if(primary.contains(name))primaryFound++;
+    else other++;  // a raw MP4 without valid sidecar remains unverified
+   }else if(name.matches("motion_[0-9]{13}[.]mp4[.]preroll[.]mp4")){
+    preroll++;
+    if(!primary.contains(name.substring(0,name.length()-".preroll.mp4".length())))
+     orphanPreroll++;
+   }else if(name.matches("motion_[0-9]{13}[.]mp4[.]complete[.]mp4")){
+    completed++;
+   }else if(name.matches("motion_[0-9]{13}[.]mp4[.]complete[.]partial[.]mp4")){
+    partial++;
+   }else if(name.matches("diagnostic_preroll_[A-Za-z0-9._-]{1,128}[.]mp4")){
+    diagnostics++;
+   }else other++;
+  }
+  if(primaryFound!=primary.size())throw new IOException("verified_original_missing_during_auxiliary_scan");
+  return new JSONObject()
+   .put("raw_mp4_files_seen",primaryFound+preroll+completed+partial+diagnostics+other)
+   .put("verified_primary_events",primaryFound)
+   .put("preroll_segments",preroll)
+   .put("preroll_without_verified_primary",orphanPreroll)
+   .put("completed_companion_mp4_files",completed)
+   .put("partial_completion_mp4_files",partial)
+   .put("diagnostic_mp4_files",diagnostics)
+   .put("unverified_or_unknown_mp4_files",other)
+   .put("auxiliary_files_are_not_additional_recordings",true)
+   .put("inventory_does_not_hash_originals",true);
+ }
  private static JSONObject summary(JSONArray items,File archive)throws Exception {
   TimeZone tz=TimeZone.getTimeZone("Europe/Amsterdam");
   TreeMap<String,Integer> hours=new TreeMap<>(),days=new TreeMap<>();
@@ -55,6 +98,7 @@ public final class PhoneArchiveCli {
     .put("timezone","Europe/Amsterdam")
     .put("operating_day_start_hour",6)
     .put("recordings",items.length())
+    .put("auxiliary_mp4_inventory",auxiliaryInventory(archive,items))
     .put("hourly_recording_counts",hourly)
     .put("daily_recording_counts",daily)
     .put("sidecar_claimed_video_bytes",claimedBytes)

@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveCli.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveCliInventoryTest.java'
       - 'ops/c720p/security-runtime/s9_standalone_phone_catalog_v1.py'
       - 'ops/c720p/security-runtime/test-s9-standalone-phone-catalog-v1.py'
       - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java'
@@ -34,3 +35,8 @@ jobs:
             ops/c720p/s9-native-security/offline-worker/PhoneArchiveCli.java
           test -s "$work/nl/kalenel/s9security/PhoneArchiveCli.class"
           echo S9_ISOLATED_ARCHIVE_WORKER_COMPILES_AND_TESTS
+          curl -fLsS --max-time 45 'https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar' -o "$work/json.jar"
+          jar tf "$work/json.jar" | grep -q 'org/json/JSONObject.class'
+          javac -source 8 -target 8 -cp "$work:$ANDROID_JAR:$work/json.jar" -d "$work" \
+            ops/c720p/s9-native-security/offline-worker/PhoneArchiveCliInventoryTest.java
+          java -cp "$work:$work/json.jar" nl.kalenel.s9security.PhoneArchiveCliInventoryTest
