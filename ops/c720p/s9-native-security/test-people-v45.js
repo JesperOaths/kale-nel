@@ -30,9 +30,11 @@ assert(js.includes('for(let pass=0;pass<3&&references.length<18;pass++)'),
 assert(js.includes('Math.abs(candidateTime-ref.recorded_ms)>72*60*60*1000'),
  'Clothing-only suggestions require nearby timestamps, not ancient colour lookalikes');
 assert(!html.includes('id="approvalConfirmed"'),'Remove redundant second confirmation checkbox');
-assert(js.includes('state.lastFolder=folder||state.lastFolder'),'Review queue must retain last selected person');
+assert(js.includes('state.lastFolder=folders[0]||state.lastFolder'),'Review queue must retain last selected person');
 const keepMarkup=html.split('<dialog id="approvalDialog"')[1]?.split('</dialog>')[0]||'';
 assert(keepMarkup.includes('id="approvalFolder"'),'Keep dialog must expose the folder picker');
+assert(keepMarkup.includes('id="approvalAddPerson"'),'Group clips need a repeatable person control');
+assert(keepMarkup.includes('id="approvalExtraPeople"'),'Group clips need additional person selection rows');
 assert(keepMarkup.includes('id="approvalLabel"'),'Keep dialog must expose new folder input');
 assert(keepMarkup.includes('Confirm &amp; keep'),'Positive submit button must clearly confirm reviewed decision');
 assert(keepMarkup.includes('id="approvalCancelFooter"'),'Keep dialog must expose cancel');
@@ -85,10 +87,13 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
      return {ok:false,status:409,json:async()=>({ok:false,error:'review_revision_changed'})};
     if(badReceipt)return {ok:true,json:async()=>({ok:true,persisted:true,manual_links_only:true,source:'sd',name:'wrong.mp4',revision:linkRevision+1,folder:payload.folder})};
     linkItems[payload.source+':'+payload.name]={source:payload.source,
-      name:payload.name,folder:payload.folder,review_status:({assign:'assigned',return_to_queue:'inbox',skip:'skipped',reject:'rejected'})[payload.action]};
+      name:payload.name,folder:payload.folder,
+      folders:payload.folders||(payload.folder?[payload.folder]:[]),
+      review_status:({assign:'assigned',return_to_queue:'inbox',skip:'skipped',reject:'rejected'})[payload.action]};
     linkRevision++;
     return {ok:true,json:async()=>({ok:true,persisted:true,source:payload.source,name:payload.name,manual_links_only:true,revision:linkRevision,
       folder:linkItems[payload.source+':'+payload.name].folder,
+      folders:linkItems[payload.source+':'+payload.name].folders,
       review_status:linkItems[payload.source+':'+payload.name].review_status})};
    }
    posts.push({payload,opts});
@@ -221,8 +226,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(!html.includes('id="appearancePreview"'),'Clothing group must not be in bottom of scan status');
  assert(!html.includes('id="candidateList"'),'Clothing group must not be attached below saved people');
  assert(el('reviewPreview').children.length>=1,'Coverage summary must display outstanding work');
- assert.equal(el('reviewAlerts').children.length,1,'The existing Jesper review issue must be highlighted as an action');
- assert(scan(el('reviewAlerts'),'Inspect originals →'),'Saved clips flagged for person recheck must be actionable');
+ assert.equal(el('reviewAlerts').children.length,0,'Reviewed clips may not be repeatedly flagged for rechecking');
  assert(el('peopleReviewNow').handlers.click,'Review action must remain accessible without a duplicate recording list');
  let keep;
  el('openReview').handlers.click();for(let i=0;i<4;i++)await flush();
@@ -267,8 +271,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
  const folderGrid=el('folderGrid');
  assert(folderGrid.children.length,'Saved folder must show original recording rows');
- assert.equal(el('folderFaces').hidden,true,'Unverified context crops must not masquerade as faces');
- assert.equal(el('folderFaceGrid').children.length,0);
+ assert.equal(el('folderFaces').hidden,false,'Use real saved face crops from a filed original, with explicit portrait choice');
+ assert(el('folderFaceGrid').children.length>0);
  assert(!scan(folderGrid,'View face candidate 1'),'Do not surface scenery as a verified face');
  assert.equal(el('savedList').children[0].children[0].children[0].tagName,'SPAN',
   'Saved folder portrait must be a neutral initial, not a crop of bicycles');
@@ -362,7 +366,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('viewerFile').hidden,false,'Assigned Drive original can be refiled');
  assert.equal(el('viewerReturn').hidden,false,'Assigned Drive original has a return action in modal');
  el('closeVideo').handlers.click();
- const returnDrive=scan(driveInPerson,'↩ Return to review queue');
+ const returnDrive=scan(driveInPerson,'↩ Remove from this person');
  assert(returnDrive,'Person folder must allow returning an archived Drive original');
  returnDrive.handlers.click();for(let i=0;i<6;i++)await flush();
  assert.equal(linkItems['drive:'+driveClip].folder,null);
