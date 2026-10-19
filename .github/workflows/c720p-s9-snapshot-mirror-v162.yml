@@ -1,0 +1,76 @@
+name: C720P S9+ verified legacy snapshot companion V162
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/c720p_to_s9_snapshot_mirror_v162.py'
+      - 'ops/c720p/security-runtime/test-c720p-s9-snapshot-mirror-v162.py'
+      - '.github/workflows/c720p-s9-snapshot-mirror-v162.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/c720p_to_s9_snapshot_mirror_v162.py'
+      - 'ops/c720p/security-runtime/test-c720p-s9-snapshot-mirror-v162.py'
+      - '.github/workflows/c720p-s9-snapshot-mirror-v162.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-snapshot-companion-v162
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Offline safety and evidence regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/security-runtime
+          python3 -m py_compile "$root/c720p_to_s9_snapshot_mirror_v162.py"
+          python3 "$root/test-c720p-s9-snapshot-mirror-v162.py"
+          echo C720P_S9_SNAPSHOT_V162_NO_MEDIA_DELETION_CI_PASS
+  physical-preview:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Inspect local JPEGs and migration manifest without phone writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          source="ops/c720p/security-runtime/c720p_to_s9_snapshot_mirror_v162.py"
+          hash="$(sha256sum "$source" | cut -d' ' -f1)"
+          stage="/tmp/c720p-s9-snapshots-${GITHUB_SHA:0:12}"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$source"
+          cmd="umask 077 && mkdir -p '$stage' && curl -fsSL --retry 2 --max-time 35 '$url' -o '$stage/mirror.py' && printf '%s  %s\n' '$hash' '$stage/mirror.py' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage/mirror.py'"
+          idem="s9-snapshot-companion-preview-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-snapshot-companion-preview','diagnostic',:'cmd',110,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "SNAPSHOT_PREVIEW_JOB=$id"
+          for attempt in $(seq 1 65); do
+            st="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$st" == done* || "$st" == error* || "$st" == failed* ]];then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3500)"
+              echo "$output"
+              [[ "$st" == 'done|0' ]] || exit 1
+              grep -q 'C720P_S9_SNAPSHOT_MIRROR_V162' <<< "$output"
+              grep -q '"state": "preview"' <<< "$output"
+              grep -q '"local_deleted": 0' <<< "$output"
+              grep -q '"mp4_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Snapshot preview did not complete";exit 1
