@@ -106,6 +106,20 @@ class Tests(unittest.TestCase):
    with self.assertRaisesRegex(RuntimeError,"snapshot_inventory"):
     m.candidates()
   self.scenario(check)
+ def test_partial_five_of_six_verified_video_manifest_fails_closed(self):
+  def check(sources,stage):
+   _,_,manifest=sources
+   doc=json.loads(manifest.read_text())
+   original=doc["records"][VIDEO]
+   for n in range(2,7):
+    name="old-garden-%04d.mp4"%n
+    copy=dict(original)
+    copy["sd_path"]=m.SD+"/Android/data/nl.kalenel.s9security/files/C720PMigrated/"+name
+    doc["records"][name]=copy
+   manifest.write_text(json.dumps(doc))
+   with self.assertRaisesRegex(RuntimeError,"six_jpeg_snapshot_parity"):
+    m.candidates()
+  self.scenario(check)
  def test_outside_path_or_symlink_excluded(self):
   def check(sources,stage):
    source,events,_=sources
