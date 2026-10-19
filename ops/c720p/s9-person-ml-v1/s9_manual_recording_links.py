@@ -82,8 +82,8 @@ def report():
    "manual_links_only":True,"automatic_identity_matching":False}
 
 def mutate(body,sd_names):
- if not isinstance(body,dict) or not {"action","source","name","folder","revision","human_confirmed"}.issubset(body) or
-    set(body)-{"action","source","name","folder","folders","revision","human_confirmed"}:
+ if (not isinstance(body,dict) or not {"action","source","name","folder","revision","human_confirmed"}.issubset(body) or
+    set(body)-{"action","source","name","folder","folders","revision","human_confirmed"}):
   return 400,{"ok":False,"error":"wrong_fields"}
  action,source,name=body["action"],body["source"],body["name"]
  if action not in ("assign","return_to_queue","skip","reject"):
