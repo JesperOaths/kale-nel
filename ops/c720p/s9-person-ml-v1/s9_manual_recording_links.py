@@ -82,7 +82,8 @@ def report():
    "manual_links_only":True,"automatic_identity_matching":False}
 
 def mutate(body,sd_names):
- if not isinstance(body,dict) or set(body)!={"action","source","name","folder","revision","human_confirmed"}:
+ if not isinstance(body,dict) or not {"action","source","name","folder","revision","human_confirmed"}.issubset(body) or
+    set(body)-{"action","source","name","folder","folders","revision","human_confirmed"}:
   return 400,{"ok":False,"error":"wrong_fields"}
  action,source,name=body["action"],body["source"],body["name"]
  if action not in ("assign","return_to_queue","skip","reject"):
@@ -94,8 +95,16 @@ def mutate(body,sd_names):
  folder=body["folder"]
  if action=="assign" and (not isinstance(folder,str) or not FOLDER.fullmatch(folder)):
   return 400,{"ok":False,"error":"unknown_folder_format"}
- if action!="assign" and folder is not None:
-  return 400,{"ok":False,"error":"return_requires_null_folder"}
+ # A single atomic review action may name multiple people. Old callers remain
+ # valid; the first folder mirrors the original v1 single-person field.
+ folders=body.get("folders",[folder] if action=="assign" else [])
+ if action=="assign":
+  if (not isinstance(folders,list) or not 1<=len(folders)<=12 or
+      any(not isinstance(x,str) or not FOLDER.fullmatch(x) for x in folders)
+      or len(set(folders))!=len(folders) or folders[0]!=folder):
+   return 400,{"ok":False,"error":"invalid_person_selection"}
+ elif folder is not None or ("folders" in body and folders!=[]):
+  return 400,{"ok":False,"error":"return_requires_empty_person_selection"}
  if type(body["revision"]) is not int:
   return 400,{"ok":False,"error":"revision_required"}
  LOCK.parent.mkdir(parents=True,exist_ok=True)
@@ -107,7 +116,8 @@ def mutate(body,sd_names):
    return 409,{"ok":False,"error":"review_revision_changed"}
   key=source+":"+name
   old=before["items"].get(key)
-  entry={"folder":folder if action=="assign" else None,
+  entry={"folder":folders[0] if action=="assign" else None,
+         "folders":folders if action=="assign" else [],
          "source":source,"name":name,
          "review_status":{"assign":"assigned","return_to_queue":"inbox",
                           "skip":"skipped","reject":"rejected"}[action]}
@@ -115,7 +125,8 @@ def mutate(body,sd_names):
            "items":{**before["items"],key:entry}}
   log={"at":dt.datetime.now(dt.timezone.utc).isoformat(),"source":source,
        "name":name,"from":old.get("folder") if isinstance(old,dict) else None,
-       "to":entry["folder"],"revision":updated["revision"],
+       "to":entry["folder"],"from_folders":(old.get("folders",[old["folder"]] if old.get("folder") else []) if isinstance(old,dict) else []),
+       "to_folders":entry["folders"],"revision":updated["revision"],
        "manual":True,"action":action,"from_review_status":
        old.get("review_status") if isinstance(old,dict) else None,
        "to_review_status":entry["review_status"]}
@@ -133,7 +144,7 @@ def mutate(body,sd_names):
   if saved["revision"]!=updated["revision"] or saved["items"].get(key)!=entry:
    return 503,{"ok":False,"error":"persisted_assignment_not_verified"}
   return 200,{"ok":True,"revision":updated["revision"],"source":source,"name":name,
-    "folder":entry["folder"],"review_status":entry["review_status"],
+    "folder":entry["folder"],"folders":entry["folders"],"review_status":entry["review_status"],
     "persisted":True,"manual_links_only":True}
 
 def install(H,sd_names):
