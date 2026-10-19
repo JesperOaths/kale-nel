@@ -1,0 +1,35 @@
+name: S9 phone-internal ledger checkpoint V196 (host-only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedLedgerTrustedCheckpointV196.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedLedgerTrustedCheckpointTestV196.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-ledger-internal-checkpoint-v196.py'
+      - '.github/workflows/s9-ledger-internal-checkpoint-v196.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedLedgerTrustedCheckpointV196.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedLedgerTrustedCheckpointTestV196.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-ledger-internal-checkpoint-v196.py'
+      - '.github/workflows/s9-ledger-internal-checkpoint-v196.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic_fsync_checkpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test phone-private anchored checkpoint without production access
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/test-s9-ledger-internal-checkpoint-v196.py"
+          python3 "$d/test-s9-ledger-internal-checkpoint-v196.py"
+          python3 "$d/test-s9-ledger-trusted-head-v195.py"
+          python3 "$d/test-s9-migrated-ledger-v193.py"
