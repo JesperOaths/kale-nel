@@ -24,7 +24,8 @@ is authorized by the mere presence of model files.
   512-D cosine scorer; requested 0.70 structural + 0.30 visual formula **only**
   when both vectors are finite, nonzero, from matching model revisions AND
   structural vectors are marked as produced from properly aligned faces.
-  Otherwise use 0.75 visual + 0.25 valid pairwise HSV histogram comparison.
+  Otherwise use 0.75 visual + 0.25 valid pairwise HSV histogram comparison
+  supplied at comparison time, not stored in either per-crop record.
   No reliable fallback -> no ranking. Scores are similarity indicators,
   **never percentages of probability of a person's identity**.
 - `stage-s9-offline-models.py`: pinned, bounded, stream-only transfer of
@@ -79,3 +80,21 @@ must be verified before the phone runtime can consume it.
 Do not claim either phase deployed or full archive backfilled solely because
 the standalone similarity Java test passes. Never touch the live recorder or
 restart/install its APK to bootstrap this worker.
+
+## Actual S9+ synthetic execution result
+
+C720P diagnostic job **11573** compiled these Java sources with `javac`,
+converted them to Android DEX using `d8`, temporarily copied the tiny DEX
+package to `/data/local/tmp` on the S9+, and executed
+`nl.kalenel.s9offline.PhoneOfflineSimilarityTest` via
+`app_process`. Result: **exit 0**, `S9_PHONE_MULTIVECTOR_SCORE_TEST_PASS`.
+The temporary test package was removed. This establishes genuine on-phone
+execution of the cosine-score module **only**, not model inference or 4K
+backfill. The test did not read any person/face recordings and did not modify
+the camera service.
+
+The Hugging Face ArcFace HTTPS source returned HTTP 200 with the expected
+174,383,860-byte size (C720P probe #11565), and model-staging dry-run
+**11570** passed. **Actual ONNX weight download/install on phone was not
+confirmed**; do not claim either backbone provisioned or any embeddings
+populated. The ORT runtime and OSNet export are still absent.
