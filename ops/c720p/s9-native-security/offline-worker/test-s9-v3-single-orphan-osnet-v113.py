@@ -61,15 +61,24 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"historical_v2_reference_missing"):
             m.choose_orphan(rows,baseline,
                  lambda key,kind:(key in paired if kind=="visual" else True))
-    def test_refuse_multiple_or_no_orphans(self):
+    def test_two_new_hsv_only_crops_recover_deterministically_one_per_window(self):
         rows=inventory();baseline=[x["key"] for x in rows[:57]]
-        with self.assertRaisesRegex(RuntimeError,"exactly_one_orphan"):
+        with self.assertRaisesRegex(RuntimeError,"no_pending_v40_histogram_only_crop"):
             m.choose_orphan(rows,baseline,lambda key,kind:True)
-        rows.append({"key":"a"*64,"clip":"motion_1700009999000.mp4",
-                     "crop_sha256":"b"*64,"source":"s9_sd","cohort":"v40"})
-        with self.assertRaisesRegex(RuntimeError,"exactly_one_orphan"):
-            m.choose_orphan(rows,baseline,lambda key,kind:(
-                key in baseline if kind=="visual" else True))
+        extra={"key":"a"*64,"clip":"motion_1700009999000.mp4",
+               "crop_sha256":"b"*64,"source":"s9_sd","cohort":"v40"}
+        rows.append(extra)
+        # First pass chooses the lower SHA key and does not attempt two crops.
+        chosen=m.choose_orphan(rows,baseline,lambda key,kind:(
+            key in baseline if kind=="visual" else True))
+        self.assertEqual(chosen["key"],rows[57]["key"])
+        # After the first real OSNet sidecar exists, the next window selects
+        # only the second pending crop, never an already-complete one.
+        paired=set(baseline+[chosen["key"]])
+        self.assertEqual(
+            m.choose_orphan(rows,baseline,
+                lambda key,kind:(key in paired if kind=="visual" else True))["key"],
+            extra["key"])
     def test_refuse_approved_orphan_or_nonunique_crop(self):
         rows=inventory();rows[57]["cohort"]="approved_new"
         base=[x["key"] for x in rows[:57]]
