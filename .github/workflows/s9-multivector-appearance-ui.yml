@@ -1,0 +1,61 @@
+name: Guarded S9+ verified appearance UI rollout
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-s9-multivector-appearance-ui-v1.py'
+      - 'ops/c720p/s9-native-security/test-s9-multivector-appearance-ui-v1.py'
+      - '.github/workflows/s9-multivector-appearance-ui.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-s9-multivector-appearance-ui-v1.py'
+      - 'ops/c720p/s9-native-security/test-s9-multivector-appearance-ui-v1.py'
+      - '.github/workflows/s9-multivector-appearance-ui.yml'
+permissions:
+  contents: read
+jobs:
+  ui-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test source-preserving UI patch without camera or archive modifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security
+          python3 -m py_compile "$root/deploy-s9-multivector-appearance-ui-v1.py"
+          python3 "$root/test-s9-multivector-appearance-ui-v1.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          import importlib.util
+          p=Path("ops/c720p/s9-native-security/deploy-s9-multivector-appearance-ui-v1.py")
+          spec=importlib.util.spec_from_file_location("s9_verified_ui",p)
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          html,_=mod.patch_html(Path("ops/c720p/s9-native-security/security-face-folders-v22.html").read_bytes())
+          txt=html.decode()
+          assert txt.count('S9_MULTIVECTOR_APPEARANCE_UI_V1')==1
+          assert "category==='osnet_hsv'" in txt
+          assert "id=\"appearanceResults\"" in txt
+          assert "id=\"casesSection\"" in txt
+          assert "id=\"browseGrid\"" in txt
+          assert "id=\"appearanceTab\"" in txt
+          assert "id=\"appearanceCategory\"" in txt
+          assert "runVerifiedMultiVectorAppearance(" in txt
+          Path("/tmp/s9-verified-ui-after-patch.html").write_bytes(html)
+          print("S9_VERIFIED_MULTIVECTOR_UI_PATCH_CONTRACT_PASS")
+          PY
+      - name: Parse all injected JS without executing network calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          doc=Path('/tmp/s9-verified-ui-after-patch.html').read_text()
+          scripts=re.findall(r'<script(?:\s+[^>]*)?>(.*?)</script>',doc,re.S)
+          inline=[x for x in scripts if 'function runAppearanceSearch' in x]
+          if len(inline)!=1:raise SystemExit('Could not isolate main app inline JS')
+          Path('/tmp/s9-appearance-ui.js').write_text(inline[0])
+          PY
+          node --check /tmp/s9-appearance-ui.js
+          echo 'S9_MULTIVECTOR_APPEARANCE_BROWSER_JS_PARSE_PASS'
