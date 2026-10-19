@@ -1,0 +1,13 @@
+[Unit]
+Description=Verify one S9+ recoverable MP4 range per safe window
+
+[Timer]
+OnBootSec=2h
+OnUnitInactiveSec=3h
+RandomizedDelaySec=20min
+AccuracySec=10min
+Persistent=false
+Unit=c720p-s9-recovery-playback-smoke-v2.service
+
+[Install]
+WantedBy=timers.target
