@@ -23,12 +23,14 @@ class ArchiveHistogramContract(unittest.TestCase):
         self.assertIn('"archive_unassigned"',source)
         self.assertIn('if row["cohort"]!="v40":',source)
 
-    def test_v3_uses_all_real_crops_not_only_approved(self):
+    def test_v3_uses_all_complete_real_crops_not_only_approved(self):
         source=(ROOT/"run-s9-uniform-appearance-rankings-v3.py").read_text()
         self.assertIn('module.inventory(include_unreviewed=True)',source)
         self.assertIn('"archive_unassigned"',source)
-        self.assertIn('module.safe_visual(row["key"],row["crop_sha256"])',source)
-        self.assertIn('row["hsv_sidecar_sha256"]',source)
+        self.assertIn('if not module.remote_exists(hsv_path)',source)
+        self.assertIn('module.safe_visual(key,crop)',source)
+        self.assertIn('complete["hsv_sidecar_sha256"]=hsv_sha',source)
+        self.assertIn('verified_v2_baseline(rows)',source)
 
     def test_unassigned_crop_provenance_without_identity_assertion(self):
         h=load("s9_hist_archive_sources","backfill-s9-hsv32-uniform-v2.py")
