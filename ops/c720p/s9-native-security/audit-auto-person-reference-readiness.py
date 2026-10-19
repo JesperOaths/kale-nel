@@ -106,21 +106,29 @@ def main():
  if registry.get("manual_links_only") is not True or not isinstance(registry.get("items"),dict):
   raise RuntimeError("manual_folder_links_unavailable")
  linked=registry["items"]
+ # Source-qualified manual state wins over V40: do not count a returned,
+ # skipped, rejected or moved original as an approved reference. Multiple
+ # explicitly confirmed people each retain that same original's membership.
  for source_key,entry in linked.items():
-  if not isinstance(entry,dict):continue
-  folder=entry.get("folder")
-  if not isinstance(folder,str) or not folder:continue
-  if source_key.startswith("sd:"):
-   clip=source_key[3:]
-   if CLIP.fullmatch(clip) and clip in sd_names:approvals[folder].add(clip)
+  if not source_key.startswith("sd:") or not isinstance(entry,dict):continue
+  clip=source_key[3:]
+  if not CLIP.fullmatch(clip) or clip not in sd_names:continue
+  if "folders" not in entry and "folder" not in entry:continue
+  for ids in approvals.values():ids.discard(clip)
+  people=entry.get("folders")
+  if people is None:people=[entry.get("folder")] if entry.get("folder") else []
+  if not isinstance(people,list):raise RuntimeError("Invalid manual person memberships")
+  if any(not isinstance(x,str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}",x) for x in people):
+   raise RuntimeError("Invalid person ID in manual overlay")
+  if entry.get("review_status","assigned")=="assigned":
+   for folder in dict.fromkeys(people):approvals[folder].add(clip)
  active_folders=[f for f in folders if not f.get("automatic_appearance_group") or f.get("approved_clips")]
  approved_clips=set().union(*approvals.values()) if approvals else set()
  enough_quality=sum(sum(per_clip[c]["quality"]>0 for c in ids)>=2 for ids in approvals.values())
  enough_aligned=sum(sum(per_clip[c]["aligned"]>0 for c in ids)>=2 for ids in approvals.values())
  quality_ref_clips=sum(per_clip[c]["quality"]>0 for c in approved_clips)
  aligned_ref_clips=sum(per_clip[c]["aligned"]>0 for c in approved_clips)
- unassigned={c for c in sd_names if c not in approved_clips and
-  (linked.get("sd:"+c) or {}).get("folder") is None}
+ unassigned={c for c in sd_names if c not in approved_clips}
  drive_count=None
  try:
   drive=read("/new/api/drive-saved")
