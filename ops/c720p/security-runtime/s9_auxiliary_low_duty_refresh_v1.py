@@ -80,7 +80,7 @@ def run(*,execute=False):
         check_other_jobs()
         if DEX.is_symlink() or not DEX.is_file() or hashlib.sha256(DEX.read_bytes()).hexdigest()!=DEX_SHA:
             raise ValueError("missing_pinned_isolated_phone_worker")
-        report=scanlib.scan(DEX,DEX_SHA,save=True)
+        report=scanlib.scan(DEX,DEX_SHA,save=True,health_check=check_other_jobs)
         if report["total_unpaired"]!=sum(x["checked"] for x in report["by_role"].values()):
             raise ValueError("postscan_auxiliary_reconciliation")
         if report["originals_modified"] is not False or report["manual_person_reviews_modified"] is not False:
