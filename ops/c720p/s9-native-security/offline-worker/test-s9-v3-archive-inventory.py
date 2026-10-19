@@ -34,7 +34,7 @@ class ArchiveHistogramContract(unittest.TestCase):
         h=load("s9_hist_archive_sources","backfill-s9-hsv32-uniform-v2.py")
         import hashlib
         source="motion_1700000000000.mp4"
-        key=hashlib.sha256(("s9_sd\\x00"+source).encode()).hexdigest()
+        key=hashlib.sha256(("s9_sd\x00"+source).encode()).hexdigest()
         class Old:
             def record_index(self):return {}
             def catalog_items(self):
@@ -45,7 +45,7 @@ class ArchiveHistogramContract(unittest.TestCase):
             def planned(self,items,index):
                 return [
                     {"source":"s9_sd",
-                     "source_key":hashlib.sha256("\\x00".join(
+                     "source_key":hashlib.sha256("\x00".join(
                          ("s9_sd",x["clip"],x["full_crop"]["sha256"])).encode()).hexdigest(),
                      "crop_sha256":x["full_crop"]["sha256"],
                      "crop_name":f"crop{i}.jpg","crop_bytes":2048}
