@@ -24,7 +24,7 @@ def patch_js(live,old,new):
  incoming=new.splitlines(keepends=True)
  result=live
  edits=0
- for kind,i1,i2,j1,j2 in difflib.SequenceMatcher(None,previous,incoming,autojunk=False).get_opcodes():
+ for kind,i1,i2,j1,j2 in reversed(difflib.SequenceMatcher(None,previous,incoming,autojunk=False).get_opcodes()):
   if kind=='equal':continue
   before=''.join(previous[i1:i2])
   after=''.join(incoming[j1:j2])
