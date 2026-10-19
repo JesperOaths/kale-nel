@@ -1,0 +1,58 @@
+name: Isolated S9 private ROI partial restoration with immutable provenance
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9StandalonePersonRoiRecoveryV3.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-roi-partial-recovery-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-roi-partial-recovery-v3.py'
+      - '.github/workflows/s9-roi-partial-recovery-v3.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9StandalonePersonRoiRecoveryV3.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-roi-partial-recovery-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-roi-partial-recovery-v3.py'
+      - '.github/workflows/s9-roi-partial-recovery-v3.yml'
+permissions:
+  contents: read
+jobs:
+  physical-device-independent-recovery-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Source integrity and deterministic partial-ROI behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$root/install-s9-roi-partial-recovery-v3.py" \
+             "$root/backfill-s9-original-roi-osnet-temporal-v2.py"
+          python3 "$root/test-s9-roi-partial-recovery-v3.py"
+          python3 "$root/test-s9-roi-temporal-fallback-v2.py"
+          echo "S9_PRIVATE_ROI_RECOVERY_SOURCE_TESTS_PASS"
+      - name: Independently compile actual Android Java and DEX
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          d8="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$jar" && test -x "$d8"
+          export S9_ANDROID_SDK_JAR="$jar"
+          export PATH="$(dirname "$d8"):$PATH"
+          python3 - <<'PY'
+          import importlib.util,tempfile
+          from pathlib import Path
+          root=Path('ops/c720p/s9-native-security/offline-worker')
+          spec=importlib.util.spec_from_file_location(
+              'compile_isolated_s9_roi_recovery',
+              root/'install-s9-roi-partial-recovery-v3.py')
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          with tempfile.TemporaryDirectory(prefix='s9-roi-recovery-compile-') as td:
+              jar,library,assets=mod.compile_worker(Path(td))
+              assert jar.name=='s9-offline-person-roi-recovery-v3.jar'
+              assert jar.stat().st_size>20000
+              assert library.stat().st_size>1000000
+              print("S9_PRIVATE_ROI_RECOVERY_ANDROID_DEX_COMPILED",jar.stat().st_size)
+          PY
