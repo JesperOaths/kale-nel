@@ -512,7 +512,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(promoted,'A manual Drive approval must promote a provisional group');
  promoted.handlers.click();for(let i=0;i<6;i++)await flush();
  assert.equal(el('folderMode').value,'approved');
- const returned=scan(el('folderGrid'),'↩ Return to review queue');assert(returned);
+ const returned=scan(el('folderGrid'),'↩ Remove from this person');assert(returned);
  returned.handlers.click();for(let i=0;i<6;i++)await flush();
  assert.equal(linkItems['drive:'+driveClip].folder,null);
  assert(!el('folderGrid').children.some(x=>x.dataset.source==='drive'&&x.dataset.clip===driveClip));
