@@ -58,8 +58,8 @@ def patch_js(raw,source):
             "const flagged=[]; // No recurrent mandatory human rechecks.")
     if t.count('function assignedFolders(item){')!=1 or t.count('function addApprovalPerson(')!=1:
         raise RuntimeError('group_assignment_patch_incomplete')
-    if any(marker not in t for marker in SAFETY_FEATURES):
-        raise RuntimeError('existing_security_feature_disappeared')
+    missing=[marker for marker in SAFETY_FEATURES if marker not in t]
+    if missing:raise RuntimeError('existing_security_feature_disappeared_'+','.join(missing))
     if "async function searchClothingMatches(" not in t:
         raise RuntimeError('outfit_comparison_disappeared')
     return t.encode()
