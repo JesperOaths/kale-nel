@@ -1,0 +1,13 @@
+[Unit]
+Description=S9 isolated Security4K sidecar catalog and 06:00 metadata aggregates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9_standalone_phone_catalog_v1.py --dex /home/jespern/c720p-home-hub/build/s9-phone-catalog-cli-6d33d4dd7614/dex/classes.dex --dex-sha256 5b3ea34bd0aa78ff86ab437017b4a2a62cbded813a0cc36b4ee95da5a2f4480e --apply
+TimeoutStartSec=125
+Nice=19
+CPUQuota=12%
+IOSchedulingClass=idle
+NoNewPrivileges=true
