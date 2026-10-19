@@ -74,8 +74,9 @@ def main():
   raise RuntimeError('target_unavailable')
  try:
   # Production UI and authenticated route; nonexistent source guarantees no write.
-  page=create('http://localhost:8123/local/c720p-surveillance.html')
+  page=create('http://localhost:8123/local/c720p-surveillance.html?v=security-filing-v65-20261019')
   wait(page,"return !!document.querySelector('#s9v5-nav button[data-view=faces]')",bool)
+  wait(page,"return document.readyState==='complete'",bool)
   for attempt in range(2):
    evaluate(page,"document.querySelector('#s9v5-nav button[data-view=faces]').click();return true;")
    try:wait(page,"return !!people()?.getElementById('approvalStatus')",bool);break
