@@ -49,18 +49,36 @@ def ntp_state():
         return None
 
 def https_clock_offset():
-    """Estimates signed remote-minus-hub offset, no clocks are changed."""
+    """Best-effort HTTPS Date remote-minus-hub estimate; no clock changes."""
+    def parse_offset(value,start,finish):
+        if not value or finish-start>6:return None
+        try:
+            date=email.utils.parsedate_to_datetime(value)
+            if date is None or date.tzinfo is None:return None
+            return round(date.timestamp()-(start+finish)/2,1)
+        except (ValueError,TypeError,AttributeError):
+            return None
     try:
         request=urllib.request.Request(CLOCK_URL,method="HEAD")
-        t0=time.time()
-        with urllib.request.urlopen(request,timeout=8) as response:
-            value=response.headers.get("Date")
-        t1=time.time()
-        date=email.utils.parsedate_to_datetime(value)
-        if date is None or date.tzinfo is None or t1-t0>5:
-            return None
-        return round(date.timestamp()-(t0+t1)/2,1)
+        start=time.time()
+        with urllib.request.urlopen(request,timeout=7) as response:
+            header=response.headers.get("Date")
+        result=parse_offset(header,start,time.time())
+        if result is not None:return result
     except (ValueError,OSError,TypeError,TimeoutError,AttributeError):
+        pass
+    # Some systems' Python TLS store or HTTP proxy refuses HEAD; the hub's
+    # existing curl command succeeds and is independently bounded here.
+    try:
+        start=time.time()
+        process=subprocess.run(["curl","-fILsS","--max-time","8",CLOCK_URL],
+                               capture_output=True,text=True,timeout=10)
+        finish=time.time()
+        if process.returncode or len(process.stdout)>65536:return None
+        dates=[line.split(":",1)[1].strip() for line in process.stdout.splitlines()
+               if line.lower().startswith("date:")]
+        return parse_offset(dates[-1],start,finish) if dates else None
+    except (OSError,subprocess.TimeoutExpired):
         return None
 
 def camera_status():
