@@ -167,6 +167,43 @@ class Tests(unittest.TestCase):
             for name in ["../secret","motion_1792000000000.mp4","FaceSnapshots/face.jpg"]:
                 with self.assertRaises(ValueError):m.read_asset(name)
             request.assert_not_called()
+    def test_trustworthy_native_capture_segment_fields_reach_timing_proof(self):
+        entry=record()
+        record_fields={
+            "capture_segment_end_reason":"quiet_end",
+            "capture_segment_configured_quiet_hold_ms":10000,
+            "capture_segment_start_elapsed_ms":120000,
+            "capture_segment_stop_elapsed_ms":138000,
+            "capture_segment_last_accepted_motion_age_at_stop_ms":10500}
+        entry["manifest"].update(record_fields)
+        entry["manifest"]["unverified_arbitrary_capture_data"]={"frame":"forbidden"}
+        catalog=self.load([page([entry])])
+        kept=catalog["records"][entry["name"]]["manifest"]
+        self.assertEqual({k:kept[k] for k in record_fields},record_fields)
+        self.assertNotIn("unverified_arbitrary_capture_data",kept)
+        self.assertEqual(json.loads(self.cache.read_text())["records"][entry["name"]]["manifest"]["capture_segment_end_reason"],"quiet_end")
+    def test_invalid_or_partial_timing_is_never_promoted(self):
+        good={
+            "capture_segment_end_reason":"quiet_end",
+            "capture_segment_configured_quiet_hold_ms":10000,
+            "capture_segment_start_elapsed_ms":120000,
+            "capture_segment_stop_elapsed_ms":138000,
+            "capture_segment_last_accepted_motion_age_at_stop_ms":10500}
+        bad=[
+            {"capture_segment_stop_elapsed_ms":119999},
+            {"capture_segment_start_elapsed_ms":"120000"},
+            {"capture_segment_configured_quiet_hold_ms":-1},
+            {"capture_segment_last_accepted_motion_age_at_stop_ms":4000000},
+            {"capture_segment_end_reason":"quiet_end\\nprivate_data"},
+        ]
+        for changed in bad:
+            with self.subTest(changed=changed):
+                manifest=record()["manifest"]|good|changed
+                result=m.safe_metadata(manifest)
+                self.assertFalse(any(k in result for k in m.CAPTURE_TIMING_FIELDS))
+        missing=record()["manifest"]|good
+        missing.pop("capture_segment_start_elapsed_ms")
+        self.assertFalse(m.safe_capture_segment(missing))
     def test_phone_vectors_and_unknown_nested_features_never_enter_hub_cache(self):
         source=record();source['manifest'].update(appearance_vector=[.5],possible_same_outfit_clips=['other'],
             face_candidates=[{'snapshot':'crop.jpg','embedding':[1,2],'template':'private'}],
