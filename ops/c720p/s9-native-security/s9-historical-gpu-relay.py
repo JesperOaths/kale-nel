@@ -192,6 +192,15 @@ def mark_v28_failed_source(error):
   return {"clip_id_prefix":key[:12],"attempts":attempts,"retry_limit":3,
           "error_type":type(error).__name__}
 
+def scoped_historical_candidates(options,main_camera_only=False):
+ """Restrict an explicit S9-only pilot without changing normal historical review.
+
+ This filter is opt-in and preserves the previous multi-camera caller contract
+ when the experimental flag is unset.
+ """
+ if not main_camera_only:return list(options)
+ return [source for source in options if source.get("camera")=="new"]
+
 def stage_one(rescan_v28=False):
  import urllib.request
  with urllib.request.urlopen(APP_STATUS,timeout=9) as res:
@@ -217,6 +226,10 @@ def stage_one(rescan_v28=False):
   verified=m.original_verified()
   rows=m.read_catalog()["items"]
   options=v28_candidates(verified,rows) if rescan_v28 else m.sorted_candidates(verified,rows)
+  # Never stage S3/bedroom media in an explicit S9-only direct-H264 pilot.
+  # Standard historical review remains unchanged without the opt-in flag.
+  options=scoped_historical_candidates(options,
+      main_camera_only=os.environ.get("S9_HISTORICAL_MAIN_CAMERA_ONLY")=="1")
   # V28 visits verified, previously classified originals; ordinary mode unchanged.
   source=options[0] if rescan_v28 and options else options[-1] if options else None
  if source is None:
