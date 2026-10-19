@@ -65,6 +65,24 @@ class Tests(unittest.TestCase):
         patch.object(mod,"start",side_effect=scanner)):
    self.assertEqual(mod.refresh(True),"verified")
   self.assertEqual(commands,[mod.CATALOG_UNIT,mod.PROOF_UNIT])
+ def test_older_proof_cannot_claim_validated_saved_timing(self):
+  current=data(False);updated=data(True)
+  values=iter((current,updated))
+  oldproof=(b'{"schema_version":"s9_native_saved_prefix_quiet_hold_proof_v1",'
+            b'"eligible_count":3,"complete":true}')
+  def stored(path,limit):
+   if path==mod.VALIDATOR:return b"a"*1000
+   return oldproof
+  with (patch.object(mod,"safe_read",side_effect=stored),
+        patch.object(mod,"sha",return_value=mod.VALIDATOR_SHA),
+        patch.object(mod,"verify_capture",return_value={"temperature_c":35.0}),
+        patch.object(mod,"catalog",side_effect=lambda:next(values)),
+        patch.object(mod,"show",return_value="inactive"),
+        patch.object(mod,"start",return_value=None)):
+   self.assertEqual(mod.refresh(True),"verified")
+  code=(HERE/"refresh-s9-timing-proof-v127.py").read_text()
+  self.assertIn('proof.get("freshness_guard_active") is True',code)
+  self.assertIn('"proof_complete":safe_complete',code)
  def test_no_camera_or_recording_modification_apis(self):
   source=(HERE/"refresh-s9-timing-proof-v127.py").read_text()
   for forbidden in ("adb install","am force-stop","pm install","delete_original",
