@@ -4,6 +4,7 @@
 Never remove Chrome profiles, cookies, credentials, recordings, thumbnails,
 source, benchmarks, models, backups, APKs or Home Assistant state.
 """
+import argparse
 import collections
 import json
 import os
@@ -67,9 +68,10 @@ def benchmark_inspect():
    except OSError:continue
  return {"files_by_extension":dict(files.most_common(12)),
    "mb_by_extension":{key:round(n/(1024**2),1) for key,n in bytes_count.most_common(12)}}
-def run():
+def run(apply=False):
  result={"target":"Chromium headless regenerable caches only",
- "operation":"safe_cache_cleanup","backup_deleted":False,"video_deleted":False,
+ "operation":"safe_cache_cleanup" if apply else "safe_cache_preview",
+ "apply_requested":apply,"backup_deleted":False,"video_deleted":False,
  "detector_build_deleted":False,"headless_profile_deleted":False,
  "benchmark_only_inspected":benchmark_inspect(),"items":[]}
  before=shutil.disk_usage("/").free
@@ -105,14 +107,30 @@ def run():
    result["status"]="unexpected_cache_volume_skipped"
   else:
    for suffix,target,size in candidates:
+    if not apply:
+     result["items"].append({"cache":suffix,"status":"eligible_not_deleted","size_mb":round(size/(1024**2),1)})
+     continue
+    # Check ownership/path again immediately before any deletion. A diagnostic
+    # process started in between scans must make cleanup abort.
+    if occupied():
+     result["items"].append({"cache":suffix,"status":"skipped_profile_now_in_use"})
+     result["status"]="skipped_profile_in_use"
+     break
+    if target.is_symlink() or not target.is_dir() or target.resolve()!=target or not target.resolve().is_relative_to(BASE.resolve()):
+     result["items"].append({"cache":suffix,"status":"changed_target_skipped"})
+     continue
     try:
      shutil.rmtree(target)
      result["items"].append({"cache":suffix,"status":"removed","size_mb":round(size/(1024**2),1)})
     except OSError as e:
      result["items"].append({"cache":suffix,"status":"failed","error":type(e).__name__})
-   result["status"]="finished"
+   if "status" not in result:result["status"]="finished" if apply else "dry_run_only"
  after=shutil.disk_usage("/").free
  result["free_mb_after"]=round(after/(1024**2),1)
  result["reclaimed_mb"]=round((after-before)/(1024**2),1)
  print("SECURITY_REGENERABLE_CACHE_CLEANUP_V1 "+json.dumps(result,separators=(",",":"),sort_keys=True),flush=True)
-if __name__=="__main__":run()
+if __name__=="__main__":
+ parser=argparse.ArgumentParser(description=__doc__)
+ parser.add_argument("--apply",action="store_true",help="Explicitly reclaim only enumerated safe Chromium cache directories")
+ args=parser.parse_args()
+ run(apply=args.apply)
