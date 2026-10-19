@@ -1,0 +1,12 @@
+[Unit]
+Description=Cool-window read-only S9+ auxiliary recovery evidence refresh
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub/bin
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9_auxiliary_low_duty_refresh_v1.py --execute
+TimeoutStartSec=240
+Nice=15
+IOSchedulingClass=idle
+CPUWeight=20
