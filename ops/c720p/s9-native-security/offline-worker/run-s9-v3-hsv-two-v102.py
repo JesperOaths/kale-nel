@@ -83,29 +83,77 @@ def camera_pid(h):
         raise RuntimeError("camera_pid_missing")
     return pid
 
-def exists(h,path):
-    resp=h.adb("shell","test -s "+path,timeout=17,required=False)
-    if resp.returncode==0:return True
-    if resp.returncode==1 and not resp.stderr.strip():return False
-    raise RuntimeError("phone_transport_untrusted")
+def presence_inventory(h,rows):
+    """Two descriptor flags per SHA-qualified crop, at most 24 per ADB shell.
 
-def validated_missing(h,rows):
-    selected=[]
+    A transport error, incomplete batch, or malformed response must never be
+    mistaken for a missing feature and cause it to be regenerated.
+    Uses the same proven S9_PAIR_MASK_V1 protocol as the OSNet worker.
+    """
+    if not isinstance(rows,list) or not 58<=len(rows)<=400:
+        raise RuntimeError("reference_cohort_outside_bound")
+    root=h.ROOT
+    if (not isinstance(root,str)
+        or not re.fullmatch(r"/[A-Za-z0-9_./-]+",root)
+        or ".." in root or len(root)>230):
+        raise RuntimeError("untrusted_phone_feature_root")
+    keys=[]
     for item in rows:
+        if not isinstance(item,dict):
+            raise RuntimeError("invalid_source_crop")
         key=item.get("key")
         sha=item.get("crop_sha256")
         if not isinstance(key,str) or not re.fullmatch(r"[a-f0-9]{64}",key):
             raise RuntimeError("invalid_source_qualified_key")
         if not isinstance(sha,str) or not re.fullmatch(r"[a-f0-9]{64}",sha):
             raise RuntimeError("invalid_crop_digest")
-        path=h.ROOT+"/features/"+key+"-hsv-v2.json"
-        if not exists(h,path):
-            # New V40 crops can have neither OSNet nor HSV yet. Never
-            # attempt torso histogram work before the separate SHA-verified
-            # real visual descriptor has been produced and checked.
-            visual=h.ROOT+"/features/"+key+"-visual.json"
-            if exists(h,visual):selected.append(item)
+        keys.append(key)
+    if len(set(keys))!=len(keys):
+        raise RuntimeError("duplicate_source_qualified_key")
+    found={}
+    for offset in range(0,len(keys),24):
+        chunk=keys[offset:offset+24]
+        script="set -eu; "
+        for key in chunk:
+            base=root+"/features/"+key
+            script+=(
+                f"if test -s {base}-visual.json; then v=1; else v=0; fi; "
+                f"if test -s {base}-hsv-v2.json; then h=1; else h=0; fi; "
+                f"printf 'S9_PAIR_MASK_V1 {key} %s %s\\n' \"$v\" \"$h\"; "
+            )
+        result=h.adb("shell",script,timeout=45,required=False)
+        raw=result.stdout
+        if (result.returncode!=0 or not isinstance(raw,str)
+            or not isinstance(result.stderr,str) or result.stderr.strip()
+            or len(raw)>len(chunk)*100):
+            raise RuntimeError("phone_descriptor_presence_indeterminate")
+        lines=raw.splitlines()
+        if len(lines)!=len(chunk):
+            raise RuntimeError("phone_descriptor_presence_incomplete")
+        for key,line in zip(chunk,lines):
+            fields=line.split()
+            if (len(fields)!=4 or fields[:2]!=["S9_PAIR_MASK_V1",key]
+                or fields[2] not in ("0","1")
+                or fields[3] not in ("0","1") or key in found):
+                raise RuntimeError("phone_descriptor_presence_untrusted")
+            found[key]=(fields[2]=="1",fields[3]=="1")
+    if len(found)!=len(keys):
+        raise RuntimeError("phone_descriptor_presence_incomplete")
+    def present(key,kind):
+        if key not in found or kind not in ("visual","hsv"):
+            raise RuntimeError("untrusted_descriptor_presence_lookup")
+        return found[key][0 if kind=="visual" else 1]
+    return present
+
+
+def validated_missing(rows,present):
+    selected=[]
+    for item in rows:
+        if (not present(item["key"],"hsv")
+            and present(item["key"],"visual")):
+            selected.append(item)
     return selected
+
 
 def run(h,ctrl):
     if shutil.disk_usage("/").free<MIN_DISK:
@@ -127,13 +175,13 @@ def run(h,ctrl):
         rows=h.inventory(include_unreviewed=True)
         if not 58<=len(rows)<=400:
             raise RuntimeError("reference_cohort_outside_bound")
-        missing=validated_missing(h,rows)
+        before_presence=presence_inventory(h,rows)
+        missing=validated_missing(rows,before_presence)
         selected=missing[:2]
         # Count true unprocessed HSV sources separately from OSNet-ready
         # candidates; withholding missing-visual sources is a deferral, not
         # a claim that the original crop has no person or no future work.
-        pending_osnet=sum(1 for x in rows if not exists(
-            h,h.ROOT+"/features/"+x["key"]+"-visual.json"))
+        pending_osnet=sum(1 for x in rows if not before_presence(x["key"],"visual"))
         # Do not touch images or sidecars until each source-derived 512D
         # embedding passed the verified model SHA, crop SHA and L2 checks.
         for row in selected:h.safe_visual(row["key"],row["crop_sha256"])
@@ -162,7 +210,8 @@ def run(h,ctrl):
         if approved!=ctrl.approved_names():raise RuntimeError("manual_reviews_changed")
         if camera_pid(h)!=pid:raise RuntimeError("camera_pid_changed")
         capture_healthy()
-        remaining=len(validated_missing(h,rows))
+        after_presence=presence_inventory(h,rows)
+        remaining=len(validated_missing(rows,after_presence))
         if remaining!=len(missing)-completed:
             raise RuntimeError("unexpected_hsv_source_delta")
         return {
