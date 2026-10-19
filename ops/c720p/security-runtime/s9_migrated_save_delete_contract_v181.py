@@ -91,6 +91,34 @@ def receipt_authorized(receipt,name,item,action,key):
     return hmac.compare_digest(hmac.new(key,body,hashlib.sha256).hexdigest(),
                                receipt["hmac_sha256"])
 
+def receipt_matches_current_journal_projection(receipt,name,item,action,key,current):
+    """ONLY compare claims; no trust or mutation.
+
+    This is NOT a journal attestation or an authenticated S9 query. A future
+    remote-first endpoint must independently obtain 'current' over an
+    authenticated channel from the real S9 locked/HMAC-verified journal.
+    Never infer current state from a historical receipt, and never authorize
+    local MP4 deletion solely from this predicate.
+    """
+    if not receipt_authorized(receipt,name,item,action,key):
+        return False
+    if (not isinstance(current,dict)
+        or current.get("ledgerIntegrityVerified") is not True
+        or current.get("mayRemoveOriginal") is not False
+        or current.get("name")!=name
+        or current.get("action")!=action
+        or current.get("sourceSha256")!=item["sha256"]
+        or type(current.get("sourceBytes")) is not int
+        or current["sourceBytes"]!=item["bytes"]
+        or type(current.get("ledgerSequence")) is not int
+        or current["ledgerSequence"]!=receipt.get("ledger_sequence")
+        or not isinstance(current.get("ledgerHeadSha256"),str)
+        or not SHA.fullmatch(current["ledgerHeadSha256"])
+        or not hmac.compare_digest(current["ledgerHeadSha256"],
+                                   receipt["ledger_head_sha256"])):
+        return False
+    return True
+
 def preview(name,event,records,action,*,receipt=None,secret=None):
     if action not in ("save","delete"):raise ValueError("unknown_action")
     item=validated_record(name,records)
