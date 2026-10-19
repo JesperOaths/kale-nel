@@ -64,4 +64,26 @@ class Tests(TestCase):
   self.assertIn("cleanName(args[1])",java)
   self.assertIn("snapshot_sha256_drift",java)
   self.assertIn("not_native_square_face_snapshot",java)
+ def test_failed_android_launcher_exit_137_is_distinct_and_private(self):
+  # Synthetic shell output must never leak into a failed one-face audit log.
+  argv=["adb","-s","test-device","shell",
+        "app_process /system/bin nl.kalenel.s9offline.S9YuNetSingleSnapshotAudit"]
+  result=m.subprocess.CompletedProcess(argv,137,"Killed sensitive-info","private-details")
+  with patch.object(m.subprocess,"run",return_value=result):
+   with self.assertRaisesRegex(RuntimeError,"^s9_yunet_phone_launcher_exit_137$") as got:
+    m.call(argv,seconds=2)
+  self.assertNotIn("sensitive-info",str(got.exception))
+  self.assertNotIn("private-details",str(got.exception))
+ def test_non_launcher_or_other_exit_keeps_generic_failure(self):
+  cases=(
+   (["adb","-s","test-device","shell","sha256sum /safe/model"],137),
+   (["adb","-s","test-device","shell","app_process /system/bin Class"],1),
+   (["javac","-version"],137),
+  )
+  for argv,code in cases:
+   with self.subTest(argv=argv[0],code=code):
+    result=m.subprocess.CompletedProcess(argv,code,"output","stderr")
+    with patch.object(m.subprocess,"run",return_value=result):
+     with self.assertRaisesRegex(RuntimeError,"^separate_phone_operation_failed$"):
+      m.call(argv,seconds=2)
 if __name__=="__main__":main(verbosity=2)
