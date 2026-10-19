@@ -1,0 +1,13 @@
+[Unit]
+Description=Incremental cool-window S9+ read-only recovery playback verification
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub/bin
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9_recovery_playback_smoke_v2.py --execute
+TimeoutStartSec=120
+Nice=18
+IOSchedulingClass=idle
+CPUWeight=10
+NoNewPrivileges=yes
