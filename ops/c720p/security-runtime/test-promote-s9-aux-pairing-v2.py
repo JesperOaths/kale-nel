@@ -42,9 +42,9 @@ class Tests(unittest.TestCase):
         self.restore={key:getattr(m,key) for key in fake}
         self.addCleanup(lambda:[setattr(m,k,v) for k,v in self.restore.items()])
         for k,v in fake.items():setattr(m,k,v)
+        self.drop_before=m.DROPIN_TEXT
         m.DROPIN_TEXT=b"[Service]\nExecStart= \nExecStart=/usr/bin/python3 /tmp/isolated.py --apply\n"
         self.addCleanup(lambda:setattr(m,"DROPIN_TEXT",self.drop_before))
-        self.drop_before=self.restore_dropin_content()
         for p,data in ((m.BIN,old),(m.DEX,b"DEX-METADATA-ISOLATED"),
                        (m.EXISTING_DROPIN,b"[Service]\n"),
                        (m.CATALOG,self.old_catalog),(m.SUMMARY,self.old_summary)):
@@ -55,7 +55,7 @@ class Tests(unittest.TestCase):
             "continuous_4k_ready":True,"continuous_4k_dropped_output_frames":0,
             "temperature_c":34.0}
         self.patches=[
-            patch.object(m.urllib.request,"urlopen",return_value=io.BytesIO(new)),
+            patch.object(m.urllib.request,"urlopen",side_effect=lambda *a,**kw:io.BytesIO(new)),
             patch.object(m,"camera",return_value=self.camera),
             patch.object(m,"active",side_effect=lambda unit:unit==m.TIMER),
         ]
