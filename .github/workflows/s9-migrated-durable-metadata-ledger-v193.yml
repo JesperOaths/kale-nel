@@ -52,6 +52,6 @@ jobs:
           import pathlib,sys
           p=pathlib.Path(sys.argv[1])
           b=p.read_bytes()
-          assert 1000<len(b)<500000 and b.startswith(b'dex\\n')
+          assert 1000<len(b)<500000 and b.startswith(b'dex\n')
           print("S9_MIGRATED_METADATA_LEDGER_V193_ANDROID_DEX_VERIFIED",len(b))
           PY
