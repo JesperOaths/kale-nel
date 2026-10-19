@@ -84,6 +84,7 @@ def stage():
   return
  if prior is not None:
   raise RuntimeError("different_model_already_staged")
+ adb("shell","mkdir","-p",ROOT)
  if subprocess.run(["adb","-s",PHONE,"shell","test","-e",part],
                    capture_output=True,timeout=14).returncode==0:
   raise RuntimeError("unknown_existing_partial_model")
@@ -120,7 +121,15 @@ def stage():
 def main():
  p=argparse.ArgumentParser();p.add_argument("--install",action="store_true")
  a=p.parse_args()
- space();health()
+ try:
+  space();health()
+ except RuntimeError as ex:
+  if str(ex) in ("capture_not_cool_idle_healthy","hub_disk_reserve_low"):
+   print("S9_FIVE_POINT_YUNET_DEFERRED "+json.dumps({
+      "reason":str(ex),"model_installed":False,
+      "camera_apk_modified":False,"recordings_modified":False}),flush=True)
+   return
+  raise
  if not a.install:
   print("S9_FIVE_POINT_YUNET_PREFLIGHT "+
     json.dumps({"source":"opencv_zoo_mit_sha256_pinned","bytes":BYTES,
