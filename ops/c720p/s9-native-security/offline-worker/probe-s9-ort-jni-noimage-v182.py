@@ -143,15 +143,36 @@ def main():
         result=run(guard)
     except Exception as error:
         reason=str(error)
+        # Only fixed, source-authored refusal reasons may reach the log.
+        # The shared V166 camera gate gained more precise categories; all
+        # remain safety refusals, never permission to bypass capture priority.
         allowed={"shared_s9_backfill_lock_unavailable","s9_offline_worker_busy",
-           "native_4k_capture_not_idle_and_cool","phone_not_connected",
-           "wrong_phone_device","camera_pid_unavailable","hub_disk_reserve_low",
-           "android_sdk_unavailable","official_ort_aar_unavailable",
-           "official_ort_aar_sha_changed","unverified_ort_library_presence"}
+           "native_4k_capture_not_idle_and_cool","native_4k_pipeline_unhealthy",
+           "native_4k_temperature_guard","native_4k_buffer_not_ready",
+           "native_4k_recording_in_progress","s9_background_work_queued",
+           "phone_not_connected","wrong_phone_device","camera_pid_unavailable",
+           "hub_disk_reserve_low","android_sdk_unavailable",
+           "official_ort_aar_unavailable","official_ort_aar_sha_changed",
+           "unverified_ort_library_presence","unexpected_noimage_java_source",
+           "noimage_ort_java_compile_failed","unexpected_noimage_ort_classes",
+           "noimage_ort_dex_compile_failed","noimage_ort_dex_size_invalid",
+           "unexpected_dex_jar_size","existing_noimage_ort_worker_drift",
+           "untrusted_pending_noimage_ort","noimage_ort_transfer_corrupt",
+           "noimage_ort_final_sha_changed","camera_pid_changed_after_probe",
+           "bounded_command_response_exceeded",
+           "bounded_build_or_phone_operation_failed",
+           "phone_transport_or_shell_failure","phone_presence_indeterminate",
+           "phone_digest_untrusted","shared_s9_lock_unavailable",
+           "other_phone_worker_running","wrong_android_device",
+           "camera_process_unverified"}
         result={"status":"deferred","reason":reason if reason in allowed
                 else "unverified_no_private_detail",
                 "native_ort_environment_started":False,"launch_attempts":0,
                 "face_images_read":0,"models_loaded":0,
                 "camera_apk_modified":False,"recordings_modified":False}
     print(MARK+json.dumps(result,sort_keys=True,separators=(",",":")),flush=True)
+    # A skipped or failed JNI capability probe is not a successful
+    # installation verification. Make the physical workflow fail closed.
+    if result.get("status")!="one_native_bootstrap_checked":
+        raise SystemExit(1)
 if __name__=="__main__":main()

@@ -77,6 +77,10 @@ jobs:
               echo "$output"
               [[ "$result" == 'done|0' ]] || exit 1
               grep -q 'S9_ORT_JNI_NO_IMAGE_V182' <<< "$output"
+              grep -q '"status":"one_native_bootstrap_checked"' <<< "$output"
+              grep -q '"launch_attempts":1' <<< "$output"
+              grep -q '"camera_pid_unchanged":true' <<< "$output"
+              grep -q '"capture_dropped_frames_after":0' <<< "$output"
               grep -q '"camera_apk_modified":false' <<< "$output"
               grep -q '"recordings_modified":false' <<< "$output"
               grep -q '"models_loaded":0' <<< "$output"

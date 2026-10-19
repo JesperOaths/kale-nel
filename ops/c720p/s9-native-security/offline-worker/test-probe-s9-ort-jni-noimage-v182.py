@@ -58,4 +58,53 @@ class Tests(unittest.TestCase):
         self.assertIn("camera_pid_changed_after_probe",py)
         self.assertIn("official_ort_aar_sha_changed",py)
 
+    def test_deferred_camera_admission_fails_job_not_false_success(self):
+        import contextlib,io,json
+        from unittest.mock import patch
+        reasons=("s9_background_work_queued","native_4k_recording_in_progress",
+                 "native_4k_temperature_guard","native_4k_buffer_not_ready",
+                 "native_4k_pipeline_unhealthy","noimage_ort_dex_compile_failed")
+        for reason in reasons:
+            with self.subTest(reason=reason):
+                output=io.StringIO()
+                with patch.object(m,"load_guard",return_value=object()),\
+                     patch.object(m,"run",side_effect=RuntimeError(reason)),\
+                     contextlib.redirect_stdout(output),\
+                     self.assertRaises(SystemExit) as stopped:
+                    m.main()
+                self.assertEqual(stopped.exception.code,1)
+                result=json.loads(output.getvalue().split(m.MARK,1)[1])
+                self.assertEqual(result["status"],"deferred")
+                self.assertEqual(result["reason"],reason)
+                self.assertEqual(result["launch_attempts"],0)
+                self.assertEqual(result["face_images_read"],0)
+                self.assertEqual(result["models_loaded"],0)
+
+    def test_untrusted_exception_is_redacted_and_fails(self):
+        import contextlib,io,json
+        from unittest.mock import patch
+        output=io.StringIO()
+        private="private-face-identifier.mp4"
+        with patch.object(m,"load_guard",return_value=object()),\
+             patch.object(m,"run",side_effect=RuntimeError(private)),\
+             contextlib.redirect_stdout(output),\
+             self.assertRaises(SystemExit) as stopped:
+            m.main()
+        self.assertEqual(stopped.exception.code,1)
+        self.assertNotIn(private,output.getvalue())
+        self.assertIn("unverified_no_private_detail",output.getvalue())
+
+    def test_only_a_completed_probe_can_succeed(self):
+        import contextlib,io,json
+        from unittest.mock import patch
+        result={"status":"one_native_bootstrap_checked",
+                "native_ort_environment_started":False,"launch_attempts":1,
+                "reason":"native_ort_environment_terminated","models_loaded":0,
+                "face_images_read":0,"camera_pid_unchanged":True}
+        output=io.StringIO()
+        with patch.object(m,"load_guard",return_value=object()),\
+             patch.object(m,"run",return_value=result),\
+             contextlib.redirect_stdout(output):
+            m.main()
+        self.assertIn("one_native_bootstrap_checked",output.getvalue())
 if __name__=="__main__":unittest.main(verbosity=2)
