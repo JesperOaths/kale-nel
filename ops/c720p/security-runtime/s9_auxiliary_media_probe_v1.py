@@ -99,7 +99,7 @@ def write_atomic(payload):
     finally:
         if os.path.exists(temp):os.unlink(temp)
 
-def scan(dex,sha256,save):
+def scan(dex,sha256,save,health_check=None):
     if dex.is_symlink() or not dex.is_file() or not re.fullmatch(r"[0-9a-f]{64}",sha256):
         raise ValueError("untrusted_dex")
     if hashlib.sha256(dex.read_bytes()).hexdigest()!=sha256:
@@ -113,6 +113,7 @@ def scan(dex,sha256,save):
     try:
         for offset in range(0,MAX_CANDIDATES,BATCH):
             camera()
+            if health_check is not None:health_check()
             raw=adb("shell","CLASSPATH="+REMOTE+
                 " app_process /system/bin nl.kalenel.s9security.AuxiliaryMediaProbe "+
                 str(offset)+" "+str(BATCH),timeout=80)
