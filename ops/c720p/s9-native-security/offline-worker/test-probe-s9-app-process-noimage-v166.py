@@ -102,4 +102,43 @@ class Tests(unittest.TestCase):
   self.assertIn('return {"success":False,"reason":"android_baseline_terminated"}',source)
   self.assertIn("capture_dropped_output_frames_after",source)
 
+ def test_every_camera_admission_blocker_is_distinct_and_no_image_access(self):
+  import json
+  good={"ok":True,"mode":"watching","native_4k_enabled":True,
+        "continuous_4k_ready":True,
+        "continuous_4k_dropped_output_frames":0,
+        "continuous_4k_error":None,"temperature_c":31.1,
+        "continuous_4k_buffered_ms":8995,
+        "recording_active":False,"recording_in_progress":False,
+        "face_backfill_queued":False,"appearance_backfill_queued":False,
+        "historical_import_queued":False}
+  class Reply:
+   status=200
+   def __init__(self,obj):self.payload=json.dumps(obj).encode()
+   def __enter__(self):return self
+   def __exit__(self,*args):pass
+   def read(self,n):return self.payload[:n]
+  with patch.object(m.urllib.request,"urlopen",return_value=Reply(good)):
+   self.assertEqual(m.current_camera()["temperature_c"],31.1)
+  cases=(
+   ({"continuous_4k_ready":False},"native_4k_pipeline_unhealthy"),
+   ({"continuous_4k_dropped_output_frames":1},"native_4k_pipeline_unhealthy"),
+   ({"temperature_c":37.5},"native_4k_temperature_guard"),
+   ({"continuous_4k_buffered_ms":2000},"native_4k_buffer_not_ready"),
+   ({"recording_in_progress":True},"native_4k_recording_in_progress"),
+   ({"recording_active":True},"native_4k_recording_in_progress"),
+   ({"face_backfill_queued":True},"s9_background_work_queued"),
+   ({"appearance_backfill_queued":True},"s9_background_work_queued"),
+   ({"historical_import_queued":True},"s9_background_work_queued"),
+  )
+  for changes,why in cases:
+   with self.subTest(why=why,changes=changes),patch.object(
+        m.urllib.request,"urlopen",return_value=Reply(dict(good,**changes))):
+    with self.assertRaisesRegex(m.Stop,"^"+why+"$"):
+     m.current_camera()
+  source=SRC.read_text()
+  for reason in ("native_4k_pipeline_unhealthy","native_4k_temperature_guard",
+                 "native_4k_buffer_not_ready","native_4k_recording_in_progress",
+                 "s9_background_work_queued"):
+   self.assertIn(reason,source)
 if __name__=="__main__":unittest.main(verbosity=2)
