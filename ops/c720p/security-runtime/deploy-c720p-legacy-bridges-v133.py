@@ -14,6 +14,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import stat
 import tempfile
 import urllib.request
@@ -26,7 +27,7 @@ INDEX=Path("/opt/homeassistant/config/www/frontyard-security-new/index.html")
 GENERATOR=Path("/home/jespern/c720p-security-camera-new/c720p-frontyard-security-new.py")
 JS=INDEX.parent/"c720p-migrated-index-playback-v1.js"
 EXPECTED_OLD={
- PAGE:"91d760a53b973cc4efd2c304ea52d39c281246bba9d7d7ab90d630b94fe0cf921a9b",
+ PAGE:"91d760a53b973cc4efd2c304ea52d39c281246bba9d5bc12027722f20f921a9b",
  INDEX:"da5f846114d9b56a8ad9b531fb18aec61a743610244192125fe79ef0d71f2d7f",
  GENERATOR:"f9e34bdb12b56678d7057a2e6f56aadac4f973b9d7d7ab90d630b94fe0cf3ad6",
 }
@@ -105,6 +106,8 @@ def main(player_path,index_path,js_path,apply):
   js=load("js",js_path)
   before=check_camera()
   baseline={p:read(p) for p in (PAGE,INDEX,GENERATOR)}
+  if any(not re.fullmatch(r"[a-f0-9]{64}",h) for h in EXPECTED_OLD.values()):
+   raise RuntimeError("invalid_pinned_live_baseline_sha256")
   if JS.exists() or JS.is_symlink():
    raise RuntimeError("legacy_s9_bridge_already_present_or_unknown")
   for path,blob in baseline.items():
