@@ -53,6 +53,34 @@ class Progressive(unittest.TestCase):
  def test_new_corpus_only_preflights_by_default(self):
   with patch.object(p,"guarded_publish",side_effect=AssertionError("must not run")):
    self.assertEqual(p.run(False,self.m),"preflight")
+ def test_late_capture_loss_defers_before_phone_scoring(self):
+  attempts=[]
+  def gate():
+   attempts.append("capture")
+   if len(attempts)==2:
+    raise RuntimeError("capture_not_idle_4k_ring_healthy")
+  with patch.object(self.m,"capture_rank_safe",side_effect=gate), \
+       patch.object(p,"guarded_publish",side_effect=AssertionError("must not score")):
+   import io
+   from contextlib import redirect_stdout
+   output=io.StringIO()
+   with redirect_stdout(output):
+    self.assertEqual(p.run(True,self.m),"deferred")
+   report=output.getvalue()
+  self.assertEqual(len(attempts),2)
+  self.assertIn('"stage": "before_phone_scoring"',report)
+  self.assertIn('"rankings_published": false',report)
+  self.assertIn('"reason": "capture_not_ready"',report)
+
+ def test_scoring_starts_only_after_second_thermal_and_ring_check(self):
+  result={"verified_crops":58,"active_index_published":True,
+          "automatic_assignments":0}
+  with patch.object(p,"guarded_publish",return_value=result) as guarded:
+   self.assertEqual(p.run(True,self.m),"verified")
+   guarded.assert_called_once()
+  self.assertEqual(self.m.calls,
+       ["capture","thermal","inventory","baseline","capture","thermal"])
+
  def test_valid_expansion_and_same_count_drift(self):
   self.assertEqual(p.decision(doc(count=58,corpus=CID),"1"*16,59),"needs_expansion")
   self.assertEqual(p.decision(None,CID,58),"needs_first_index")
