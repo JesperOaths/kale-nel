@@ -114,50 +114,41 @@ def patch(old):
             "match.scoreSource==='osnet_hsv'" not in txt):
             raise RuntimeError("Partially installed model suggestion UI")
         return old,False
-    start=" async function searchClothingMatches(force=false){"
+    start="async function searchClothingMatches(force=false){"
     if txt.count(start)!=1:raise RuntimeError("Changed search function")
     txt=txt.replace(start,MODEL_JS+"\n"+start,1)
-    anchor="""  for(const {ref,person} of references){
-   if(token!==state.clothingToken)break;
-   try{
-    const make=category=>'/new/api/appearance-search?'"""
-    changed="""  for(const {ref,person} of references){
-   if(token!==state.clothingToken)break;
-   try{
-    // Model-backed appearance evidence is available only for verified
-    // detector crops. Preserve the historical HSV route for other clips.
-    const modelCount=await addReviewedOsnetMatches(ref,person,matches);
-    if(modelCount>0){checked++;continue}
-    const make=category=>'/new/api/appearance-search?'"""
-    if txt.count(anchor)!=1:raise RuntimeError("Changed legacy comparison loop")
+    anchor="const make=category=>'/new/api/appearance-search?'"
+    changed="""// Model-backed evidence exists only for verified detector crops.
+   // Keep existing two-piece HSV comparison for other references.
+   const modelCount=await addReviewedOsnetMatches(ref,person,matches);
+   if(modelCount>0){checked++;continue}
+   const make=category=>'/new/api/appearance-search?'"""
+    if txt.count(anchor)!=1:raise RuntimeError("Changed comparison loop")
     txt=txt.replace(anchor,changed,1)
     key="const score=.62*u+.38*l,key=person.id+':'+clip,prior=matches.get(key);"
     if txt.count(key)!=1:raise RuntimeError("Changed legacy evidence key")
     txt=txt.replace(key,"const score=.62*u+.38*l,key=person.id+':'+clip+':hsv',prior=matches.get(key);",1)
-    row="""       upper:u,lower:l,score,bestScore:score,sumScore:score,
-       recorded_ms:"""
+    row="upper:u,lower:l,score,bestScore:score,sumScore:score,"
     if txt.count(row)!=1:raise RuntimeError("Changed legacy comparison row")
-    txt=txt.replace(row,"""       upper:u,lower:l,score,bestScore:score,sumScore:score,scoreSource:'hsv_two_piece',
-       recorded_ms:""",1)
-    competition="""    const competitors=allMatches.filter(other=>other.clip===match.clip&&
-     other.person.id!==match.person.id&&"""
-    if txt.count(competition)!=1:raise RuntimeError("Changed ambiguity comparison")
-    txt=txt.replace(competition,"""    const competitors=allMatches.filter(other=>other.clip===match.clip&&
-     other.scoreSource===match.scoreSource&&other.person.id!==match.person.id&&""",1)
-    title="""  $('clothingTotal').textContent=state.clothingBusy?'Comparing approved reference recordings on S9+…':
-   state.clothingError||matches.length+' two-piece outfit comparisons within 72 hours · human review required; not identity matches';"""
-    if txt.count(title)!=1:raise RuntimeError("Changed UI status")
-    txt=txt.replace(title,"""  $('clothingTotal').textContent=state.clothingBusy?'Comparing approved reference recordings on S9+…':
-   state.clothingError||matches.length+' provisional appearance comparisons within 72 hours · human review required; not identity matches';""",1)
-    # Distinguish model-backed vs old HSV scores on each card.
-    original="""    elt('p',date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+
-     Math.round(match.lower*100)+'%'),"""
-    revised="""    elt('p',match.scoreSource==='osnet_hsv'
+    txt=txt.replace(row,row+"scoreSource:'hsv_two_piece',",1)
+    competitor="other.person.id!==match.person.id&&"
+    if txt.count(competitor)!=1:raise RuntimeError("Changed ambiguity comparator")
+    txt=txt.replace(competitor,"other.scoreSource===match.scoreSource&&"+competitor,1)
+    title="two-piece outfit comparisons within 72 hours · human review required; not identity matches"
+    if txt.count(title)!=1:raise RuntimeError("Changed comparison title")
+    txt=txt.replace(title,"provisional appearance comparisons within 72 hours · human review required; not identity matches",1)
+    # Preserve the existing card DOM and manual original-video actions.
+    begin="elt('p',date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+"
+    finish="Math.round(match.lower*100)+'%'),"
+    if txt.count(begin)!=1:raise RuntimeError("Changed per-card evidence description")
+    pos=txt.index(begin);end_card=txt.find(finish,pos)
+    if end_card<0 or end_card-pos>150:raise RuntimeError("Changed per-card HSV score")
+    original=txt[pos:end_card+len(finish)]
+    revised="""elt('p',match.scoreSource==='osnet_hsv'
      ?date(match)+' · OSNet 75% + clothing HSV 25% · appearance similarity '+
       Math.round(match.score*100)+'%'
      :date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+
       Math.round(match.lower*100)+'%'),"""
-    if txt.count(original)!=1:raise RuntimeError("Changed evidence card rendering")
     txt=txt.replace(original,revised,1)
     txt=txt.replace(
        "'No credible two-piece clothing matches in the indexed videos. Matching outfits do not establish identities.'",
