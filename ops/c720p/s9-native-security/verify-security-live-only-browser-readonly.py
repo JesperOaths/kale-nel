@@ -52,6 +52,17 @@ def main():
     page=cdp.Socket(item["webSocketDebuggerUrl"]);break
    time.sleep(.2)
   if not page:raise RuntimeError("background_home_security_tab_missing")
+  # Live playback script loads only after the Security pane is mounted.
+  for _ in range(70):
+   response=page.call("Runtime.evaluate",{"expression":
+    "!!document.querySelector('#s9v5-nav button[data-view=faces]')",
+    "returnByValue":True})
+   if response.get("result",{}).get("value") is True:break
+   time.sleep(.25)
+  else:raise RuntimeError("security_navigation_not_ready")
+  page.call("Runtime.evaluate",{"expression":
+   "document.querySelector('#s9v5-nav button[data-view=faces]').click();true",
+   "returnByValue":True})
   state={}
   for _ in range(80):
    result=page.call("Runtime.evaluate",{"expression":CHECK,"returnByValue":True})
@@ -59,6 +70,7 @@ def main():
    state=result.get("result",{}).get("value") or {}
    if state.get("live") and state.get("originalOnly"):break
    time.sleep(.3)
+  print('SECURITY_MJPEG_BROWSER_CONTEXT '+json.dumps(state,sort_keys=True),flush=True)
   assert state.get("live"),"new MJPEG bridge not loaded in active Security frames"
   assert state.get("originalOnly"),"old smooth copy player remains active"
   assert not state.get("legacyControls"),"old quality selector still exposed"
