@@ -30,7 +30,8 @@ assert(js.includes('for(let pass=0;pass<3&&references.length<18;pass++)'),
 assert(js.includes('Math.abs(candidateTime-ref.recorded_ms)>72*60*60*1000'),
  'Clothing-only suggestions require nearby timestamps, not ancient colour lookalikes');
 assert(!html.includes('id="approvalConfirmed"'),'Remove redundant second confirmation checkbox');
-assert(js.includes('state.lastFolder=folder||state.lastFolder'),'Review queue must retain last selected person');
+assert(js.includes('state.lastFolder=selected[0]||state.lastFolder'),'Review queue must retain last selected person');
+assert(js.includes("assign_many")&&html.includes('id="approvalAddPerson"'),'Repeatable group filing must be wired end to end');
 const keepMarkup=html.split('<dialog id="approvalDialog"')[1]?.split('</dialog>')[0]||'';
 assert(keepMarkup.includes('id="approvalFolder"'),'Keep dialog must expose the folder picker');
 assert(keepMarkup.includes('id="approvalLabel"'),'Keep dialog must expose new folder input');
@@ -85,10 +86,13 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
      return {ok:false,status:409,json:async()=>({ok:false,error:'review_revision_changed'})};
     if(badReceipt)return {ok:true,json:async()=>({ok:true,persisted:true,manual_links_only:true,source:'sd',name:'wrong.mp4',revision:linkRevision+1,folder:payload.folder})};
     linkItems[payload.source+':'+payload.name]={source:payload.source,
-      name:payload.name,folder:payload.folder,review_status:({assign:'assigned',return_to_queue:'inbox',skip:'skipped',reject:'rejected'})[payload.action]};
+      name:payload.name,folder:payload.folder,
+      folders:payload.action==='assign_many'?payload.folders:payload.folder?[payload.folder]:[],
+      review_status:({assign:'assigned',assign_many:'assigned',return_to_queue:'inbox',skip:'skipped',reject:'rejected'})[payload.action]};
     linkRevision++;
     return {ok:true,json:async()=>({ok:true,persisted:true,source:payload.source,name:payload.name,manual_links_only:true,revision:linkRevision,
       folder:linkItems[payload.source+':'+payload.name].folder,
+      folders:linkItems[payload.source+':'+payload.name].folders,
       review_status:linkItems[payload.source+':'+payload.name].review_status})};
    }
    posts.push({payload,opts});
@@ -163,8 +167,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('savedList').children.length,1,'Show saved person folders immediately');
  assert.equal(el('peopleReviewSummary').textContent,'6 recordings need review');
  assert.equal(el('peopleReviewNotice').hidden,false);
- assert.equal(el('peopleRecheckNotice').hidden,false,'Previously kept clips needing recheck must be visible on People landing');
- assert.equal(el('peopleRecheckSummary').textContent,'3 confirmed recordings need evidence rechecking');
+ assert.equal(el('peopleRecheckNotice').hidden,true,'Saved human decisions must not be repeatedly reopened by model disagreements');
+ assert.equal(el('peopleRecheckSummary').textContent,'0 confirmed recordings need evidence rechecking');
  assert(el('peopleRecheckNow').handlers.click,'Recheck button must lead to person originals');
  assert.equal(el('reviewTabCount').textContent,' · 6');
  assert.equal(el('queueCount').textContent,'6');
@@ -221,8 +225,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(!html.includes('id="appearancePreview"'),'Clothing group must not be in bottom of scan status');
  assert(!html.includes('id="candidateList"'),'Clothing group must not be attached below saved people');
  assert(el('reviewPreview').children.length>=1,'Coverage summary must display outstanding work');
- assert.equal(el('reviewAlerts').children.length,1,'The existing Jesper review issue must be highlighted as an action');
- assert(scan(el('reviewAlerts'),'Inspect originals →'),'Saved clips flagged for person recheck must be actionable');
+ assert.equal(el('reviewAlerts').children.length,0,'Saved clips do not become mandatory rechecks when the model changes');
+ assert(!scan(el('reviewAlerts'),'Inspect originals →'),'No forced recheck for human-confirmed clips');
  assert(el('peopleReviewNow').handlers.click,'Review action must remain accessible without a duplicate recording list');
  let keep;
  el('openReview').handlers.click();for(let i=0;i<4;i++)await flush();
