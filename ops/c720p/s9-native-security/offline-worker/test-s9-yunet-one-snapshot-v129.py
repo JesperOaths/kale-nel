@@ -70,7 +70,7 @@ class Tests(TestCase):
         "app_process /system/bin nl.kalenel.s9offline.S9YuNetSingleSnapshotAudit"]
   result=m.subprocess.CompletedProcess(argv,137,"Killed sensitive-info","private-details")
   with patch.object(m.subprocess,"run",return_value=result):
-   with self.assertRaisesRegex(RuntimeError,"^s9_yunet_phone_launcher_exit_137$") as got:
+   with self.assertRaisesRegex(RuntimeError,"^android_app_process_terminated_without_face_evidence$") as got:
     m.call(argv,seconds=2)
   self.assertNotIn("sensitive-info",str(got.exception))
   self.assertNotIn("private-details",str(got.exception))
@@ -86,4 +86,63 @@ class Tests(TestCase):
     with patch.object(m.subprocess,"run",return_value=result):
      with self.assertRaisesRegex(RuntimeError,"^separate_phone_operation_failed$"):
       m.call(argv,seconds=2)
+ def test_android_exit_137_sigkill_and_explicit_killed_are_not_face_evidence(self):
+  from types import SimpleNamespace
+  private="private_face_filename_must_not_be_logged.jpg"
+  argv=["adb","-s","test-device","shell",
+        "export CLASSPATH=/safe/model; app_process -Djava.library.path=/safe /system/bin Test "+private]
+  for code,stdout,stderr in ((137,"",""),(-9,"",""),(1,"","Killed "+private)):
+   with self.subTest(code=code):
+    process=SimpleNamespace(returncode=code,stdout=stdout,stderr=stderr)
+    with patch.object(m.subprocess,"run",return_value=process), \
+         self.assertRaisesRegex(RuntimeError,"^android_app_process_terminated_without_face_evidence$") as raised:
+     m.call(argv,seconds=5)
+    self.assertNotIn(private,str(raised.exception))
+  # sha256sum and non-Android failures cannot be mislabeled as detector errors.
+  argv[-1]="sha256sum /safe/test-app_process.jar"
+  with patch.object(m.subprocess,"run",return_value=SimpleNamespace(
+       returncode=137,stdout="",stderr="Killed")):
+   with self.assertRaisesRegex(RuntimeError,"^separate_phone_operation_failed$"):
+    m.call(argv,seconds=5)
+
+ def test_terminated_phone_worker_defers_only_after_4k_health_and_pid_verified(self):
+  import io,sys,contextlib,tempfile
+  health={"temperature_c":32.2,"continuous_4k_dropped_output_frames":0}
+  with tempfile.TemporaryDirectory() as temp:
+   lock=Path(temp)/"worker.lock"
+   output=io.StringIO()
+   with patch.object(m,"LOCK",lock),patch.object(m,"current_camera",side_effect=[health,health]) as probe, \
+        patch.object(m,"select",return_value=(("private.jpg","a"*64),1)), \
+        patch.object(m,"adb",return_value="123") as adb, \
+        patch.object(m,"build",return_value=Path(temp)/"fake.jar"), \
+        patch.object(m,"execute",side_effect=RuntimeError(
+            "android_app_process_terminated_without_face_evidence")), \
+        patch.object(sys,"argv",["worker","--apply"]),contextlib.redirect_stdout(output):
+    m.main()
+   self.assertEqual(probe.call_count,2)
+   self.assertEqual(adb.call_count,2)
+   result=output.getvalue()
+   self.assertIn("S9_YUNET_REAL_ONE_SNAPSHOT_DEFERRED",result)
+   self.assertIn('"detector_inference_verified": false',result)
+   self.assertIn('"native_camera_ready_after": true',result)
+   self.assertIn('"camera_dropped_output_frames_after": 0',result)
+   self.assertNotIn("private.jpg",result)
+
+ def test_termination_with_changed_camera_pid_cannot_claim_safe_defer(self):
+  import io,sys,contextlib,tempfile
+  health={"temperature_c":32.2,"continuous_4k_dropped_output_frames":0}
+  with tempfile.TemporaryDirectory() as temp:
+   out=io.StringIO()
+   with patch.object(m,"LOCK",Path(temp)/"worker.lock"), \
+        patch.object(m,"current_camera",return_value=health), \
+        patch.object(m,"select",return_value=(("private.jpg","a"*64),1)), \
+        patch.object(m,"adb",side_effect=["123","567"]), \
+        patch.object(m,"build",return_value=Path(temp)/"fake.jar"), \
+        patch.object(m,"execute",side_effect=RuntimeError(
+            "android_app_process_terminated_without_face_evidence")), \
+        patch.object(sys,"argv",["worker","--apply"]), \
+        contextlib.redirect_stdout(out):
+    with self.assertRaisesRegex(RuntimeError,"camera_pid_changed_after_yunet_termination"):
+     m.main()
+   self.assertNotIn("S9_YUNET_REAL_ONE_SNAPSHOT_DEFERRED",out.getvalue())
 if __name__=="__main__":main(verbosity=2)
