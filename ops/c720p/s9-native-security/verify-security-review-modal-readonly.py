@@ -67,7 +67,7 @@ def main():
    const card=d?.querySelector('#savedList .profile');
    if(!card)throw Error('profile_missing');
    card.click();return true;""")
-  until(page,"return !peopleDoc()?.getElementById('folderView')?.hidden",
+  until(page,"return !!peopleDoc()&&!peopleDoc().getElementById('folderView').hidden",
         lambda v:v is True)
   evaluate(page,"""const d=peopleDoc(),box=d.getElementById('folderMode');
    if(box.value!=='approved'){box.value='approved';
