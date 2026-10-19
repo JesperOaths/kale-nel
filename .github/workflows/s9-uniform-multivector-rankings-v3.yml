@@ -1,0 +1,50 @@
+name: S9 uniform crop appearance score V3 independent runtime
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9AppearanceRankingWorkerV3.java'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-uniform-appearance-rankings-v3.py'
+      - '.github/workflows/s9-uniform-multivector-rankings-v3.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9AppearanceRankingWorkerV3.java'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-uniform-appearance-rankings-v3.py'
+      - '.github/workflows/s9-uniform-multivector-rankings-v3.yml'
+permissions:
+  contents: read
+jobs:
+  independent-ranker-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compile source-verified standalone app_process class and run offline contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder=ops/c720p/s9-native-security/offline-worker
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          d8="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$jar" && test -x "$d8"
+          echo "S9_ANDROID_SDK_JAR=$jar" >> "$GITHUB_ENV"
+          echo "$(dirname "$d8")" >> "$GITHUB_PATH"
+          python3 -m py_compile "$folder/run-s9-uniform-appearance-rankings-v3.py"
+          python3 "$folder/test-s9-uniform-appearance-rankings-v3.py"
+      - name: Actually compile independent Android Java and DEX classes (without phone access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import importlib.util,tempfile
+          root=Path("ops/c720p/s9-native-security/offline-worker")
+          file=root/"run-s9-uniform-appearance-rankings-v3.py"
+          spec=importlib.util.spec_from_file_location("compile_v2",file)
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          with tempfile.TemporaryDirectory(prefix="s9-v2-rank-compile-") as tmp:
+              jar=mod.compile_ranker(Path(tmp))
+              assert jar.stat().st_size>1000
+              print("S9_UNIFORM_CROP_RANKER_V3_ANDROID_COMPILED",jar.stat().st_size)
+          PY
