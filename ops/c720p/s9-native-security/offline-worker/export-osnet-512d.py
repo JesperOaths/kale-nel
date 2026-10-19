@@ -42,6 +42,29 @@ def main():
         name="osnet_x1_0",num_classes=1000,loss="softmax",
         pretrained=True,use_gpu=False)
     model=model.cpu().eval()
+    # torchreid's OSNet ImageNet loader may warn and continue when no
+    # checkpoint tensors matched. A 512-D random model is NOT acceptable.
+    checkpoint=Path.home()/".cache/torch/checkpoints/osnet_x1_0_imagenet.pth"
+    if not checkpoint.is_file() or checkpoint.stat().st_size<1_000_000:
+        raise RuntimeError("Actual pretrained OSNet checkpoint missing")
+    weights=torch.load(checkpoint,map_location="cpu",weights_only=True)
+    if isinstance(weights,dict) and isinstance(weights.get("state_dict"),dict):
+        weights=weights["state_dict"]
+    if not isinstance(weights,dict):
+        raise RuntimeError("Pretrained OSNet checkpoint has invalid state_dict")
+    model_params=model.state_dict()
+    matched=0
+    backbone=0
+    for name,param in model_params.items():
+        if name.startswith("classifier."):
+            continue
+        backbone+=1
+        tensor=weights.get(name,weights.get("module."+name))
+        if isinstance(tensor,torch.Tensor) and tensor.shape==param.shape:
+            matched+=1
+    if backbone<10 or matched<math.ceil(.9*backbone):
+        raise RuntimeError("Pretrained OSNet weights do not cover backbone")
+    checkpoint_sha=digest(checkpoint)
     test=torch.linspace(-1,1,3*256*128,dtype=torch.float32).reshape(1,3,256,128)
     with torch.inference_mode():
         out=model(test).detach().cpu().numpy().astype(np.float32)
@@ -85,6 +108,8 @@ def main():
             "mean":[0.485,0.456,0.406],
             "std":[0.229,0.224,0.225],
             "source":"torchreid.models.build_model(osnet_x1_0,pretrained=True)",
+            "pretrained_checkpoint_sha256":checkpoint_sha,
+            "pretrained_backbone_coverage":round(matched/backbone,4),
             "onnx_opset":17,"cosine_torch_onnx":cosine,
             "sha256":checksum,"bytes":args.output.stat().st_size,
             "identity_model":False,"phone_runtime_tested":False,
