@@ -33,7 +33,22 @@ def patch_js(live,old,new):
  ):
   previous=b.block(old,start,end)
   replacement=b.block(new,start,end)
-  if previous!=replacement:result=b.one(result,previous,replacement)
+  if previous==replacement:continue
+  live_block=b.block(result,start,end)
+  if live_block==replacement:continue
+  if live_block==previous:
+   result=b.one(result,previous,replacement)
+   continue
+  # Fail safely, with source-only fingerprints instead of publishing any
+  # identity, recording, or personal-review data.
+  print('FACE_V71_BOUNDARY_DRIFT '+json.dumps({
+   'start':start,'old_sha256':b.sha(previous.encode()),
+   'live_sha256':b.sha(live_block.encode()),
+   'new_sha256':b.sha(replacement.encode()),
+   'old_lines':len(previous.splitlines()),
+   'live_lines':len(live_block.splitlines()),
+   'new_lines':len(replacement.splitlines())}),flush=True)
+  raise RuntimeError('concurrent_people_region_'+start.split('(')[0].strip()[:40])
  for marker in ('Unverified crop','Use as portrait','function folderApprovedSDClips',
      'function fetchAutomatic','function searchClothingMatches','assign_many'):
   if marker not in result:raise RuntimeError('security_feature_missing_'+marker)
