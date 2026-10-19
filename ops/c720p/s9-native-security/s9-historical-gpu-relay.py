@@ -164,14 +164,14 @@ def merge_v28_recheck(catalog,entry):
  catalog["items"][key]=row
  return review
 
-def mark_v28_failed_source(error):
+def mark_v28_failed_source(error,main_camera_only=False):
  """A corrupt/missing verified source must not stall the entire local queue."""
  module=cpu_catalog()
  with module.LOCK.open("a") as lock:
   wait_for_catalog_lock(lock)
   verified=module.original_verified()
   cat=module.read_catalog()
-  options=v28_candidates(verified,cat["items"])
+  options=scoped_historical_candidates(v28_candidates(verified,cat["items"]),main_camera_only)
   if not options:return None
   item=options[0]
   key=item["clip_id"]
@@ -500,7 +500,8 @@ def cycle(rescan_v28=False):
                      "hub_disk_space_guard","historical_catalog_busy_retry_next_timer"):
    print("S9_HISTORY_DEFERRED",str(error))
   elif rescan_v28:
-   evidence=mark_v28_failed_source(error)
+   evidence=mark_v28_failed_source(error,
+       main_camera_only=os.environ.get("S9_HISTORICAL_MAIN_CAMERA_ONLY")=="1")
    print("S9_HISTORY_V28_SOURCE_RETRY",json.dumps(evidence or {"error":type(error).__name__}))
   else:raise
 
