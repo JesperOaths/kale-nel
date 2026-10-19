@@ -210,6 +210,14 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 #openClothing{margin-top:12px;width:100%;min-height:42px}
 #approvalDialog .approval-footer>.primary{min-width:220px;flex:1}
 @media(max-width:600px){#review .evidence .body>.actions .primary{flex:1}}
+.auto-person-folders{display:grid;gap:18px;margin-top:15px}
+.auto-person-group{padding:16px;border:1px solid #42616d;border-radius:12px;background:#11232e}
+.auto-person-group>.section-head{margin-bottom:13px}
+.auto-person-group h3{margin:0;font-size:19px}
+.auto-person-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr));gap:12px}
+.auto-person-cards article{min-width:0}
+.auto-person-cards .actions button{flex:1;min-width:96px}
+.auto-person-folders .empty{padding:22px;border:1px dashed #436575;border-radius:12px}
 </style>
 <script defer src="/local/frontyard-security-new/security-people-v45.js?v=v56-20261018-keep-dialog-form-only"></script>
 <script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
@@ -223,6 +231,7 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 <nav class="tabs" aria-label="People and faces workspace">
  <button type="button" data-pane="people" aria-selected="true">People</button>
  <button type="button" data-pane="review" aria-selected="false">Review recordings <span id="reviewTabCount"></span></button>
+ <button type="button" data-pane="automatic" aria-selected="false">Automatic Person <span id="automaticTabCount"></span></button>
  <button type="button" data-pane="clothing" aria-selected="false">Outfit comparisons <span id="clothingTabCount"></span></button>
  <button type="button" data-pane="overview" aria-selected="false">Processing coverage</button>
 </nav>
@@ -268,6 +277,11 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
  <div class="filters"><label>Show<select id="reviewMode"><option value="all" selected>Unassigned recordings</option><option value="inbox">Needs review</option><option value="skipped">Skipped</option></select></label>
 <label>Per page<select id="pageSize"><option value="100" selected>100</option><option value="150">150</option><option value="200">200</option></select></label></div>
  <div id="reviewGrid" class="grid"></div><div id="reviewPage" class="pagebar"></div>
+</section>
+<section id="automatic" hidden aria-label="Automatic person proposals">
+ <div class="section-head"><div><h2>Automatic Person</h2><p>Face-based suggestions grouped by saved person. Every recording requires your approval before it is filed.</p></div><button id="refreshAutomatic" type="button" class="secondary">↻ Refresh suggestions</button></div>
+ <p id="automaticStatus" class="status" role="status">Checking S9+ face evidence…</p>
+ <div id="automaticFolders" class="auto-person-folders" aria-live="polite"></div>
 </section>
 <section id="people" aria-label="Saved people">
  <div class="people-review-notice" id="peopleReviewNotice" hidden><strong id="peopleReviewSummary"></strong><button id="peopleReviewNow" type="button" class="primary">Review →</button></div>
