@@ -43,6 +43,16 @@ async function run(){
  assert.equal(img.dataset.securityLiveStatus,'LIVE · S9+ native camera');
  img.src='/local/still.jpg';
  assert.equal(img._src,'/local/still.jpg');
+ // The kiosk reuses its IMG when Live is closed and opened again.
+ img.src='/new/live.mjpg';
+ for(let i=0;i<8&&calls.filter(x=>x==='sign:/new/live.mjpg').length<2;i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(calls.filter(x=>x==='sign:/new/live.mjpg').length,2);
+ // A detached reused node must be cleaned up, allowing a fresh session.
+ img.isConnected=false;timers[0]();img.isConnected=true;
+ img.src='/new/live.mjpg';
+ for(let i=0;i<8&&calls.filter(x=>x==='sign:/new/live.mjpg').length<3;i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(calls.filter(x=>x==='sign:/new/live.mjpg').length,3,
+   'Reused Live IMG must rejoin visibility scan and reconnect after detachment');
  const vid=new Video();
  vid.src='/new/saved/clip/motion_1792000000000.mp4';
  assert.equal(vid._src,'/new/saved/clip/motion_1792000000000.mp4','native VIDEO.src untouched');
