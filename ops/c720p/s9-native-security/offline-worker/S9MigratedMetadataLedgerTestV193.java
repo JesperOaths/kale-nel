@@ -3,6 +3,9 @@ package nl.kalenel.s9offline;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -90,6 +93,16 @@ public final class S9MigratedMetadataLedgerTestV193 {
                 ledger.commit("delete",A,SOURCE_A,123456,N2);
             ok(repeatedDelete.hmacSha256.equals(tombstone.hmacSha256),
                "latest_tombstone_still_idempotent");
+            // A temporary same-JVM writer lock must never let a reader
+            // report a stale state, partial row, or unchecked exception.
+            try(FileChannel competitor=FileChannel.open(
+                   dir.resolve(".actions-v193.lock"),StandardOpenOption.WRITE);
+                FileLock held=competitor.lock()) {
+                denied(()->ledger.latestDecision(A),"overlapping_read_lock_refused");
+                denied(()->ledger.verifiedCount(),"overlapping_count_lock_refused");
+                denied(()->ledger.commit("save",B,SOURCE_B,789012,N3),
+                       "overlapping_commit_lock_refused");
+            }
             // B is independent of A's tombstone; no A/B source mixing.
             S9MigratedMetadataLedgerV193.Receipt separate=
                 ledger.commit("save",B,SOURCE_B,789012,N3);
