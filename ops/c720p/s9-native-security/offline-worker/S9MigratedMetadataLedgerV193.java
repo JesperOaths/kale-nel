@@ -171,8 +171,10 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
         java.util.HashSet<String> seenNonces = new java.util.HashSet<String>();
         java.util.HashSet<String> tombstones = new java.util.HashSet<String>();
         if (text.isEmpty()) return result;
-        for (String line : text.split("\n", -1)) {
-            if (line.isEmpty()) continue;
+        String[] lines = text.split("\n", -1);
+        for (int lineNumber=0;lineNumber<lines.length-1;lineNumber++) {
+            String line = lines[lineNumber];
+            if (line.isEmpty()) throw new IOException("empty_ledger_record");
             String[] fields = line.split("\\|", -1);
             if (fields.length != 9 || result.size() >= MAX_ROWS)
                 throw new IOException("ledger_record_untrusted");
