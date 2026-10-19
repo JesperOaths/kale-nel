@@ -149,7 +149,7 @@ def assert_camera_safe(expected_pid):
     if observed!=expected_pid:
         raise RuntimeError("Camera2 process changed during offline backfill")
     report=adb("shell","dumpsys battery",timeout=15).stdout
-    match=re.search(r"temperature:\\s*(\\d+)",report)
+    match=re.search(r"temperature:\s*(\d+)",report)
     if match is None:
         raise RuntimeError("Phone thermal telemetry unavailable")
     temperature=int(match.group(1))/10
