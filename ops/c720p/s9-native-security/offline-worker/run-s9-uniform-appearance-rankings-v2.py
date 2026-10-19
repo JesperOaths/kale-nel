@@ -21,7 +21,7 @@ import zipfile
 PHONE="192.168.178.250:5555"
 ROOT="/data/local/tmp/s9_worker"
 STATE=Path("/home/jespern/c720p-home-hub/state/s9-multivector-crop-map-v2.json")
-ANDROID="/usr/lib/android-sdk/platforms/android-36/android.jar"
+ANDROID=os.environ.get("S9_ANDROID_SDK_JAR","/usr/lib/android-sdk/platforms/android-36/android.jar")
 VISUAL="ee5717ad7a90cf0c915afa1fb6a5399b966562c5d42aa6f4a0c6c84a5349e47d"
 HEX=re.compile(r"[a-f0-9]{64}\Z")
 SCHEMA="s9_uniform_upper_torso_hsv32_v2"
