@@ -22,6 +22,7 @@ class V3Deploy(unittest.TestCase):
         self.assertIn("s9_multivector_appearance_api_v3.install(H)",d.ADD)
         self.assertIn(d.HOOK,d.ADD)
         self.assertNotIn("s9_multivector_appearance_api_v2.install(H)",d.ADD)
+        self.assertIn("Unrecognized live V3 API module; refusing overwrite",SRC.read_text())
         code=SRC.read_text()
         for forbidden in ("pm install","am force-stop","delete_original",
                           "review_decide","camera.apk"):
