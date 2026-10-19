@@ -50,6 +50,11 @@ def patch_js(live,old,new):
      "  x.face.snapshot_on_s9!==false)||null;")
    old_guard=("if(!id||!faceName.test(name)||!credibleFaceCrop(face)||\n"
      "     !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){")
+   # The protected V70 live build uses the already verified, source-qualified
+   # approved-folder helper instead of the stale repository v40-only predicate.
+   # This exact alternate guard was inspected read-only in management job #11860.
+   live_guard=("if(!id||!faceName.test(name)||!credibleFaceCrop(face)||\\n"
+     "     !folderApprovedSDClips(id).has(face.clip)){")
    new_guard=("if(!id||!faceName.test(name)||face?.face?.snapshot_on_s9===false||\n"
      "     !assignedRecordingKeys(id).has('sd:'+face.clip)){")
    old_notice="notification('Person portrait selected on this browser. Review decisions were not changed.');"
@@ -57,6 +62,8 @@ def patch_js(live,old,new):
    partial=live_block
    for before,after in ((old_find,new_find),(old_guard,new_guard),(old_notice,new_notice)):
     if after in partial:continue
+    if before==old_guard and partial.count(before)==0 and partial.count(live_guard)==1:
+     before=live_guard
     if partial.count(before)!=1:raise RuntimeError('unrecognized_live_portrait_statement')
     partial=partial.replace(before,after,1)
    guard="if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;"
