@@ -1,0 +1,31 @@
+name: S9 read-only original integrity
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveIntegrity.java'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java'
+      - 'ops/c720p/s9-native-security/tests/PhoneArchiveIntegrityTest.java'
+      - '.github/workflows/s9-original-integrity-readonly.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveIntegrity.java'
+      - 'ops/c720p/s9-native-security/tests/PhoneArchiveIntegrityTest.java'
+permissions:
+  contents: read
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          curl -fsSL --max-time 40 'https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar' -o "$work/json.jar"
+          jar tf "$work/json.jar" | grep -q '^org/json/JSONObject.class$'
+          javac -source 8 -target 8 -cp "$work/json.jar" -d "$work" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveIntegrity.java \
+            ops/c720p/s9-native-security/tests/PhoneArchiveIntegrityTest.java
+          java -cp "$work:$work/json.jar" nl.kalenel.s9security.PhoneArchiveIntegrityTest
