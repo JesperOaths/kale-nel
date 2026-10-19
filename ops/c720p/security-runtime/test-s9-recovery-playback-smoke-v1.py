@@ -67,8 +67,11 @@ class Tests(unittest.TestCase):
        "check_camera() is None or busy_services()","read(SAMPLE_LENGTH+1)","SAMPLE_LENGTH=1024",
        "MIN_ROOT_BYTES=650*1024*1024"):
    self.assertIn(requirement,text)
-  for forbidden in ("adb pull","shutil.rmtree","unlink(","CameraManager","FileOutputStream","--apply"):
+  for forbidden in ("adb pull","shutil.rmtree","CameraManager","FileOutputStream","--apply"):
    self.assertNotIn(forbidden,text)
+  # Atomic private-report cleanup is permitted; source media deletion is not.
+  self.assertEqual(text.count("os.unlink("),1)
+  self.assertIn("os.unlink(temp)",text)
  def test_sparse_timer(self):
   root=PATH.parent
   timer=(root/"c720p-s9-recovery-playback-smoke-v1.timer").read_text()
