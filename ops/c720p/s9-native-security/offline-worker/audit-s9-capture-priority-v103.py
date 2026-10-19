@@ -64,7 +64,7 @@ def recovery_diagnostics(camera,temperature_c):
         "4k_rearm_could_be_waiting_for_idle_or_cooldown":(
             saved and not ready and attempts is not None and attempts<3
             and valid_numeric(temperature_c) and temperature_c<40.5),
-        "4k_recovery_requires_camera_restart_from_hub":False,
+        "hub_initiated_camera_restart":False,
     }
 
 
