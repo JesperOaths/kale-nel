@@ -63,4 +63,7 @@ class Tests(unittest.TestCase):
   self.assertIn("s9_multivector_appearance_api.install(H)",text)
   self.assertIn("s9_c720p_imported_media_api_v1.install(H,play_sd)",text)
   self.assertIn("if root_override is None and name.startswith",text)
+  html=(HERE.parent/"s9-native-security"/"security-review-v8.html").read_text()
+  for key in ("id=\"c720pMigrated\"","/new/api/c720p-migrated-clips","/new/saved/c720p-migrated/clip/","not_s9_original_recordings!==true"):
+   self.assertIn(key,html)
 if __name__=="__main__":unittest.main(verbosity=2)
