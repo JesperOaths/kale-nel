@@ -1,0 +1,13 @@
+[Unit]
+Description=Check recoverable S9 playback byte-range only when cool; stop after proof
+
+[Timer]
+OnBootSec=1h
+OnUnitInactiveSec=6h
+RandomizedDelaySec=45min
+AccuracySec=15min
+Persistent=false
+Unit=c720p-s9-recovery-playback-smoke-v1.service
+
+[Install]
+WantedBy=timers.target
