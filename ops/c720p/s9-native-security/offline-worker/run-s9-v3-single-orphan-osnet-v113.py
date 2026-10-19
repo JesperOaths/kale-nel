@@ -71,6 +71,62 @@ def healthy():
         raise RuntimeError("4k_capture_not_idle_ready")
     return status
 
+def presence_inventory(h,rows):
+    """Read bounded phone visual/HSV presence in batches, fail closed on ADB.
+
+    Source keys must already be SHA-qualified; never interpret a lost ADB
+    transport or partial response as absent verified evidence. Avoid two
+    Android shell launches per crop as source inventory expands to 400 rows.
+    """
+    if not isinstance(rows,list) or not 58<=len(rows)<=400:
+        raise RuntimeError("invalid_source_inventory_size")
+    root=h.ROOT
+    if (not isinstance(root,str)
+        or not re.fullmatch(r"/[A-Za-z0-9_./-]+",root)
+        or ".." in root or len(root)>230):
+        raise RuntimeError("untrusted_phone_feature_root")
+    keys=[x.get("key") if isinstance(x,dict) else None for x in rows]
+    if (any(not isinstance(k,str) or not re.fullmatch(r"[a-f0-9]{64}",k)
+            for k in keys) or len(set(keys))!=len(keys)):
+        raise RuntimeError("invalid_phone_feature_source_keys")
+    result={}
+    for offset in range(0,len(keys),24):
+        batch=keys[offset:offset+24]
+        script="set -eu; "
+        for key in batch:
+            base=root+"/features/"+key
+            visual=base+"-visual.json"
+            hsv=base+"-hsv-v2.json"
+            script+=(
+                f"if test -s {visual}; then v=1; else v=0; fi; "
+                f"if test -s {hsv}; then h=1; else h=0; fi; "
+                f"printf 'S9_PAIR_MASK_V1 {key} %s %s\\n' \"$v\" \"$h\"; "
+            )
+        response=h.adb("shell",script,timeout=45,required=False)
+        raw=response.stdout
+        if (response.returncode!=0 or
+            not isinstance(raw,str) or not isinstance(response.stderr,str) or
+            response.stderr.strip() or len(raw)>len(batch)*100):
+            raise RuntimeError("phone_descriptor_presence_indeterminate")
+        lines=raw.splitlines()
+        if len(lines)!=len(batch):
+            raise RuntimeError("phone_descriptor_presence_incomplete")
+        for key,line in zip(batch,lines):
+            fields=line.split()
+            if (len(fields)!=4 or fields[:2]!=["S9_PAIR_MASK_V1",key]
+                or fields[2] not in ("0","1")
+                or fields[3] not in ("0","1") or key in result):
+                raise RuntimeError("phone_descriptor_presence_untrusted")
+            result[key]={"visual":fields[2]=="1","hsv":fields[3]=="1"}
+    if len(result)!=len(keys):
+        raise RuntimeError("phone_descriptor_presence_incomplete")
+    def present(key,kind):
+        if key not in result or kind not in ("visual","hsv"):
+            raise RuntimeError("untrusted_descriptor_presence_lookup")
+        return result[key][kind]
+    return present
+
+
 def choose_orphan(rows,baseline_keys,present):
     """Choose one genuine V40 visual missing, prioritizing HSV-ready crops."""
     if not isinstance(rows,list) or not 58<=len(rows)<=400:
@@ -162,10 +218,8 @@ def run(apply=False):
                    for k in ("clip","crop_sha256","cohort"))
                for b in baseline):
             raise RuntimeError("v2_source_map_changed")
-        def present(key,kind):
-            return h.remote_exists(h.ROOT+"/features/"+key+
-                                   ("-visual.json" if kind=="visual" else "-hsv-v2.json"))
         mark("v2_hsv_osnet_source_presence")
+        present=presence_inventory(h,rows)
         try:
             orphan=choose_orphan(rows,[b["key"] for b in baseline],present)
         except RuntimeError as no_orphan:
