@@ -73,11 +73,23 @@ def approved_names():
     if manual.get("manual_links_only") is not True or not isinstance(manual.get("items"),dict):
         raise RuntimeError("Manual review provenance index unavailable")
     assigned=set()
+    # Explicit source-qualified V68 overlays override an earlier V40 decision,
+    # including RETURN-TO-QUEUE, SKIP, REJECT, moves and multi-person filing.
+    # A revoked reference must never silently re-enter model training.
+    explicit=set()
     for code,entry in manual["items"].items():
         if not code.startswith("sd:") or not isinstance(entry,dict):
             continue
         clip=code[3:]
-        if CLIP.fullmatch(clip) and entry.get("folder") is not None:
+        if not CLIP.fullmatch(clip):continue
+        if "folders" not in entry and "folder" not in entry:continue
+        explicit.add(clip)
+        people=entry.get("folders")
+        if people is None:people=[entry.get("folder")] if entry.get("folder") else []
+        if not isinstance(people,list):raise RuntimeError("Malformed manual link membership")
+        if any(not isinstance(x,str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}",x) for x in people):
+            raise RuntimeError("Malformed manual person membership")
+        if people and entry.get("review_status","assigned")=="assigned":
             assigned.add(clip)
     doc=request("/new/api/visual-review?workflow=clip_folders_v40&tab=all&offset=0&limit=100")
     folders=doc.get("folders")
@@ -94,7 +106,7 @@ def approved_names():
             if not isinstance(records,list):raise RuntimeError("Unverified approved page")
             for item in records:
                 clip=item.get("clip")
-                if isinstance(clip,str) and CLIP.fullmatch(clip):
+                if isinstance(clip,str) and CLIP.fullmatch(clip) and clip not in explicit:
                     assigned.add(clip)
             total=page.get("total")
             if type(total) is not int or total>5000:
