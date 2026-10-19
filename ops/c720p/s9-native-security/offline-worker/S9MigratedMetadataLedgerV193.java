@@ -67,6 +67,47 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
         public boolean personReviewsModified() { return false; }
     }
 
+    /**
+     * The latest HMAC-verified METADATA action for one explicitly named clip.
+     * This is a read-only projection of journal history, not evidence that
+     * the MP4 still exists or permission to delete the C720P original.
+     * null means no action has ever been committed for this clip.
+     */
+    public static final class CurrentDecision {
+        public final String action, name, sourceSha256, ledgerHeadSha256;
+        public final long sourceBytes, ledgerSequence;
+        public final boolean ledgerIntegrityVerified = true;
+        private CurrentDecision(Row r) {
+            action=r.action; name=r.name; sourceSha256=r.sourceHash;
+            sourceBytes=r.bytes; ledgerSequence=r.sequence;
+            ledgerHeadSha256=r.head;
+        }
+        public boolean isSaved() { return "save".equals(action); }
+        public boolean isDeletedTombstone() { return "delete".equals(action); }
+        public boolean mayRemoveOriginal() { return false; }
+    }
+
+    public synchronized CurrentDecision latestDecision(String name) throws IOException {
+        if (closed)throw new IOException("ledger_closed");
+        if (name==null || !CLIP.matcher(name).matches() || name.contains(".."))
+            throw new IOException("unsafe_current_state_name");
+        ensureFile(ledger);ensureFile(lockFile);
+        // Share the writer's file lock: never parse an in-flight append as
+        // permanent corruption or return a stale state from racing writes.
+        try(FileChannel channel=FileChannel.open(lockFile,StandardOpenOption.WRITE);
+            FileLock held=channel.lock()) {
+            List<Row> rows=readVerified();
+            for(int i=rows.size()-1;i>=0;i--)
+                if(rows.get(i).name.equals(name))
+                    return new CurrentDecision(rows.get(i));
+            return null;
+        } catch(java.nio.channels.OverlappingFileLockException busy) {
+            throw new IOException("ledger_exclusive_lock_busy",busy);
+        } catch(GeneralSecurityException e) {
+            throw new IOException("ledger_crypto_unavailable");
+        }
+    }
+
     private static final class Row {
         long sequence, bytes;
         String previous, nonce, action, name, sourceHash, head, mac;
@@ -156,6 +197,8 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
                     || !verified.get(verified.size()-1).head.equals(row.head))
                 throw new IOException("durable_ledger_readback_failed");
             return receipt(row);
+        } catch (java.nio.channels.OverlappingFileLockException busy) {
+            throw new IOException("ledger_exclusive_lock_busy",busy);
         } catch (GeneralSecurityException error) {
             throw new IOException("ledger_crypto_unavailable") ;
         }
@@ -163,9 +206,12 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
 
     public synchronized int verifiedCount() throws IOException {
         if (closed) throw new IOException("ledger_closed");
-        ensureFile(ledger);
-        try {
+        ensureFile(ledger);ensureFile(lockFile);
+        try(FileChannel channel=FileChannel.open(lockFile,StandardOpenOption.WRITE);
+            FileLock held=channel.lock()) {
             return readVerified().size();
+        } catch (java.nio.channels.OverlappingFileLockException busy) {
+            throw new IOException("ledger_exclusive_lock_busy",busy);
         } catch (GeneralSecurityException error) {
             throw new IOException("ledger_crypto_unavailable");
         }

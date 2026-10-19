@@ -3,6 +3,9 @@ package nl.kalenel.s9offline;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -53,8 +56,14 @@ public final class S9MigratedMetadataLedgerTestV193 {
         try(S9MigratedMetadataLedgerV193 ledger=
               new S9MigratedMetadataLedgerV193(dir.toFile(),KEY)){
             ok(ledger.verifiedCount()==0,"uninitialized_count");
+            ok(ledger.latestDecision(A)==null,"untracked_clip_has_no_authority");
+            denied(()->ledger.latestDecision("../unsafe.mp4"),"current_state_traversal");
             synthetic=ledger.commit("save",A,SOURCE_A,123456,N1);
             ok(synthetic.ledgerSequence==1 && synthetic.durable,"first_commit");
+            S9MigratedMetadataLedgerV193.CurrentDecision saved=ledger.latestDecision(A);
+            ok(saved!=null&&saved.isSaved()&&!saved.isDeletedTombstone()
+              &&saved.ledgerSequence==1&&!saved.mayRemoveOriginal()
+              &&SOURCE_A.equals(saved.sourceSha256),"current_save_visible_without_write");
             ok(!synthetic.mayRemoveOriginal() && !synthetic.personReviewsModified(),"metadata_only");
             long firstSize=Files.size(file);
             S9MigratedMetadataLedgerV193.Receipt duplicate=
@@ -71,6 +80,10 @@ public final class S9MigratedMetadataLedgerTestV193 {
             S9MigratedMetadataLedgerV193.Receipt tombstone=
                 ledger.commit("delete",A,SOURCE_A,123456,N2);
             ok(tombstone.ledgerSequence==2 && ledger.verifiedCount()==2,"durable_tombstone");
+            S9MigratedMetadataLedgerV193.CurrentDecision deleted=ledger.latestDecision(A);
+            ok(deleted!=null&&deleted.isDeletedTombstone()&&!deleted.isSaved()
+               &&deleted.ledgerSequence==2&&!deleted.mayRemoveOriginal(),
+               "latest_delete_not_historical_save");
             denied(()->ledger.commit("save",A,SOURCE_A,123456,N3),"explicit_restore_required");
             // An old Save receipt must not masquerade as a current Saved
             // decision once Delete's tombstone has been durably committed.
@@ -80,14 +93,32 @@ public final class S9MigratedMetadataLedgerTestV193 {
                 ledger.commit("delete",A,SOURCE_A,123456,N2);
             ok(repeatedDelete.hmacSha256.equals(tombstone.hmacSha256),
                "latest_tombstone_still_idempotent");
+            // A temporary same-JVM writer lock must never let a reader
+            // report a stale state, partial row, or unchecked exception.
+            try(FileChannel competitor=FileChannel.open(
+                   dir.resolve(".actions-v193.lock"),StandardOpenOption.WRITE);
+                FileLock held=competitor.lock()) {
+                denied(()->ledger.latestDecision(A),"overlapping_read_lock_refused");
+                denied(()->ledger.verifiedCount(),"overlapping_count_lock_refused");
+                denied(()->ledger.commit("save",B,SOURCE_B,789012,N3),
+                       "overlapping_commit_lock_refused");
+            }
             // B is independent of A's tombstone; no A/B source mixing.
             S9MigratedMetadataLedgerV193.Receipt separate=
                 ledger.commit("save",B,SOURCE_B,789012,N3);
             ok(separate.ledgerSequence==3,"third_action");
+            ok(ledger.latestDecision(A).isDeletedTombstone()&&
+               ledger.latestDecision(B).isSaved()&&
+               ledger.latestDecision(B).ledgerSequence==3,
+               "independent_clip_latest_state_kept");
         }
         try(S9MigratedMetadataLedgerV193 reloaded=
               new S9MigratedMetadataLedgerV193(dir.toFile(),KEY)){
             ok(reloaded.verifiedCount()==3,"restart_reads_durable_records");
+            ok(reloaded.latestDecision(A).isDeletedTombstone()
+               &&reloaded.latestDecision(B).isSaved()
+               &&reloaded.latestDecision(B).sourceBytes==789012,
+               "latest_state_recovered_after_restart");
             // Historical Save may still be cryptographically authentic,
             // but replay after a newer tombstone is not an active receipt.
             denied(()->reloaded.commit("save",A,SOURCE_A,123456,N1),
@@ -106,11 +137,13 @@ public final class S9MigratedMetadataLedgerTestV193 {
         try(S9MigratedMetadataLedgerV193 bad=
               new S9MigratedMetadataLedgerV193(dir.toFile(),KEY)){
             denied(()->bad.verifiedCount(),"tampered_chain");
+            denied(()->bad.latestDecision(A),"tampered_current_state_not_authoritative");
         }
         Files.write(file,good.substring(0,good.length()-1).getBytes(StandardCharsets.US_ASCII));
         try(S9MigratedMetadataLedgerV193 cut=
               new S9MigratedMetadataLedgerV193(dir.toFile(),KEY)){
             denied(()->cut.verifiedCount(),"partial_crash_record");
+            denied(()->cut.latestDecision(A),"partial_record_state_not_authoritative");
         }
         Files.write(file,good.getBytes(StandardCharsets.US_ASCII));
         byte[] wrong="different-synthetic-ledger-key-with-safe-minimum-length".getBytes(
@@ -118,6 +151,7 @@ public final class S9MigratedMetadataLedgerTestV193 {
         try(S9MigratedMetadataLedgerV193 wrongKey=
               new S9MigratedMetadataLedgerV193(dir.toFile(),wrong)){
             denied(()->wrongKey.verifiedCount(),"wrong_key");
+            denied(()->wrongKey.latestDecision(A),"wrong_key_state");
         }
         // Refuse symlink substitution and unprovisioned files.
         Path alias=root.resolve("symlink");
