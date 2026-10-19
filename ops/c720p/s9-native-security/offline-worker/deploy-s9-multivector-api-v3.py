@@ -156,6 +156,9 @@ def main():
     previous=PROXY.read_bytes();proxy_meta=PROXY.stat()
     old_module=MODULE.read_bytes() if MODULE.exists() else None
     module_meta=MODULE.stat() if MODULE.exists() else None
+    # Refuse to overwrite an independently updated live V3 module.
+    if old_module is not None and old_module!=source:
+        raise RuntimeError("Unrecognized live V3 API module; refusing overwrite")
     txt=previous.decode("utf-8")
     if ADD in txt:patched=previous
     elif txt.count(HOOK)==1:patched=txt.replace(HOOK,ADD,1).encode()
