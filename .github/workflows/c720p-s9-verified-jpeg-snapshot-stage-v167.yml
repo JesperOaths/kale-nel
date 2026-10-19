@@ -1,0 +1,94 @@
+name: Verify and mirror C720P legacy JPEG snapshots on S9 microSD V167
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/c720p_to_s9_verified_snapshot_stage_v167.py'
+      - 'ops/c720p/security-runtime/test-c720p-s9-snapshot-stage-v167.py'
+      - '.github/workflows/c720p-s9-verified-jpeg-snapshot-stage-v167.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/c720p_to_s9_verified_snapshot_stage_v167.py'
+      - 'ops/c720p/security-runtime/test-c720p-s9-snapshot-stage-v167.py'
+      - '.github/workflows/c720p-s9-verified-jpeg-snapshot-stage-v167.yml'
+  schedule:
+    - cron: '31 2,10,18 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-jpeg-snapshot-mirror-v167
+  cancel-in-progress: false
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Retain existing MP4 mirror, verify JPEG snapshot source and hash checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/c720p_to_s9_verified_snapshot_stage_v167.py" "$d/c720p_to_s9_verified_media_stage_v2.py"
+          python3 "$d/test-c720p-s9-snapshot-stage-v167.py"
+          python3 "$d/test-c720p-s9-verified-mirror-timer-v2.py"
+          python3 "$d/test-c720p-s9-verified-local-mirror-v2.py"
+  physical-stage:
+    needs: synthetic
+    if: (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify six SHA-linked snapshots without removing local originals
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          d=ops/c720p/security-runtime
+          stage="/tmp/c720p-s9-jpeg-${GITHUB_SHA:0:14}"
+          command="mkdir -p '$stage'"
+          for file in c720p_to_s9_verified_snapshot_stage_v167.py c720p_to_s9_verified_media_stage_v2.py; do
+            remote="$d/$file"
+            sha="$(sha256sum "$remote" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$remote"
+            command="$command && curl -fsSL --max-time 35 '$url' -o '$stage/$file' && printf '%s  %s\\n' '$sha' '$stage/$file' | sha256sum -c - >/dev/null"
+          done
+          script="$stage/c720p_to_s9_verified_snapshot_stage_v167.py"
+          command="$command && /usr/bin/python3 '$script' && /usr/bin/python3 '$script' --copy > '$stage/copy.out'"
+          command="$command && if grep -q 'C720P_S9_SNAPSHOT_V167_VERIFIED' '$stage/copy.out'; then /usr/bin/python3 '$script' --verify > '$stage/verify.out' && grep -q 'C720P_S9_SNAPSHOT_V167_VERIFIED' '$stage/verify.out' && cat '$stage/copy.out' '$stage/verify.out'; elif grep -q 'C720P_S9_SNAPSHOT_V167_DEFERRED' '$stage/copy.out'; then cat '$stage/copy.out'; else echo 'Snapshot proof missing' >&2; exit 1; fi"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-s9-jpeg-v167-${GITHUB_SHA:0:14}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$command" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-s9-jpeg-v167','deployment',:'cmd',650,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "C720P_S9_SNAPSHOT_V167_MANAGEMENT_JOB=$id"
+          for attempt in $(seq 1 200); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == failed* || "$status" == error* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 4400)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]] || exit 1
+              if grep -q 'C720P_S9_SNAPSHOT_V167_VERIFIED' <<< "$output"; then
+                grep -q '"all_source_sha256_verified_on_s9": true' <<< "$output"
+                grep -q '"local_snapshots_deleted": false' <<< "$output"
+                grep -q '"originals_modified": false' <<< "$output"
+                grep -q '"ready_for_local_snapshot_retirement": false' <<< "$output"
+                echo 'S9 verified the snapshots, but C720P originals remain protected'
+              elif grep -q 'C720P_S9_SNAPSHOT_V167_DEFERRED' <<< "$output"; then
+                echo 'Capture-first deferred staging; no copy claimed'
+              else
+                echo 'S9 JPEG stage result not source-verified'; exit 1
+              fi
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'No bounded C720P-to-S9 JPEG verification result'; exit 1
