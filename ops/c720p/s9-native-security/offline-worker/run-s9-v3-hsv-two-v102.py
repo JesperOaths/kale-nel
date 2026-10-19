@@ -99,7 +99,12 @@ def validated_missing(h,rows):
         if not isinstance(sha,str) or not re.fullmatch(r"[a-f0-9]{64}",sha):
             raise RuntimeError("invalid_crop_digest")
         path=h.ROOT+"/features/"+key+"-hsv-v2.json"
-        if not exists(h,path):selected.append(item)
+        if not exists(h,path):
+            # New V40 crops can have neither OSNet nor HSV yet. Never
+            # attempt torso histogram work before the separate SHA-verified
+            # real visual descriptor has been produced and checked.
+            visual=h.ROOT+"/features/"+key+"-visual.json"
+            if exists(h,visual):selected.append(item)
     return selected
 
 def run(h,ctrl):
@@ -121,6 +126,11 @@ def run(h,ctrl):
             raise RuntimeError("reference_cohort_outside_bound")
         missing=validated_missing(h,rows)
         selected=missing[:2]
+        # Count true unprocessed HSV sources separately from OSNet-ready
+        # candidates; withholding missing-visual sources is a deferral, not
+        # a claim that the original crop has no person or no future work.
+        pending_osnet=sum(1 for x in rows if not exists(
+            h,h.ROOT+"/features/"+x["key"]+"-visual.json"))
         # Do not touch images or sidecars until each source-derived 512D
         # embedding passed the verified model SHA, crop SHA and L2 checks.
         for row in selected:h.safe_visual(row["key"],row["crop_sha256"])
@@ -155,6 +165,7 @@ def run(h,ctrl):
         return {
             "verified_crops":len(rows),"missing_before":len(missing),
             "new_verified_histograms":completed,"missing_after":remaining,
+            "pending_real_visual_sidecars":pending_osnet,
             "phone_max_temp_c":observed_max,"phone_pid_unchanged":True,
             "originals_unchanged":True,"manual_reviews_unchanged":True,
             "camera_apk_changed":False,"rankings_modified":False,
