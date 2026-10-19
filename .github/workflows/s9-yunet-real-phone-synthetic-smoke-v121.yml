@@ -1,0 +1,91 @@
+name: Genuine isolated S9 YuNet synthetic ONNX smoke V121
+on:
+  schedule:
+    - cron: '12 4,10,16,22 * * *'
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-yunet-synthetic-smoke-v121.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-yunet-synthetic-smoke-v121.py'
+      - 'ops/c720p/s9-native-security/offline-worker/S9YuNetOnnxSyntheticSmoke.java'
+      - '.github/workflows/s9-yunet-real-phone-synthetic-smoke-v121.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-yunet-synthetic-smoke-v121.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-yunet-synthetic-smoke-v121.py'
+      - '.github/workflows/s9-yunet-real-phone-synthetic-smoke-v121.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-yunet-synthetic-on-phone-v121
+  cancel-in-progress: false
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test strict synthetic-only phone flow
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/run-s9-yunet-synthetic-smoke-v121.py"
+          python3 "$d/test-s9-yunet-synthetic-smoke-v121.py"
+  phone:
+    needs: unit
+    if: (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Sha-pin independent model-only phone runtime check
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          d=ops/c720p/s9-native-security/offline-worker
+          stage="/tmp/s9-yunet-synth-${GITHUB_SHA:0:14}"
+          cmd="mkdir -p '$stage'"
+          for part in run-s9-yunet-synthetic-smoke-v121.py S9YuNetOnnxSyntheticSmoke.java; do
+            f="$d/$part"
+            h="$(sha256sum "$f" | cut -d' ' -f1)"
+            u="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$f"
+            cmd="$cmd && curl -fsSL --max-time 40 '$u' -o '$stage/$part' && printf '%s  %s\\n' '$h' '$stage/$part' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/run-s9-yunet-synthetic-smoke-v121.py' --apply"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="yunet-synthetic-v121-${GITHUB_SHA:0:14}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-yunet-synthetic-v121','deployment',:'cmd',480,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_YUNET_SYNTHETIC_JOB=$id"
+          for i in $(seq 1 150); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              if grep -q 'S9_YUNET_REAL_PHONE_SYNTHETIC_VERIFIED' <<< "$output"; then
+                grep -q '"human_faces_read": false' <<< "$output"
+                grep -q '"camera_apk_modified": false' <<< "$output"
+                grep -q '"people_assigned": 0' <<< "$output"
+                echo "S9 genuine YuNet tensor contract verified using only synthetic pixels"
+              elif grep -q 'S9_YUNET_REAL_PHONE_SYNTHETIC_DEFERRED' <<< "$output"; then
+                grep -q '"verified": false' <<< "$output"
+                echo "S9 synthetic model test deferred: phone unavailable or capture busy"
+              else
+                echo "No verified synthetic model result"; exit 1
+              fi
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "S9 synthetic runtime job timeout"; exit 1
