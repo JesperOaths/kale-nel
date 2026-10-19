@@ -76,6 +76,22 @@ class Tests(unittest.TestCase):
   codes={x["code"] for x in d["issues"]}
   self.assertIn("original_integrity_audit_incomplete",codes)
   self.assertIn("unpaired_preroll_evidence_pending_classification",codes)
+ def test_split_preroll_health_distinguishes_missing_from_unverified_raw(self):
+  args=parameters()
+  args["catalog"]["auxiliary_mp4_inventory"]={
+    "preroll_without_verified_primary":3,
+    "preroll_without_any_primary":1,
+    "preroll_with_raw_unverified_primary":2}
+  d=m.evaluate(**args)
+  self.assertEqual(d["checks"]["unpaired_preroll_segments"],3)
+  self.assertEqual(d["checks"]["prerolls_without_raw_primary"],1)
+  self.assertEqual(d["checks"]["prerolls_with_unverified_raw_primary"],2)
+  codes={x["code"] for x in d["issues"]}
+  self.assertIn("preroll_without_raw_primary_preserve_for_recovery",codes)
+  self.assertIn("preroll_with_unverified_primary_requires_sidecar_review",codes)
+  self.assertNotIn("unpaired_preroll_evidence_pending_classification",codes)
+  self.assertFalse(d["originals_modified"])
+  self.assertFalse(d["manual_reviews_modified"])
  def test_curl_clock_fallback_estimates_positive_90_seconds_without_setting_clock(self):
   header="HTTP/1.1 200 Connection established\n\nHTTP/2 200\nDate: Mon, 19 Oct 2026 04:01:30 GMT\n"
   with patch.object(m.urllib.request,"urlopen",side_effect=OSError("python_proxy_failed")),\
