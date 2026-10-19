@@ -44,10 +44,9 @@ final class PhoneArchiveIntegrity {
    JSONObject report=audit(root,name,gate);
    respond(out,200,report);
   }catch(InterruptedIOException paused){
-   respond(out,503,new JSONObject().put("ok",false).put("error","integrity_deferred_for_capture"));
+   simpleError(out,503,"integrity_deferred_for_capture");
   }catch(Exception invalid){
-   respond(out,503,new JSONObject().put("ok",false).put("error","integrity_unavailable")
-       .put("error_type",invalid.getClass().getSimpleName()));
+   simpleError(out,503,"integrity_unavailable");
   }finally{
    ACTIVE.set(false);
   }
