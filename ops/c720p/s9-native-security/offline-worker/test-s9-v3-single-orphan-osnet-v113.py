@@ -171,6 +171,26 @@ class Tests(unittest.TestCase):
         self.assertIn("github.event_name == 'push'",content)
         self.assertIn("S9_V3_ORPHAN_OSNET_DEFERRED",content)
 
+    def test_concurrent_archive_worker_is_a_safe_deferral(self):
+        import tempfile
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory(prefix="s9-busy-v3-") as tmp:
+            lock=m.LOCK
+            m.LOCK=Path(tmp)/"archive.lock"
+            try:
+                with patch.object(m.shutil,"disk_usage",
+                         return_value=SimpleNamespace(free=3_000_000_000)), \
+                     patch.object(m.fcntl,"flock",
+                         side_effect=BlockingIOError()), \
+                     patch.object(m,"healthy") as camera:
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "shared_archive_worker_busy"):
+                        m.run(apply=True)
+                    camera.assert_not_called()
+            finally:
+                m.LOCK=lock
+        self.assertIn('"shared_archive_worker_busy"',P.read_text())
+
     def test_script_preserves_manual_evidence_and_no_auto_assign(self):
         src=P.read_text()
         for token in ("old.extract_one(old_source)",
