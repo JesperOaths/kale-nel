@@ -1,0 +1,62 @@
+name: S9 standalone original-video person ROI Java compilation
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9StandalonePersonRoi.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-standalone-person-detector.py'
+      - '.github/workflows/s9-standalone-person-roi-compile.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9StandalonePersonRoi.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-standalone-person-detector.py'
+      - '.github/workflows/s9-standalone-person-roi-compile.yml'
+permissions:
+  contents: read
+jobs:
+  compiler-and-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Inspect Android SDK and JDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$ANDROID_HOME/platforms"
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$jar"
+          tools="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -x "$tools"
+          echo "S9_ANDROID_SDK_JAR=$jar" >> "$GITHUB_ENV"
+          echo "$(dirname "$tools")" >> "$GITHUB_PATH"
+          javac -version
+      - name: Validate isolated person cropper and download official CPU TensorFlow Lite dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$dir/install-s9-standalone-person-detector.py"
+          python3 "$dir/install-s9-standalone-person-detector.py" --compile-only
+      - name: Validate no original-video mutation or identity assignment primitives
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path("ops/c720p/s9-native-security/offline-worker")
+          scanner=(root/"S9StandalonePersonRoi.java").read_text()
+          installer=(root/"install-s9-standalone-person-detector.py").read_text()
+          required=("MediaMetadataRetriever","Interpreter","setNumThreads(1)",
+                    "frames=3","single_person","MODEL_SHA","SOURCE")
+          # SOURCE refers to the source-qualified key, not person identity.
+          for term in required[:-1]:
+              assert term.lower() in scanner.lower(),term
+          for term in ("--compile-only","camera_apk_modified",
+                       "MODEL_SHA","labelmap.txt","read_apk"):
+              assert term in installer,term
+          for text in (scanner,installer):
+              for forbidden in ("pm install","am force-stop","getCameraIdList",
+                                "delete_original","automatic_person_assign"):
+                  assert forbidden not in text,forbidden
+          print("S9_STANDALONE_PERSON_ROI_INDEPENDENCE_GATES_PASS")
+          PY
