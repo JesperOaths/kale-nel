@@ -98,7 +98,6 @@ ANCHOR="<title>Camera Security</title>"
  text=text.replace(old_code,new_code)
  existing_check="""        data,st=snapshot()
         if data is None:
-            print("C720P_LEGACY_INDEX_BRIDGE_DEFERRED regenerating")
 """
  protected_check="""        if (JPEG_BRIDGE.is_symlink() or not JPEG_BRIDGE.is_file() or
             digest(JPEG_BRIDGE.read_bytes())!=EXPECTED_JPEG_SHA256):
@@ -106,7 +105,6 @@ ANCHOR="<title>Camera Security</title>"
             return "deferred"
         data,st=snapshot()
         if data is None:
-            print("C720P_LEGACY_INDEX_BRIDGE_DEFERRED regenerating")
 """
  if text.count(existing_check)!=1:raise RuntimeError("unknown_guard_snapshot_gate")
  text=text.replace(existing_check,protected_check)
