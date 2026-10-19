@@ -42,6 +42,69 @@ class Tests(unittest.TestCase):
   blob=fixture().replace(b"if self.origin_ok()",b"if True")
   with self.assertRaisesRegex(RuntimeError,"authenticated_cors_source_contract_changed"):
    m.patch(blob,hashlib.sha256(blob).hexdigest())
+ def test_loopback_restart_waits_only_for_connection_refused(self):
+  import urllib.error
+  from unittest.mock import patch
+  transient=urllib.error.URLError(ConnectionRefusedError(111,"Connection refused"))
+  with patch.object(m,"origin_header",side_effect=[transient,transient,True]) as probe,patch.object(m.time,"sleep") as sleep:
+   self.assertTrue(m.wait_for_local_relay({"allowed":200,"disallowed":200}))
+   self.assertEqual(probe.call_count,3)
+   self.assertEqual(sleep.call_count,2)
+ def test_auth_header_failures_never_retry(self):
+  from unittest.mock import patch
+  with patch.object(m,"origin_header",side_effect=RuntimeError("existing_allowlisted_origin_not_preserved")) as probe,patch.object(m.time,"sleep") as sleep:
+   with self.assertRaisesRegex(RuntimeError,"existing_allowlisted_origin_not_preserved"):
+    m.wait_for_local_relay({"allowed":200,"disallowed":200})
+   self.assertEqual(probe.call_count,1)
+   sleep.assert_not_called()
+ def test_other_network_failures_are_not_masked(self):
+  import urllib.error
+  from unittest.mock import patch
+  error=urllib.error.URLError(PermissionError("policy denied"))
+  with patch.object(m,"origin_header",side_effect=error),patch.object(m.time,"sleep") as sleep:
+   with self.assertRaises(urllib.error.URLError):m.wait_for_local_relay({"allowed":200,"disallowed":200})
+   sleep.assert_not_called()
+ def test_wait_timeout_still_fails_closed(self):
+  import urllib.error
+  from unittest.mock import patch
+  error=urllib.error.URLError(ConnectionRefusedError(111,"refused"))
+  with patch.object(m,"origin_header",side_effect=error) as probe,patch.object(m.time,"sleep") as sleep:
+   with self.assertRaisesRegex(RuntimeError,"relay_listener_not_ready_after_restart"):
+    m.wait_for_local_relay({"allowed":200,"disallowed":200})
+   self.assertEqual(probe.call_count,30)
+   self.assertEqual(sleep.call_count,29)
+ def test_actual_local_loopback_200_is_preserved_not_redefined_as_unauthorized(self):
+  from unittest.mock import patch
+  class Result:
+   status=200
+   def __init__(self,headers):self.headers=headers
+   def __enter__(self):return self
+   def __exit__(self,*_):return False
+  def old_response(req,timeout):
+   origin=req.headers["Origin"]
+   return Result({"Access-Control-Allow-Origin":origin} if "localhost" in origin else {})
+  def new_response(req,timeout):
+   origin=req.headers["Origin"]
+   return Result({"Access-Control-Allow-Origin":origin,
+     "Access-Control-Expose-Headers":"Content-Range"} if "localhost" in origin else {})
+  with patch.object(m.urllib.request,"urlopen",side_effect=old_response):
+   baseline=m.origin_header(False)
+  self.assertEqual(baseline,{"allowed":200,"disallowed":200})
+  with patch.object(m.urllib.request,"urlopen",side_effect=new_response):
+   self.assertEqual(m.origin_header(True,baseline),baseline)
+ def test_disallowed_origin_receives_no_range_exposure(self):
+  from unittest.mock import patch
+  class Resp:
+   status=200
+   def __init__(self,headers):self.headers=headers
+   def __enter__(self):return self
+   def __exit__(self,*_):return False
+  def unsafe(req,timeout):
+   origin=req.headers["Origin"]
+   return Resp({"Access-Control-Allow-Origin":origin,"Access-Control-Expose-Headers":"Content-Range"})
+  with patch.object(m.urllib.request,"urlopen",side_effect=unsafe):
+   with self.assertRaisesRegex(RuntimeError,"disallowed_browser_origin_exposed"):
+    m.origin_header(True)
  def test_no_media_mutation_or_auth_changes_in_source(self):
   src=SRC.read_text()
   for banned in ("pm install","am force-stop","adb push","delete_original",
@@ -49,7 +112,7 @@ class Tests(unittest.TestCase):
     "Access-Control-Allow-Origin','*'"):
    self.assertNotIn(banned,src)
   for marker in ("C720P_CONTENT_RANGE_CORS_V159_VERIFIED","OLD_SHA",
-      "def origin_header():","def browser():","browser_content_range_not_exposed",
+      "def origin_header(expose,expected_status=None):","def wait_for_local_relay(expected_status):","relay_authorization_status_changed_across_rollout","def browser():","browser_content_range_not_exposed",
       "atomic(TARGET,old,mode)","unit(\"restart\")",
       "local_c720p_mp4s_preserved","manual_reviews_modified"):
    self.assertIn(marker,src)
