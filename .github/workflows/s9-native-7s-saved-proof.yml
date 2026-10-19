@@ -1,0 +1,27 @@
+name: S9 native saved seven-second and quiet-tail proof
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/s9_7s_saved_timing_proof_v1.py'
+      - 'ops/c720p/security-runtime/test-s9-7s-saved-timing-proof-v1.py'
+      - 'ops/c720p/security-runtime/c720p-s9-native-timing-proof-v1.service'
+      - 'ops/c720p/security-runtime/c720p-s9-native-timing-proof-v1.timer'
+      - '.github/workflows/s9-native-7s-saved-proof.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/s9_7s_saved_timing_proof_v1.py'
+      - 'ops/c720p/security-runtime/test-s9-7s-saved-timing-proof-v1.py'
+permissions:
+  contents: read
+jobs:
+  metadata-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/s9_7s_saved_timing_proof_v1.py
+          python3 ops/c720p/security-runtime/test-s9-7s-saved-timing-proof-v1.py
+          echo S9_SAVED_7S_PREFIX_AND_10S_QUIET_TIMING_METADATA_GUARDED

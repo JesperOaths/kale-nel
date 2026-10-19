@@ -1,0 +1,11 @@
+[Unit]
+Description=Read-only S9 native 7-second saved MP4 timing verification
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9_7s_saved_timing_proof_v1.py
+TimeoutStartSec=35
+Nice=19
+IOSchedulingClass=idle
+NoNewPrivileges=yes
