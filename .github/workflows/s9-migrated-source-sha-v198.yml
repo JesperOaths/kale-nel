@@ -33,3 +33,27 @@ jobs:
           python3 "$d/test-s9-dual-store-commit-v197.py"
           python3 "$d/test-s9-ledger-internal-checkpoint-v196.py"
           echo "S9_SHA_SOURCE_V198_HOST_ONLY_NO_APK_NO_MEDIA"
+      - name: Compile privileged-source verification adapter as Android API 28 DEX (no phone)
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          d8="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$jar" && test -x "$d8"
+          stage="$(mktemp -d)"
+          trap 'rm -rf "$stage"' EXIT
+          mkdir -p "$stage/classes" "$stage/dex"
+          javac -source 8 -target 8 -cp "$jar" -d "$stage/classes" \
+            "$root/S9MigratedMetadataLedgerV193.java" \
+            "$root/S9MigratedLedgerTrustedCheckpointV196.java" \
+            "$root/S9MigratedDualStoreCommitV197.java" \
+            "$root/S9MigratedVerifiedSourceV198.java"
+          "$d8" --min-api 28 --output "$stage/dex" $(find "$stage/classes" -name '*.class' -print)
+          python3 - "$stage/dex/classes.dex" <<'PY'
+          from pathlib import Path
+          import sys
+          raw=Path(sys.argv[1]).read_bytes()
+          assert raw.startswith(b'dex\n') and 1000<len(raw)<1500000
+          print("S9_MIGRATED_SOURCE_V199_API28_DEX_VERIFIED",len(raw))
+          PY
