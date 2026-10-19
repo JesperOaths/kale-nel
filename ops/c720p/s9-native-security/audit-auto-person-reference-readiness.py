@@ -65,6 +65,22 @@ def classify(events):
           and face.get("snapshot_on_s9") is not False)
    if not saved:continue
    crop_all["indexed_snapshots"]+=1;per_clip[clip]["saved"]+=1
+   # Count missing/explicit evidence separately; an absent boolean is not
+   # affirmative evidence that the original model verified this crop.
+   manual=face.get("face_crop_requires_manual_review")
+   padded=face.get("face_crop_padded_context_only")
+   crop_all["manual_flag_true" if manual is True else
+            "manual_flag_false" if manual is False else "manual_flag_missing"]+=1
+   crop_all["padded_flag_true" if padded is True else
+            "padded_flag_false" if padded is False else "padded_flag_missing"]+=1
+   crop_all["recognized_match_status" if face.get("match_status") in GOOD_STATUS
+            else "other_match_status"]+=1
+   crop_all["snapshot_sha_present" if re.fullmatch(
+     r"[a-f0-9]{64}",str(face.get("snapshot_sha256","")))
+     else "snapshot_sha_missing"]+=1
+   crop_all["alignment_metadata_present" if
+     "face_landmarks_aligned" in face or "face_alignment_verified" in face
+     else "alignment_metadata_missing"]+=1
    strict=(face.get("face_crop_requires_manual_review") is False
       and face.get("face_crop_padded_context_only") is False
       and face.get("match_status") in GOOD_STATUS)
@@ -116,6 +132,17 @@ def main():
         "sd_face_candidate_rows":face_counts["candidate_rows"],
         "sd_indexed_face_snapshots":face_counts["indexed_snapshots"],
         "sd_quality_accepted_face_crops":face_counts["quality_accepted"],
+        "face_manual_review_flag_true":face_counts["manual_flag_true"],
+        "face_manual_review_flag_false":face_counts["manual_flag_false"],
+        "face_manual_review_flag_missing":face_counts["manual_flag_missing"],
+        "face_padded_context_true":face_counts["padded_flag_true"],
+        "face_padded_context_false":face_counts["padded_flag_false"],
+        "face_padded_context_flag_missing":face_counts["padded_flag_missing"],
+        "face_recognized_match_status":face_counts["recognized_match_status"],
+        "face_other_match_status":face_counts["other_match_status"],
+        "face_snapshot_sha_present":face_counts["snapshot_sha_present"],
+        "face_snapshot_sha_missing":face_counts["snapshot_sha_missing"],
+        "face_alignment_metadata_missing":face_counts["alignment_metadata_missing"],
         "sd_explicit_landmark_aligned_crops":face_counts["explicitly_aligned"],
         "saved_person_folders":len(active_folders),
         "distinct_approved_sd_clips":len(approved_clips),
