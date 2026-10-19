@@ -1,5 +1,6 @@
 name: Security Automatic Person V63 safe release
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/deploy-automatic-person-*-v63.py'
@@ -7,6 +8,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'ops/c720p/s9-native-security/deploy-automatic-person-backend-v63.py'
+      - 'ops/c720p/s9-native-security/deploy-automatic-person-ui-v63.py'
       - '.github/workflows/c720p-security-auto-person-v63-release.yml'
 permissions:
   contents: read
