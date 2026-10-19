@@ -11,6 +11,7 @@ spec=importlib.util.spec_from_file_location('v65_helpers',Path(__file__).with_na
 b=importlib.util.module_from_spec(spec);spec.loader.exec_module(b)
 BEFORE='49f16744ed1beea14a5db17102f9ade004423230'
 LIVE_JS='251d5a46cee563ed35c486485ba1dd26e0268e40b4aa2ee5cdcfdb183c2506d8'
+ALREADY_JS='9b2aa1dded79085c24e107489a47120b75c0d07245856411007a402060d3b909'
 TAG='security-drive-person-v66-20261019'
 ASSETS={k:b.ASSETS[k] for k in ('js','people','hub','entry','shell','backend')}
 LIVE_BACKEND='8fd8acf7df9d6c3a9f5074168e563a222976099294a6807ec4f503e9270367c3'
@@ -38,7 +39,32 @@ def main():
  for k,path in ASSETS.items():
   if not path.is_file() or path.is_symlink():raise RuntimeError('unsafe_live_asset')
   existing[k]=(path.read_bytes(),stat.S_IMODE(path.stat().st_mode))
- if b.sha(existing['js'][0])!=LIVE_JS:raise RuntimeError('concurrent_people_ui_update')
+ current_js=b.sha(existing['js'][0])
+ if current_js==ALREADY_JS:
+  # A prior guarded production job already installed this exact V66 build.
+  # Validate the complete live lineage, not just a version string; no restart
+  # or write is needed, and any concurrent/newer UI fails safely below.
+  expected_backend=b.src(a.ref,'ops/c720p/s9-person-ml-v1/s9_manual_recording_links.py').encode()
+  if b.sha(existing['backend'][0])!=b.sha(expected_backend):
+   raise RuntimeError('concurrent_manual_backend_update')
+  for k in ('people','hub','entry','shell'):
+   if TAG.encode() not in existing[k][0]:raise RuntimeError('incomplete_v66_asset_lineage_'+k)
+  before=b.inventory();reviews=b.reviews()
+  for k,path in ASSETS.items():
+   if k=='backend':continue
+   served=b.read('http://127.0.0.1:8123/local/'+path.relative_to(b.WWW).as_posix()+'?v='+TAG)
+   if b.sha(served)!=b.sha(existing[k][0]):raise RuntimeError('served_ui_mismatch_'+k)
+  after=b.inventory()
+  if any(not before[k]<=after[k] for k in before):raise RuntimeError('original_inventory_changed')
+  if reviews!=b.reviews():raise RuntimeError('review_registry_changed')
+  print('DRIVE_PERSON_V66_PREFLIGHT '+json.dumps({'apply':a.apply,'already':True,
+   'js_sha256':current_js,'originals':{k:len(v) for k,v in before.items()}}),flush=True)
+  if a.apply:
+   print('DRIVE_PERSON_V66_DEPLOY_VERIFIED '+json.dumps({'already':True,
+    'originals':{k:len(v) for k,v in after.items()},'review_files_unchanged':True,
+    'metadata_writes':0,'backup':'existing_verified_release','js_sha256':current_js}),flush=True)
+  return
+ if current_js!=LIVE_JS:raise RuntimeError('concurrent_people_ui_update')
  if b.sha(existing['backend'][0])!=LIVE_BACKEND:raise RuntimeError('concurrent_manual_backend_update')
  before=b.inventory();reviews=b.reviews()
  old=b.src(BEFORE,b.PREFIX+'security-people-v45.js');new=b.src(a.ref,b.PREFIX+'security-people-v45.js')
