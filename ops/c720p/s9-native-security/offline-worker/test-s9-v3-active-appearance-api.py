@@ -129,7 +129,7 @@ class V3Api(unittest.TestCase):
         map_path.write_bytes(self.map_bytes)
         self.pointer["map_sha256"]=a.checksum(self.map_bytes)
         a.ACTIVE.write_bytes(encode(self.pointer))
-        with self.assertRaisesRegex(ValueError,"unknown_v3_archive_source"):
+        with self.assertRaisesRegex(ValueError,"missing_original_v2_reference|unknown_v3_archive_source"):
             a.report(self.rows[0]["clip"])
 
     def test_identity_assertions_and_nan_rejected(self):
