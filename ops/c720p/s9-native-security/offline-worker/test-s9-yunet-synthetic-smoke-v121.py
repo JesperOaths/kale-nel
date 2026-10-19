@@ -34,6 +34,21 @@ class Tests(unittest.TestCase):
        returncode=0,stderr="",stdout="")):
    with self.assertRaisesRegex(RuntimeError,"unsafe_phone_worker_symlink"):
     m.phone_path_exists_safely("/data/local/tmp/s9_worker/test.pending")
+ def test_valid_android_sha256sum_is_accepted(self):
+  digest="a"*64
+  results=[
+   SimpleNamespace(returncode=0,stderr="",stdout=""),
+   SimpleNamespace(returncode=0,stderr="",stdout=digest+"  /data/local/tmp/s9_worker/model.onnx\\n")]
+  with patch.object(m.subprocess,"run",side_effect=results) as proc:
+   self.assertEqual(m.phone_sha("/data/local/tmp/s9_worker/model.onnx"),digest)
+   self.assertEqual(proc.call_count,2)
+ def test_malformed_android_sha256sum_fails_closed(self):
+  results=[
+   SimpleNamespace(returncode=0,stderr="",stdout=""),
+   SimpleNamespace(returncode=0,stderr="",stdout="unexpected sha256 response")]
+  with patch.object(m.subprocess,"run",side_effect=results):
+   with self.assertRaisesRegex(RuntimeError,"invalid_phone_sha"):
+    m.phone_sha("/data/local/tmp/s9_worker/model.onnx")
  def test_static_device_safety(self):
   text=source.read_text()
   for needed in ("continuous_4k_dropped_output_frames","temperature_c",

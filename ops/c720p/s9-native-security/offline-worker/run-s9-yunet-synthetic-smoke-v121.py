@@ -48,9 +48,10 @@ def phone_sha(path):
  if proc.returncode==1 and not proc.stderr.strip():return None
  if proc.returncode:raise RuntimeError("unavailable_phone_model_or_dex")
  out=adb("shell","sha256sum "+path)
- m=re.match(r"^([a-f0-9]{64})\\s+",out)
- if not m:raise RuntimeError("invalid_phone_sha")
- return m.group(1)
+ parts=out.split()
+ if len(parts)<2 or not re.fullmatch("[a-f0-9]{64}",parts[0]):
+  raise RuntimeError("invalid_phone_sha")
+ return parts[0]
 
 def phone_path_exists_safely(path):
  # Reject both actual files and pre-existing zero-byte partial transfers.
