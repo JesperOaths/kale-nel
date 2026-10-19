@@ -2,6 +2,7 @@
 """No-device tests for two-crop phone HSV32 preservation and thermal gates."""
 import importlib.util
 import json
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -42,21 +43,20 @@ class FakeH:
         self.visual={r["key"] for r in self.rows}
         self.verified=[]
         self.new=[]
+        self.presence_batches=[]
     def adb(self, *argv, **kw):
         if argv[:2]==("shell","pidof nl.kalenel.s9security"):
             return SimpleNamespace(returncode=0,stdout=self.pid+"\n",stderr="")
         if argv[:2]==("shell","dumpsys battery"):
             return SimpleNamespace(returncode=0,stdout=f"temperature: {int(self.temp*10)}\n",stderr="")
-        if argv[:2]==("shell","test -s "+self.ROOT+"/features/"):
-            raise AssertionError("test -s call must contain exact key")
-        if argv[0]=="shell" and argv[1].startswith("test -s "):
-            match=argv[1].removeprefix("test -s ").removeprefix(self.ROOT+"/features/")
-            if match.endswith("-hsv-v2.json"):
-                found=match.removesuffix("-hsv-v2.json") in self.cached
-            elif match.endswith("-visual.json"):
-                found=match.removesuffix("-visual.json") in self.visual
-            else:raise AssertionError("unexpected descriptor path")
-            return SimpleNamespace(returncode=0 if found else 1,stdout="",stderr="")
+        if argv[0]=="shell" and argv[1].startswith("set -eu; "):
+            assert kw.get("timeout")==45 and kw.get("required") is False
+            keys=re.findall(r"S9_PAIR_MASK_V1 ([a-f0-9]{64}) %s %s",argv[1])
+            self.presence_batches.append(keys)
+            text="".join(
+                f"S9_PAIR_MASK_V1 {key} {int(key in self.visual)} "
+                f"{int(key in self.cached)}\n" for key in keys)
+            return SimpleNamespace(returncode=0,stdout=text,stderr="")
         raise AssertionError("unexpected phone command "+str(argv))
     def inventory(self, include_unreviewed=False):
         assert include_unreviewed
@@ -213,6 +213,54 @@ class Tests(unittest.TestCase):
             self.assertNotIn(".mp4",str(data))
             self.assertNotIn("new_verified_histograms",data)
 
+    def test_82_crop_inventory_requires_four_calls_per_snapshot(self):
+        h=FakeH(count=82,initially_missing=1)
+        result=m.run(h,FakeCtrl())
+        self.assertEqual(result["new_verified_histograms"],1)
+        self.assertEqual([len(b) for b in h.presence_batches],[24,24,24,10]*2)
+        self.assertEqual(result["missing_after"],0)
+        self.assertEqual(result["pending_real_visual_sidecars"],0)
+
+    def test_400_crop_maximum_is_bounded_and_nonwriting(self):
+        h=FakeH(count=400,initially_missing=0)
+        result=m.run(h,FakeCtrl())
+        self.assertEqual(result["new_verified_histograms"],0)
+        self.assertEqual(len(h.presence_batches),34)
+        self.assertTrue(all(0<len(b)<=24 for b in h.presence_batches))
+        self.assertEqual(h.new,[])
+
+    def test_short_swapped_or_corrupt_presence_batch_fails_closed(self):
+        for bad in ("missing","swapped","bad_flag","offline"):
+            with self.subTest(bad=bad):
+                h=FakeH()
+                old=h.adb
+                def bad_read(*args,**kwargs):
+                    response=old(*args,**kwargs)
+                    if args[0]!="shell" or not args[1].startswith("set -eu; "):
+                        return response
+                    if bad=="offline":
+                        return SimpleNamespace(returncode=255,stdout="",stderr="device offline")
+                    lines=response.stdout.splitlines()
+                    if bad=="missing":lines.pop()
+                    if bad=="swapped":lines[0],lines[1]=lines[1],lines[0]
+                    if bad=="bad_flag":lines[0]=lines[0].replace(" 1 0"," 2 0")
+                    return SimpleNamespace(returncode=0,stdout="\n".join(lines)+"\n",stderr="")
+                h.adb=bad_read
+                with self.assertRaisesRegex(RuntimeError,"phone_descriptor_presence_"):
+                    m.run(h,FakeCtrl())
+                self.assertEqual(h.new,[])
+
+    def test_duplicate_keys_and_bad_root_fail_before_adb(self):
+        for kind in ("duplicate","root"):
+            with self.subTest(kind=kind):
+                h=FakeH()
+                if kind=="duplicate":h.rows[-1]["key"]=h.rows[0]["key"]
+                else:h.ROOT="/tmp/wrong; path"
+                with self.assertRaisesRegex(RuntimeError,"(duplicate_source|untrusted_phone_feature_root)"):
+                    m.run(h,FakeCtrl())
+                self.assertEqual(h.presence_batches,[])
+                self.assertEqual(h.new,[])
+
     def test_source_key_validation_prevents_writes(self):
         h=FakeH()
         h.rows[0]["key"]="../bad"
@@ -223,11 +271,11 @@ class Tests(unittest.TestCase):
         h=FakeH()
         old=h.adb
         def err(*args,**kw):
-            if args[0]=="shell" and args[1].startswith("test -s "):
+            if args[0]=="shell" and args[1].startswith("set -eu; "):
                 return SimpleNamespace(returncode=255,stderr="device offline",stdout="")
             return old(*args,**kw)
         h.adb=err
-        with self.assertRaisesRegex(RuntimeError,"phone_transport_untrusted"):
+        with self.assertRaisesRegex(RuntimeError,"phone_descriptor_presence_indeterminate"):
             m.run(h,FakeCtrl())
         self.assertEqual(h.new,[])
 
