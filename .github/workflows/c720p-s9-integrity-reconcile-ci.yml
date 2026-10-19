@@ -1,0 +1,27 @@
+name: C720P private S9 integrity reconciliation
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/s9-original-integrity-reconcile-v1.py'
+      - 'ops/c720p/security-runtime/test-s9-original-integrity-reconcile-v1.py'
+      - 'ops/c720p/security-runtime/c720p-s9-original-integrity-v1.*'
+      - '.github/workflows/c720p-s9-integrity-reconcile-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/s9-original-integrity-reconcile-v1.py'
+      - 'ops/c720p/security-runtime/test-s9-original-integrity-reconcile-v1.py'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/s9-original-integrity-reconcile-v1.py
+          python3 ops/c720p/security-runtime/test-s9-original-integrity-reconcile-v1.py
+          grep -q 'Nice=19' ops/c720p/security-runtime/c720p-s9-original-integrity-v1.service
+          grep -q 'OnUnitInactiveSec=30min' ops/c720p/security-runtime/c720p-s9-original-integrity-v1.timer

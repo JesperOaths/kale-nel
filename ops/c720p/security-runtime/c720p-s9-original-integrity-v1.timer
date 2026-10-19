@@ -1,0 +1,13 @@
+[Unit]
+Description=Low-duty S9 microSD original-integrity audit
+
+[Timer]
+OnBootSec=12min
+OnUnitInactiveSec=30min
+RandomizedDelaySec=8min
+AccuracySec=5min
+Unit=c720p-s9-original-integrity-v1.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

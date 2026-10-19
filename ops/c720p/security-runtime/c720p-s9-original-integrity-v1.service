@@ -1,0 +1,11 @@
+[Unit]
+Description=Read-only S9 original 4K digest reconciliation (one phone clip only)
+After=default.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9-original-integrity-reconcile-v1.py
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=175
+NoNewPrivileges=true
