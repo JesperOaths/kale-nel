@@ -10,6 +10,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-hsv32-uniform-v2.py'
       - 'ops/c720p/s9-native-security/offline-worker/S9AppearanceRankingWorkerV3.java'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-partial-inventory.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-batched-pair-presence-v192.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-progressive-ranking-v113.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-phone-json-integrity-v114.py'
       - '.github/workflows/s9-v3-progressive-ranking-v113.yml'
@@ -22,6 +23,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-hsv32-uniform-v2.py'
       - 'ops/c720p/s9-native-security/offline-worker/S9AppearanceRankingWorkerV3.java'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-partial-inventory.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-batched-pair-presence-v192.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-progressive-ranking-v113.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-phone-json-integrity-v114.py'
       - '.github/workflows/s9-v3-progressive-ranking-v113.yml'
@@ -47,6 +49,7 @@ jobs:
           python3 "$d/test-s9-phone-json-integrity-v114.py"
           python3 "$d/test-s9-v3-ranker-capture-isolation-v106.py"
           python3 "$d/test-s9-v3-partial-inventory.py"
+          python3 "$d/test-s9-v3-batched-pair-presence-v192.py"
   guarded-publisher:
     needs: verify
     if: (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && github.repository == 'JesperOaths/kale-nel'
