@@ -236,6 +236,11 @@ async function manualLink(item,folder,reviewAction=null){
  }
 }
 
+async function removeFromPerson(item,folder){
+ const remaining=assignedFolders(item).filter(id=>id!==folder);
+ // The original v40 approval still exists. Explicit empty overlay masks it.
+ return manualLink(item,remaining.length?remaining:null);
+}
 function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
 // Source-qualified evidence: Drive originals cannot inherit S9 face crops.
 function folderApprovedSDClips(id){
@@ -565,6 +570,19 @@ function selectPane(pane){
   b.setAttribute('aria-selected',String(b.dataset.pane===expected));
  }
 }
+function addApprovalPerson(value=''){
+ const host=$('approvalExtraPeople'),existing=host.children.length;
+ if(existing>=11){alertText('Up to 12 people can be filed in one recording.');return}
+ const row=elt('div','','additional-person-row');
+ const picker=elt('select');picker.setAttribute('aria-label','Additional person '+(existing+2));
+ picker.add(new Option('Select additional person',''));
+ for(const f of savedFolders())picker.add(new Option(f.label,f.id));
+ picker.value=value;
+ const remove=control('− Remove',()=>{
+  row.remove();if(row.parentNode===host)host.removeChild(row);
+ },'secondary');
+ row.append(picker,remove);host.append(row);
+}
 function openApproval(item){
  state.approvalItem=item;$('approvalStatus').textContent='';
  $('approvalClip').textContent='Recording · '+date(item);
@@ -576,10 +594,12 @@ function openApproval(item){
   if(f?.automatic_appearance_group)select.add(new Option('Keep in '+f.label+' (reviewed)',f.id));
  }
  $('approvalLabel').value='';
+ $('approvalExtraPeople').replaceChildren();
  if(state.folder)select.value=state.folder;
  else if(state.lastFolder&&savedFolders().some(f=>f.id===state.lastFolder))select.value=state.lastFolder;
  const assigned=assignedFolder(item);
  if(assigned&&Array.from(select.options||select.children).some(o=>o.value===assigned))select.value=assigned;
+ for(const person of assignedFolders(item).slice(1))addApprovalPerson(person);
  $('newLabel').hidden=!!select.value;
  $('approvalDialog').showModal();
  const main=$('approvalDialog').querySelector('.approval-main');
@@ -712,8 +732,8 @@ function reviewItem(item,compact){
  const tools=elt('div','','actions');
  tools.append(control(item.person_recheck_required?'🔎 Recheck person evidence':'▶ Play',()=>startVideo(item)));
  if(item.decision==='approved'){
-  if(state.folder)tools.append(control('↩ Return to review queue',
-    ()=>manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},null),'secondary'));
+  if(state.folder)tools.append(control('↩ Remove from this person',
+    ()=>removeFromPerson({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},state.folder),'secondary'));
   else tools.append(control('Saved ✓',()=>{},'secondary'));
  }else if(['rejected','skipped'].includes(item.decision)){
   tools.append(control('Restore',()=>state.pane==='review'?manualLink(item,null):restore(item),'secondary'));
@@ -1409,6 +1429,7 @@ $('editFolder').addEventListener('click',()=>openFolderEditor('edit'));
 $('cancelFolder').addEventListener('click',()=>$('folderDialog').close());
 $('cancelApproval').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalFolder').addEventListener('change',()=>{$('newLabel').hidden=!!$('approvalFolder').value});
+$('approvalAddPerson').addEventListener('click',()=>addApprovalPerson());
 $('approvalPlay').addEventListener('click',()=>{if(state.approvalItem)startVideo(state.approvalItem)});
 $('approvalCancelFooter').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalForm').addEventListener('submit',async e=>{
@@ -1426,7 +1447,12 @@ $('approvalForm').addEventListener('submit',async e=>{
   if(!done||!created){alertText('Could not create a person.');return}
   folder=created;
  }
- const ok=await manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},folder);
+ const extra=[...$('approvalExtraPeople').children].map(row=>row.querySelector('select')?.value).filter(Boolean);
+ const all=[folder,...extra];
+ if(new Set(all).size!==all.length){
+  alertText('Select each person only once.');return;
+ }
+ const ok=await manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},all);
  if(ok)$('approvalDialog').close();
 });
 $('folderForm').addEventListener('submit',async e=>{
@@ -1447,8 +1473,11 @@ $('viewerFile').addEventListener('click',()=>{
 });
 $('viewerReturn').addEventListener('click',()=>{
  const item=state.playingItem;if(!item||!(assignedFolder(item)||item.approvedFolderContext))return;
- if(!confirm('Return this recording to the unassigned review queue?'))return;
- $('viewer').close();manualLink(item,null);
+ const folder=state.folder&&assignedTo(item,state.folder)?state.folder:null;
+ if(!confirm(folder?'Remove this clip from this person? Other assigned people will remain.':
+   'Return this recording to the unassigned review queue?'))return;
+ $('viewer').close();
+ if(folder)removeFromPerson(item,folder);else manualLink(item,null);
 });
 $('viewer').addEventListener('close',stopVideo);
 $('video').addEventListener('loadedmetadata',()=>{const v=$('video');
