@@ -23,6 +23,12 @@ for(const label of ['Processing coverage','Review recordings','People','People A
 assert(js.includes('limit:100')&&html.includes('value="100" selected'),'Page size must default to 100');
 assert(js.includes('batch.revision!==next.revision'),'Review pagination must not combine changed revisions');
 assert(js.includes('viewerFile')&&html.includes('id="viewerFile"'),'Video filing must be actionable');
+assert(js.includes('approvedFolderContext')&&js.includes('playVideo(path,date(item),sec,item)'),
+ 'Approved person folder must keep modal Return to review available while full assignment scan loads');
+assert(js.includes('for(let pass=0;pass<3&&references.length<18;pass++)'),
+ 'Outfit references must rotate across saved people before using extra samples');
+assert(js.includes('Math.abs(candidateTime-ref.recorded_ms)>72*60*60*1000'),
+ 'Clothing-only suggestions require nearby timestamps, not ancient colour lookalikes');
 assert(!html.includes('id="approvalConfirmed"'),'Remove redundant second confirmation checkbox');
 assert(js.includes('state.lastFolder=folder||state.lastFolder'),'Review queue must retain last selected person');
 const keepMarkup=html.split('<dialog id="approvalDialog"')[1]?.split('</dialog>')[0]||'';
@@ -349,6 +355,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
   'Suggestions must return to source evidence for confirmation: '+el('clothingTotal').textContent+
   '; items='+el('clothingList').children.length+'; requests='+fetches.filter(p=>p.includes('/appearance-search?')).length);
  assert.match(el('clothingTotal').textContent,/human review/);
+ assert.match(el('clothingTotal').textContent,/within 72 hours/);
  // Simulate a slow previous tab request arriving after a newer navigation.
  panes[1].handlers.click();
  for(let i=0;i<5;i++)await flush();
