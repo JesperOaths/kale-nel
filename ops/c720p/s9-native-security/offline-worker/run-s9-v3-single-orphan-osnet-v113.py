@@ -72,7 +72,7 @@ def healthy():
     return status
 
 def choose_orphan(rows,baseline_keys,present):
-    """Only one extra V40 HSV-only crop, never a historical reference."""
+    """Choose one real extra V40 HSV-only crop per run, preserving V2."""
     if not isinstance(rows,list) or not 58<=len(rows)<=400:
         raise RuntimeError("invalid_source_inventory_size")
     old_keys=set(baseline_keys)
@@ -96,9 +96,12 @@ def choose_orphan(rows,baseline_keys,present):
             if key in old_keys or row.get("cohort")!="v40":
                 raise RuntimeError("orphan_is_not_unassigned_v40")
             found.append(row)
-    if len(found)!=1:
-        raise RuntimeError("expected_exactly_one_orphan")
-    return found[0]
+    if not found:
+        raise RuntimeError("no_pending_v40_histogram_only_crop")
+    # A two-histogram HSV32 batch can legitimately leave multiple missing
+    # visual features. Recover at most ONE in this cool window, and let the
+    # next scheduled run select the next still-pending crop.
+    return min(found,key=lambda row:row["key"])
 
 def choose_v40_source(old,entry):
     # Re-use the same source-qualified original V40 crop that produced
@@ -161,7 +164,7 @@ def run(apply=False):
         try:
             orphan=choose_orphan(rows,[b["key"] for b in baseline],present)
         except RuntimeError as no_orphan:
-            if str(no_orphan)!="expected_exactly_one_orphan":
+            if str(no_orphan)!="no_pending_v40_histogram_only_crop":
                 raise
             # A previous attempt may have completed append-only phone inference
             # and only failed a later post-check. Reconcile genuine real pair
@@ -253,6 +256,7 @@ def main():
         print(BLOCK+json.dumps({"stage":STAGE["value"],"reason":reason if reason in
              {"hub_disk_reserve_low","expected_exactly_one_orphan",
               "historical_v2_reference_missing","v40_crop_provenance_mismatch",
+              "no_pending_v40_histogram_only_crop",
               "invalid_source_inventory_size"} else "private_verification_failed",
               "private_output_suppressed":True,
               "completed":False}),flush=True)
