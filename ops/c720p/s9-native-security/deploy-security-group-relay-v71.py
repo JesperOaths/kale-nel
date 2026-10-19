@@ -14,6 +14,7 @@ import json
 import re
 import stat
 import subprocess
+import time
 import urllib.error
 import urllib.request
 
@@ -72,12 +73,23 @@ def probe_group():
              'X-S9-Manual-Link-Intent':'manual-original-review-links-v1',
              'Origin':'http://127.0.0.1:8123',
              'Sec-Fetch-Site':'same-site' if port==8794 else 'same-origin'},method='POST')
-        try:r=urllib.request.urlopen(request,timeout=20)
-        except urllib.error.HTTPError as e:r=e
-        with r:
-            answer=json.load(r)
-            if r.status!=404 or answer.get('error')!='source_not_in_verified_archive':
-                raise RuntimeError('group_post_relay_rejected_or_misrouted_'+str(port))
+        for attempt in range(25):
+            try:
+                r=urllib.request.urlopen(request,timeout=8)
+            except urllib.error.HTTPError as exc:
+                r=exc
+            except urllib.error.URLError as exc:
+                # A systemd service can be active before its TCP socket binds.
+                # Retry only a connection-refused/startup gap, never 403/400.
+                if isinstance(exc.reason,ConnectionRefusedError) and attempt<24:
+                    time.sleep(1)
+                    continue
+                raise RuntimeError('group_probe_socket_unavailable_'+str(port)) from exc
+            with r:
+                answer=json.load(r)
+                if r.status!=404 or answer.get('error')!='source_not_in_verified_archive':
+                    raise RuntimeError('group_post_relay_rejected_or_misrouted_'+str(port))
+            break
 
 def main():
     args=argparse.ArgumentParser()
