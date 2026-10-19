@@ -33,9 +33,12 @@ class AllBrowserSafety(unittest.TestCase):
  def test_range_bounded_before_read_and_no_ids_returned(self):
   js=s.script()
   self.assertIn("headers:{Range:'bytes=0-1023'}",js)
-  self.assertIn("mp4.status!==206||length!==1024",js)
+  self.assertIn("status_206:mp4.status===206",js)
+  self.assertIn("length_1024:length===1024",js)
+  self.assertIn("range_matches_manifest:range==='bytes 0-1023/'+String(f.bytes)",js)
+  self.assertIn("mime_mp4:type==='video/mp4'",js)
   self.assertIn("await mp4.body?.cancel()",js)
-  self.assertLess(js.index("length!==1024"),js.index("await mp4.arrayBuffer()"))
+  self.assertLess(js.index("length_1024:length===1024"),js.index("await mp4.arrayBuffer()"))
   self.assertIn("seen.has(f.name)",js)
   self.assertIn("passed++",js)
   self.assertNotIn("return {ticket:",js)
@@ -43,6 +46,31 @@ class AllBrowserSafety(unittest.TestCase):
   self.assertNotIn("return {filename:",js)
   self.assertNotIn("v.play(",js)
   self.assertIn("filenames_not_returned:true",js)
+
+ def test_failed_range_returns_only_safe_boolean_contract_flags(self):
+  keys=("status_206","length_1024","range_header_visible",
+        "range_matches_manifest","mime_mp4")
+  report={"ok":False,"reason":"range_contract_failed","passed":2,
+          "range_checks":dict(zip(keys,(True,True,False,False,True))),
+          "filename":"private-test-clip.mp4",
+          "signed_url":"https://secret.invalid/recording?key=hidden"}
+  with patch("builtins.print") as printed:
+   with self.assertRaisesRegex(RuntimeError,"range_contract_failed"):
+    s.validate(report)
+  self.assertEqual(printed.call_count,1)
+  text=printed.call_args.args[0]
+  self.assertIn("C720P_MIGRATED_ALL_RANGE_DIAGNOSTIC ",text)
+  self.assertIn('"previous_ranges_verified": 2',text)
+  self.assertIn('"range_header_visible": false',text)
+  self.assertIn('"status_206": true',text)
+  self.assertNotIn("private-test-clip.mp4",text)
+  self.assertNotIn("secret.invalid",text)
+  self.assertNotIn("key=hidden",text)
+  for bad in ({"status_206":"true"},dict(zip(keys,[True]*4+[1]))):
+   with patch("builtins.print") as blocked:
+    forged=dict(report,range_checks=bad)
+    with self.assertRaises(RuntimeError):s.validate(forged)
+    blocked.assert_not_called()
 
  def test_no_private_data_in_failure_codes(self):
   self.assertEqual(s.safe_failure_reason(RuntimeError(
