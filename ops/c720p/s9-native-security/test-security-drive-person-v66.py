@@ -22,6 +22,7 @@ live,_=model.patch(live)
 live=v65.patch_js(live,at(v65.BEFORE).decode(),old)
 assert v65.sha(live)==v66.LIVE_JS
 fresh=v66.patch_js(live,old,(ROOT/'security-people-v45.js').read_text())
+assert v66.sha(fresh)==v66.ALREADY_JS, 'Installed V66 hash no longer matches exact source replay'
 with tempfile.TemporaryDirectory() as directory:
  target=Path(directory)/PREFIX;target.mkdir(parents=True)
  (target/'security-people-v45.js').write_bytes(fresh)
