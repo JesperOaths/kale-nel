@@ -149,45 +149,67 @@ def main():
         # endlessly recompute full historical rankings for empty detections.
         generated=totals.get("new_real_512d_vector",0)
         ranked=False;histograms=0;active=False
-        if generated:
-            catalog=h.inventory(include_unreviewed=True)
-            if len(catalog)>400:raise RuntimeError("V3 archive exceeds bounded scorer capacity")
-            pending_hsv=[x for x in catalog if not h.remote_exists(
-                 h.ROOT+"/features/"+x["key"]+"-hsv-v2.json")]
-            if len(pending_hsv)>10:
-                raise RuntimeError("More than ten missing HSV sidecars; run bounded histogram batches")
-            if pending_hsv:
-                out=run_worker(
-                    "backfill-s9-hsv32-uniform-v2.py",
-                    ["--include-unreviewed","--missing-only","--limit","10","--write"],
-                    "S9_HSV32_V2_BACKFILL_VERIFIED",timeout=380)
-                counts=out.get("counts",{})
-                if (sum(counts.values())!=len(pending_hsv) or
-                    counts.get("verified_histogram_and_osnet")!=len(pending_hsv)
-                    or out.get("recordings_modified") is not False):
-                    raise RuntimeError("Uniform HSV32 stage did not verify all new descriptors")
-                histograms=len(pending_hsv)
-            if len(catalog)>=58:
-                out=run_worker(
-                    "run-s9-uniform-appearance-rankings-v3.py",
-                    ["--apply"],"S9_V3_MODEL_BACKED_RANKINGS_PRODUCED",
-                    timeout=400)
-                if (out.get("verified_uniform_crop_records")!=len(catalog)
-                    or out.get("v1_v2_indices_sha256_unchanged") is not True
-                    or out.get("camera_apk_changed") is not False
-                    or out.get("manual_reviews_changed") is not False):
-                    raise RuntimeError("V3 ranked snapshot failed source preservation")
-                ranked=True
-                if args.activate_api:
-                    api=run_worker("deploy-s9-multivector-api-v3.py",
-                                   ["--apply"],"S9_V3_READONLY_API_DEPLOY_VERIFIED",
-                                   timeout=360)
-                    active=api.get("status")=="verified_v3_rankings_live"
-                    if not active:
-                        raise RuntimeError("V3 API did not serve real active rankings")
+        catalog=h.inventory(include_unreviewed=True)
+        if len(catalog)>400:
+            raise RuntimeError("V3 archive exceeds bounded scorer capacity")
+        pending_hsv=[x for x in catalog if not h.remote_exists(
+             h.ROOT+"/features/"+x["key"]+"-hsv-v2.json")]
+        # If an earlier run reached its thermal stop after writing OSNet,
+        # there may be no *new* vector in this invocation. Still resume
+        # missing HSV computation / publishing the unactivated V3 snapshot.
+        if pending_hsv:
+            count=min(10,len(pending_hsv))
+            out=run_worker(
+                "backfill-s9-hsv32-uniform-v2.py",
+                ["--include-unreviewed","--missing-only","--limit",
+                 str(count),"--write"],
+                "S9_HSV32_V2_BACKFILL_VERIFIED",timeout=380)
+            counts=out.get("counts",{})
+            if (sum(counts.values())!=count or
+                counts.get("verified_histogram_and_osnet")!=count
+                or out.get("recordings_modified") is not False):
+                raise RuntimeError("Uniform HSV32 stage did not verify selected descriptors")
+            histograms=count
+        missing_remaining=max(0,len(pending_hsv)-histograms)
+        active_pointer=STATE/"s9-multivector-v3-active.json"
+        active_count=0
+        if active_pointer.is_symlink():
+            raise RuntimeError("Unsafe active V3 pointer")
+        if active_pointer.exists():
+            pointer=json.loads(active_pointer.read_text())
+            active_count=pointer.get("verified_crops")
+            if (type(active_count) is not int or
+                not 58<=active_count<=400
+                or pointer.get("schema")!="s9_appearance_v3_active_v1"
+                or pointer.get("human_review_required") is not True):
+                raise RuntimeError("Malformed existing V3 active snapshot")
+            if active_count>len(catalog):
+                raise RuntimeError("Verified V3 corpus regressed below active snapshot")
+        if len(catalog)>=58 and missing_remaining==0 and active_count<len(catalog):
+            out=run_worker(
+                "run-s9-uniform-appearance-rankings-v3.py",
+                ["--apply"],"S9_V3_MODEL_BACKED_RANKINGS_PRODUCED",
+                timeout=400)
+            if (out.get("verified_uniform_crop_records")!=len(catalog)
+                or out.get("v1_v2_indices_sha256_unchanged") is not True
+                or out.get("camera_apk_changed") is not False
+                or out.get("manual_reviews_changed") is not False):
+                raise RuntimeError("V3 ranked snapshot failed source preservation")
+            ranked=True
+        if args.activate_api and len(catalog)>=58 and missing_remaining==0:
+            if not active_pointer.exists():
+                raise RuntimeError("No fully verified V3 snapshot to activate")
+            api=run_worker("deploy-s9-multivector-api-v3.py",
+                           ["--apply"],"S9_V3_READONLY_API_DEPLOY_VERIFIED",
+                           timeout=360)
+            active=api.get("status")=="verified_v3_rankings_live"
+            if not active:
+                raise RuntimeError("V3 API did not serve real active rankings")
         print("S9_V3_ARCHIVE_RESUMABLE_BATCH "+json.dumps({
             "selected":len(selected),"counts":totals,
-            "new_histograms":histograms,"ranked_v3":ranked,
+            "new_histograms":histograms,
+            "missing_histograms_remaining":missing_remaining,
+            "ranked_v3":ranked,
             "live_api_confirmed":active,
             "processed_this_pass":done,
             "remaining_at_selection":max(0,len(pending)-len(selected)),
