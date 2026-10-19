@@ -214,7 +214,8 @@ def main():
     try:
         if changed:save_atomic(UI,data,metadata)
         if UI.read_bytes()!=data:raise RuntimeError("UI changed after V3 patch")
-        served=fetch(SERVED+"?appearance_v3_sha="+sha(data)[:16],200000)
+        # Check the complete newer Security page, not an obsolete 200 KB cap.
+        served=fetch(SERVED+"?appearance_v3_sha="+sha(data)[:16],1500000)
         if sha(served)!=sha(data):
             raise RuntimeError("Home Assistant served a different Security page")
         verify_api(sample)
