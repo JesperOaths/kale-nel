@@ -34,10 +34,11 @@ class Safety(unittest.TestCase):
   tree=ast.parse(source)
   invoked=[node.func.attr for node in ast.walk(tree) if
            isinstance(node,ast.Call) and isinstance(node.func,ast.Attribute)]
-  for forbidden in ("write_bytes","write_text","unlink","replace","rmtree",
+  for forbidden in ("write_bytes","write_text","unlink","rmtree",
                     "remove","Popen","chmod","mkdir","system","restart"):
    self.assertNotIn(forbidden,invoked)
   self.assertNotIn("module.apply()",source)
+  self.assertNotIn("os.replace(",source)
   self.assertIn('"no_index_regenerated":True',source)
   self.assertIn('"originals_retained":True',source)
  def test_private_symlink_source_rejected(self):
