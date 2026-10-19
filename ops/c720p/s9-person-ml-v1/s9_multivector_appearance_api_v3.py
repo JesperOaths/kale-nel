@@ -54,6 +54,44 @@ def active_snapshot():
         raise ValueError("untrusted_v3_active_snapshot")
     return doc
 
+def verify_historical_v2_subset(source_map):
+    """Never let a V3 corpus silently omit/relabel the original V2 cohort."""
+    path=STATE/"s9-multivector-crop-map-v2.json"
+    data,old=json_local(path,600000)
+    if checksum(data)!=source_map.get("v2_baseline_source_map_sha256"):
+        raise ValueError("v3_historical_baseline_sha_mismatch")
+    baseline=old.get("rows")
+    if (old.get("schema")!="s9_multivector_source_map_v2"
+        or old.get("visual_model_sha256")!=VISUAL_SHA
+        or old.get("color_histogram_schema")!=SCHEMA
+        or old.get("people_assigned_automatically")!=0
+        or not isinstance(baseline,list) or len(baseline)!=57):
+        raise ValueError("invalid_historical_v2_reference_map")
+    counts={}
+    present={item.get("key"):item for item in source_map["rows"]
+             if isinstance(item,dict)}
+    if len(present)!=len(source_map["rows"]):
+        raise ValueError("duplicate_v3_reference_key")
+    encountered=set()
+    for item in baseline:
+        if not isinstance(item,dict):
+            raise ValueError("invalid_historical_reference")
+        key=item.get("key")
+        if (not isinstance(key,str) or not HEXDIGEST.fullmatch(key)
+            or key in encountered or item.get("source")!="s9_sd"):
+            raise ValueError("invalid_v2_reference_provenance")
+        encountered.add(key)
+        counts[item.get("cohort")]=counts.get(item.get("cohort"),0)+1
+        current=present.get(key)
+        if (not isinstance(current,dict)
+            or any(current.get(name)!=item.get(name)
+                   for name in ("clip","crop_sha256","cohort"))):
+            raise ValueError("v3_missing_original_v2_reference")
+    if counts!={"v40":51,"approved_new":6}:
+        raise ValueError("invalid_v2_historical_cohort")
+    return True
+
+
 def verified_map(pointer):
     path=STATE/("s9-multivector-crop-map-v3-"+pointer["corpus_id"]+".json")
     data,doc=json_local(path,600000)
@@ -68,6 +106,7 @@ def verified_map(pointer):
         or not isinstance(rows,list)
         or len(rows)!=pointer["verified_crops"]):
         raise ValueError("untrusted_v3_source_map")
+    verify_historical_v2_subset(doc)
     clips={};keys={};v40=approved=0
     for item in rows:
         if not isinstance(item,dict) or item.get("source")!="s9_sd":
@@ -87,7 +126,7 @@ def verified_map(pointer):
         if cohort=="approved_new":approved+=1
         keys[key]=clip
         clips.setdefault(clip,[]).append(key)
-    if v40!=51 or approved<6:
+    if v40<51 or approved<6:
         raise ValueError("baseline_v40_or_approved_crops_missing")
     return clips,keys
 
