@@ -35,7 +35,7 @@ def helper(name,alias):
 
 def temperature(h):
     value=h.adb("shell","dumpsys battery",timeout=20).stdout
-    match=re.search(r"temperature:\\s*(\\d+)",value)
+    match=re.search(r"temperature:\s*(\d+)",value)
     if match is None:raise RuntimeError("missing_phone_thermal_reading")
     return int(match.group(1))/10
 
