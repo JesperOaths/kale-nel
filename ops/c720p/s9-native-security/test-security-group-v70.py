@@ -22,6 +22,6 @@ oldhtml=at('ops/c720p/s9-native-security/security-people-v45.html').encode()
 html=p.patch_html(oldhtml).decode()
 assert html.count('id="approvalAddPerson"')==1
 assert html.count('id="approvalMorePeople"')==1
-assert 'additional-person-row' in html
+assert 'approval-extra-row' in html
 assert p.patch_html(html.encode())==html.encode()
 print('SECURITY_GROUP_V70_DIFF_AND_FORM_PATCH_PASS')
