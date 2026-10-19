@@ -151,7 +151,24 @@ if __name__=="__main__":
    "all_originals_required":True},sort_keys=True))
  else:
   try:print(MARK+json.dumps(inspect(),sort_keys=True),flush=True)
-  except Exception:
+  except Exception as error:
+   # Only authored, fixed codes. Raw errors may contain private filenames/URLs.
+   reasons={
+    "required_source_missing","required_source_untrusted",
+    "private_manifest_permission_drift","source_changed_during_read",
+    "s9_capture_http_unavailable","s9_capture_not_healthy",
+    "index_regeneration_guard_inactive","snapshot_migration_manifest_drift",
+    "snapshot_name_untrusted","snapshot_sha_or_size_untrusted",
+    "snapshot_8795_8794_sha_proof_missing",
+    "original_video_bridge_drift",
+    "legacy_index_source_or_controls_changed",
+    "jpeg_script_already_injected_refuse_double_install",
+    "legacy_player_shape_changed","unknown_regeneration_guard",
+    "snapshot_display_target_collision",
+   }
+   code=str(error)
+   if code not in reasons:code="unclassified_no_private_detail"
    print("C720P_JPEG_LEGACY_V183_NOT_VERIFIED "+json.dumps({
-    "failed":True,"retirement_authorized":False},sort_keys=True),flush=True)
+    "failed":True,"reason_code":code,
+    "retirement_authorized":False},sort_keys=True),flush=True)
    raise SystemExit(1)
