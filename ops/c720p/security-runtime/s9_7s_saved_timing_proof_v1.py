@@ -55,7 +55,7 @@ def sample(manifest):
 
 def assess(catalog):
     records=catalog.get("records")
-    if catalog.get("schema_version")!="s9-standalone-archive-catalog-v1" or not isinstance(records,dict):
+    if catalog.get("schema_version")!="s9_native_archive_catalog_v1" or not isinstance(records,dict):
         raise ValueError("unrecognized_catalog_schema")
     eligible=[]
     for name,record in sorted(records.items(),reverse=True):
