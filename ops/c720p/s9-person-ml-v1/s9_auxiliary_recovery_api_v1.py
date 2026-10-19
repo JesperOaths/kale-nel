@@ -17,8 +17,8 @@ ALL_NAME=re.compile(r"motion_[0-9]{13}[.]mp4[.](?:preroll[.]mp4|complete[.]mp4|c
 MAX_REPORT=900000
 VERSION="s9_auxiliary_recovery_metadata_v1"
 
-def read_recovery(source=REPORT):
-    path=Path(source)
+def read_recovery(source=None):
+    path=Path(source or REPORT)
     st=path.stat()
     if (path.is_symlink() or not path.is_file() or
         st.st_mode&0o077 or not 300<st.st_size<MAX_REPORT):
