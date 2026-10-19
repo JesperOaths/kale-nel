@@ -101,6 +101,8 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
                 if(rows.get(i).name.equals(name))
                     return new CurrentDecision(rows.get(i));
             return null;
+        } catch(java.nio.channels.OverlappingFileLockException busy) {
+            throw new IOException("ledger_exclusive_lock_busy",busy);
         } catch(GeneralSecurityException e) {
             throw new IOException("ledger_crypto_unavailable");
         }
@@ -195,6 +197,8 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
                     || !verified.get(verified.size()-1).head.equals(row.head))
                 throw new IOException("durable_ledger_readback_failed");
             return receipt(row);
+        } catch (java.nio.channels.OverlappingFileLockException busy) {
+            throw new IOException("ledger_exclusive_lock_busy",busy);
         } catch (GeneralSecurityException error) {
             throw new IOException("ledger_crypto_unavailable") ;
         }
@@ -206,6 +210,8 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
         try(FileChannel channel=FileChannel.open(lockFile,StandardOpenOption.WRITE);
             FileLock held=channel.lock()) {
             return readVerified().size();
+        } catch (java.nio.channels.OverlappingFileLockException busy) {
+            throw new IOException("ledger_exclusive_lock_busy",busy);
         } catch (GeneralSecurityException error) {
             throw new IOException("ledger_crypto_unavailable");
         }
