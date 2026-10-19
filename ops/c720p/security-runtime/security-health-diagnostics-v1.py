@@ -133,7 +133,13 @@ def evaluate(*,now,root_free_bytes,root_total_bytes,phone,catalog,activity,ledge
         warn("original_integrity_audit_incomplete","info")
     companion=(catalog or {}).get("auxiliary_mp4_inventory") if src_ok else None
     orphan=companion.get("preroll_without_verified_primary") if isinstance(companion,dict) else None
-    if type(orphan) is int and orphan>0:warn("unpaired_preroll_evidence_pending_classification","info")
+    true_missing=companion.get("preroll_without_any_primary") if isinstance(companion,dict) else None
+    raw_unverified=companion.get("preroll_with_raw_unverified_primary") if isinstance(companion,dict) else None
+    if type(true_missing) is int and type(raw_unverified) is int:
+        if true_missing>0:warn("preroll_without_raw_primary_preserve_for_recovery","info")
+        if raw_unverified>0:warn("preroll_with_unverified_primary_requires_sidecar_review","info")
+    elif type(orphan) is int and orphan>0:
+        warn("unpaired_preroll_evidence_pending_classification","info")
     severity="critical" if any(x["severity"]=="critical" for x in issues) else "warning" if any(x["severity"]=="warning" for x in issues) else "healthy"
     return {
       "schema_version":VERSION,"generated_at_utc":now.isoformat(),
@@ -149,6 +155,8 @@ def evaluate(*,now,root_free_bytes,root_total_bytes,phone,catalog,activity,ledge
          "original_digest_matches":covered,
          "original_digest_mismatches":mismatches,
          "unpaired_preroll_segments":orphan if type(orphan) is int else None,
+         "prerolls_without_raw_primary":true_missing if type(true_missing) is int else None,
+         "prerolls_with_unverified_raw_primary":raw_unverified if type(raw_unverified) is int else None,
          "original_integrity_coverage_complete":type(cat_count) is int and covered==cat_count and mismatches==0},
       "issues":issues,
       "s3_included":False,
