@@ -114,7 +114,8 @@ def main():
         if result["modelCards"]+result["oldCards"]<result["count"]:
             raise RuntimeError("Unlabelled appearance evidence cards exist")
         print("S9_REVIEWED_OSNET_KIOSK_READONLY_PASS "+
-              json.dumps({"cards":result["count"],"osnet_cards":result["modelCards"],
+              json.dumps({"cards":result["count"],"status":result["status"][:180],
+                          "osnet_cards":result["modelCards"],
                           "legacy_hsv_cards":result["oldCards"],
                           "all_review_buttons":result["reviewControls"],
                           "one_browser_background_tab":True,
