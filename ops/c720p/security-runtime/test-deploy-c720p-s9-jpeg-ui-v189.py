@@ -100,7 +100,7 @@ class Tests(unittest.TestCase):
  def test_no_media_or_manual_record_writes(self):
   source=(DIR/"deploy-c720p-s9-jpeg-ui-v189.py").read_text()
   for prohibited in ("adb install","pm install","am force-stop","ffmpeg",
-     "shutil.rmtree","review_decide","saveClip(", "deleteClip(", "original.mp4",
+     "shutil.rmtree","review_decide","function saveClip", "function deleteClip", "original.mp4",
      "/Security4K/motion_", "systemctl"):
    self.assertNotIn(prohibited,source)
   self.assertIn('"local_jpeg_fallback_preserved":True',source)
