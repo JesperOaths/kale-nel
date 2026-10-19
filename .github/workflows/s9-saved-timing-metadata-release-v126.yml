@@ -1,0 +1,90 @@
+name: Guarded C720P S9 timing-metadata whitelist V126
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/deploy-s9-timing-metadata-v126.py'
+      - 'ops/c720p/security-runtime/test-deploy-s9-timing-metadata-v126.py'
+      - '.github/workflows/s9-saved-timing-metadata-release-v126.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/deploy-s9-timing-metadata-v126.py'
+      - 'ops/c720p/security-runtime/test-deploy-s9-timing-metadata-v126.py'
+      - '.github/workflows/s9-saved-timing-metadata-release-v126.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-timing-metadata-v126
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/deploy-s9-timing-metadata-v126.py"
+          python3 "$d/test-deploy-s9-timing-metadata-v126.py"
+          python3 "$d/test-phone-archive-catalog-v1.py"
+          python3 "$d/test-s9-7s-saved-timing-proof-v1.py"
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Only replace exact earlier C720P metadata client, never recordings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          d=ops/c720p/security-runtime
+          stage="/tmp/s9-timing-client-${GITHUB_SHA:0:14}"
+          cmd="mkdir -p '$stage'"
+          for part in deploy-s9-timing-metadata-v126.py phone_archive_catalog_v1.py; do
+            f="$d/$part"
+            hash="$(sha256sum "$f" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$f"
+            cmd="$cmd && curl -fsSL --max-time 40 '$url' -o '$stage/$part' && printf '%s  %s\\n' '$hash' '$stage/$part' | sha256sum -c - >/dev/null"
+          done
+          target_sha="$(sha256sum "$d/phone_archive_catalog_v1.py" | cut -d' ' -f1)"
+          cmd="$cmd && python3 '$stage/deploy-s9-timing-metadata-v126.py' --candidate '$stage/phone_archive_catalog_v1.py' --expected-sha256 '$target_sha' && python3 '$stage/deploy-s9-timing-metadata-v126.py' --candidate '$stage/phone_archive_catalog_v1.py' --expected-sha256 '$target_sha' --apply"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="s9-timing-catalog-v126-${GITHUB_SHA:0:14}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-timing-metadata-v126','deployment',:'cmd',240,:'idem'
+          );
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "S9_TIMING_METADATA_V126_JOB=$job"
+          for i in $(seq 1 85); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3800)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              if grep -q 'S9_TIMING_METADATA_V126_VERIFIED' <<< "$output"; then
+                grep -q '"recordings_modified": false' <<< "$output"
+                grep -q '"manual_reviews_modified": false' <<< "$output"
+                grep -q '"camera_apk_modified": false' <<< "$output"
+                echo "C720P metadata whitelist installed; catalog refresh remains separate"
+              elif grep -q 'S9_TIMING_METADATA_V126_DEFERRED' <<< "$output"; then
+                grep -q '"module_modified": false' <<< "$output"
+                echo "Existing newer metadata module or active scanner preserved without overwrite"
+              else
+                echo "Unknown result from metadata-only release"; exit 1
+              fi
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
