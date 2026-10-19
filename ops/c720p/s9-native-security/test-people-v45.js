@@ -83,10 +83,11 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     if(payload.revision!==linkRevision)
      return {ok:false,status:409,json:async()=>({ok:false,error:'review_revision_changed'})};
     linkItems[payload.source+':'+payload.name]={source:payload.source,
-      name:payload.name,folder:payload.action==='return_to_queue'?null:payload.folder};
+      name:payload.name,folder:payload.folder,review_status:({assign:'assigned',return_to_queue:'inbox',skip:'skipped',reject:'rejected'})[payload.action]};
     linkRevision++;
     return {ok:true,json:async()=>({ok:true,revision:linkRevision,
-      folder:linkItems[payload.source+':'+payload.name].folder})};
+      folder:linkItems[payload.source+':'+payload.name].folder,
+      review_status:linkItems[payload.source+':'+payload.name].review_status})};
    }
    posts.push({payload,opts});
    return {ok:true,json:async()=>({ok:true,folder:payload.folder||'G123'})};
@@ -184,8 +185,8 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.match(el('reviewTotal').textContent,/2 Drive/);
  el('reviewMode').value='skipped';el('reviewMode').handlers.change();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewSource').value,'sd','Skipped view must truthfully label its native-only source');
- assert.equal(el('reviewSource').disabled,true);
+ assert.equal(el('reviewSource').value,'drive','Skipped view must retain its selected source');
+ assert.equal(el('reviewSource').disabled,false);
  el('reviewMode').value='inbox';el('reviewMode').handlers.change();
  for(let i=0;i<5;i++)await flush();
  assert.equal(el('reviewGrid').children.length,2,'Needs review includes both unassigned Drive originals');
@@ -296,6 +297,33 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('review').hidden,false,'Confirm & keep must not navigate into a folder');
  assert.equal(el('folderView').hidden,true,'Saved clips must not hijack the current review queue');
  assert.equal(linkPosts.at(-1).payload.folder,'G123');
+ assert.equal(el('approvalDialog').open,false,'Successful SD filing must close popup');
+ // Universal review disposition: both sources may be skipped or rejected,
+ // reversibly, without confusing same-named originals or filing a person.
+ for(const source of ['drive','sd']){
+  const row=el('reviewGrid').children.find(x=>x.dataset.source===source);
+  assert(row,'Unassigned '+source+' fixture');
+  const name=row.dataset.clip;
+  for(const [button,mode] of [['↷ Skip for now','skipped'],['✕ Reject','rejected']]){
+   const current=el('reviewGrid').children.find(x=>x.dataset.source===source&&x.dataset.clip===name);
+   assert(scan(current,button),'Every original exposes '+button);
+   scan(current,button).handlers.click();for(let i=0;i<7;i++)await flush();
+   assert(!el('reviewGrid').children.some(x=>x.dataset.source===source&&x.dataset.clip===name),
+    mode+' must leave Unassigned');
+   assert.equal(linkItems[source+':'+name].folder,null,'Review dismissal must not assign a person');
+   el('reviewMode').value=mode;el('reviewMode').handlers.change();
+   for(let i=0;i<5;i++)await flush();
+   const hidden=el('reviewGrid').children.find(x=>x.dataset.source===source&&x.dataset.clip===name);
+   assert(hidden,source+' disposition must survive switching views');
+   assert(!scan(hidden,'✓ File under person'),'Dismissed clips must show Restore first');
+   scan(hidden,'Restore').handlers.click();for(let i=0;i<7;i++)await flush();
+   assert(!el('reviewGrid').children.some(x=>x.dataset.source===source&&x.dataset.clip===name));
+   el('reviewMode').value='all';el('reviewMode').handlers.change();
+   for(let i=0;i<5;i++)await flush();
+   assert(el('reviewGrid').children.some(x=>x.dataset.source===source&&x.dataset.clip===name),
+    'Restore must return original to Unassigned');
+  }
+ }
  // A successful backend commit remains a success when only the follow-up
  // GET fails. Never invite a second accidental assignment in this case.
  const driveBefore=el('reviewGrid').children.find(x=>x.dataset.clip===driveClip);
@@ -320,7 +348,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(!el('reviewGrid').children.some(x=>x.dataset.clip===driveClip),
   'Locally acknowledged Drive link must leave the unassigned queue');
  const driveWrites=linkPosts.filter(x=>x.payload.source==='drive');
- assert.equal(driveWrites.length,1,'Transient GET failure cannot duplicate committed POST');
+ assert.equal(driveWrites.filter(x=>x.payload.action==='assign').length,1,'Transient GET failure cannot duplicate committed POST');
  
  // Readback after reopening must retain the exact source and link. Removing
  // it from a person must expose the unchanged original to review again.
@@ -419,10 +447,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(releaseHeldAll,'Old request must be deliberately paused');
  el('reviewMode').value='inbox';el('reviewMode').handlers.change();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'1 review item · 0 Drive');
+ assert.equal(el('reviewTotal').textContent,'2 review items · 0 Drive');
  holdAll=false;releaseHeldAll();
  for(let i=0;i<5;i++)await flush();
- assert.equal(el('reviewTotal').textContent,'1 review item · 0 Drive',
+ assert.equal(el('reviewTotal').textContent,'2 review items · 0 Drive',
   'Stale responses must not replace current tab data');
  // Failed native face metadata is unknown coverage, never a false zero or
  // an indefinitely spinning Loading state. Refresh repairs the display.

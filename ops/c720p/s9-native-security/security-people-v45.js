@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,reviewSource:'all',recheckOnly:false,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0,automaticRows:[],automaticRevision:0,automaticStatus:'loading',automaticToken:0,automaticBusy:false};
+ faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),legacySkipped:new Map(),assignedReady:false,linksRevision:0,archiveToken:0,automaticRows:[],automaticRevision:0,automaticStatus:'loading',automaticToken:0,automaticBusy:false};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -44,14 +44,40 @@ function assignedFolder(item){
  if(explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder'))return explicit.folder||null;
  return state.legacyAssigned.get(key)||null;
 }
-function unassignedArchiveRows(){return state.archiveEntries.filter(item=>!assignedFolder(item))}
+function reviewDecision(item){
+ const explicit=state.extraLinks?.items?.[assignmentKey(item)];
+ if(explicit)return explicit.review_status|| (explicit.folder?'assigned':'inbox');
+ return state.legacySkipped.get(assignmentKey(item))?.decision||'inbox';
+}
+function unassignedArchiveRows(){return state.archiveEntries.filter(item=>
+ !assignedFolder(item)&&!['skipped','rejected'].includes(reviewDecision(item)))}
 function reviewQueueRows(){
- const rows=state.tab==='all'?state.archiveEntries:[
+ const archived=['skipped','rejected'].includes(state.tab);
+ const rows=state.tab==='all'||archived?state.archiveEntries:[
   ...(state.doc?.items||[]).map(item=>({...item,source:'sd',name:item.clip})),
-  ...state.archiveEntries.filter(item=>item.source==='drive')];
- return rows.filter(item=>!assignedFolder(item)&&
+  ...state.archiveEntries.filter(item=>item.source==='drive'||
+   (state.extraLinks?.items?.[assignmentKey(item)]&&!assignedFolder(item)&&reviewDecision(item)==='inbox'))];
+ return [...new Map(rows.map(item=>[assignmentKey(item),item])).values()].filter(item=>!assignedFolder(item)&&
+  (archived?reviewDecision(item)===state.tab:
+   !['skipped','rejected'].includes(reviewDecision(item)))&&
   (state.reviewSource==='all'||item.source===state.reviewSource)).sort((a,b)=>
   num(b.recorded_ms)-num(a.recorded_ms)||assignmentKey(a).localeCompare(assignmentKey(b)));
+}
+async function fetchLegacySkipped(){
+ const rows=new Map();let offset=0,total=0,revision=null;
+ do{
+  const q=new URLSearchParams({workflow:'clip_folders_v40',tab:'skipped',offset:String(offset),limit:'24'});
+  const response=await relay().fetch('/new/api/visual-review?'+q,{cache:'no-store'});
+  const data=await response.json();
+  if(!response.ok||data.ok!==true||!Array.isArray(data.items)||num(data.total)>5000||
+     (revision!==null&&revision!==data.revision))throw Error('Skipped review index unavailable');
+  revision=data.revision;total=num(data.total);
+  if(!data.items.length&&offset<total)throw Error('Incomplete skipped index');
+  for(const item of data.items)if(['skipped','rejected'].includes(item.decision))
+   rows.set('sd:'+item.clip,item);
+  offset+=data.items.length;
+ }while(offset<total);
+ state.legacySkipped=rows;
 }
 function makeArchiveRows(){
  const sd=[...state.clipEvidence.keys()].map(clip=>({
@@ -82,6 +108,8 @@ async function fetchExtraLinks(){
  const data=await response.json();
  if(!response.ok||data.ok!==true||!data.manual_links_only||!data.items)
   throw Error('Manual recording links unavailable');
+ if(!Number.isSafeInteger(data.revision)||data.revision<state.linksRevision)
+  throw Error('Assignment refresh is older than the saved review');
  state.extraLinks=data;state.linksRevision=data.revision;
 }
 async function fetchDriveArchive(){
@@ -119,9 +147,10 @@ async function refreshArchiveReviewSources(folders){
  const token=++state.archiveToken;
  state.assignedReady=false;
  const jobs=await Promise.allSettled([fetchExtraLinks(),fetchDriveArchive(),
-     scanApprovedFolders(folders)]);
+     scanApprovedFolders(folders),fetchLegacySkipped()]);
  if(token!==state.archiveToken)return;
- if(jobs[0].status!=='fulfilled'||jobs[2].status!=='fulfilled'){
+ if(jobs[0].status!=='fulfilled'||jobs[2].status!=='fulfilled'||jobs[3].status!=='fulfilled'){
+  state.assignedReady=false;
   $('reviewTotal').textContent='Review index unavailable · Refresh';
   alertText('Could not safely verify assigned recordings; refresh to retry.');
   return;
@@ -132,10 +161,10 @@ async function refreshArchiveReviewSources(folders){
  if(state.pane==='clothing')searchClothingMatches();
  if(state.pane==='automatic')fetchAutomatic();
 }
-async function manualLink(item,folder){
+async function manualLink(item,folder,reviewAction=null){
  let errorAfterReload='';
  if(state.busy||!state.extraLinks)return false;
- const data={action:folder?'assign':'return_to_queue',
+ const data={action:reviewAction||(folder?'assign':'return_to_queue'),
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
    folder:folder||null,revision:state.linksRevision,human_confirmed:true};
  state.busy=true;
@@ -156,20 +185,32 @@ async function manualLink(item,folder){
   // A successful POST is a committed review change. A subsequent GET failure
   // must never turn its success into an apparent failed save and a duplicate retry.
   if(!Number.isSafeInteger(outcome.revision)||outcome.revision<=data.revision||
-     (outcome.folder||null)!==data.folder)
+     (outcome.folder||null)!==data.folder||
+     (data.action==='skip'&&outcome.review_status!=='skipped')||
+     (data.action==='reject'&&outcome.review_status!=='rejected'))
    throw Error('Saved response could not be verified. Refresh before retrying.');
   const key=data.source+':'+data.name;
-  state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder};
+  state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder,
+   review_status:outcome.review_status|| (folder?'assigned':'inbox')};
   state.extraLinks.revision=outcome.revision;
   state.linksRevision=outcome.revision;
   state.lastFolder=folder||state.lastFolder;
-  const label=folder?'Recording filed under person':'Recording returned to review';
+  // Commit the visible result before slower archive reads; never require a
+  // successful refresh to finish a save that the server already acknowledged.
+  if(folder&&state.approvalItem&&assignmentKey(state.approvalItem)===key){
+   $('approvalDialog').close();state.approvalItem=null;
+  }
+  if(state.doc)render();
+  const label=folder?'Recording filed under person':data.action==='skip'?
+   'Recording skipped · restore from Skipped':data.action==='reject'?
+   'Recording rejected from review · original retained; restore from Rejected':
+   'Recording returned to review';
   try{await fetchExtraLinks()}
   catch(_){
    notification(label+' · Saved, but the latest assignments could not be refreshed. Refresh to sync.');
    return true;
   }
-  notification(label);
+  notification(label,['skip','reject'].includes(data.action)?()=>manualLink(item,null):null);
   return true;
  }catch(error){errorAfterReload=String(error.message||error);return false}
  finally{
@@ -178,7 +219,7 @@ async function manualLink(item,folder){
   if(state.doc)render();
   // loadView clears ordinary transient messages, but a failed write/409
   // requires an actionable explanation after the automatic redraw.
-  if(errorAfterReload)alertText(errorAfterReload);
+  if(errorAfterReload){alertText(errorAfterReload);$('approvalStatus').textContent=errorAfterReload;}
  }
 }
 
@@ -332,7 +373,8 @@ async function loadView(){
  // Latest request wins. View switches must not inherit the old tab's response.
  state.loading=true;const token=++state.serial;alertText('');
  const combinedInbox=state.pane==='review'&&state.tab==='inbox';
- const q=new URLSearchParams({workflow:'clip_folders_v40',tab:state.tab,
+ const reviewTab=state.pane==='review'&&['skipped','rejected'].includes(state.tab)?'all':state.tab;
+ const q=new URLSearchParams({workflow:'clip_folders_v40',tab:reviewTab,
   offset:String(combinedInbox?0:state.offset),limit:String(Math.min(24,state.limit))});
  if(state.folder)q.set('folder',state.folder);
  if(state.tab==='suggestions'){
@@ -481,7 +523,7 @@ function selectPane(pane){
  }
 }
 function openApproval(item){
- state.approvalItem=item;
+ state.approvalItem=item;$('approvalStatus').textContent='';
  $('approvalClip').textContent='Recording · '+date(item);
  const select=$('approvalFolder');select.replaceChildren();
  select.add(new Option('Create a new person',''));
@@ -630,16 +672,14 @@ function reviewItem(item,compact){
   if(state.folder)tools.append(control('↩ Return to review queue',
     ()=>manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},null),'secondary'));
   else tools.append(control('Saved ✓',()=>{},'secondary'));
- }else if(item.unindexed||item.source==='drive'){
-  tools.append(control('✓ File under person',()=>openApproval(item),'primary'));
- }else if(item.decision==='approved'){
-  tools.append(control('Saved ✓',()=>{},'secondary'));tools.lastChild.disabled=true;
  }else if(['rejected','skipped'].includes(item.decision)){
-  tools.append(control('Restore',()=>restore(item),'secondary'));
+  tools.append(control('Restore',()=>state.pane==='review'?manualLink(item,null):restore(item),'secondary'));
  }else{
   tools.append(control(state.folder?'✓ Keep here':'✓ File under person',()=>openApproval(item),'primary'),
-   control('↷ Skip for now',()=>dismiss(item),'danger'));
+   control('↷ Skip for now',()=>state.pane==='review'?manualLink(item,null,'skip'):dismiss(item),'secondary'));
+  if(state.pane==='review')tools.append(control('✕ Reject',()=>manualLink(item,null,'reject'),'danger'));
  }
+
  if(state.folder&&state.doc?.reference_examples?.length&&item.decision!=='approved')
   tools.append(control('Compare',()=>compare(item)));
  info.append(tools);
@@ -854,39 +894,28 @@ function paginate(host,total,onPage){
 }
 function renderReview(){
  $('reviewMode').value=state.tab;
- $('reviewSource').value=state.tab==='skipped'?'sd':state.reviewSource;
- $('reviewSource').disabled=state.tab==='skipped';
+ $('reviewSource').value=state.reviewSource;$('reviewSource').disabled=false;
  const host=$('reviewGrid');host.replaceChildren();
- if(state.tab==='all'||state.tab==='inbox'){
-  if(!state.assignedReady||!state.extraLinks){
-   $('reviewTotal').textContent='Checking saved recordings…';
-   host.append(elt('p','Loading the complete review queue…','empty'));return;
-  }
-  const free=reviewQueueRows();
-  if(state.offset>=free.length)state.offset=free.length?
-   Math.floor((free.length-1)/state.limit)*state.limit:0;
-  const visible=free.slice(state.offset,state.offset+state.limit);
-  for(const item of visible){
-   const fromReview=(state.doc?.items||[]).find(x=>x.clip===item.clip);
-   // Preserve verified native observation fields for safe review actions.
-   host.append(reviewItem({...item,...(item.source==='sd'&&fromReview?
-    fromReview:{}),source:item.source,name:item.name,
-    // Manual return overrides a historically approved v40 decision.
-    decision:null,unindexed:!fromReview||item.source==='drive'},false));
-  }
-  const driveCount=free.filter(x=>x.source==='drive').length;
-  const suffix=state.driveStatus==='unavailable'?' · Drive unavailable':' · '+driveCount+' Drive';
-  $('reviewTotal').textContent=free.length+(state.tab==='all'?' unassigned recordings':
-   ' review '+(free.length===1?'item':'items'))+suffix;
-  paginate($('reviewPage'),free.length,n=>{state.offset=n;renderReview()});
- }else{
-  const unsaved=(state.doc?.items||[]).filter(item=>
-   !assignedFolder({source:'sd',name:item.clip,clip:item.clip}));
-  $('reviewTotal').textContent=unsaved.length+' review '+(unsaved.length===1?'item':'items');
-  for(const item of unsaved)host.append(reviewItem(item,false));
-  paginate($('reviewPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
+ if(!state.assignedReady||!state.extraLinks){
+  $('reviewTotal').textContent='Checking saved recordings…';
+  host.append(elt('p','Loading the complete review queue…','empty'));return;
  }
- if(!host.children.length)host.append(elt('p','No unassigned recordings in this view.','empty'));
+ const free=reviewQueueRows();
+ if(state.offset>=free.length)state.offset=free.length?
+  Math.floor((free.length-1)/state.limit)*state.limit:0;
+ for(const item of free.slice(state.offset,state.offset+state.limit)){
+  const fromReview=item.source==='sd'?state.legacySkipped.get(assignmentKey(item))||
+   (state.doc?.items||[]).find(x=>x.clip===item.clip):null;
+  host.append(reviewItem({...item,...(fromReview||{}),source:item.source,name:item.name,
+   decision:['skipped','rejected'].includes(state.tab)?state.tab:null,
+   unindexed:!fromReview||item.source==='drive'},false));
+ }
+ const driveCount=free.filter(x=>x.source==='drive').length;
+ const suffix=state.driveStatus==='unavailable'?' · Drive unavailable':' · '+driveCount+' Drive';
+ $('reviewTotal').textContent=free.length+(state.tab==='all'?' unassigned recordings':
+  state.tab==='inbox'?' review '+(free.length===1?'item':'items'):' '+state.tab+' recordings')+suffix;
+ paginate($('reviewPage'),free.length,n=>{state.offset=n;renderReview()});
+ if(!host.children.length)host.append(elt('p','No recordings in this view.','empty'));
 }
 
 function renderPeople(){
@@ -1343,7 +1372,7 @@ $('approvalFolder').addEventListener('change',()=>{$('newLabel').hidden=!!$('app
 $('approvalPlay').addEventListener('click',()=>{if(state.approvalItem)startVideo(state.approvalItem)});
 $('approvalCancelFooter').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalForm').addEventListener('submit',async e=>{
- e.preventDefault();const item=state.approvalItem;if(!item)return;
+ e.preventDefault();const item=state.approvalItem;if(!item||state.busy)return;
  const id=$('approvalFolder').value;
  const label=$('approvalLabel').value.trim();
  // Confirm & keep is the explicit human-review decision; the second checkbox
