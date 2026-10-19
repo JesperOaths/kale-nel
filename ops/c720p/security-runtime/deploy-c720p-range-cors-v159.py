@@ -58,31 +58,43 @@ def unit(action):
      capture_output=True,text=True,timeout=30)
  if p.returncode:raise RuntimeError("relay_unit_"+action+"_failed")
  return p.stdout.strip()
-def origin_header():
- # Unauthorized media remains unauthorized; only expose nonsecret response
- # header name to the ALREADY allowlisted HA origin on 8794.
- req=urllib.request.Request(
-  "http://127.0.0.1:8794/new/api/c720p-migrated-clips",
-  headers={"Origin":"http://localhost:8123"})
- try:r=urllib.request.urlopen(req,timeout=15)
- except urllib.error.HTTPError as e:r=e
- with r:
-  headers=r.headers;status=r.status
- if status not in (401,403):raise RuntimeError("unauthorized_relay_http_contract_changed")
- if headers.get("Access-Control-Allow-Origin")!="http://localhost:8123":
-  raise RuntimeError("existing_allowlisted_origin_not_preserved")
- if headers.get("Access-Control-Expose-Headers")!="Content-Range":
-  raise RuntimeError("nonsecret_media_range_not_exposed")
- return True
-def wait_for_local_relay():
- # systemctl restart can return after the process is active but before its
- # localhost TCP listener has finished binding. Retry ONLY connection refused;
- # invalid auth/CORS/header responses must fail immediately and roll back.
+def origin_header(expose,expected_status=None):
+ # The existing C720P loopback policy permits local requests with HTTP 200,
+ # even without a browser bearer. Preserve that status exactly across the
+ # update rather than imposing a new and incorrect 401/403 expectation.
+ statuses={}
+ for label,origin in (("allowed","http://localhost:8123"),
+                      ("disallowed","http://nonexistent.invalid:8123")):
+  req=urllib.request.Request(
+    "http://127.0.0.1:8794/new/api/c720p-migrated-clips",
+    headers={"Origin":origin})
+  try:r=urllib.request.urlopen(req,timeout=12)
+  except urllib.error.HTTPError as err:r=err
+  with r:headers=r.headers;status=r.status
+  if status not in (200,401,403):
+   raise RuntimeError("relay_local_authorization_behavior_changed")
+  if label=="allowed":
+   if headers.get("Access-Control-Allow-Origin")!=origin:
+    raise RuntimeError("existing_allowlisted_origin_not_preserved")
+   visible=headers.get("Access-Control-Expose-Headers")
+   if (visible=="Content-Range")!=expose:
+    raise RuntimeError("content_range_cors_exposure_not_as_expected")
+   if visible not in (None,"Content-Range"):
+    raise RuntimeError("unexpected_extra_exposed_browser_headers")
+  else:
+   if headers.get("Access-Control-Allow-Origin") or headers.get("Access-Control-Expose-Headers"):
+    raise RuntimeError("disallowed_browser_origin_exposed")
+  statuses[label]=status
+ if expected_status is not None and statuses!=expected_status:
+  raise RuntimeError("relay_authorization_status_changed_across_rollout")
+ return statuses
+def wait_for_local_relay(expected_status):
+ # Only transient connection-refused during service bind gets retried;
+ # already-connected invalid CORS or changed authorizations fail immediately.
  for attempt in range(30):
-  try:return origin_header()
+  try:return origin_header(True,expected_status)
   except urllib.error.URLError as exc:
-   if not isinstance(exc.reason,ConnectionRefusedError):
-    raise
+   if not isinstance(exc.reason,ConnectionRefusedError):raise
    if attempt==29:
     raise RuntimeError("relay_listener_not_ready_after_restart") from None
    time.sleep(.5)
@@ -170,6 +182,7 @@ def deploy(apply):
  mode=stat.S_IMODE(TARGET.stat().st_mode)
  if unit("is-active")!="active":raise RuntimeError("existing_relay_not_active")
  before=camera()
+ baseline_status=origin_header(False)
  with tempfile.TemporaryDirectory(prefix="cors-range-v159-") as tmp:
   source=Path(tmp)/"relay.py";source.write_bytes(new)
   py_compile.compile(str(source),doraise=True)
@@ -190,7 +203,7 @@ def deploy(apply):
   unit("restart")
   if unit("is-active")!="active":raise RuntimeError("relay_not_active_after_patch")
   if verified_file(TARGET,150000)!=new:raise RuntimeError("relay_source_drift_after_patch")
-  wait_for_local_relay()
+  wait_for_local_relay(baseline_status)
   count=browser()
   after=camera()
   print(PROOF+json.dumps({
