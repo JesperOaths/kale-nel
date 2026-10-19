@@ -4,6 +4,9 @@ import datetime
 import importlib.util
 import io
 import json
+import sys
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 import tempfile
 import unittest
@@ -34,7 +37,14 @@ class Handler:
     def send_response(self,code):self.response_code=code
     def send_header(self,k,v):self.headers[k]=v
     def end_headers(self):pass
-m.install_local_sd(Handler)
+# Isolate this read-only endpoint from unrelated review and camera overlays.
+overlays=("s9_human_thumbnail_review","s9_drive_visitor_review",
+ "s9_manual_evidence_cases","s9_manual_recording_links",
+ "s9_automatic_person_review","s9_native_camera_controls",
+ "s9_evidence_quality_v1")
+with patch.dict(sys.modules,{name:SimpleNamespace(install=lambda *args,**kwargs:None)
+ for name in overlays}):
+ m.install_local_sd(Handler)
 
 class Tests(unittest.TestCase):
     def setUp(self):
