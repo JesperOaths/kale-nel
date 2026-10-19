@@ -1,0 +1,30 @@
+name: C720P S9 JPEG persistent legacy pages V187
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/deploy-c720p-s9-jpeg-pages-v187.py'
+      - 'ops/c720p/security-runtime/test-deploy-c720p-s9-jpeg-pages-v187.py'
+      - '.github/workflows/c720p-s9-jpeg-legacy-pages-v187.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/deploy-c720p-s9-jpeg-pages-v187.py'
+      - 'ops/c720p/security-runtime/test-deploy-c720p-s9-jpeg-pages-v187.py'
+      - '.github/workflows/c720p-s9-jpeg-legacy-pages-v187.yml'
+permissions:
+  contents: read
+jobs:
+  test-source-and-watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Confirm additive index regeneration and local-fallback safety
+        run: |
+          set -euo pipefail
+          dir=ops/c720p/security-runtime
+          python3 -m py_compile "$dir/deploy-c720p-s9-jpeg-pages-v187.py"
+          python3 "$dir/test-deploy-c720p-s9-jpeg-pages-v187.py"
+          node "$dir/test-c720p-migrated-snapshot-display-v182.mjs"
+          python3 "$dir/test-c720p-legacy-s9-index-bridge-guard-v1.py"
+          echo C720P_S9_JPEG_V187_SOURCE_ONLY_PASSED
