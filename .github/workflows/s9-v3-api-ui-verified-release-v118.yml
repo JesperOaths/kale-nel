@@ -1,0 +1,128 @@
+name: Verified S9 V3 API and UI rollout V118
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-api-v3.py'
+      - 'ops/c720p/s9-native-security/deploy-s9-appearance-v3-ui.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-multivector-api-deploy-v3.py'
+      - '.github/workflows/s9-v3-api-ui-verified-release-v118.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-api-v3.py'
+      - 'ops/c720p/s9-native-security/deploy-s9-appearance-v3-ui.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-multivector-api-deploy-v3.py'
+      - '.github/workflows/s9-v3-api-ui-verified-release-v118.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-v3-api-ui-v118-metadata-only
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify live-drift and rollback contracts
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security
+          python3 "$d/offline-worker/test-s9-multivector-api-deploy-v3.py"
+          python3 "$d/test-s9-appearance-v3-ui.py"
+          python3 -m py_compile "$d/offline-worker/deploy-s9-multivector-api-v3.py" "$d/deploy-s9-appearance-v3-ui.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          api=Path("ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-api-v3.py").read_text()
+          ui=Path("ops/c720p/s9-native-security/deploy-s9-appearance-v3-ui.py").read_text()
+          for text in ("Unrecognized live V3 API module; refusing overwrite","snapshot_catalogs","S9_V3_READONLY_API_DEPLOY_VERIFIED","S9_V3_READONLY_API_DEPLOY_ROLLED_BACK"): assert text in api
+          for text in ("S9_APPEARANCE_V3_UI_LIVE_VERIFIED","api_reference()","verify_api(sample)","save_atomic(UI,old,metadata)"): assert text in ui
+          for text in ("pm install","am force-stop","adb install","delete_original"): assert text not in api and text not in ui
+          print("S9_V3_API_UI_SAFE_RELEASE_CONTRACT_PASS")
+          PY
+  api:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Install backed-up V3 read-only API after strict preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          file=ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-api-v3.py
+          digest="$(sha256sum "$file" | cut -d' ' -f1)"
+          stage="/tmp/security-v3-api-${GITHUB_SHA:0:16}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+          cmd="curl -fsSL --max-time 40 '$url' -o '$stage' && printf '%s  %s\\n' '$digest' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage' && /usr/bin/python3 '$stage' --apply"
+          idem="security-v3-api-v118-${GITHUB_SHA:0:14}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1('github-actions-v3-appearance-api-v118','deployment',:'cmd',300,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_V3_API_V118_JOB=$id"
+          for i in $(seq 1 90); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3500)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]]
+              grep -q 'S9_V3_READONLY_API_DEPLOY_VERIFIED' <<< "$output"
+              grep -q 'verified_v3_rankings_live' <<< "$output"
+              grep -q '"camera_apk_modified": false' <<< "$output"
+              grep -q '"videos_or_reviews_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
+  ui:
+    needs: api
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Patch live Appearance Search only after V3 API acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          file=ops/c720p/s9-native-security/deploy-s9-appearance-v3-ui.py
+          digest="$(sha256sum "$file" | cut -d' ' -f1)"
+          stage="/tmp/security-v3-ui-${GITHUB_SHA:0:16}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+          cmd="curl -fsSL --max-time 40 '$url' -o '$stage' && printf '%s  %s\\n' '$digest' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage' && /usr/bin/python3 '$stage' --apply"
+          idem="security-v3-ui-v118-${GITHUB_SHA:0:14}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1('github-actions-v3-appearance-ui-v118','deployment',:'cmd',300,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_V3_UI_V118_JOB=$id"
+          for i in $(seq 1 90); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3500)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]]
+              grep -q 'S9_APPEARANCE_V3_UI_LIVE_VERIFIED' <<< "$output"
+              grep -q '"recordings_modified": false' <<< "$output"
+              grep -q '"camera_apk_modified": false' <<< "$output"
+              grep -q '"human_reviews_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
