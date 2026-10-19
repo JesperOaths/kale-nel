@@ -24,6 +24,7 @@ S9="192.168.178.250:5555"
 PHONE_DIR="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
 PHONE_OUT="/data/local/tmp/s9_worker"
 CLIP_RE=re.compile(r"^motion_[0-9]{13}[.]mp4$")
+DRIVE_RE=re.compile(r"^[A-Za-z0-9][A-Za-z0-9_. ()-]{0,230}[.](?i:mp4|mov|mkv|avi)$")
 MAX_CATALOG=50000
 MAX_LIST=50000
 
@@ -49,17 +50,20 @@ def remote_list():
     return set(names)
 
 
-def safe_clip(item):
+def safe_clip(item,source):
     clip=item.get("clip_no") or item.get("remote_name") or ""
-    clip=str(clip).rsplit("/",1)[-1]
-    return clip if CLIP_RE.fullmatch(clip) else None
+    if not isinstance(clip,str) or not clip or "/" in clip or "\\" in clip:
+        return None
+    rule=CLIP_RE if source=="s9_sd" else DRIVE_RE
+    return clip if rule.fullmatch(clip) and ".." not in clip else None
 
 
 def one_row(source,clip,artifact="",kind="recording",
             status="awaiting_inference",inspection_only=False,exists=False):
     if source not in ("s9_sd","gdrive_archive"):
         raise ValueError("Unexpected provenance source")
-    if not CLIP_RE.fullmatch(clip):
+    pattern=CLIP_RE if source=="s9_sd" else DRIVE_RE
+    if not pattern.fullmatch(clip) or ".." in clip:
         raise ValueError("Unsafe clip reference")
     if artifact and (len(artifact)>240 or not re.fullmatch(r"[A-Za-z0-9_.-]+",artifact)):
         raise ValueError("Unsafe crop/thumbnail reference")
@@ -79,8 +83,8 @@ def one_row(source,clip,artifact="",kind="recording",
 
 def plan(sd_events,drive_events,sd_files):
     raw_mp4={v for v in sd_files if CLIP_RE.fullmatch(v)}
-    sd_indexed={v for x in sd_events if (v:=safe_clip(x))}
-    drive_indexed={v for x in drive_events if (v:=safe_clip(x))}
+    sd_indexed={v for x in sd_events if (v:=safe_clip(x,"s9_sd"))}
+    drive_indexed={v for x in drive_events if (v:=safe_clip(x,"gdrive_archive"))}
     # Do not reject an index entry when its original is missing. This is
     # evidence requiring repair, not permission to delete an old crop record.
     all_sd=raw_mp4 | sd_indexed
@@ -107,7 +111,7 @@ def plan(sd_events,drive_events,sd_files):
     # JPEG was moved. Preserve metadata references, never drop missing crops.
     for source,events in (("s9_sd",sd_events),("gdrive_archive",drive_events)):
         for event in events:
-            clip=safe_clip(event)
+            clip=safe_clip(event,source)
             if clip is None:continue
             snapshot=event.get("snapshot_name")
             if (isinstance(snapshot,str)
