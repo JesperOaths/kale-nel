@@ -105,6 +105,39 @@ class Progressive(unittest.TestCase):
     with self.assertRaisesRegex(RuntimeError,"guarded_ranker_failed"):
      p.guarded_publish(self.m,"1"*16,59)
 
+ def test_late_capture_error_does_not_expose_private_stderr(self):
+  import subprocess
+  details="traceback /secure/motion_1999999999999.mp4 capture_not_idle_4k_ring_healthy"
+  fake=subprocess.CompletedProcess(["python","ranker"],1,"",details)
+  self.assertEqual(p.classify_ranker_failure(details),"capture_unavailable")
+  with patch.object(p.subprocess,"run",return_value=fake):
+   with self.assertRaisesRegex(RuntimeError,"guarded_ranker_failed_capture_unavailable") as ctx:
+    p.guarded_publish(self.m,"1"*16,59)
+  self.assertNotIn("1999999999999",str(ctx.exception))
+  self.assertNotIn("/secure/",str(ctx.exception))
+
+ def test_ambiguous_or_unknown_stderr_stays_generic(self):
+  self.assertEqual(p.classify_ranker_failure(None),"unclassified")
+  self.assertEqual(p.classify_ranker_failure("private/motion_1999999999999.mp4"),"unclassified")
+  combined="capture_too_warm_for_ranker; Phone V3 index integrity checks failed"
+  self.assertEqual(p.classify_ranker_failure(combined),"unclassified")
+  self.assertEqual(p.classify_ranker_failure("x"*100001),"unclassified")
+  self.assertEqual(p.classify_ranker_failure("Phone V3 index integrity checks failed"),"phone_index_integrity")
+
+ def test_failed_apply_reports_no_verified_publication_without_pointer_claim(self):
+  import io
+  out=io.StringIO()
+  with patch.object(p,"guarded_publish",
+                    side_effect=RuntimeError("guarded_ranker_failed_capture_unavailable")):
+   with patch("sys.stdout",out):
+    with self.assertRaisesRegex(RuntimeError,"guarded_ranker_failed_capture_unavailable"):
+     p.run(True,self.m)
+  rendered=out.getvalue()
+  self.assertIn("S9_V3_PROGRESSIVE_RANKING_BLOCKED ",rendered)
+  self.assertIn('"publication_verified": false',rendered)
+  self.assertIn('"pointer_state_after_error": "not_claimed"',rendered)
+  self.assertNotIn('"rankings_published": false',rendered)
+
  def test_old_indices_and_review_data_never_mutated_by_this_wrapper(self):
   src=(ROOT/"run-s9-v3-progressive-ranking-v113.py").read_text()
   for forbidden in ('adb install','am force-stop','assign_person','os.replace(',
