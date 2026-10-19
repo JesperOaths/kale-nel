@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodic safety check for legacy S9+ playback index bridge
+
+[Timer]
+OnBootSec=12min
+OnUnitInactiveSec=10min
+RandomizedDelaySec=2min
+AccuracySec=1min
+Persistent=false
+Unit=c720p-legacy-s9-index-bridge-guard-v1.service
+
+[Install]
+WantedBy=timers.target
