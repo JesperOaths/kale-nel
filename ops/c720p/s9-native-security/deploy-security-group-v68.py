@@ -24,7 +24,7 @@ BACKEND_SOURCE='ops/c720p/s9-person-ml-v1/s9_manual_recording_links.py'
 PEOPLE_SOURCE='ops/c720p/s9-native-security/security-people-v45.js'
 HTML_SOURCE='ops/c720p/s9-native-security/security-people-v45.html'
 SAFETY_FEATURES=('fetchAutomatic','addReviewedOsnetMatches','approvedFolderContext',
-    'fetchLegacySkipped','searchClothingMatches','continuous','faceFetchError',
+    'fetchLegacySkipped','searchClothingMatches','faceFetchError',
     'fetchExtraLinks','automaticPortrait','folderApprovedSDClips')
 
 def transplant(live,source,old_start,new_start,end):
