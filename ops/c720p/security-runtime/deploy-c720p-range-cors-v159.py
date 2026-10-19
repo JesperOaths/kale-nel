@@ -74,6 +74,20 @@ def origin_header():
  if headers.get("Access-Control-Expose-Headers")!="Content-Range":
   raise RuntimeError("nonsecret_media_range_not_exposed")
  return True
+def wait_for_local_relay():
+ # systemctl restart can return after the process is active but before its
+ # localhost TCP listener has finished binding. Retry ONLY connection refused;
+ # invalid auth/CORS/header responses must fail immediately and roll back.
+ for attempt in range(30):
+  try:return origin_header()
+  except urllib.error.URLError as exc:
+   if not isinstance(exc.reason,ConnectionRefusedError):
+    raise
+   if attempt==29:
+    raise RuntimeError("relay_listener_not_ready_after_restart") from None
+   time.sleep(.5)
+ raise RuntimeError("relay_listener_unavailable")
+
 def browser():
  if CDP.is_symlink() or not CDP.is_file():raise RuntimeError("verified_chromium_helper_missing")
  spec=importlib.util.spec_from_file_location("c720p_cors_probe_v159",CDP)
@@ -176,7 +190,7 @@ def deploy(apply):
   unit("restart")
   if unit("is-active")!="active":raise RuntimeError("relay_not_active_after_patch")
   if verified_file(TARGET,150000)!=new:raise RuntimeError("relay_source_drift_after_patch")
-  origin_header()
+  wait_for_local_relay()
   count=browser()
   after=camera()
   print(PROOF+json.dumps({
