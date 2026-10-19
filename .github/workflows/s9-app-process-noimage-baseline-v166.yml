@@ -1,0 +1,87 @@
+name: S9 Android ART no-image single-launch baseline V166
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9AppProcessNoImageBaselineV166.java'
+      - 'ops/c720p/s9-native-security/offline-worker/probe-s9-app-process-noimage-v166.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-probe-s9-app-process-noimage-v166.py'
+      - '.github/workflows/s9-app-process-noimage-baseline-v166.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9AppProcessNoImageBaselineV166.java'
+      - 'ops/c720p/s9-native-security/offline-worker/probe-s9-app-process-noimage-v166.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-probe-s9-app-process-noimage-v166.py'
+      - '.github/workflows/s9-app-process-noimage-baseline-v166.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-art-noimage-baseline-v166
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test minimal Java only and phone-free fail-closed launcher
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/probe-s9-app-process-noimage-v166.py" "$d/test-probe-s9-app-process-noimage-v166.py"
+          python3 "$d/test-probe-s9-app-process-noimage-v166.py"
+          mkdir -p "$RUNNER_TEMP/s9-minimal-java-v166"
+          javac -source 8 -target 8 -d "$RUNNER_TEMP/s9-minimal-java-v166" "$d/S9AppProcessNoImageBaselineV166.java"
+  physical:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Admit only one tiny no-model Android Java startup with S9 4K priority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          d="ops/c720p/s9-native-security/offline-worker"
+          stage="/tmp/s9-noimage-art-v166-${GITHUB_SHA:0:13}"
+          cmd="install -d -m 700 '$stage'"
+          for name in S9AppProcessNoImageBaselineV166.java probe-s9-app-process-noimage-v166.py; do
+            digest="$(sha256sum "$d/$name" | cut -d' ' -f1)"
+            uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$d/$name"
+            cmd="$cmd && curl -fsSL --max-time 35 '$uri' -o '$stage/$name' && printf '%s  %s\\n' '$digest' '$stage/$name' | sha256sum -c - >/dev/null"
+          done
+          # The Python helper reads its Java file only from this checked stage.
+          cmd="$cmd && /usr/bin/python3 '$stage/probe-s9-app-process-noimage-v166.py'"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="s9-art-noimage-v166-${GITHUB_SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-art-noimage-v166','diagnostic',:'cmd',230,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "S9_APP_PROCESS_NOIMAGE_V166_JOB=$job"
+          for attempt in $(seq 1 110); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3600)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_APP_PROCESS_BASELINE_V166' <<< "$output"
+              grep -q '"status":"physical_baseline_checked"' <<< "$output"
+              grep -q '"launch_attempts":1' <<< "$output"
+              grep -q '"yu_net_inference_executed":false' <<< "$output"
+              grep -q '"model_or_image_opened":false' <<< "$output"
+              grep -q '"camera_pid_unchanged":true' <<< "$output"
+              grep -q '"capture_dropped_output_frames_after":0' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "S9 no-image baseline did not complete";exit 1
