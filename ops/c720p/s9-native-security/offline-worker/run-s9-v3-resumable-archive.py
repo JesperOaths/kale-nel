@@ -99,6 +99,9 @@ def prepare_partial_recovery(ctrl,clip):
     crop=remote_file_present(ctrl,roi)
     evidence=remote_file_present(ctrl,meta)
     if crop==evidence:return False
+    # Gate CPU-side compilation/staging on the same physical-model, live
+    # Camera2 PID and battery-temperature readiness used for ROI inference.
+    ctrl.readiness()
     jar=ctrl.ROOT+"/s9-offline-person-roi-recovery-v3.jar"
     if remote_file_present(ctrl,jar):return False
     result=run_worker("install-s9-roi-partial-recovery-v3.py",
