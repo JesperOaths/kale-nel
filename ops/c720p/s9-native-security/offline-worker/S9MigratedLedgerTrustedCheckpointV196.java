@@ -42,6 +42,7 @@ public final class S9MigratedLedgerTrustedCheckpointV196 implements AutoCloseabl
     private static final String SCHEMA="s9_c720p_trusted_checkpoint_v196";
     private final Path dir, target, lockFile;
     private final byte[] key;
+    private final javax.crypto.SecretKey keystoreHmacKey;
     private boolean closed;
 
     public static final class State {
@@ -58,7 +59,18 @@ public final class S9MigratedLedgerTrustedCheckpointV196 implements AutoCloseabl
 
     public S9MigratedLedgerTrustedCheckpointV196(File appInternalDirectory,byte[] secret)
             throws IOException {
-        if (appInternalDirectory==null || secret==null || secret.length<32)
+        this(appInternalDirectory,secret,null);
+    }
+    public S9MigratedLedgerTrustedCheckpointV196(File appInternalDirectory,
+            javax.crypto.SecretKey signingKey) throws IOException {
+        this(appInternalDirectory,null,signingKey);
+    }
+    private S9MigratedLedgerTrustedCheckpointV196(File appInternalDirectory,
+            byte[] secret,javax.crypto.SecretKey signingKey) throws IOException {
+        if (appInternalDirectory==null
+            || (secret==null && (signingKey==null
+                || !"HmacSHA256".equalsIgnoreCase(signingKey.getAlgorithm())))
+            || (secret!=null && (secret.length<32 || signingKey!=null)))
             throw new IOException("trusted_checkpoint_setup_invalid");
         dir=appInternalDirectory.toPath();
         if (Files.isSymbolicLink(dir)
@@ -72,7 +84,8 @@ public final class S9MigratedLedgerTrustedCheckpointV196 implements AutoCloseabl
         requireRegular(target);requireRegular(lockFile);
         if (Files.size(target)>350 || Files.size(lockFile)!=0)
             throw new IOException("trusted_checkpoint_files_untrusted");
-        key=Arrays.copyOf(secret,secret.length);
+        key=secret==null?null:Arrays.copyOf(secret,secret.length);
+        keystoreHmacKey=signingKey;
     }
 
     private static void requireRegular(Path file) throws IOException {
@@ -178,7 +191,8 @@ public final class S9MigratedLedgerTrustedCheckpointV196 implements AutoCloseabl
     }
     private String mac(String payload) throws GeneralSecurityException {
         Mac h=Mac.getInstance("HmacSHA256");
-        h.init(new SecretKeySpec(key,"HmacSHA256"));
+        h.init(keystoreHmacKey!=null?keystoreHmacKey:
+            new SecretKeySpec(key,"HmacSHA256"));
         byte[] signed=h.doFinal(payload.getBytes(StandardCharsets.US_ASCII));
         char[] alphabet="0123456789abcdef".toCharArray();
         char[] result=new char[signed.length*2];
@@ -195,6 +209,7 @@ public final class S9MigratedLedgerTrustedCheckpointV196 implements AutoCloseabl
         char[] b=new char[size];Arrays.fill(b,c);return new String(b);
     }
     @Override public synchronized void close(){
-        Arrays.fill(key,(byte)0);closed=true;
+        if(key!=null)Arrays.fill(key,(byte)0);
+        closed=true;
     }
 }
