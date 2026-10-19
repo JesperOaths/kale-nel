@@ -16,7 +16,7 @@ patched=v.patch_js(old,old,new).decode()
 for start,end in (
  ('function folderApprovedSDClips(id){','function assignedRecordingKeys(folder){'),
  ('function chosenPortrait(f){','function approvedPreviewClip(preview){'),
- ("  badge(media,item.source==='drive'","  if(item.decision==='approved'){"),
+ (" badge(media,item.source==='drive'"," if(item.decision==='approved'){"),
  (' const faceMatches=state.faceList.filter(', " paginate($('folderPage')"),
 ):
  assert v.b.block(patched,start,end)==v.b.block(new,start,end),(start,end)
