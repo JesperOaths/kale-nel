@@ -39,8 +39,9 @@ class Tests(unittest.TestCase):
   self.assertEqual(m.MAX_TEMP_C,37.0)
   self.assertIn("competing_s9_integrity_or_catalog_job",txt)
   self.assertIn('status.get("mode")!="watching"',txt)
-  self.assertIn('scanlib.scan(DEX,DEX_SHA,save=True)',txt)
+  self.assertIn('scanlib.scan(DEX,DEX_SHA,save=True,health_check=check_other_jobs)',txt)
   self.assertIn("originals_modified",txt)
+  self.assertIn("if health_check is not None:health_check()", (BASE/"s9_auxiliary_media_probe_v1.py").read_text())
   for danger in ("shutil.rmtree(", ".unlink(", "adb pull", "CameraManager", "sudo ", "rm -rf"):
    self.assertNotIn(danger,txt)
   sampler=(BASE/"s9_auxiliary_media_probe_v1.py").read_text()
