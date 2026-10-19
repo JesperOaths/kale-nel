@@ -54,4 +54,5 @@ with tempfile.TemporaryDirectory(prefix="security-v8-parse-") as directory:
   assert len(bodies)==1,name
   file=d/(name+".js");file.write_text(bodies[0])
   subprocess.run(["node","--check",str(file)],check=True,timeout=12)
+subprocess.run(["node",str(ROOT/"test-security-verified-activity-ui.mjs")],check=True,timeout=12)
 print("S9_SECURITY_V8_JS_AND_LAYOUT_CONTRACT_PASS")
