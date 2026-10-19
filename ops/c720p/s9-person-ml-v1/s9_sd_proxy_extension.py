@@ -11,6 +11,57 @@ SECURITY_SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Securit
 PHONE="192.168.178.250:5555"
 RE_NAME=re.compile(r"(?:rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}|native4k_[0-9]{13}|motion_[0-9]{13})[.]mp4")
 BLOCK=65536
+ACTIVITY_REPORT=Path("/home/jespern/c720p-home-hub/state/security-s9-drive-activity-v1.json")
+
+def read_private_recording_activity(source=ACTIVITY_REPORT):
+ """Sanitize private verified recording aggregates for the existing 8794 relay."""
+ import datetime
+ import time
+ source=Path(source)
+ st=source.stat()
+ if source.is_symlink() or not source.is_file() or st.st_mode&0o077 or not 30<st.st_size<700000:
+  raise ValueError("untrusted_activity_file")
+ d=json.loads(source.read_bytes())
+ if (d.get("schema_version")!="security_s9_drive_activity_v1"
+  or d.get("timezone")!="Europe/Amsterdam" or d.get("operating_day_start_local")!="06:00"
+  or d.get("s3_excluded") is not True or d.get("media_decoded") is not False
+  or d.get("video_bytes_transferred") is not False):
+  raise ValueError("untrusted_activity_origin")
+ stamp=datetime.datetime.fromisoformat(d["generated_at_utc"])
+ if stamp.tzinfo is None or not -180<=time.time()-stamp.timestamp()<=1800:
+  raise ValueError("stale_activity")
+ origins=d["source_recordings"]
+ sd=origins["s9_microSD"];drive=origins["historical_drive_verified_new"]
+ total=d["total_recordings"];unknown=d["historical_drive_timestamp_unknown"]
+ if any(type(v) is not int or not 0<=v<=200000 for v in (sd,drive,total,unknown)) or sd+drive!=total or unknown>drive:
+  raise ValueError("invalid_activity_totals")
+ hours=d["local_wall_clock_hours"];days=d["operating_days"]
+ if not isinstance(hours,dict) or set(hours)!={f"{i:02d}" for i in range(24)} or not isinstance(days,dict) or len(days)>420:
+  raise ValueError("invalid_activity_dimensions")
+ def checked(value):
+  if not isinstance(value,dict):raise ValueError("invalid_activity_bucket")
+  a,b,c=(value.get(k) for k in ("s9_microSD","historical_drive","combined"))
+  if any(type(v) is not int or not 0<=v<=200000 for v in (a,b,c)) or a+b!=c:
+   raise ValueError("inconsistent_activity_bucket")
+  return {"s9_microSD":a,"historical_drive":b,"combined":c}
+ h={key:checked(hours[key]) for key in sorted(hours)}
+ dates={}
+ for key,row in sorted(days.items()):
+  if not re.fullmatch(r"20[0-9]{2}-[0-9]{2}-[0-9]{2}",key):raise ValueError("invalid_day")
+  datetime.date.fromisoformat(key)
+  dates[key]=checked(row)
+ for table in (h,dates):
+  if sum(x["s9_microSD"] for x in table.values())!=sd or sum(x["historical_drive"] for x in table.values())+unknown!=drive:
+   raise ValueError("source_counts_do_not_reconcile")
+ return {"ok":True,"schema_version":"security_s9_drive_activity_v1",
+  "generated_at_utc":d["generated_at_utc"],"timezone":"Europe/Amsterdam",
+  "operating_day_start_local":"06:00","source_recordings":{"s9_microSD":sd,
+   "historical_drive_verified_new":drive},"total_recordings":total,
+  "historical_drive_timestamp_unknown":unknown,"local_wall_clock_hours":h,
+  "operating_days":dates,"recordings_not_people":True,"s3_included":False,
+  "dst_caveat":"Historical Drive repeated-hour offsets cannot be resolved",
+  "media_decoded":False,"video_bytes_transferred":False}
+
 def rows():
  try:
   d=json.loads(CAT.read_text())
@@ -171,6 +222,22 @@ def install_local_sd(H):
    self.path=original_path
    try:return original(self)
    finally:self.path=before
+  if path=="/new/api/security-recording-activity":
+   # Existing outer 8794 relay applies the Security authentication boundary.
+   if self.command!="GET" or url.query:
+    self.js(400,{"ok":False,"error":"activity_get_no_query_only"});return
+   try:
+    blob=json.dumps(read_private_recording_activity(),separators=(",",":"),sort_keys=True).encode()
+    self.send_response(200)
+    self.send_header("Content-Type","application/json; charset=utf-8")
+    self.send_header("Cache-Control","private, no-store")
+    self.send_header("X-Content-Type-Options","nosniff")
+    self.send_header("Content-Length",str(len(blob)))
+    self.end_headers()
+    self.wfile.write(blob)
+   except (OSError,ValueError,TypeError,KeyError,OverflowError):
+    self.js(503,{"ok":False,"error":"verified_activity_unavailable"})
+   return
   data=rows()
   previews=preview_rows()
   if path=="/new/api/live-person-watch":
