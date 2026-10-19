@@ -86,7 +86,7 @@ class Audit(unittest.TestCase):
       "private person's filename.jpg : adb command")),contextlib.redirect_stdout(output):
    with self.assertRaises(SystemExit) as ex:m.main()
   self.assertEqual(ex.exception.code,1)
-  self.assertNotIn("private",output.getvalue())
+  self.assertNotIn("person\x27s filename.jpg",output.getvalue())
   self.assertIn('"app_process_invoked":false',output.getvalue())
 
  def test_read_only_source_has_no_camera_model_or_mutation_calls(self):
