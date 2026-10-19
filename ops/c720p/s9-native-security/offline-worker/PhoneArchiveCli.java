@@ -31,21 +31,28 @@ public final class PhoneArchiveCli {
   File[] items=archive.listFiles();
   if(items==null||items.length>20000)throw new IOException("sd_inventory_unavailable_or_unbounded");
   int primaryFound=0,preroll=0,orphanPreroll=0,completed=0,partial=0,diagnostics=0,other=0;
+  int oldOrphanPreroll=0,oldComplete=0,oldPartial=0,unknownMtime=0;
+  final long now=System.currentTimeMillis(),oneDay=24L*60*60*1000;
   for(File f:items) {
    if(!f.isFile()||java.nio.file.Files.isSymbolicLink(f.toPath()))continue;
    String name=f.getName();
    if(!name.endsWith(".mp4"))continue;
+   long modified=f.lastModified();
+   boolean old=modified>0 && modified<=now-oneDay;
+   if(modified<=0 || modified>now+3600000L)unknownMtime++;
    if(name.matches("motion_[0-9]{13}[.]mp4")){
     if(primary.contains(name))primaryFound++;
     else other++;  // a raw MP4 without valid sidecar remains unverified
    }else if(name.matches("motion_[0-9]{13}[.]mp4[.]preroll[.]mp4")){
     preroll++;
-    if(!primary.contains(name.substring(0,name.length()-".preroll.mp4".length())))
+    if(!primary.contains(name.substring(0,name.length()-".preroll.mp4".length()))){
      orphanPreroll++;
+     if(old)oldOrphanPreroll++;
+    }
    }else if(name.matches("motion_[0-9]{13}[.]mp4[.]complete[.]mp4")){
-    completed++;
+    completed++;if(old)oldComplete++;
    }else if(name.matches("motion_[0-9]{13}[.]mp4[.]complete[.]partial[.]mp4")){
-    partial++;
+    partial++;if(old)oldPartial++;
    }else if(name.matches("diagnostic_preroll_[A-Za-z0-9._-]{1,128}[.]mp4")){
     diagnostics++;
    }else other++;
@@ -56,6 +63,12 @@ public final class PhoneArchiveCli {
    .put("verified_primary_events",primaryFound)
    .put("preroll_segments",preroll)
    .put("preroll_without_verified_primary",orphanPreroll)
+   .put("unpaired_preroll_older_than_24h_mtime",oldOrphanPreroll)
+   .put("completed_companion_older_than_24h_mtime",oldComplete)
+   .put("partial_companion_older_than_24h_mtime",oldPartial)
+   .put("mp4_files_with_untrusted_mtime",unknownMtime)
+   .put("mtime_age_only_not_integrity_verdict",true)
+   .put("no_media_quarantined_or_deleted",true)
    .put("completed_companion_mp4_files",completed)
    .put("partial_completion_mp4_files",partial)
    .put("diagnostic_mp4_files",diagnostics)
