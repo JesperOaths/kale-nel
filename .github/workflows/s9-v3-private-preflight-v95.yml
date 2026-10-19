@@ -1,0 +1,91 @@
+name: S9 V3 private archive readiness V95
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-private-preflight-v95.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-private-preflight-v95.py'
+      - '.github/workflows/s9-v3-private-preflight-v95.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-private-preflight-v95.py'
+      - '.github/workflows/s9-v3-private-preflight-v95.yml'
+permissions:
+  contents: read
+concurrency:
+  group: security-v3-private-preflight
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify no-write source-qualified archive preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$root/run-s9-v3-private-preflight-v95.py"
+          python3 "$root/test-s9-v3-private-preflight-v95.py"
+          python3 "$root/test-s9-v3-resumable-archive.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("ops/c720p/s9-native-security/offline-worker/run-s9-v3-private-preflight-v95.py")
+          s=p.read_text()
+          for token in ("os.remove(", ".unlink(", ".write_text(", ".write_bytes(",
+                        "os.replace(", "pm install", "am force-stop", "--apply"):
+              assert token not in s, token
+          assert 'raw_filenames_disclosed' in s and 'camera_apk_modified' in s
+          print("S9_V3_PRIVATE_PREFLIGHT_SOURCE_GUARD_PASS")
+          PY
+  live-readonly:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Run authorized private C720P no-write archive readiness check
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          root='ops/c720p/s9-native-security/offline-worker'
+          stage="/tmp/security-v3-private-${GITHUB_SHA:0:12}"
+          cmd="mkdir -p '$stage'"
+          for script in run-s9-v3-private-preflight-v95.py run-s9-v3-resumable-archive.py backfill-s9-original-roi-osnet-temporal-v2.py backfill-s9-hsv32-uniform-v2.py; do
+            src="$root/$script"
+            digest="$(sha256sum "$src" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+            cmd="$cmd && curl -fsSL --retry 2 --max-time 35 '$url' -o '$stage/$script' && printf '%s  %s\\n' '$digest' '$stage/$script' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/run-s9-v3-private-preflight-v95.py'"
+          idem="security-v3-private-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-v3-private-archive-readonly','diagnostic',:'cmd',220,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_V3_PRIVATE_PREFLIGHT_JOB=$id"
+          for attempt in $(seq 1 48); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3500)"
+              echo "$output"
+              if [[ "$status" != 'done|0' ]]; then
+                echo "S9 V3 private read-only preflight did not complete"; exit 1
+              fi
+              grep -q 'S9_V3_ARCHIVE_PRIVATE_PREFLIGHT' <<< "$output"
+              grep -q '"raw_filenames_disclosed": false' <<< "$output"
+              grep -q '"review_decisions_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "S9 V3 private preflight timed out"; exit 1
