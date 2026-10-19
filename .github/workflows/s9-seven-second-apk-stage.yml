@@ -1,0 +1,25 @@
+name: S9 native seven-second signed APK stage-only guard
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/build-s9-native-seven-second-tail-v1.py'
+      - 'ops/c720p/s9-native-security/test-build-s9-native-seven-second-tail-v1.py'
+      - '.github/workflows/s9-seven-second-apk-stage.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/build-s9-native-seven-second-tail-v1.py'
+      - 'ops/c720p/s9-native-security/test-build-s9-native-seven-second-tail-v1.py'
+permissions:
+  contents: read
+jobs:
+  no-install-build-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-build-s9-native-seven-second-tail-v1.py
+          python3 -m py_compile ops/c720p/s9-native-security/build-s9-native-seven-second-tail-v1.py
+          echo S9_NATIVE_7S_SIGNED_STAGE_ONLY_GUARDED
