@@ -163,6 +163,17 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 #auxRecovery .aux-player{grid-column:1/-1;width:100%;max-height:380px;background:#060b10}
 #auxRecoveryPaging{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0}
 #auxRecoveryPaging span{font-size:11px;color:#aacbd4}
+
+/* Migrated C720P videos are separate from S9 native original counts. */
+#c720pMigrated{margin:10px 0;border:1px solid #466977;border-radius:12px;background:#112834;padding:0 14px}
+.evidence-mode #c720pMigrated{display:none}
+#c720pMigrated>summary{cursor:pointer;padding:14px 0;font-weight:700}
+#c720pMigrated p{color:#abc8d1;font-size:12px}
+#c720pMigratedList{display:grid;gap:7px;max-height:590px;overflow:auto}
+#c720pMigratedList .migrated-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;padding:9px;border:1px solid #3a5a68;background:#1b3745;border-radius:8px}
+#c720pMigratedList .migrated-row small{display:block;color:#b0cbd2}
+#c720pMigrated button{border:1px solid #507784;border-radius:8px;background:#254957;color:#f6ffff;padding:7px 11px;cursor:pointer}
+#c720pMigrated .migrated-player{grid-column:1/-1;max-height:360px;width:100%;background:#080f17}
 </style><!-- Original MP4 via secure range relay; disabled unreliable smooth-copy playback override. -->
 </head><body><main>
 <header><div><div class="eyebrow">S9+ · microSD · local only</div><h1 id="title">Recordings</h1><p id="intro"></p></div><button type="button" id="refresh">Refresh</button></header>
@@ -173,6 +184,12 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
  <input id="auxRecoverySearch" type="search" placeholder="Filter by date or type" aria-label="Filter recovery footage">
  <div id="auxRecoveryList"></div>
  <div id="auxRecoveryPaging"><button type="button" id="auxRecoveryPrev">Previous</button><span id="auxRecoveryPage">—</span><button type="button" id="auxRecoveryNext">Next</button></div>
+</details>
+
+<details id="c720pMigrated" aria-label="C720P recordings stored on S9 microSD">
+ <summary>C720P recordings on S9+ <span id="c720pMigratedCount"></span></summary>
+ <p id="c720pMigratedStatus" role="status">Verified migrated videos, separate from S9+ original recordings and person assignments.</p>
+ <div id="c720pMigratedList"></div>
 </details>
 
 <section class="analytics" id="activityAnalytics" aria-label="Activity patterns over time">
@@ -844,5 +861,62 @@ search.addEventListener('input',()=>{page=0;if(loaded)render()});
 prev.addEventListener('click',()=>{if(page>0){page--;render()}});
 next.addEventListener('click',()=>{page++;render()});
 window.addEventListener('pagehide',stop);
+})();
+</script>
+<script id="c720p-migrated-recordings-ui">
+(()=>{
+ const panel=document.getElementById('c720pMigrated');
+ if(!panel)return;
+ const count=document.getElementById('c720pMigratedCount');
+ const list=document.getElementById('c720pMigratedList');
+ const status=document.getElementById('c720pMigratedStatus');
+ let loading=false,loaded=false,player=null,nonce=0;
+ const create=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);return n};
+ function stop(){nonce++;if(player){player.pause();player.removeAttribute('src');player.load();player.remove();player=null}}
+ function okFile(f){return f&&typeof f.name==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,139}\.mp4$/.test(f.name)
+   &&!f.name.includes('..')&&Number.isSafeInteger(f.bytes)&&f.bytes>=10000&&f.bytes<=943718400&&typeof f.indexed==='boolean'}
+ async function load(){
+  if(loading||loaded)return;
+  loading=true;status.textContent='Loading verified S9+ migration records…';
+  try{
+   const relay=window.C720PSecureRelay;
+   if(!relay?.fetch)throw Error('Authenticated Security relay unavailable');
+   const response=await relay.fetch('/new/api/c720p-migrated-clips',{cache:'no-store'});
+   if(!response.ok)throw Error('Verified migration index unavailable');
+   const d=await response.json();
+   if(d.ok!==true||d.schema_version!=='c720p_s9_verified_import_v2'||
+      d.not_s9_original_recordings!==true||d.not_person_assignments!==true||
+      !Number.isSafeInteger(d.total_imported)||!Array.isArray(d.files)||
+      d.total_imported!==d.files.length||d.files.length>5000||!d.files.every(okFile)){
+      throw Error('Migration report failed validation');
+   }
+   list.replaceChildren();
+   count.textContent='· '+d.total_imported;
+   status.textContent='S9+ microSD copies verified by SHA-256. Originals and person decisions are preserved.';
+   if(!d.files.length){list.append(create('p','No verified migrated clips yet.'));loaded=true;return}
+   for(const f of d.files){
+    const row=create('div');row.className='migrated-row';
+    const metadata=create('div',f.name);
+    metadata.append(create('small',(f.bytes/1048576).toFixed(1)+' MiB · '+(f.indexed?'Indexed camera event':'Recovered local clip')));
+    const preview=create('button','Preview');preview.type='button';
+    preview.addEventListener('click',async()=>{
+     stop();const req=nonce;preview.disabled=true;
+     try{
+      const url=await window.C720PSecureRelay.url('/new/saved/c720p-migrated/clip/'+encodeURIComponent(f.name));
+      if(req!==nonce)return;
+      const video=create('video');video.className='migrated-player';
+      video.controls=true;video.preload='metadata';video.playsInline=true;video.src=url;player=video;row.append(video);
+      video.addEventListener('error',()=>{if(player===video)status.textContent='Unable to play this migrated clip; stored video remains preserved'});
+     }catch(_){status.textContent='Authenticated migrated video playback unavailable'}
+     finally{preview.disabled=false}
+    });
+    row.append(metadata,preview);list.append(row);
+   }
+   loaded=true;
+  }catch(err){status.textContent='Migrated clips unavailable · '+String(err.message||err)}
+  finally{loading=false}
+ }
+ panel.addEventListener('toggle',()=>{if(panel.open)load();else stop()});
+ window.addEventListener('pagehide',stop);
 })();
 </script><div data-version-watermark style="position:fixed;bottom:4px;right:10px;color:#7894a5;font-size:10px;pointer-events:none">v817 - Made by Bruis</div></body></html>
