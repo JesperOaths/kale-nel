@@ -1,0 +1,97 @@
+name: Security saved recordings edit-people V108
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/test-people-v45.js'
+      - 'ops/c720p/s9-native-security/deploy-security-saved-group-edit-v108.py'
+      - 'ops/c720p/s9-native-security/test-security-saved-group-v108.py'
+      - '.github/workflows/security-saved-group-edit-v108.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/test-people-v45.js'
+      - 'ops/c720p/s9-native-security/deploy-security-saved-group-edit-v108.py'
+      - 'ops/c720p/s9-native-security/test-security-saved-group-v108.py'
+      - '.github/workflows/security-saved-group-edit-v108.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-security-saved-group-v108
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify scoped edit and unchanged original review protections
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security
+          python3 -m py_compile "$d/deploy-security-saved-group-edit-v108.py"
+          python3 "$d/test-security-saved-group-v108.py"
+          node --check "$d/security-people-v45.js"
+          node "$d/test-people-v45.js"
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('ops/c720p/s9-native-security/deploy-security-saved-group-edit-v108.py').read_text()
+          assert 'live_security_js_changed_since_review' in s
+          assert 'recordings_modified' in s and 'review_files_unchanged' in s
+          assert 'SECURITY_SAVED_GROUP_V108_DEPLOY_VERIFIED' in s
+          assert 'SECURITY_SAVED_GROUP_V108_ROLLED_BACK' in s
+          for unwanted in ('adb install','pm install','recording_delete','review_decision_write'):
+              assert unwanted not in s
+          print('SECURITY_SAVED_GROUP_V108_SCOPE_PASS')
+          PY
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Stage immutable digest-verified UI-only guarded deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          root='ops/c720p/s9-native-security'
+          stage="/tmp/security-saved-group-v108-${GITHUB_SHA:0:12}"
+          cmd="mkdir -p '$stage'"
+          for file in deploy-security-saved-group-edit-v108.py deploy-security-filing-v65.py security-step4-cdp-safe.py; do
+            source="$root/$file"
+            hash="$(sha256sum "$source" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$source"
+            cmd="$cmd && curl -fsSL --retry 2 --max-time 30 '$url' -o '$stage/$file' && printf '%s  %s\\n' '$hash' '$stage/$file' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/deploy-security-saved-group-edit-v108.py' --ref '${GITHUB_SHA}' && /usr/bin/python3 '$stage/deploy-security-saved-group-edit-v108.py' --ref '${GITHUB_SHA}' --apply"
+          idem="security-saved-group-v108-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-saved-group-v108','deployment',:'cmd',420,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "SECURITY_SAVED_GROUP_V108_JOB=$id"
+          for i in $(seq 1 105); do
+            result="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$result" == done* || "$result" == error* || "$result" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 5000)"
+              err="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stderr,'') from c720p_agent.jobs where id=$id" | tail -c 1500)"
+              echo "$output"
+              if [[ "$result" != 'done|0' ]]; then echo "$err"; exit 1; fi
+              grep -q 'SECURITY_SAVED_GROUP_V108_DEPLOY_VERIFIED' <<< "$output"
+              grep -q '"review_files_unchanged": true' <<< "$output"
+              grep -q '"camera_apk_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1

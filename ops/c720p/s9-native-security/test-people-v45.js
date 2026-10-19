@@ -271,6 +271,12 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
  const folderGrid=el('folderGrid');
  assert(folderGrid.children.length,'Saved folder must show original recording rows');
+ const editApproved=scan(folderGrid,'＋ Edit people');
+ assert(editApproved,'Approved originals need a direct action to update their people without returning to review');
+ editApproved.handlers.click();
+ assert.equal(el('approvalDialog').open,true,'Edit people opens the existing group-filing dialog');
+ assert.equal(el('approvalFolder').value,'G123','Existing approved person should be selected');
+ el('approvalDialog').close();
  assert.equal(el('folderFaces').hidden,false,
   'Real candidate crops from approved clips must be available for explicit human selection');
  assert.equal(el('folderFaceGrid').children.length,2,

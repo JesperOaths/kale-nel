@@ -724,9 +724,12 @@ function reviewItem(item,compact){
  const tools=elt('div','','actions');
  tools.append(control('▶ Play',()=>startVideo(item)));
  if(item.decision==='approved'){
+  // An already-filed group can grow or shrink without returning the original
+  // to the unassigned queue, losing another person's saved membership, or
+  // forcing a duplicate human review.
+  tools.append(control('＋ Edit people',()=>openApproval(item),'primary'));
   if(state.folder)tools.append(control('↩ Return to review queue',
     ()=>manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},null),'secondary'));
-  else tools.append(control('Saved ✓',()=>{},'secondary'));
  }else if(['rejected','skipped'].includes(item.decision)){
   tools.append(control('Restore',()=>state.pane==='review'?manualLink(item,null):restore(item),'secondary'));
  }else{
