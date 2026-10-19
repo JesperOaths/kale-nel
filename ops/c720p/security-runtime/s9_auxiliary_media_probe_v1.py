@@ -65,10 +65,10 @@ def parse(raw,offset,total=None):
         "extractor_unavailable_or_incomplete","size_outside_probe_limits",
         "possibly_active_or_untrusted_mtime","untrusted_video_format"}
     for row in rows:
-        if not isinstance(row,dict) or not isinstance(row.get("name"),str) or
-          not CLIP.fullmatch(row["name"]) or row.get("role") not in ("preroll","complete","partial") or
-          row.get("read_only") is not True or row.get("status") not in allowed or
-          type(row.get("bytes")) is not int or row["bytes"]<0:
+        if (not isinstance(row,dict) or not isinstance(row.get("name"),str) or
+            not CLIP.fullmatch(row["name"]) or row.get("role") not in ("preroll","complete","partial") or
+            row.get("read_only") is not True or row.get("status") not in allowed or
+            type(row.get("bytes")) is not int or row["bytes"]<0):
             raise ValueError("untrusted_file_row")
         name=row["name"]
         expected="preroll" if name.endswith(".preroll.mp4") else "partial" if name.endswith(".complete.partial.mp4") else "complete"
