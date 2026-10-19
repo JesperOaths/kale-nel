@@ -49,10 +49,12 @@ class Tests(unittest.TestCase):
  def test_timer_is_sparse_and_non_persistent(self):
   timer=(BASE/"c720p-s9-auxiliary-recovery-refresh-v1.timer").read_text()
   service=(BASE/"c720p-s9-auxiliary-recovery-refresh-v1.service").read_text()
-  for token in ("OnBootSec=2h","OnUnitInactiveSec=3d",
-       "RandomizedDelaySec=4h","Persistent=false"):
+  for token in ("OnBootSec=2h","OnUnitInactiveSec=12h",
+       "RandomizedDelaySec=45min","Persistent=false"):
    self.assertIn(token,timer)
   self.assertNotIn("OnCalendar=",timer)
+  # Every no-op retry is cheap; only scan once the report is >=36h old.
+  self.assertEqual(m.MIN_AGE,36*3600)
   self.assertIn("Nice=15",service)
   self.assertIn("IOSchedulingClass=idle",service)
   self.assertIn("s9_auxiliary_low_duty_refresh_v1.py --execute",service)
