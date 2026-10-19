@@ -538,6 +538,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[1].handlers.click();for(let i=0;i<8;i++)await flush();
  // Earlier Drive-only source selection must not hide the synthetic SD group.
  el('reviewSource').value='all';el('reviewSource').handlers.change();
+ console.log('GROUP_PREFLIGHT_FIXTURE',JSON.stringify({source:el('reviewSource').value,tab:el('reviewMode').value,total:el('reviewTotal').textContent,rows:el('reviewGrid').children.map(x=>({source:x.dataset.source,clip:x.dataset.clip,txt:x.textContent})),linkKeys:Object.keys(linkItems)}));
  const groupRow=el('reviewGrid').children.find(x=>x.dataset.source==='sd'&&x.dataset.clip===otherClip);
  assert(groupRow,'Unassigned reviewed original for a group fixture must be present');
  const groupFile=scan(groupRow,'✓ File under person');
