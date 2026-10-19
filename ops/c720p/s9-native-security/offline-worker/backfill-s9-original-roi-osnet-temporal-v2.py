@@ -143,6 +143,57 @@ def readiness():
     return camera,celsius
 
 
+def assert_camera_safe(expected_pid):
+    """Fail closed between archived clips, not just at both ends of a batch."""
+    observed=adb("shell","pidof nl.kalenel.s9security",timeout=15).stdout.strip()
+    if observed!=expected_pid:
+        raise RuntimeError("Camera2 process changed during offline backfill")
+    report=adb("shell","dumpsys battery",timeout=15).stdout
+    match=re.search(r"temperature:\s*(\d+)",report)
+    if match is None:
+        raise RuntimeError("Phone thermal telemetry unavailable")
+    temperature=int(match.group(1))/10
+    if temperature>42:
+        raise RuntimeError("Phone battery temperature above 42 C; stop batch")
+    return temperature
+
+
+def detector_provenance(clip,key,metadata):
+    """Require the immutable ROI source record before trusting any embedding."""
+    record=json.loads(adb("exec-out","cat",metadata,timeout=20).stdout)
+    sha=record.get("crop_sha256") if isinstance(record,dict) else None
+    if (not isinstance(record,dict)
+        or record.get("schema")!="s9_offline_single_person_roi_v1"
+        or record.get("source")!="s9_sd"
+        or record.get("source_clip")!=clip
+        or record.get("source_qualified_key")!=key
+        or record.get("detector_sha256")!=DETECT_SHA
+        or record.get("identity_verified") is not False
+        or record.get("requires_human_review") is not True
+        or not isinstance(sha,str) or not KEY.fullmatch(sha)):
+        raise RuntimeError("Untrusted detector ROI provenance")
+    return sha
+
+
+def valid_visual(doc,key,crop_sha):
+    """Reject nonfinite, fabricated or unrelated existing OSNet sidecars."""
+    if not isinstance(doc,dict):return False
+    vec=doc.get("visual_embedding")
+    return (
+        doc.get("schema")=="s9_offline_appearance_embedding_v1"
+        and doc.get("source_qualified_key")==key
+        and doc.get("crop_sha256")==crop_sha
+        and doc.get("model_sha256")==OSNET_SHA
+        and doc.get("model_type")=="visual"
+        and doc.get("appearance_only") is True
+        and doc.get("human_review_required") is True
+        and doc.get("verified_same_person") is False
+        and isinstance(vec,list) and len(vec)==512
+        and all(type(x) in (float,int) and math.isfinite(x) for x in vec)
+        and abs(sum(x*x for x in vec)-1)<=0.001
+    )
+
+
 def compute_one(clip):
     key=hashlib.sha256(("s9_sd\x00"+clip).encode()).hexdigest()
     if not KEY.fullmatch(key):raise RuntimeError("Invalid source qualified key")
@@ -151,13 +202,11 @@ def compute_one(clip):
     sidecar=ROOT+"/features/"+key+"-visual.json"
     existing=adb("shell","test -s "+sidecar,check=False)
     if existing.returncode==0:
-        # Always verify existing sidecars, do not fabricate their success.
+        # Previously generated features count only if detector provenance and
+        # the full normalized model output are independently validated.
+        sha=detector_provenance(clip,key,metadata)
         obj=json.loads(adb("exec-out","cat",sidecar,timeout=25).stdout)
-        vector=obj.get("visual_embedding")
-        if (obj.get("source_qualified_key")!=key or
-            obj.get("model_sha256")!=OSNET_SHA or
-            not isinstance(vector,list) or len(vector)!=512 or
-            abs(sum(float(v)**2 for v in vector)-1)>0.001):
+        if not valid_visual(obj,key,sha):
             raise RuntimeError("Previously staged vector failed integrity checks")
         return "already_verified"
     if adb("shell","test -e "+metadata,check=False).returncode!=0:
@@ -171,14 +220,7 @@ def compute_one(clip):
             return "no_qualified_person_box"
         if "S9_OFFLINE_SINGLE_PERSON_ROI_STAGED" not in result.stdout:
             raise RuntimeError("Detector did not confirm private crop staging")
-    met=json.loads(adb("exec-out","cat",metadata,timeout=20).stdout)
-    sha=met.get("crop_sha256")
-    if (met.get("schema")!="s9_offline_single_person_roi_v1" or
-        met.get("source_clip")!=clip or met.get("source_qualified_key")!=key or
-        met.get("detector_sha256")!=DETECT_SHA or
-        not isinstance(sha,str) or not KEY.fullmatch(sha) or
-        not met.get("requires_human_review")):
-        raise RuntimeError("Untrusted detector ROI provenance")
+    sha=detector_provenance(clip,key,metadata)
     if adb("shell","sha256sum "+roi,timeout=25).stdout.split()[0]!=sha:
         raise RuntimeError("Detector crop checksum mismatch")
     onnx=("export LD_LIBRARY_PATH="+ROOT+"/lib; "
@@ -190,14 +232,7 @@ def compute_one(clip):
     if "S9_OFFLINE_REAL_CROP_512D_PERSISTED visual" not in out.stdout:
         raise RuntimeError("Phone OSNet did not persist verified 512-D descriptor")
     doc=json.loads(adb("exec-out","cat",sidecar,timeout=25).stdout)
-    vec=doc.get("visual_embedding")
-    if (doc.get("source_qualified_key")!=key or
-        doc.get("crop_sha256")!=sha or
-        doc.get("model_sha256")!=OSNET_SHA or
-        doc.get("verified_same_person") is not False or
-        not isinstance(vec,list) or len(vec)!=512 or
-        not all(type(x) in (float,int) and math.isfinite(x) for x in vec)
-        or abs(sum(x*x for x in vec)-1)>0.001):
+    if not valid_visual(doc,key,sha):
         raise RuntimeError("Phone OSNet real-vector readback failed")
     return "new_real_512d_vector"
 
@@ -223,10 +258,13 @@ def main():
           "camera_or_review_modified":False}),flush=True)
         return
     camera,temp=readiness()
+    temperatures=[temp]
     counts={}
     for _,clip,_ in current:
         try:
+            temperatures.append(assert_camera_safe(camera))
             status=compute_one(clip)
+            temperatures.append(assert_camera_safe(camera))
         except Exception as e:
             counts["failed_"+type(e).__name__]=counts.get("failed_"+type(e).__name__,0)+1
             break
@@ -239,6 +277,8 @@ def main():
        "eligible":len(selected),"offset":args.offset,
        "attempted":sum(counts.values()),"counts":counts,
        "phone_temp_initial_c":temp,
+       "phone_temp_max_checked_c":max(temperatures),
+       "thermal_checked_between_clips":True,
        "model_execution_location":"Samsung_S9_plus",
        "human_review_required":True,
        "camera_apk_modified":False,"recordings_modified":False,
