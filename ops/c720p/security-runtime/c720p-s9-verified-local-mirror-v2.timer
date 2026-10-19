@@ -1,0 +1,13 @@
+[Unit]
+Description=Safely stage new C720P security recordings to S9+ microSD
+
+[Timer]
+OnBootSec=1h
+OnUnitInactiveSec=3h
+RandomizedDelaySec=30min
+AccuracySec=5min
+Persistent=false
+Unit=c720p-s9-verified-local-mirror-v2.service
+
+[Install]
+WantedBy=timers.target

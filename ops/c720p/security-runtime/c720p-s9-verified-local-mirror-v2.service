@@ -1,0 +1,13 @@
+[Unit]
+Description=Mirror finalized C720P security MP4s to S9+ microSD with SHA256 proof
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub/bin
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/c720p_to_s9_verified_media_stage_v2.py --copy
+TimeoutStartSec=1500
+Nice=18
+IOSchedulingClass=idle
+CPUWeight=10
+NoNewPrivileges=yes
