@@ -10,7 +10,18 @@ def load(name):
 v=load('deploy-security-portrait-v71')
 old=subprocess.check_output(['git','show',v.BEFORE+':ops/c720p/s9-native-security/security-people-v45.js']).decode()
 new=(BASE/'security-people-v45.js').read_text()
-assert v.patch_js(old,old,new)==new.encode()
+patched=v.patch_js(old,old,new).decode()
+# V71 deliberately changes only four bounded regions; unrelated source changes
+# must never be silently smuggled into the live V70 release.
+for start,end in (
+ ('function folderApprovedSDClips(id){','function assignedRecordingKeys(folder){'),
+ ('function chosenPortrait(f){','function approvedPreviewClip(preview){'),
+ ("  badge(media,item.source==='drive'","  if(item.decision==='approved'){"),
+ (' const faceMatches=state.faceList.filter(', " paginate($('folderPage')"),
+):
+ assert v.b.block(patched,start,end)==v.b.block(new,start,end),(start,end)
+assert patched.count('Use as portrait')>=1
+
 assert 'assignedFolders(row).includes(id)' in new
 assert 'Unverified crop' in new and 'Use as portrait' in new
 assert 'approved_clips' in new and 'function fetchAutomatic' in new
