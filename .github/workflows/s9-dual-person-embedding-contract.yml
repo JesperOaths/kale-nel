@@ -1,0 +1,49 @@
+name: S9 person full-crop and upper-quarter embedding contract
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/s9_person_feature_extractor.py'
+      - 'ops/c720p/s9-native-security/test-s9-person-feature-extractor.py'
+      - 'ops/c720p/s9-native-security/S9_DUAL_EMBEDDING_EXTRACTOR.md'
+      - '.github/workflows/s9-dual-person-embedding-contract.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/s9_person_feature_extractor.py'
+      - 'ops/c720p/s9-native-security/test-s9-person-feature-extractor.py'
+      - '.github/workflows/s9-dual-person-embedding-contract.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Install offline synthetic-test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/s9-dual-embeddings"
+          "$RUNNER_TEMP/s9-dual-embeddings/bin/python" -m pip install --disable-pip-version-check --no-input \
+            numpy==2.2.6 opencv-python-headless==4.12.0.88
+      - name: Validate crop, ONNX adapter, output shapes and model isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/s9_person_feature_extractor.py \
+            ops/c720p/s9-native-security/test-s9-person-feature-extractor.py
+          "$RUNNER_TEMP/s9-dual-embeddings/bin/python" \
+            ops/c720p/s9-native-security/test-s9-person-feature-extractor.py
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('ops/c720p/s9-native-security/s9_person_feature_extractor.py').read_text()
+          for marker in ('"visual_embedding"', '"structural_crop_embedding"',
+                         'upper_quarter(full)', 'torch.inference_mode()',
+                         'weights_only=True', 'allow_pickle=False',
+                         '"verified_same_person": False'):
+              assert marker in source,marker
+          for prohibited in ('urllib.request', 'requests.post(', 'face_recognition',
+                             'sqlite3.connect(', 'pretrained=True'):
+              assert prohibited not in source, prohibited
+          print('S9_DUAL_PERSON_EMBEDDINGS_ISOLATED_SOURCE_PASS')
+          PY
