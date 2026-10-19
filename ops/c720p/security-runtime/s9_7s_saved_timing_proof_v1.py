@@ -106,15 +106,20 @@ def assess(catalog,after_rollout_ms=None):
     med=statistics.median(prefixes)
     count_good=sum(x>=MIN_PREFIX_MS for x in prefixes)
     count_tail=sum(MIN_TAIL_MS<=x<=MAX_TAIL_MS for x in ages)
+    # Separate counts are NOT proof of the same recorded clip having both.
+    joint=sum(x["estimated_saved_prefix_ms"]>=MIN_PREFIX_MS
+              and MIN_TAIL_MS<=x["age_since_last_accepted_motion_ms"]<=MAX_TAIL_MS
+              for x in subset)
     return {"ok":True,"complete":len(subset)>=MIN_SAMPLES
-            and count_good>=MIN_SAMPLES and count_tail>=MIN_SAMPLES
-            and med>=MIN_PREFIX_MS,
+            and joint>=MIN_SAMPLES and med>=MIN_PREFIX_MS,
       "eligible_count":len(subset),**meta,
       "estimated_prefix_median_ms":round(med),
       "estimated_prefix_min_ms":min(prefixes),
       "estimated_prefix_max_ms":max(prefixes),
       "prefix_at_least_6700ms":count_good,
       "quiet_tail_10_to_15_seconds":count_tail,
+      "joint_prefix_and_tail_count":joint,
+      "joint_same_recording_required":True,
       "age_since_motion_median_ms":round(statistics.median(ages)),
       "full_frame_decode_verified":False,
       "not_a_claim_of_motion_pixel_ground_truth":True}
@@ -140,7 +145,10 @@ def main():
         if OUT.is_file():
             prior=json.loads(OUT.read_text())
             if (prior.get("schema_version")==SCHEMA and prior.get("complete") is True
-                and prior.get("freshness_guard_active") is True):
+                and prior.get("freshness_guard_active") is True
+                and prior.get("joint_same_recording_required") is True
+                and type(prior.get("joint_prefix_and_tail_count")) is int
+                and prior["joint_prefix_and_tail_count"]>=MIN_SAMPLES):
                 print("S9_SAVED_TIMING_PROOF_ALREADY_COMPLETE");return
         if not verified_new_rollout():
             print("S9_SAVED_TIMING_PROOF_DEFERRED new_camera_not_yet_installed");return
