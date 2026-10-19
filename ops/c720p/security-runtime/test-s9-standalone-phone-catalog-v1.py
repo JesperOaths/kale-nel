@@ -25,6 +25,7 @@ def sample():
         "sidecar_claimed_video_bytes":200000,
         "sd_usable_bytes":100000,"sd_total_bytes":200000,
         "counts_are_recordings_not_distinct_people":True,
+        "read_only":True,
         "originals_sha256_rechecked":False,
         "hourly_recording_counts":{"2026-10-15T18+0200":1},
         "daily_recording_counts":{"2026-10-15":1}}}
