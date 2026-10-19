@@ -1,0 +1,79 @@
+name: C720P authenticated legacy S9 browser playback smoke V136
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/smoke-c720p-legacy-auth-browser-v136.py'
+      - 'ops/c720p/security-runtime/test-smoke-c720p-legacy-auth-browser-v136.py'
+      - '.github/workflows/c720p-legacy-authenticated-browser-smoke-v136.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/smoke-c720p-legacy-auth-browser-v136.py'
+      - 'ops/c720p/security-runtime/test-smoke-c720p-legacy-auth-browser-v136.py'
+      - '.github/workflows/c720p-legacy-authenticated-browser-smoke-v136.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-legacy-s9-browser-readonly-v136
+  cancel-in-progress: false
+jobs:
+  local-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify bounded same-origin authentication probe cannot mutate clips
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/smoke-c720p-legacy-auth-browser-v136.py"
+          python3 "$d/test-smoke-c720p-legacy-auth-browser-v136.py"
+          python3 "$d/test-deploy-c720p-legacy-bridges-v133.py"
+  physical-browser:
+    needs: local-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify only 1024 bytes through signed existing browser relay
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          name=smoke-c720p-legacy-auth-browser-v136.py
+          path="ops/c720p/security-runtime/$name"
+          sha="$(sha256sum "$path" | cut -d' ' -f1)"
+          stage="/tmp/c720p-legacy-browser-v136-${GITHUB_SHA:0:15}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$path"
+          cmd="curl -fsSL --max-time 40 '$url' -o '$stage' && printf '%s  %s\\n' '$sha' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage' && /usr/bin/python3 '$stage' --run"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-browser-v136-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-auth-browser-v136','diagnostic',:'cmd',300,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "C720P_LEGACY_BROWSER_V136_JOB=$id"
+          for i in $(seq 1 100); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3300)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]] || exit 1
+              grep -q 'C720P_LEGACY_BROWSER_AUTH_RELAY_V136_VERIFIED' <<< "$output"
+              grep -q '"s9_media_206_bounded": true' <<< "$output"
+              grep -q '"signed_url_not_disclosed": true' <<< "$output"
+              grep -q '"video_decode_started": false' <<< "$output"
+              grep -q '"media_modified": false' <<< "$output"
+              grep -q '"reviews_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "C720P legacy authenticated browser proof timed out";exit 1
