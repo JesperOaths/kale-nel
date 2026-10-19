@@ -40,6 +40,30 @@ class BackfillPlan(unittest.TestCase):
         self.assertTrue(any(x["source"]=="gdrive_archive" for x in rows))
         self.assertEqual(len({x["key"] for x in rows}),len(rows))
 
+    def test_auxiliary_mp4_are_not_independent_person_recordings(self):
+        primary="motion_1792211111111.mp4"
+        preroll=primary+".preroll.mp4"
+        complete=primary+".complete.mp4"
+        partial=primary+".complete.partial.mp4"
+        diagnostic="diagnostic_preroll_1792211111111.mp4"
+        drive="DVR_20251019.mp4"
+        files={primary,preroll,complete,partial,diagnostic}
+        rows,stats=p.plan([{"clip_no":primary}],
+                          [{"clip_no":77,"remote_name":drive}],files)
+        self.assertEqual(stats["sd_raw_mp4"],5)
+        self.assertEqual(stats["sd_primary_recordings"],1)
+        self.assertEqual(stats["sd_auxiliary_mp4"],4)
+        self.assertEqual(stats["auxiliary_media_rows"],4)
+        self.assertEqual(stats["source_qualified_recordings"],2)
+        eligible=[x for x in rows if x["kind"]=="recording"]
+        self.assertEqual({(x["source"],x["clip"]) for x in eligible},
+                         {("s9_sd",primary),("gdrive_archive",drive)})
+        extras=[x for x in rows if x["kind"]=="auxiliary_media"]
+        self.assertEqual(len(extras),4)
+        self.assertTrue(all(x["inspection_only"] and not x["model_ready"]
+                            and x["embedding_status"]=="not_an_independent_recording"
+                            and x["visual_embedding"] is None for x in extras))
+
     def test_same_filename_across_sources_stays_separate(self):
         clip="motion_1792211111111.mp4"
         rows,_=p.plan([{"clip_no":clip}],[{"clip_no":clip}],{clip})
