@@ -28,6 +28,36 @@ MARK="S9_ORT_JNI_NO_IMAGE_V182 "
 CLASS="nl.kalenel.s9offline.S9OrtJniNoImageV182"
 EXPECTED="S9_ORT_JNI_NO_IMAGE_ENV_OK_V182"
 MAX_AAR=30_000_000
+# Fixed categories only. No filenames, stderr, hashes, tokens, clips or URLs.
+STAGES=frozenset(("entry","guard_import","lock_and_health","phone_identity",
+   "source_preflight","aar_download","java_compile","dex_compile",
+   "dex_package","phone_dex_stage","native_environment_launch",
+   "camera_postcheck"))
+CURRENT_STAGE="entry"
+def mark(label):
+    global CURRENT_STAGE
+    if label not in STAGES:raise ValueError("invalid_static_stage")
+    CURRENT_STAGE=label
+
+def safe_failure(error):
+    reason=str(error)
+    reasons=frozenset(("shared_s9_backfill_lock_unavailable",
+      "s9_offline_worker_busy","native_4k_capture_not_idle_and_cool",
+      "phone_not_connected","wrong_phone_device","camera_pid_unavailable",
+      "hub_disk_reserve_low","android_sdk_unavailable",
+      "official_ort_aar_unavailable","official_ort_aar_sha_changed",
+      "unverified_ort_library_presence","noimage_ort_java_compile_failed",
+      "noimage_ort_dex_compile_failed","noimage_ort_dex_size_invalid",
+      "unexpected_noimage_ort_classes","unexpected_dex_jar_size",
+      "unexpected_noimage_java_source"))
+    category=type(error).__name__
+    allowed=frozenset(("Stop","RuntimeError","OSError","TimeoutExpired",
+       "HTTPError","URLError","CalledProcessError","KeyError",
+       "AttributeError","TypeError","ValueError","BadZipFile"))
+    return {"failure_stage":CURRENT_STAGE,
+      "exception_class":category if category in allowed else "unexpected",
+      "reason":reason if reason in reasons else "preparation_stage_unverified"}
+
 def load_guard():
     if not LIB.is_file() or LIB.is_symlink():raise RuntimeError("v166_guard_unavailable")
     spec=importlib.util.spec_from_file_location("s9_ort_baseline_guard_v166",str(LIB))
@@ -35,12 +65,14 @@ def load_guard():
     return module
 
 def jar_for_android(tmp,guard):
+    mark("source_preflight")
     if SRC.is_symlink() or not SRC.is_file() or not 150<SRC.stat().st_size<5000:
         raise guard.Stop("unexpected_noimage_java_source")
     if not guard.AND_JAR.is_file() or guard.AND_JAR.is_symlink():
         raise guard.Stop("android_sdk_unavailable")
     if shutil.disk_usage("/").free<850*1024*1024:
         raise guard.Stop("hub_disk_reserve_low")
+    mark("aar_download")
     req=urllib.request.Request(AAR_URL,headers={"User-Agent":"S9NoImageORT/1"})
     with urllib.request.urlopen(req,timeout=38) as response:
         if response.status!=200:raise guard.Stop("official_ort_aar_unavailable")
@@ -52,18 +84,21 @@ def jar_for_android(tmp,guard):
     api_jar=tmp/"official-ort-android-classes.jar"
     api_jar.write_bytes(api)
     classes=tmp/"classes";classes.mkdir()
+    mark("java_compile")
     javac=guard.call(["javac","-source","8","-target","8",
           "-cp",str(api_jar),"-d",str(classes),str(SRC)],35)
     guard.require(javac.returncode==0,"noimage_ort_java_compile_failed")
     compiled=list(classes.rglob("*.class"))
     guard.require(len(compiled)==1,"unexpected_noimage_ort_classes")
     dex=tmp/"dex";dex.mkdir()
+    mark("dex_compile")
     build=guard.call(["d8","--min-api","28","--lib",str(guard.AND_JAR),
                  "--output",str(dex),str(api_jar),str(compiled[0])],75)
     guard.require(build.returncode==0,"noimage_ort_dex_compile_failed")
     target=dex/"classes.dex"
     guard.require(target.is_file() and 1000<target.stat().st_size<4*1024*1024,
                   "noimage_ort_dex_size_invalid")
+    mark("dex_package")
     jar=tmp/"s9-ort-noimage-v182.jar"
     with zipfile.ZipFile(jar,"w",zipfile.ZIP_DEFLATED) as z:
         z.write(target,"classes.dex")
@@ -92,12 +127,14 @@ def launch_once(guard,target):
     return {"success":False,"reason":"native_ort_environment_not_verified"}
 
 def run(guard):
+    mark("lock_and_health")
     guard.require(guard.LOCK.is_file() and not guard.LOCK.is_symlink(),
                   "shared_s9_backfill_lock_unavailable")
     with guard.LOCK.open("r") as lock:
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise guard.Stop("s9_offline_worker_busy") from None
         first=guard.current_camera()
+        mark("phone_identity")
         guard.require(guard.must_adb("get-state")=="device","phone_not_connected")
         guard.require(guard.must_adb("shell","getprop ro.product.model")==guard.MODEL,
                       "wrong_phone_device")
@@ -106,6 +143,7 @@ def run(guard):
         with tempfile.TemporaryDirectory(prefix="s9-ort-noimage-v182-") as folder:
             jar=jar_for_android(Path(folder),guard)
             guard.current_camera()
+            mark("phone_dex_stage")
             digest=hashlib.sha256(jar.read_bytes()).hexdigest()
             # Dedicated, immutable-by-hash staging, not shared runtime overwrite.
             destination=guard.WORKER+"/s9-ort-noimage-v182-"+digest[:16]+".jar"
@@ -122,7 +160,9 @@ def run(guard):
                 guard.require(guard.phone_digest(destination)==digest,
                               "noimage_ort_final_sha_changed")
             guard.current_camera()
+            mark("native_environment_launch")
             status=launch_once(guard,destination)
+        mark("camera_postcheck")
         after=guard.current_camera()
         guard.require(guard.must_adb("shell","pidof nl.kalenel.s9security")==pid,
                       "camera_pid_changed_after_probe")
@@ -139,17 +179,11 @@ def run(guard):
 
 def main():
     try:
+        mark("guard_import")
         guard=load_guard()
         result=run(guard)
     except Exception as error:
-        reason=str(error)
-        allowed={"shared_s9_backfill_lock_unavailable","s9_offline_worker_busy",
-           "native_4k_capture_not_idle_and_cool","phone_not_connected",
-           "wrong_phone_device","camera_pid_unavailable","hub_disk_reserve_low",
-           "android_sdk_unavailable","official_ort_aar_unavailable",
-           "official_ort_aar_sha_changed","unverified_ort_library_presence"}
-        result={"status":"deferred","reason":reason if reason in allowed
-                else "unverified_no_private_detail",
+        result={"status":"deferred",**safe_failure(error),
                 "native_ort_environment_started":False,"launch_attempts":0,
                 "face_images_read":0,"models_loaded":0,
                 "camera_apk_modified":False,"recordings_modified":False}
