@@ -95,7 +95,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    return {ok:true,json:async()=>({ok:true,revision:autoDenied.size,decision:'denied'})};
   }
   if(p==='/new/api/automatic-person'){
-   const rows=[candidateClip,pendingOutfitClip].map((name,i)=>({id:(i?'e':'f').repeat(64),source:'sd',name,
+   const rows=[otherClip,extraClip].map((name,i)=>({id:(i?'e':'f').repeat(64),source:'sd',name,
     folder:'G123',score:.94,margin:.12,reference_count:2,human_approved:false}));
    return {ok:true,json:async()=>({ok:true,status:'ready',revision:autoDenied.size,
     items:rows.filter(x=>!autoDenied.has(x.id))})};
