@@ -13,6 +13,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-progressive-ranking-v113.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-phone-json-integrity-v114.py'
       - '.github/workflows/s9-v3-progressive-ranking-v113.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py'
   push:
     branches: [main]
     paths:
@@ -24,6 +25,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-progressive-ranking-v113.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-phone-json-integrity-v114.py'
       - '.github/workflows/s9-v3-progressive-ranking-v113.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py'
 permissions:
   contents: read
 concurrency:
@@ -41,6 +43,7 @@ jobs:
           d=ops/c720p/s9-native-security/offline-worker
           python3 -m py_compile "$d/run-s9-v3-progressive-ranking-v113.py"
           python3 "$d/test-s9-v3-progressive-ranking-v113.py"
+          python3 ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py
           python3 "$d/test-s9-phone-json-integrity-v114.py"
           python3 "$d/test-s9-v3-ranker-capture-isolation-v106.py"
           python3 "$d/test-s9-v3-partial-inventory.py"
