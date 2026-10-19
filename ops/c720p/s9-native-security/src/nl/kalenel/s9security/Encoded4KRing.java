@@ -12,18 +12,18 @@ import java.util.List;
  * access units in RAM. It does not create files before an event.
  *
  * Immutable samples and monotonic PTS let a single MediaMuxer consume the
- * 5-second historical prefix and then continue with live packets from the
+ * 7-second historical prefix and then continue with live packets from the
  * SAME encoder, without a resolution conversion or reconfiguration gap.
  *
  * No Android dependency: deterministic JVM tests cover boundary behavior.
  */
 public final class Encoded4KRing {
  public static final int WIDTH=3840, HEIGHT=2160, FPS=30, BITRATE=24000000;
- public static final long HISTORY_US=7000000L;
- public static final long TARGET_US=5000000L;
+ public static final long HISTORY_US=9000000L;
+ public static final long TARGET_US=7000000L;
  public static final long MIN_VALID_US=4400000L;
  public static final int MAX_BYTES=48*1024*1024;
- private static final int MAX_FRAMES=270;
+ private static final int MAX_FRAMES=300;
 
  public static final class Sample {
   public final byte[] data;
@@ -74,6 +74,11 @@ public final class Encoded4KRing {
   if(ring.size()<6)return null;
   List<Sample> a=new ArrayList<>(ring);
   long latest=a.get(a.size()-1).ptsUs;
+  // Retain up to nine seconds so a full seven-second history can start
+  // at an independently decodable IDR even with a one-second GOP.
+  // The 48 MiB cap remains unchanged; on cold start / pressure the
+  // conservative 4.4s minimum still preserves footage instead of
+  // silently dropping a new event for lack of a mature ring.
   long cutoff=latest-TARGET_US;
   int chosen=-1;
   // The preceding IDR preserves the requested historical time window.
