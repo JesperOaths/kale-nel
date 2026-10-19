@@ -67,7 +67,7 @@ final class PhonePreviewEncoder {
       side.optInt("width")!=3840||side.optInt("height")!=2160||
       !originalSha.matches("[a-f0-9]{64}"))throw new IOException("untrusted_4k_manifest");
    File copies=new File(home,"PlaybackCopies");
-   if((!copies.isDirectory()&&!copies.mkdir())||copies.isSymbolicLink()||
+   if((!copies.isDirectory()&&!copies.mkdir())||Files.isSymbolicLink(copies.toPath())||
       !copies.getCanonicalFile().getParentFile().equals(home))
     throw new IOException("preview_cache_path");
    int width=vertical==360?640:848;
@@ -116,7 +116,7 @@ final class PhonePreviewEncoder {
   long bytes=0;
   File[] files=root.listFiles((dir,name)->name.matches(
     "motion_[0-9]{13}[.]mp4[.](?:360p|480p)[.]mp4"));
-  if(files!=null)for(File item:files)if(item.isFile()&&!item.isSymbolicLink())bytes+=item.length();
+  if(files!=null)for(File item:files)if(item.isFile()&&!Files.isSymbolicLink(item.toPath()))bytes+=item.length();
   return bytes;
  }
 
