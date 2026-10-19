@@ -108,6 +108,40 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
         }
     }
 
+    /**
+     * Compare the fully verified microSD journal with a monotonic checkpoint
+     * obtained from an INDEPENDENTLY TRUSTED storage domain (for example the
+     * phone application's internal private storage). This method does not
+     * create or authenticate that checkpoint. Never use a head supplied by
+     * the caller/browser or kept only on the same microSD as proof of freshness.
+     *
+     * A valid HMAC prefix remains cryptographically valid if an attacker or
+     * filesystem rollback removes a complete final row. Only comparison to a
+     * trusted external head detects that rollback. This remains fail-closed,
+     * read-only, and confers NO authority to delete MP4/JPEG originals.
+     */
+    public synchronized void requireTrustedHead(long expectedSequence,
+            String expectedHeadSha256) throws IOException {
+        if (closed)throw new IOException("ledger_closed");
+        if (expectedSequence<0 || expectedSequence>MAX_ROWS
+                || expectedHeadSha256==null
+                || !HEX64.matcher(expectedHeadSha256).matches())
+            throw new IOException("trusted_checkpoint_invalid");
+        ensureFile(ledger);ensureFile(lockFile);
+        try(FileChannel channel=FileChannel.open(lockFile,StandardOpenOption.WRITE);
+            FileLock held=channel.lock()) {
+            List<Row> rows=readVerified();
+            String currentHead=rows.isEmpty()?ZERO:rows.get(rows.size()-1).head;
+            if (rows.size()!=expectedSequence
+                    || !constantEquals(currentHead,expectedHeadSha256))
+                throw new IOException("ledger_head_diverged_from_trusted_checkpoint");
+        } catch(java.nio.channels.OverlappingFileLockException busy) {
+            throw new IOException("ledger_exclusive_lock_busy",busy);
+        } catch(GeneralSecurityException e) {
+            throw new IOException("ledger_crypto_unavailable");
+        }
+    }
+
     private static final class Row {
         long sequence, bytes;
         String previous, nonce, action, name, sourceHash, head, mac;
