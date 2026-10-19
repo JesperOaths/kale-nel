@@ -85,9 +85,12 @@ def stage():
  if prior is not None:
   raise RuntimeError("different_model_already_staged")
  adb("shell","mkdir","-p",ROOT)
- if subprocess.run(["adb","-s",PHONE,"shell","test","-e",part],
-                   capture_output=True,timeout=14).returncode==0:
+ part_check=subprocess.run(["adb","-s",PHONE,"shell","test","-e",part],
+                           capture_output=True,text=True,timeout=14)
+ if part_check.returncode==0:
   raise RuntimeError("unknown_existing_partial_model")
+ if part_check.returncode!=1 or part_check.stderr.strip():
+  raise RuntimeError("partial_model_presence_indeterminate")
  req=urllib.request.Request(SRC,headers={"User-Agent":"S9-FivePoint-Stage/1"})
  with urllib.request.urlopen(req,timeout=40) as response:
   if response.status!=200:raise RuntimeError("model_source_unavailable")
