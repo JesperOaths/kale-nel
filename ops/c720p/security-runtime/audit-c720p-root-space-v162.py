@@ -70,6 +70,42 @@ def size(path):
  if byte_count>80*1024**3:return {"status":"unexpected_size_refused"}
  return {"status":"measured","mib":round(byte_count/(1024**2),1)}
 
+def docker_summary():
+ # Query Docker's aggregate counters only; never enumerate image, container,
+ # volume names or issue prune/stop. Docker's "reclaimable" is an estimate, NOT
+ # permission to delete images needed for camera/HA rollback.
+ try:
+  proc=subprocess.run(
+   ["docker","system","df","--format","{{json .}}"],
+   capture_output=True,text=True,timeout=12,check=False)
+ except subprocess.TimeoutExpired:
+  return {"status":"timeout"}
+ except (OSError,ValueError):
+  return {"status":"unavailable"}
+ if proc.returncode!=0 or len(proc.stdout)>16000:
+  return {"status":"unavailable"}
+ allowed={"Images","Containers","Local Volumes","Build Cache"}
+ summary={}
+ for line in proc.stdout.splitlines():
+  try:entry=json.loads(line)
+  except (json.JSONDecodeError,TypeError):
+   continue
+  if not isinstance(entry,dict) or entry.get("Type") not in allowed:
+   continue
+  kind=entry["Type"].lower().replace(" ","_")
+  detail={}
+  for key,out in (("TotalCount","total_count"),("Active","active_count"),
+                  ("Size","size_display"),("Reclaimable","reclaimable_display")):
+   value=entry.get(key)
+   if isinstance(value,int) and 0<=value<=1000000:
+    detail[out]=value
+   elif isinstance(value,str) and len(value)<=42 and re.fullmatch(r"[0-9A-Za-z .()%+-]+",value):
+    detail[out]=value
+  summary[kind]=detail
+ return {"status":"measured" if summary else "unrecognized_output",
+         "categories":summary,
+         "reported_reclaimable_is_not_deletion_approval":True}
+
 def audit():
  before=capture()
  fs=shutil.disk_usage("/")
@@ -77,6 +113,8 @@ def audit():
   "root_total_mib":round(fs.total/(1024**2),1),
   "root_used_mib":round(fs.used/(1024**2),1),
   "root_free_mib":round(fs.free/(1024**2),1),
+  "root_not_available_to_unprivileged_mib":round(
+    max(0,os.statvfs("/").f_bfree-os.statvfs("/").f_bavail)*os.statvfs("/").f_frsize/(1024**2),1),
   "capture_ready_before":True,
   "scans":{},"non_additive_categories":True,
   "read_only":True,"files_deleted":False,"recordings_modified":False,
@@ -90,6 +128,7 @@ def audit():
    report["scans"][category]={"status":"deferred_hub_load"}
    continue
   report["scans"][category]=size(path)
+ report["docker_inventory"]=docker_summary() if os.getloadavg()[0]<=MAX_LOAD else {"status":"deferred_hub_load"}
  after=capture()
  report.update(status="complete",capture_ready_after=True,
                capture_dropped_frames_after=after["continuous_4k_dropped_output_frames"],
