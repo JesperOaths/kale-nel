@@ -1,0 +1,77 @@
+name: S9 YuNet Android launcher environment V165 (read-only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/audit-s9-yunet-launcher-v165.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-audit-s9-yunet-launcher-v165.py'
+      - '.github/workflows/s9-yunet-launch-environment-v165.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/audit-s9-yunet-launcher-v165.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-audit-s9-yunet-launcher-v165.py'
+      - '.github/workflows/s9-yunet-launch-environment-v165.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-yunet-android-environment-readonly-v165
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Only synthetic audit tests, no physical S9 process
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/audit-s9-yunet-launcher-v165.py" "$d/test-audit-s9-yunet-launcher-v165.py"
+          python3 "$d/test-audit-s9-yunet-launcher-v165.py"
+  physical:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read-only S9 architecture, staged native libs and aggregated errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          source="ops/c720p/s9-native-security/offline-worker/audit-s9-yunet-launcher-v165.py"
+          digest="$(sha256sum "$source" | cut -d' ' -f1)"
+          stage="/tmp/s9-yunet-launch-env-v165-${GITHUB_SHA:0:13}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$source"
+          cmd="curl -fsSL --max-time 35 '$uri' -o '$stage' && printf '%s  %s\\n' '$digest' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage'"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="s9-yunet-launch-env-v165-${GITHUB_SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-yunet-launch-env-v165','diagnostic',:'cmd',160,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "S9_YUNET_LAUNCH_ENV_V165_JOB=$job"
+          for attempt in $(seq 1 110); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3600)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_YUNET_ANDROID_LAUNCH_ENV_V165' <<< "$output"
+              grep -q '"status":"verified_readonly"' <<< "$output"
+              grep -q '"app_process_invoked":false' <<< "$output"
+              grep -q '"model_or_image_read":false' <<< "$output"
+              grep -q '"camera_pid_unchanged":true' <<< "$output"
+              grep -q '"native_capture_dropped_output_frames_after":0' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Read-only Android launcher context not verified";exit 1
