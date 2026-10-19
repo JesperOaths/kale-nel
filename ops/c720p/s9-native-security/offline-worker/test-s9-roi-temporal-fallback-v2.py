@@ -60,4 +60,29 @@ class Checks(unittest.TestCase):
   corrupt=dict(doc);corrupt["visual_embedding"]=[0.0]*512
   self.assertFalse(module.valid_visual(corrupt,key,"b"*64))
 
+
+ def test_camera_pid_and_temperature_are_checked_per_clip(self):
+  import importlib.util
+  from types import SimpleNamespace
+  from unittest.mock import patch
+  path=ROOT/"backfill-s9-original-roi-osnet-temporal-v2.py"
+  spec=importlib.util.spec_from_file_location("s9_temporal_pid_guard",path)
+  module=importlib.util.module_from_spec(spec)
+  spec.loader.exec_module(module)
+  def responses(pid="1234",temp=419):
+   def fake_adb(*args,**kwargs):
+    if args[1].startswith("pidof"):return SimpleNamespace(stdout=pid)
+    if args[1]=="dumpsys battery":
+     return SimpleNamespace(stdout="battery status\\ntemperature: "+str(temp))
+    raise AssertionError("Unexpected request: "+str(args))
+   return fake_adb
+  with patch.object(module,"adb",side_effect=responses()):
+   self.assertEqual(module.assert_camera_safe("1234"),41.9)
+  with patch.object(module,"adb",side_effect=responses(temp=421)):
+   with self.assertRaisesRegex(RuntimeError,"above 42"):
+    module.assert_camera_safe("1234")
+  with patch.object(module,"adb",side_effect=responses(pid="5678")):
+   with self.assertRaisesRegex(RuntimeError,"process changed"):
+    module.assert_camera_safe("1234")
+
 if __name__=="__main__":unittest.main(verbosity=2)
