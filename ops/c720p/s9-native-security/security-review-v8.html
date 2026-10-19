@@ -128,13 +128,50 @@ video{width:100%;height:auto;max-height:320px;background:#05090d;display:block;b
 .chart-selection{display:flex;gap:9px;align-items:center;flex-wrap:wrap;min-height:30px;margin:4px 0;color:#baf3e4;font-size:12px}
 @media(max-width:1020px){.analytics-panels{grid-template-columns:1fr}.analytics-kpis{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.analytics-kpis{grid-template-columns:repeat(2,1fr)}.analytics-panel{padding:10px}.heatmap-wrap{grid-template-columns:29px minmax(0,1fr)}.heatmap-cells{gap:2px}.heatmap-cells button{font-size:9px}.hour-axis{gap:2px}.daily-chart{gap:2px}}
+
+.verified-activity{border:1px solid #446d78;border-radius:14px;padding:15px;background:#112834;display:grid;gap:14px}
+.verified-activity h2{font-size:18px;margin:0}.verified-activity p{font-size:12px;margin:4px 0;color:#b2cbd3}
+.verified-activity .verified-status{font-size:12px;color:#ade8d6}.verified-activity .verified-status.error{color:#f6bdad}
+.verified-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.verified-kpis>div{background:#1c3845;border:1px solid #45616d;padding:12px;border-radius:10px}
+.verified-kpis strong{display:block;font-size:23px;font-variant-numeric:tabular-nums}
+.verified-kpis span{display:block;font-size:11px;color:#b8d0da}
+.verified-panels{display:grid;grid-template-columns:1fr 1.2fr;gap:12px;min-width:0}
+.verified-panels>section{background:#152d3b;border:1px solid #385766;border-radius:10px;padding:12px;min-width:0}
+.verified-panels h3{margin:0;font-size:14px}.verified-scroll{overflow-x:auto;width:100%;padding-bottom:8px}
+.verified-bars{display:grid;gap:3px;align-items:end;min-height:180px}.verified-bars.hours{min-width:460px}.verified-bars.days{min-width:790px}
+.verified-column{text-align:center;min-width:0}.verified-column small{display:block;height:18px;white-space:nowrap;font-size:9px;color:#bdced8;line-height:18px}
+.verified-barspace{display:flex;align-items:end;justify-content:center;height:154px;border-bottom:1px solid #466677}
+.verified-track{width:100%;max-width:30px;display:flex;flex-direction:column-reverse;overflow:hidden;border-radius:3px 3px 0 0}
+.verified-track .verified-sd{display:block;background:#74dcc3}.verified-track .verified-drive{display:block;background:#879ff0}
+.verified-legend{display:flex;gap:15px;flex-wrap:wrap;color:#bdced8;font-size:11px}
+.verified-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.verified-legend .sd{background:#74dcc3}.verified-legend .drive{background:#879ff0}
+@media(max-width:1020px){.verified-panels{grid-template-columns:1fr}}
+@media(max-width:580px){.verified-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.verified-activity{padding:10px}}
 </style><!-- Original MP4 via secure range relay; disabled unreliable smooth-copy playback override. -->
 </head><body><main>
 <header><div><div class="eyebrow">S9+ · microSD · local only</div><h1 id="title">Recordings</h1><p id="intro"></p></div><button type="button" id="refresh">Refresh</button></header>
 <div id="sync" role="status">Connecting to the phone archive…</div>
 
 <section class="analytics" id="activityAnalytics" aria-label="Activity patterns over time">
- <div class="analytics-heading"><div><h2>Activity patterns</h2><p>Explore when the camera saved recordings. Charts describe recorded events, not all garden movement or distinct visitors.</p></div>
+ <section class="verified-activity" aria-label="Verified source-reconciled recording activity">
+  <div><h2>Verified S9+ and Google Drive activity</h2><p>Actual recorded events, not inferred individuals. Days run from 06:00 to 06:00 in Amsterdam.</p></div>
+  <div class="verified-status" id="verifiedStatus" role="status">Loading authenticated activity…</div>
+  <div class="verified-kpis" aria-label="Verified archive totals">
+   <div><strong id="verifiedTotal">—</strong><span>All verified recordings</span></div>
+   <div><strong id="verifiedSd">—</strong><span>S9+ originals</span></div>
+   <div><strong id="verifiedDrive">—</strong><span>Verified historical Drive</span></div>
+   <div><strong id="verifiedDays">—</strong><span>Amsterdam operating days</span></div>
+  </div>
+  <div class="verified-panels">
+   <section><h3>Recording hour, Amsterdam local time</h3><div class="verified-scroll"><div class="verified-bars hours" id="verifiedHours" role="img" aria-label="Recording counts by local hour and storage source"></div></div></section>
+   <section><h3>Operating day, starting 06:00</h3><div class="verified-scroll"><div class="verified-bars days" id="verifiedDayBars" role="img" aria-label="Recording counts per Amsterdam operating day and source"></div></div></section>
+  </div>
+  <div class="verified-legend"><span><i class="sd"></i>S9+ microSD</span><span><i class="drive"></i>Google Drive</span></div>
+  <p id="verifiedNote">Verified server-side aggregates load separately from the clip-level evidence indexes.</p>
+ </section>
+ <div class="analytics-heading"><div><h2>Per-recording evidence and exploration</h2><p>These detail charts use separately loaded clip indexes and calendar dates. Verified archive totals and 06:00 operating days are above; the two views can differ.</p></div>
  <label class="analytics-filter">Show <select id="analyticScope"><option value="all">All recordings</option><option value="person">Possible people</option><option value="reviewed">Sampled-frame reviewed</option></select></label></div>
  <div class="analytics-kpis" aria-label="Archive activity summary">
  <div class="kpi"><strong id="akTotal">—</strong><span>Recordings in selected scope</span></div>
@@ -311,6 +348,74 @@ function nextCalendarDay(date,n){
  const d=new Date(date+'T12:00:00Z');
  d.setUTCDate(d.getUTCDate()+n);
  return d.toISOString().slice(0,10);
+}
+
+function validateVerifiedActivity(raw){
+ if(!raw||raw.ok!==true||raw.schema_version!=='security_s9_drive_activity_v1'||
+ raw.timezone!=='Europe/Amsterdam'||raw.operating_day_start_local!=='06:00'||
+ raw.s3_included!==false||raw.recordings_not_people!==true||
+ raw.media_decoded!==false||raw.video_bytes_transferred!==false)throw Error('untrusted_activity_origin');
+ const good=n=>Number.isSafeInteger(n)&&n>=0&&n<=200000;
+ const src=raw.source_recordings||{},sd=src.s9_microSD,drive=src.historical_drive_verified_new;
+ const total=raw.total_recordings,unknown=raw.historical_drive_timestamp_unknown;
+ if(![sd,drive,total,unknown].every(good)||sd+drive!==total||unknown>drive)throw Error('invalid_activity_totals');
+ const hours=raw.local_wall_clock_hours,days=raw.operating_days;
+ if(!hours||!days||Array.isArray(hours)||Array.isArray(days)||typeof hours!=='object'||typeof days!=='object')throw Error('invalid_activity_tables');
+ const hk=Object.keys(hours),dk=Object.keys(days).sort();
+ if(hk.length!==24||hk.some(k=>!/^(?:0\d|1\d|2[0-3])$/.test(k))||dk.length>420)throw Error('invalid_activity_hours');
+ if(dk.some(k=>{if(!/^20\d{2}-\d{2}-\d{2}$/.test(k))return true;let d=new Date(k+'T12:00:00Z');return !Number.isFinite(+d)||d.toISOString().slice(0,10)!==k;}))throw Error('invalid_activity_dates');
+ let hs=0,hd=0,ds=0,dd=0;
+ const check=x=>{
+  const a=x?.s9_microSD,b=x?.historical_drive,c=x?.combined;
+  if(![a,b,c].every(good)||a+b!==c)throw Error('invalid_activity_bucket');
+  return {s9_microSD:a,historical_drive:b,combined:c};
+ };
+ const hourRows=Array.from({length:24},(_,i)=>{
+  const label=String(i).padStart(2,'0'),row=check(hours[label]);hs+=row.s9_microSD;hd+=row.historical_drive;return {label,row};
+ });
+ const dayRows=dk.map(label=>{const row=check(days[label]);ds+=row.s9_microSD;dd+=row.historical_drive;return {label,row};});
+ if(hs!==sd||ds!==sd||hd+unknown!==drive||dd+unknown!==drive)throw Error('activity_source_reconciliation_failed');
+ return {total,sd,drive,unknown,hours:hourRows,days:dayRows};
+}
+function verifiedBarChart(id,data,type){
+ const host=$(id);host.replaceChildren();
+ host.style.gridTemplateColumns='repeat('+Math.max(1,data.length)+',minmax(0,1fr))';
+ const peak=Math.max(1,...data.map(x=>x.row.combined));
+ for(const {label,row} of data){
+  const col=text('div','','verified-column'),area=text('div','','verified-barspace'),bar=text('div','','verified-track');
+  bar.style.height=(row.combined?Math.max(2,100*row.combined/peak):0)+'%';
+  if(row.combined){
+   const sd=text('span','','verified-sd'),drive=text('span','','verified-drive');
+   sd.style.height=(100*row.s9_microSD/row.combined)+'%';
+   drive.style.height=(100*row.historical_drive/row.combined)+'%';
+   bar.append(sd,drive);
+  }
+  col.title=(type==='hour'?label+':00 local':label+' 06:00 operating day')+': '+row.combined+
+   ' recordings ('+row.s9_microSD+' S9+, '+row.historical_drive+' Drive)';
+  col.setAttribute('aria-label',col.title);
+  const mark=type==='hour'?(Number(label)%3===0?label:''):(Number(label.slice(-2))%3===0?label.slice(5):'');
+  area.append(bar);col.append(area,text('small',mark));host.append(col);
+ }
+}
+function drawVerifiedActivity(report,error=''){
+ const status=$('verifiedStatus');
+ status.classList.toggle('error',!report);
+ if(!report){
+  status.textContent='Verified report unavailable'+(error?' · '+error:'');
+  for(const id of ['verifiedTotal','verifiedSd','verifiedDrive','verifiedDays'])$(id).textContent='—';
+  $('verifiedHours').replaceChildren();$('verifiedDayBars').replaceChildren();
+  $('verifiedNote').textContent='Clip-index estimates are not substituted for a missing verified aggregate.';
+  return;
+ }
+ status.textContent='Authenticated and source-reconciled · S3 excluded';
+ for(const [id,n] of [['verifiedTotal',report.total],['verifiedSd',report.sd],['verifiedDrive',report.drive],['verifiedDays',report.days.length]])
+  $(id).textContent=n.toLocaleString();
+ verifiedBarChart('verifiedHours',report.hours,'hour');
+ verifiedBarChart('verifiedDayBars',report.days,'day');
+ const a=state.all.filter(x=>x.source!=='drive').length,b=state.all.filter(x=>x.source==='drive').length;
+ $('verifiedNote').textContent=report.unknown+' historical Drive recordings lack a usable timestamp (included in totals, excluded from time bins). '+
+ 'Drive timestamps do not disambiguate repeated DST hours. Each count represents a saved recording, not a person or dwell time.'+
+ ((a!==report.sd||b!==report.drive)?' Clip-index coverage differs ('+a+' S9+, '+b+' Drive); detailed evidence charts may be incomplete.':'');
 }
 function selectedAnalyticsClips(){
  const scope=$('analyticScope').value;
@@ -514,11 +619,17 @@ async function refresh(){
  if(state.refreshing)return;state.refreshing=true;$('sync').textContent='Refreshing S9+ and Drive archives…';
  try{
   const r=relay();if(!r?.fetch)throw Error('secure_relay_unavailable');
-  const [local,drive,driveReview]=await Promise.allSettled([
+  const [local,drive,driveReview,verifiedResponse]=await Promise.allSettled([
    r.fetch('/new/api/saved',{cache:'no-store'}),
    mode==='evidence'?r.fetch('/new/api/drive-saved',{cache:'no-store'}):Promise.resolve(null),
-   mode==='evidence'?r.fetch('/new/api/drive-person-review',{cache:'no-store'}):Promise.resolve(null)
+   mode==='evidence'?r.fetch('/new/api/drive-person-review',{cache:'no-store'}):Promise.resolve(null),
+   mode==='evidence'?r.fetch('/new/api/security-recording-activity',{cache:'no-store'}):Promise.resolve(null)
   ]);
+  let verifiedReport=null,verifiedError='';
+  if(mode==='evidence')try{
+   if(verifiedResponse.status!=='fulfilled'||!verifiedResponse.value?.ok)throw Error('authenticated_route_unavailable');
+   verifiedReport=validateVerifiedActivity(await verifiedResponse.value.json());
+  }catch(e){verifiedError=String(e.message||e)}
   const historyByName=new Map();
   state.driveProcessing=null;
   if(driveReview.status==='fulfilled'&&driveReview.value?.ok){
@@ -567,12 +678,14 @@ async function refresh(){
     }
    }
   }
+  if(mode==='evidence')drawVerifiedActivity(verifiedReport,verifiedError);
   if(local.status!=='fulfilled'&&state.driveStatus!=='ready')throw Error('both_archive_indexes_unavailable');
   if(!accepted.length&&state.driveStatus!=='ready')throw Error('no_accessible_archive_metadata');
   state.all=accepted;
   const localCount=accepted.filter(x=>x.source==='sd').length,driveCount=accepted.length-localCount;
   $('sync').textContent=localCount+' S9+ recordings · '+driveCount+' Drive recordings'+
    (state.driveStatus==='unavailable'?' · Drive unavailable':'')+' · original 4K retained on S9+';
+  if(mode==='evidence')drawVerifiedActivity(verifiedReport,verifiedError);
   render();drawAnalytics();
  }catch(e){$('sync').textContent='Archive metadata unavailable · '+String(e.message||e)}
  finally{state.refreshing=false}
