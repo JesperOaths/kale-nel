@@ -10,11 +10,13 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-hsv-two-v102.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-hsv-schedule-idempotency-v112.py'
       - '.github/workflows/s9-v3-hsv-two-v102.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py'
   push:
     branches: [main]
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-hsv-two-v102.py'
       - '.github/workflows/s9-v3-hsv-two-v102.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py'
 permissions:
   contents: read
 concurrency:
@@ -33,6 +35,7 @@ jobs:
           d=ops/c720p/s9-native-security/offline-worker
           python3 -m py_compile "$d/run-s9-v3-hsv-two-v102.py" "$d/test-s9-v3-hsv-two-v102.py"
           python3 "$d/test-s9-v3-hsv-two-v102.py"
+          python3 ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py
           python3 "$d/test-s9-hsv32-uniform-v2.py"
           python3 "$d/test-s9-v3-hsv-schedule-idempotency-v112.py"
           python3 - <<'PY'
