@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import shutil
 import sys
+import urllib.request
 
 ROOT=Path(__file__).resolve().parent
 STATE=Path("/home/jespern/c720p-home-hub/state")
@@ -20,7 +21,8 @@ LOCK=STATE/"s9-v3-archive-backfill.lock"
 MARK="S9_V3_HSV32_TWO_VERIFIED "
 REJECT="S9_V3_HSV32_TWO_BLOCKED "
 MAX_C=42.0
-INITIAL_MAX_C=41.5
+INITIAL_MAX_C=39.5
+STATUS_URL="http://127.0.0.1:18808/status"
 MIN_DISK=850*1024*1024
 
 def helper(name,alias):
@@ -38,6 +40,43 @@ def temperature(h):
     match=re.search(r"temperature:\s*(\d+)",value)
     if match is None:raise RuntimeError("missing_phone_thermal_reading")
     return int(match.group(1))/10
+
+def capture_healthy():
+    """Fail closed if camera, 4K ring, preroll, or thermal recovery is degraded."""
+    with urllib.request.urlopen(STATUS_URL,timeout=12) as response:
+        if response.status!=200:
+            raise RuntimeError("camera_health_endpoint_unavailable")
+        raw=response.read(150001)
+    if len(raw)>150000:raise RuntimeError("unbounded_camera_health")
+    status=json.loads(raw)
+    if not isinstance(status,dict):
+        raise RuntimeError("invalid_camera_health")
+    temp=status.get("temperature_c")
+    if type(temp) not in (float,int) or temp>INITIAL_MAX_C:
+        raise RuntimeError("camera_too_warm_for_offline_processing")
+    if (status.get("ok") is not True
+        or status.get("mode")!="watching"
+        or status.get("native_4k_enabled") is not True
+        or status.get("continuous_4k_ready") is not True
+        or type(status.get("continuous_4k_buffered_ms")) is not int
+        or status["continuous_4k_buffered_ms"]<5000
+        or status.get("continuous_4k_dropped_output_frames")!=0
+        or bool(status.get("continuous_4k_error"))
+        or status.get("continuous_4k_trial_active") is True
+        or status.get("recording_active") is True
+        or status.get("recording_in_progress") is True
+        or status.get("face_backfill_queued") is True
+        or status.get("movement_4k_backfill_queued") is True):
+        raise RuntimeError("camera_capture_not_stably_ready")
+    # Offline work must never compete with a degraded preroll mechanism.
+    if status.get("preroll_ready") is not True:
+        raise RuntimeError("preroll_not_ready")
+    if type(status.get("preroll_buffered_ms")) not in (int,float):
+        raise RuntimeError("unverified_preroll_window")
+    if status["preroll_buffered_ms"]<4000:
+        raise RuntimeError("preroll_buffer_not_full")
+    return status
+
 
 def camera_pid(h):
     pid=h.adb("shell","pidof nl.kalenel.s9security",timeout=20).stdout.strip()
@@ -72,6 +111,7 @@ def run(h,ctrl):
     fd=os.open(LOCK,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     with os.fdopen(fd,"rb") as locked:
         fcntl.flock(locked,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        capture_healthy()
         pid=camera_pid(h)
         before_temp=temperature(h)
         if before_temp>INITIAL_MAX_C:raise RuntimeError("phone_warm_before_batch")
@@ -88,6 +128,7 @@ def run(h,ctrl):
         completed=0
         observed_max=before_temp
         for row in selected:
+            capture_healthy()
             t=temperature(h)
             observed_max=max(observed_max,t)
             if t>INITIAL_MAX_C:raise RuntimeError("phone_warm_before_descriptor")
@@ -96,6 +137,7 @@ def run(h,ctrl):
                 raise RuntimeError("phone_histogram_unverified")
             after=temperature(h)
             observed_max=max(observed_max,after)
+            capture_healthy()
             if after>MAX_C:raise RuntimeError("phone_thermal_post_limit")
             if camera_pid(h)!=pid:raise RuntimeError("camera_pid_changed")
             # Independently reread each newly written sidecar, not just the
@@ -107,6 +149,7 @@ def run(h,ctrl):
             raise RuntimeError("original_catalog_regressed")
         if approved!=ctrl.approved_names():raise RuntimeError("manual_reviews_changed")
         if camera_pid(h)!=pid:raise RuntimeError("camera_pid_changed")
+        capture_healthy()
         remaining=len(validated_missing(h,rows))
         if remaining!=len(missing)-completed:
             raise RuntimeError("unexpected_hsv_source_delta")
@@ -126,11 +169,19 @@ def main():
 
 if __name__=="__main__":
     try:main()
-    except Exception:
+    except Exception as error:
         # Clip names, persons, sidecar paths and raw phone stderr must never
-        # enter public CI logs. Partially completed sidecars are append-only
-        # and independently valid; the next run is safely resumable.
-        print(REJECT+json.dumps({"private_output_suppressed":True,
+        # enter public CI logs. Expose only allowlisted policy reason codes.
+        reason=str(error)
+        allowed={"hub_free_disk_guard","phone_warm_before_batch",
+                 "phone_warm_before_descriptor","phone_thermal_post_limit",
+                 "camera_too_warm_for_offline_processing",
+                 "camera_capture_not_stably_ready","preroll_not_ready",
+                 "preroll_buffer_not_full","unverified_preroll_window",
+                 "phone_transport_untrusted"}
+        print(REJECT+json.dumps({"reason":reason if reason in allowed else
+             "verification_or_worker_failed",
+             "private_output_suppressed":True,
              "originals_not_intentionally_written":True,
              "existing_reviews_not_intentionally_written":True}),flush=True)
         raise SystemExit(2)
