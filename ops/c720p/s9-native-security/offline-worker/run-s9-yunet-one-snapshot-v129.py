@@ -39,7 +39,14 @@ SHA=re.compile(r"[a-f0-9]{64}")
 def digest(blob):return hashlib.sha256(blob).hexdigest()
 def call(argv,seconds=90):
  p=subprocess.run(argv,capture_output=True,text=True,timeout=seconds)
- if p.returncode:raise RuntimeError("separate_phone_operation_failed")
+ if p.returncode:
+  # An Android app_process shell launch returning 137 was observed in a real
+  # one-snapshot smoke. Treat it as a distinct hard failure; it does not prove
+  # OOM, a model result, or a recorder fault. Never log command or phone data.
+  if (len(argv)>=5 and argv[0]=="adb" and argv[3]=="shell"
+      and "app_process" in argv[4] and p.returncode==137):
+   raise RuntimeError("s9_yunet_phone_launcher_exit_137")
+  raise RuntimeError("separate_phone_operation_failed")
  return p.stdout.strip()
 def adb(*cmd,timeout=26):
  return call(["adb","-s",PHONE,*cmd],timeout)
