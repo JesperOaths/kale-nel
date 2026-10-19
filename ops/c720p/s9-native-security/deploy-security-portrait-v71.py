@@ -41,6 +41,31 @@ def patch_js(live,old,new):
   if live_block==previous:
    result=b.one(result,previous,replacement)
    continue
+  if start=='function chosenPortrait(f){':
+   # V70's deployed region contains one extra preserved source line. Apply
+   # only the three verified portrait policy statements; never replace the
+   # entire function and discard that independent live addition.
+   old_find="return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&credibleFaceCrop(x))||null;"
+   new_find=("return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&\\n"
+     "  x.face.snapshot_on_s9!==false)||null;")
+   old_guard=("if(!id||!faceName.test(name)||!credibleFaceCrop(face)||\\n"
+     "     !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){")
+   new_guard=("if(!id||!faceName.test(name)||face?.face?.snapshot_on_s9===false||\\n"
+     "     !assignedRecordingKeys(id).has('sd:'+face.clip)){")
+   old_notice="notification('Person portrait selected on this browser. Review decisions were not changed.');"
+   new_notice="notification('Manually selected person portrait on this browser. The selected crop was not automatically verified.');"
+   partial=live_block
+   for before,after in ((old_find,new_find),(old_guard,new_guard),(old_notice,new_notice)):
+    if after in partial:continue
+    if partial.count(before)!=1:raise RuntimeError('unrecognized_live_portrait_statement')
+    partial=partial.replace(before,after,1)
+   guard="if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;"
+   if guard not in partial:
+    if partial.count(new_find)!=1:raise RuntimeError('portrait_guard_insert_ambiguous')
+    partial=partial.replace(new_find,guard+"\\n "+new_find,1)
+   if partial==live_block:raise RuntimeError('unchanged_live_portrait_policy')
+   result=b.one(result,live_block,partial)
+   continue
   # Fail safely, with source-only fingerprints instead of publishing any
   # identity, recording, or personal-review data.
   print('FACE_V71_BOUNDARY_DRIFT '+json.dumps({
