@@ -34,7 +34,7 @@ class UniqueScheduleKeys(unittest.TestCase):
 
  def test_scheduler_and_thermal_gate_unchanged(self):
   workflow=WORKFLOW.read_text()
-  self.assertIn("cron: '11 1,5,9,13,17,21 * * *'",workflow)
+  self.assertIn("cron: '20 1,5,9,13,17,21 * * *'",workflow)
   self.assertIn("cancel-in-progress: false",workflow)
   self.assertIn("s9-v3-two-hsv-real-phone-guarded",workflow)
   self.assertIn("S9_V3_HSV32_TWO_DEFERRED",workflow)
