@@ -71,6 +71,10 @@ jobs:
               [[ "$status" == 'done|0' ]] || exit 1
               grep -q 'C720P_MIGRATED_ALL_BROWSER_RANGES_V146_VERIFIED' <<< "$output"
               grep -q '"authenticated_all_import_ranges": true' <<< "$output"
+              grep -q 'C720P_MIGRATED_ALL_HOST_RANGES_V148_VERIFIED' <<< "$output"
+              grep -q '"all_host_headers_verified": true' <<< "$output"
+              grep -q '"upstream_front_ranges_sha_equal": true' <<< "$output"
+              grep -q '"local_c720p_originals_still_required": true' <<< "$output"
               grep -q '"bounded_1024_bytes_each": true' <<< "$output"
               grep -q '"index_guard_active": true' <<< "$output"
               grep -q '"local_copy_retention_required": true' <<< "$output"
