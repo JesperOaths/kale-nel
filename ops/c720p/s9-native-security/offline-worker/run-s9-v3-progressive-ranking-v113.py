@@ -16,6 +16,10 @@ import sys
 HERE=Path(__file__).resolve().parent
 HASH=re.compile(r"[a-f0-9]{64}")
 CORPUS=re.compile(r"[a-f0-9]{16}")
+class SharedWorkerBusy(Exception):
+    """The ranking worker has not started any phone or index changes."""
+
+
 ALLOW_DEFERRALS={
  "capture_too_warm_for_ranker":"capture_warm",
  "capture_not_idle_4k_ring_healthy":"capture_not_ready",
@@ -74,8 +78,20 @@ def guarded_publish(ranker,expected_id,count):
  worker=HERE/"run-s9-uniform-appearance-rankings-v3.py"
  proc=subprocess.run([sys.executable,str(worker),"--apply"],
                      capture_output=True,text=True,timeout=780)
+ if proc.returncode==75:
+  markers=[line for line in proc.stdout.splitlines()
+           if line.startswith("S9_V3_RANKER_DEFERRED ")]
+  if len(markers)==1:
+   try:
+    status=json.loads(markers[0].split("S9_V3_RANKER_DEFERRED ",1)[1])
+   except (json.JSONDecodeError,ValueError):
+    status={}
+   if (status.get("reason")=="shared_archive_worker_busy"
+       and status.get("rankings_published") is False
+       and status.get("automatic_person_assignments")==0):
+    raise SharedWorkerBusy() from None
  if proc.returncode:
-  # Do not print private filenames, person labels or source paths.
+  # Never disclose potentially private stderr or crop identifiers.
   raise RuntimeError("guarded_ranker_failed_or_capture_changed")
  markers=[l.split("S9_V3_MODEL_BACKED_RANKINGS_PRODUCED ",1)[1]
           for l in proc.stdout.splitlines()
@@ -132,7 +148,13 @@ def run(apply=False,ranker=None):
    json.dumps({"verified_crops":count,"work":plan,
                "rankings_published":False,"identities_assigned":0}),flush=True)
   return "preflight"
- result=guarded_publish(m,expected,count)
+ try:
+  result=guarded_publish(m,expected,count)
+ except SharedWorkerBusy:
+  print("S9_V3_PROGRESSIVE_RANKING_DEFERRED "+json.dumps({
+      "reason":"shared_archive_worker_busy","rankings_published":False,
+      "capture_modified":False,"identities_assigned":0}),flush=True)
+  return "deferred"
  print("S9_V3_PROGRESSIVE_RANKING_VERIFIED "+json.dumps(result,sort_keys=True),
        flush=True)
  return "verified"

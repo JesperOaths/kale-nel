@@ -353,7 +353,18 @@ def run():
     if lock.is_symlink():raise RuntimeError("Untrusted archive lock")
     fd=os.open(lock,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     try:
-        fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        try:
+            fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:
+            # Another source-qualified phone worker owns this cool window.
+            # No crop, phone model or ranking write has occurred yet.
+            print("S9_V3_RANKER_DEFERRED "+json.dumps({
+                "reason":"shared_archive_worker_busy",
+                "rankings_published":False,
+                "automatic_person_assignments":0,
+                "originals_modified":False,
+                "manual_reviews_modified":False}),flush=True)
+            raise SystemExit(75)
         capture_rank_safe()
         phone_temperature_c()
         return rank(args)
