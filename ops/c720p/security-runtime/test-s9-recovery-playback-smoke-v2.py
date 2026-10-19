@@ -37,11 +37,11 @@ class Tests(unittest.TestCase):
     self.directory=tempfile.TemporaryDirectory()
     self.addCleanup(self.directory.cleanup)
     temp=Path(self.directory.name)
-    self.old=(v1.OUTPUT,v2.STATE,v2.LOCK,v2.PARTIAL)
-    v1.OUTPUT=temp/"done.json";v2.STATE=temp;v2.LOCK=temp/"lock";v2.PARTIAL=temp/"partial.json"
+    self.old=(v1.OUTPUT,v1.STATE,v2.STATE,v2.LOCK,v2.PARTIAL)
+    v1.OUTPUT=temp/"done.json";v1.STATE=temp;v2.STATE=temp;v2.LOCK=temp/"lock";v2.PARTIAL=temp/"partial.json"
     self.addCleanup(self.restore)
  def restore(self):
-    v1.OUTPUT,v2.STATE,v2.LOCK,v2.PARTIAL=self.old
+    v1.OUTPUT,v1.STATE,v2.STATE,v2.LOCK,v2.PARTIAL=self.old
  def test_two_safe_windows_make_final_proof(self):
     with patch.object(v1,"json_url",return_value=catalog()),\
          patch.object(v1,"check_camera",return_value=healthy()),\
