@@ -1,0 +1,29 @@
+name: C720P verified Security activity UI guarded publish safety
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/deploy-security-verified-activity-ui-v1.py'
+      - 'ops/c720p/security-runtime/test-deploy-security-verified-activity-ui-v1.py'
+      - 'ops/c720p/s9-native-security/security-review-v8.html'
+      - '.github/workflows/c720p-security-verified-activity-publish.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/deploy-security-verified-activity-ui-v1.py'
+      - 'ops/c720p/security-runtime/test-deploy-security-verified-activity-ui-v1.py'
+      - '.github/workflows/c720p-security-verified-activity-publish.yml'
+permissions:
+  contents: read
+jobs:
+  source-and-rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check pinned document and reversible atomic install
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/deploy-security-verified-activity-ui-v1.py
+          python3 ops/c720p/security-runtime/test-deploy-security-verified-activity-ui-v1.py
+          node ops/c720p/s9-native-security/test-security-verified-activity-ui.mjs
+          echo SECURITY_VERIFIED_ACTIVITY_GUARDED_SOURCE_PASS
