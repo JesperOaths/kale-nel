@@ -1,0 +1,12 @@
+[Unit]
+Description=Read-only original S9 4K SHA256 audit (one verified clip)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9-original-hash-ledger-v1.py
+Nice=19
+CPUQuota=10%
+IOSchedulingClass=idle
+TimeoutStartSec=175
+NoNewPrivileges=true
