@@ -52,6 +52,13 @@ final class PhoneMediaRange {
    }
    maxAllowed=MAX_PREVIEW_BYTES;
    clip=new File(mediaHome,sourceName+"."+preview.group(3)+".mp4").getCanonicalFile();
+   // Encoder atomically publishes this derivative manifest only after the
+   // MP4 muxer has closed. A partial/failed preview must never be streamed.
+   File completed=new File(mediaHome,clip.getName()+".verified.json").getCanonicalFile();
+   if(!completed.getParentFile().equals(mediaHome)||!completed.isFile()||
+      completed.length()<64||completed.length()>4096){
+    respond(out,404,0,0,0,0,false,head);return true;
+   }
   }else{
    clip=new File(home,match.group(2)).getCanonicalFile();
   }
