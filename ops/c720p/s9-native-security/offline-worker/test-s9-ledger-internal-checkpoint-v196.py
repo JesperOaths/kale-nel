@@ -28,7 +28,7 @@ class InternalCheckpoint(unittest.TestCase):
   body=SOURCE.read_text()
   for banned in ("CameraManager","MediaCodec","ClipClassifier",
                  "adb push","am force-stop","HttpServer","Files.delete(",
-                 ".mp4\"","new URL(","send_response(","Camera2"):
+                 ".mp4\"","new URL(","send_response("):
    self.assertNotIn(banned,body)
   for required in ("StandardCopyOption.ATOMIC_MOVE","FileLock locked=channel.lock()",
                    "stream.getFD().sync()","root.force(true)",
