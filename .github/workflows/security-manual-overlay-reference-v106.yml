@@ -1,0 +1,32 @@
+name: Security source-qualified manual reference overlay V106
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-person-roi-osnet.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py'
+      - 'ops/c720p/s9-native-security/audit-auto-person-reference-readiness.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-manual-overlay-reference-v106.py'
+      - '.github/workflows/security-manual-overlay-reference-v106.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-person-roi-osnet.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py'
+      - 'ops/c720p/s9-native-security/audit-auto-person-reference-readiness.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-manual-overlay-reference-v106.py'
+      - '.github/workflows/security-manual-overlay-reference-v106.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate cross-store reference integrity without accessing security media
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/offline-worker/backfill-s9-original-person-roi-osnet.py \
+            ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py \
+            ops/c720p/s9-native-security/audit-auto-person-reference-readiness.py
+          python3 ops/c720p/s9-native-security/offline-worker/test-manual-overlay-reference-v106.py
