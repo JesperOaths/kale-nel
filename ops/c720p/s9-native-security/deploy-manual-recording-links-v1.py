@@ -95,13 +95,13 @@ def main():
  if active_backend.is_file() and b"FILING_REVIEW_VERSION=" in active_backend.read_bytes():
   if sha(active_backend.read_bytes())!=expected["backend"]:
    raise RuntimeError("modern_filing_requires_coordinated_deployer")
-  if not re.search(rb"security-(?:filing-v65|drive-person-v66)-20261019",(WWW/"security-people-v50.html").read_bytes()):
+  if not re.search(rb"security-(?:filing-v65|drive-person-v66|group-filing-v70|review-face-choices-v71)-20261019",(WWW/"security-people-v50.html").read_bytes()):
    raise RuntimeError("modern_filing_ui_not_active")
   links=api("/new/api/s9-manual-recording-links")
   if links.get("ok") is not True or links.get("manual_links_only") is not True:
    raise RuntimeError("modern_filing_registry_unavailable")
   print("S9_MANUAL_CLIP_LINKS_DEPLOY_VERIFIED "+json.dumps({
-   "already":True,"modern_filing_version":65,"proxy_preserved":True,
+   "already":True,"modern_filing_version":"v65_or_newer_compatible","proxy_preserved":True,
    "originals":len(clips),"historical_drive_clips":drive_count_before}),flush=True)
   return
  staged={}
