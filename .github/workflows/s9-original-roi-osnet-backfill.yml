@@ -1,0 +1,44 @@
+name: S9 source-qualified original person ROI to OSNet backfill
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-person-roi-osnet.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-original-person-roi-osnet.py'
+      - '.github/workflows/s9-original-roi-osnet-backfill.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-person-roi-osnet.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-original-person-roi-osnet.py'
+      - '.github/workflows/s9-original-roi-osnet-backfill.yml'
+permissions:
+  contents: read
+jobs:
+  offline-backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate bounded and guarded orchestration
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$dir/backfill-s9-original-person-roi-osnet.py"
+          python3 "$dir/test-s9-original-person-roi-osnet.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path("ops/c720p/s9-native-security/offline-worker/backfill-s9-original-person-roi-osnet.py").read_text()
+          for term in ("--mode","--limit","--offset",
+                       "approved_names()","no_qualified_person_box",
+                       "new_real_512d_vector",
+                       "S9_ORIGINAL_ROI_OSNET_BACKFILL_DRY_RUN",
+                       "S9_ORIGINAL_ROI_OSNET_BACKFILL_BATCH",
+                       "temperature","OSNET_SHA","DETECT_SHA",
+                       "recordings_modified"):
+              assert term in source,term
+          for banned in ("pm install", "am force-stop",
+                         "review/review","auto_assign_person(",
+                         "os.remove(", "shutil.rmtree("):
+              assert banned not in source,banned
+          print("S9_ORIGINAL_PERSON_ROI_OSNET_SOURCE_GATE_PASS")
+          PY
