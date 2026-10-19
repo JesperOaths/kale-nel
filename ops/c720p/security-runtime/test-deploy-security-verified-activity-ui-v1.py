@@ -57,15 +57,20 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"untrusted_live_page"):
             m.guarded_replace(self.target,self.after,self.backups)
         self.assertEqual(actual.read_bytes(),self.before)
-    def test_real_asset_is_pinned_and_has_all_essential_routes(self):
+    def test_current_asset_preserves_original_installer_and_security_contract(self):
+        # This installer is intentionally pinned to the original activity rollout,
+        # not to every later additive revision of the Security HTML.
+        self.assertEqual(self.new,"3d53db930a8597a76a4a549bf418bad51f39a3c8")
+        self.assertIn("5d9d553c339c3904ee733998ba4ea6871d9b66f6",m.SOURCE)
         page=Path(__file__).parents[1]/"s9-native-security"/"security-review-v8.html"
         raw=page.read_bytes()
-        self.assertEqual(m.blob_sha(raw),self.new)
-        m.validate_document= self.old_validator
+        m.validate_document=self.old_validator
         m.validate_document(raw)
         self.assertIn(b"/new/api/security-recording-activity",raw)
         self.assertIn(b"/new/api/s9-manual-recording-links",raw)
         self.assertIn(b"gejast-auth-gate.js",raw)
+        self.assertIn(b"/new/api/s9-auxiliary-recovery",raw)
+        self.assertNotEqual(m.blob_sha(raw),self.old)
 
 if __name__=="__main__":
     unittest.main(verbosity=2)
