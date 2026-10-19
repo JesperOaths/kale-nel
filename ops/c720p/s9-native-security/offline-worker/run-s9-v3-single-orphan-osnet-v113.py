@@ -81,7 +81,11 @@ def choose_orphan(rows,baseline_keys,present):
     for row in rows:
         key=row.get("key")
         if (not isinstance(key,str) or not re.fullmatch(r"[a-f0-9]{64}",key)
-            or row.get("source")!="s9_sd"):
+            # The trusted V40/temporal inventory omits a "source" field:
+            # its V40 rows were *already* filtered to s9_sd and its
+            # source-qualified key is independently matched to the V40
+            # original crop SHA before a single OSNet write.
+            or row.get("source","s9_sd")!="s9_sd"):
             raise RuntimeError("bad_source_qualified_crop")
         has_hsv=present(key,"hsv")
         has_visual=present(key,"visual")

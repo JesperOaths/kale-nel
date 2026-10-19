@@ -41,11 +41,20 @@ def camera(**changes):
 class Tests(unittest.TestCase):
     def test_exactly_one_new_v40_histogram_only_crop(self):
         rows=inventory();baseline=[x["key"] for x in rows[:57]]
+        # Exactly as the real h.inventory() V40 output: no "source" key.
+        for row in rows:row.pop("source")
         paired=set(baseline)
         present=lambda key,kind:(key in paired if kind=="visual" else True)
         row=m.choose_orphan(rows,baseline,present)
         self.assertEqual(row["key"],rows[57]["key"])
         self.assertEqual(row["cohort"],"v40")
+    def test_explicit_foreign_source_is_rejected(self):
+        rows=inventory();baseline=[x["key"] for x in rows[:57]]
+        rows[57]["source"]="gdrive_archive"
+        with self.assertRaisesRegex(RuntimeError,"bad_source_qualified_crop"):
+            m.choose_orphan(rows,baseline,lambda key,kind:(
+                 key in baseline if kind=="visual" else True))
+
     def test_never_replace_missing_original_v2_embedding(self):
         rows=inventory();baseline=[x["key"] for x in rows[:57]]
         paired=set(baseline[1:])
