@@ -55,25 +55,24 @@ class Archive(unittest.TestCase):
                     "human_review_required":True,"recordings_modified":False,
                     "camera_apk_modified":False,"review_decisions_modified":False})
 
-    def test_single_status_uses_nonzero_result_not_first_dictionary_key(self):
-        common={"attempted":1,"human_review_required":True,
-                "recordings_modified":False,"camera_apk_modified":False,
-                "review_decisions_modified":False}
-        self.assertEqual(s.single_status({**common,"counts":{
-            "already_verified":0,"new_real_512d_vector":1,
-            "no_qualified_person_box":0}}),"new_real_512d_vector")
-        self.assertEqual(s.single_status({**common,"counts":{
-            "no_qualified_person_box":1,"already_verified":0}}),
-            "no_qualified_person_box")
+    def test_single_status_mixed_zero_counts_and_invalid_values(self):
+        base={"attempted":1,"human_review_required":True,
+              "recordings_modified":False,"camera_apk_modified":False,
+              "review_decisions_modified":False}
+        valid={"already_verified":0,"new_real_512d_vector":1,
+               "no_qualified_person_box":0}
+        self.assertEqual(s.single_status({**base,"counts":valid}),
+                         "new_real_512d_vector")
         for invalid in (
             {"already_verified":True,"new_real_512d_vector":0},
             {"already_verified":-1,"new_real_512d_vector":2},
             {"already_verified":0,"new_real_512d_vector":0},
             {"already_verified":1,"new_real_512d_vector":1},
-        ):
+            {"stale_feature":1},
+            {}):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(RuntimeError):
-                    s.single_status({**common,"counts":invalid})
+                    s.single_status({**base,"counts":invalid})
 
     def test_missing_only_requires_explicit_v3_mode(self):
         source=(ROOT/"backfill-s9-hsv32-uniform-v2.py").read_text()
