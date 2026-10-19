@@ -37,7 +37,7 @@ jobs:
               assert term in api,term
           for term in ("S9_UNIFORM_MULTIVECTOR_API_V2_LIVE_VERIFIED",
                        "S9_UNIFORM_V2_API_ROLLED_BACK",
-                       "v1_api_overwritten", "recordings_changed"):
+                       "v1_api_overwritten", "video_or_review_data_changed"):
               assert term in deploy,term
           for text in (api,deploy):
               for banned in ("pm install","am force-stop","automatic_person_assign(",
