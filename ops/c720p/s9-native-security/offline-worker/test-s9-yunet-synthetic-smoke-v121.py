@@ -10,6 +10,28 @@ source=HERE/"run-s9-yunet-synthetic-smoke-v121.py"
 spec=importlib.util.spec_from_file_location("yunet_smoke_v121",source)
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 class Tests(unittest.TestCase):
+ def test_android_sha256sum_is_accepted(self):
+  from types import SimpleNamespace
+  digest="8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
+  def fake(cmd,**kw):
+   if cmd[-1].startswith("test -s "):
+    return SimpleNamespace(returncode=0,stderr="",stdout="")
+   if cmd[-1].startswith("sha256sum "):
+    return SimpleNamespace(returncode=0,stderr="",stdout=digest+"  /storage/9C33-6BBD/S9OfflineModels/file.onnx\\n")
+   raise AssertionError("unexpected command")
+  with patch.object(m.subprocess,"run",side_effect=fake):
+   self.assertEqual(m.phone_sha("/storage/9C33-6BBD/S9OfflineModels/file.onnx"),digest)
+ def test_invalid_digest_rejected(self):
+  from types import SimpleNamespace
+  def fake(cmd,**kw):
+   if cmd[-1].startswith("test -s "):
+    return SimpleNamespace(returncode=0,stderr="",stdout="")
+   if cmd[-1].startswith("sha256sum "):
+    return SimpleNamespace(returncode=0,stderr="",stdout="not-a-sha256 output")
+   raise AssertionError("unexpected command")
+  with patch.object(m.subprocess,"run",side_effect=fake):
+   with self.assertRaisesRegex(RuntimeError,"invalid_phone_sha"):
+    m.phone_sha("/storage/9C33-6BBD/S9OfflineModels/file.onnx")
  def test_existing_ort_version_pinned(self):
   self.assertIn("1.22.0",m.AAR_URI)
   self.assertEqual(m.AAR_SHA,"04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2")
