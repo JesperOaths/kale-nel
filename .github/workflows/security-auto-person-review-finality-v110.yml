@@ -1,0 +1,90 @@
+name: Security Automatic Person finality V110 guarded metadata-only release
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-automatic-person-review-finality-v110.py'
+      - '.github/workflows/security-auto-person-review-finality-v110.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-automatic-person-review-finality-v110.py'
+      - '.github/workflows/security-auto-person-review-finality-v110.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-automatic-person-metadata-v110
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Keep file-only deployment and human review safe
+        run: |
+          set -euo pipefail
+          f=ops/c720p/s9-native-security/deploy-automatic-person-review-finality-v110.py
+          python3 -m py_compile "$f"
+          python3 ops/c720p/s9-native-security/test-automatic-person-review.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path("ops/c720p/s9-native-security/deploy-automatic-person-review-finality-v110.py").read_text()
+          for needle in ("OLD_REF=","S9_AUTO_PERSON_NEW_SHA256","DEFERRED_NEWER_BACKEND",
+              "s9_automatic_person_review.install(H,rows)","originals_modified",
+              "manual_reviews_modified","snapshots()!=review_before","atomic(MODULE,before,mode)"):
+              assert needle in s,needle
+          for banned in ("pm install","am force-stop","adb ","Camera2.apk","manual.current().update"):
+              assert banned not in s,banned
+          print("S9_AUTO_PERSON_V110_SAFE_DEPLOYMENT_CONTRACT_PASS")
+          PY
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: SHA-stage then safely deploy only the C720P private Python metadata module
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          f='ops/c720p/s9-native-security/deploy-automatic-person-review-finality-v110.py'
+          src='ops/c720p/s9-person-ml-v1/s9_automatic_person_review.py'
+          psha="$(sha256sum "$f" | cut -d' ' -f1)"
+          msha="$(sha256sum "$src" | cut -d' ' -f1)"
+          stage="/tmp/security-auto-person-v110-${GITHUB_SHA:0:14}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$f"
+          cmd="curl -fsSL --max-time 45 '$url' -o '$stage' && printf '%s  %s\\n' '$psha' '$stage' | sha256sum -c - >/dev/null && S9_SECURITY_REF='${GITHUB_SHA}' S9_AUTO_PERSON_NEW_SHA256='$msha' python3 '$stage' && S9_SECURITY_REF='${GITHUB_SHA}' S9_AUTO_PERSON_NEW_SHA256='$msha' python3 '$stage' --apply"
+          idem="security-auto-person-v110-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-auto-person-v110','deployment',:'cmd',200,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || exit 1
+          echo "S9_AUTO_PERSON_V110_MANAGEMENT_JOB=$id"
+          for attempt in $(seq 1 70); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 5000)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]] || exit 1
+              if grep -q 'S9_AUTO_PERSON_V110_DEFERRED_NEWER_BACKEND' <<< "$output"; then
+                echo "Another live backend was found, so no overwrite was attempted"; exit 0
+              fi
+              grep -q 'S9_AUTO_PERSON_V110_VERIFIED' <<< "$output" || exit 1
+              grep -q '"camera_apk_modified": false' <<< "$output" || exit 1
+              grep -q '"manual_reviews_modified": false' <<< "$output" || exit 1
+              echo "S9 Automatic Person metadata-only release verified"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "S9 Automatic Person V110 management job timed out"
+          exit 1
