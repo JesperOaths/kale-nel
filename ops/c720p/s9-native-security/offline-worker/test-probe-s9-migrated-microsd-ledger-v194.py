@@ -79,11 +79,13 @@ class LedgerSmoke(unittest.TestCase):
  def test_source_does_not_expose_model_person_or_unlink(self):
   script=(HERE/"probe-s9-migrated-microsd-ledger-v194.py").read_text()
   java=(HERE/"S9MigratedLedgerMicroSdSmokeV194.java").read_text()
-  for forbidden in ("adb shell rm", "os.unlink(", "Files.delete(",
-    "Files.move(","MediaCodec","OrtEnvironment","ClipClassifier",
-    "MediaRecorder","PersonEvidence","CameraManager",
-    "import android.hardware"):
-   self.assertNotIn(forbidden,script+java)
+  for forbidden in ("Files.delete(", "Files.move(","MediaCodec",
+    "OrtEnvironment","ClipClassifier","MediaRecorder","PersonEvidence",
+    "CameraManager","import android.hardware"):
+   self.assertNotIn(forbidden,java)
+  for forbidden in ("adb shell rm","os.unlink(","os.remove(",
+                    "shutil.rmtree(","--real-media"):
+   self.assertNotIn(forbidden,script)
   self.assertIn("getFD().sync()", (HERE/"S9MigratedMetadataLedgerV193.java").read_text())
   self.assertIn("fcntl.LOCK_EX|fcntl.LOCK_NB",script)
   self.assertIn("C720PMigratedLedgerSyntheticV194",java)
