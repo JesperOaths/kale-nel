@@ -27,17 +27,17 @@ final class PhoneArchiveIntegrity {
   if(!(request.startsWith("GET /archive/integrity")||
        request.startsWith("HEAD /archive/integrity")))return false;
   if(!request.matches("^GET /archive/integrity[?]clip=motion_[0-9]{13}[.]mp4 HTTP/1[.]1$")){
-   respond(out,400,new JSONObject().put("ok",false).put("error","invalid_integrity_request"));
+   simpleError(out,400,"invalid_integrity_request");
    return true;
   }
   String name=request.substring("GET /archive/integrity?clip=".length(),
       request.length()-" HTTP/1.1".length());
   if(root==null||gate==null||!gate.allowed()){
-   respond(out,503,new JSONObject().put("ok",false).put("error","capture_priority_or_thermal_guard"));
+   simpleError(out,503,"capture_priority_or_thermal_guard");
    return true;
   }
   if(!ACTIVE.compareAndSet(false,true)){
-   respond(out,503,new JSONObject().put("ok",false).put("error","integrity_worker_busy"));
+   simpleError(out,503,"integrity_worker_busy");
    return true;
   }
   try {
@@ -112,6 +112,14 @@ final class PhoneArchiveIntegrity {
    .put("result",matches?"digest_match":"digest_mismatch_needs_manual_investigation");
  }
 
+ private static void simpleError(OutputStream out,int code,String error)throws IOException{
+  byte[] body=("{\"ok\":false,\"error\":\""+error+"\"}").getBytes("UTF-8");
+  String reason=code==400?"Bad Request":"Service Unavailable";
+  out.write(("HTTP/1.1 "+code+" "+reason+"\r\nContent-Type: application/json\r\n"+
+   "Cache-Control: private, no-store\r\nX-Content-Type-Options: nosniff\r\n"+
+   "Content-Length: "+body.length+"\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+  out.write(body);out.flush();
+ }
  private static void respond(OutputStream out,int code,JSONObject report)throws IOException {
   byte[] raw=report.toString().getBytes("UTF-8");
   String reason=code==200?"OK":code==400?"Bad Request":"Service Unavailable";
