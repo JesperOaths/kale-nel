@@ -72,6 +72,7 @@ class LedgerSmoke(unittest.TestCase):
    lock=Path(tmp)/"lock";lock.write_text("")
    class Busy(Exception): pass
    guard=SimpleNamespace(LOCK=lock,Stop=Busy,
+     require=lambda ok,why:None if ok else (_ for _ in ()).throw(Busy(why)),
      current_camera=lambda:(_ for _ in ()).throw(Busy("native_4k_temperature_guard")))
    with self.assertRaisesRegex(Busy,"native_4k_temperature_guard"):
     m.run(guard)
