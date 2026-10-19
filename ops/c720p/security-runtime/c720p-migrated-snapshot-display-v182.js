@@ -47,10 +47,10 @@
        file.bytes>943718400||file.indexed!==true)return;
     known.add(n);
    }
-   const catalog=await fetch('/local/frontyard-security-new/events.json',{
+   const eventsResponse=await fetch('/local/frontyard-security-new/events.json',{
      cache:'no-store'});
-   if(catalog.status!==200)return;
-   let events=await catalog.json();
+   if(eventsResponse.status!==200)return;
+   let events=await eventsResponse.json();
    if(!Array.isArray(events))events=events?.events||events?.items||events?.clips;
    if(!Array.isArray(events)||events.length>10000)return;
    const clipRefs=new Set();
