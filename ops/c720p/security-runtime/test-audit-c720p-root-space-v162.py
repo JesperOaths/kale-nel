@@ -62,6 +62,7 @@ class Test(unittest.TestCase):
        patch.object(m.shutil,"disk_usage",return_value=usage), \
        patch.object(m.os,"getloadavg",return_value=(0.2,0.1,0.1)), \
        patch.object(m,"TARGETS",{"cache":"/tmp","docker":"/var/lib/docker"}), \
+       patch.object(m,"docker_summary",return_value={"status":"unavailable"}), \
        patch.object(m,"size",return_value={"status":"measured","mib":123.4}) as scanner:
    report=m.audit()
   self.assertEqual(scanner.call_count,2)
