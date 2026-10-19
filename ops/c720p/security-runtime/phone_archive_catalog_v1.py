@@ -8,6 +8,7 @@ import fcntl
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -100,6 +101,41 @@ def _read(args):
     except (urllib.error.URLError,TimeoutError) as error:
         raise Unavailable("phone_catalog_connection_unavailable") from error
 
+STANDALONE_CATALOG=Path("/home/jespern/c720p-home-hub/state/s9-standalone-archive-catalog-v1.json")
+STANDALONE_SUMMARY=Path("/home/jespern/c720p-home-hub/state/s9-standalone-archive-summary-v1.json")
+
+def _fresh_standalone_catalog(catalog=STANDALONE_CATALOG,summary=STANDALONE_SUMMARY):
+    """Fallback ONLY to an independently verified, very recent phone snapshot.
+
+    The worker writes these after exact parity with both pre/post hub catalogs
+    and 4K health checks. A stale, tampered or unavailable phone cannot become
+    an empty archive merely because the Camera2 /archive endpoint is absent.
+    """
+    try:
+        paths=[Path(catalog),Path(summary)]
+        stamps=[p.stat() for p in paths]
+        now=time.time()
+        for p,st in zip(paths,stamps):
+            if (p.is_symlink() or not p.is_file() or st.st_mode&0o077
+                or st.st_size<50 or st.st_size>MAX_BYTES
+                or not -120<=now-st.st_mtime<=300):
+                return None
+        snapshot=_cached(paths[0])
+        if snapshot is None or not snapshot["records"]:return None
+        details=_object(paths[1].read_bytes())
+        if (details.get("catalog_snapshot_id")!=snapshot["snapshot_id"] or
+            details.get("recordings")!=len(snapshot["records"]) or
+            details.get("source")!="S9_native_microSD_sidecar_metadata" or
+            details.get("timezone")!="Europe/Amsterdam" or
+            details.get("operating_day_start_hour")!=6 or
+            details.get("read_only") is not True or
+            details.get("video_bytes_transferred_to_hub") is not False or
+            details.get("camera_4k_healthy_before_and_after") is not True):
+            return None
+        return snapshot
+    except (OSError,ValueError,TypeError,KeyError):
+        return None
+
 def load_catalog(cache=CACHE):
     cache=Path(cache);cache.parent.mkdir(parents=True,exist_ok=True)
     with cache.with_suffix(".lock").open("a+") as guard:
@@ -107,6 +143,10 @@ def load_catalog(cache=CACHE):
         old=_cached(cache)
         for attempt in range(2):
             try:return _load_pages(cache,old)
+            except Unavailable:
+                alternate=_fresh_standalone_catalog()
+                if alternate is not None:return alternate
+                raise
             except BlockingIOError:
                 if attempt:raise Unavailable("phone_catalog_changing_defer")
         raise AssertionError("unreachable")
