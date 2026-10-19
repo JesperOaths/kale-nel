@@ -77,3 +77,46 @@ jobs:
           path: ${{ runner.temp }}/s9-models/*
           if-no-files-found: error
           retention-days: 30
+
+  publish:
+    needs: export
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: s9-osnet-512d-onnx-verified
+          path: ${{ runner.temp }}/s9-publish
+      - name: Verify manifest and publish checksummed public model asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/s9-publish"
+          python3 - "$folder" <<'PY'
+          import hashlib,json,pathlib,sys
+          d=pathlib.Path(sys.argv[1])
+          m=json.loads((d/'visual_backbone_512d.manifest.json').read_text())
+          model=d/'visual_backbone_512d.onnx'
+          sha=hashlib.sha256(model.read_bytes()).hexdigest()
+          if (sha!=m['sha256'] or model.stat().st_size!=m['bytes']
+              or m['cosine_torch_onnx']<.999
+              or m['input_shape']!=[1,3,256,128]
+              or m['output_shape']!=[1,512]
+              or m.get('pretrained_backbone_coverage',0)<.9
+              or m.get('pretrained_checkpoint_sha256')!='fe2d63f9157c28a4a8d8ca29bec12d5b2988ac0346d712025789ea9174968e79'):
+              raise SystemExit('OSNet export/manifest integrity validation failed')
+          print('S9_OSNET_PUBLIC_RELEASE_ARTIFACT_VERIFIED '+sha)
+          PY
+          tag='s9-offline-osnet-x1-0-512d-20261019'
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'OSNet release already exists; refusing to overwrite model'
+            exit 1
+          fi
+          gh release create "$tag" "$folder/visual_backbone_512d.onnx"             "$folder/visual_backbone_512d.manifest.json"             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease             --title 'Verified OSNet x1.0 512D offline S9+ model'             --notes 'Pretrained OSNet x1.0, PyTorch-to-ONNX parity verified; standalone S9+ appearance-descriptor asset, no personal footage and no camera APK changes. Inspect accompanying SHA256 manifest. This is not evidence of biometric identity.'
+          echo 'S9_OSNET_PUBLIC_RELEASE_PUBLISHED'
