@@ -51,6 +51,25 @@ class Tests(unittest.TestCase):
         for invalid in ("rm -rf","pm install","am force-stop","video.unlink",
                         "review_decide","/Security4K/FaceSnapshots/"):
             self.assertNotIn(invalid,py)
+    def test_unexpected_preparation_failure_is_labeled_without_private_detail(self):
+        try:
+            m.mark("dex_compile")
+            result=m.safe_failure(OSError("/private/name/token/sharepoint"))
+            self.assertEqual(result["failure_stage"],"dex_compile")
+            self.assertEqual(result["exception_class"],"OSError")
+            self.assertEqual(result["reason"],"preparation_stage_unverified")
+            self.assertNotIn("/private",str(result))
+        finally:m.mark("entry")
+    def test_known_guard_failure_keeps_fixed_nonprivate_reason(self):
+        try:
+            m.mark("lock_and_health")
+            result=m.safe_failure(RuntimeError("native_4k_capture_not_idle_and_cool"))
+            self.assertEqual(result["reason"],"native_4k_capture_not_idle_and_cool")
+            self.assertEqual(result["failure_stage"],"lock_and_health")
+        finally:m.mark("entry")
+    def test_stage_categories_whitelisted_no_private_filenames(self):
+        self.assertEqual(m.STAGES & {"/storage", "FaceSnapshots"},set())
+        with self.assertRaises(ValueError):m.mark("../private/data")
     def test_thermal_gate_and_shared_lock_reused(self):
         py=src.read_text()
         self.assertIn("guard.current_camera()",py)
