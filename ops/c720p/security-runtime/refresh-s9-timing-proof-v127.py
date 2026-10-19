@@ -117,13 +117,18 @@ def refresh(apply=False):
   raise RuntimeError("saved_timing_proof_unrecognized")
  eligible=proof.get("eligible_count")
  if type(eligible) is not int or eligible<0:raise RuntimeError("proof_eligible_count_invalid")
- if proof.get("complete") is True and eligible<3:
+ # Older timing-proof versions did not exclude pre-upgrade recordings.
+ # Even if such a proof reports complete, NEVER advertise completion until
+ # the independent source actually carries the verified install-time guard.
+ safe_complete=proof.get("complete") is True and proof.get("freshness_guard_active") is True
+ if safe_complete and eligible<3:
   raise RuntimeError("proof_completed_without_three_independent_clips")
  print("S9_SAVED_TIMING_V127_VERIFIED "+json.dumps({
   "originals_still_indexed":len(new),
   "verified_native_timing_metadata_rows":n,
   "proof_eligible_quiet_end_records":eligible,
-  "proof_complete":proof.get("complete") is True,
+  "proof_freshness_guard_active":proof.get("freshness_guard_active") is True,
+  "proof_complete":safe_complete,
   "s9_camera_temperature_c":after["temperature_c"],
   "no_video_bytes_read_by_timing_proof":True,
   "originals_modified":False,"camera_apk_modified":False,
