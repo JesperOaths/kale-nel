@@ -136,8 +136,8 @@ class Tests(unittest.TestCase):
                     b"def new_outer():pass\\n",b"def new_inner():pass\\n",
                     b"def install(H):pass\\n",32.1)),patch.object(
                     m,"restart_and_wait"),patch.object(
-                    m,"jpeg_proof",return_value=[("safe.jpg",{"sha256":"a"*64,"bytes":1200})]),
-                    patch.object(m,"jpeg_endpoint",side_effect=inject_failure),patch.object(
+                    m,"jpeg_proof",return_value=[("safe.jpg",{"sha256":"a"*64,"bytes":1200})]),patch.object(
+                    m,"jpeg_endpoint",side_effect=inject_failure),patch.object(
                     m,"camera",return_value=32.1),patch.object(m,"inventory",return_value=True):
                 with self.assertRaisesRegex(m.Deferred,"concurrent_outer_deployment"):
                     m.apply()
