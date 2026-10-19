@@ -32,14 +32,24 @@ class ArchiveHistogramContract(unittest.TestCase):
 
     def test_unassigned_crop_provenance_without_identity_assertion(self):
         h=load("s9_hist_archive_sources","backfill-s9-hsv32-uniform-v2.py")
-        import types,sys
-        old=h.sibling
+        import hashlib
         source="motion_1700000000000.mp4"
-        key=__import__("hashlib").sha256(("s9_sd\\x00"+source).encode()).hexdigest()
+        key=hashlib.sha256(("s9_sd\\x00"+source).encode()).hexdigest()
         class Old:
             def record_index(self):return {}
-            def catalog_items(self):return []
-            def planned(self,items,index):return []
+            def catalog_items(self):
+                return [
+                  {"clip":f"motion_{1700000001000+i*1000}.mp4",
+                   "full_crop":{"sha256":f"{i+1:064x}"}}
+                  for i in range(51)]
+            def planned(self,items,index):
+                return [
+                    {"source":"s9_sd",
+                     "source_key":hashlib.sha256("\\x00".join(
+                         ("s9_sd",x["clip"],x["full_crop"]["sha256"])).encode()).hexdigest(),
+                     "crop_sha256":x["full_crop"]["sha256"],
+                     "crop_name":f"crop{i}.jpg","crop_bytes":2048}
+                    for i,x in enumerate(items)]
         class New:
             def primary_events(self):return {source:{"person_count":0}}
             def approved_names(self):return set()
@@ -53,10 +63,14 @@ class ArchiveHistogramContract(unittest.TestCase):
         with patch.object(h,"sibling",side_effect=get_sibling),\
              patch.object(h,"remote_exists",return_value=True),\
              patch.object(h,"phone_json",return_value=data):
-            self.assertEqual(h.inventory(),[])
+            baseline=h.inventory()
+            self.assertEqual(len(baseline),51)
+            self.assertEqual({x["cohort"] for x in baseline},{"v40"})
             rows=h.inventory(include_unreviewed=True)
-            self.assertEqual(len(rows),1)
-            self.assertEqual(rows[0]["cohort"],"archive_unassigned")
-            self.assertEqual(rows[0]["clip"],source)
+            self.assertEqual(len(rows),52)
+            recovered=[row for row in rows if row["cohort"]=="archive_unassigned"]
+            self.assertEqual(len(recovered),1)
+            self.assertEqual(recovered[0]["cohort"],"archive_unassigned")
+            self.assertEqual(recovered[0]["clip"],source)
 
 if __name__=="__main__":unittest.main(verbosity=2)
