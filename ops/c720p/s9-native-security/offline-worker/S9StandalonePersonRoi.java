@@ -150,9 +150,9 @@ public final class S9StandalonePersonRoi {
     weights.put(Files.readAllBytes(detector));weights.rewind();
     MediaMetadataRetriever grabber=new MediaMetadataRetriever();
     Candidate best=null;
-    try(Interpreter.Options options=new Interpreter.Options()) {
-      options.setNumThreads(1);
-      try(Interpreter net=new Interpreter(weights,options)) {
+    Interpreter.Options options=new Interpreter.Options();
+    options.setNumThreads(1);
+    try(Interpreter net=new Interpreter(weights,options)) {
         grabber.setDataSource(original.toString());
         String length=grabber.extractMetadata(
           MediaMetadataRetriever.METADATA_KEY_DURATION);
@@ -175,7 +175,7 @@ public final class S9StandalonePersonRoi {
           }finally{if(frame!=null)frame.recycle();}
         }
       }
-    }finally{grabber.release();}
+    finally{grabber.release();}
     if(best==null){
       System.out.println("S9_OFFLINE_SINGLE_PERSON_ROI_NOT_FOUND frames=3");
       return;
