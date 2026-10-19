@@ -1,0 +1,28 @@
+name: Authenticated S9 auxiliary recovery footage
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_auxiliary_recovery_api_v1.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-auxiliary-recovery-api-v1.py'
+      - '.github/workflows/s9-auxiliary-recovery-api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_auxiliary_recovery_api_v1.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-auxiliary-recovery-api-v1.py'
+permissions:
+  contents: read
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Enforce recovery isolation and authenticated handler contract
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_auxiliary_recovery_api_v1.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
+          python3 ops/c720p/s9-person-ml-v1/test-s9-auxiliary-recovery-api-v1.py
+          echo S9_AUTH_RECOVERABLE_AUX_ONLY
