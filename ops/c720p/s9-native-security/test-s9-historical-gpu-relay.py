@@ -104,6 +104,13 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    case["animal_confidence"]=0.0
    if confidence:case[confidence]=.7
    self.assertEqual(m.category_from_phone(case),expected)
+ def test_s9_only_direct_h264_pilot_never_selects_s3_archive(self):
+  inputs=[{"camera":"s3","clip_id":"a"},{"camera":"new","clip_id":"b"},{"camera":"new","clip_id":"c"}]
+  allowed=m.scoped_historical_candidates(inputs,True)
+  self.assertEqual([v["clip_id"] for v in allowed],["b","c"])
+  self.assertEqual(m.scoped_historical_candidates(inputs,False),inputs)
+  self.assertEqual(len(inputs),3) # default historical workflow retained
+
  def test_direct_h264_avoids_hub_transcode_only_on_compatible_opt_in(self):
   with tempfile.TemporaryDirectory() as root:
    movie=Path(root)/'source.mp4';movie.write_bytes(b'x'*500000)
