@@ -1,0 +1,84 @@
+name: Guarded S9 saved-timing metadata refresh V127
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/refresh-s9-timing-proof-v127.py'
+      - 'ops/c720p/security-runtime/test-refresh-s9-timing-proof-v127.py'
+      - '.github/workflows/s9-verified-saved-timing-refresh-v127.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/refresh-s9-timing-proof-v127.py'
+      - 'ops/c720p/security-runtime/test-refresh-s9-timing-proof-v127.py'
+      - '.github/workflows/s9-verified-saved-timing-refresh-v127.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-saved-timing-proof-refresh-v127
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Preserve source hashes and not invent three proof recordings
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/refresh-s9-timing-proof-v127.py"
+          python3 "$d/test-refresh-s9-timing-proof-v127.py"
+          python3 "$d/test-s9-7s-saved-timing-proof-v1.py"
+          python3 "$d/test-phone-archive-catalog-v1.py"
+  physical:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Refresh verified private S9 metadata and bounded timing evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          file='ops/c720p/security-runtime/refresh-s9-timing-proof-v127.py'
+          sum="$(sha256sum "$file" | cut -d' ' -f1)"
+          tmp="/tmp/s9-timing-proof-refresh-${GITHUB_SHA:0:15}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+          cmd="curl -fsSL --max-time 35 '$uri' -o '$tmp' && printf '%s  %s\\n' '$sum' '$tmp' | sha256sum -c - >/dev/null && /usr/bin/python3 '$tmp' && /usr/bin/python3 '$tmp' --apply"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="s9-timing-v127-${GITHUB_SHA:0:13}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-timing-v127','deployment',:'cmd',500,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_SAVED_TIMING_V127_MANAGEMENT_JOB=$id"
+          for attempt in $(seq 1 175); do
+            result="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$result" == done* || "$result" == failed* || "$result" == error* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3600)"
+              echo "$output"
+              [[ "$result" == 'done|0' ]] || exit 1
+              if grep -q 'S9_SAVED_TIMING_V127_VERIFIED' <<< "$output"; then
+                grep -q '"historical_original_hashes_unchanged": true' <<< "$output"
+                grep -q '"camera_apk_modified": false' <<< "$output"
+                grep -q '"originals_modified": false' <<< "$output"
+                echo "Real S9 timing fields recovered to safe hub metadata, not a fabricated saved-video proof"
+              elif grep -q 'S9_SAVED_TIMING_V127_DEFERRED' <<< "$output"; then
+                grep -q '"proof_complete_not_claimed": true' <<< "$output"
+                echo "Metadata scan busy; no false completion claim"
+              else
+                echo "Unrecognized S9 timing refresh result";exit 1
+              fi
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "S9 timing job timeout";exit 1
