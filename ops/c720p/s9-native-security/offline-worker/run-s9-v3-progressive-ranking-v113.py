@@ -21,6 +21,7 @@ ALLOW_DEFERRALS={
  "capture_not_idle_4k_ring_healthy":"capture_not_ready",
  "S9+ above cool ranking temperature; no run":"battery_warm",
  "V3 requires complete original V2 references plus one extra real descriptor":"descriptors_incomplete",
+ "S9 sidecar transfer indeterminate; no index published":"sidecar_transfer_unreliable",
 }
 def module():
  path=HERE/"run-s9-uniform-appearance-rankings-v3.py"
