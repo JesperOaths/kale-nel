@@ -6,6 +6,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGateTest.java'
       - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoder.java'
       - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoderTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9YuNetOnnxSyntheticSmoke.java'
       - 'ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-face-landmark-stage-v120.py'
       - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
@@ -16,6 +17,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGateTest.java'
       - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoder.java'
       - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoderTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9YuNetOnnxSyntheticSmoke.java'
       - 'ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-face-landmark-stage-v120.py'
       - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
@@ -37,3 +39,9 @@ jobs:
           javac -d /tmp/s9-face-gate-v120 "$d/PhoneFaceLandmarkGate.java" "$d/PhoneFaceLandmarkGateTest.java" "$d/PhoneYuNetLandmarkDecoder.java" "$d/PhoneYuNetLandmarkDecoderTest.java"
           java -cp /tmp/s9-face-gate-v120 nl.kalenel.s9offline.PhoneFaceLandmarkGateTest
           java -cp /tmp/s9-face-gate-v120 nl.kalenel.s9offline.PhoneYuNetLandmarkDecoderTest
+          # Official ARM64/Java ORT AAR is only used for compilation here.
+          # The actual ONNX execution is gated separately on a cool S9+.
+          curl -fsSL --retry 2 --max-time 90             https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.17.1/onnxruntime-android-1.17.1.aar             -o /tmp/s9-face-ort-v120.aar
+          unzip -p /tmp/s9-face-ort-v120.aar classes.jar > /tmp/s9-face-ort-v120.jar
+          javac -source 8 -target 8 -cp /tmp/s9-face-ort-v120.jar -d /tmp/s9-face-gate-v120 "$d/S9YuNetOnnxSyntheticSmoke.java"
+          test -f /tmp/s9-face-gate-v120/nl/kalenel/s9offline/S9YuNetOnnxSyntheticSmoke.class
