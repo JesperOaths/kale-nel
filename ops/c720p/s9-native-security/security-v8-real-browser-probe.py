@@ -5,6 +5,7 @@ No video playback, camera motion, archive mutations or login changes.
 """
 import base64,json,os,socket,struct,time,urllib.request
 PORT=9222
+MAX_CDP_FRAME_BYTES=2*1024*1024
 class Socket:
  def __init__(self,url):
   host,route=url.split("://",1)[1].split("/",1)
@@ -18,9 +19,11 @@ class Socket:
   if b"HTTP/1.1 101" not in header:raise RuntimeError("cdp_ws_refused")
   self.id=0
  def _get(self,n):
+  if not isinstance(n,int) or not 0<=n<=MAX_CDP_FRAME_BYTES:
+   raise RuntimeError('cdp_frame_too_large')
   b=b""
   while len(b)<n:
-   part=self.sock.recv(n-len(b))
+   part=self.sock.recv(min(65536,n-len(b)))
    if not part:raise RuntimeError("cdp_ws_closed")
    b+=part
   return b
