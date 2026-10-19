@@ -1,5 +1,9 @@
 name: S9 V3 bounded HSV32 source-descriptor completion V102
 on:
+  # Six low-duty attempts per day. The phone-side worker immediately defers
+  # when Camera2, the 4K buffer, free space, or temperature is unsafe.
+  schedule:
+    - cron: '11 1,5,9,13,17,21 * * *'
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-hsv-two-v102.py'
@@ -46,7 +50,7 @@ jobs:
           PY
   guarded-two-sidecars:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    if: (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && github.repository == 'JesperOaths/kale-nel'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
