@@ -231,6 +231,7 @@ async function open(rec){
   host.append(explanation);
  }
  const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.disablePictureInPicture=false;
+ video.dataset.securityPlaybackSegment='original';
  host.append(video);state.activeVideo=video;
  const quality=text('div','Loading media details…','');quality.id='quality';host.append(quality);
  const mf=text('div','','');mf.id='metrics';host.append(mf);
@@ -262,24 +263,36 @@ async function open(rec){
  if(preFound){
   try{
    const early=await r.url(prePath);
+   video.dataset.securityPlaybackSegment='preroll';
    video.src=early;
    quality.textContent='Pre-event buffered video · automatically continues into original 4K';
    video.addEventListener('ended',()=>{
     if(state.selected!==entryKey(rec))return;
+    video.dataset.securityPlaybackSegment='original';
+    count=0;start=0;
+    quality.textContent='Loading the original 4K recording after the pre-event buffer…';
     video.src=url;video.play().catch(()=>{});
    },{once:true});
   }catch(_){video.src=url;}
  }else video.src=url;
- video.addEventListener('loadedmetadata',()=>{quality.textContent='Original video · '+video.videoWidth+' × '+video.videoHeight+' · '+(Number.isFinite(video.duration)?video.duration.toFixed(1)+'s':'unknown duration')+' · monitoring displayed frames';},{once:true});
+ video.addEventListener('loadedmetadata',()=>{
+  if(state.activeVideo!==video)return;
+  count=0;start=0;
+  const caption=video.dataset.securityPlaybackSegment==='preroll'?'Pre-event buffered video':'Original video';
+  quality.textContent=caption+' · '+video.videoWidth+' × '+video.videoHeight+' · '+
+   (Number.isFinite(video.duration)?video.duration.toFixed(1)+'s':'unknown duration')+' · monitoring displayed frames';
+ });
  let count=0,start=0,reported=0;const cb=(now,meta)=>{if(state.activeVideo!==video||!video.isConnected)return;
  if(!start)start=now;count++;
  if(now-start>=1200){const fps=count*1000/(now-start);const q=video.getVideoPlaybackQuality?.();let dropped=q?.droppedVideoFrames;
- quality.textContent='Actual displayed playback: '+fps.toFixed(1)+' FPS'+(typeof dropped==='number'?' · dropped frames '+dropped:'')+
+ quality.textContent=(video.dataset.securityPlaybackSegment==='preroll'?'Pre-event buffer playback: ':'Original video playback: ')+
+  fps.toFixed(1)+' FPS'+(typeof dropped==='number'?' · dropped frames '+dropped:'')+
  (fps<24?' · below 24 FPS target':' · meets 24 FPS target')+' · '+video.videoWidth+'×'+video.videoHeight;
  count=0;start=now;reported++;}
  video.requestVideoFrameCallback(cb)};
  if(typeof video.requestVideoFrameCallback==='function')video.requestVideoFrameCallback(cb);
- else quality.textContent='Video ready · FPS measurement not supported in this browser';
+ else quality.textContent=(video.dataset.securityPlaybackSegment==='preroll'?'Pre-event buffer':'Original video')+
+  ' ready · FPS measurement not supported in this browser';
  }catch(_){quality.textContent='Unable to load signed MP4. Original retained on S9+.'}
 }
 

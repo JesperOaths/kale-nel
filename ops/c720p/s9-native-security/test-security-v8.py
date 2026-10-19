@@ -18,6 +18,14 @@ assert 's9SavedFolderFrame' in mod.ROOT_JS
 assert 's9v8-evidence' in mod.ROOT_JS
 assert 'site=' not in mod.ROOT_JS
 assert 'fps<24' in TEMPLATE
+assert "video.dataset.securityPlaybackSegment='preroll'" in TEMPLATE
+assert "video.dataset.securityPlaybackSegment='original'" in TEMPLATE
+assert "Pre-event buffer playback: " in TEMPLATE
+assert "Original video playback: " in TEMPLATE
+assert "Loading the original 4K recording after the pre-event buffer" in TEMPLATE
+assert "if(state.activeVideo!==video)return;" in TEMPLATE
+assert "count=0;start=0;" in TEMPLATE
+assert not re.search(r"video[.]addEventListener\\('loadedmetadata',[\\s\\S]*?\\},\\{once:true\\}\\)",TEMPLATE)
 assert 'requestVideoFrameCallback' in TEMPLATE
 assert 'getVideoPlaybackQuality' in TEMPLATE
 assert 'requestVideoFrameCallback' in mod.PERFORMANCE_JS
