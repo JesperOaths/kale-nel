@@ -109,9 +109,11 @@ def execute():
   # immediately before each permitted cache-only removal.
   applied=run_helper(helper,True)
   removed_count,removed_mib=validate(applied,True)
-  result.update(cache_reclaim_performed=True,
-      removed_cache_items=sum(e["status"]=="removed" for e in applied["items"]),
-      failed_cache_items=sum(e["status"]=="failed" for e in applied["items"]),
+  nremoved=sum(e["status"]=="removed" for e in applied["items"])
+  nfailed=sum(e["status"]=="failed" for e in applied["items"])
+  result.update(cache_cleanup_attempted=True,cache_reclaim_performed=nremoved>0,
+      removed_cache_items=nremoved,
+      failed_cache_items=nfailed,
       reclaimed_mib=max(0.0,float(applied.get("reclaimed_mb") or 0.0)))
  else:
   result.update(cache_deferred_reason=preview["status"])
