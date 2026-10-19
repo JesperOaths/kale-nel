@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""No-device tests for two-crop phone HSV32 preservation and thermal gates."""
+import importlib.util
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
+
+SRC=Path(__file__).with_name("run-s9-v3-hsv-two-v102.py")
+spec=importlib.util.spec_from_file_location("v102_hsv",SRC)
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+
+class FakeH:
+    ROOT="/data/local/tmp/s9_worker"
+    def __init__(self, temp=40.0, count=76, initially_missing=18):
+        self.temp=temp
+        self.pid="8088"
+        self.rows=[{"key":f"{i+1:064x}","crop_sha256":"f"*64,
+             "cohort":"v40" if i<70 else "approved_new"} for i in range(count)]
+        self.cached={r["key"] for r in self.rows[initially_missing:]}
+        self.verified=[]
+        self.new=[]
+    def adb(self, *argv, **kw):
+        if argv[:2]==("shell","pidof nl.kalenel.s9security"):
+            return SimpleNamespace(returncode=0,stdout=self.pid+"\n",stderr="")
+        if argv[:2]==("shell","dumpsys battery"):
+            return SimpleNamespace(returncode=0,stdout=f"temperature: {int(self.temp*10)}\n",stderr="")
+        if argv[:2]==("shell","test -s "+self.ROOT+"/features/"):
+            raise AssertionError("test -s call must contain exact key")
+        if argv[0]=="shell" and argv[1].startswith("test -s "):
+            match=argv[1].removeprefix("test -s ").removeprefix(self.ROOT+"/features/").removesuffix("-hsv-v2.json")
+            found=match in self.cached
+            return SimpleNamespace(returncode=0 if found else 1,stdout="",stderr="")
+        raise AssertionError("unexpected phone command "+str(argv))
+    def inventory(self, include_unreviewed=False):
+        assert include_unreviewed
+        return list(self.rows)
+    def safe_visual(self,key,cropsha):
+        if cropsha!="f"*64 or key not in {r["key"] for r in self.rows}:
+            raise RuntimeError("forged_visual")
+        self.verified.append(key)
+        return True
+    def v2_histogram(self,row):
+        if row["key"] not in self.cached:
+            self.new.append(row["key"])
+            self.cached.add(row["key"])
+        return "verified_histogram_and_osnet"
+
+class FakeCtrl:
+    def __init__(self):
+        self.decisions={"approved"}
+        self.originals={"motion_1700000000000.mp4":{}}
+    def approved_names(self):return set(self.decisions)
+    def primary_events(self):return dict(self.originals)
+
+class Tests(unittest.TestCase):
+    def setUp(self):
+        self.t=tempfile.TemporaryDirectory()
+        self.old_lock=m.LOCK
+        m.LOCK=Path(self.t.name)/"archive.lock"
+        self.disk=patch.object(m.shutil,"disk_usage",return_value=SimpleNamespace(free=3_000_000_000))
+        self.disk.start()
+    def tearDown(self):
+        self.disk.stop()
+        m.LOCK=self.old_lock
+        self.t.cleanup()
+    def test_exact_two_real_sidecars_and_resume(self):
+        h=FakeH()
+        c=FakeCtrl()
+        first=m.run(h,c)
+        self.assertEqual(first["verified_crops"],76)
+        self.assertEqual(first["missing_before"],18)
+        self.assertEqual(first["new_verified_histograms"],2)
+        self.assertEqual(first["missing_after"],16)
+        self.assertEqual(len(h.new),2)
+        self.assertFalse(first["private_identifiers_disclosed"])
+        self.assertFalse(first["rankings_modified"])
+        self.assertEqual(first["automatic_people_assigned"],0)
+        self.assertEqual(len(h.verified),2)
+        again=m.run(h,c)
+        self.assertEqual(again["missing_before"],16)
+        self.assertEqual(again["missing_after"],14)
+        self.assertEqual(len(h.new),4)
+    def test_warm_phone_prevents_phone_writes(self):
+        h=FakeH(temp=41.6)
+        with self.assertRaisesRegex(RuntimeError,"phone_warm"):
+            m.run(h,FakeCtrl())
+        self.assertEqual(h.new,[])
+    def test_changed_pid_before_histogram_prevents_writes(self):
+        h=FakeH()
+        old=h.safe_visual
+        def change(key,sha):
+            h.pid="unknown"
+            return old(key,sha)
+        h.safe_visual=change
+        with self.assertRaisesRegex(RuntimeError,"camera_pid_missing"):
+            m.run(h,FakeCtrl())
+        self.assertEqual(h.new,[])
+    def test_source_key_validation_prevents_writes(self):
+        h=FakeH()
+        h.rows[0]["key"]="../bad"
+        with self.assertRaisesRegex(RuntimeError,"invalid_source_qualified_key"):
+            m.run(h,FakeCtrl())
+        self.assertEqual(h.new,[])
+    def test_indeterminate_adb_error_is_not_absence(self):
+        h=FakeH()
+        old=h.adb
+        def err(*args,**kw):
+            if args[0]=="shell" and args[1].startswith("test -s "):
+                return SimpleNamespace(returncode=255,stderr="device offline",stdout="")
+            return old(*args,**kw)
+        h.adb=err
+        with self.assertRaisesRegex(RuntimeError,"phone_transport_untrusted"):
+            m.run(h,FakeCtrl())
+        self.assertEqual(h.new,[])
+
+if __name__=="__main__":unittest.main(verbosity=2)
