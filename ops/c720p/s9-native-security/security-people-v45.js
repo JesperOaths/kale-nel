@@ -38,12 +38,16 @@ function date(item){return stampMs(item.recorded_ms)}
 const driveName=/^[A-Za-z0-9._-]{1,180}[.]mp4$/;
 const driveSnap=/^[A-Za-z0-9._-]{1,180}[.]jpg$/;
 function assignmentKey(item){return (item.source==='drive'?'drive':'sd')+':'+String(item.name||item.clip||'')}
-function assignedFolder(item){
- const key=assignmentKey(item);
- const explicit=state.extraLinks?.items?.[key];
- if(explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder'))return explicit.folder||null;
- return state.legacyAssigned.get(key)||null;
+function assignedFolders(item){
+ const key=assignmentKey(item),explicit=state.extraLinks?.items?.[key];
+ if(explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder'))
+  return Array.isArray(explicit.folders)?explicit.folders.filter(Boolean):
+   explicit.folder?[explicit.folder]:[];
+ const legacy=state.legacyAssigned.get(key);
+ return legacy?[legacy]:[];
 }
+function assignedFolder(item){return assignedFolders(item)[0]||null}
+function assignedTo(item,folder){return assignedFolders(item).includes(folder)}
 function reviewDecision(item){
  const explicit=state.extraLinks?.items?.[assignmentKey(item)];
  if(explicit)return explicit.review_status|| (explicit.folder?'assigned':'inbox');
@@ -164,9 +168,13 @@ async function refreshArchiveReviewSources(folders){
 async function manualLink(item,folder,reviewAction=null){
  let errorAfterReload='';
  if(state.busy||!state.extraLinks)return false;
- const data={action:reviewAction||(folder?'assign':'return_to_queue'),
+ const folders=Array.isArray(folder)?[...new Set(folder.filter(Boolean))]:folder?[folder]:[];
+ if(folders.length>12){alertText('A recording supports up to 12 people.');return false}
+ const data={action:reviewAction||(folders.length?'assign':'return_to_queue'),
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
-   folder:folder||null,revision:state.linksRevision,human_confirmed:true};
+   folder:folders[0]||null,revision:state.linksRevision,human_confirmed:true};
+ // A group assignment is a single audited write, not a sequence of partial saves.
+ if(folders.length>1)data.folders=folders;
  state.busy=true;
  try{
   const response=await relay().fetch('/new/api/s9-manual-recording-links',{
@@ -188,22 +196,25 @@ async function manualLink(item,folder,reviewAction=null){
      outcome.manual_links_only!==true||
      !Number.isSafeInteger(outcome.revision)||outcome.revision<=data.revision||
      (outcome.folder||null)!==data.folder||
+     (folders.length>1&&(!Array.isArray(outcome.folders)||
+       JSON.stringify(outcome.folders)!==JSON.stringify(folders)))||
      (data.action==='skip'&&outcome.review_status!=='skipped')||
      (data.action==='reject'&&outcome.review_status!=='rejected'))
    throw Error('Save was not confirmed for this recording and person. Refresh and check before retrying.');
   const key=data.source+':'+data.name;
   state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder,
-   review_status:outcome.review_status|| (folder?'assigned':'inbox')};
+   folders:Array.isArray(outcome.folders)?outcome.folders:folders,
+   review_status:outcome.review_status|| (folders.length?'assigned':'inbox')};
   state.extraLinks.revision=outcome.revision;
   state.linksRevision=outcome.revision;
-  state.lastFolder=folder||state.lastFolder;
+  state.lastFolder=folders[0]||state.lastFolder;
   // Commit the visible result before slower archive reads; never require a
   // successful refresh to finish a save that the server already acknowledged.
-  if(folder&&state.approvalItem&&assignmentKey(state.approvalItem)===key){
+  if(folders.length&&state.approvalItem&&assignmentKey(state.approvalItem)===key){
    $('approvalDialog').close();state.approvalItem=null;
   }
   if(state.doc)render();
-  const label=folder?'Recording filed under person':data.action==='skip'?
+  const label=folders.length?'Recording filed under '+folders.length+' '+(folders.length===1?'person':'people'):data.action==='skip'?
    'Recording skipped · restore from Skipped':data.action==='reject'?
    'Recording rejected from review · original retained; restore from Rejected':
    'Recording returned to review';
@@ -230,24 +241,26 @@ function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
 function folderApprovedSDClips(id){
  if(!state.assignedReady||!state.extraLinks)return new Set();
  return new Set(state.archiveEntries.filter(row=>row.source==='sd'&&
-  assignedFolder(row)===id).map(row=>row.clip));
+  assignedTo(row,id)).map(row=>row.clip));
 }
 function assignedRecordingKeys(folder){
  const keys=new Set();
  for(const [key,legacy] of state.legacyAssigned){
   const explicit=state.extraLinks?.items?.[key];
-  const assigned=explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder')?explicit.folder:legacy;
-  if(assigned&&(!folder||assigned===folder))keys.add(key);
+  const all=explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder')?
+   (Array.isArray(explicit.folders)?explicit.folders:explicit.folder?[explicit.folder]:[]):[legacy];
+  if(all.length&&(!folder||all.includes(folder)))keys.add(key);
  }
- for(const [key,entry] of Object.entries(state.extraLinks?.items||{}))
-  if(entry.folder&&(!folder||entry.folder===folder))keys.add(key);
+ for(const [key,entry] of Object.entries(state.extraLinks?.items||{})){
+  const all=Array.isArray(entry.folders)?entry.folders:entry.folder?[entry.folder]:[];
+  if(all.length&&(!folder||all.includes(folder)))keys.add(key);
+ }
  return keys;
 }
 function folderAssignmentCount(f){
  if(state.assignedReady&&state.extraLinks)return assignedRecordingKeys(f.id).size;
- // While the complete native assignment scan is loading, manual links still
- // establish that this person has filed originals (including Drive-only people).
- const manual=Object.values(state.extraLinks?.items||{}).filter(x=>x.folder===f.id).length;
+ const manual=Object.values(state.extraLinks?.items||{}).filter(x=>
+  (Array.isArray(x.folders)?x.folders:x.folder?[x.folder]:[]).includes(f.id)).length;
  return Math.max(num(f.approved_clips),manual);
 }
 function totalAssignedCount(){
@@ -1222,14 +1235,14 @@ function renderFolder(){
  for(const item of state.doc?.items||[]){
   if(state.tab==='approved'&&state.recheckOnly&&!item.person_recheck_required)continue;
   if(state.tab==='approved'&&state.extraLinks?.items?.['sd:'+item.clip]?.folder!==undefined&&
-     state.extraLinks.items['sd:'+item.clip].folder!==state.folder)continue;
+     !assignedTo({source:'sd',name:item.clip},state.folder))continue;
   host.append(reviewItem({...item,source:'sd',name:item.clip},false));
  }
  if(state.tab==='approved'&&!state.recheckOnly){
   // New manual links (Drive, unindexed SD, and corrected folder moves).
   for(const entry of state.archiveEntries){
    const override=state.extraLinks?.items?.[assignmentKey(entry)];
-   if(!override||override.folder!==state.folder)continue;
+   if(!override||!assignedTo(entry,state.folder))continue;
    if(Array.from(host.children).some(x=>x.dataset?.clip===entry.clip&&
       x.dataset?.source===entry.source))continue;
    host.append(reviewItem({...entry,decision:'approved',
