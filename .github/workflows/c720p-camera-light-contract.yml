@@ -1,0 +1,22 @@
+name: Camera light ownership static contracts
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/camera-light-contract-audit-v1.py'
+      - 'ops/c720p/security-runtime/test-camera-light-contract-audit-v1.py'
+      - '.github/workflows/c720p-camera-light-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/camera-light-contract-audit-v1.py'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 -m py_compile ops/c720p/security-runtime/camera-light-contract-audit-v1.py
+          python3 ops/c720p/security-runtime/test-camera-light-contract-audit-v1.py
