@@ -1,0 +1,102 @@
+name: Security Automatic Person V63 safe release
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-automatic-person-*-v63.py'
+      - '.github/workflows/c720p-security-auto-person-v63-release.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-security-auto-person-v63-release.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-security-auto-person-v63
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate guarded release and exact source-diff onto reconstructed V62
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-automatic-person-backend-v63.py ops/c720p/s9-native-security/deploy-automatic-person-ui-v63.py
+          python3 ops/c720p/s9-native-security/test-automatic-person-review.py
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          import urllib.request
+          def read(name):
+              path=Path('ops/c720p/s9-native-security')/name
+              spec=importlib.util.spec_from_file_location(name.replace('.','_'),path)
+              mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod);return mod
+          v60=read('deploy-security-people-v60-coverage.py')
+          v62=read('deploy-security-people-v62.py')
+          v63=read('deploy-automatic-person-ui-v63.py')
+          url='https://raw.githubusercontent.com/JesperOaths/kale-nel/eaf8a58f1c733dbc9109348725669917eab1bb5b/ops/c720p/s9-native-security/'
+          with urllib.request.urlopen(url+'security-people-v45.js',timeout=30) as r:
+              v59=r.read()
+          v62_js=v62.patched(v60.patch_coverage(v59),v62.remote(v62.BASE_SHA),v62.remote(v62.NEW_SHA))
+          assert v63.sha(v62_js)==v63.ACTIVE_V62_SHA
+          before=v63.src(v63.BEFORE,'security-people-v45.js')
+          after=v63.src(v63.AFTER,'security-people-v45.js')
+          patched,count=v63.add_diffs(v62_js,before,after)
+          assert count>=3 and b'function renderAutomatic()' in patched
+          with urllib.request.urlopen(url+'security-people-v45.html',timeout=30) as r:
+              base=r.read()
+          new_html,edits=v63.add_diffs(base,v63.src(v63.BEFORE,'security-people-v45.html'),v63.src(v63.AFTER,'security-people-v45.html'))
+          assert edits>=2 and b'data-pane="automatic"' in new_html
+          assert b'id="automaticFolders"' in new_html
+          print('SECURITY_AUTO_PERSON_V63_EXACT_SOURCE_PATCH_PASS',count,edits)
+          PY
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Install review-only API before Automatic Person tab, with guarded rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          base='ops/c720p/s9-native-security'
+          staging="/tmp/security-auto-person-v63-${GITHUB_SHA:0:12}"
+          cmd="mkdir -p '$staging'"
+          for script in deploy-automatic-person-backend-v63.py deploy-automatic-person-ui-v63.py; do
+            src="$base/$script"
+            dig="$(sha256sum "$src" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+            cmd="$cmd && curl -fSsL --max-time 40 '$url' -o '$staging/$script' && printf '%s  %s\n' '$dig' '$staging/$script' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && python3 '$staging/deploy-automatic-person-backend-v63.py' && python3 '$staging/deploy-automatic-person-ui-v63.py' && python3 '$staging/deploy-automatic-person-backend-v63.py' --apply && python3 '$staging/deploy-automatic-person-ui-v63.py' --apply"
+          idem="security-auto-person-v63-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-auto-person-v63','deployment',:'cmd',320,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "SECURITY_AUTO_PERSON_V63_JOB=$id"
+          for i in $(seq 1 75); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              out="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 15000)"
+              err="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stderr,'') from c720p_agent.jobs where id=$id" | head -c 4500)"
+              echo "$out"
+              if [[ "$status" != 'done|0' ]]; then echo "$err"; exit 1; fi
+              grep -q 'SECURITY_AUTO_PERSON_BACKEND_VERIFIED' <<< "$out"
+              grep -q 'SECURITY_AUTO_PERSON_V63_UI_DEPLOY_VERIFIED' <<< "$out"
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
