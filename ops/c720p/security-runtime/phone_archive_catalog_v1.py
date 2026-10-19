@@ -38,6 +38,27 @@ METADATA_KEYS=set(('name bytes sha256 width height scene_category person_count c
  'face_crop_padded_manual_count face_rejected_insufficient_native_eye_detail face_deep_detector_anchor_frames '
  'face_deep_person_roi_anchors face_deep_multiple_person_anchors face_deep_multiscale_refinement_passes '
  'face_deep_tiled_scene_samples face_deep_second_person_roi_samples').split())
+# Camera2 v7 capture-segment evidence is metadata-only, not face or video
+# bytes. Earlier client versions silently omitted all five proof fields.
+# Preserve the group only when it is internally consistent; malformed optional
+# evidence never blocks the unrelated verified 4K archive catalog.
+CAPTURE_TIMING_FIELDS=(
+ 'capture_segment_end_reason',
+ 'capture_segment_configured_quiet_hold_ms',
+ 'capture_segment_start_elapsed_ms',
+ 'capture_segment_stop_elapsed_ms',
+ 'capture_segment_last_accepted_motion_age_at_stop_ms',
+)
+def safe_capture_segment(manifest):
+ if any(k not in manifest for k in CAPTURE_TIMING_FIELDS):return {}
+ reason,quiet,start,stop,age=(manifest[k] for k in CAPTURE_TIMING_FIELDS)
+ if (not isinstance(reason,str) or not re.fullmatch(r"[a-z_]{1,32}",reason)
+     or any(type(n) is not int for n in (quiet,start,stop,age))
+     or not 0<=quiet<=60000 or not 0<=start<stop<2**63
+     or not 0<=age<=3000000):
+  return {}
+ return {k:manifest[k] for k in CAPTURE_TIMING_FIELDS}
+
 FACE_KEYS=set(('match_status time_ms person_id candidate_name cosine_similarity snapshot snapshot_size_bytes '
  'snapshot_sha256 face_crop_requires_manual_review face_crop_padded_context_only').split())
 TRACK_KEYS=set(('temporary_track_id id cross_recording_identity first_sample_ms last_sample_ms sample_count '
@@ -46,6 +67,7 @@ TRACK_KEYS=set(('temporary_track_id id cross_recording_identity first_sample_ms 
 
 def safe_metadata(manifest):
     result={k:v for k,v in manifest.items() if k in METADATA_KEYS}
+    result.update(safe_capture_segment(manifest))
     for key,allowed,maximum in [('face_candidates',FACE_KEYS,16),('anonymous_tracks',TRACK_KEYS,64)]:
         if key not in result:continue
         rows=result[key]
