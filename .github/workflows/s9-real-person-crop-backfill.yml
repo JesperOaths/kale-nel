@@ -49,11 +49,11 @@ jobs:
             assert expected in backfill,expected
           for expected in ('official','AAR_SHA','javac','d8','s9-crop-worker.jar'):
             assert expected.lower() in install.lower(),expected
-          for expected in ('visual_75_color_25','structural_70_visual_30',
-                           'PhoneOfflineSimilarity.compare','aligned_face_verified',
+          for expected in ('PhoneOfflineSimilarity.compare','aligned_face_verified',
                            'human_review_required','verified_same_person'):
             assert expected in ranker, expected
-          for expected in ('upper_hsv32','S9_REAL_APPEARANCE_RANKINGS_VERIFIED',
+          for expected in ('visual_75_color_25','structural_70_visual_30',
+                           'upper_hsv32','S9_REAL_APPEARANCE_RANKINGS_VERIFIED',
                            'ranking_computed_on','automatically_assigned_people'):
             assert expected in stage, expected
           for bad in ('am force-stop','pm install','pm uninstall','review/review',
