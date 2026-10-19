@@ -1,0 +1,80 @@
+name: Verify installed dual C720P S9+ video and JPEG regeneration watchdog V191
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-c720p-jpeg-index-regen-v191.py'
+      - 'ops/c720p/security-runtime/test-audit-c720p-jpeg-index-regen-v191.py'
+      - '.github/workflows/c720p-s9-jpeg-index-regeneration-v191.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-c720p-jpeg-index-regen-v191.py'
+      - 'ops/c720p/security-runtime/test-audit-c720p-jpeg-index-regen-v191.py'
+      - '.github/workflows/c720p-s9-jpeg-index-regeneration-v191.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-s9-jpeg-index-regeneration-v191
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Exercise synthetic index regeneration and duplicate refusal
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/audit-c720p-jpeg-index-regen-v191.py"
+          python3 "$d/test-audit-c720p-jpeg-index-regen-v191.py"
+          python3 "$d/test-deploy-c720p-s9-jpeg-pages-v187.py"
+  physical:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check active watchdog on synthetic HTML without invoking its apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          src=ops/c720p/security-runtime/audit-c720p-jpeg-index-regen-v191.py
+          sha="$(sha256sum "$src" | cut -d' ' -f1)"
+          stage="/tmp/c720p-jpeg-watchdog-v191-${GITHUB_SHA:0:13}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+          cmd="umask 077 && curl -fsSL --max-time 35 '$url' -o '$stage' && printf '%s  %s\\n' '$sha' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage' --run"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-jpeg-watchdog-v191-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-jpeg-watchdog-v191','diagnostic',:'cmd',220,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "C720P_JPEG_WATCHDOG_V191_JOB=$job"
+          for attempt in $(seq 1 70); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'C720P_JPEG_INDEX_REGEN_V191_VERIFIED' <<< "$output"
+              grep -q '"both_missing_restored": true' <<< "$output"
+              grep -q '"idempotent_with_both_present": true' <<< "$output"
+              grep -q '"duplicate_script_refused": true' <<< "$output"
+              grep -q '"live_legacy_html_script_parity": true' <<< "$output"
+              grep -q '"no_index_regenerated": true' <<< "$output"
+              grep -q '"native_4k_zero_drops": true' <<< "$output"
+              grep -q '"originals_retained": true' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Dual bridge read-only regeneration contract unverified";exit 1
