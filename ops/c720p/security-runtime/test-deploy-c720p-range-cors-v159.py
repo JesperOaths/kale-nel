@@ -42,6 +42,37 @@ class Tests(unittest.TestCase):
   blob=fixture().replace(b"if self.origin_ok()",b"if True")
   with self.assertRaisesRegex(RuntimeError,"authenticated_cors_source_contract_changed"):
    m.patch(blob,hashlib.sha256(blob).hexdigest())
+ def test_loopback_restart_waits_only_for_connection_refused(self):
+  import urllib.error
+  from unittest.mock import patch
+  transient=urllib.error.URLError(ConnectionRefusedError(111,"Connection refused"))
+  with patch.object(m,"origin_header",side_effect=[transient,transient,True]) as probe,patch.object(m.time,"sleep") as sleep:
+   self.assertTrue(m.wait_for_local_relay())
+   self.assertEqual(probe.call_count,3)
+   self.assertEqual(sleep.call_count,2)
+ def test_auth_header_failures_never_retry(self):
+  from unittest.mock import patch
+  with patch.object(m,"origin_header",side_effect=RuntimeError("existing_allowlisted_origin_not_preserved")) as probe,patch.object(m.time,"sleep") as sleep:
+   with self.assertRaisesRegex(RuntimeError,"existing_allowlisted_origin_not_preserved"):
+    m.wait_for_local_relay()
+   self.assertEqual(probe.call_count,1)
+   sleep.assert_not_called()
+ def test_other_network_failures_are_not_masked(self):
+  import urllib.error
+  from unittest.mock import patch
+  error=urllib.error.URLError(PermissionError("policy denied"))
+  with patch.object(m,"origin_header",side_effect=error),patch.object(m.time,"sleep") as sleep:
+   with self.assertRaises(urllib.error.URLError):m.wait_for_local_relay()
+   sleep.assert_not_called()
+ def test_wait_timeout_still_fails_closed(self):
+  import urllib.error
+  from unittest.mock import patch
+  error=urllib.error.URLError(ConnectionRefusedError(111,"refused"))
+  with patch.object(m,"origin_header",side_effect=error) as probe,patch.object(m.time,"sleep") as sleep:
+   with self.assertRaisesRegex(RuntimeError,"relay_listener_not_ready_after_restart"):
+    m.wait_for_local_relay()
+   self.assertEqual(probe.call_count,30)
+   self.assertEqual(sleep.call_count,29)
  def test_no_media_mutation_or_auth_changes_in_source(self):
   src=SRC.read_text()
   for banned in ("pm install","am force-stop","adb push","delete_original",
