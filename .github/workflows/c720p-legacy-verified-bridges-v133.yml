@@ -1,0 +1,89 @@
+name: C720P coordinated authenticated S9 legacy playback bridges V133
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/deploy-c720p-legacy-bridges-v133.py'
+      - 'ops/c720p/security-runtime/test-deploy-c720p-legacy-bridges-v133.py'
+      - '.github/workflows/c720p-legacy-verified-bridges-v133.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/deploy-c720p-legacy-bridges-v133.py'
+      - 'ops/c720p/security-runtime/test-deploy-c720p-legacy-bridges-v133.py'
+      - '.github/workflows/c720p-legacy-verified-bridges-v133.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-legacy-s9-player-and-index-v133
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test no-loss player and generator transaction
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/deploy-c720p-legacy-bridges-v133.py" "$d/patch-c720p-legacy-index-s9-v1.py" "$d/patch-c720p-legacy-s9-migrated-player-v1.py"
+          python3 "$d/test-deploy-c720p-legacy-bridges-v133.py"
+          python3 "$d/test-c720p-legacy-index-s9-v1.py"
+          python3 "$d/test-patch-c720p-legacy-s9-migrated-player-v1.py"
+          node --check "$d/c720p-migrated-index-playback-v1.js"
+  physical:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Deploy source-matched, backed-up legacy bridge only with healthy 4K
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          dir=ops/c720p/security-runtime
+          stage="/tmp/c720p-s9-legacy-v133-${GITHUB_SHA:0:13}"
+          script="$dir/deploy-c720p-legacy-bridges-v133.py"
+          proof="$(sha256sum "$script" | cut -d' ' -f1)"
+          cmd="mkdir -p '$stage'"
+          for part in deploy-c720p-legacy-bridges-v133.py patch-c720p-legacy-index-s9-v1.py patch-c720p-legacy-s9-migrated-player-v1.py c720p-migrated-index-playback-v1.js; do
+            file="$dir/$part"
+            digest="$(sha256sum "$file" | cut -d' ' -f1)"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+            cmd="$cmd && curl -fsSL --max-time 35 '$url' -o '$stage/$part' && printf '%s  %s\\n' '$digest' '$stage/$part' | sha256sum -c - >/dev/null"
+          done
+          args="--player '$stage/patch-c720p-legacy-s9-migrated-player-v1.py' --index '$stage/patch-c720p-legacy-index-s9-v1.py' --js '$stage/c720p-migrated-index-playback-v1.js'"
+          cmd="$cmd && /usr/bin/python3 '$stage/deploy-c720p-legacy-bridges-v133.py' $args && /usr/bin/python3 '$stage/deploy-c720p-legacy-bridges-v133.py' $args --apply"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-legacy-v133-${GITHUB_SHA:0:13}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-legacy-bridges-v133','deployment',:'cmd',520,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "C720P_LEGACY_BRIDGES_V133_JOB=$job"
+          for i in $(seq 1 165); do
+            result="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$result" == done* || "$result" == failed* || "$result" == error* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3600)"
+              echo "$output"
+              [[ "$result" == 'done|0' ]] || exit 1
+              grep -q 'C720P_LEGACY_BRIDGES_V133_PREFLIGHT' <<< "$output"
+              grep -q 'C720P_LEGACY_BRIDGES_V133_VERIFIED' <<< "$output"
+              grep -q '"safe_to_delete_c720p_mp4s": false' <<< "$output"
+              grep -q '"videos_modified": false' <<< "$output"
+              grep -q '"camera_apk_modified": false' <<< "$output"
+              grep -q '"user_reviews_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Timed out verifying guarded C720P legacy bridge activation";exit 1
