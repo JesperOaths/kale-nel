@@ -47,7 +47,7 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
     private final Path ledger;
     private final Path lockFile;
     private final byte[] key;
-    // Accept non-exportable AndroidKeyStore HMAC keys without calling getEncoded().
+    // AndroidKeyStore HMAC signer stays under OS-managed key ownership.
     private final javax.crypto.SecretKey nonExportableSigningKey;
     private boolean closed;
 
