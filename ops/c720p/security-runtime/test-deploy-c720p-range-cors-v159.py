@@ -112,7 +112,7 @@ class Tests(unittest.TestCase):
     "Access-Control-Allow-Origin','*'"):
    self.assertNotIn(banned,src)
   for marker in ("C720P_CONTENT_RANGE_CORS_V159_VERIFIED","OLD_SHA",
-      "def origin_header():","def browser():","browser_content_range_not_exposed",
+      "def origin_header(expose,expected_status=None):","def wait_for_local_relay(expected_status):","relay_authorization_status_changed_across_rollout","def browser():","browser_content_range_not_exposed",
       "atomic(TARGET,old,mode)","unit(\"restart\")",
       "local_c720p_mp4s_preserved","manual_reviews_modified"):
    self.assertIn(marker,src)
