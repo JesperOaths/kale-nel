@@ -61,15 +61,50 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"historical_v2_reference_missing"):
             m.choose_orphan(rows,baseline,
                  lambda key,kind:(key in paired if kind=="visual" else True))
-    def test_refuse_multiple_or_no_orphans(self):
+    def test_two_new_hsv_only_crops_recover_deterministically_one_per_window(self):
         rows=inventory();baseline=[x["key"] for x in rows[:57]]
-        with self.assertRaisesRegex(RuntimeError,"exactly_one_orphan"):
+        with self.assertRaisesRegex(RuntimeError,"no_pending_v40_histogram_only_crop"):
             m.choose_orphan(rows,baseline,lambda key,kind:True)
-        rows.append({"key":"a"*64,"clip":"motion_1700009999000.mp4",
-                     "crop_sha256":"b"*64,"source":"s9_sd","cohort":"v40"})
-        with self.assertRaisesRegex(RuntimeError,"exactly_one_orphan"):
-            m.choose_orphan(rows,baseline,lambda key,kind:(
-                key in baseline if kind=="visual" else True))
+        extra={"key":"a"*64,"clip":"motion_1700009999000.mp4",
+               "crop_sha256":"b"*64,"source":"s9_sd","cohort":"v40"}
+        rows.append(extra)
+        # First pass chooses the lower SHA key and does not attempt two crops.
+        chosen=m.choose_orphan(rows,baseline,lambda key,kind:(
+            key in baseline if kind=="visual" else True))
+        self.assertEqual(chosen["key"],rows[57]["key"])
+        # After the first real OSNet sidecar exists, the next window selects
+        # only the second pending crop, never an already-complete one.
+        paired=set(baseline+[chosen["key"]])
+        self.assertEqual(
+            m.choose_orphan(rows,baseline,
+                lambda key,kind:(key in paired if kind=="visual" else True))["key"],
+            extra["key"])
+    def test_missing_both_features_is_a_real_pending_v40_visual(self):
+        rows=inventory()
+        baseline=[x["key"] for x in rows[:57]]
+        # A newly extracted V40 JPEG has neither HSV32 nor OSNet yet.
+        chosen=m.choose_orphan(rows,baseline,
+            lambda key,kind:key in baseline)
+        self.assertEqual(chosen["key"],rows[57]["key"])
+        self.assertEqual(chosen["cohort"],"v40")
+        # No synthetic HSV32 should be claimed when visual is recovered.
+        body=P.read_text()
+        self.assertIn('"hsv32_completion_still_pending":not has_hsv',body)
+        self.assertIn('h.safe_visual(orphan["key"],orphan["crop_sha256"])',body)
+        self.assertIn('digest=rank.existing_sha(visual)',body)
+
+    def test_prefers_histogram_only_over_both_missing(self):
+        rows=inventory()
+        baseline=[x["key"] for x in rows[:57]]
+        # A lexically earlier V40 missing both must not block a later crop
+        # whose genuine HSV histogram is already complete.
+        later=dict(rows[57])
+        later["key"]="a"*64
+        rows.append(later)
+        def present(key,kind):
+            return key in baseline or (key==later["key"] and kind=="hsv")
+        self.assertEqual(m.choose_orphan(rows,baseline,present)["key"],later["key"])
+
     def test_refuse_approved_orphan_or_nonunique_crop(self):
         rows=inventory();rows[57]["cohort"]="approved_new"
         base=[x["key"] for x in rows[:57]]
@@ -135,6 +170,26 @@ class Tests(unittest.TestCase):
         self.assertIn("github.event_name == 'schedule'",content)
         self.assertIn("github.event_name == 'push'",content)
         self.assertIn("S9_V3_ORPHAN_OSNET_DEFERRED",content)
+
+    def test_concurrent_archive_worker_is_a_safe_deferral(self):
+        import tempfile
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory(prefix="s9-busy-v3-") as tmp:
+            lock=m.LOCK
+            m.LOCK=Path(tmp)/"archive.lock"
+            try:
+                with patch.object(m.shutil,"disk_usage",
+                         return_value=SimpleNamespace(free=3_000_000_000)), \
+                     patch.object(m.fcntl,"flock",
+                         side_effect=BlockingIOError()), \
+                     patch.object(m,"healthy") as camera:
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "shared_archive_worker_busy"):
+                        m.run(apply=True)
+                    camera.assert_not_called()
+            finally:
+                m.LOCK=lock
+        self.assertIn('"shared_archive_worker_busy"',P.read_text())
 
     def test_script_preserves_manual_evidence_and_no_auto_assign(self):
         src=P.read_text()
