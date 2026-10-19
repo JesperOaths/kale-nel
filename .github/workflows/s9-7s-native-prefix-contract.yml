@@ -1,0 +1,33 @@
+name: S9 native 7s preroll and 10s quiet tail contract
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/Encoded4KRing.java'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java'
+      - 'ops/c720p/s9-native-security/tests/Encoded4KRingTest.java'
+      - 'ops/c720p/s9-native-security/tests/test-7s-prefix-and-tail-evidence.py'
+      - '.github/workflows/s9-7s-native-prefix-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/Encoded4KRing.java'
+      - 'ops/c720p/s9-native-security/tests/Encoded4KRingTest.java'
+permissions:
+  contents: read
+jobs:
+  ring-and-sidecar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compile and simulate native 7s ring and validate tail evidence fields
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/tests/test-7s-prefix-and-tail-evidence.py
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          javac -d "$work" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/Encoded4KRing.java \
+            ops/c720p/s9-native-security/tests/Encoded4KRingTest.java
+          java -cp "$work" nl.kalenel.s9security.Encoded4KRingTest
+          echo S9_NATIVE_7S_PREFIX_AND_10S_TAIL_EVIDENCE_PASS
