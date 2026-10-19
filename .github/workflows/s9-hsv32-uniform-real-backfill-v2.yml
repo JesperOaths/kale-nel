@@ -1,0 +1,26 @@
+name: Real S9 old/new person crop HSV32 schema audit
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-hsv32-uniform-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-hsv32-uniform-v2.py'
+      - '.github/workflows/s9-hsv32-uniform-real-backfill-v2.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-hsv32-uniform-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-hsv32-uniform-v2.py'
+      - '.github/workflows/s9-hsv32-uniform-real-backfill-v2.yml'
+permissions:
+  contents: read
+jobs:
+  uniform-person-crops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify all cohort selection and integrity guards without private media
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$root/backfill-s9-hsv32-uniform-v2.py"
+          python3 "$root/test-s9-hsv32-uniform-v2.py"
