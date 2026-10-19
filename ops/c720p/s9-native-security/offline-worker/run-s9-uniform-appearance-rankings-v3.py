@@ -102,11 +102,24 @@ def compile_ranker(base):
     exec_local(["d8","--min-api","28","--output",str(dex),
                 *[str(p) for p in compiled]],100)
     jar=base/"s9-ranking-v3-worker.jar"
-    with zipfile.ZipFile(jar,"w",zipfile.ZIP_DEFLATED) as archive:
-        archive.write(dex/"classes.dex","classes.dex")
+    # Deterministic archive to permit repeatable append-only snapshot staging.
+    info=zipfile.ZipInfo("classes.dex",date_time=(1980,1,1,0,0,0))
+    info.compress_type=zipfile.ZIP_DEFLATED
+    info.external_attr=(0o600<<16)
+    with zipfile.ZipFile(jar,"w") as archive:
+        archive.writestr(info,(dex/"classes.dex").read_bytes())
     if not 1000<jar.stat().st_size<300000:
         raise RuntimeError("Unexpected v2 DEX size")
     return jar
+
+
+def phone_temperature_c():
+    response=phone("shell","dumpsys battery",timeout=18)
+    match=re.search(r"temperature:\s*(\d+)",response)
+    if match is None:raise RuntimeError("S9+ battery temperature missing")
+    measured=int(match.group(1))/10
+    if measured>42:raise RuntimeError("S9+ hotter than 42 C; no ranking run")
+    return measured
 
 
 def existing_sha(path):
@@ -169,6 +182,7 @@ def run():
     camera=phone("shell","pidof nl.kalenel.s9security",timeout=17)
     if not re.fullmatch(r"[0-9 ]+",camera):
         raise RuntimeError("Camera2 PID baseline unavailable")
+    thermal_initial=phone_temperature_c()
     old={name:existing_sha(ROOT+"/"+name) for name in
          ("rank-input-v1.jsonl","rankings-v1.json",
           "rank-input-v2.jsonl","rankings-v2.json")}
@@ -233,6 +247,7 @@ def run():
             num+=1
     if phone("shell","pidof nl.kalenel.s9security",timeout=17)!=camera:
         raise RuntimeError("Live camera PID changed")
+    thermal_after=phone_temperature_c()
     if any(existing_sha(ROOT+"/"+k)!=v for k,v in old.items()):
         raise RuntimeError("Existing v1/v2 ranked indices changed during v3 run")
     write_private_map(mapping,corpus_id)
@@ -242,6 +257,8 @@ def run():
         "verified_uniform_crop_records":len(rows),
         "appearance_comparisons":num,
         "phone_rankings_sha256":existing_sha(output_remote),
+        "thermal_initial_c":thermal_initial,
+        "thermal_after_c":thermal_after,
         "private_hub_map_sha256":digest(mapping),
         "v1_v2_indices_sha256_unchanged":True,
         "camera_apk_changed":False,"recordings_changed":False,
