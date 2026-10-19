@@ -58,7 +58,8 @@ def patched(live,old_main,new_main):
  out=live
  for start,end in (
    (b"function startVideo(item){",b"// Step 3:"),
-   (b"async function searchClothingMatches(",b"function renderClothing()")):
+   (b"async function searchClothingMatches(",b"function renderClothing()"),
+   (b"function renderClothing(){",b"function renderFolder()")):
   old=section(old_main,start,end)
   new=section(new_main,start,end)
   if out.count(old)!=1 or old==new:raise RuntimeError("unexpected_people_patch_anchor")
