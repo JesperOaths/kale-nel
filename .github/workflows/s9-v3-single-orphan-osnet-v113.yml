@@ -1,9 +1,9 @@
 name: S9 V3 genuine single missing OSNet recovery V113
 on:
-  # Eight-minute stagger after six scheduled HSV32 passes, before V3 ranks.
+  # Start each cool window with one authentic source-verified OSNet crop.
   # Existing shared lock + cool Camera2 ring gate refuse overlapping work.
   schedule:
-    - cron: '19 1,5,9,13,17,21 * * *'
+    - cron: '5 1,5,9,13,17,21 * * *'
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-single-orphan-osnet-v113.py'
