@@ -38,7 +38,11 @@ FILE=re.compile(r"motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg"
 SHA=re.compile(r"[a-f0-9]{64}")
 def digest(blob):return hashlib.sha256(blob).hexdigest()
 def call(argv,seconds=90):
- p=subprocess.run(argv,capture_output=True,text=True,timeout=seconds)
+ try:p=subprocess.run(argv,capture_output=True,text=True,timeout=seconds)
+ except subprocess.TimeoutExpired:
+  # TimeoutExpired embeds command arguments, including private JPEG names.
+  # Never propagate those arguments to management logs or mark inference valid.
+  raise RuntimeError("phone_or_build_operation_timeout_no_private_detail") from None
  if p.returncode:
   # An Android app_process shell launch returning 137 was observed in a real
   # one-snapshot smoke. Treat it as a distinct hard failure; it does not prove
