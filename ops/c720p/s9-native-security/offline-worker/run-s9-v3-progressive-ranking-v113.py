@@ -14,8 +14,8 @@ import subprocess
 import sys
 
 HERE=Path(__file__).resolve().parent
-HASH=re.compile(r"[a-f0-9]{64}\\Z")
-CORPUS=re.compile(r"[a-f0-9]{16}\\Z")
+HASH=re.compile(r"[a-f0-9]{64}")
+CORPUS=re.compile(r"[a-f0-9]{16}")
 ALLOW_DEFERRALS={
  "capture_too_warm_for_ranker":"capture_warm",
  "capture_not_idle_4k_ring_healthy":"capture_not_ready",
@@ -33,7 +33,7 @@ def corpus_for(rows,ranker):
  entries=[{"key":x["key"],"aligned_face_verified":False,
            "visual_sidecar_sha256":x["visual_sidecar_sha256"],
            "hsv_sidecar_sha256":x["hsv_sidecar_sha256"]} for x in rows]
- data="".join(json.dumps(e,separators=(",",":"))+"\\n" for e in entries).encode()
+ data="".join(json.dumps(e,separators=(",",":"))+chr(10) for e in entries).encode()
  return ranker.digest(data)[:16]
 
 def read_pointer(path):
