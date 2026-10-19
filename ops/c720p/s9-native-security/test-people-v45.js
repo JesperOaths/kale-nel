@@ -163,6 +163,17 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(el('peopleReviewNow').handlers.click,'Review action must remain accessible without a duplicate recording list');
  let keep;
  el('openReview').handlers.click();for(let i=0;i<4;i++)await flush();
+ const unassignedVideo=scan(el('reviewGrid').children.find(x=>x.dataset.source==='sd'),'▶ Play');
+ assert(unassignedVideo,'Unassigned video must expose original player');
+ unassignedVideo.handlers.click();
+ for(let i=0;i<3;i++)await flush();
+ assert.equal(el('viewer').open,true,'Original player opens from review queue');
+ assert.equal(el('viewerFile').hidden,false,'Filing control visible inside player');
+ assert.equal(el('viewerReturn').hidden,true,'Return control hidden on unassigned original');
+ el('viewerFile').handlers.click();
+ assert.equal(el('approvalDialog').open,true,'File from video opens actionable confirmation');
+ assert.equal(el('viewer').open,false,'Player closes before confirmation');
+ el('approvalDialog').close();
  keep=scan(el('reviewGrid').children.find(x=>x.dataset.source==='sd'),'✓ File under person');
  assert(keep,'Primary SD review action');
  keep.handlers.click();
@@ -229,6 +240,12 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  // GET fails. Never invite a second accidental assignment in this case.
  const driveBefore=el('reviewGrid').children.find(x=>x.dataset.clip===driveClip);
  assert(driveBefore,'Drive original must be visible in the unassigned queue');
+ scan(driveBefore,'▶ Play').handlers.click();for(let i=0;i<3;i++)await flush();
+ assert.equal(el('viewerFile').hidden,false,'Unassigned historical Drive video may be filed in player');
+ el('viewerFile').handlers.click();
+ assert.equal(el('approvalDialog').open,true);
+ assert.equal(el('approvalClip').textContent.includes('Recording'),true);
+ el('approvalDialog').close();
  const driveKeep=scan(driveBefore,'✓ File under person');
  assert(driveKeep,'Verified Drive originals must have the filing action');
  driveKeep.handlers.click();el('approvalFolder').value='G123';
@@ -251,6 +268,10 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  el('savedList').children[0].handlers.click();for(let i=0;i<5;i++)await flush();
  const driveInPerson=el('folderGrid').children.find(x=>x.dataset.clip===driveClip);
  assert(driveInPerson,'Drive original must appear in the chosen person');
+ scan(driveInPerson,'▶ Play').handlers.click();for(let i=0;i<3;i++)await flush();
+ assert.equal(el('viewerFile').hidden,false,'Assigned Drive original can be refiled');
+ assert.equal(el('viewerReturn').hidden,false,'Assigned Drive original has a return action in modal');
+ el('closeVideo').handlers.click();
  const returnDrive=scan(driveInPerson,'↩ Return to review queue');
  assert(returnDrive,'Person folder must allow returning an archived Drive original');
  returnDrive.handlers.click();for(let i=0;i<6;i++)await flush();
