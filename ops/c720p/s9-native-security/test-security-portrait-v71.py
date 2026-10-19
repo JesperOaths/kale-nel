@@ -21,6 +21,16 @@ for start,end in (
 ):
  assert v.b.block(patched,start,end)==v.b.block(new,start,end),(start,end)
 assert patched.count('Use as portrait')>=1
+# Preserve unrelated live additions inside the portrait function, while
+# applying the exact source-verified portrait policy changes.
+notice="notification('Person portrait selected on this browser. Review decisions were not changed.');"
+fixture=old.replace(notice,"// kept existing kiosk feature line\\n "+notice,1)
+patched_extra=v.patch_js(fixture,old,new).decode()
+assert '// kept existing kiosk feature line' in patched_extra
+assert "if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;" in patched_extra
+assert "x.face.snapshot_on_s9!==false)||null;" in patched_extra
+assert "notification('Manually selected person portrait" in patched_extra
+
 
 assert 'assignedFolders(row).includes(id)' in new
 assert 'Unverified crop' in new and 'Use as portrait' in new
