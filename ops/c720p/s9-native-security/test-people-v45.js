@@ -12,7 +12,7 @@ assert(js.includes('function scanApprovedFolders('),'Full folder assignment scan
 assert(js.includes("'/new/api/drive-saved'"),'Historical Drive catalog must be included');
 assert(js.includes("'/new/api/s9-manual-recording-links'"),'Use isolated authenticated assignment route');
 assert(js.includes('function queueVisibleFace('),'Face previews must be loaded only when visible');
-assert(js.includes('credibleFaceCrop(')&&js.includes('Change cover photo'),'Only qualified faces can be portraits; optional override remains');
+assert(js.includes('credibleFaceCrop(')&&js.includes('Use as portrait'),'Qualified auto-portraits remain gated; explicit human crop selection must work');
 assert(!/\.innerHTML\s*=/.test(js));
 assert(!js.includes("groupRows($('clothingList'))"),'Legacy provisional groups cannot masquerade as scored outfit matches');
 assert(!/id="unassignedFolder"|Clothing appearances grouped into folders/.test(html));
@@ -271,8 +271,12 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert(fetches.some(x=>x.includes('folder=G123')&&x.includes('tab=approved')));
  const folderGrid=el('folderGrid');
  assert(folderGrid.children.length,'Saved folder must show original recording rows');
- assert.equal(el('folderFaces').hidden,true,'Unverified context crops must not masquerade as faces');
- assert.equal(el('folderFaceGrid').children.length,0);
+ assert.equal(el('folderFaces').hidden,false,
+  'Real candidate crops from approved clips must be available for explicit human selection');
+ assert.equal(el('folderFaceGrid').children.length,2,
+  'Do not discard both manual-review crops just because automatic qualification is incomplete');
+ assert(scan(el('folderFaceGrid'),'Use as portrait'),
+  'A person can deliberately choose their cover crop, including when automatic face verification is pending');
  assert(!scan(folderGrid,'View face candidate 1'),'Do not surface scenery as a verified face');
  assert.equal(el('savedList').children[0].children[0].children[0].tagName,'SPAN',
   'Saved folder portrait must be a neutral initial, not a crop of bicycles');
