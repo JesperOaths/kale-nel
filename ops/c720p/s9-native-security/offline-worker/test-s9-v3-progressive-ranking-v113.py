@@ -73,7 +73,7 @@ class Progressive(unittest.TestCase):
   import subprocess
   marker="S9_V3_RANKER_DEFERRED "+json.dumps({
    "reason":"shared_archive_worker_busy","rankings_published":False,
-   "automatic_person_assignments":0})+"\\n"
+   "automatic_person_assignments":0})+"\n"
   fake=subprocess.CompletedProcess(["python","ranker"],75,marker,
        "private/source/motion_1999999999999.mp4")
   with patch.object(p.subprocess,"run",return_value=fake):
@@ -90,15 +90,15 @@ class Progressive(unittest.TestCase):
 
  def test_unknown_nonzero_ranker_results_still_fail_closed(self):
   import subprocess
-  for code,marker in ((75,"S9_V3_RANKER_DEFERRED {}\\n"),
+  for code,marker in ((75,"S9_V3_RANKER_DEFERRED {}\n"),
                       (1,"S9_V3_RANKER_DEFERRED "+json.dumps({
                        "reason":"shared_archive_worker_busy",
                        "rankings_published":False,
-                       "automatic_person_assignments":0})+"\\n"),
+                       "automatic_person_assignments":0})+"\n"),
                       (75,"S9_V3_RANKER_DEFERRED "+json.dumps({
                        "reason":"other",
                        "rankings_published":False,
-                       "automatic_person_assignments":0})+"\\n")):
+                       "automatic_person_assignments":0})+"\n")):
    with self.subTest(code=code),patch.object(
      p.subprocess,"run",return_value=subprocess.CompletedProcess(
       ["python"],code,marker,"untrusted private detail")):
