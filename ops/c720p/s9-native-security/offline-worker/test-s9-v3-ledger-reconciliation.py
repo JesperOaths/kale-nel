@@ -34,6 +34,8 @@ class Phone:
             if self.offline:return proc(code=1,error="error: device offline")
             if path in self.missing:return proc(code=1)
             return proc()
+        if args[0]=="shell" and len(args)>1 and str(args[1]).startswith("sha256sum "):
+            return proc(output="b"*64+"  "+args[1].split("sha256sum ",1)[1])
         if args[0]=="exec-out":
             return proc(output=json.dumps({"visual_embedding":[1.0]+[0.0]*511}))
         raise AssertionError("Unexpected test ADB command "+str(args))
@@ -69,6 +71,13 @@ class LedgerAudit(unittest.TestCase):
         self.assertEqual(m.reviewed_ledger()[clip],"stale_feature")
         self.assertTrue(m.AUDIT.is_file())
         self.assertEqual(m.reconcile_ledger(ctrl,previous)["checked"],0)
+
+    def test_roi_missing_is_requeued_for_deterministic_worker_recovery(self):
+        clip=src(3)
+        key=hashlib.sha256(("s9_sd\x00"+clip).encode()).hexdigest()
+        expected=Phone.ROOT+"/inbox/"+key+".jpg"
+        ctrl=Phone(missing={expected})
+        self.assertEqual(m.check_existing_feature(ctrl,clip),"missing_roi")
 
     def test_transport_failure_is_not_misreported_as_loss(self):
         clip=src(2)
