@@ -1,0 +1,39 @@
+name: S9+ Security V3 appearance UI mode isolated DOM safety
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-s9-appearance-v3-ui.py'
+      - 'ops/c720p/s9-native-security/test-s9-appearance-v3-ui.py'
+      - '.github/workflows/s9-appearance-v3-ui.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-s9-appearance-v3-ui.py'
+      - 'ops/c720p/s9-native-security/test-s9-appearance-v3-ui.py'
+      - '.github/workflows/s9-appearance-v3-ui.yml'
+permissions:
+  contents: read
+jobs:
+  source-preserving-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test DOM patches and both V1 and HSV backward compatibility
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-s9-appearance-v3-ui.py
+          python3 ops/c720p/s9-native-security/test-s9-appearance-v3-ui.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import importlib.util,re,subprocess,tempfile
+          root=Path('ops/c720p/s9-native-security')
+          spec=importlib.util.spec_from_file_location('test_v3_script',root/'deploy-s9-appearance-v3-ui.py')
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          html,_=m.patch((root/'security-face-folders-v22.html').read_bytes())
+          script=re.search(rb'<script id="security-face-folders-v22">(.*?)</script>',html,re.S)
+          assert script,'Security inline JS not found'
+          with tempfile.TemporaryDirectory(prefix='security-v3-js-') as d:
+              js=Path(d)/'security.js'
+              js.write_bytes(script.group(1))
+              subprocess.run(['node','--check',str(js)],check=True)
+          PY
