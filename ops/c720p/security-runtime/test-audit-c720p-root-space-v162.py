@@ -62,6 +62,7 @@ class Test(unittest.TestCase):
        patch.object(m.shutil,"disk_usage",return_value=usage), \
        patch.object(m.os,"getloadavg",return_value=(0.2,0.1,0.1)), \
        patch.object(m,"TARGETS",{"cache":"/tmp","docker":"/var/lib/docker"}), \
+       patch.object(m,"docker_summary",return_value={"status":"unavailable"}), \
        patch.object(m,"size",return_value={"status":"measured","mib":123.4}) as scanner:
    report=m.audit()
   self.assertEqual(scanner.call_count,2)
@@ -76,4 +77,41 @@ class Test(unittest.TestCase):
    self.assertNotIn(banned,s)
   self.assertIn("timeout=MAX_SCAN_S",s)
   self.assertIn('["du","-sx","-B1","--",str(target)]',s)
+ def test_docker_summary_no_image_or_volume_names(self):
+  import json
+  lines=[
+   {"Type":"Images","TotalCount":10,"Active":4,"Size":"1.1GB","Reclaimable":"200MB (18%)","PrivateImageName":"secret"},
+   {"Type":"Containers","TotalCount":2,"Active":2,"Size":"12MB","Reclaimable":"0B"},
+   {"Type":"Build Cache","TotalCount":14,"Active":0,"Size":"600MB","Reclaimable":"580MB"},
+  ]
+  output="\n".join(json.dumps(line) for line in lines)+"\n"
+  with patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0,stdout=output)) as run:
+   data=m.docker_summary()
+  self.assertEqual(data["status"],"measured")
+  self.assertTrue(data["reported_reclaimable_is_not_deletion_approval"])
+  self.assertEqual(data["categories"]["build_cache"]["size_display"],"600MB")
+  self.assertEqual(data["categories"]["images"]["active_count"],4)
+  self.assertNotIn("secret",str(data))
+  self.assertEqual(run.call_args.args[0],["docker","system","df","--format","{{json .}}"])
+
+ def test_docker_unavailable_fail_closed(self):
+  for value in (SimpleNamespace(returncode=1,stdout="unauthorized"),
+                SimpleNamespace(returncode=0,stdout="malformed json\n")):
+   with patch.object(m.subprocess,"run",return_value=value):
+    self.assertIn(m.docker_summary()["status"],("unavailable","unrecognized_output"))
+  with patch.object(m.subprocess,"run",side_effect=m.subprocess.TimeoutExpired(["docker"],12)):
+   self.assertEqual(m.docker_summary()["status"],"timeout")
+
+ def test_privileged_root_reservation_is_not_reclaimable_cache(self):
+  healthy={"continuous_4k_dropped_output_frames":0,"temperature_c":32.0}
+  usage=SimpleNamespace(total=10000*4096,used=8500*4096,free=700*4096)
+  blocks=SimpleNamespace(f_bfree=1500,f_bavail=700,f_frsize=4096)
+  with patch.object(m,"capture",return_value=healthy), \
+       patch.object(m.shutil,"disk_usage",return_value=usage), \
+       patch.object(m.os,"statvfs",return_value=blocks), \
+       patch.object(m.os,"getloadavg",return_value=(0.1,0.1,0.1)), \
+       patch.object(m,"TARGETS",{}),patch.object(m,"docker_summary",return_value={"status":"unavailable"}):
+   report=m.audit()
+  self.assertAlmostEqual(report["root_not_available_to_unprivileged_mib"],3.1,places=1)
+  self.assertFalse(report["files_deleted"])
 if __name__=="__main__":unittest.main(verbosity=2)
