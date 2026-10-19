@@ -51,6 +51,12 @@ class Tests(unittest.TestCase):
    doc["installed"]=True
    f.write_text(json.dumps(doc))
    self.assertTrue(m.verified_new_rollout(f))
+ def test_only_post_install_clips_can_certify_timing(self):
+  source=catalog(clip(),clip(),clip())
+  self.assertFalse(m.assess(source,after_rollout_ms=1792000010003)["complete"])
+  newer=m.assess(source,after_rollout_ms=1792000000000)
+  self.assertTrue(newer["complete"])
+  self.assertEqual(newer["pre_upgrade_excluded"],0)
  def test_no_media_or_review_write_operations(self):
   src=p.read_text()
   for token in ("adb ","ffmpeg","MediaCodec","shutil.rmtree","--apply","sudo ","video.write("):
