@@ -77,7 +77,8 @@ final class PhonePreviewEncoder {
     throw new IOException("preview_output_path");
    File verified=new File(copies,basename+".verified.json");
    if(target.exists()||verified.exists())throw new IOException("preview_output_already_exists");
-   if(cacheBytes(copies)>240L*1024*1024)
+   reapExpired(copies,gate);
+   if(cacheBytes(copies)+MAX_DERIVATIVE>300L*1024*1024)
     throw new IOException("preview_cache_budget_exceeded");
    temporary=File.createTempFile(".preview-",".mp4.tmp",copies);
    int frames=encode(original,temporary,width,vertical,gate);
@@ -110,6 +111,38 @@ final class PhonePreviewEncoder {
    if(temporary!=null&&temporary.exists())temporary.delete();
    BUSY.set(false);
   }
+ }
+
+ /** TTL applies only to independently regenerated preview MP4s and their
+  * completion sidecars. Original source media and original sidecars stay in
+  * the parent Security4K directory and cannot match this allowlist.
+  */
+ static int reapExpired(File root,Gate gate){
+  File[] outputs=root.listFiles((dir,name)->name.matches(
+    "motion_[0-9]{13}[.]mp4[.](?:360p|480p)[.]mp4"));
+  if(outputs==null)return 0;
+  int removed=0;
+  long now=System.currentTimeMillis();
+  for(File file:outputs){
+   if(removed>=12||!gate.canContinue())break;
+   try{
+    if(!file.isFile()||Files.isSymbolicLink(file.toPath())||
+       !file.getCanonicalFile().getParentFile().equals(root.getCanonicalFile()))
+     continue;
+    long age=now-file.lastModified();
+    if(age<=48L*60*60*1000||age>365L*24*60*60*1000)continue;
+    File manifest=new File(root,file.getName()+".verified.json");
+    if(!manifest.isFile()||Files.isSymbolicLink(manifest.toPath())||
+       !manifest.getCanonicalFile().getParentFile().equals(root.getCanonicalFile()))
+     continue;
+    // Delete only both regenerable products. No original files or user labels.
+    if(file.delete()){
+     manifest.delete();
+     removed++;
+    }
+   }catch(IOException ignored){}
+  }
+  return removed;
  }
 
  private static long cacheBytes(File root){
