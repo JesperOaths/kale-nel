@@ -207,12 +207,19 @@ def main():
     parser.add_argument("--write",action="store_true")
     parser.add_argument("--include-unreviewed",action="store_true",
         help="V3-only: include provenance-verified, unassigned archive crops")
+    parser.add_argument("--missing-only",action="store_true",
+        help="Only compute absent uniform HSV32 sidecars (for bounded V3 runs)")
     parser.add_argument("--offset",type=int,default=0)
     parser.add_argument("--limit",type=int,default=5)
     opts=parser.parse_args()
     if opts.offset<0 or not 1<=opts.limit<=10:
         raise ValueError("Only small v2 backfill batches accepted")
     catalog=inventory(include_unreviewed=opts.include_unreviewed)
+    if opts.missing_only:
+        if not opts.include_unreviewed or opts.offset!=0:
+            raise RuntimeError("Missing-only is reserved for V3 archive mode at offset zero")
+        catalog=[r for r in catalog if not remote_exists(
+            ROOT+"/features/"+r["key"]+"-hsv-v2.json")]
     chosen=catalog[opts.offset:opts.offset+opts.limit]
     if not opts.write:
         print("S9_HSV32_V2_BACKFILL_DRY_RUN "+json.dumps({
@@ -220,7 +227,8 @@ def main():
             "cohorts":dict(Counter(r["cohort"] for r in catalog)),
             "selected":len(chosen),"offset":opts.offset,
             "histograms_generated":0,"v1_rankings_changed":False,
-            "include_unreviewed":opts.include_unreviewed}),flush=True)
+            "include_unreviewed":opts.include_unreviewed,
+            "missing_only":opts.missing_only}),flush=True)
         return
     initial=adb("shell","pidof nl.kalenel.s9security",timeout=20).stdout.strip()
     if not re.fullmatch(r"[0-9 ]+",initial):
@@ -242,6 +250,7 @@ def main():
     print("S9_HSV32_V2_BACKFILL_VERIFIED "+json.dumps({
         "selected":len(chosen),"offset":opts.offset,"counts":dict(summary),
         "phone_battery_initial_c":int(m.group(1))/10,
+        "missing_only":opts.missing_only,
         "v1_rankings_changed":False,"camera_apk_modified":False,
         "recordings_modified":False,"human_reviews_modified":False}),flush=True)
     if any(x.startswith("failed_") for x in summary):
