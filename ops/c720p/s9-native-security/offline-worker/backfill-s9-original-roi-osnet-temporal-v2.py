@@ -106,18 +106,38 @@ def approved_names():
     return assigned
 
 
+def eligible_archive_clip(record,mode,isapproved):
+    """Screen archived originals without trusting a negative old detector pass.
+
+    An old zero/unknown person count is *not* proof of no person. The separate
+    eight-frame phone detector remains the only authority for accepting an
+    actual crop, and never treats known multi-person scenes as one person.
+    """
+    if not isinstance(record,dict):return False
+    count=record.get("person_count")
+    multiple=record.get("frames_with_distinct_multiple_person_boxes",0)
+    if type(multiple) is not int or multiple<0:return False
+    if multiple>0 or type(count) is bool:return False
+    if count is not None and (type(count) is not int or count<0 or count>1):
+        return False
+    if mode=="approved":return isapproved
+    if mode=="person":return count==1
+    if mode in ("all","archive"):return count is None or count in (0,1)
+    raise ValueError("Unknown archive scan mode")
+
+
 def candidates(events,approved,mode):
     records=[]
     for clip,record in events.items():
         isapproved=clip in approved
-        if mode=="approved" and not isapproved:continue
-        if mode=="person" and get_person_count(record)!=1:continue
-        if (get_person_count(record)!=1 or
-            (record.get("frames_with_distinct_multiple_person_boxes") or 0)>0):
-            continue
-        records.append((not isapproved,clip,record))
-    records.sort(key=lambda x:(x[0],x[1]))
-    return records
+        if not eligible_archive_clip(record,mode,isapproved):continue
+        # Approved references first; earlier positive person evidence second;
+        # previously missed/unknown originals last. Every candidate still
+        # goes through all standalone SSD, crop and provenance acceptance.
+        count=get_person_count(record)
+        records.append((not isapproved,count!=1,clip,record))
+    records.sort(key=lambda x:(x[0],x[1],x[2]))
+    return [(unapproved,clip,record) for unapproved,_,clip,record in records]
 
 
 def readiness():
@@ -240,7 +260,7 @@ def compute_one(clip):
 def main():
     opts=argparse.ArgumentParser()
     opts.add_argument("--apply",action="store_true")
-    opts.add_argument("--mode",choices=("approved","person","all"),default="approved")
+    opts.add_argument("--mode",choices=("approved","person","all","archive"),default="approved")
     opts.add_argument("--limit",type=int,default=1)
     opts.add_argument("--offset",type=int,default=0)
     args=opts.parse_args()
@@ -255,6 +275,9 @@ def main():
           "primary_originals":len(events),"approved_originals":len(approved),
           "eligible_for_mode":len(selected),"selected_count":len(current),
           "mode":args.mode,"vectors_written":0,
+          "archive_zero_detection_eligible":sum(
+              get_person_count(record)==0 for _,_,record in selected),
+          "unassigned_only_recovery":args.mode in ("all","archive"),
           "camera_or_review_modified":False}),flush=True)
         return
     camera,temp=readiness()
@@ -275,6 +298,7 @@ def main():
         raise RuntimeError("One or more saved originals disappeared")
     print("S9_TEMPORAL_FALLBACK_ROI_OSNET_BACKFILL_BATCH "+json.dumps({
        "eligible":len(selected),"offset":args.offset,
+       "candidate_selection":"prior_approved_then_positive_then_missing_or_zero",
        "attempted":sum(counts.values()),"counts":counts,
        "phone_temp_initial_c":temp,
        "phone_temp_max_checked_c":max(temperatures),
