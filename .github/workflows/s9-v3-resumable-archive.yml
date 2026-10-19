@@ -1,0 +1,38 @@
+name: S9 V3 resumable archive batches and thermally bounded staging
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-resumable-archive.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-hsv32-uniform-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-resumable-archive.py'
+      - '.github/workflows/s9-v3-resumable-archive.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-resumable-archive.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-original-roi-osnet-temporal-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-s9-hsv32-uniform-v2.py'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-resumable-archive.py'
+      - '.github/workflows/s9-v3-resumable-archive.yml'
+permissions:
+  contents: read
+jobs:
+  source-only-safe-backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify bounded source-specific resume guards and V3 record preparation
+        shell: bash
+        run: |
+          set -euo pipefail
+          p=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$p/run-s9-v3-resumable-archive.py" \
+              "$p/backfill-s9-original-roi-osnet-temporal-v2.py" \
+              "$p/backfill-s9-hsv32-uniform-v2.py" \
+              "$p/run-s9-uniform-appearance-rankings-v3.py"
+          python3 "$p/test-s9-v3-resumable-archive.py"
+          python3 "$p/test-s9-roi-temporal-fallback-v2.py"
+          python3 "$p/test-s9-v3-archive-inventory.py"

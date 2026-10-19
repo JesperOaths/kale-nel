@@ -257,12 +257,21 @@ def compute_one(clip):
     return "new_real_512d_vector"
 
 
+def verify_expected_clip(current,expected):
+    if not expected:return
+    if (not CLIP.fullmatch(expected) or len(current)!=1 or
+        current[0][1]!=expected):
+        raise RuntimeError("Archive catalog reordered during source-specific run")
+
+
 def main():
     opts=argparse.ArgumentParser()
     opts.add_argument("--apply",action="store_true")
     opts.add_argument("--mode",choices=("approved","person","all","archive"),default="approved")
     opts.add_argument("--limit",type=int,default=1)
     opts.add_argument("--offset",type=int,default=0)
+    opts.add_argument("--expected-clip",default="",
+        help="Fail closed if a growing archive changed the offset target")
     args=opts.parse_args()
     if args.offset<0 or not 1<=args.limit<=5:
         raise RuntimeError("Only bounded batches of up to 5 originals")
@@ -270,6 +279,7 @@ def main():
     approved=approved_names()
     selected=candidates(events,approved,args.mode)
     current=selected[args.offset:args.offset+args.limit]
+    verify_expected_clip(current,args.expected_clip)
     if not args.apply:
         print("S9_TEMPORAL_FALLBACK_ROI_OSNET_BACKFILL_DRY_RUN "+json.dumps({
           "primary_originals":len(events),"approved_originals":len(approved),

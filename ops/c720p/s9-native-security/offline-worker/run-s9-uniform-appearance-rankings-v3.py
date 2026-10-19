@@ -103,7 +103,7 @@ def compile_ranker(base):
     if len(compiled)<3:raise RuntimeError("Missing phone ranking comparator classes")
     exec_local(["d8","--min-api","28","--output",str(dex),
                 *[str(p) for p in compiled]],100)
-    jar=base/"s9-ranking-v3-worker.jar"
+    jar=base/"s9-ranking-v3-400-worker.jar"
     # Deterministic archive to permit repeatable append-only snapshot staging.
     info=zipfile.ZipInfo("classes.dex",date_time=(1980,1,1,0,0,0))
     info.compress_type=zipfile.ZIP_DEFLATED
@@ -270,10 +270,10 @@ def run():
         mapping=(json.dumps(private_map,sort_keys=True,separators=(",",":"))+"\n").encode()
         input_remote=ROOT+"/rank-input-v3-"+corpus_id+".jsonl"
         output_remote=ROOT+"/rankings-v3-"+corpus_id+".json"
-        stage(ROOT+"/s9-ranking-v3-worker.jar",jar)
+        stage(ROOT+"/s9-ranking-v3-400-worker.jar",jar)
         stage(input_remote,inp)
     if existing_sha(output_remote) is None:
-        result=phone("shell","export CLASSPATH="+ROOT+"/s9-ranking-v3-worker.jar; "+
+        result=phone("shell","export CLASSPATH="+ROOT+"/s9-ranking-v3-400-worker.jar; "+
             "app_process /system/bin nl.kalenel.s9offline.S9AppearanceRankingWorkerV3 "+
             input_remote+" "+output_remote,timeout=165)
         if "S9_APPEARANCE_RANKINGS_ON_PHONE_VERIFIED" not in result:
