@@ -157,13 +157,22 @@ def deploy(root,artifacts):
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--install",action="store_true")
+    parser.add_argument("--compile-only",action="store_true")
     args=parser.parse_args()
+    if args.compile_only and args.install:
+        raise RuntimeError("Compilation-only must not install on S9+")
     if shutil.disk_usage("/tmp").free<240_000_000:
         raise RuntimeError("C720P scratch free space below 240MB safety reserve")
     with tempfile.TemporaryDirectory(prefix="s9-ssd-offline-") as d:
         root=pathlib.Path(d)
-        models=read_apk(root)
+        models={} if args.compile_only else read_apk(root)
         jar,lib,aars=compile_worker(root)
+        if args.compile_only:
+            print("S9_STANDALONE_TFLITE_DETECTOR_COMPILED "+json.dumps({
+                "dex_sha256":digest(jar),"native_sha256":digest(lib),
+                "official_aars":aars,"apk_read":False,
+                "camera_apk_modified":False,"recordings_modified":False}),flush=True)
+            return
         artifacts=[(jar,WORKER+"/s9-offline-person-detector.jar"),
                    (lib,WORKER+"/lib/libtensorflowlite_jni.so"),
                    (models["person_detect.tflite"],WORKER+"/models/person_detect.tflite"),
