@@ -14,7 +14,7 @@ import tempfile
 PAGE=Path("/opt/homeassistant/config/www/frontyard-security-new/clips.html")
 BACKUPS=Path("/home/jespern/c720p-home-hub/backups/c720p-legacy-s9-playback-v1")
 MARKER="C720P_MIGRATED_S9_LEGACY_PLAYER_V1"
-ANCHOR="const path=String(current.clip).split('/').map(encodeURIComponent).join('/');\\n   const url=BASE+path;\\n   blobClipNo=current.clip_no;"
+ANCHOR="const path=String(current.clip).split('/').map(encodeURIComponent).join('/');\n   const url=BASE+path;\n   blobClipNo=current.clip_no;"
 REPLACE="""const path=String(current.clip).split('/').map(encodeURIComponent).join('/');
  // C720P_MIGRATED_S9_LEGACY_PLAYER_V1: old local player first checks S9+
  // without losing the local fallback while legacy clips are still retained.
