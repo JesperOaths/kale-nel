@@ -1,0 +1,13 @@
+[Unit]
+Description=Check verified original 4K timing after safe seven-second upgrade
+
+[Timer]
+OnBootSec=2h
+OnUnitInactiveSec=2h
+RandomizedDelaySec=20min
+AccuracySec=5min
+Persistent=false
+Unit=c720p-s9-native-timing-proof-v1.service
+
+[Install]
+WantedBy=timers.target
