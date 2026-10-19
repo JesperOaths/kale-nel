@@ -53,6 +53,76 @@ def exec_local(args,timeout=100):
     return result.stdout.strip()
 
 
+def trusted_pair_presence(module,inventory):
+    """Fail-closed, private S9_PAIR_MASK_V1 protocol in 24-crop batches.
+
+    This protocol is identical to the independently verified V102 helper,
+    but self-contained: both scheduled ranker and single-OSNet staging carry
+    only this file, so neither can silently omit a new helper dependency.
+    Historical fake unit-test modules still use their remote_exists method.
+    """
+    if not callable(getattr(module,"adb",None)):
+        def synthetic_presence(key,kind):
+            if kind not in ("visual","hsv") or not HEX.fullmatch(key):
+                raise RuntimeError("untrusted_descriptor_presence_lookup")
+            suffix="-visual.json" if kind=="visual" else "-hsv-v2.json"
+            return module.remote_exists(ROOT+"/features/"+key+suffix)
+        return synthetic_presence
+    if not isinstance(inventory,list) or not 58<=len(inventory)<=400:
+        raise RuntimeError("reference_cohort_outside_bound")
+    root=module.ROOT
+    if (not isinstance(root,str) or not re.fullmatch(r"/[A-Za-z0-9_./-]+",root)
+        or ".." in root or len(root)>230):
+        raise RuntimeError("untrusted_phone_feature_root")
+    keys=[]
+    for row in inventory:
+        if not isinstance(row,dict):
+            raise RuntimeError("invalid_source_crop")
+        key=row.get("key")
+        sha=row.get("crop_sha256")
+        if not isinstance(key,str) or not HEX.fullmatch(key):
+            raise RuntimeError("invalid_source_qualified_key")
+        if not isinstance(sha,str) or not HEX.fullmatch(sha):
+            raise RuntimeError("invalid_crop_digest")
+        keys.append(key)
+    if len(keys)!=len(set(keys)):
+        raise RuntimeError("duplicate_source_qualified_key")
+    flags={}
+    for offset in range(0,len(keys),24):
+        chunk=keys[offset:offset+24]
+        script="set -eu; "
+        for key in chunk:
+            base=root+"/features/"+key
+            script+=(
+                f"if test -s {base}-visual.json; then v=1; else v=0; fi; "
+                f"if test -s {base}-hsv-v2.json; then h=1; else h=0; fi; "
+                f"printf 'S9_PAIR_MASK_V1 {key} %s %s\\n' \"$v\" \"$h\"; "
+            )
+        response=module.adb("shell",script,timeout=45,required=False)
+        raw=response.stdout
+        if (response.returncode!=0 or not isinstance(raw,str)
+            or not isinstance(response.stderr,str) or response.stderr.strip()
+            or len(raw)>len(chunk)*100):
+            raise RuntimeError("phone_descriptor_presence_indeterminate")
+        lines=raw.splitlines()
+        if len(lines)!=len(chunk):
+            raise RuntimeError("phone_descriptor_presence_incomplete")
+        for key,line in zip(chunk,lines):
+            parts=line.split()
+            if (len(parts)!=4 or parts[:2]!=["S9_PAIR_MASK_V1",key]
+                or parts[2] not in ("0","1") or parts[3] not in ("0","1")
+                or key in flags):
+                raise RuntimeError("phone_descriptor_presence_untrusted")
+            flags[key]=(parts[2]=="1",parts[3]=="1")
+    if len(flags)!=len(keys):
+        raise RuntimeError("phone_descriptor_presence_incomplete")
+    def present(key,kind):
+        if key not in flags or kind not in ("visual","hsv"):
+            raise RuntimeError("untrusted_descriptor_presence_lookup")
+        return flags[key][0 if kind=="visual" else 1]
+    return present
+
+
 def verified_ready_subset(module,inventory):
     """Include only complete on-phone descriptor pairs; never synthesize data.
 
@@ -62,6 +132,10 @@ def verified_ready_subset(module,inventory):
     """
     if not isinstance(inventory,list) or len(inventory)>400:
         raise RuntimeError("Unbounded source-qualified crop inventory")
+    # The phone's paired flags are checked in at most ceil(N/24) ADB
+    # roundtrips instead of two per crop. Every COMPLETE sidecar is still
+    # independently decoded, validated and SHA-256 verified below.
+    present=trusted_pair_presence(module,inventory)
     ready=[]
     for row in inventory:
         if not isinstance(row,dict):
@@ -72,7 +146,7 @@ def verified_ready_subset(module,inventory):
             or row.get("cohort") not in ("v40","approved_new","archive_unassigned")):
             raise RuntimeError("Invalid source qualified descriptor provenance")
         hsv_path=ROOT+"/features/"+key+"-hsv-v2.json"
-        if not module.remote_exists(hsv_path):
+        if not present(key,"hsv"):
             continue
         # The 76-crop inventory may contain a new V40 HSV32 descriptor
         # whose OSNet 512-D companion has not been completed yet. Confirm
@@ -81,7 +155,7 @@ def verified_ready_subset(module,inventory):
         # immutable V2 references. A future cool-window backfill may fill
         # the missing visual descriptor without overwriting existing HSV.
         visual_path=ROOT+"/features/"+key+"-visual.json"
-        if not module.remote_exists(visual_path):
+        if not present(key,"visual"):
             continue
         module.safe_visual(key,crop)
         hsv=module.phone_json(hsv_path)
