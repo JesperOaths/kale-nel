@@ -4,7 +4,8 @@ import hashlib
 import hmac
 import unittest
 from s9_migrated_save_delete_contract_v181 import (ROOT,preview,
-    canonical_receipt,validated_record,receipt_authorized,safe_aggregate)
+    canonical_receipt,validated_record,receipt_authorized,safe_aggregate,
+    receipt_matches_current_journal_projection)
 NAME="motion_1792200000000.mp4"
 SHA="a"*64
 ROWS={NAME:{"sd_path":ROOT+"/"+NAME,"sha256":SHA,
@@ -96,6 +97,43 @@ class Tests(unittest.TestCase):
         self.assertFalse(result.may_remove_local_original)
         self.assertFalse(result.remote_mutation_executed)
 
+    def test_signed_historical_save_is_not_current_after_later_delete(self):
+        saved=make_receipt("save",sequence=1,head="e"*64)
+        old_state={"ledgerIntegrityVerified":True,"mayRemoveOriginal":False,
+         "name":NAME,"action":"save","sourceSha256":SHA,
+         "sourceBytes":123456,"ledgerSequence":1,"ledgerHeadSha256":"e"*64}
+        current_delete={**old_state,"action":"delete","ledgerSequence":2,
+                        "ledgerHeadSha256":"d"*64}
+        self.assertTrue(receipt_matches_current_journal_projection(
+            saved,NAME,ROWS[NAME],"save",SECRET,old_state))
+        self.assertFalse(receipt_matches_current_journal_projection(
+            saved,NAME,ROWS[NAME],"save",SECRET,current_delete))
+        current_receipt=make_receipt("delete",sequence=2,head="d"*64)
+        self.assertTrue(receipt_matches_current_journal_projection(
+            current_receipt,NAME,ROWS[NAME],"delete",SECRET,current_delete))
+        # Cryptographically authentic old Save cannot change the tombstone.
+        self.assertEqual(preview(NAME,EVENT,ROWS,"save",
+                         receipt=saved,secret=SECRET).status,"shadow_only")
+        self.assertFalse(EVENT["saved"])
+    def test_latest_projection_must_match_every_ledger_and_media_field(self):
+        saved=make_receipt("save")
+        good={"ledgerIntegrityVerified":True,"mayRemoveOriginal":False,
+            "name":NAME,"action":"save","sourceSha256":SHA,
+            "sourceBytes":123456,"ledgerSequence":1,
+            "ledgerHeadSha256":"e"*64}
+        for change in ({"ledgerSequence":2},{"ledgerSequence":True},
+          {"ledgerHeadSha256":"0"*64},{"ledgerIntegrityVerified":False},
+          {"mayRemoveOriginal":True},{"sourceBytes":False},
+          {"sourceBytes":123457},{"sourceSha256":"b"*64},
+          {"name":"different.mp4"},{"action":"delete"}):
+            with self.subTest(change=change):
+                self.assertFalse(receipt_matches_current_journal_projection(
+                  saved,NAME,ROWS[NAME],"save",SECRET,{**good,**change}))
+        self.assertFalse(receipt_matches_current_journal_projection(
+            saved,NAME,ROWS[NAME],"save",SECRET,None))
+        self.assertFalse(receipt_matches_current_journal_projection(
+            {**saved,"hmac_sha256":"f"*64},
+            NAME,ROWS[NAME],"save",SECRET,good))
     def test_unsafe_names_and_actions_rejected(self):
         for n in ("../secret.mp4","bad/clip.mp4","",NAME+".exe"):
             with self.assertRaises(ValueError):validated_record(n,ROWS)
