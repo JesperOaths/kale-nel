@@ -64,6 +64,16 @@ def safe_clip(item,source):
     return None
 
 
+def drive_source_id(item,clip):
+    # Historical Drive integer clip_no values are NOT globally unique.
+    # Reused local IDs previously collapsed 94 originals into 82 work rows.
+    # Stable composite digest retains every distinct source filename without
+    # leaking the original or allowing path traversal.
+    number=item.get("clip_no")
+    value=str(number) if isinstance(number,int) and not isinstance(number,bool) else ""
+    return hashlib.sha256(("gdrive_archive\\0"+value+"\\0"+clip).encode()).hexdigest()
+
+
 def one_row(source,clip,artifact="",kind="recording",
             status="awaiting_inference",inspection_only=False,exists=False,
             source_id=None):
@@ -115,8 +125,8 @@ def plan(sd_events,drive_events,sd_files):
               inspection_only=True,exists=clip in raw_mp4)
              for clip in sorted(auxiliary)]
     rows += [one_row("gdrive_archive",clip,status="drive_requires_verified_source_decode",
-             exists=False,source_id=item.get("clip_no") if isinstance(item.get("clip_no"),int)
-             else clip) for item,clip in drive_rows]
+             exists=False,source_id=drive_source_id(item,clip))
+             for item,clip in drive_rows]
     # Existing sidecars and crop JPEGs are preserved without parsing their
     # identity content. Even an inspection-only crop remains indexed as such.
     stems=sorted(((clip[:-4],clip) for clip in all_sd if clip.lower().endswith(".mp4")),
@@ -149,8 +159,8 @@ def plan(sd_events,drive_events,sd_files):
                 rows.append(one_row(source,clip,snapshot,"catalog_snapshot",
                   "not_an_aligned_face_evidence",
                   inspection_only=True,exists=source=="s9_sd" and snapshot in sd_files,
-                  source_id=(event.get("clip_no") if source=="gdrive_archive"
-                             and isinstance(event.get("clip_no"),int) else clip)))
+                  source_id=(drive_source_id(event,clip)
+                             if source=="gdrive_archive" else clip)))
     distinct={}
     for row in rows:distinct[row["key"]]=row
     return list(sorted(distinct.values(),key=lambda x:(x["source"],x["clip"],x["kind"],str(x["crop_ref"])))),{

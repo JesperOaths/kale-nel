@@ -72,6 +72,27 @@ class BackfillPlan(unittest.TestCase):
         self.assertEqual(len(exact),2)
         self.assertEqual({x["source"] for x in exact},{"s9_sd","gdrive_archive"})
 
+    def test_reused_drive_numeric_ids_do_not_collapse_original_clips(self):
+        clip1="ArchiveA_2024.mp4"
+        clip2="ArchiveB_2024.mp4"
+        rows,stats=p.plan([],
+            [{"clip_no":12,"remote_name":clip1,"snapshot_name":"a.jpg"},
+             {"clip_no":12,"remote_name":clip2,"snapshot_name":"b.jpg"}],
+            set())
+        recordings=[r for r in rows
+                    if r["source"]=="gdrive_archive" and r["kind"]=="recording"]
+        snaps=[r for r in rows
+               if r["source"]=="gdrive_archive" and r["kind"]=="catalog_snapshot"]
+        self.assertEqual(len(recordings),2)
+        self.assertEqual(len(snaps),2)
+        self.assertEqual(stats["source_qualified_recordings"],2)
+        self.assertEqual({r["clip"] for r in recordings},{clip1,clip2})
+        self.assertEqual(len({r["source_id"] for r in recordings}),2)
+        self.assertEqual(len({r["key"] for r in recordings}),2)
+        for row in recordings:
+            snap=next(x for x in snaps if x["clip"]==row["clip"])
+            self.assertEqual(snap["source_id"],row["source_id"])
+
     def test_untrusted_sources_rejected(self):
         for bad in ({"clip_no":"../evil.mp4"},
                     {"clip_no":"/tmp/something.mp4"},
