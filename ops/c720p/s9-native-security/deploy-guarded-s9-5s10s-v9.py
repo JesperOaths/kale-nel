@@ -2,9 +2,9 @@
 """Guarded installer for a 10-second post-motion tail on a verified S9+ 4K APK.
 
 Preserves signed v6 APK for rollback. Only activates after camera idle, stable
-GPU/4K ring, and enough space; then proves a real ~39-second single 4K MP4
-(7-9s pre-event + >=30s post-event), packet continuity and app-restart
-persistence. Diagnostic media is never indexed as a security event.
+GPU/4K ring, and enough space; then verifies a real 4K diagnostic
+recording with retained preroll and a 10-second post-motion hold, packet
+continuity and app-restart persistence. Diagnostic media is never indexed as a security event.
 """
 from pathlib import Path
 import datetime,hashlib,json,os,re,statistics,subprocess,tempfile,time,urllib.request
