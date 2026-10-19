@@ -858,6 +858,9 @@ public final class CameraService extends Service {
      evidence.put("capture_transition_reason",segment.transitionReason);
      evidence.put("capture_end_reason",segment.stopReason);
      evidence.put("physical_reconfigure_gap_ms",segment.gapMs<0?JSONObject.NULL:segment.gapMs);
+     evidence.put("last_accepted_motion_age_at_stop_ms",
+       segment.lastEvidenceAgeMs==Long.MAX_VALUE?JSONObject.NULL:segment.lastEvidenceAgeMs);
+     evidence.put("configured_quiet_hold_ms",QUIET_MS);
      evidence.put("auto_resume_armed",segment.autoResumeArmed);
      evidence.put("timestamp_basis","Android_elapsedRealtime_not_wall_clock");
      evidence.put("video_continuity_is_gapless",false);
@@ -886,6 +889,9 @@ public final class CameraService extends Service {
     j.put("capture_segment_start_elapsed_ms",segment.startMonotonicMs);
     j.put("capture_segment_stop_elapsed_ms",segment.stopMonotonicMs);
     j.put("capture_segment_gap_from_previous_ms",segment.gapMs<0?JSONObject.NULL:segment.gapMs);
+    j.put("capture_segment_last_accepted_motion_age_at_stop_ms",
+      segment.lastEvidenceAgeMs==Long.MAX_VALUE?JSONObject.NULL:segment.lastEvidenceAgeMs);
+    j.put("capture_segment_configured_quiet_hold_ms",QUIET_MS);
     j.put("capture_segment_auto_resume_armed",segment.autoResumeArmed);
     j.put("capture_segments_have_unrecorded_transition_gaps",true);
     j.put("capture_metadata_is_model_evidence_not_verified_identity",true);
