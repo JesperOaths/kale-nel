@@ -49,6 +49,11 @@ class Tests(unittest.TestCase):
     returncode=1,stderr="",stdout="")) as run:
    self.assertIsNone(m.digest(m.ROOT+"/"+m.NAME))
    self.assertEqual(run.call_count,1)
+ def test_partial_model_transport_errors_must_fail_closed(self):
+  from types import SimpleNamespace
+  source=path.read_text()
+  self.assertIn("partial_model_presence_indeterminate",source)
+  self.assertIn("part_check.returncode!=1 or part_check.stderr.strip()",source)
  def test_script_never_touches_camera_or_review_files(self):
   code=path.read_text()
   for banned in ("am force-stop","pm install","Camera2.apk","Security4K",
