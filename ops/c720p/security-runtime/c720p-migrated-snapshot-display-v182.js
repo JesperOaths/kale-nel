@@ -91,7 +91,33 @@
    }catch(_){/* original local JPEG continues to work */}
   }
  }
+ // Camera Clips renders its <img> elements after DOMContentLoaded.
+ // Observe only child additions containing images; never poll or modify Save.
+ let active=false,rerun=false;
+ async function refresh(){
+  if(active){rerun=true;return}
+  active=true;
+  try{await apply()}
+  finally{
+   active=false;
+   if(rerun){rerun=false;Promise.resolve().then(()=>{void refresh()})}
+  }
+ }
+ function containsPhoto(node){
+  return node?.nodeType===1 &&
+   (node.tagName==='IMG'||typeof node.querySelector==='function' &&
+    !!node.querySelector('img[src]'));
+ }
+ function start(){
+  void refresh();
+  if(typeof MutationObserver!=='function'||!document.body)return;
+  const watcher=new MutationObserver(changes=>{
+   if(changes.some(c=>Array.from(c.addedNodes||[]).some(containsPhoto)))
+    void refresh();
+  });
+  watcher.observe(document.body,{childList:true,subtree:true});
+ }
  if(document.readyState==='loading')
-  document.addEventListener('DOMContentLoaded',()=>{void apply()},{once:true});
- else void apply();
+  document.addEventListener('DOMContentLoaded',start,{once:true});
+ else start();
 })();
