@@ -26,7 +26,7 @@ class Tests(unittest.TestCase):
    base=("<html><head>"+m.TITLE+"</head><body>"
         "<div>saveClip(1)</div><video src='clips/safe.mp4'></video>"
         +("<p>thumbnail-test-row</p>"*35)
-        "</body></html>").encode()
+        +"</body></html>").encode()
    both=new.new_html(base)
    self.assertEqual(both.count(m.VIDEO_TAG.encode()),1)
    self.assertEqual(both.count(m.JPEG_TAG.encode()),1)
