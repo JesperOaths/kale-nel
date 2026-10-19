@@ -67,7 +67,7 @@ class Tests(unittest.TestCase):
    class Evidence:
     def read_proof(self):return self_rows
    self_rows=self.rows()
-   with patch.object(m,"EVENTS",p),patch.object(m,"load",return_value=Evidence()):
+   with patch.object(m,"EVENTS",p),patch.object(m,"load",return_value=Evidence()),patch.object(m,"EXPECTED_BYTES",sum(v["bytes"] for v in self_rows.values())):
     self.assertEqual(m.evidence(),self_rows)
     data[0]["snapshot"]="snaps/../../secrets.jpg"
     p.write_text(json.dumps(data))
