@@ -9,7 +9,7 @@ spec=importlib.util.spec_from_file_location('drive_review_cdp',Path(__file__).wi
 cdp=importlib.util.module_from_spec(spec);spec.loader.exec_module(cdp)
 FIND='''function people(){const q=[document],seen=new Set();
  for(let i=0;i<q.length&&i<24;i++){const d=q[i];if(!d||seen.has(d))continue;seen.add(d);
- if(d.getElementById('reviewGrid')&&d.getElementById('reviewMode'))return d;
+ if(d.getElementById('reviewGrid')&&d.getElementById('reviewSource'))return d;
  for(const f of d.querySelectorAll('iframe'))try{if(f.contentDocument)q.push(f.contentDocument)}catch(_){} }
  return null;}'''
 def evaluate(page,code):
@@ -37,8 +37,15 @@ def main():
    time.sleep(.2)
   if page is None:raise RuntimeError('browser_target_unavailable')
   wait(page,"return !!document.querySelector('#s9v5-nav button[data-view=faces]')",lambda x:x is True)
-  evaluate(page,"document.querySelector('#s9v5-nav button[data-view=faces]').click();return true;")
-  wait(page,"return !!people()?.getElementById('reviewSource')",lambda x:x is True)
+  # Markup can precede the deferred hub navigation listener on a cold target.
+  # Retry that read-only navigation once after its scripts have loaded.
+  for attempt in range(2):
+   evaluate(page,"document.querySelector('#s9v5-nav button[data-view=faces]').click();return true;")
+   try:
+    wait(page,"return !!people()?.getElementById('reviewSource')",lambda x:x is True)
+    break
+   except RuntimeError:
+    if attempt:raise
   evaluate(page,"people().querySelector('[data-pane=review]').click();return true;")
   wait(page,"return people().getElementById('reviewTotal').textContent",lambda x:isinstance(x,str) and ' Drive' in x)
   evaluate(page,"const d=people(),e=d.getElementById('reviewSource');e.value='drive';e.dispatchEvent(new d.defaultView.Event('change'));return true;")
