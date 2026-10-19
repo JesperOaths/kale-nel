@@ -144,6 +144,7 @@ def promote(execute):
     if DROPIN.exists():
         raise RuntimeError("promotion_dropin_exists_before_activation")
     changed=False
+    old_mode=BIN.stat().st_mode&0o777
     try:
         system("stop",TIMER)
         end=time.monotonic()+130
@@ -151,9 +152,9 @@ def promote(execute):
             if time.monotonic()>end:
                 raise RuntimeError("previous_catalog_service_busy")
             time.sleep(1)
-        if safe_read(BIN)!=installed or safe_read(EXISTING_DROPIN,10_000)!=safe_read(EXISTING_DROPIN,10_000):
+        if safe_read(BIN)!=installed or hashlib.sha256(safe_read(EXISTING_DROPIN,10_000)).hexdigest()!=EXISTING_DROPIN_SHA256:
             raise RuntimeError("source_changed_after_timer_pause")
-        atomic(BIN,incoming,BIN.stat().st_mode&0o777)
+        atomic(BIN,incoming,old_mode)
         atomic(DROPIN,DROPIN_TEXT,0o644)
         changed=True
         system("daemon-reload")
@@ -178,7 +179,7 @@ def promote(execute):
                 "manual_reviews_changed":False,"camera_apk_changed":False}
     except BaseException:
         if changed:
-            atomic(BIN,installed,0o644)
+            atomic(BIN,installed,old_mode)
             DROPIN.unlink(missing_ok=True)
             atomic(CATALOG,old_catalog,0o600)
             atomic(SUMMARY,old_summary,0o600)
