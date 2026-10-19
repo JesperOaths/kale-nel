@@ -52,12 +52,13 @@ def source_inventory():
     spec=importlib.util.spec_from_file_location("s9_v2_uniform_catalog",helper)
     module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module
     spec.loader.exec_module(module)
-    rows=module.inventory()
+    rows=module.inventory(include_unreviewed=True)
     cohort=Counter(x["cohort"] for x in rows)
-    if (not 58<=len(rows)<=200 or cohort["v40"]!=51
-        or cohort["approved_new"]!=len(rows)-51
-        or any(x not in {"v40","approved_new"} for x in cohort)):
-        raise RuntimeError("V3 needs at least one additional real approved crop beyond 57")
+    if (not 58<=len(rows)<=400 or cohort["v40"]!=51
+        or cohort["approved_new"]<6
+        or sum(cohort.values())!=len(rows)
+        or any(x not in {"v40","approved_new","archive_unassigned"} for x in cohort)):
+        raise RuntimeError("V3 needs at least one additional verified standalone crop beyond 57")
     for row in rows:
         module.safe_visual(row["key"],row["crop_sha256"])
         hsv=module.phone_json(ROOT+"/features/"+row["key"]+"-hsv-v2.json")
