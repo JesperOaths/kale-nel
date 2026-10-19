@@ -983,14 +983,14 @@ public final class CameraService extends Service {
  private void maybeHistoricalImport(){
   long now=SystemClock.elapsedRealtime();
   if(!running||historicalQueued||now-lastHistoricalScan<60000||folder==null||classifier==null||reviewer==null||
-     !"watching".equals(mode)||movementBackfillQueued||temperature()>=420||folder.getUsableSpace()<20L*1024*1024*1024)return;
+     !"watching".equals(mode)||movementBackfillQueued||!offlineArchiveWorkAllowed()||folder.getUsableSpace()<20L*1024*1024*1024)return;
   historicalQueued=true;
   final File sandbox=folder.getParentFile();
   final ClipClassifier model=classifier;
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=420)return;
+     if(!running||!"watching".equals(mode)||!offlineArchiveWorkAllowed())return;
      int done=new HistoricalImportWorker(sandbox,model).processOne();
      if(done>0){historicalReviewed+=done;Log.i(TAG,"HISTORICAL_IMPORT_REVIEW_COMPLETED "+done);}
     }catch(Exception e){
@@ -1102,12 +1102,24 @@ public final class CameraService extends Service {
 
  /** Review missing movement observations from finalized original 4K MP4s on
   * the phone's existing serialized worker. Capture and face review stay live. */
+ // Historical archive inference is optional; never let it prevent a
+ // saved/verified continuous-4K encoder from thermally rearming. Unlike
+ // real-time garden/person detection, these passes may be postponed safely.
+ private static final int OFFLINE_4K_HEADROOM_TENTHS_C=395;
+ private boolean offlineArchiveWorkAllowed(){
+  final int batteryTenths=temperature();
+  if(batteryTenths>=420)return false;
+  if(!getSharedPreferences("native",MODE_PRIVATE)
+       .getBoolean("continuous_4k_production_enabled",false))return true;
+  return batteryTenths<=OFFLINE_4K_HEADROOM_TENTHS_C&&
+         continuous4KTrial&&continuous4K!=null&&continuous4K.readyForEvent();
+ }
  private void maybeMovementBackfill(){
   long now=SystemClock.elapsedRealtime();
   if(!running||movementBackfillQueued||faceBackfillQueued||historicalQueued||
      now-lastMovementBackfillScan<90000L||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||temperature()>=420||gardenPersonGateBusy||
+     !"watching".equals(mode)||!offlineArchiveWorkAllowed()||gardenPersonGateBusy||
      (lastMovementAt>0&&now-lastMovementAt<60000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   movementBackfillQueued=true;
@@ -1115,12 +1127,12 @@ public final class CameraService extends Service {
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=420)return;
+     if(!running||!"watching".equals(mode)||!offlineArchiveWorkAllowed())return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
      Arrays.sort(manifests,Comparator.comparing(File::getName));
      for(File manifest:manifests){
-      if(!running||!"watching".equals(mode)||temperature()>=420||
+      if(!running||!"watching".equals(mode)||!offlineArchiveWorkAllowed()||
          gardenPersonGateBusy||(lastMovementAt>0&&
          SystemClock.elapsedRealtime()-lastMovementAt<60000L))return;
       if(manifest.length()<100||manifest.length()>28000)continue;
@@ -1180,7 +1192,7 @@ public final class CameraService extends Service {
      faceBackfillQueued||historicalQueued||gardenPersonGateBusy||
      now-lastAppearanceBackfillScan<120000L||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||temperature()>=420||
+     !"watching".equals(mode)||!offlineArchiveWorkAllowed()||
      (lastMovementAt>0&&now-lastMovementAt<90000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   appearanceBackfillQueued=true;
@@ -1188,14 +1200,14 @@ public final class CameraService extends Service {
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=420)return;
+     if(!running||!"watching".equals(mode)||!offlineArchiveWorkAllowed())return;
      File[] manifests=archive.listFiles((d,n)->
         n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
      Arrays.sort(manifests,Comparator.comparing(File::getName));
      try(AppearanceSearchIndex index=new AppearanceSearchIndex(archive)){
       for(File manifest:manifests){
-       if(!running||!"watching".equals(mode)||temperature()>=420||
+       if(!running||!"watching".equals(mode)||!offlineArchiveWorkAllowed()||
           gardenPersonGateBusy||(lastMovementAt>0&&
           SystemClock.elapsedRealtime()-lastMovementAt<90000L))return;
        if(manifest.length()<100||manifest.length()>28000)continue;
