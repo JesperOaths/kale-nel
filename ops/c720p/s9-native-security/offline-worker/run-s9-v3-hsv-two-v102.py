@@ -62,19 +62,17 @@ def capture_healthy():
         or status["continuous_4k_buffered_ms"]<5000
         or status.get("continuous_4k_dropped_output_frames")!=0
         or bool(status.get("continuous_4k_error"))
-        or status.get("continuous_4k_trial_active") is True
+        or status.get("continuous_4k_production_persisted") is not True
+        or status.get("preroll_version")!="continuous_native_4k_h264_ring_v1"
         or status.get("recording_active") is True
         or status.get("recording_in_progress") is True
         or status.get("face_backfill_queued") is True
         or status.get("movement_4k_backfill_queued") is True):
         raise RuntimeError("camera_capture_not_stably_ready")
-    # Offline work must never compete with a degraded preroll mechanism.
-    if status.get("preroll_ready") is not True:
-        raise RuntimeError("preroll_not_ready")
-    if type(status.get("preroll_buffered_ms")) not in (int,float):
-        raise RuntimeError("unverified_preroll_window")
-    if status["preroll_buffered_ms"]<4000:
-        raise RuntimeError("preroll_buffer_not_full")
+    # The native continuous-4K H.264 ring is itself the preroll buffer.
+    # CameraService intentionally stops GardenPreRoll in this mode, so the
+    # separate legacy 'preroll_ready' field is normally false here.
+    # 'continuous_4k_trial_active' likewise stays true after promotion.
     return status
 
 
@@ -176,8 +174,7 @@ if __name__=="__main__":
         allowed={"hub_free_disk_guard","phone_warm_before_batch",
                  "phone_warm_before_descriptor","phone_thermal_post_limit",
                  "camera_too_warm_for_offline_processing",
-                 "camera_capture_not_stably_ready","preroll_not_ready",
-                 "preroll_buffer_not_full","unverified_preroll_window",
+                 "camera_capture_not_stably_ready",
                  "phone_transport_untrusted"}
         print(REJECT+json.dumps({"reason":reason if reason in allowed else
              "verification_or_worker_failed",
