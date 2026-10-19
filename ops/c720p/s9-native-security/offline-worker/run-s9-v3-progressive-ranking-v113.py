@@ -74,6 +74,27 @@ def decision(current,corpus_id,count):
   raise RuntimeError("inconsistent_active_corpus")
  return "needs_expansion"
 
+def classify_ranker_failure(stderr):
+ # Only exact allowlisted markers become public categories. Phone stderr may
+ # contain original clip paths, person filenames or crop hashes: never relay it.
+ if not isinstance(stderr,str) or len(stderr)>100000:
+  return "unclassified"
+ classes=(
+  ("capture_not_idle_4k_ring_healthy","capture_unavailable"),
+  ("capture_too_warm_for_ranker","capture_too_warm"),
+  ("S9+ above cool ranking temperature; no run","battery_too_warm"),
+  ("Live camera PID changed","camera_process_changed"),
+  ("Existing v1/v2 ranked indices changed during v3 run","legacy_index_changed"),
+  ("Phone V3 index integrity checks failed","phone_index_integrity"),
+  ("Phone v3 ranking worker did not verify","phone_scoring_unverified"),
+  ("S9 ranker sidecar presence indeterminate","phone_sidecar_transport"),
+  ("S9 sidecar presence indeterminate","phone_sidecar_transport"),
+  ("S9 sidecar transfer indeterminate","phone_sidecar_transport"),
+ )
+ matched={category for token,category in classes if token in stderr}
+ return next(iter(matched)) if len(matched)==1 else "unclassified"
+
+
 def guarded_publish(ranker,expected_id,count):
  worker=HERE/"run-s9-uniform-appearance-rankings-v3.py"
  proc=subprocess.run([sys.executable,str(worker),"--apply"],
@@ -91,8 +112,10 @@ def guarded_publish(ranker,expected_id,count):
        and status.get("automatic_person_assignments")==0):
     raise SharedWorkerBusy() from None
  if proc.returncode:
-  # Never disclose potentially private stderr or crop identifiers.
-  raise RuntimeError("guarded_ranker_failed_or_capture_changed")
+  # Preserve fail-closed state even if on-phone computation partly ran;
+  # never claim the active pointer was unchanged without verifying it.
+  kind=classify_ranker_failure(proc.stderr)
+  raise RuntimeError("guarded_ranker_failed_"+kind) from None
  markers=[l.split("S9_V3_MODEL_BACKED_RANKINGS_PRODUCED ",1)[1]
           for l in proc.stdout.splitlines()
           if l.startswith("S9_V3_MODEL_BACKED_RANKINGS_PRODUCED ")]
@@ -155,6 +178,14 @@ def run(apply=False,ranker=None):
       "reason":"shared_archive_worker_busy","rankings_published":False,
       "capture_modified":False,"identities_assigned":0}),flush=True)
   return "deferred"
+ except RuntimeError as error:
+  if str(error).startswith("guarded_ranker_failed_"):
+   print("S9_V3_PROGRESSIVE_RANKING_BLOCKED "+json.dumps({
+     "reason":str(error).removeprefix("guarded_ranker_failed_"),
+     "publication_verified":False,"pointer_state_after_error":"not_claimed",
+     "private_output_suppressed":True,"automatic_assignments_claimed":0
+   },sort_keys=True),flush=True)
+  raise
  print("S9_V3_PROGRESSIVE_RANKING_VERIFIED "+json.dumps(result,sort_keys=True),
        flush=True)
  return "verified"
