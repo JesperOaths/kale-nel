@@ -144,6 +144,31 @@ class Tests(unittest.TestCase):
                             temperature_c=39.5,continuous_4k_buffered_ms=6000))):
             self.assertEqual(m.run(FakeH(temp=39.5),FakeCtrl())["new_verified_histograms"],2)
 
+    def test_thermal_deferral_is_not_a_completed_batch(self):
+        for reason in ("camera_too_warm_for_offline_processing",
+                       "phone_warm_before_batch",
+                       "phone_warm_before_descriptor",
+                       "phone_thermal_post_limit",
+                       "camera_capture_not_stably_ready"):
+            marker,data,status=m.classify_abort(reason)
+            self.assertEqual(marker,m.DEFER)
+            self.assertEqual(status,0)
+            self.assertIs(data["verified_batch_completed"],False)
+            self.assertIs(data["intermediate_sidecars_may_have_been_written"],True)
+            self.assertIs(data["private_output_suppressed"],True)
+            self.assertNotIn("new_verified_histograms",data)
+
+    def test_integrity_or_transport_failure_is_not_a_deferral(self):
+        for reason in ("phone_transport_untrusted",
+                       "previous crop /private/filename.mp4 invalid",
+                       "hub_free_disk_guard"):
+            marker,data,status=m.classify_abort(reason)
+            self.assertEqual(marker,m.REJECT)
+            self.assertEqual(status,2)
+            self.assertIs(data["private_output_suppressed"],True)
+            self.assertNotIn(".mp4",str(data))
+            self.assertNotIn("new_verified_histograms",data)
+
     def test_source_key_validation_prevents_writes(self):
         h=FakeH()
         h.rows[0]["key"]="../bad"
