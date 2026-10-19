@@ -167,7 +167,8 @@ def native_updates(source,snapshot,helpers):
         if (old.get("phone_catalog_version")==entry["version"] and
             (not entry["thumbnail"] or (old.get("phone_thumbnail_version")==entry["thumbnail_version"] and
                 phone_catalog.valid_cached_thumbnail(dest,entry["thumbnail_version"])))):continue
-        available,thumb_version=phone_catalog.cache_thumbnail(entry,dest,old.get("phone_thumbnail_version"))
+        available,thumb_version=phone_catalog.cache_thumbnail(entry,dest,old.get("phone_thumbnail_version"),
+            fallback_reader=lambda asset:adb("exec-out","cat",FOLDER+"/"+asset,limit=2200000))
         thumbnail="s9-phone-thumbs/"+dest.name if available else None
         fresh=row_from_manifest(name,entry["manifest"],entry["bytes"],thumbnail,helpers)
         fresh.update(phone_catalog_version=entry["version"],phone_thumbnail_version=thumb_version)

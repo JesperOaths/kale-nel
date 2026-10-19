@@ -57,6 +57,43 @@ class Tests(unittest.TestCase):
         result=json.loads((self.root/'s9-phone-events.json').read_text())
         self.assertEqual(result['total_phone_files'],1);self.assertEqual(result['errors'],[])
         self.assertFalse(any(NAME in str(args) for args in calls))
+    def test_full_phone_outage_does_not_replace_populated_index(self):
+        index=self.root/'s9-phone-events.json'
+        original={'storage_policy':'local_microSD','phone_recordings':[{'name':NAME,'sd_verified':True}]}
+        index.write_text(json.dumps(original));before=index.read_bytes()
+        def adb(*args):
+            if args[:3]==('shell','ls','-1') and args[-1]==self.catalog.SD:return b''
+            raise OSError('phone_disconnected_mid_scan')
+        with patch.object(self.catalog,'ROOT',self.root),patch.object(self.catalog,'PRIVATE_FALLBACK',self.root/'fallback.json'), \
+             patch.object(self.catalog,'adb',side_effect=adb),patch.object(self.catalog.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=b'device')), \
+             patch.object(client,'load_catalog',side_effect=client.Unavailable):
+            with self.assertRaises(RuntimeError):self.catalog.build_catalog()
+        self.assertEqual(index.read_bytes(),before)
+        self.assertFalse((self.root/'fallback.json').exists())
+    def test_full_sidecar_failure_does_not_hide_previously_indexed_original(self):
+        index=self.root/'s9-phone-events.json'
+        index.write_text(json.dumps({'storage_policy':'local_microSD','phone_recordings':[{'name':NAME,'sd_verified':True}]}))
+        before=index.read_bytes()
+        def adb(*args):
+            if args[:3]==('shell','ls','-1'):
+                return (NAME+'\n').encode() if 'Security4K' in args[-1] else b''
+            raise OSError('sidecar_read_failed')
+        with patch.object(self.catalog,'ROOT',self.root),patch.object(self.catalog,'PRIVATE_FALLBACK',self.root/'fallback.json'), \
+             patch.object(self.catalog,'adb',side_effect=adb),patch.object(self.catalog.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=b'device')), \
+             patch.object(client,'load_catalog',side_effect=client.Unavailable):
+            with self.assertRaises(RuntimeError):self.catalog.build_catalog()
+        self.assertEqual(index.read_bytes(),before)
+        self.assertFalse((self.root/'fallback.json').exists())
+    def test_full_successful_listing_can_reconcile_removed_original(self):
+        index=self.root/'s9-phone-events.json'
+        index.write_text(json.dumps({'storage_policy':'local_microSD','phone_recordings':[{'name':NAME,'sd_verified':True}]}))
+        def adb(*args):
+            if args[:3]==('shell','ls','-1'):return b''
+            raise OSError('legacy_absent')
+        with patch.object(self.catalog,'ROOT',self.root),patch.object(self.catalog,'PRIVATE_FALLBACK',self.root/'fallback.json'), \
+             patch.object(self.catalog,'adb',side_effect=adb),patch.object(self.catalog.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=b'device')), \
+             patch.object(client,'load_catalog',side_effect=client.Unavailable):self.catalog.build_catalog()
+        self.assertEqual(json.loads(index.read_text())['phone_recordings'],[])
     def test_fast_defers_while_full_catalog_owns_shared_lock(self):
         lock=self.root/'shared.lock'
         with lock.open('a+') as owner:

@@ -106,6 +106,28 @@ class Tests(unittest.TestCase):
             self.assertEqual(m.cache_thumbnail(entry,path,"5000:1792000000000"),
                              (True,"5000:1792000000000"))
         self.assertEqual(path.read_bytes(),previous)
+    def test_standalone_catalog_old_apk_still_fetches_new_thumbnail(self):
+        entry=record();entry.update(thumbnail=True,thumbnail_version="5000:1792000000000")
+        path=Path(self.tmp.name)/"new.jpg"
+        raw=b"\xff\xd8\xff"+b"y"*4995+b"\xff\xd9"
+        with patch.object(m,"read_asset",side_effect=m.Unavailable) as native:
+            fallback=unittest.mock.Mock(return_value=raw)
+            self.assertEqual(m.cache_thumbnail(entry,path,None,fallback_reader=fallback),
+                             (True,entry["thumbnail_version"]))
+            fallback.assert_called_once_with(entry["name"]+".thumb.jpg")
+            self.assertEqual(path.read_bytes(),raw)
+            m.cache_thumbnail(entry,path,entry["thumbnail_version"],fallback_reader=fallback)
+            self.assertEqual(native.call_count,1)
+            self.assertEqual(fallback.call_count,1)
+    def test_bad_fallback_jpeg_cannot_replace_valid_previous_thumbnail(self):
+        entry=record();entry.update(thumbnail=True,thumbnail_version="5000:1792000000001")
+        path=Path(self.tmp.name)/"old.jpg"
+        previous=b"\xff\xd8\xff"+b"p"*4995+b"\xff\xd9";path.write_bytes(previous)
+        with patch.object(m,"read_asset",side_effect=m.Unavailable):
+            self.assertEqual(m.cache_thumbnail(entry,path,"5000:1792000000000",
+                fallback_reader=lambda asset:b"\xff\xd8\xff"+b"x"*4997),
+                (True,"5000:1792000000000"))
+        self.assertEqual(path.read_bytes(),previous)
     def test_fresh_standalone_snapshot_must_match_private_camera_healthy_summary(self):
         source=record()
         catalog=Path(self.tmp.name)/"standalone.json"

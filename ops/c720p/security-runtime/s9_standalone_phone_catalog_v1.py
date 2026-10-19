@@ -41,7 +41,8 @@ def camera():
 def hub_names():
     with urllib.request.urlopen("http://127.0.0.1:8795/new/api/saved",timeout=12) as r:
         d=json.load(r)
-    if not isinstance(d.get("events"),list) or not d.get("events"):
+    if (d.get("ok") is not True or d.get("archive_mode")!="S9-microSD-only"
+        or not isinstance(d.get("events"),list) or not d.get("events")):
         raise RuntimeError("hub_archive_unavailable")
     items=[]
     for record in d["events"]:
@@ -137,12 +138,17 @@ def run(dex,dex_sha,apply=False,state=STATE):
         catalog,summary=scan(Path(dex),dex_sha)
         live_after=hub_names();after=camera()
         found=set(catalog["records"])
-        if found!=live_before or found!=live_after:
+        # The phone validates each original's sidecar and actual byte size.
+        # Permit newly verified originals that the fast indexer has not seen
+        # yet; exact equality makes discovery depend on the older scanner.
+        # Missing known originals or a shrinking hub still defer publication.
+        if not live_before<=live_after<=found:
             raise RuntimeError("standalone_catalog_not_equal_to_live_archive")
         summary["catalog_snapshot_id"]=catalog["snapshot_id"]
         summary["generated_at_utc"]=dt.datetime.now(dt.timezone.utc).isoformat()
         summary["video_bytes_transferred_to_hub"]=False
         summary["camera_4k_healthy_before_and_after"]=True
+        summary["new_verified_originals"]=len(found-live_after)
         summary["microSD_scan_wall_seconds"]=round(time.monotonic()-start,3)
         summary["camera_temperature_before_c"]=before.get("temperature_c")
         summary["camera_temperature_after_c"]=after.get("temperature_c")
@@ -151,6 +157,7 @@ def run(dex,dex_sha,apply=False,state=STATE):
             atomic(state/"s9-standalone-archive-summary-v1.json",summary)
         print("S9_STANDALONE_ARCHIVE_PARITY "+json.dumps({
             "verified_phone":len(found),"hub_recordings":len(live_after),
+            "new_verified_originals":len(found-live_after),
             "hour_buckets":len(summary["hourly_recording_counts"]),
             "day_buckets":len(summary["daily_recording_counts"]),
             "scan_seconds":summary["microSD_scan_wall_seconds"],

@@ -5,6 +5,7 @@ import json
 from unittest.mock import patch
 from pathlib import Path
 import unittest
+import tempfile
 M=Path(__file__).with_name("fast-recent-s9-clip-index.py")
 spec=importlib.util.spec_from_file_location("fast_s9",M)
 module=importlib.util.module_from_spec(spec)
@@ -84,6 +85,17 @@ class FastIndexTests(unittest.TestCase):
   self.assertIn('b"recent_existing_face_updates"',d)
   self.assertIn('b"safe_face_review_metadata"',d)
   self.assertNotIn('b"face_deep_review_version" not in updated',d)
+
+ def test_single_file_deploy_refuses_incompatible_thumbnail_client(self):
+  p=Path(__file__).with_name("deploy-fast-face-v26.py")
+  spec=importlib.util.spec_from_file_location("fast_deploy",p)
+  deploy=importlib.util.module_from_spec(spec);spec.loader.exec_module(deploy)
+  with tempfile.TemporaryDirectory() as tmp:
+   client=Path(tmp)/"phone_archive_catalog_v1.py"
+   client.write_text("def cache_thumbnail(entry,destination,previous_version):pass\n")
+   with self.assertRaises(RuntimeError):deploy.compatible_client(b"cache_thumbnail(fallback_reader=reader)",client)
+   client.write_text("def cache_thumbnail(entry,destination,previous_version,fallback_reader=None):pass\n")
+   deploy.compatible_client(b"cache_thumbnail(fallback_reader=reader)",client)
 
  def test_no_camera_decoding_or_modification(self):
   raw=M.read_text()
