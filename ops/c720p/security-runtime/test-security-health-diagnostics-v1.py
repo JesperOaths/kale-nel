@@ -80,7 +80,7 @@ class Tests(unittest.TestCase):
   header="HTTP/1.1 200 Connection established\n\nHTTP/2 200\nDate: Mon, 19 Oct 2026 04:01:30 GMT\n"
   with patch.object(m.urllib.request,"urlopen",side_effect=OSError("python_proxy_failed")),\
        patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0,stdout=header)) as cmd,\
-       patch.object(m.time,"time",side_effect=[NOW.timestamp(),NOW.timestamp()]):
+       patch.object(m.time,"time",return_value=NOW.timestamp()):
    self.assertEqual(m.https_clock_offset(),90.0)
   self.assertEqual(cmd.call_args.args[0][:2],["curl","-fILsS"])
  def test_clock_unavailable_returns_unknown_not_zero(self):
