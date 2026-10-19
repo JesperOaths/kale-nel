@@ -44,6 +44,27 @@ class Tests(TestCase):
   for size in (-1,1,2200000,"50000"):
    with self.subTest(size=size),self.assertRaisesRegex(RuntimeError,"no_source_qualified"):
     self.one(document(snapshot_size_bytes=size))
+ def test_android_app_process_sigkill_is_never_face_evidence(self):
+  from types import SimpleNamespace
+  private="private_photo_should_never_be_logged.jpg"
+  process=SimpleNamespace(returncode=137,stdout="Killed "+private,stderr="")
+  with patch.object(m.subprocess,"run",return_value=process):
+   with self.assertRaises(RuntimeError) as err:
+    m.call(["adb","-s",m.PHONE,"shell","app_process --audit-single "+private])
+  self.assertEqual(str(err.exception),"android_app_process_terminated_without_face_evidence")
+  self.assertNotIn(private,str(err.exception))
+ def test_unrelated_command_failure_not_called_phone_sigkill(self):
+  from types import SimpleNamespace
+  with patch.object(m.subprocess,"run",return_value=SimpleNamespace(
+    returncode=137,stdout="Killed",stderr="")):
+   with self.assertRaisesRegex(RuntimeError,"separate_phone_operation_failed"):
+    m.call(["javac","--version"])
+ def test_sigkill_must_defer_without_identity_or_media_mutation(self):
+  source=SOURCE.read_text()
+  self.assertIn('"android_app_process_terminated_without_face_evidence")',source)
+  self.assertIn('android_app_process_terminated_without_face_evidence',source)
+  self.assertIn('if label in benign:',source)
+  self.assertIn('"originals_modified":False',source)
  def test_byte_for_byte_readonly_commitment(self):
   src=SOURCE.read_text();java=(ROOT/"S9YuNetSingleSnapshotAudit.java").read_text()
   for expected in ("LOCK_EX|fcntl.LOCK_NB","camera_pid_changed_after_one_snapshot",
