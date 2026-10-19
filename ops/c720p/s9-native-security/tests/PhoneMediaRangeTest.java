@@ -62,6 +62,26 @@ public final class PhoneMediaRangeTest {
    check(headers(prerollPart).contains("206 Partial Content"),"preroll 206");
    check(prerollPart.length-split(prerollPart)==4096,"preroll exact range");
    preroll.delete();
+   // Lower-resolution copies are private, optional and isolated from original
+   // 4K clips. Range semantics match original streaming; unverified/orphaned
+   // copies are not served.
+   File variants=new File(root,"PlaybackCopies");
+   check(variants.mkdir(),"preview directory");
+   File manifest=new File(root,name+".verified.json");
+   try(FileOutputStream out=new FileOutputStream(manifest)){out.write("verified".getBytes("UTF-8"));}
+   File preview=new File(variants,name+".360p.mp4");
+   try(FileOutputStream out=new FileOutputStream(preview)){out.write(data);}
+   byte[] previewPart=serve(root,"GET /preview/"+name+".360p.mp4 HTTP/1.1\r\nRange: bytes=512-1023\r\n\r\n");
+   check(headers(previewPart).contains("206 Partial Content"),"preview range 206");
+   check(previewPart.length-split(previewPart)==512,"preview exact 512 bytes");
+   check(Arrays.equals(Arrays.copyOfRange(previewPart,split(previewPart),previewPart.length),
+        Arrays.copyOfRange(data,512,1024)),"preview bytes match");
+   byte[] badPreview=serve(root,"GET /preview/"+name+".1080p.mp4 HTTP/1.1\r\n\r\n");
+   check(headers(badPreview).contains("404 Not Found"),"reject unsupported preview sizes");
+   manifest.delete();
+   byte[] orphan=serve(root,"GET /preview/"+name+".360p.mp4 HTTP/1.1\r\n\r\n");
+   check(headers(orphan).contains("404 Not Found"),"never serve orphan preview without verified source");
+   preview.delete();variants.delete();
    byte[] traversal=serve(root,"GET /clip/../secrets HTTP/1.1\r\n\r\n");
    check(headers(traversal).contains("404 Not Found"),"no traversal");
    byte[] unfinished=serve(root,"GET /clip/"+name+".recording HTTP/1.1\r\n\r\n");
