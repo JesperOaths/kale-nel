@@ -20,7 +20,8 @@ TEMP_ROOT = os.environ.get("C720P_TEST_TMPDIR")
 
 class ContinuityPatchTests(unittest.TestCase):
     def fixture(self, name):
-        return (FIXTURES / name).read_text(encoding="utf-8")
+        stored = name + ".fixture" if name.endswith(".html") else name
+        return (FIXTURES / stored).read_text(encoding="utf-8")
 
     def test_idempotent_patches_preserve_unrelated_features_and_newlines(self):
         for name in PATCH.FILES:
@@ -75,8 +76,12 @@ class ContinuityPatchTests(unittest.TestCase):
 
     def test_patched_runtime_behaviour_without_network_or_browser(self):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as base:
+            source = Path(base) / "source"
+            source.mkdir()
+            for name in PATCH.FILES:
+                (source / name).write_text(self.fixture(name), encoding="utf-8")
             output = Path(base) / "stage"
-            PATCH.stage(FIXTURES, output)
+            PATCH.stage(source, output)
             result = subprocess.run(["node", str(HERE / "test-security-ui-continuity-runtime-v1.mjs"), str(output)],
                                     capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

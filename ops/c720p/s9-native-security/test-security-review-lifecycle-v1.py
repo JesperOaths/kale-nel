@@ -16,10 +16,13 @@ p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
 FIXTURES=HERE/'tests/fixtures/security-review-lifecycle-v1'
 TEMP_ROOT=os.environ.get('C720P_TEST_TMPDIR')
 
+def fixture_path(name):
+ return FIXTURES/(name+'.fixture' if name.endswith('.html') else name)
+
 class LifecycleTests(unittest.TestCase):
  def test_narrow_changes_preserve_migration_review_and_other_scripts(self):
   for name in p.FILES:
-   original=(FIXTURES/name).read_text(encoding='utf-8')
+   original=fixture_path(name).read_text(encoding='utf-8')
    for newline in ('\n','\r\n'):
     with self.subTest(name=name,newline=repr(newline)):
      before='/* OTHER_CHAT_FEATURE_KEEP */\n'+original
@@ -36,13 +39,13 @@ class LifecycleTests(unittest.TestCase):
 
  def test_partial_or_unknown_source_is_rejected(self):
   for name,marker in zip(p.FILES,(p.OUTFIT_MARKER,p.REVIEW_MARKER,p.NIGHT_MARKER)):
-   original=(FIXTURES/name).read_text(encoding='utf-8')
+   original=fixture_path(name).read_text(encoding='utf-8')
    with self.subTest(name=name):
     with self.assertRaises(ValueError):p.patch_asset(name,marker+'\n'+original)
     with self.assertRaises(ValueError):p.patch_asset(name,'unknown concurrent rewrite')
 
  def test_older_canonical_hsv_path_is_patched_without_inserting_a_model_pipeline(self):
-  original=(FIXTURES/'security-people-v45.js').read_text(encoding='utf-8')
+  original=fixture_path('security-people-v45.js').read_text(encoding='utf-8')
   start=original.index(p.OUTFIT_ANCHOR)
   end=original.index('async function searchClothingMatches(force=false){',start)
   canonical=original[:start]+original[end:]
@@ -54,14 +57,14 @@ class LifecycleTests(unittest.TestCase):
  def test_stage_is_separate_and_does_not_write_on_an_invalid_later_asset(self):
   with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
    source=Path(folder)/'source';source.mkdir();output=Path(folder)/'output'
-   for name in p.FILES:(source/name).write_bytes((FIXTURES/name).read_bytes())
+   for name in p.FILES:(source/name).write_bytes(fixture_path(name).read_bytes())
    with self.assertRaises(ValueError):p.stage(source,source)
    with self.assertRaises(ValueError):p.stage(source,source/'nested')
    night=source/p.FILES[-1]
    night.write_text('unknown night source',encoding='utf-8')
    with self.assertRaises(ValueError):p.stage(source,output)
    self.assertFalse(output.exists())
-   night.write_bytes((FIXTURES/night.name).read_bytes())
+   night.write_bytes(fixture_path(night.name).read_bytes())
    before={name:(source/name).read_bytes() for name in p.FILES}
    manifest=p.stage(source,output)
    self.assertEqual(before,{name:(source/name).read_bytes() for name in p.FILES})
@@ -71,7 +74,9 @@ class LifecycleTests(unittest.TestCase):
 
  def test_real_js_outfit_decisions_visibility_protocol_and_night_polling(self):
   with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
-   output=Path(folder)/'stage';p.stage(FIXTURES,output)
+   source=Path(folder)/'source';source.mkdir()
+   for name in p.FILES:(source/name).write_bytes(fixture_path(name).read_bytes())
+   output=Path(folder)/'stage';p.stage(source,output)
    result=subprocess.run([os.environ.get('C720P_TEST_NODE','node'),
     str(HERE/'test-security-review-lifecycle-runtime-v1.mjs'),str(output)],
     capture_output=True,text=True,timeout=30)
