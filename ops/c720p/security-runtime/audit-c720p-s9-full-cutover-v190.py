@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import re
 import stat
+import sys
 import urllib.request
 
 HERE=Path(__file__).resolve().parent
@@ -41,6 +42,7 @@ def import_module(path,alias):
  need(path.is_file() and not path.is_symlink(),"required_source_missing")
  spec=importlib.util.spec_from_file_location(alias,str(path))
  module=importlib.util.module_from_spec(spec)
+ sys.modules[alias]=module
  spec.loader.exec_module(module)
  return module
 
