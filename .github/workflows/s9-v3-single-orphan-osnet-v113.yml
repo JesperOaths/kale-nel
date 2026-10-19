@@ -1,5 +1,9 @@
 name: S9 V3 genuine single missing OSNet recovery V113
 on:
+  # Eight-minute stagger after six scheduled HSV32 passes, before V3 ranks.
+  # Existing shared lock + cool Camera2 ring gate refuse overlapping work.
+  schedule:
+    - cron: '19 1,5,9,13,17,21 * * *'
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-single-orphan-osnet-v113.py'
@@ -43,7 +47,7 @@ jobs:
           PY
   live-one-crop:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    if: (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
@@ -67,7 +71,7 @@ jobs:
             cmd="$cmd && curl -fsSL --retry 2 --max-time 45 '$url' -o '$stage/$source' && printf '%s  %s\n' '$digest' '$stage/$source' | sha256sum -c - >/dev/null"
           done
           cmd="$cmd && /usr/bin/python3 '$stage/run-s9-v3-single-orphan-osnet-v113.py' --apply"
-          idem="s9-v3-single-osnet-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          idem="s9-v3-single-osnet-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
           select job_id from c720p_agent.submit_management_job_v1(
             'github-actions-s9-one-real-osnet-recovery','security',:'cmd',700,:'idem');
