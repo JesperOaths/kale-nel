@@ -411,7 +411,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.deepEqual(sameNameEntries.map(x=>x.dataset.source).sort(),['drive','sd'],
   'Source-specific approved originals may share the same basename');
  const sdInPerson=sameNameEntries.find(x=>x.dataset.source==='sd');
- scan(sdInPerson,'↩ Return to review queue').handlers.click();
+ scan(sdInPerson,'↩ Remove from this person').handlers.click();
  for(let i=0;i<5;i++)await flush();
  assert.equal(linkItems['sd:'+clip].folder,null,
   'Returning SD original must not delete or move the same-name Drive link');
