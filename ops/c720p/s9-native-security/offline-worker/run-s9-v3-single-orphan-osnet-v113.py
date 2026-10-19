@@ -72,7 +72,7 @@ def healthy():
     return status
 
 def choose_orphan(rows,baseline_keys,present):
-    """Choose one real extra V40 HSV-only crop per run, preserving V2."""
+    """Choose one genuine V40 visual missing, prioritizing HSV-ready crops."""
     if not isinstance(rows,list) or not 58<=len(rows)<=400:
         raise RuntimeError("invalid_source_inventory_size")
     old_keys=set(baseline_keys)
@@ -92,16 +92,16 @@ def choose_orphan(rows,baseline_keys,present):
         has_visual=present(key,"visual")
         if key in old_keys and (not has_hsv or not has_visual):
             raise RuntimeError("historical_v2_reference_missing")
-        if has_hsv and not has_visual:
+        if not has_visual:
             if key in old_keys or row.get("cohort")!="v40":
                 raise RuntimeError("orphan_is_not_unassigned_v40")
-            found.append(row)
+            found.append((not has_hsv,key,row))
     if not found:
         raise RuntimeError("no_pending_v40_histogram_only_crop")
-    # A two-histogram HSV32 batch can legitimately leave multiple missing
-    # visual features. Recover at most ONE in this cool window, and let the
-    # next scheduled run select the next still-pending crop.
-    return min(found,key=lambda row:row["key"])
+    # Prefer an existing verified HSV32 crop to complete a new V3 pair now,
+    # otherwise repair one source where both features were missing. Every
+    # selected source must still match one original V40 JPEG SHA256.
+    return min(found,key=lambda entry:(entry[0],entry[1]))[2]
 
 def choose_v40_source(old,entry):
     # Re-use the same source-qualified original V40 crop that produced
@@ -212,11 +212,20 @@ def run(apply=False):
         result=old.extract_one(old_source)
         if result not in ("verified_new","already_indexed"):
             raise RuntimeError("on_phone_osnet_not_verified")
-        # Re-read both real phone sidecars and their SHA256 hashes.
+        # Independently validate the 512D real ONNX model/crop SHA and L2.
+        # HSV32 will be generated in a later safe window if missing: never
+        # fabricate a histogram or imply the pair was fully verified.
         mark("persisted_visual_and_hsv_sha_readback")
-        complete=rank.verified_ready_subset(h,[orphan])
-        if len(complete)!=1 or complete[0]["key"]!=orphan["key"]:
-            raise RuntimeError("post_processing_descriptor_pair_invalid")
+        h.safe_visual(orphan["key"],orphan["crop_sha256"])
+        visual=h.ROOT+"/features/"+orphan["key"]+"-visual.json"
+        digest=rank.existing_sha(visual)
+        if not isinstance(digest,str) or not re.fullmatch(r"[a-f0-9]{64}",digest):
+            raise RuntimeError("post_processing_visual_checksum_missing")
+        has_hsv=present(orphan["key"],"hsv")
+        if has_hsv:
+            complete=rank.verified_ready_subset(h,[orphan])
+            if len(complete)!=1 or complete[0]["key"]!=orphan["key"]:
+                raise RuntimeError("post_processing_descriptor_pair_invalid")
         mark("post_inference_camera_readiness")
         healthy()
         if ctrl.adb("shell","pidof nl.kalenel.s9security",timeout=15).stdout.strip()!=camera_id:
@@ -231,7 +240,8 @@ def run(apply=False):
         mark("complete")
         print(DONE+json.dumps({
             "single_real_osnet_vector_verified":True,
-            "existing_hsv32_matched_and_verified":True,
+            "existing_hsv32_matched_and_verified":has_hsv,
+            "hsv32_completion_still_pending":not has_hsv,
             "new_osnet_sidecar_created":result=="verified_new",
             "historical_v2_references_preserved":57,
             "camera_pid_unchanged":True,"originals_modified":False,
