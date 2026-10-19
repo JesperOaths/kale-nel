@@ -106,8 +106,8 @@ def patch(old):
  player=p.decode("utf8")
  generator=g.decode("utf8")
  index=i.decode("utf8")
- if player.count("</head>")!=1 or "C720PSecureRelay" not in player or
-    "C720P_MIGRATED_S9_LEGACY_PLAYER_V1" not in player:
+ if (player.count("</head>")!=1 or "C720PSecureRelay" not in player or
+     "C720P_MIGRATED_S9_LEGACY_PLAYER_V1" not in player):
   raise RuntimeError("unknown_legacy_player_structure")
  if (index.count(VIDEO)!=1 or generator.count(VIDEO)!=1 or
      index.count("<title>Camera Security</title>")!=1 or
