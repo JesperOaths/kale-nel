@@ -3,8 +3,8 @@ Description=Refresh private S9 recovery evidence only during a cool capture wind
 
 [Timer]
 OnBootSec=2h
-OnUnitInactiveSec=3d
-RandomizedDelaySec=4h
+OnUnitInactiveSec=12h
+RandomizedDelaySec=45min
 AccuracySec=15min
 Persistent=false
 Unit=c720p-s9-auxiliary-recovery-refresh-v1.service
