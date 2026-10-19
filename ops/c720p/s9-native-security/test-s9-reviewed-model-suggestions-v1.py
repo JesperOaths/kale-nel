@@ -13,7 +13,7 @@ spec.loader.exec_module(m)
 class Tests(unittest.TestCase):
     def setUp(self):
         self.base=(ROOT/"security-people-v45.js").read_bytes()
-        self.page=(ROOT/"security-people-v50.html").read_bytes()
+        self.page=(ROOT/"security-people-v45.html").read_bytes()
 
     def test_patch_parses_and_retains_functions(self):
         new,changed=m.patch(self.base)
