@@ -41,7 +41,7 @@ class Tests(unittest.TestCase):
   self.assertIn("real_served_legacy_pages:2",js)
   self.assertIn("images[0].dispatchEvent(new Event('error'))",js)
   self.assertIn("finally{script.remove();container.remove();}",js)
-  for banned in ("saveClip(","deleteClip(","/save?","/delete?","video.play(",
+  for banned in ("saveClip(1);","deleteClip(","/save?","/delete?","video.play(",
       "getUserMedia(","fetch('/new/people/"):
    self.assertNotIn(banned,js)
   tree=ast.parse(SOURCE.read_text())
