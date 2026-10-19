@@ -33,3 +33,25 @@ jobs:
           d=ops/c720p/s9-native-security/offline-worker
           python3 "$d/test-s9-migrated-ledger-v193.py"
           python3 ops/c720p/security-runtime/test_s9_migrated_save_delete_contract_v181.py
+      - name: Compile production ledger as Android Java 8 DEX without any device access
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          d8="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$jar" && test -x "$d8"
+          temp="$(mktemp -d)"
+          trap 'rm -rf "$temp"' EXIT
+          mkdir -p "$temp/classes" "$temp/dex"
+          javac -source 8 -target 8 -cp "$jar" -d "$temp/classes" "$root/S9MigratedMetadataLedgerV193.java"
+          find "$temp/classes" -name '*.class' | grep -q .
+          "$d8" --min-api 28 --output "$temp/dex" $(find "$temp/classes" -name '*.class' -print)
+          test -s "$temp/dex/classes.dex"
+          python3 - "$temp/dex/classes.dex" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1])
+          b=p.read_bytes()
+          assert 1000<len(b)<500000 and b.startswith(b'dex\\n')
+          print("S9_MIGRATED_METADATA_LEDGER_V193_ANDROID_DEX_VERIFIED",len(b))
+          PY
