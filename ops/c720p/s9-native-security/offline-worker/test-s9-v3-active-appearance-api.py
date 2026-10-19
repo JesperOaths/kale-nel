@@ -42,8 +42,18 @@ class V3Api(unittest.TestCase):
                 "cohort":"v40" if i<51 else "approved_new" if i<57
                        else "archive_unassigned"
             })
+        self.v2_map={"schema":"s9_multivector_source_map_v2",
+                     "visual_model_sha256":a.VISUAL_SHA,
+                     "color_histogram_schema":a.SCHEMA,
+                     "people_assigned_automatically":0,
+                     "rows":[{k:row[k] for k in
+                             ("key","clip","source","crop_sha256","cohort")}
+                             for row in self.rows[:57]]}
+        self.v2_map_bytes=encode(self.v2_map)
+        (self.folder/"s9-multivector-crop-map-v2.json").write_bytes(self.v2_map_bytes)
         self.map={
             "schema":"s9_multivector_source_map_v3",
+            "v2_baseline_source_map_sha256":a.checksum(self.v2_map_bytes),
             "corpus_id":self.corpus,
             "visual_model_sha256":a.VISUAL_SHA,
             "color_histogram_schema":a.SCHEMA,
@@ -65,12 +75,15 @@ class V3Api(unittest.TestCase):
                         for i,row in enumerate(self.rows)]
         }
         self.original_state=worker.STATE_DIR
+        self.original_baseline_map=worker.BASELINE_V2_MAP
         self.original_api_state=a.STATE
         self.original_api_active=a.ACTIVE
         worker.STATE_DIR=self.folder
+        worker.BASELINE_V2_MAP=self.folder/"s9-multivector-crop-map-v2.json"
         a.STATE=self.folder
         a.ACTIVE=self.folder/"s9-multivector-v3-active.json"
         self.addCleanup(setattr,worker,"STATE_DIR",self.original_state)
+        self.addCleanup(setattr,worker,"BASELINE_V2_MAP",self.original_baseline_map)
         self.addCleanup(setattr,a,"STATE",self.original_api_state)
         self.addCleanup(setattr,a,"ACTIVE",self.original_api_active)
         self.install()
@@ -83,7 +96,7 @@ class V3Api(unittest.TestCase):
             "corpus_id":self.corpus,
             "map_sha256":a.checksum(self.map_bytes),
             "rankings_sha256":a.checksum(self.rank_bytes),
-            "verified_crops":58,
+            "verified_crops":len(self.rows),
             "automatic_person_assignments":0,
             "human_review_required":True}
         a.ACTIVE.write_bytes(encode(self.pointer))
@@ -140,6 +153,36 @@ class V3Api(unittest.TestCase):
                 "method":"visual_75_color_25",
                 "verified_same_person":False,
                 "human_review_required":True}
+
+    def test_expanded_v40_corpus_accepts_new_crops_but_preserves_v2(self):
+        self.assertEqual(worker.verified_v2_baseline(self.rows),
+                         a.checksum(self.v2_map_bytes))
+        # One unassigned dummy is replaced by 19 additional real V40 entries:
+        # the original 51 V40 + 6 manually approved references stay identical.
+        self.rows.pop()
+        for i in range(19):
+            self.rows.append({
+                "key":hashlib.sha256(("new-v40-"+str(i)).encode()).hexdigest(),
+                "clip":f"motion_{1890000000000+i*1000}.mp4",
+                "source":"s9_sd","crop_sha256":"4"*64,
+                "visual_sidecar_sha256":"5"*64,"hsv_sidecar_sha256":"6"*64,
+                "cohort":"v40"})
+        self.map["rows"]=self.rows
+        self.install()
+        clips,keys=a.verified_map(self.pointer)
+        self.assertEqual(len(keys),76)
+        self.assertEqual(len(clips),76)
+        self.assertEqual(worker.verified_v2_baseline(self.rows),
+                         a.checksum(self.v2_map_bytes))
+        del self.rows[0]
+        with self.assertRaisesRegex(RuntimeError,"Missing or altered"):
+            worker.verified_v2_baseline(self.rows)
+
+    def test_rejects_tampered_historical_v2_baseline_sha(self):
+        self.map["v2_baseline_source_map_sha256"]="f"*64
+        self.install()
+        with self.assertRaisesRegex(ValueError,"historical_baseline_sha"):
+            a.verified_map(self.pointer)
 
     def test_active_pointer_never_regresses_and_is_append_only(self):
         # Separate from live source maps; tests only temporary files.
