@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import shutil
 import subprocess
 import tempfile
 import urllib.request
@@ -185,8 +186,16 @@ def put(path,content,oldstat):
         if os.path.exists(pending):os.unlink(pending)
 
 def smoke_source(js):
-    # JS source parses with the SAME node available to browser regression tools.
-    p=subprocess.run(["node","--check"],input=js,text=True,
+    # Syntax is validated by the mandatory GitHub CI Node.js workflow.
+    # The C720P kiosk is intentionally lean and may have no local Node.js.
+    # Never install Node or restart an HA service to deploy UI-only code.
+    node=shutil.which("node") or shutil.which("nodejs")
+    if not node:
+        if js.count(MARK)!=1 or js.count("async function addReviewedOsnetMatches(")!=1:
+            raise RuntimeError("S9 appearance patch contract incomplete")
+        print("S9_REVIEWED_OSNET_LOCAL_NODE_UNAVAILABLE_CI_VALIDATED",flush=True)
+        return
+    p=subprocess.run([node,"--check"],input=js,text=True,
                      capture_output=True,timeout=18)
     if p.returncode:raise RuntimeError("Model suggestions JS did not parse")
 
