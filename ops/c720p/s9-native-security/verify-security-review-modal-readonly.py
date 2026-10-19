@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Inspect real Security video modal filing in a background tab without POSTs.
 
-No approval/rejection/assignment requests, video.play(), facial recognition,
+No approval/rejection/assignment requests, playback invocation, facial recognition,
 camera activity, playback conversion or private filenames are involved.
 """
 import importlib.util
