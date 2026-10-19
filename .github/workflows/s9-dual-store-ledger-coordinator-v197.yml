@@ -1,0 +1,65 @@
+name: S9 dual-store Save Delete coordinator V197 (offline)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedDualStoreCoordinatorV197.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedDualStoreCoordinatorTestV197.java'
+      - '.github/workflows/s9-dual-store-ledger-coordinator-v197.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedDualStoreCoordinatorV197.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedDualStoreCoordinatorTestV197.java'
+      - '.github/workflows/s9-dual-store-ledger-coordinator-v197.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-dual-store-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile and regress dual-store crash barrier without a phone
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          javac -source 8 -target 8 -d "$tmp" \
+            "$root/S9MigratedMetadataLedgerV193.java" \
+            "$root/S9MigratedLedgerTrustedCheckpointV196.java" \
+            "$root/S9MigratedDualStoreCoordinatorV197.java" \
+            "$root/S9MigratedDualStoreCoordinatorTestV197.java"
+          java -cp "$tmp" nl.kalenel.s9offline.S9MigratedDualStoreCoordinatorTestV197
+          python3 "$root/test-s9-migrated-ledger-v193.py"
+          python3 "$root/test-s9-ledger-internal-checkpoint-v196.py"
+          echo S9_DUAL_STORE_COORDINATOR_V197_HOST_ONLY_SAFE
+      - name: Check Android Java 8 API 28 DEX compilation without access to device
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          d8="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$jar" && test -x "$d8"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          mkdir -p "$tmp/classes" "$tmp/dex"
+          javac -source 8 -target 8 -cp "$jar" -d "$tmp/classes" \
+            "$root/S9MigratedMetadataLedgerV193.java" \
+            "$root/S9MigratedLedgerTrustedCheckpointV196.java" \
+            "$root/S9MigratedDualStoreCoordinatorV197.java"
+          "$d8" --min-api 28 --output "$tmp/dex" $(find "$tmp/classes" -name '*.class' -print)
+          test -s "$tmp/dex/classes.dex"
+          python3 - "$tmp/dex/classes.dex" <<'PY'
+          from pathlib import Path
+          import sys
+          payload=Path(sys.argv[1]).read_bytes()
+          assert payload[:4]==bytes((100,101,120,10)) and 1000<len(payload)<500000
+          print("S9_DUAL_STORE_V197_ANDROID_DEX_SOURCE_VERIFIED",len(payload))
+          PY
