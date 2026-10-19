@@ -1,0 +1,12 @@
+[Unit]
+Description=Read-only cool-window Security recovery byte-range verification
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub/bin
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9_recovery_playback_smoke_v1.py --execute
+TimeoutStartSec=90
+Nice=18
+IOSchedulingClass=idle
+CPUWeight=10
