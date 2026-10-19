@@ -29,7 +29,9 @@ jobs:
           mkdir -p "$tmp/ops/c720p/s9-native-security"
           base='https://raw.githubusercontent.com/JesperOaths/kale-nel/eaf8a58f1c733dbc9109348725669917eab1bb5b/ops/c720p/s9-native-security'
           curl -fSsL --retry 2 --max-time 35 "$base/security-people-v45.js" -o "$tmp/v59.js"
-          cp ops/c720p/s9-native-security/security-people-v45.html ops/c720p/s9-native-security/test-people-v45.js "$tmp/ops/c720p/s9-native-security/"
+          for file in security-people-v45.html test-people-v45.js; do
+            curl -fSsL --retry 2 --max-time 35 "$base/$file" -o "$tmp/ops/c720p/s9-native-security/$file"
+          done
           python3 - "$tmp" <<'PY'
           import importlib.util
           import sys
