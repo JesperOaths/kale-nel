@@ -1,0 +1,37 @@
+name: S9 standalone original-digest safety
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrity.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrityCli.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrityTest.java'
+      - '.github/workflows/s9-standalone-original-integrity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrity.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrityCli.java'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          curl -fsSL --max-time 40 https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar -o "$work/json.jar"
+          javac -source 8 -target 8 -cp "$work/json.jar" -d "$work/classes" \
+            ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrity.java \
+            ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrityTest.java
+          java -cp "$work/classes:$work/json.jar" nl.kalenel.s9security.PhoneArchiveIntegrityTest
+          sdk="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          jar="$(find "$sdk/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$jar"
+          javac -source 8 -target 8 -cp "$jar" -d "$work/classes" \
+            ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrity.java \
+            ops/c720p/s9-native-security/offline-worker/PhoneArchiveIntegrityCli.java
+          echo S9_ORIGINAL_DIGEST_ISOLATED_ANDROID_COMPILED
