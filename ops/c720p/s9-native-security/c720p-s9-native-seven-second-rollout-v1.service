@@ -1,0 +1,13 @@
+[Unit]
+Description=Guarded one-attempt S9 native 7-second 4K rollout at safe thermal idle
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub/bin
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9_7s_cool_rollout_v1.py
+TimeoutStartSec=360
+Nice=14
+IOSchedulingClass=idle
+CPUWeight=15
+NoNewPrivileges=yes

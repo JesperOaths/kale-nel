@@ -1,0 +1,13 @@
+[Unit]
+Description=Attempt S9 7-second 4K rollout only when existing camera is cool and idle
+
+[Timer]
+OnBootSec=3h
+OnUnitInactiveSec=25min
+RandomizedDelaySec=5min
+AccuracySec=2min
+Persistent=false
+Unit=c720p-s9-native-seven-second-rollout-v1.service
+
+[Install]
+WantedBy=timers.target
