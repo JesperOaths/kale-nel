@@ -91,7 +91,7 @@ public final class AuxiliaryMediaProbe {
  }
  private static JSONArray scan(int offset,int limit)throws Exception {
   File base=new File(ARCHIVE);
-  if(base.isSymbolicLink())throw new IllegalStateException("archive_symlink");
+  if(Files.isSymbolicLink(base.toPath()))throw new IllegalStateException("archive_symlink");
   if(!base.isDirectory()||!base.canRead()||!ARCHIVE.equals(base.getCanonicalPath()))
    throw new IllegalStateException("untrusted_archive_path");
   File[] all=base.listFiles();
