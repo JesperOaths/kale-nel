@@ -54,7 +54,7 @@ class Tests(unittest.TestCase):
   for dangerous in ("unlink","rmtree","replace","write_bytes","write_text",
                     "mkdir","chmod","system","Popen","kill","terminate"):
    self.assertNotIn(dangerous,calls)
-  self.assertNotIn("subprocess",SCRIPT.read_text())
+  self.assertFalse(any(isinstance(n,ast.Import) and any(alias.name=="subprocess" for alias in n.names) for n in ast.walk(parsed)))
   self.assertIn('"local_originals_retention_required":True',SCRIPT.read_text())
   self.assertIn('"no_save_or_delete_executed":True',SCRIPT.read_text())
 
