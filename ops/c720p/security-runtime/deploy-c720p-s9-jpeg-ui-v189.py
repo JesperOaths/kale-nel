@@ -70,6 +70,8 @@ ANCHOR="<title>Camera Security</title>"
  addition="""MARKER="c720p-migrated-index-playback-v1.js"
 JPEG_SCRIPT="<script defer src='c720p-migrated-snapshot-display-v182.js'></script>"
 JPEG_MARKER="c720p-migrated-snapshot-display-v182.js"
+JPEG_BRIDGE=INDEX.parent/"c720p-migrated-snapshot-display-v182.js"
+EXPECTED_JPEG_SHA256="339d98d5aa704a648720463e72b03b216af07cfa9c7aae01f952d95e408456d6"
 ANCHOR="<title>Camera Security</title>"
 """
  if text.count(original)!=1:raise RuntimeError("unknown_guard_constant_shape")
@@ -94,6 +96,16 @@ ANCHOR="<title>Camera Security</title>"
 """
  if text.count(old_code)!=1:raise RuntimeError("unknown_guard_function_shape")
  text=text.replace(old_code,new_code)
+ existing_check="""        data,st=snapshot()
+"""
+ protected_check="""        if (JPEG_BRIDGE.is_symlink() or not JPEG_BRIDGE.is_file() or
+            digest(JPEG_BRIDGE.read_bytes())!=EXPECTED_JPEG_SHA256):
+            print("C720P_LEGACY_INDEX_BRIDGE_DEFERRED signed_jpeg_script_drift")
+            return "deferred"
+        data,st=snapshot()
+"""
+ if text.count(existing_check)!=1:raise RuntimeError("unknown_guard_snapshot_gate")
+ text=text.replace(existing_check,protected_check)
  old_preview="""            "would_patch":bool(data and MARKER.encode() not in data
                          and new_html(data) is not None),"""
  new_preview="""            "would_patch":bool(data and new_html(data) is not None),"""
