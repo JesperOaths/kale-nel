@@ -30,12 +30,19 @@ def adb(*args,timeout=25):
   raise RuntimeError("phone_transfer_or_health_unavailable")
  return result.stdout.strip()
 def digest(name):
+ # Only test -s code 1 with NO stderr confirms actual absence.
+ # An ADB connection failure or permission error must abort, not overwrite.
+ check=subprocess.run(["adb","-s",PHONE,"shell","test","-s",name],
+                      capture_output=True,text=True,timeout=20)
+ if check.returncode==1 and not check.stderr.strip():return None
+ if check.returncode!=0:raise RuntimeError("phone_model_presence_indeterminate")
  result=subprocess.run(["adb","-s",PHONE,"shell","sha256sum",name],
                        capture_output=True,text=True,timeout=20)
- if result.returncode:return None
- m=re.fullmatch(r"([a-f0-9]{64})\s+.+",result.stdout.strip())
- if not m:raise RuntimeError("unknown_phone_model_digest")
- return m.group(1)
+ if result.returncode:raise RuntimeError("phone_model_hash_indeterminate")
+ line=result.stdout.strip().split()
+ if len(line)<2 or not re.fullmatch(r"[a-f0-9]{64}",line[0]):
+  raise RuntimeError("unknown_phone_model_digest")
+ return line[0]
 def health():
  with urllib.request.urlopen(CAMERA,timeout=12) as r:
   if r.status!=200:raise RuntimeError("native_recorder_unavailable")
