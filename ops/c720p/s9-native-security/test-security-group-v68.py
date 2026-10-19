@@ -27,7 +27,7 @@ assert b'approvedFolderContext' in patched
 with tempfile.TemporaryDirectory() as d:
     output=Path(d)/'people.js';output.write_bytes(patched)
     subprocess.run(['node','--check',str(output)],check=True)
-html=(ROOT/'security-people-v45.html').read_bytes()
+html=data['at'](data['V66_RELEASE'],'security-people-v45.html')
 modified=v68.patch_html(html)
 assert b'id="approvalAddPerson"' in modified
 assert b'id="approvalMorePeople"' in modified
