@@ -104,6 +104,23 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    case["animal_confidence"]=0.0
    if confidence:case[confidence]=.7
    self.assertEqual(m.category_from_phone(case),expected)
+ def test_main_only_v28_failure_does_not_charge_s3_recording(self):
+  with tempfile.TemporaryDirectory() as temp:
+   first="1"*64;second="2"*64
+   verified={first:{"clip_id":first,"camera":"s3","legacy_person_score":.9,"remote_name":"S3_bedroom.mp4"},
+             second:{"clip_id":second,"camera":"new","legacy_person_score":.7,"remote_name":"NEW_garden.mp4"}}
+   data={"items":{first:{"status":"classified","camera":"s3","remote_name":"S3_bedroom.mp4"},
+                  second:{"status":"classified","camera":"new","remote_name":"NEW_garden.mp4"}}}
+   saved=[]
+   module=SimpleNamespace(LOCK=Path(temp)/"lock",original_verified=lambda:verified,
+       read_catalog=lambda:data,write_catalog=lambda updated:saved.append(updated))
+   with patch.object(m,"cpu_catalog",return_value=module):
+    receipt=m.mark_v28_failed_source(RuntimeError("unsafe_input"),main_camera_only=True)
+   self.assertEqual(receipt["clip_id_prefix"],second[:12])
+   self.assertNotIn("v28_person_recheck",data["items"][first])
+   self.assertEqual(data["items"][second]["v28_person_recheck"]["status"],"error")
+   self.assertEqual(len(saved),1)
+
  def test_main_s9_camera_pilot_does_not_select_bedroom_media(self):
   sources=[{"camera":"s3","clip_id":"bedroom"},
            {"camera":"new","clip_id":"garden1"},
