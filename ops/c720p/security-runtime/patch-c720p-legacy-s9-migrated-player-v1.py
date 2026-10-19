@@ -18,29 +18,31 @@ ANCHOR="const path=String(current.clip).split('/').map(encodeURIComponent).join(
 REPLACE="""const path=String(current.clip).split('/').map(encodeURIComponent).join('/');
  // C720P_MIGRATED_S9_LEGACY_PLAYER_V1: old local player first checks S9+
  // without losing the local fallback while legacy clips are still retained.
- let url=BASE+path,rangeOrigin='range-local';
+ let url=BASE+path;
  const requested=String(current.clip).split('/').pop();
- const requestGeneration=generation;
- if(window.C720PSecureRelay?.fetch&&window.C720PSecureRelay?.url&&
+ const requestClip=String(current.clip),requestClipNo=String(current.clip_no);
+ const relay=window.C720PSecureRelay||(()=>{
+   try{return window.parent!==window?window.parent.C720PSecureRelay:null}
+   catch(_){return null}
+ })();
+ if(relay?.fetch&&relay?.url&&
     /^[A-Za-z0-9][A-Za-z0-9._-]{0,139}\\.mp4$/.test(requested)&&!requested.includes('..')){
    try{
-    const response=await C720PSecureRelay.fetch('/new/api/c720p-migrated-clips',{cache:'no-store'});
+    const response=await relay.fetch('/new/api/c720p-migrated-clips',{cache:'no-store'});
     if(response.ok){
      const proof=await response.json();
      if(proof.ok===true&&proof.schema_version==='c720p_s9_verified_import_v2'&&
         proof.not_s9_original_recordings===true&&proof.not_person_assignments===true&&
         Array.isArray(proof.files)&&proof.files.length<=5000&&
         proof.files.some(f=>f&&f.name===requested&&Number.isSafeInteger(f.bytes)&&f.bytes>=10000)){
-       url=await C720PSecureRelay.url('/new/saved/c720p-migrated/clip/'+encodeURIComponent(requested));
-       rangeOrigin='s9-microSD-migrated';
+       url=await relay.url('/new/saved/c720p-migrated/clip/'+encodeURIComponent(requested));
      }
     }
    }catch(_){/* local file remains available during cutover */}
  }
- if(requestGeneration!==generation)return;
+ if(!current||String(current.clip)!==requestClip||String(current.clip_no)!==requestClipNo)return;
  blobClipNo=current.clip_no;"""
 VERSION_ANCHOR="mode:'range-local',src:url"
-VERSION_REPLACE="mode:rangeOrigin,src:url"
 
 def sha(raw):return hashlib.sha256(raw).hexdigest()
 
@@ -51,7 +53,7 @@ def patch(raw):
         raise ValueError("legacy_player_source_drift")
     if "async function prepareBlob(play)" not in raw or "function releaseBlob()" not in raw:
         raise ValueError("legacy_player_required_functions_missing")
-    result=raw.replace(ANCHOR,REPLACE).replace(VERSION_ANCHOR,VERSION_REPLACE)
+    result=raw.replace(ANCHOR,REPLACE)
     if result.count(MARKER)!=1:
         raise ValueError("source_marker_count")
     if not all(t in result for t in ("async function playPhone(", "Save", "delete", "events.json")):
