@@ -476,6 +476,10 @@ def install_local_sd(H):
  # Historical auxiliary footage is separate from verified original recordings.
  import s9_auxiliary_recovery_api_v1
  s9_auxiliary_recovery_api_v1.install(H,play_sd)
+ # Former C720P event recordings offloaded onto S9+; isolated from
+ # verified original 4K and manual person classification.
+ import s9_c720p_imported_media_api_v1
+ s9_c720p_imported_media_api_v1.install(H,play_sd)
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
@@ -484,7 +488,7 @@ def install_local_sd(H):
  except ModuleNotFoundError as error:
   if error.name!='s9_evidence_quality_v1':raise
  else:s9_evidence_quality_v1.install(H,rows)
-def play_sd(handler,name,record):
+def play_sd(handler,name,record,*,root_override=None):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:
   handler.js(404,{"ok":False,"error":"invalid_clip"});return
@@ -505,11 +509,14 @@ def play_sd(handler,name,record):
   return media_headers(handler,code,size,first,last,count)
  # Native Camera2 MP4s can now be served from the phone's loopback Range API
  # without starting ADB dd per seek. Old installed builds still 404/fallback.
- if name.startswith("motion_") and phone_video_range(handler,name,size,first,last,count,code):
+ if root_override is None and name.startswith("motion_") and phone_video_range(handler,name,size,first,last,count,code):
   return
  shift=first%BLOCK
  chunks=last//BLOCK-first//BLOCK+1
- root=SECURITY_SD if name.startswith("motion_") else NATIVE_SD if name.startswith("native4k_") else SD
+ root=(root_override if root_override is not None else
+       SECURITY_SD if name.startswith("motion_") else NATIVE_SD if name.startswith("native4k_") else SD)
+ if root_override is not None and root_override!=("/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/C720PMigrated"):
+  handler.js(404,{"ok":False,"error":"unauthorized_media_root"});return
  args=["adb","-s",PHONE,"exec-out","dd","if="+root+"/"+name,
        "bs="+str(BLOCK),"skip="+str(first//BLOCK),"count="+str(chunks)]
  try:proc=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
