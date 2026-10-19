@@ -39,6 +39,7 @@ class FakeH:
         self.rows=[{"key":f"{i+1:064x}","crop_sha256":"f"*64,
              "cohort":"v40" if i<70 else "approved_new"} for i in range(count)]
         self.cached={r["key"] for r in self.rows[initially_missing:]}
+        self.visual={r["key"] for r in self.rows}
         self.verified=[]
         self.new=[]
     def adb(self, *argv, **kw):
@@ -49,15 +50,20 @@ class FakeH:
         if argv[:2]==("shell","test -s "+self.ROOT+"/features/"):
             raise AssertionError("test -s call must contain exact key")
         if argv[0]=="shell" and argv[1].startswith("test -s "):
-            match=argv[1].removeprefix("test -s ").removeprefix(self.ROOT+"/features/").removesuffix("-hsv-v2.json")
-            found=match in self.cached
+            match=argv[1].removeprefix("test -s ").removeprefix(self.ROOT+"/features/")
+            if match.endswith("-hsv-v2.json"):
+                found=match.removesuffix("-hsv-v2.json") in self.cached
+            elif match.endswith("-visual.json"):
+                found=match.removesuffix("-visual.json") in self.visual
+            else:raise AssertionError("unexpected descriptor path")
             return SimpleNamespace(returncode=0 if found else 1,stdout="",stderr="")
         raise AssertionError("unexpected phone command "+str(argv))
     def inventory(self, include_unreviewed=False):
         assert include_unreviewed
         return list(self.rows)
     def safe_visual(self,key,cropsha):
-        if cropsha!="f"*64 or key not in {r["key"] for r in self.rows}:
+        if (cropsha!="f"*64 or key not in self.visual
+            or key not in {r["key"] for r in self.rows}):
             raise RuntimeError("forged_visual")
         self.verified.append(key)
         return True
@@ -106,6 +112,32 @@ class Tests(unittest.TestCase):
         self.assertEqual(again["missing_before"],16)
         self.assertEqual(again["missing_after"],14)
         self.assertEqual(len(h.new),4)
+    def test_missing_both_features_waits_for_real_osnet_first(self):
+        h=FakeH()
+        c=FakeCtrl()
+        missing_visual=h.rows[0]["key"]
+        h.visual.remove(missing_visual)
+        # 18 histograms missing in total, only 17 backed by visual data.
+        first=m.run(h,c)
+        self.assertEqual(first["missing_before"],17)
+        self.assertEqual(first["pending_real_visual_sidecars"],1)
+        self.assertEqual(first["new_verified_histograms"],2)
+        self.assertNotIn(missing_visual,h.new)
+        # After the source-qualified ONNX worker actually produces the
+        # visual sidecar, it becomes eligible in the next cool window.
+        h.visual.add(missing_visual)
+        second=m.run(h,c)
+        self.assertIn(missing_visual,h.new)
+        self.assertEqual(second["pending_real_visual_sidecars"],0)
+
+    def test_no_visual_sidecar_never_generates_fake_hsv(self):
+        h=FakeH(initially_missing=76)
+        h.visual.clear()
+        result=m.run(h,FakeCtrl())
+        self.assertEqual(result["new_verified_histograms"],0)
+        self.assertEqual(result["pending_real_visual_sidecars"],76)
+        self.assertEqual(h.new,[])
+
     def test_warm_phone_prevents_phone_writes(self):
         h=FakeH(temp=41.6)
         with self.assertRaisesRegex(RuntimeError,"phone_warm"):
