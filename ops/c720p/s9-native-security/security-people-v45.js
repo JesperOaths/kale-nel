@@ -722,7 +722,7 @@ function reviewItem(item,compact){
  }
  else if(!item.temporal_support)info.append(elt('p','Person evidence uncertain'));
  const tools=elt('div','','actions');
- tools.append(control(item.person_recheck_required?'🔎 Recheck person evidence':'▶ Play',()=>startVideo(item)));
+ tools.append(control('▶ Play',()=>startVideo(item)));
  if(item.decision==='approved'){
   if(state.folder)tools.append(control('↩ Return to review queue',
     ()=>manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},null),'secondary'));
