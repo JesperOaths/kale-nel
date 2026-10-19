@@ -115,7 +115,19 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
                             || !row.sourceHash.equals(sourceSha256)
                             || row.bytes != sourceBytes)
                         throw new IOException("nonce_replay_conflict");
-                    return receipt(row); // exact idempotent retry, no new write
+                    // A previously valid Save receipt is not a claim about
+                    // the CURRENT state after a subsequent Delete (or another
+                    // state transition). This caller cannot resurrect a
+                    // superseded action by replaying its old nonce. Compare
+                    // against the latest action for this clip under the lock.
+                    for (int j=current.size()-1;j>=0;j--) {
+                        Row latest=current.get(j);
+                        if (!latest.name.equals(name))continue;
+                        if (latest.sequence!=row.sequence)
+                            throw new IOException("superseded_receipt_no_longer_current");
+                        break;
+                    }
+                    return receipt(row); // current exact idempotent retry
                 }
                 if (row.name.equals(name) && row.action.equals("delete"))
                     throw new IOException("deleted_metadata_requires_explicit_restore");

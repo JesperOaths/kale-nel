@@ -72,6 +72,14 @@ public final class S9MigratedMetadataLedgerTestV193 {
                 ledger.commit("delete",A,SOURCE_A,123456,N2);
             ok(tombstone.ledgerSequence==2 && ledger.verifiedCount()==2,"durable_tombstone");
             denied(()->ledger.commit("save",A,SOURCE_A,123456,N3),"explicit_restore_required");
+            // An old Save receipt must not masquerade as a current Saved
+            // decision once Delete's tombstone has been durably committed.
+            denied(()->ledger.commit("save",A,SOURCE_A,123456,N1),
+                   "superseded_save_nonce_after_delete");
+            S9MigratedMetadataLedgerV193.Receipt repeatedDelete=
+                ledger.commit("delete",A,SOURCE_A,123456,N2);
+            ok(repeatedDelete.hmacSha256.equals(tombstone.hmacSha256),
+               "latest_tombstone_still_idempotent");
             // B is independent of A's tombstone; no A/B source mixing.
             S9MigratedMetadataLedgerV193.Receipt separate=
                 ledger.commit("save",B,SOURCE_B,789012,N3);
@@ -80,9 +88,14 @@ public final class S9MigratedMetadataLedgerTestV193 {
         try(S9MigratedMetadataLedgerV193 reloaded=
               new S9MigratedMetadataLedgerV193(dir.toFile(),KEY)){
             ok(reloaded.verifiedCount()==3,"restart_reads_durable_records");
+            // Historical Save may still be cryptographically authentic,
+            // but replay after a newer tombstone is not an active receipt.
+            denied(()->reloaded.commit("save",A,SOURCE_A,123456,N1),
+                   "restart_rejects_superseded_save");
             S9MigratedMetadataLedgerV193.Receipt repeated=
-                reloaded.commit("save",A,SOURCE_A,123456,N1);
-            ok(repeated.hmacSha256.equals(synthetic.hmacSha256),"restart_idempotent_receipt");
+                reloaded.commit("delete",A,SOURCE_A,123456,N2);
+            ok(repeated.action.equals("delete")&&repeated.ledgerSequence==2,
+               "restart_idempotent_latest_delete");
         }
         // Private ledger key authenticates each record. Changed metadata must
         // not become authoritative after an in-place disk mutation.
