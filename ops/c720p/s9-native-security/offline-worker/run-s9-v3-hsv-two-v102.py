@@ -114,7 +114,10 @@ def run(h,ctrl):
         raise RuntimeError("unsafe_lock_path")
     fd=os.open(LOCK,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     with os.fdopen(fd,"rb") as locked:
-        fcntl.flock(locked,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        try:
+            fcntl.flock(locked,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError("shared_archive_worker_busy") from None
         capture_healthy()
         pid=camera_pid(h)
         before_temp=temperature(h)
@@ -173,7 +176,8 @@ def run(h,ctrl):
 
 def classify_abort(reason):
     # Pure, privacy-bounded result contract; raw exception details never logged.
-    temporary={"phone_warm_before_batch","phone_warm_before_descriptor",
+    temporary={"shared_archive_worker_busy",
+               "phone_warm_before_batch","phone_warm_before_descriptor",
                "phone_thermal_post_limit",
                "camera_too_warm_for_offline_processing",
                "camera_capture_not_stably_ready"}
