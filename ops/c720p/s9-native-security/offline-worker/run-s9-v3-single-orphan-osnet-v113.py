@@ -28,6 +28,7 @@ DONE="S9_V3_ORPHAN_OSNET_RECOVERED "
 DEFER="S9_V3_ORPHAN_OSNET_DEFERRED "
 BLOCK="S9_V3_ORPHAN_OSNET_BLOCKED "
 STAGE={"value":"startup"}
+WRITES={"started":False}
 def mark(value):
     # Only source-authored fixed stage names, never an exception or clip ID.
     STAGE["value"]=value
@@ -157,7 +158,41 @@ def run(apply=False):
             return h.remote_exists(h.ROOT+"/features/"+key+
                                    ("-visual.json" if kind=="visual" else "-hsv-v2.json"))
         mark("v2_hsv_osnet_source_presence")
-        orphan=choose_orphan(rows,[b["key"] for b in baseline],present)
+        try:
+            orphan=choose_orphan(rows,[b["key"] for b in baseline],present)
+        except RuntimeError as no_orphan:
+            if str(no_orphan)!="expected_exactly_one_orphan":
+                raise
+            # A previous attempt may have completed append-only phone inference
+            # and only failed a later post-check. Reconcile genuine real pair
+            # evidence instead of trying to rewrite or duplicate it.
+            mark("reconcile_preexisting_real_descriptor_pair")
+            complete=rank.verified_ready_subset(h,rows)
+            rank.verified_v2_baseline(complete)
+            old_keys={x["key"] for x in baseline}
+            extras=[x for x in complete
+                    if x["key"] not in old_keys and x["cohort"]=="v40"]
+            if len(extras)<1 or len(complete)<58:
+                raise RuntimeError("no_new_complete_real_reference")
+            healthy()
+            if ctrl.adb("shell","pidof nl.kalenel.s9security",timeout=15).stdout.strip()!=camera_id:
+                raise RuntimeError("camera_pid_changed_during_reconcile")
+            if ctrl.approved_names()!=approved or not set(inventory_before).issubset(ctrl.primary_events()):
+                raise RuntimeError("review_or_archive_changed")
+            if original_map.read_bytes()!=frozen_bytes:
+                raise RuntimeError("immutable_v2_changed_during_reconcile")
+            print(DONE+json.dumps({
+                "single_real_osnet_vector_verified":True,
+                "existing_hsv32_matched_and_verified":True,
+                "new_osnet_sidecar_created":False,
+                "historical_v2_references_preserved":57,
+                "camera_pid_unchanged":True,
+                "originals_modified":False,"manual_review_decisions_modified":False,
+                "camera_apk_modified":False,"rankings_written":False,
+                "automatic_people_assigned":0,
+                "private_identifiers_disclosed":False,
+                "already_complete_readonly_reconciliation":True},sort_keys=True),flush=True)
+            return
         mark("original_v40_crop_sha_provenance")
         old_source=choose_v40_source(old,orphan)
         if not apply:
@@ -170,6 +205,7 @@ def run(apply=False):
         mark("pre_inference_capture_readiness")
         healthy()
         mark("one_actual_on_phone_osnet_inference")
+        WRITES["started"]=True
         result=old.extract_one(old_source)
         if result not in ("verified_new","already_indexed"):
             raise RuntimeError("on_phone_osnet_not_verified")
@@ -211,7 +247,7 @@ def main():
         temporary={"camera_too_warm","4k_capture_not_idle_ready"}
         if reason in temporary:
             print(DEFER+json.dumps({"reason":reason,"stage":STAGE["value"],"completed":False,
-                "may_have_written_one_real_sidecar":args.apply,
+                "may_have_written_one_real_sidecar":WRITES["started"],
                 "private_identifiers_disclosed":False}),flush=True)
             return
         print(BLOCK+json.dumps({"stage":STAGE["value"],"reason":reason if reason in

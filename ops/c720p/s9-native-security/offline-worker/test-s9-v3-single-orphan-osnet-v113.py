@@ -115,6 +115,27 @@ class Tests(unittest.TestCase):
         self.assertNotIn('traceback.print_exc(',src)
         self.assertNotIn('print(str(exc))',src)
 
+    def test_idempotent_resume_never_rewrites_a_complete_vector(self):
+        script=P.read_text()
+        self.assertIn('mark("reconcile_preexisting_real_descriptor_pair")',script)
+        self.assertIn('rank.verified_ready_subset(h,rows)',script)
+        self.assertIn('rank.verified_v2_baseline(complete)',script)
+        self.assertIn('"already_complete_readonly_reconciliation":True',script)
+        self.assertIn('"new_osnet_sidecar_created":False',script)
+        self.assertIn('WRITES["started"]=True',script)
+        self.assertIn('"may_have_written_one_real_sidecar":WRITES["started"]',script)
+        m.WRITES["started"]=False
+        self.assertFalse(m.WRITES["started"])
+
+    def test_cool_window_schedule_is_unique_and_staggered(self):
+        wf=Path(__file__).resolve().parents[4]/".github/workflows/s9-v3-single-orphan-osnet-v113.yml"
+        content=wf.read_text()
+        self.assertIn("cron: '19 1,5,9,13,17,21 * * *'",content)
+        self.assertIn("${GITHUB_RUN_ID}",content)
+        self.assertIn("github.event_name == 'schedule'",content)
+        self.assertIn("github.event_name == 'push'",content)
+        self.assertIn("S9_V3_ORPHAN_OSNET_DEFERRED",content)
+
     def test_script_preserves_manual_evidence_and_no_auto_assign(self):
         src=P.read_text()
         for token in ("old.extract_one(old_source)",
