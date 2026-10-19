@@ -126,14 +126,15 @@ def capture_candidate_list(ctrl):
 def single_status(doc):
     counts=doc.get("counts")
     if (doc.get("attempted")!=1 or not isinstance(counts,dict)
-        or sum(v for v in counts.values() if type(v) is int)!=1
+        or not counts or any(type(v) is not int or v<0 for v in counts.values())
+        or sum(counts.values())!=1
         or any(x not in WORKER_STATUSES for x in counts)
         or doc.get("human_review_required") is not True
         or doc.get("recordings_modified") is not False
         or doc.get("camera_apk_modified") is not False
         or doc.get("review_decisions_modified") is not False):
         raise RuntimeError("Untrusted S9 ROI/OSNet acceptance result")
-    return next(iter(counts))
+    return next(status for status,value in counts.items() if value==1)
 
 def check_existing_feature(ctrl,clip):
     """Bounded read-only validation of a previous phone-side success."""
