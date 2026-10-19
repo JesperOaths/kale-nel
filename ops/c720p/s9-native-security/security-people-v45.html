@@ -218,6 +218,11 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
 .auto-person-cards article{min-width:0}
 .auto-person-cards .actions button{flex:1;min-width:96px}
 .auto-person-folders .empty{padding:22px;border:1px dashed #436575;border-radius:12px}
+.approval-more-people{display:grid;gap:9px;margin-top:8px}
+.approval-extra-row{display:flex;gap:8px;align-items:center}
+.approval-extra-row select{min-width:0;flex:1;max-width:100%}
+.approval-extra-row button{flex:none}
+#approvalAddPerson{width:100%;text-align:left;margin-top:8px;min-height:38px}
 </style>
 <script defer src="/local/frontyard-security-new/security-people-v45.js?v=v56-20261018-keep-dialog-form-only"></script>
 <script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
@@ -319,6 +324,8 @@ footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
   <div class="approval-video"><button id="approvalPlay" type="button" class="secondary">▶ Play original recording</button></div>
   <label>Person<select id="approvalFolder"></select></label>
   <label id="newLabel">New person name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
+  <div id="approvalMorePeople" class="approval-more-people" aria-label="Additional people in this recording"></div>
+  <button id="approvalAddPerson" type="button" class="secondary">+ Add another person</button>
   
  </div>
  <div class="approval-footer"><button id="approvalCancelFooter" type="button">Cancel</button><button class="primary" type="submit">Confirm &amp; keep · next recording</button></div>

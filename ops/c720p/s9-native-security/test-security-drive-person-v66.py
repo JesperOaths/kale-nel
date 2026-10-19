@@ -21,11 +21,14 @@ live=v64.patch_js(live,at(v64.BEFORE).decode(),at(v65.BEFORE).decode())
 live,_=model.patch(live)
 live=v65.patch_js(live,at(v65.BEFORE).decode(),old)
 assert v65.sha(live)==v66.LIVE_JS
-fresh=v66.patch_js(live,old,(ROOT/'security-people-v45.js').read_text())
+# Reconstruct the historical V66 release from its immutable merge, not the
+# evolving main-branch UI. New features cannot change an old release digest.
+V66_RELEASE='9ca69d3b66b006dc92044ee48212b64c51527b96'
+fresh=v66.patch_js(live,old,at(V66_RELEASE).decode())
 assert v66.b.sha(fresh)==v66.ALREADY_JS, 'Installed V66 hash no longer matches exact source replay'
 with tempfile.TemporaryDirectory() as directory:
  target=Path(directory)/PREFIX;target.mkdir(parents=True)
  (target/'security-people-v45.js').write_bytes(fresh)
- for name in ('test-people-v45.js','security-people-v45.html'):(target/name).write_bytes((ROOT/name).read_bytes())
+ for name in ('test-people-v45.js','security-people-v45.html'):(target/name).write_bytes(at(V66_RELEASE,name))
  subprocess.run(['node',PREFIX+'test-people-v45.js'],cwd=directory,check=True)
 print('DRIVE_PERSON_V66_LIVE_PATCH_REGRESSION_PASS')
