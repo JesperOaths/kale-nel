@@ -17,7 +17,7 @@ d=importlib.util.module_from_spec(spec);spec.loader.exec_module(d)
 class V3Deploy(unittest.TestCase):
     def test_immutable_pinned_module_and_separate_route(self):
         self.assertEqual(d.github_blob_sha(API.read_bytes()),d.BLOB)
-        self.assertIn("/81bab2ddaee3dc63b94ad4736fca026c6b05570d/",d.SOURCE)
+        self.assertIn("/31acac83f463e384f7c50b910310631c241ca308/",d.SOURCE)
         self.assertEqual(d.HOOK.count("s9_multivector_appearance_api.install(H)"),1)
         self.assertIn("s9_multivector_appearance_api_v3.install(H)",d.ADD)
         self.assertIn(d.HOOK,d.ADD)
