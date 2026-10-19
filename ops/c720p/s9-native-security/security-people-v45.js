@@ -813,18 +813,37 @@ function automaticPortrait(f){
  }
  return proposed.get(f.id)||null;
 }
+function representativeReviewedImage(f){
+ const clips=folderApprovedSDClips(f.id);
+ if(!clips.size)return null;
+ // Human-labelled person only. A multi-person frame is NOT proof that a
+ // particular captured face belongs to the labelled person.
+ for(const clip of clips){
+  const rec=state.clipEvidence.get(clip);
+  const found=state.faceList.filter(x=>x.clip===clip&&
+    faceName.test(String(x.face?.snapshot_name||''))&&x.face?.snapshot_on_s9!==false);
+  if(found.length===1&&num(rec?.person_count)<=1){
+   return {node:mediaForFace(found[0]),label:'Face candidate from a manually reviewed recording'};
+  }
+ }
+ for(const clip of clips){
+  if(state.clipEvidence.has(clip))return {node:sceneFor({source:'sd',clip,name:clip}),
+   label:'Scene from a reviewed recording · individual face unverified'};
+ }
+ return null;
+}
 function profileRow(f){
  const b=control('',()=>openFolder(f.id),'profile');b.replaceChildren();
  const avatar=elt('div','', 'avatar');
  const face=chosenPortrait(f)||automaticPortrait(f);
- if(face){
-  avatar.append(mediaForFace(face));
-  avatar.title='Candidate from a reviewed recording';
- }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
+ const image=face?{node:mediaForFace(face),label:'Face candidate from a reviewed recording'}:
+  representativeReviewedImage(f);
+ if(image){avatar.append(image.node);avatar.title=image.label}
+ else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
  const info=elt('div');info.append(elt('strong',f.label),
   elt('small',folderAssignmentCount(f)+' reviewed '+(folderAssignmentCount(f)===1?'recording':'recordings')+
-    (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')),
-  elt('small',face?'Portrait from reviewed recording':'No verified face portrait yet'));
+    ''),
+  elt('small',image?image.label:'No reviewed image available'));
  b.append(avatar,info,elt('span','Open recordings →','arrow'));
  return b;
 }
@@ -853,7 +872,7 @@ function renderMetrics(){
  $('reviewTabCount').textContent=queue?' · '+queue:'';
  $('peopleReviewNotice').hidden=queue===0;
  $('peopleReviewSummary').textContent=queue+(queue===1?' recording needs':' recordings need')+' review';
- const recheck=saved.reduce((n,x)=>n+num(x.approvals_needing_person_recheck),0);
+ const recheck=0; // Manual approvals remain approved regardless of automatic detector status.
  $('peopleRecheckNotice').hidden=recheck===0;
  $('peopleRecheckSummary').textContent=recheck+' confirmed recording'+(recheck===1?' needs':'s need')+' evidence rechecking';
  $('personCount').textContent=String(saved.length);
@@ -895,7 +914,7 @@ function renderMetrics(){
  }
 }
 function renderOverview(){
- const flagged=savedFolders().filter(f=>num(f.approvals_needing_person_recheck)>0);
+ const flagged=[]; // Existing human approval is never invalidated by a later model scan.
  const reviewAlerts=$('reviewAlerts');reviewAlerts.replaceChildren();
  for(const f of flagged.slice(0,3)){
   const count=num(f.approvals_needing_person_recheck);
@@ -973,7 +992,7 @@ function renderReview(){
 
 function renderPeople(){
  const review=$('peopleRecheckActions');review.replaceChildren();
- const flagged=savedFolders().filter(x=>num(x.approvals_needing_person_recheck)>0);
+ const flagged=[]; // Detection discrepancies belong to diagnostics, not review chores.
  for(const person of flagged){
   const number=num(person.approvals_needing_person_recheck);
   review.append(control('Recheck '+person.label+' · '+number+' recording'+(number===1?'':'s'),
@@ -1230,12 +1249,11 @@ function renderFolder(){
  if(!f){alertText('This person is no longer available');return}
  $('folderTitle').textContent=f.label;
  $('folderDescription').textContent=folderAssignmentCount(f)+' saved recording links · '+
-  num(f.suggested_clips)+' appearance suggestions'+
-  (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need person rechecking':'');
- $('folderRecheck').hidden=!num(f.approvals_needing_person_recheck);
+  num(f.suggested_clips)+' appearance suggestions';
+ $('folderRecheck').hidden=true;
  $('folderRecheck').textContent=num(f.approvals_needing_person_recheck)+
   ' saved clip(s) need rechecking against the original recording; a previous approval is not a current detector confirmation.';
- $('folderRecheckFilter').hidden=state.tab!=='approved'||!num(f.approvals_needing_person_recheck);
+ $('folderRecheckFilter').hidden=true;
  $('folderRecheckOnly').checked=state.recheckOnly;
  $('folderMode').value=state.tab;
  const suggestions=state.tab==='suggestions';
