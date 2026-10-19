@@ -1,0 +1,13 @@
+[Unit]
+Description=Refresh S9 isolated native Security4K metadata without camera APK changes
+
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=2min
+RandomizedDelaySec=15s
+AccuracySec=15s
+Persistent=false
+Unit=c720p-s9-standalone-catalog.service
+
+[Install]
+WantedBy=timers.target

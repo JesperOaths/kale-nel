@@ -1,0 +1,112 @@
+package nl.kalenel.s9security;
+
+import java.io.*;
+import java.util.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+/** Isolated app_process entry point: same metadata-only catalog as Camera2,
+ * but a DIFFERENT Android process with no camera, media recorder or APK edits.
+ * Nothing is written to the S9 archive or hub by this Java entry point.
+ */
+public final class PhoneArchiveCli {
+ private static final String ARCHIVE_SUFFIX="/Android/data/nl.kalenel.s9security/files/Security4K";
+ private static JSONObject request(File folder,String uri)throws Exception {
+  ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+  if(!PhoneArchiveCatalog.handle(bytes,"GET "+uri+" HTTP/1.1",folder))
+   throw new IOException("phone_catalog_handler_refused");
+  String raw=bytes.toString("UTF-8");
+  int pos=raw.indexOf("\r\n\r\n");
+  if(pos<0||!raw.startsWith("HTTP/1.1 200 "))throw new IOException("phone_catalog_response_unavailable");
+  return new JSONObject(raw.substring(pos+4));
+ }
+ private static JSONObject summary(JSONArray items,File archive)throws Exception {
+  TimeZone tz=TimeZone.getTimeZone("Europe/Amsterdam");
+  TreeMap<String,Integer> hours=new TreeMap<>(),days=new TreeMap<>();
+  long claimedBytes=0;
+  int thumbs=0,personCandidates=0;
+  for(int i=0;i<items.length();i++){
+   JSONObject record=items.getJSONObject(i);
+   String name=record.getString("name");
+   if(!name.matches("motion_[0-9]{13}[.]mp4"))throw new IOException("untrusted_catalog_clip");
+   long epoch=Long.parseLong(name.substring(7,20));
+   GregorianCalendar t=new GregorianCalendar(tz,Locale.ROOT);
+   t.setTimeInMillis(epoch);
+   int hour=t.get(Calendar.HOUR_OF_DAY);
+   int offset=(t.get(Calendar.ZONE_OFFSET)+t.get(Calendar.DST_OFFSET))/60000;
+   String hourKey=String.format(Locale.ROOT,"%04d-%02d-%02dT%02d%c%04d",
+      t.get(Calendar.YEAR),t.get(Calendar.MONTH)+1,t.get(Calendar.DAY_OF_MONTH),
+      hour,offset>=0?'+':'-',Math.abs(offset)/60*100+Math.abs(offset)%60);
+   hours.put(hourKey,hours.containsKey(hourKey)?hours.get(hourKey)+1:1);
+   if(hour<6)t.add(Calendar.DAY_OF_MONTH,-1);
+   String dayKey=String.format(Locale.ROOT,"%04d-%02d-%02d",t.get(Calendar.YEAR),
+     t.get(Calendar.MONTH)+1,t.get(Calendar.DAY_OF_MONTH));
+   days.put(dayKey,days.containsKey(dayKey)?days.get(dayKey)+1:1);
+   claimedBytes+=record.getLong("bytes");
+   if(record.getBoolean("thumbnail"))thumbs++;
+   int candidates=record.getJSONObject("manifest").optInt("person_count",0);
+   if(candidates>0&&candidates<=20)personCandidates++;
+  }
+  JSONObject hourly=new JSONObject(),daily=new JSONObject();
+  for(Map.Entry<String,Integer> e:hours.entrySet())hourly.put(e.getKey(),e.getValue());
+  for(Map.Entry<String,Integer> e:days.entrySet())daily.put(e.getKey(),e.getValue());
+  return new JSONObject()
+    .put("source","S9_native_microSD_sidecar_metadata")
+    .put("timezone","Europe/Amsterdam")
+    .put("operating_day_start_hour",6)
+    .put("recordings",items.length())
+    .put("hourly_recording_counts",hourly)
+    .put("daily_recording_counts",daily)
+    .put("sidecar_claimed_video_bytes",claimedBytes)
+    .put("thumbnail_present_count",thumbs)
+    .put("person_candidate_recording_count",personCandidates)
+    .put("sd_usable_bytes",archive.getUsableSpace())
+    .put("sd_total_bytes",archive.getTotalSpace())
+    .put("counts_are_recordings_not_distinct_people",true)
+    .put("originals_sha256_rechecked",false)
+    .put("read_only",true);
+ }
+ public static void main(String[] args) {
+  try {
+   if(args.length!=1)throw new IllegalArgumentException("expected_archive_directory");
+   File folder=new File(args[0]).getCanonicalFile();
+   String p=folder.getPath();
+   if(!p.startsWith("/storage/9C33-6BBD/")||!p.endsWith(ARCHIVE_SUFFIX)||
+      !folder.isDirectory()||!folder.canRead())
+    throw new IOException("unexpected_sd_archive_path");
+   JSONArray all=new JSONArray();
+   String pin=null;
+   int count=-1;
+   for(int cursor=0,page=0;page<41;page++){
+    JSONObject data=request(folder,"/archive/catalog?cursor="+cursor+"&limit=50"+
+       (pin==null?"":"&snapshot="+pin));
+    if(!data.getBoolean("ok")||!"s9_native_archive_catalog_v1".equals(data.getString("schema_version"))||
+       !"full".equals(data.getString("mode"))||data.getJSONArray("errors").length()!=0)
+     throw new IOException("phone_catalog_invalid_or_unverified");
+    String snapshot=data.getString("snapshot_id");
+    if(pin==null){pin=snapshot;count=data.getInt("total_records");}
+    if(!pin.equals(snapshot)||count!=data.getInt("total_records")||cursor!=data.getInt("cursor"))
+     throw new IOException("catalog_generation_changed_during_read");
+    JSONArray pageRows=data.getJSONArray("records");
+    if(pageRows.length()>50)throw new IOException("catalog_page_size");
+    for(int i=0;i<pageRows.length();i++)all.put(pageRows.getJSONObject(i));
+    if(data.isNull("next_cursor"))break;
+    int next=data.getInt("next_cursor");
+    if(next<=cursor||next!=cursor+pageRows.length())throw new IOException("catalog_invalid_cursor");
+    cursor=next;
+   }
+   if(all.length()!=count||all.length()>2000)throw new IOException("phone_catalog_incomplete");
+   JSONObject payload=new JSONObject()
+     .put("ok",true).put("schema_version","s9_native_archive_cli_v1")
+     .put("snapshot_id",pin).put("records",all).put("total_records",count)
+     .put("source","S9_android_app_process")
+     .put("metadata_only",true).put("read_only",true)
+     .put("camera_apk_modified",false).put("video_decode_performed",false)
+     .put("summary",summary(all,folder));
+   System.out.println("S9_PHONE_ARCHIVE_CLI "+payload.toString());
+  }catch(Exception e){
+   System.err.println("S9_PHONE_ARCHIVE_CLI_UNAVAILABLE "+e.getClass().getSimpleName());
+   System.exit(2);
+  }
+ }
+}

@@ -1,0 +1,36 @@
+name: S9 isolated archive metadata worker
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveCli.java'
+      - 'ops/c720p/security-runtime/s9_standalone_phone_catalog_v1.py'
+      - 'ops/c720p/security-runtime/test-s9-standalone-phone-catalog-v1.py'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java'
+      - '.github/workflows/s9-standalone-archive-worker.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneArchiveCli.java'
+      - 'ops/c720p/security-runtime/s9_standalone_phone_catalog_v1.py'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/s9_standalone_phone_catalog_v1.py
+          PYTHONPATH=ops/c720p/security-runtime python3 ops/c720p/security-runtime/test-s9-standalone-phone-catalog-v1.py
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          ANDROID_JAR="$(find "$SDK_ROOT/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$ANDROID_JAR"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          javac -source 8 -target 8 -cp "$ANDROID_JAR" -d "$work" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneArchiveCatalog.java \
+            ops/c720p/s9-native-security/offline-worker/PhoneArchiveCli.java
+          test -s "$work/nl/kalenel/s9security/PhoneArchiveCli.class"
+          echo S9_ISOLATED_ARCHIVE_WORKER_COMPILES_AND_TESTS
