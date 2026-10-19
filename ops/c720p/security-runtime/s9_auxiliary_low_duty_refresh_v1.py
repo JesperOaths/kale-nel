@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import urllib.request
 
 import s9_auxiliary_media_probe_v1 as scanlib
 
@@ -28,8 +29,9 @@ MAX_TEMP_C=37.0
 MIN_ROOT_AVAILABLE=650*1024*1024
 
 def age_seconds(report=REPORT,now=None):
+    if report.is_symlink():raise ValueError("unsafe_recovery_report_symlink")
     if not report.exists():return None
-    if report.is_symlink() or not report.is_file() or report.stat().st_size>900000:
+    if not report.is_file() or report.stat().st_size>900000:
         raise ValueError("unsafe_existing_recovery_report")
     data=json.loads(report.read_bytes())
     if data.get("schema_version")!="s9_auxiliary_structural_report_v1":
@@ -63,10 +65,14 @@ def run(*,execute=False):
         if not execute:
             print("S9_AUX_RECOVERY_REFRESH_PLAN read_only_phone_scan private_report_only")
             return "plan"
-        status=scanlib.camera()
+        with urllib.request.urlopen("http://127.0.0.1:18808/status",timeout=8) as response:
+            status=json.load(response)
         temperature=status.get("temperature_c")
         if type(temperature) not in (float,int) or not 0<=temperature<MAX_TEMP_C:
             print("S9_AUX_RECOVERY_REFRESH_DEFERRED thermal")
+            return "deferred"
+        if status.get("mode")!="watching" or status.get("continuous_4k_ready") is not True or status.get("continuous_4k_dropped_output_frames")!=0:
+            print("S9_AUX_RECOVERY_REFRESH_DEFERRED capture")
             return "deferred"
         if os.statvfs("/").f_bavail*os.statvfs("/").f_frsize<MIN_ROOT_AVAILABLE:
             print("S9_AUX_RECOVERY_REFRESH_DEFERRED low_root_space")
