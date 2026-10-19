@@ -15,7 +15,8 @@ m=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(m)
 
 def response(**changes):
  d={"status":"micro_sd_two_decisions_reloaded","metadata_actions":2,
-    "nonce_replay_refused":True,"delete_is_only_tombstone":True,
+    "nonce_replay_refused":True,"superseded_save_refused":True,
+    "delete_is_only_tombstone":True,
     "journal_readback_verified":True,"only_synthetic_directory_written":True,
     "synthetic_key_persisted":False,"originals_removed":0,
     "real_clips_opened":0,"real_save_delete_enabled":False,
@@ -51,6 +52,7 @@ class LedgerSmoke(unittest.TestCase):
 
  def test_fake_or_partial_phone_receipt_refused(self):
   for bad in ({"nonce_replay_refused":False},
+              {"superseded_save_refused":False},
               {"only_synthetic_directory_written":False},
               {"synthetic_key_persisted":True},
               {"originals_removed":1},
