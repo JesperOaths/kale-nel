@@ -123,7 +123,12 @@ def run(apply=False):
     mark("shared_worker_lock")
     fd=os.open(LOCK,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     with os.fdopen(fd,"rb") as lock:
-        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        try:
+            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:
+            # Another phone worker owns the global capture-safe window.
+            # Scheduled retries must defer, never fight for Camera2 time.
+            raise RuntimeError("shared_archive_worker_busy") from None
         mark("camera_health")
         healthy()
         mark("loading_source_dependencies")
@@ -257,7 +262,8 @@ def main():
     try:run(args.apply)
     except Exception as exc:
         reason=str(exc)
-        temporary={"camera_too_warm","4k_capture_not_idle_ready"}
+        temporary={"camera_too_warm","4k_capture_not_idle_ready",
+                   "shared_archive_worker_busy"}
         if reason in temporary:
             print(DEFER+json.dumps({"reason":reason,"stage":STAGE["value"],"completed":False,
                 "may_have_written_one_real_sidecar":WRITES["started"],
