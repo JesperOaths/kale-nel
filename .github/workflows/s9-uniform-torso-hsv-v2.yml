@@ -1,0 +1,52 @@
+name: S9 uniform torso HSV32 v2 independent descriptor DEX
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9OfflineTorsoHistogramV2.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-torso-hsv-v2.py'
+      - '.github/workflows/s9-uniform-torso-hsv-v2.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9OfflineTorsoHistogramV2.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-torso-hsv-v2.py'
+      - '.github/workflows/s9-uniform-torso-hsv-v2.yml'
+permissions:
+  contents: read
+jobs:
+  compile-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Locate official Android platform and DEX tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          d8="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$sdk"
+          test -x "$d8"
+          echo "S9_ANDROID_SDK_JAR=$sdk" >> "$GITHUB_ENV"
+          echo "$(dirname "$d8")" >> "$GITHUB_PATH"
+      - name: Build isolated DEX and inspect no camera access
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$root/install-s9-torso-hsv-v2.py"
+          python3 "$root/install-s9-torso-hsv-v2.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          r=Path("ops/c720p/s9-native-security/offline-worker")
+          java=(r/"S9OfflineTorsoHistogramV2.java").read_text()
+          setup=(r/"install-s9-torso-hsv-v2.py").read_text()
+          for term in ("hue8_saturation2_value2_center_torso_v2",
+                       "crop_sha256","upper_hsv32","human_review_required",
+                       "verified_same_person", "StandardCopyOption.ATOMIC_MOVE"):
+              assert term in java,term
+          for bad in ("Camera2","pm install","am force-stop","delete_original",
+                      "delete_review","automatic_assign"):
+              assert bad not in java, bad
+          assert "--install" in setup
+          print("S9_UNIFORM_TORSO_HSV_V2_SOURCE_CONTRACT_PASS")
+          PY
