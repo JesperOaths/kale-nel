@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+import urllib.request
 
 PHONE="192.168.178.250:5555"
 ROOT="/data/local/tmp/s9_worker"
@@ -28,6 +29,9 @@ ANDROID=os.environ.get("S9_ANDROID_SDK_JAR","/usr/lib/android-sdk/platforms/andr
 VISUAL="ee5717ad7a90cf0c915afa1fb6a5399b966562c5d42aa6f4a0c6c84a5349e47d"
 HEX=re.compile(r"[a-f0-9]{64}\Z")
 SCHEMA="s9_uniform_upper_torso_hsv32_v2"
+CAPTURE_STATUS="http://127.0.0.1:18808/status"
+MAX_RANK_START_TEMP_C=39.5
+
 
 
 def digest(content):return hashlib.sha256(content).hexdigest()
@@ -175,12 +179,46 @@ def compile_ranker(base):
     return jar
 
 
+def capture_rank_safe():
+    """Only run private O(N²) ranking when live continuous-4K capture is safe."""
+    with urllib.request.urlopen(CAPTURE_STATUS,timeout=12) as response:
+        if response.status!=200:
+            raise RuntimeError("capture_status_unavailable")
+        content=response.read(150001)
+    if len(content)>150000:
+        raise RuntimeError("capture_status_unbounded")
+    data=json.loads(content)
+    if not isinstance(data,dict):raise RuntimeError("capture_status_untrusted")
+    temp=data.get("temperature_c")
+    if type(temp) not in (int,float) or not math.isfinite(temp):
+        raise RuntimeError("capture_temperature_untrusted")
+    if temp>MAX_RANK_START_TEMP_C:
+        raise RuntimeError("capture_too_warm_for_ranker")
+    if (data.get("ok") is not True
+        or data.get("mode")!="watching"
+        or data.get("native_4k_enabled") is not True
+        or data.get("continuous_4k_production_persisted") is not True
+        or data.get("continuous_4k_ready") is not True
+        or data.get("preroll_version")!="continuous_native_4k_h264_ring_v1"
+        or type(data.get("continuous_4k_buffered_ms")) is not int
+        or data["continuous_4k_buffered_ms"]<5000
+        or data.get("continuous_4k_dropped_output_frames")!=0
+        or bool(data.get("continuous_4k_error"))
+        or any(data.get(k) is True for k in
+           ("face_backfill_queued","historical_import_queued",
+            "movement_4k_backfill_queued","appearance_backfill_queued",
+            "garden_archive_triage_queued"))):
+        raise RuntimeError("capture_not_idle_4k_ring_healthy")
+    # Do not confuse the separate inactive GardenPreRoll with the 4K ring.
+    return data
+
+
 def phone_temperature_c():
     response=phone("shell","dumpsys battery",timeout=18)
     match=re.search(r"temperature:\s*(\d+)",response)
     if match is None:raise RuntimeError("S9+ battery temperature missing")
     measured=int(match.group(1))/10
-    if measured>42:raise RuntimeError("S9+ hotter than 42 C; no ranking run")
+    if measured>MAX_RANK_START_TEMP_C:raise RuntimeError("S9+ above cool ranking temperature; no run")
     return measured
 
 
@@ -291,6 +329,25 @@ def run():
     parser=argparse.ArgumentParser()
     parser.add_argument("--apply",action="store_true")
     args=parser.parse_args()
+    if not args.apply:
+        return rank(args)
+    # Same nonblocking global serialization used by the HSV32 and archive
+    # workers. Unlike dry-run, an applied ranker holds this lock through the
+    # source read, phone DEX, index validation and active pointer promotion.
+    STATE_DIR.mkdir(parents=True,exist_ok=True)
+    lock=STATE_DIR/"s9-v3-archive-backfill.lock"
+    if lock.is_symlink():raise RuntimeError("Untrusted archive lock")
+    fd=os.open(lock,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
+    try:
+        fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        capture_rank_safe()
+        phone_temperature_c()
+        return rank(args)
+    finally:
+        os.close(fd)
+
+
+def rank(args):
     rows=source_inventory()
     baseline_sha=verified_v2_baseline(rows)
     print("S9_V3_MULTIVECTOR_RANKING_PREFLIGHT "+json.dumps({
@@ -302,6 +359,7 @@ def run():
         "new_rankings_written":False,
         "old_rankings_modified":False}),flush=True)
     if not args.apply:return
+    capture_rank_safe()
     camera=phone("shell","pidof nl.kalenel.s9security",timeout=17)
     if not re.fullmatch(r"[0-9 ]+",camera):
         raise RuntimeError("Camera2 PID baseline unavailable")
@@ -372,12 +430,15 @@ def run():
     if phone("shell","pidof nl.kalenel.s9security",timeout=17)!=camera:
         raise RuntimeError("Live camera PID changed")
     thermal_after=phone_temperature_c()
+    capture_rank_safe()
     if any(existing_sha(ROOT+"/"+k)!=v for k,v in old.items()):
         raise RuntimeError("Existing v1/v2 ranked indices changed during v3 run")
     write_private_map(mapping,corpus_id)
     current_index_sha=existing_sha(output_remote)
+    capture_rank_safe()
     if not current_index_sha or not HEX.fullmatch(current_index_sha):
         raise RuntimeError("Phone ranking digest unavailable at pointer promotion")
+    phone_temperature_c()
     activated=publish_verified_active(
         corpus_id,current_index_sha,digest(mapping),len(rows))
     print("S9_V3_MODEL_BACKED_RANKINGS_PRODUCED "+json.dumps({

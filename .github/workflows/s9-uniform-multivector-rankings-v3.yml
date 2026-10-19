@@ -6,6 +6,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-uniform-appearance-rankings-v3.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-partial-inventory.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-ranker-capture-isolation-v106.py'
       - '.github/workflows/s9-uniform-multivector-rankings-v3.yml'
   push:
     paths:
@@ -13,6 +14,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-uniform-appearance-rankings-v3.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-uniform-appearance-rankings-v3.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-partial-inventory.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-ranker-capture-isolation-v106.py'
       - '.github/workflows/s9-uniform-multivector-rankings-v3.yml'
 permissions:
   contents: read
@@ -35,6 +37,7 @@ jobs:
           python3 -m py_compile "$folder/run-s9-uniform-appearance-rankings-v3.py"
           python3 "$folder/test-s9-uniform-appearance-rankings-v3.py"
           python3 "$folder/test-s9-v3-partial-inventory.py"
+          python3 "$folder/test-s9-v3-ranker-capture-isolation-v106.py"
       - name: Actually compile independent Android Java and DEX classes (without phone access)
         shell: bash
         run: |
