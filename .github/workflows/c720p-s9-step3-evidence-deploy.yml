@@ -1,17 +1,14 @@
-name: S9 Step 3 unified evidence on actual Security tab
+name: S9 Step 3 legacy evidence source checks (V59 supersedes deploy)
+# V59 deployment and acceptance are owned by security-step4-v59-release-20261019.yml.
+# Do not auto-run this older V58 deployment against an upgraded V59 hub route.
+# The guarded old deploy script remains available for recovery; it is not
+# automatically invoked by a mainline People UI change.
 on:
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/security-people-v45.html'
       - 'ops/c720p/s9-native-security/security-people-v45.js'
       - 'ops/c720p/s9-native-security/test-people-v45.js'
-      - 'ops/c720p/s9-native-security/deploy-people-v45.py'
-      - '.github/workflows/c720p-s9-step3-evidence-deploy.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'ops/c720p/s9-native-security/security-people-v45.html'
-      - 'ops/c720p/s9-native-security/security-people-v45.js'
       - 'ops/c720p/s9-native-security/deploy-people-v45.py'
       - '.github/workflows/c720p-s9-step3-evidence-deploy.yml'
 permissions:
