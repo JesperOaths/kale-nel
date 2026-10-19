@@ -241,8 +241,9 @@ function actualFolder(){return state.doc?.folders.find(f=>f.id===state.folder)}
 // Source-qualified evidence: Drive originals cannot inherit S9 face crops.
 function folderApprovedSDClips(id){
  if(!state.assignedReady||!state.extraLinks)return new Set();
+ // A group recording belongs to EVERY manually selected person.
  return new Set(state.archiveEntries.filter(row=>row.source==='sd'&&
-  assignedFolder(row)===id).map(row=>row.clip));
+  assignedFolders(row).includes(id)).map(row=>row.clip));
 }
 function assignedRecordingKeys(folder){
  const keys=new Set([...state.legacyAssigned.keys(),...Object.keys(state.extraLinks?.items||{})]);
@@ -710,13 +711,13 @@ function reviewItem(item,compact){
  root.dataset.source=item.source==='drive'?'drive':'sd';
  const media=sceneFor(item);
  const info=elt('div','',compact?'row-info':'body');
- badge(media,item.source==='drive'?'GOOGLE DRIVE':item.unindexed?'S9+ MICROSD':item.decision==='approved'?'SAVED':item.person_recheck_required?'RECHECK':'S9+');
+ badge(media,item.source==='drive'?'GOOGLE DRIVE':item.unindexed?'S9+ MICROSD':item.decision==='approved'||assignedFolder(item)?'SAVED':item.person_recheck_required?'REVIEW':'S9+');
  const main=elt('strong',date(item));
  info.append(main);
  if(!compact){const faceEvidence=reviewFacesForClip(item);if(faceEvidence)info.append(faceEvidence)}
  if(item.unindexed)info.append(elt('p',item.source==='drive'?'Google Drive':'Person analysis unavailable'));
- else if(item.person_recheck_required){
-  info.append(elt('p','Person evidence needs recheck · inspect video and detector observations'));
+ else if(item.person_recheck_required&&item.decision!=='approved'&&!assignedFolder(item)){
+  info.append(elt('p','Person evidence needs inspection · inspect video and detector observations'));
   if(!compact)info.append(step3ClipEvidence(item));
  }
  else if(!item.temporal_support)info.append(elt('p','Person evidence uncertain'));
@@ -751,13 +752,17 @@ function chosenPortrait(f){
   try{saved=JSON.parse(localStorage.getItem(portraitKey(id))||'null')}catch(_){}
  }
  if(!saved||!faceName.test(String(saved.name||''))||!clipName.test(String(saved.clip||'')))return null;
- return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&credibleFaceCrop(x))||null;
+ // An explicit cover-photo selection may use an unverified crop from a
+ // human-filed recording; never conflate that with model-confirmed identity.
+ if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;
+ return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&
+  x.face.snapshot_on_s9!==false)||null;
 }
 function choosePortrait(f,face){
  // The user, not the model, picks this folder's cover from an approved clip.
  const id=String(f.id||''),name=String(face?.face?.snapshot_name||'');
- if(!id||!faceName.test(name)||!credibleFaceCrop(face)||
-     !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
+ if(!id||!faceName.test(name)||face?.face?.snapshot_on_s9===false||
+     !assignedRecordingKeys(id).has('sd:'+face.clip)){
   alertText('Choose a face image from a recording confirmed for this person.');return;
  }
  const data={name,clip:face.clip};state.folderPortraits.set(id,data);
@@ -765,7 +770,7 @@ function choosePortrait(f,face){
   try{localStorage.setItem(portraitKey(id),JSON.stringify(data))}
   catch(_){notification('Person portrait selected for this session; browser storage is unavailable.')}
  }
- notification('Person portrait selected on this browser. Review decisions were not changed.');
+ notification('Manually selected person portrait on this browser. The selected crop was not automatically verified.');
  renderFolder();
 }
 function approvedPreviewClip(preview){
@@ -1283,14 +1288,25 @@ function renderFolder(){
  // A linked recording can still contain a different person: never label a crop as an identified face.
  const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
  const clips=folderApprovedSDClips(state.folder);
- const faceMatches=state.faceList.filter(x=>clips.has(x.clip)&&credibleFaceCrop(x)).slice(0,16);
+ const uniqueFaceCrops=new Set();
+ const faceMatches=state.faceList.filter(x=>{
+  if(!clips.has(x.clip)||!faceName.test(String(x.face?.snapshot_name||''))||
+     x.face?.snapshot_on_s9===false)return false;
+  const digest=String(x.face.snapshot_sha256||x.face.snapshot_name);
+  if(uniqueFaceCrops.has(digest))return false;
+  uniqueFaceCrops.add(digest);return true;
+ }).slice(0,48);
  facePanel.hidden=state.tab!=='approved'||faceMatches.length===0;
  if(!facePanel.hidden)for(const face of faceMatches){
   const cell=elt('div','','folder-photo-choice');
   const button=control('',()=>inspectFaceSnapshot(face),'folder-face');
-  button.replaceChildren(mediaForFace(face),elt('small',stampMs(Number(face.clip.slice(7,20)))+' · View'));
+  button.replaceChildren(mediaForFace(face),elt('small',stampMs(Number(face.clip.slice(7,20)))+
+    ' · Unverified crop · Inspect'));
   const selected=(chosenPortrait(f)||automaticPortrait(f))?.face.snapshot_name===face.face.snapshot_name;
-  const set=control(selected?'✓ Cover photo':'Change cover photo',()=>choosePortrait(f,face),'secondary');
+  const set=control(selected?'✓ Selected portrait':'Use as portrait',()=>{
+   if(confirm('Set this crop as this person\'s portrait? Confirm you identified the correct person. This does not change review decisions.'))
+    choosePortrait(f,face);
+  },'secondary');
   set.setAttribute('aria-pressed',String(selected));
   cell.append(button,set);faceGrid.append(cell);
  }
