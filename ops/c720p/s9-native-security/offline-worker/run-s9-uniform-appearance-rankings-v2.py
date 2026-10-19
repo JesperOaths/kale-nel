@@ -93,7 +93,9 @@ def compile_ranker(base):
 
 
 def existing_sha(path):
-    if phone("shell","test -s "+path,required=False):
+    result=subprocess.run(["adb","-s",PHONE,"shell","test -s "+path],
+                          capture_output=True,text=True,timeout=15)
+    if result.returncode==0:
         return phone("shell","sha256sum "+path,timeout=30).split()[0]
     return None
 
