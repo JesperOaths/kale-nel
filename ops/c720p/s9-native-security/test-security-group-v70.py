@@ -10,7 +10,7 @@ pin='962b15b04cf3f130e568ba4d014ce5c06533b80f'
 def at(path,rev=pin):
  return subprocess.check_output(['git','show',rev+':'+path]).decode()
 old=at('ops/c720p/s9-native-security/security-people-v45.js')
-new=(root/'security-people-v45.js').read_text()
+new=at('ops/c720p/s9-native-security/security-people-v45.js','6f6211a2c79da5a31c960a3e6fed147e7d36b19e')
 assert p.patch_js(old,old,new)==new.encode()
 assert b'function assignedFolders' in p.patch_js(old,old,new)
 try:
