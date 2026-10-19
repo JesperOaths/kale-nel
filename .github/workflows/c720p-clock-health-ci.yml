@@ -1,0 +1,76 @@
+name: C720P Amsterdam clock readiness (read-only physical)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/c720p-clock-health-repair-v1.py'
+      - 'ops/c720p/security-runtime/test-c720p-clock-health-v1.py'
+      - '.github/workflows/c720p-clock-health-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/c720p-clock-health-repair-v1.py'
+      - 'ops/c720p/security-runtime/test-c720p-clock-health-v1.py'
+      - '.github/workflows/c720p-clock-health-ci.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-clock-health-v160
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test guarded NTP helper without host access
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/c720p-clock-health-repair-v1.py" "$d/test-c720p-clock-health-v1.py"
+          python3 "$d/test-c720p-clock-health-v1.py"
+          ! grep -q 'sudoers' "$d/c720p-clock-health-repair-v1.py"
+  physical_inspection:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check live C720P clock without admin or NTP changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          source="ops/c720p/security-runtime/c720p-clock-health-repair-v1.py"
+          digest="$(sha256sum "$source" | cut -d' ' -f1)"
+          dest="/tmp/c720p-clock-readiness-v160-${GITHUB_SHA:0:13}.py"
+          uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$source"
+          cmd="curl -fsSL --max-time 35 '$uri' -o '$dest' && printf '%s  %s\\n' '$digest' '$dest' | sha256sum -c - >/dev/null && /usr/bin/python3 '$dest'"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-clock-readonly-v160-${GITHUB_SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-c720p-clock-readonly-v160','diagnostic',:'cmd',90,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "C720P_CLOCK_READONLY_V160_JOB=$job"
+          for attempt in $(seq 1 105); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 2400)"
+              echo "$output"
+              [[ "$status" == 'done|0' ]] || exit 1
+              grep -q 'C720P_CLOCK_READINESS_V1' <<< "$output"
+              grep -q '"operation":"clock_inspection"' <<< "$output"
+              grep -q '"privileged_changes":false' <<< "$output"
+              grep -q '"camera_or_media_modified":false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "C720P clock read-only inspection not verified"; exit 1
