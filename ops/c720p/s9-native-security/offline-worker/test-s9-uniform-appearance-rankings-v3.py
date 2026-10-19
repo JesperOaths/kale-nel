@@ -25,6 +25,11 @@ class V3(unittest.TestCase):
         self.assertIn("corpusId",java)
         self.assertIn("rankings-v3-",java)
         self.assertIn("MessageDigest",java)
+        self.assertIn('visual_sidecar_sha256',java)
+        self.assertIn('hsv_sidecar_sha256',java)
+        self.assertIn('sha(visualBytes)',java)
+        self.assertIn('sha(hsvBytes)',java)
+        self.assertIn('math.isfinite(x)',p.read_text())
         py=p.read_text()
         for marker in ("v1_v2_indices_sha256_unchanged","source_inventory",
                        "approved_new", "S9_V3_MODEL_BACKED_RANKINGS_PRODUCED",
