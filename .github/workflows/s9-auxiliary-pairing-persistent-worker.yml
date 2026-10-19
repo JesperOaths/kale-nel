@@ -1,0 +1,28 @@
+name: S9 auxiliary catalog persistent promotion safety
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/promote-s9-aux-pairing-v2.py'
+      - 'ops/c720p/security-runtime/test-promote-s9-aux-pairing-v2.py'
+      - '.github/workflows/s9-auxiliary-pairing-persistent-worker.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/promote-s9-aux-pairing-v2.py'
+      - 'ops/c720p/security-runtime/test-promote-s9-aux-pairing-v2.py'
+      - '.github/workflows/s9-auxiliary-pairing-persistent-worker.yml'
+permissions:
+  contents: read
+jobs:
+  guarded-promotion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify isolated service promotion can roll back safely
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/promote-s9-aux-pairing-v2.py
+          python3 -m py_compile ops/c720p/security-runtime/test-promote-s9-aux-pairing-v2.py
+          python3 ops/c720p/security-runtime/test-promote-s9-aux-pairing-v2.py
+          echo S9_AUX_PAIRING_PERSISTENT_PROMOTION_TESTS_PASS
