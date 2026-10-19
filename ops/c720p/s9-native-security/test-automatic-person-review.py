@@ -62,6 +62,42 @@ class AutoPersonReviewTests(unittest.TestCase):
   self.assertEqual(mod.report({},self.links)["items"],[])
   self.links["sd:"+CLIP]={"folder":"G999"}
   self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+ def test_manual_group_and_terminal_review_decisions_do_not_resurface(self):
+  self.write()
+  for entry in (
+      {"folder":"G888","folders":["G888","G123"],"review_status":"assigned"},
+      {"folder":None,"folders":["G888"],"review_status":"assigned"},
+      {"folder":None,"folders":[],"review_status":"skipped"},
+      {"folder":None,"folders":[],"review_status":"rejected"},
+      {"folder":None,"folders":[],"review_status":"unknown"},
+      {"folder":"G888"}):
+   with self.subTest(entry=entry):
+    self.links["sd:"+CLIP]=entry
+    self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+  self.links["sd:"+CLIP]={"folder":None,"folders":[],"review_status":"inbox"}
+  self.assertEqual(len(mod.report(self.sd,self.links)["items"]),1)
+
+ def test_denied_pair_stays_denied_after_model_and_crop_refresh(self):
+  self.write()
+  first=mod.report(self.sd,self.links)["items"][0]
+  self.assertEqual(self.deny(first["id"])[0],200)
+  self.assertEqual(len(mod.state()["denied_pairs"]),1)
+  doc=json.loads(mod.SOURCE.read_text())
+  doc["model_sha256"]="c"*64
+  doc["suggestions"][0]["model_sha256"]="c"*64
+  doc["suggestions"][0]["snapshot_sha256"]="d"*64
+  mod.SOURCE.write_text(json.dumps(doc))
+  refreshed,status=mod.proposals()
+  self.assertEqual(status,"ready")
+  self.assertNotEqual(refreshed[0]["id"],first["id"])
+  self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+
+ def test_existing_denial_registry_remains_compatible(self):
+  self.write()
+  mod.REJECTED.write_text(json.dumps({"version":1,"revision":1,"denied":[]}))
+  self.assertEqual(len(mod.report(self.sd,self.links)["items"]),1)
+  self.assertEqual(mod.state()["denied_pairs"],[])
+
  def test_deny_is_audited_and_revision_safe(self):
   self.write();item=mod.report(self.sd,self.links)["items"][0]
   code,data=self.deny(item["id"])
