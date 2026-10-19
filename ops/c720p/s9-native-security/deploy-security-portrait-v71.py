@@ -46,11 +46,11 @@ def patch_js(live,old,new):
    # only the three verified portrait policy statements; never replace the
    # entire function and discard that independent live addition.
    old_find="return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&credibleFaceCrop(x))||null;"
-   new_find=("return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&\\n"
+   new_find=("return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&\n"
      "  x.face.snapshot_on_s9!==false)||null;")
-   old_guard=("if(!id||!faceName.test(name)||!credibleFaceCrop(face)||\\n"
+   old_guard=("if(!id||!faceName.test(name)||!credibleFaceCrop(face)||\n"
      "     !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){")
-   new_guard=("if(!id||!faceName.test(name)||face?.face?.snapshot_on_s9===false||\\n"
+   new_guard=("if(!id||!faceName.test(name)||face?.face?.snapshot_on_s9===false||\n"
      "     !assignedRecordingKeys(id).has('sd:'+face.clip)){")
    old_notice="notification('Person portrait selected on this browser. Review decisions were not changed.');"
    new_notice="notification('Manually selected person portrait on this browser. The selected crop was not automatically verified.');"
@@ -62,7 +62,7 @@ def patch_js(live,old,new):
    guard="if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;"
    if guard not in partial:
     if partial.count(new_find)!=1:raise RuntimeError('portrait_guard_insert_ambiguous')
-    partial=partial.replace(new_find,guard+"\\n "+new_find,1)
+    partial=partial.replace(new_find,guard+"\n "+new_find,1)
    if partial==live_block:raise RuntimeError('unchanged_live_portrait_policy')
    result=b.one(result,live_block,partial)
    continue
