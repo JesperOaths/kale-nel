@@ -80,7 +80,7 @@ def build(phone,archive,at=None):
         if not isinstance(row,dict):continue
         if row.get("camera")!="new" or row.get("state")!="verified":continue
         name=row.get("remote_name")
-        if not isinstance(name,str) or not re.fullmatch(r"NEW_[A-Za-z0-9._-]{18,155}[.]mp4",name):
+        if not isinstance(name,str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{4,180}[.]mp4",name):
             raise ValueError("untrusted_drive_source")
         if name in seen:raise ValueError("duplicate_drive_recording")
         seen.add(name);verified+=1
