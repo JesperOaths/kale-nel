@@ -29,8 +29,9 @@ def rows():
 
 class FakeH:
     ROOT="/data/local/tmp/s9_worker"
-    def __init__(self,items,missing):
+    def __init__(self,items,missing,missing_visual=()):
         self.items=items;self.missing={x["key"] for x in missing}
+        self.missing_visual={x["key"] for x in missing_visual}
         self.verified=0
         self.values={x["key"]:{"schema":m.SCHEMA,"source_qualified_key":x["key"],
           "crop_sha256":x["crop_sha256"],
@@ -38,6 +39,8 @@ class FakeH:
           "verified_same_person":False,"identity_probability":False,
           "human_review_required":True,"upper_hsv32":[1.0]+[0.0]*31} for x in items}
     def remote_exists(self,path):
+        if path.endswith("-visual.json") and any(key in path for key in self.missing_visual):
+            return False
         return not any(key in path for key in self.missing)
     def safe_visual(self,key,crop):
         if crop!="1"*64:raise RuntimeError("tampered_OSNet")
@@ -88,6 +91,38 @@ class Partial(TestCase):
             subset=m.verified_ready_subset(fake,self.catalog)
         with self.assertRaisesRegex(RuntimeError,"Missing or altered"):
             m.verified_v2_baseline(subset)
+
+    def test_extra_verified_histogram_without_visual_stays_pending(self):
+        # Physical job #11962 hit the extra V40 HSV-only file. Its visual
+        # companion is legitimately absent, not corrupt. Keep all 57 old
+        # V2 records and defer V3 until the extra 512-D sidecar exists.
+        missing_hsv=self.catalog[52:70]
+        one_missing_visual=self.catalog[51:52]
+        fake=FakeH(self.catalog,missing_hsv,one_missing_visual)
+        with patch.object(m,"existing_sha",return_value="2"*64):
+            subset=m.verified_ready_subset(fake,self.catalog)
+        self.assertEqual(len(subset),57)
+        self.assertTrue(m.verified_v2_baseline(subset))
+        self.assertEqual(fake.verified,57)
+
+    def test_absent_visual_of_historic_v2_reference_not_silent(self):
+        fake=FakeH(self.catalog,self.catalog[52:70],self.catalog[0:1])
+        with patch.object(m,"existing_sha",return_value="2"*64):
+            subset=m.verified_ready_subset(fake,self.catalog)
+        with self.assertRaisesRegex(RuntimeError,"Missing or altered"):
+            m.verified_v2_baseline(subset)
+
+    def test_visual_transport_failure_must_not_look_missing(self):
+        fake=FakeH(self.catalog,self.catalog[52:70])
+        prior=fake.remote_exists
+        def unreadable(path):
+            if path.endswith("-visual.json"):
+                raise RuntimeError("S9 sidecar presence indeterminate")
+            return prior(path)
+        fake.remote_exists=unreadable
+        with patch.object(m,"existing_sha",return_value="2"*64):
+            with self.assertRaisesRegex(RuntimeError,"indeterminate"):
+                m.verified_ready_subset(fake,self.catalog)
 
     def test_existing_bad_descriptor_is_not_skipped(self):
         fake=FakeH(self.catalog,[])
