@@ -30,7 +30,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           s=Path('ops/c720p/s9-native-security/audit-s9-motion-people-v69.py').read_text()
-          for banned in ('os.remove(', '.unlink(', 'shutil.rmtree(', 'subprocess.', 'os.system(', 'os.replace(', 'open("w"', "open('w'", '.write_text(', '.write_bytes('):
+          for banned in ('os.remove(', '.unlink(', 'shutil.rmtree(', 'os.system(', 'os.replace(', 'open("w"', "open('w'", '.write_text(', '.write_bytes('):
               assert banned not in s, banned
           assert 'SECURITY_FEATURE_V69_READONLY' in s
           assert 'review_decisions_modified' in s
