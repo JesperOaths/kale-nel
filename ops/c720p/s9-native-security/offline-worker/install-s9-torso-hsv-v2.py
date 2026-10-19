@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Build standalone Android HSV32 descriptor DEX without camera APK access."""
-import argparse,hashlib,json,pathlib,subprocess,tempfile,zipfile,shutil
+import argparse,hashlib,json,pathlib,subprocess,tempfile,zipfile,shutil,os
 PHONE="192.168.178.250:5555"
 ROOT="/data/local/tmp/s9_worker"
 SRC=pathlib.Path(__file__).with_name("S9OfflineTorsoHistogramV2.java")
-ANDROID="/usr/lib/android-sdk/platforms/android-36/android.jar"
+ANDROID=os.environ.get("S9_ANDROID_SDK_JAR","/usr/lib/android-sdk/platforms/android-36/android.jar")
 
 
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
