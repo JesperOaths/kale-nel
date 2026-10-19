@@ -1,0 +1,29 @@
+name: C720P authenticated S9+ thumbnail display bridge V182
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/c720p-migrated-snapshot-display-v182.js'
+      - 'ops/c720p/security-runtime/test-c720p-migrated-snapshot-display-v182.mjs'
+      - '.github/workflows/c720p-s9-thumbnail-bridge-v182.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/c720p-migrated-snapshot-display-v182.js'
+      - 'ops/c720p/security-runtime/test-c720p-migrated-snapshot-display-v182.mjs'
+      - '.github/workflows/c720p-s9-thumbnail-bridge-v182.yml'
+permissions:
+  contents: read
+jobs:
+  offline-browser-fallback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify authenticated JPEG selection, invalid-source refusal, and local fallback
+        run: |
+          set -euo pipefail
+          node --check ops/c720p/security-runtime/c720p-migrated-snapshot-display-v182.js
+          node ops/c720p/security-runtime/test-c720p-migrated-snapshot-display-v182.mjs
+          python3 ops/c720p/security-runtime/test-c720p-legacy-s9-index-bridge-guard-v1.py
+          python3 ops/c720p/s9-person-ml-v1/test-s9-c720p-snapshots-v163.py
+          echo "V182_SOURCE_ONLY_NO_CAMERA_OR_INDEX_CHANGE"
