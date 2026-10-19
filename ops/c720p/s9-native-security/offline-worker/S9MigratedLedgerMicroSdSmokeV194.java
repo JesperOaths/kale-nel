@@ -86,9 +86,14 @@ public final class S9MigratedLedgerMicroSdSmokeV194 {
                 check(reopened.verifiedCount()==2,
                       "journal_reload_mismatch");
                 S9MigratedMetadataLedgerV193.Receipt repeat =
-                    reopened.commit("save",CLIP,SHA,123456,SAVE_NONCE);
-                check(saved.hmacSha256.equals(repeat.hmacSha256),
-                      "journal_retry_signature_drift");
+                    reopened.commit("delete",CLIP,SHA,123456,DELETE_NONCE);
+                check(deleted.hmacSha256.equals(repeat.hmacSha256),
+                      "journal_latest_tombstone_retry_drift");
+                // PR #1029: superseded Save nonce cannot restore older state.
+                boolean staleRejected=false;
+                try { reopened.commit("save",CLIP,SHA,123456,SAVE_NONCE); }
+                catch(IOException expected) {staleRejected=true;}
+                check(staleRejected,"superseded_save_nonce_accepted");
             }
             long bytes=Files.size(ROOT.resolve("actions-v193.log"));
             check(bytes>300 && bytes<2000
@@ -99,7 +104,7 @@ public final class S9MigratedLedgerMicroSdSmokeV194 {
                 + "{\"status\":\"micro_sd_two_decisions_reloaded\","
                 + "\"real_clips_opened\":0,\"actual_person_reviews_modified\":false,"
                 + "\"real_save_delete_enabled\":false,\"metadata_actions\":2,"
-                + "\"nonce_replay_refused\":true,\"delete_is_only_tombstone\":true,"
+                + "\"nonce_replay_refused\":true,\"superseded_save_refused\":true,\"delete_is_only_tombstone\":true,"
                 + "\"journal_readback_verified\":true,\"only_synthetic_directory_written\":true,"
                 + "\"synthetic_key_persisted\":false,"
                 + "\"originals_removed\":0,\"camera_apk_modified\":false}");
