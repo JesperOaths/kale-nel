@@ -30,7 +30,18 @@ public final class PhoneArchiveCli {
   for(int i=0;i<verified.length();i++)primary.add(verified.getJSONObject(i).getString("name"));
   File[] items=archive.listFiles();
   if(items==null||items.length>20000)throw new IOException("sd_inventory_unavailable_or_unbounded");
+  // Raw-but-unverified original MP4s are not missing originals; retain both
+  // their own presence and their auxiliary companions as potential evidence.
+  Set<String> rawPrimary=new HashSet<>();
+  for(File f:items){
+   if(f.isFile()&&!java.nio.file.Files.isSymbolicLink(f.toPath()) &&
+      f.getName().matches("motion_[0-9]{13}[.]mp4"))rawPrimary.add(f.getName());
+  }
   int primaryFound=0,preroll=0,orphanPreroll=0,completed=0,partial=0,diagnostics=0,other=0;
+  int pairedVerifiedPreroll=0,pairedUnverifiedPreroll=0,missingRawPreroll=0;
+  int completeVerified=0,completeUnverified=0,completeMissing=0;
+  int partialVerified=0,partialUnverified=0,partialMissing=0;
+  int oldMissingRawPreroll=0,oldUnverifiedPreroll=0;
   int oldOrphanPreroll=0,oldComplete=0,oldPartial=0,unknownMtime=0;
   final long now=System.currentTimeMillis(),oneDay=24L*60*60*1000;
   for(File f:items) {
@@ -45,24 +56,55 @@ public final class PhoneArchiveCli {
     else other++;  // a raw MP4 without valid sidecar remains unverified
    }else if(name.matches("motion_[0-9]{13}[.]mp4[.]preroll[.]mp4")){
     preroll++;
-    if(!primary.contains(name.substring(0,name.length()-".preroll.mp4".length()))){
-     orphanPreroll++;
-     if(old)oldOrphanPreroll++;
+    String base=name.substring(0,name.length()-".preroll.mp4".length());
+    if(primary.contains(base))pairedVerifiedPreroll++;
+    else {
+     orphanPreroll++;if(old)oldOrphanPreroll++;
+     if(rawPrimary.contains(base)){
+      pairedUnverifiedPreroll++;if(old)oldUnverifiedPreroll++;
+     }else{
+      missingRawPreroll++;if(old)oldMissingRawPreroll++;
+     }
     }
    }else if(name.matches("motion_[0-9]{13}[.]mp4[.]complete[.]mp4")){
     completed++;if(old)oldComplete++;
+    String base=name.substring(0,name.length()-".complete.mp4".length());
+    if(primary.contains(base))completeVerified++;
+    else if(rawPrimary.contains(base))completeUnverified++;
+    else completeMissing++;
    }else if(name.matches("motion_[0-9]{13}[.]mp4[.]complete[.]partial[.]mp4")){
     partial++;if(old)oldPartial++;
+    String base=name.substring(0,name.length()-".complete.partial.mp4".length());
+    if(primary.contains(base))partialVerified++;
+    else if(rawPrimary.contains(base))partialUnverified++;
+    else partialMissing++;
    }else if(name.matches("diagnostic_preroll_[A-Za-z0-9._-]{1,128}[.]mp4")){
     diagnostics++;
    }else other++;
   }
   if(primaryFound!=primary.size())throw new IOException("verified_original_missing_during_auxiliary_scan");
+  if(pairedVerifiedPreroll+pairedUnverifiedPreroll+missingRawPreroll!=preroll ||
+     completeVerified+completeUnverified+completeMissing!=completed ||
+     partialVerified+partialUnverified+partialMissing!=partial ||
+     orphanPreroll!=pairedUnverifiedPreroll+missingRawPreroll)
+   throw new IOException("auxiliary_roles_failed_reconciliation");
   return new JSONObject()
    .put("raw_mp4_files_seen",primaryFound+preroll+completed+partial+diagnostics+other)
    .put("verified_primary_events",primaryFound)
    .put("preroll_segments",preroll)
    .put("preroll_without_verified_primary",orphanPreroll)
+   .put("preroll_with_verified_primary",pairedVerifiedPreroll)
+   .put("preroll_with_raw_unverified_primary",pairedUnverifiedPreroll)
+   .put("preroll_without_any_primary",missingRawPreroll)
+   .put("preroll_without_any_primary_older_than_24h_mtime",oldMissingRawPreroll)
+   .put("preroll_with_raw_unverified_primary_older_than_24h_mtime",oldUnverifiedPreroll)
+   .put("completed_companion_with_verified_primary",completeVerified)
+   .put("completed_companion_with_raw_unverified_primary",completeUnverified)
+   .put("completed_companion_without_any_primary",completeMissing)
+   .put("partial_companion_with_verified_primary",partialVerified)
+   .put("partial_companion_with_raw_unverified_primary",partialUnverified)
+   .put("partial_companion_without_any_primary",partialMissing)
+   .put("auxiliary_pairing_is_filename_presence_only_not_media_integrity",true)
    .put("unpaired_preroll_older_than_24h_mtime",oldOrphanPreroll)
    .put("completed_companion_older_than_24h_mtime",oldComplete)
    .put("partial_companion_older_than_24h_mtime",oldPartial)

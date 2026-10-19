@@ -122,6 +122,38 @@ def parse(raw):
             auxiliary.get("auxiliary_files_are_not_additional_recordings") is not True or
             auxiliary.get("inventory_does_not_hash_originals") is not True):
             raise ValueError("standalone_auxiliary_inventory_counts_inconsistent")
+    # Additive versioned split: legacy inventories remain readable. Once any
+    # pairing field is present, demand the complete source-reconciled set.
+    if auxiliary is not None and any(k in auxiliary for k in (
+            "preroll_with_verified_primary","preroll_with_raw_unverified_primary",
+            "preroll_without_any_primary")):
+        groups=(
+            ("preroll_segments",("preroll_with_verified_primary",
+                "preroll_with_raw_unverified_primary","preroll_without_any_primary")),
+            ("completed_companion_mp4_files",("completed_companion_with_verified_primary",
+                "completed_companion_with_raw_unverified_primary",
+                "completed_companion_without_any_primary")),
+            ("partial_completion_mp4_files",("partial_companion_with_verified_primary",
+                "partial_companion_with_raw_unverified_primary",
+                "partial_companion_without_any_primary")))
+        for total,parts in groups:
+            if any(type(auxiliary.get(k)) is not int or
+                   not 0<=auxiliary[k]<=20000 for k in parts) or sum(auxiliary[k] for k in parts)!=auxiliary[total]:
+                raise ValueError("standalone_auxiliary_pairing_mismatch")
+        if (auxiliary["preroll_without_verified_primary"]!=
+                auxiliary["preroll_with_raw_unverified_primary"]+
+                auxiliary["preroll_without_any_primary"] or
+            auxiliary.get("auxiliary_pairing_is_filename_presence_only_not_media_integrity") is not True):
+            raise ValueError("standalone_auxiliary_pairing_semantics")
+        aged=("preroll_without_any_primary_older_than_24h_mtime",
+              "preroll_with_raw_unverified_primary_older_than_24h_mtime")
+        if (any(type(auxiliary.get(k)) is not int or
+                not 0<=auxiliary[k]<=20000 for k in aged) or
+            auxiliary[aged[0]]>auxiliary["preroll_without_any_primary"] or
+            auxiliary[aged[1]]>auxiliary["preroll_with_raw_unverified_primary"] or
+            auxiliary[aged[0]]+auxiliary[aged[1]]!=
+                auxiliary.get("unpaired_preroll_older_than_24h_mtime")):
+            raise ValueError("standalone_auxiliary_pairing_age_mismatch")
     return {"schema_version":schema.VERSION,"snapshot_id":d["snapshot_id"],"records":records},s
 
 def adb(*args,timeout=25):

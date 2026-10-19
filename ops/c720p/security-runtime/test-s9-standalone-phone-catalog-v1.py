@@ -75,6 +75,48 @@ class Tests(unittest.TestCase):
             data["summary"]["auxiliary_mp4_inventory"]={**aux,**corrupted}
             with self.subTest(corrupted=corrupted),self.assertRaises(ValueError):
                 m.parse((m.MARKER+json.dumps(data)).encode())
+    def test_split_auxiliary_pairing_preserves_legacy_and_fails_closed(self):
+        d=sample()
+        legacy={"raw_mp4_files_seen":5,"verified_primary_events":1,
+          "preroll_segments":1,"preroll_without_verified_primary":0,
+          "completed_companion_mp4_files":1,"partial_completion_mp4_files":1,
+          "diagnostic_mp4_files":1,"unverified_or_unknown_mp4_files":0,
+          "auxiliary_files_are_not_additional_recordings":True,
+          "inventory_does_not_hash_originals":True}
+        paired={
+          "preroll_with_verified_primary":1,
+          "preroll_with_raw_unverified_primary":0,"preroll_without_any_primary":0,
+          "preroll_without_any_primary_older_than_24h_mtime":0,
+          "preroll_with_raw_unverified_primary_older_than_24h_mtime":0,
+          "unpaired_preroll_older_than_24h_mtime":0,
+          "completed_companion_with_verified_primary":1,
+          "completed_companion_with_raw_unverified_primary":0,
+          "completed_companion_without_any_primary":0,
+          "partial_companion_with_verified_primary":1,
+          "partial_companion_with_raw_unverified_primary":0,
+          "partial_companion_without_any_primary":0,
+          "auxiliary_pairing_is_filename_presence_only_not_media_integrity":True}
+        d["summary"]["auxiliary_mp4_inventory"]={**legacy,**paired}
+        m.parse((m.MARKER+json.dumps(d)).encode())
+        for corruption in (
+          {"preroll_with_verified_primary":0},
+          {"completed_companion_without_any_primary":1},
+          {"partial_companion_with_raw_unverified_primary":1},
+          {"preroll_without_any_primary_older_than_24h_mtime":1},
+          {"unpaired_preroll_older_than_24h_mtime":1},
+          {"auxiliary_pairing_is_filename_presence_only_not_media_integrity":False}
+        ):
+            item=sample()
+            item["summary"]["auxiliary_mp4_inventory"]={**legacy,**paired,**corruption}
+            with self.subTest(corruption=corruption),self.assertRaises(ValueError):
+                m.parse((m.MARKER+json.dumps(item)).encode())
+        partial=sample()
+        p={**legacy,**paired}
+        p.pop("partial_companion_without_any_primary")
+        partial["summary"]["auxiliary_mp4_inventory"]=p
+        with self.assertRaises(ValueError):
+            m.parse((m.MARKER+json.dumps(partial)).encode())
+
     def test_atomic_0600_and_non_symlink(self):
         with tempfile.TemporaryDirectory() as root:
             p=Path(root)/"report.json"
