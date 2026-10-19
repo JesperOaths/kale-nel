@@ -33,10 +33,16 @@ class AllBrowserSafety(unittest.TestCase):
  def test_range_bounded_before_read_and_no_ids_returned(self):
   js=s.script()
   self.assertIn("headers:{Range:'bytes=0-1023'}",js)
-  self.assertIn("mp4.status!==206||length!==1024",js)
+  self.assertIn("mp4.status!==206?'range_non206'",js)
   self.assertIn("await mp4.body?.cancel()",js)
   self.assertLess(js.index("length!==1024"),js.index("await mp4.arrayBuffer()"))
   self.assertIn("seen.has(f.name)",js)
+  for reason in ("range_non206","range_bad_length",
+    "range_manifest_total_mismatch","range_bad_mime"):
+   self.assertIn(reason,js)
+   self.assertEqual(s.safe_failure_reason(RuntimeError(
+     "all_migrated_browser_ranges_not_verified_"+reason)),
+     "all_migrated_browser_ranges_not_verified_"+reason)
   self.assertIn("passed++",js)
   self.assertNotIn("return {ticket:",js)
   self.assertNotIn("return {clip:",js)
