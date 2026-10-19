@@ -29,13 +29,22 @@ async function scenario(opts={}){
   url:async(route)=>{calls.push(['url',route]);return 'https://signed.example.invalid'+route}
  };
  const host={C720PSecureRelay:opts.noRelay?undefined:auth};host.parent=host;
- const doc={readyState:'complete',querySelectorAll:()=>pics};
+ let onMutations=null;
+ const doc={readyState:'complete',body:{},querySelectorAll:()=>pics};
+ class FakeMutationObserver{
+  constructor(cb){onMutations=cb}
+  observe(target,settings){assert.equal(target,doc.body);assert.equal(settings.childList,true)}
+ }
  const ctx={window:host,document:doc,encodeURIComponent,
+  MutationObserver:FakeMutationObserver,
   fetch:async(route)=>{calls.push(['events',route]);return {
     status:200,json:async()=>opts.events??events}}};
  vm.runInNewContext(script,ctx,{timeout:1000});
  for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));
- return {pics,calls};
+ return {pics,calls,addImage(img){
+  pics.push(img);
+  onMutations?.([{addedNodes:[{nodeType:1,tagName:'IMG'}]}]);
+ }};
 }
 {
  const {pics,calls}=await scenario();
@@ -75,6 +84,19 @@ async function scenario(opts={}){
  const {pics}=await scenario();
  pics[0].handlers.load();
  assert.equal(pics[0].dataset.c720pS9Snapshot,'loaded');
+}
+{
+ // Simulate Camera Clips painting a new thumbnail after the first page load.
+ const {pics,calls,addImage}=await scenario();
+ const fresh=image('snaps/'+filenames[0]);
+ addImage(fresh);
+ for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(fresh.src.startsWith('https://signed.example.invalid'),true);
+ assert.equal(fresh.dataset.c720pLegacySnapshotSrc,'snaps/'+filenames[0]);
+ assert.equal(calls.filter(x=>x[0]==='url').length,7);
+ fresh.handlers.error();
+ assert.equal(fresh.src,'snaps/'+filenames[0]);
+ assert.equal(fresh.dataset.c720pS9Snapshot,'fallback');
 }
 // Source-exclusion checks are preventive, not an authorization to retire MP4s.
 for(const prohibited of ['.remove()', '.unlink(', 'saved=true','saveClip(', 'deleteClip(',
