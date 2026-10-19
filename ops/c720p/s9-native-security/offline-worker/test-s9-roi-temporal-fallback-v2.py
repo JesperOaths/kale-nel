@@ -85,4 +85,32 @@ class Checks(unittest.TestCase):
    with self.assertRaisesRegex(RuntimeError,"process changed"):
     module.assert_camera_safe("1234")
 
+
+ def test_zero_detection_archive_recovery_only_and_group_safety(self):
+  import importlib.util
+  path=ROOT/"backfill-s9-original-roi-osnet-temporal-v2.py"
+  spec=importlib.util.spec_from_file_location("s9_temporal_archive_selector",path)
+  m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+  events={
+   "motion_1700000000000.mp4":{"person_count":0},
+   "motion_1700000001000.mp4":{"person_count":1},
+   "motion_1700000002000.mp4":{"person_count":2},
+   "motion_1700000003000.mp4":{"person_count":0,
+                                "frames_with_distinct_multiple_person_boxes":1},
+   "motion_1700000004000.mp4":{},
+   "motion_1700000005000.mp4":{"person_count":True},
+   "motion_1700000006000.mp4":{"person_count":-1}}
+  approved={"motion_1700000000000.mp4"}
+  self.assertEqual([x[1] for x in m.candidates(events,approved,"person")],
+                   ["motion_1700000001000.mp4"])
+  self.assertEqual([x[1] for x in m.candidates(events,approved,"approved")],
+                   ["motion_1700000000000.mp4"])
+  self.assertEqual([x[1] for x in m.candidates(events,approved,"archive")],
+                   ["motion_1700000000000.mp4","motion_1700000001000.mp4",
+                    "motion_1700000004000.mp4"])
+  self.assertEqual(m.candidates(events,approved,"all"),
+                   m.candidates(events,approved,"archive"))
+  self.assertFalse(m.eligible_archive_clip({"person_count":1,
+      "frames_with_distinct_multiple_person_boxes":2},"all",False))
+
 if __name__=="__main__":unittest.main(verbosity=2)
