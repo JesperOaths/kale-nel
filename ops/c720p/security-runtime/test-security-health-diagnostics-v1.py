@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 ROOT=Path(__file__).parent
 spec=importlib.util.spec_from_file_location("health",ROOT/"security-health-diagnostics-v1.py")
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
@@ -74,6 +76,17 @@ class Tests(unittest.TestCase):
   codes={x["code"] for x in d["issues"]}
   self.assertIn("original_integrity_audit_incomplete",codes)
   self.assertIn("unpaired_preroll_evidence_pending_classification",codes)
+ def test_curl_clock_fallback_estimates_positive_90_seconds_without_setting_clock(self):
+  header="HTTP/1.1 200 Connection established\n\nHTTP/2 200\nDate: Mon, 19 Oct 2026 04:01:30 GMT\n"
+  with patch.object(m.urllib.request,"urlopen",side_effect=OSError("python_proxy_failed")),\
+       patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0,stdout=header)) as cmd,\
+       patch.object(m.time,"time",side_effect=[NOW.timestamp(),NOW.timestamp()]):
+   self.assertEqual(m.https_clock_offset(),90.0)
+  self.assertEqual(cmd.call_args.args[0][:2],["curl","-fILsS"])
+ def test_clock_unavailable_returns_unknown_not_zero(self):
+  with patch.object(m.urllib.request,"urlopen",side_effect=OSError("offline")),\
+       patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=7,stdout="")):
+   self.assertIsNone(m.https_clock_offset())
  def test_private_atomic_output_and_symlink_rejection(self):
   with tempfile.TemporaryDirectory() as folder:
    path=Path(folder)/"security-health.json"
