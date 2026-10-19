@@ -33,3 +33,20 @@ jobs:
           javac -d /tmp/s9-five-point-v129 "$d/PhoneFaceLandmarkGate.java" "$d/PhoneFaceLandmarkGateTest.java" "$d/PhoneYuNetLandmarkDecoder.java" "$d/PhoneYuNetLandmarkDecoderTest.java"
           java -cp /tmp/s9-five-point-v129 nl.kalenel.s9offline.PhoneFaceLandmarkGateTest
           java -cp /tmp/s9-five-point-v129 nl.kalenel.s9offline.PhoneYuNetLandmarkDecoderTest
+      - name: Compile Android image decoder with pinned ONNX Runtime API
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          platform="$(find "$sdk/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$platform"
+          artifact="/tmp/s9-yunet-one-v130.aar"
+          if ! curl -fSsL --retry 2 --max-time 80 "https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar" -o "$artifact"; then
+            curl -fSsL --retry 2 --max-time 80 "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar" -o "$artifact"
+          fi
+          echo "04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  $artifact" | sha256sum -c -
+          unzip -p "$artifact" classes.jar > /tmp/s9-yunet-one-v130-ort.jar
+          javac -source 8 -target 8 -cp "$platform:/tmp/s9-yunet-one-v130-ort.jar" -d /tmp/s9-five-point-v129 \
+            "$d/PhoneFaceLandmarkGate.java" "$d/PhoneYuNetLandmarkDecoder.java" "$d/S9YuNetSingleSnapshotAudit.java"
+          test -s /tmp/s9-five-point-v129/nl/kalenel/s9offline/S9YuNetSingleSnapshotAudit.class
