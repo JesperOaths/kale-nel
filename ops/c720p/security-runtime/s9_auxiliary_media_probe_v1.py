@@ -35,7 +35,7 @@ def camera():
     if not (value.get("ok") is True and value.get("mode")=="watching" and
         value.get("continuous_4k_ready") is True and
         value.get("continuous_4k_dropped_output_frames")==0 and
-        0<float(value.get("temperature_c") or 100)<43):
+        0<float(value.get("temperature_c") or 100)<39):
         raise RuntimeError("capture_not_healthy_or_too_warm")
     return value
 
