@@ -10,19 +10,19 @@ spec=importlib.util.spec_from_file_location("legacy_save_delete_v168",SCRIPT)
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 def fixture(missing=False,remote=False):
- return ("""
-def handle(parsed,events,keep,ROOT,refs):
-    if parsed.path == '/save':
-        for e in events:
-            e['saved'] = True
-        save_index(events)
-    if parsed.path == '/delete':
-        for rel in refs:
-            (ROOT / rel).unlink("""+("missing_ok=True" if missing else "")+""")
-        save_index(keep,replace=True)
-"""+("""
-        remote_delete()
-""" if remote else """)).encode()
+ lines=[
+  "def handle(parsed,events,keep,ROOT,refs):",
+  "    if parsed.path == '/save':",
+  "        for e in events:",
+  "            e['saved'] = True",
+  "        save_index(events)",
+  "    if parsed.path == '/delete':",
+  "        for rel in refs:",
+  "            (ROOT / rel).unlink(" + ("missing_ok=True" if missing else "") + ")",
+  "        save_index(keep,replace=True)",
+ ]
+ if remote:lines.append("        remote_delete()")
+ return ("\n".join(lines)+"\n").encode()
 
 class Tests(unittest.TestCase):
  def test_old_save_and_delete_block_retirement(self):
