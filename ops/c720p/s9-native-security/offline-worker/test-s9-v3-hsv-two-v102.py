@@ -22,9 +22,11 @@ class FakeResp:
 def good_capture(**changes):
     status={"ok":True,"mode":"watching","native_4k_enabled":True,
             "continuous_4k_ready":True,"continuous_4k_buffered_ms":7000,
+            "continuous_4k_production_persisted":True,
+            "preroll_version":"continuous_native_4k_h264_ring_v1",
             "continuous_4k_dropped_output_frames":0,"continuous_4k_error":"",
-            "continuous_4k_trial_active":False,"recording_active":False,
-            "preroll_ready":True,"preroll_buffered_ms":5500,
+            "continuous_4k_trial_active":True,"recording_active":False,
+            "preroll_ready":False,"preroll_buffered_ms":0,
             "temperature_c":38.0}
     status.update(changes)
     return status
@@ -124,8 +126,8 @@ class Tests(unittest.TestCase):
           ({"temperature_c":41.5},"camera_too_warm"),
           ({"continuous_4k_ready":False},"camera_capture"),
           ({"continuous_4k_buffered_ms":1000},"camera_capture"),
-          ({"preroll_ready":False},"preroll_not_ready"),
-          ({"preroll_buffered_ms":1000},"preroll_buffer_not_full"),
+          ({"preroll_version":"legacy_preroll"},"camera_capture"),
+          ({"continuous_4k_production_persisted":False},"camera_capture"),
           ({"recording_active":True},"camera_capture"),
           ({"continuous_4k_dropped_output_frames":2},"camera_capture"),
           ({"mode":"restarting"},"camera_capture")]:
@@ -139,7 +141,7 @@ class Tests(unittest.TestCase):
     def test_camera_guard_can_resume_after_stable_cool_buffer(self):
         with patch.object(m.urllib.request,"urlopen",
                           return_value=FakeResp(good_capture(
-                            temperature_c=39.5,preroll_buffered_ms=4000))):
+                            temperature_c=39.5,continuous_4k_buffered_ms=6000))):
             self.assertEqual(m.run(FakeH(temp=39.5),FakeCtrl())["new_verified_histograms"],2)
 
     def test_source_key_validation_prevents_writes(self):
