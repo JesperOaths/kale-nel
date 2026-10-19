@@ -24,12 +24,15 @@ ORIGINS={"https://kalenel.nl","https://www.kalenel.nl","http://localhost","http:
 
 def state():
  if REJECTED.is_symlink():raise ValueError("unsafe_path")
- if not REJECTED.exists():return {"version":1,"revision":0,"denied":[]}
+ if not REJECTED.exists():return {"version":1,"revision":0,"denied":[],"denied_pairs":[]}
  if REJECTED.stat().st_size>200000:raise ValueError("oversized_reviews")
  d=json.loads(REJECTED.read_text())
  if d.get("version")!=1 or type(d.get("revision"))!=int or not isinstance(d.get("denied"),list):
   raise ValueError("invalid_review_state")
- if len(d["denied"])>5000 or any(not isinstance(x,str) or not HASH.fullmatch(x) for x in d["denied"]):
+ pairs=d.setdefault("denied_pairs",[])
+ if (len(d["denied"])>5000 or any(not isinstance(x,str) or not HASH.fullmatch(x) for x in d["denied"])
+     or not isinstance(pairs,list) or len(pairs)>5000
+     or any(not isinstance(x,str) or not HASH.fullmatch(x) for x in pairs)):
   raise ValueError("invalid_denials")
  return d
 
@@ -62,12 +65,32 @@ def proposals():
    "model_origin":"S9+ aligned face embeddings","human_approved":False})
  return verified,"ready"
 
+def stable_pair_key(item):
+ # A model upgrade, new face crop or rescoring must not revoke a human denial
+ # of the same recording-to-person proposal. No original clip names are stored.
+ return hashlib.sha256((item["source"]+"|"+item["name"]+"|"+item["folder"]).encode()).hexdigest()
+
+def final_manual_decision(entry):
+ # The source-qualified V68+ review overlay is authoritative, including groups.
+ # Only an explicit return_to_queue / inbox with no assigned people reopens review.
+ if entry is None:return False
+ if not isinstance(entry,dict):return True
+ status=entry.get("review_status")
+ if status=="inbox":
+  return entry.get("folder") is not None or entry.get("folders") not in (None,[])
+ if status in ("assigned","skipped","rejected"):return True
+ # Unknown or legacy review states must never silently re-prompt a human.
+ return True
+
 def report(sd_names,manual_links):
- rows,status=proposals();rejected=state();denied=set(rejected["denied"]);visible=[]
+ rows,status=proposals();rejected=state();denied=set(rejected["denied"])
+ denied_pairs=set(rejected["denied_pairs"]);visible=[]
+ if not isinstance(manual_links,dict):raise ValueError("invalid_manual_review_registry")
  used=set()
  for x in sorted(rows,key=lambda x:(-x["score"],-x["margin"])):
-  if x["name"] not in sd_names or x["id"] in denied or x["name"] in used:continue
-  if (manual_links.get("sd:"+x["name"]) or {}).get("folder"):continue
+  if (x["name"] not in sd_names or x["id"] in denied
+      or stable_pair_key(x) in denied_pairs or x["name"] in used):continue
+  if final_manual_decision(manual_links.get("sd:"+x["name"])):continue
   used.add(x["name"]);visible.append(x)
  return {"ok":True,"status":status,"items":visible[:500],
   "revision":rejected["revision"],"human_approval_required":True,
@@ -98,7 +121,9 @@ def deny(body,sd_names,links):
   if old["revision"]!=body["revision"]:return 409,{"ok":False,"error":"review_changed_refresh"}
   candidate=next((x for x in report(sd_names,links)["items"] if x["id"]==body["id"]),None)
   if not candidate:return 404,{"ok":False,"error":"proposal_not_available"}
-  updated={"version":1,"revision":old["revision"]+1,"denied":old["denied"]+[body["id"]]}
+  updated={"version":1,"revision":old["revision"]+1,
+           "denied":old["denied"]+[body["id"]],
+           "denied_pairs":list(dict.fromkeys(old["denied_pairs"]+[stable_pair_key(candidate)]))}
   try:
    save(updated)
    fd=os.open(AUDIT,os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW,0o600)
