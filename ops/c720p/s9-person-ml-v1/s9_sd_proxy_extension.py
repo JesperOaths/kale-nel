@@ -470,6 +470,12 @@ def install_local_sd(H):
  # human approval. No machine result writes an approved person assignment.
  import s9_automatic_person_review
  s9_automatic_person_review.install(H,rows)
+ # Preserve the independent S9 multivector appearance API already deployed.
+ import s9_multivector_appearance_api
+ s9_multivector_appearance_api.install(H)
+ # Historical auxiliary footage is separate from verified original recordings.
+ import s9_auxiliary_recovery_api_v1
+ s9_auxiliary_recovery_api_v1.install(H,play_sd)
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
