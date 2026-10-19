@@ -154,9 +154,13 @@ def promote(execute):
             time.sleep(1)
         if safe_read(BIN)!=installed or hashlib.sha256(safe_read(EXISTING_DROPIN,10_000)).hexdigest()!=EXISTING_DROPIN_SHA256:
             raise RuntimeError("source_changed_after_timer_pause")
-        atomic(BIN,incoming,old_mode)
-        atomic(DROPIN,DROPIN_TEXT,0o644)
+        # Mark rollback scope before the first write: a second atomic step
+        # can fail after the adapter was already replaced.
         changed=True
+        atomic(BIN,incoming,old_mode)
+        if DROPIN.exists():
+            raise RuntimeError("concurrent_service_dropin_creation")
+        atomic(DROPIN,DROPIN_TEXT,0o644)
         system("daemon-reload")
         system("start",SERVICE,timeout=165)
         after=camera()
