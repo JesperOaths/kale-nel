@@ -45,9 +45,9 @@ def call(argv,seconds=90):
   # OOM, a model result, or a recorder fault. Never log command or phone data.
   if (len(argv)>=5 and argv[0]=="adb" and argv[3]=="shell"
       and isinstance(argv[4],str)
-      and re.search(r"(?:^|[; ])app_process(?:\\s|$)",argv[4])
+      and re.search(r"(?:^|[; ])app_process(?:\s|$)",argv[4])
       and (p.returncode in (137,-9)
-           or re.search(r"\\bkilled\\b",(p.stderr or "")+" "+(p.stdout or ""),re.I))):
+           or re.search(r"\bkilled\b",(p.stderr or "")+" "+(p.stdout or ""),re.I))):
    raise RuntimeError("android_app_process_terminated_without_face_evidence")
   raise RuntimeError("separate_phone_operation_failed")
  return p.stdout.strip()
