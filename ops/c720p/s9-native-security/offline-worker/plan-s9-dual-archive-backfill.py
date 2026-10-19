@@ -4,7 +4,9 @@
 This planner does NOT generate embeddings, assign people, erase crop records,
 modify camera state, download videos, or claim that cropped JPEGs are aligned.
 It reconciles raw S9 SD MP4 and JPEG inventory with authenticated SD/Drive
-catalog metadata; including records outside the current 175-clip SD catalog.
+catalog metadata. Counts only verified canonical motion MP4s as primary SD
+recordings; prerolls, derived exports and diagnostics remain separate
+auxiliary metadata and NEVER become additional person-inference jobs.
 Outputs a private, append-only-ready JSONL work plan only when requested.
 """
 from __future__ import annotations
@@ -25,6 +27,7 @@ PHONE_DIR="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4
 PHONE_OUT="/data/local/tmp/s9_worker"
 CLIP_RE=re.compile(r"^[A-Za-z0-9][A-Za-z0-9_. ()-]{0,230}[.](?i:mp4|mov|mkv|avi)$")
 DRIVE_RE=CLIP_RE
+PRIMARY_RE=re.compile(r"^motion_[0-9]{13}[.]mp4$")
 MAX_CATALOG=50000
 MAX_LIST=50000
 
@@ -90,16 +93,27 @@ def one_row(source,clip,artifact="",kind="recording",
 
 def plan(sd_events,drive_events,sd_files):
     raw_mp4={v for v in sd_files if CLIP_RE.fullmatch(v) and ".." not in v}
-    sd_indexed={v for x in sd_events if (v:=safe_clip(x,"s9_sd"))}
+    raw_primary={v for v in raw_mp4 if PRIMARY_RE.fullmatch(v)}
+    aux_mp4=raw_mp4-raw_primary
+    sd_indexed={v for x in sd_events
+                if (v:=safe_clip(x,"s9_sd")) and PRIMARY_RE.fullmatch(v)}
+    sd_other_indexed={v for x in sd_events
+                      if (v:=safe_clip(x,"s9_sd")) and not PRIMARY_RE.fullmatch(v)}
     drive_rows=[(x,v) for x in drive_events
                 if (v:=safe_clip(x,"gdrive_archive"))]
     drive_indexed={v for _,v in drive_rows}
-    # Do not reject an index entry when its original is missing. This is
-    # evidence requiring repair, not permission to delete an old crop record.
-    all_sd=raw_mp4 | sd_indexed
+    # A verified primary named motion_<epoch_ms>.mp4 is one recording.
+    # Preroll, transcoding, partial and diagnostic MP4s are auxiliary media,
+    # never separate human observations or candidates for feature extraction.
+    all_sd=raw_primary | sd_indexed
+    auxiliary=aux_mp4 | sd_other_indexed
     rows=[one_row("s9_sd",clip,status=("awaiting_inference"
-              if clip in raw_mp4 else "original_missing_or_unmounted"),
-              exists=clip in raw_mp4) for clip in sorted(all_sd)]
+              if clip in raw_primary else "original_missing_or_unmounted"),
+              exists=clip in raw_primary) for clip in sorted(all_sd)]
+    rows += [one_row("s9_sd",clip,kind="auxiliary_media",
+              status="not_an_independent_recording",
+              inspection_only=True,exists=clip in raw_mp4)
+             for clip in sorted(auxiliary)]
     rows += [one_row("gdrive_archive",clip,status="drive_requires_verified_source_decode",
              exists=False,source_id=item.get("clip_no") if isinstance(item.get("clip_no"),int)
              else clip) for item,clip in drive_rows]
@@ -122,7 +136,7 @@ def plan(sd_events,drive_events,sd_files):
             clip="unlinked_recording.mp4"
         rows.append(one_row("s9_sd",clip,filename,"saved_crop",
                             "inspection_only_unverified_alignment",
-                            inspection_only=True,exists=clip in raw_mp4))
+                            inspection_only=True,exists=clip in raw_primary))
     # Catalog snapshot references can be relevant even when the physical
     # JPEG was moved. Preserve metadata references, never drop missing crops.
     for source,events in (("s9_sd",sd_events),("gdrive_archive",drive_events)):
@@ -141,12 +155,16 @@ def plan(sd_events,drive_events,sd_files):
     for row in rows:distinct[row["key"]]=row
     return list(sorted(distinct.values(),key=lambda x:(x["source"],x["clip"],x["kind"],str(x["crop_ref"])))),{
         "sd_raw_mp4":len(raw_mp4),
+        "sd_primary_recordings":len(raw_primary),
+        "sd_auxiliary_mp4":len(aux_mp4),
         "sd_catalog_clips":len(sd_indexed),
-        "sd_raw_not_in_catalog":len(raw_mp4-sd_indexed),
-        "sd_catalog_missing_original":len(sd_indexed-raw_mp4),
+        "sd_catalog_auxiliary_entries":len(sd_other_indexed),
+        "sd_raw_not_in_catalog":len(raw_primary-sd_indexed),
+        "sd_catalog_missing_original":len(sd_indexed-raw_primary),
         "drive_catalog_clips":len(drive_rows),
         "drive_distinct_filenames":len(drive_indexed),
         "source_qualified_recordings":len(all_sd)+len(drive_rows),
+        "auxiliary_media_rows":len(auxiliary),
         "saved_crop_or_snapshot_rows":sum(bool(x["crop_ref"]) for x in distinct.values()),
         "inspection_only_rows":sum(x["inspection_only"] for x in distinct.values()),
     }
