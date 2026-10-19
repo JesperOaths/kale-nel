@@ -21,6 +21,24 @@ BEFORE='6f6211a2c79da5a31c960a3e6fed147e7d36b19e'
 LIVE_SHA='25c41501a5f870475530adfbfd671aaa601a1883156b5a0863519fdce86f30c1'
 ASSETS={k:v66.ASSETS[k] for k in ('js','people','hub','entry','shell')}
 
+def patch_js(live,old,new):
+ result=live
+ # Replace four exact source-bounded regions. None may touch the independent
+ # OSNet matcher, automatic-person producer, or recorder support.
+ for start,end in (
+  ('function folderApprovedSDClips(id){','function assignedRecordingKeys(folder){'),
+  ('function chosenPortrait(f){','function approvedPreviewClip(preview){'),
+  ("  badge(media,item.source==='drive'","  if(item.decision==='approved'){"),
+  (' const faceMatches=state.faceList.filter('," paginate($('folderPage')"),
+ ):
+  previous=b.block(old,start,end)
+  replacement=b.block(new,start,end)
+  if previous!=replacement:result=b.one(result,previous,replacement)
+ for marker in ('Unverified crop','Use as portrait','function folderApprovedSDClips',
+     'function fetchAutomatic','function searchClothingMatches','assign_many'):
+  if marker not in result:raise RuntimeError('security_feature_missing_'+marker)
+ return result.encode()
+
 def main():
  p=argparse.ArgumentParser()
  p.add_argument('--ref',required=True);p.add_argument('--apply',action='store_true')
@@ -38,7 +56,7 @@ def main():
  if backend.is_symlink() or not backend.is_file() or b.sha(backend.read_bytes())!=b.sha(expected.encode()):
   raise RuntimeError('concurrent_manual_links_backend_update')
  before=b.inventory();decisions=b.reviews()
- desired={'js':v70.patch_js(current['js'][0].decode(),old,new)}
+ desired={'js':patch_js(current['js'][0].decode(),old,new)}
  for feature in ('function folderApprovedSDClips','Unverified crop','Use as portrait',
                  'function searchClothingMatches','function fetchAutomatic','assign_many'):
   if feature.encode() not in desired['js']:raise RuntimeError('lost_security_feature_'+feature)
