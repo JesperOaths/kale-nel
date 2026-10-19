@@ -60,6 +60,12 @@ class Tests(unittest.TestCase):
     self.assertEqual(report["historical_drive_timestamp_unknown"],1)
     self.assertEqual(report["total_recordings"],4)
     self.assertEqual(report["operating_days"]["2026-10-18"]["historical_drive"],0)
+ def test_main_camera_legacy_prefix_not_dropped(self):
+    data=drive()
+    data["items"][0]["remote_name"]="S9PHONE_20261019053200_archive_001.mp4"
+    result=m.build(phone(),data,AT)
+    self.assertEqual(result["source_recordings"]["historical_drive_verified_new"],2)
+    self.assertEqual(result["operating_days"]["2026-10-18"]["historical_drive"],1)
  def test_stale_or_incomplete_phone_summary_does_not_write(self):
     for change in (
         {"generated_at_utc":"2026-10-18T01:00:00+00:00"},
