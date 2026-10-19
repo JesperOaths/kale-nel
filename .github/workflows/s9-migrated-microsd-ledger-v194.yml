@@ -1,0 +1,99 @@
+name: S9+ isolated microSD synthetic ledger V194
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedMetadataLedgerV193.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedLedgerMicroSdSmokeV194.java'
+      - 'ops/c720p/s9-native-security/offline-worker/probe-s9-migrated-microsd-ledger-v194.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-probe-s9-migrated-microsd-ledger-v194.py'
+      - '.github/workflows/s9-migrated-microsd-ledger-v194.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedMetadataLedgerV193.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedLedgerMicroSdSmokeV194.java'
+      - 'ops/c720p/s9-native-security/offline-worker/probe-s9-migrated-microsd-ledger-v194.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-probe-s9-migrated-microsd-ledger-v194.py'
+      - '.github/workflows/s9-migrated-microsd-ledger-v194.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-migrated-synthetic-microsd-v194
+  cancel-in-progress: false
+jobs:
+  host_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile synthetic S9 test and verify no originals or review writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/probe-s9-migrated-microsd-ledger-v194.py"
+          python3 "$d/test-probe-s9-migrated-microsd-ledger-v194.py"
+          python3 "$d/test-s9-migrated-ledger-v193.py"
+          mkdir -p "$RUNNER_TEMP/ledger-v194-classes"
+          javac -source 8 -target 8 -d "$RUNNER_TEMP/ledger-v194-classes" \
+             "$d/S9MigratedMetadataLedgerV193.java" \
+             "$d/S9MigratedLedgerMicroSdSmokeV194.java"
+  physical_once:
+    needs: host_only
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Execute only one synthetic locked S9 microSD test with checksum pin and intact 4K
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          source="ops/c720p/s9-native-security/offline-worker"
+          stage="/tmp/s9-microsd-ledger-v194-${GITHUB_SHA:0:14}"
+          cmd="install -d -m 700 '$stage'"
+          for name in probe-s9-app-process-noimage-v166.py probe-s9-migrated-microsd-ledger-v194.py S9MigratedMetadataLedgerV193.java S9MigratedLedgerMicroSdSmokeV194.java; do
+            digest="$(sha256sum "$source/$name" | cut -d' ' -f1)"
+            uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$source/$name"
+            cmd="$cmd && curl -fsSL --max-time 35 '$uri' -o '$stage/$name' && printf '%s  %s\\n' '$digest' '$stage/$name' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/probe-s9-migrated-microsd-ledger-v194.py'"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="s9-microsd-synthetic-ledger-v194-${GITHUB_SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-synthetic-ledger-v194','diagnostic',:'cmd',270,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_MICROSD_LEDGER_V194_JOB=$id"
+          for i in $(seq 1 115); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_MICROSD_LEDGER_PHYSICAL_V194' <<< "$output"
+              grep -q '"status":"verified_synthetic_micro_sd"' <<< "$output"
+              grep -q '"synthetic_commit_count":2' <<< "$output"
+              grep -q '"ledger_journal_reloaded":true' <<< "$output"
+              grep -q '"nonce_replay_refused":true' <<< "$output"
+              grep -q '"real_save_delete_enabled":false' <<< "$output"
+              grep -q '"production_secret_provisioned":false' <<< "$output"
+              grep -q '"real_media_read_or_deleted":false' <<< "$output"
+              grep -q '"camera_pid_unchanged":true' <<< "$output"
+              grep -q '"capture_dropped_frames_after":0' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "S9 one-shot synthetic microSD durability not verified"; exit 1
