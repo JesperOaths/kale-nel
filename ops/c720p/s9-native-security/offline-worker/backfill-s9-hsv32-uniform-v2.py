@@ -79,7 +79,7 @@ def safe_visual(key,cropsha):
     return True
 
 
-def inventory():
+def inventory(include_unreviewed=False):
     old=sibling("backfill-v40-person-rois-on-s9.py","s9_v40_uniform")
     new=sibling("backfill-s9-original-person-roi-osnet.py","s9_original_uniform")
     source_map=old.record_index()
@@ -105,12 +105,16 @@ def inventory():
                        "crop_bytes":row["crop_bytes"],"cohort":"v40"})
     events=new.primary_events()
     approved=new.approved_names()
-    # Only genuinely detector-positive, explicitly assigned single-person
-    # examples. Other recordings require separate independent review.
-    for _,clip,_ in new.candidates(events,approved,"approved"):
+    # Optional v3 inventory additionally includes recovered unassigned clips.
+    # Prior V2 callers retain the approved-only source cohort unchanged.
+    mode="archive" if include_unreviewed else "approved"
+    for _,clip,_ in new.candidates(events,approved,mode):
         key=hashlib.sha256(("s9_sd\x00"+clip).encode()).hexdigest()
         sidecar=ROOT+"/features/"+key+"-detector.json"
-        if not remote_exists(sidecar):continue
+        if (not remote_exists(sidecar) or
+            not remote_exists(ROOT+"/features/"+key+"-visual.json")):
+            # A partial extractor run is never reported as a verified vector.
+            continue
         meta=phone_json(sidecar)
         sha=meta.get("crop_sha256")
         if (meta.get("schema")!="s9_offline_single_person_roi_v1"
@@ -122,8 +126,8 @@ def inventory():
             raise RuntimeError("Newer S9 person crop provenance invalid")
         result.append({"key":key,"clip":clip,"crop_sha256":sha,
                        "crop_name":key+".jpg","crop_bytes":None,
-                       "cohort":"approved_new"})
-    if len(result)<51 or len(result)>200:
+                       "cohort":"approved_new" if clip in approved else "archive_unassigned"})
+    if len(result)<51 or len(result)>400:
         raise RuntimeError("Missing verified V40/approved crop cohort")
     if len(set(x["key"] for x in result))!=len(result):
         raise RuntimeError("Duplicate source-qualified crop keys")
@@ -137,8 +141,8 @@ def ensure_crop(row):
         if remote_sha(inbox)!=row["crop_sha256"]:
             raise RuntimeError("Existing private original crop digest differs")
         return inbox,False
-    if row["cohort"]=="approved_new":
-        raise RuntimeError("New approved crop missing; never recreate from approximation")
+    if row["cohort"]!="v40":
+        raise RuntimeError("S9 original crop missing; never fabricate or replace")
     # Rehydrate only the verified original V40 JPEG, without modifying it.
     endpoint=API+"/new/api/visual-review/crop/"+urllib.parse.quote(row["crop_name"],safe="")
     with urllib.request.urlopen(endpoint,timeout=33) as response:
@@ -201,19 +205,22 @@ def v2_histogram(row):
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--write",action="store_true")
+    parser.add_argument("--include-unreviewed",action="store_true",
+        help="V3-only: include provenance-verified, unassigned archive crops")
     parser.add_argument("--offset",type=int,default=0)
     parser.add_argument("--limit",type=int,default=5)
     opts=parser.parse_args()
     if opts.offset<0 or not 1<=opts.limit<=10:
         raise ValueError("Only small v2 backfill batches accepted")
-    catalog=inventory()
+    catalog=inventory(include_unreviewed=opts.include_unreviewed)
     chosen=catalog[opts.offset:opts.offset+opts.limit]
     if not opts.write:
         print("S9_HSV32_V2_BACKFILL_DRY_RUN "+json.dumps({
             "verified_full_person_crops":len(catalog),
             "cohorts":dict(Counter(r["cohort"] for r in catalog)),
             "selected":len(chosen),"offset":opts.offset,
-            "histograms_generated":0,"v1_rankings_changed":False}),flush=True)
+            "histograms_generated":0,"v1_rankings_changed":False,
+            "include_unreviewed":opts.include_unreviewed}),flush=True)
         return
     initial=adb("shell","pidof nl.kalenel.s9security",timeout=20).stdout.strip()
     if not re.fullmatch(r"[0-9 ]+",initial):
