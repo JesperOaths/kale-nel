@@ -69,6 +69,42 @@ class Progressive(unittest.TestCase):
   (self.root/"s9-multivector-v3-active.json").symlink_to(self.root/"other")
   with self.assertRaisesRegex(RuntimeError,"symlink"):
    p.read_pointer(self.root/"s9-multivector-v3-active.json")
+ def test_held_archive_lock_deferred_with_no_source_details(self):
+  import subprocess
+  marker="S9_V3_RANKER_DEFERRED "+json.dumps({
+   "reason":"shared_archive_worker_busy","rankings_published":False,
+   "automatic_person_assignments":0})+"\\n"
+  fake=subprocess.CompletedProcess(["python","ranker"],75,marker,
+       "private/source/motion_1999999999999.mp4")
+  with patch.object(p.subprocess,"run",return_value=fake):
+   with self.assertRaises(p.SharedWorkerBusy):
+    p.guarded_publish(self.m,"1"*16,59)
+  current=p.corpus_for(self.m.source_inventory(),self.m)
+  # A previous already-current pointer should remain untouched.
+  self.pointer(doc(count=58,corpus=current))
+  with patch.object(p,"guarded_publish",side_effect=p.SharedWorkerBusy):
+   self.assertEqual(p.run(True,self.m),"current")
+  (self.root/"s9-multivector-v3-active.json").unlink()
+  with patch.object(p,"guarded_publish",side_effect=p.SharedWorkerBusy):
+   self.assertEqual(p.run(True,self.m),"deferred")
+
+ def test_unknown_nonzero_ranker_results_still_fail_closed(self):
+  import subprocess
+  for code,marker in ((75,"S9_V3_RANKER_DEFERRED {}\\n"),
+                      (1,"S9_V3_RANKER_DEFERRED "+json.dumps({
+                       "reason":"shared_archive_worker_busy",
+                       "rankings_published":False,
+                       "automatic_person_assignments":0})+"\\n"),
+                      (75,"S9_V3_RANKER_DEFERRED "+json.dumps({
+                       "reason":"other",
+                       "rankings_published":False,
+                       "automatic_person_assignments":0})+"\\n")):
+   with self.subTest(code=code),patch.object(
+     p.subprocess,"run",return_value=subprocess.CompletedProcess(
+      ["python"],code,marker,"untrusted private detail")):
+    with self.assertRaisesRegex(RuntimeError,"guarded_ranker_failed"):
+     p.guarded_publish(self.m,"1"*16,59)
+
  def test_old_indices_and_review_data_never_mutated_by_this_wrapper(self):
   src=(ROOT/"run-s9-v3-progressive-ranking-v113.py").read_text()
   for forbidden in ('adb install','am force-stop','assign_person','os.replace(',
