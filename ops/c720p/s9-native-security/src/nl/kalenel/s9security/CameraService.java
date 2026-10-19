@@ -1815,6 +1815,24 @@ public final class CameraService extends Service {
    BufferedReader in=new BufferedReader(new InputStreamReader(socket.getInputStream(),"UTF-8"));
    String line=in.readLine();if(line==null)return;
    OutputStream out=socket.getOutputStream();
+   // Explicit administrator-only loopback digest read. Heavy SD I/O is
+   // forbidden while movement, recording, background inference or heat is active.
+   if(PhoneArchiveIntegrity.handle(out,line,folder,new PhoneArchiveIntegrity.Gate(){
+    long lastThermalAt=0;boolean cool=false;
+    public boolean allowed(){
+     long now=SystemClock.elapsedRealtime();
+     if(!running||!"watching".equals(mode)||folder==null||
+        historicalQueued||faceBackfillQueued||movementBackfillQueued||
+        appearanceBackfillQueued||gardenTriageQueued||gardenPersonGateBusy||
+        (lastMovementAt>0&&now-lastMovementAt<30000L)||
+        folder.getUsableSpace()<20L*1024*1024*1024)return false;
+     if(now-lastThermalAt>3000L){
+      cool=temperature()<390;
+      lastThermalAt=now;
+     }
+     return cool;
+    }
+   }))return;
    if(PhoneArchiveCatalog.handle(out,line,folder))return;
    // Read-only native microSD streaming; C720P stays a thin signed relay.
    if(PhoneMediaRange.handle(in,out,line,folder))return;
