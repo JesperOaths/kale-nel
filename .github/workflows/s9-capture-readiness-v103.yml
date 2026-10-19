@@ -1,0 +1,82 @@
+name: S9 Camera2 thermal and 4K readiness read-only V103
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/audit-s9-capture-priority-v103.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-capture-priority-v103.py'
+      - '.github/workflows/s9-capture-readiness-v103.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/audit-s9-capture-priority-v103.py'
+      - '.github/workflows/s9-capture-readiness-v103.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-capture-priority-readonly-v103
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read-only camera priority and private reporting tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/audit-s9-capture-priority-v103.py"
+          python3 "$d/test-s9-capture-priority-v103.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('ops/c720p/s9-native-security/offline-worker/audit-s9-capture-priority-v103.py').read_text()
+          assert 'MAX_OFFLINE_START_C=39.5' in s
+          assert 'MIN_BUFFER_MS=4500' in s
+          for verb in ('--apply','am force-stop','pm install','adb push','rm -f'):
+              assert verb not in s, verb
+          print('S9_CAMERA_READONLY_PRIORITY_V103_SOURCE_PASS')
+          PY
+  live-readonly:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check current 4K recorder and thermal headroom without changing anything
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          src=ops/c720p/s9-native-security/offline-worker/audit-s9-capture-priority-v103.py
+          digest="$(sha256sum "$src" | cut -d' ' -f1)"
+          path="/tmp/s9-capture-priority-${GITHUB_SHA:0:12}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+          cmd="curl -fsSL --retry 2 --max-time 35 '$url' -o '$path' && printf '%s  %s\\n' '$digest' '$path' | sha256sum -c - >/dev/null && /usr/bin/python3 '$path'"
+          idem="s9-readonly-capture-v103-${GITHUB_SHA:0:20}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-thermal-readiness-v103','diagnostic',:'cmd',140,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_CAMERA_PRIORITY_V103_JOB=$id"
+          for i in $(seq 1 45); do
+            status="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$status" == done* || "$status" == error* || "$status" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 2800)"
+              echo "$output"
+              if [[ "$status" != 'done|0' ]]; then echo "S9 camera read-only check failed"; exit 1; fi
+              grep -q 'S9_CAPTURE_PRIORITY_V103' <<< "$output"
+              grep -q '"recordings_modified": false' <<< "$output"
+              grep -q '"private_clip_names_disclosed": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'S9 capture read-only job timed out'; exit 1
