@@ -79,6 +79,32 @@ class Tests(unittest.TestCase):
             m.choose_orphan(rows,baseline,
                 lambda key,kind:(key in paired if kind=="visual" else True))["key"],
             extra["key"])
+    def test_missing_both_features_is_a_real_pending_v40_visual(self):
+        rows=inventory()
+        baseline=[x["key"] for x in rows[:57]]
+        # A newly extracted V40 JPEG has neither HSV32 nor OSNet yet.
+        chosen=m.choose_orphan(rows,baseline,
+            lambda key,kind:key in baseline)
+        self.assertEqual(chosen["key"],rows[57]["key"])
+        self.assertEqual(chosen["cohort"],"v40")
+        # No synthetic HSV32 should be claimed when visual is recovered.
+        body=P.read_text()
+        self.assertIn('"hsv32_completion_still_pending":not has_hsv',body)
+        self.assertIn('h.safe_visual(orphan["key"],orphan["crop_sha256"])',body)
+        self.assertIn('digest=rank.existing_sha(visual)',body)
+
+    def test_prefers_histogram_only_over_both_missing(self):
+        rows=inventory()
+        baseline=[x["key"] for x in rows[:57]]
+        # A lexically earlier V40 missing both must not block a later crop
+        # whose genuine HSV histogram is already complete.
+        later=dict(rows[57])
+        later["key"]="a"*64
+        rows.append(later)
+        def present(key,kind):
+            return key in baseline or (key==later["key"] and kind=="hsv")
+        self.assertEqual(m.choose_orphan(rows,baseline,present)["key"],later["key"])
+
     def test_refuse_approved_orphan_or_nonunique_crop(self):
         rows=inventory();rows[57]["cohort"]="approved_new"
         base=[x["key"] for x in rows[:57]]
