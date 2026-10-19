@@ -34,7 +34,9 @@ def patch_js(live,old,new):
   previous=b.block(old,start,end)
   replacement=b.block(new,start,end)
   if previous==replacement:continue
-  live_block=b.block(result,start,end)
+  try:live_block=b.block(result,start,end)
+  except ValueError as error:
+   raise RuntimeError('unrecognized_live_region_'+start.split('(')[0].strip()[:40]) from error
   if live_block==replacement:continue
   if live_block==previous:
    result=b.one(result,previous,replacement)
