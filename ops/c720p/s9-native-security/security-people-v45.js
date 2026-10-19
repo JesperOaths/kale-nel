@@ -826,10 +826,8 @@ function representativeReviewedImage(f){
    return {node:mediaForFace(found[0]),label:'Face candidate from a manually reviewed recording'};
   }
  }
- for(const clip of clips){
-  if(state.clipEvidence.has(clip))return {node:sceneFor({source:'sd',clip,name:clip}),
-   label:'Scene from a reviewed recording · individual face unverified'};
- }
+ // A scene thumbnail may depict bicycles, cars or another person: NEVER
+ // substitute it for a person's face photograph.
  return null;
 }
 function profileRow(f){
