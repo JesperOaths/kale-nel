@@ -86,6 +86,64 @@ class Tests(unittest.TestCase):
                 m.jpeg_endpoint(8794,"safe.jpg",
                                 {"bytes":len(raw),"sha256":"a"*64})
 
+    def test_all_six_private_jpegs_verification_required_on_both_ports(self):
+        names=[(f"motion_{1792000010000+i*1000}.jpg",
+                {"sha256":"a"*64,"bytes":1000+i}) for i in range(6)]
+        self.assertEqual(len(names),6)
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);state=root/"state";state.mkdir()
+            outer=root/"outer.py";inner=root/"inner.py";module=root/"module.py"
+            old_o=b"def old_outer():pass\\n"
+            old_i=b"def old_inner():pass\\n"
+            outer.write_bytes(old_o);inner.write_bytes(old_i)
+            calls=[]
+            def endpoint(port,name,item):
+                calls.append((port,name))
+                if port==8794 and name==names[-1][0]:
+                    raise m.Deferred("sixth_jpeg_not_verified")
+            with patch.multiple(m,OUTER=outer,INNER=inner,MODULE=module,
+                                STATE=state,BACKUP=state/"backups",
+                                LOCK=state/"deploy.lock"),patch.object(
+                    m,"prepare",return_value=(old_o,old_i,
+                    b"def new_outer():pass\\n",b"def new_inner():pass\\n",
+                    b"def install(H):pass\\n",32.1)),patch.object(
+                    m,"restart_and_wait"),patch.object(m,"jpeg_proof",return_value=names),patch.object(
+                    m,"jpeg_endpoint",side_effect=endpoint),patch.object(
+                    m,"camera",return_value=32.1),patch.object(
+                    m,"inventory",return_value=True):
+                with self.assertRaisesRegex(m.Deferred,"sixth_jpeg_not_verified"):
+                    m.apply()
+                self.assertEqual(outer.read_bytes(),old_o)
+                self.assertEqual(inner.read_bytes(),old_i)
+        self.assertEqual([p for p,n in calls],[8795]*6+[8794]*6)
+        self.assertEqual(len({n for p,n in calls}),6)
+
+    def test_do_not_overwrite_another_deployer_during_rollback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);state=root/"state";state.mkdir()
+            outer=root/"outer.py";inner=root/"inner.py";module=root/"module.py"
+            old_o=b"def old_outer():pass\\n";old_i=b"def old_inner():pass\\n"
+            other=b"def newer_concurrent_update():pass\\n"
+            outer.write_bytes(old_o);inner.write_bytes(old_i)
+            def inject_failure(port,name,item):
+                if port==8794:
+                    outer.write_bytes(other)
+                    raise m.Deferred("concurrent_outer_deployment")
+            with patch.multiple(m,OUTER=outer,INNER=inner,MODULE=module,
+                                STATE=state,BACKUP=state/"backups",
+                                LOCK=state/"deploy.lock"),patch.object(
+                    m,"prepare",return_value=(old_o,old_i,
+                    b"def new_outer():pass\\n",b"def new_inner():pass\\n",
+                    b"def install(H):pass\\n",32.1)),patch.object(
+                    m,"restart_and_wait"),patch.object(
+                    m,"jpeg_proof",return_value=[("safe.jpg",{"sha256":"a"*64,"bytes":1200})]),
+                    patch.object(m,"jpeg_endpoint",side_effect=inject_failure),patch.object(
+                    m,"camera",return_value=32.1),patch.object(m,"inventory",return_value=True):
+                with self.assertRaisesRegex(m.Deferred,"concurrent_outer_deployment"):
+                    m.apply()
+                self.assertEqual(outer.read_bytes(),other)
+                self.assertEqual(inner.read_bytes(),old_i)
+
     def test_sha_drift_and_missing_component_are_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
@@ -116,8 +174,8 @@ class Tests(unittest.TestCase):
                   m,"prepare",return_value=(
                     orig_o,orig_i,newer_o,newer_i,b"def install(H): pass\n",32.1)
                 ),patch.object(m,"restart_and_wait"),patch.object(
-                  m,"jpeg_proof",return_value=("safe.jpg",{
-                     "sha256":"0"*64,"bytes":1200})),patch.object(
+                  m,"jpeg_proof",return_value=[("safe.jpg",{
+                     "sha256":"0"*64,"bytes":1200})]),patch.object(
                   m,"jpeg_endpoint",side_effect=[None,m.Deferred("bad_8794")]),patch.object(
                   m,"camera",return_value=32.1),patch.object(m,"inventory",return_value=True):
                 with self.assertRaisesRegex(m.Deferred,"bad_8794"):
