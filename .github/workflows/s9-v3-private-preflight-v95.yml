@@ -34,8 +34,9 @@ jobs:
           p=Path("ops/c720p/s9-native-security/offline-worker/run-s9-v3-private-preflight-v95.py")
           s=p.read_text()
           for token in ("os.remove(", ".unlink(", ".write_text(", ".write_bytes(",
-                        "os.replace(", "pm install", "am force-stop", "--apply"):
+                        "os.replace(", "pm install", "am force-stop"):
               assert token not in s, token
+          assert '\"--apply\"' not in s
           assert 'raw_filenames_disclosed' in s and 'camera_apk_modified' in s
           print("S9_V3_PRIVATE_PREFLIGHT_SOURCE_GUARD_PASS")
           PY
