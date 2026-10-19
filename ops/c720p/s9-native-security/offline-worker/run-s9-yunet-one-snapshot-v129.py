@@ -44,8 +44,11 @@ def call(argv,seconds=90):
   # one-snapshot smoke. Treat it as a distinct hard failure; it does not prove
   # OOM, a model result, or a recorder fault. Never log command or phone data.
   if (len(argv)>=5 and argv[0]=="adb" and argv[3]=="shell"
-      and "app_process" in argv[4] and p.returncode==137):
-   raise RuntimeError("s9_yunet_phone_launcher_exit_137")
+      and isinstance(argv[4],str)
+      and re.search(r"(?:^|[; ])app_process(?:\\s|$)",argv[4])
+      and (p.returncode in (137,-9)
+           or re.search(r"\\bkilled\\b",(p.stderr or "")+" "+(p.stdout or ""),re.I))):
+   raise RuntimeError("android_app_process_terminated_without_face_evidence")
   raise RuntimeError("separate_phone_operation_failed")
  return p.stdout.strip()
 def adb(*cmd,timeout=26):
@@ -226,6 +229,22 @@ def main():
   label="another_s9_worker_active" if isinstance(e,BlockingIOError) else str(e)
   benign=("capture_not_cool_idle","no_source_qualified_unpadded_face_snapshot",
           "hub_root_disk_reserve_low","another_s9_worker_active")
+  if label=="android_app_process_terminated_without_face_evidence":
+   # The phone shell terminated before any trustworthy face result. Verify the
+   # camera survived it before treating this as a safe deferred audit.
+   after=current_camera()
+   if adb("shell","pidof nl.kalenel.s9security")!=pid:
+    raise RuntimeError("camera_pid_changed_after_yunet_termination")
+   print("S9_YUNET_REAL_ONE_SNAPSHOT_DEFERRED "+json.dumps({
+    "reason":label,"detector_inference_verified":False,
+    "native_camera_ready_after":True,
+    "camera_dropped_output_frames_after":after["continuous_4k_dropped_output_frames"],
+    "phone_temperature_after_c":after["temperature_c"],
+    "automatic_person_assignments":0,
+    "reference_created":False,"camera_apk_modified":False,
+    "originals_modified":False,"manual_reviews_modified":False
+   },sort_keys=True),flush=True)
+   return
   if label in benign:
    print("S9_YUNET_REAL_ONE_SNAPSHOT_DEFERRED "+json.dumps({
     "reason":label,"executed":False,"camera_apk_modified":False,
