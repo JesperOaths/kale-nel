@@ -38,16 +38,34 @@ public final class S9MigratedLedgerCoordinatorTestV197 {
             "identical_keys_refused");
         denied(()->new S9MigratedLedgerCoordinatorV197(sd.toFile(),sd.toFile(),SD,APP),
             "same_storage_refused");
-        denied(()->new S9MigratedLedgerCoordinatorV197(phone.toFile(),sd.toFile(),
-            SD,new byte[32]),"incorrect_unprovisioned_anchor_key_or_file");
+        // Unsigned genesis must never be treated as an authenticated state.
+        try(S9MigratedLedgerCoordinatorV197 virgin=
+            new S9MigratedLedgerCoordinatorV197(phone.toFile(),sd.toFile(),SD,APP)) {
+            denied(()->virgin.latestVerified(NAME),"unsigned_genesis_read_refused");
+            denied(()->virgin.commitMetadata("save",NAME,SOURCE,123456,rep('1',32)),
+                "unsigned_genesis_write_refused");
+        }
+        // Separate synthetic-only one-time provisioner: this is NOT a live API.
         String savedHead;
+        try(S9MigratedMetadataLedgerV193 journal=
+                new S9MigratedMetadataLedgerV193(sd.toFile(),SD);
+            S9MigratedLedgerTrustedCheckpointV196 checkpoint=
+                new S9MigratedLedgerTrustedCheckpointV196(phone.toFile(),APP)) {
+            journal.requireTrustedHead(0,ZERO);
+            S9MigratedMetadataLedgerV193.Receipt first=journal.commit(
+                "save",NAME,SOURCE,123456,rep('1',32));
+            require(first.ledgerSequence==1 && !first.mayRemoveOriginal(),"saved_1");
+            savedHead=first.ledgerHeadSha256;
+            checkpoint.advance(0,ZERO,1,savedHead);
+        }
+        try(S9MigratedLedgerCoordinatorV197 wrong=
+                new S9MigratedLedgerCoordinatorV197(phone.toFile(),sd.toFile(),
+                    SD,new byte[32])) {
+            denied(()->wrong.latestVerified(NAME),"wrong_checkpoint_key_refused");
+        }
         try(S9MigratedLedgerCoordinatorV197 coordinated=
             new S9MigratedLedgerCoordinatorV197(phone.toFile(),sd.toFile(),SD,APP)) {
-            require(coordinated.latestVerified(NAME).decision==null,"fresh_empty");
-            S9MigratedMetadataLedgerV193.Receipt save=coordinated.commitMetadata(
-                "save",NAME,SOURCE,123456,rep('1',32));
-            require(save.ledgerSequence==1 && !save.mayRemoveOriginal(),"saved_1");
-            savedHead=save.ledgerHeadSha256;
+            require(coordinated.latestVerified(NAME).decision.isSaved(),"provisioned_save");
             S9MigratedMetadataLedgerV193.Receipt replay=coordinated.commitMetadata(
                 "save",NAME,SOURCE,123456,rep('1',32));
             require(replay.ledgerSequence==1,"exact_retry");
