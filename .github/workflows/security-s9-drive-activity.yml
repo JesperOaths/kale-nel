@@ -1,0 +1,23 @@
+name: Security S9 Drive combined recording activity
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/combined-s9-drive-activity-v1.py'
+      - 'ops/c720p/security-runtime/test-combined-s9-drive-activity-v1.py'
+      - '.github/workflows/security-s9-drive-activity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/combined-s9-drive-activity-v1.py'
+      - 'ops/c720p/security-runtime/test-combined-s9-drive-activity-v1.py'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 -m py_compile ops/c720p/security-runtime/combined-s9-drive-activity-v1.py ops/c720p/security-runtime/test-combined-s9-drive-activity-v1.py
+          python3 ops/c720p/security-runtime/test-combined-s9-drive-activity-v1.py
