@@ -61,19 +61,25 @@ def current_camera():
   body=reply.read(65537)
  require(len(body)<=65536,"camera_status_too_large")
  d=json.loads(body)
+ # Fixed, non-identifying reason codes: never expose clip, person or
+ # path information. This ONLY improves diagnostics, never relaxes admission.
  require(d.get("ok") is True and d.get("mode")=="watching"
    and d.get("native_4k_enabled") is True
    and d.get("continuous_4k_ready") is True
    and d.get("continuous_4k_dropped_output_frames")==0
-   and not d.get("continuous_4k_error")
-   and type(d.get("temperature_c")) in (float,int)
-   and 0<d["temperature_c"]<=36.5
-   and type(d.get("continuous_4k_buffered_ms")) is int
-   and d["continuous_4k_buffered_ms"]>=6500
-   and not any(d.get(key) is True for key in (
-     "recording_active","recording_in_progress","face_backfill_queued",
-     "appearance_backfill_queued","historical_import_queued")),
-   "native_4k_capture_not_idle_and_cool")
+   and not d.get("continuous_4k_error"),"native_4k_pipeline_unhealthy")
+ require(type(d.get("temperature_c")) in (float,int)
+   and 0<d["temperature_c"]<=36.5,"native_4k_temperature_guard")
+ require(type(d.get("continuous_4k_buffered_ms")) is int
+   and d["continuous_4k_buffered_ms"]>=6500,
+   "native_4k_buffer_not_ready")
+ require(not any(d.get(key) is True for key in
+   ("recording_active","recording_in_progress")),
+   "native_4k_recording_in_progress")
+ require(not any(d.get(key) is True for key in
+   ("face_backfill_queued","appearance_backfill_queued",
+    "historical_import_queued")),
+   "s9_background_work_queued")
  return d
 
 def build(folder):
@@ -195,7 +201,10 @@ def main():
      "minimal_worker_copy_failed","minimal_worker_promotion_failed",
      "bounded_command_response_exceeded","bounded_build_or_phone_operation_failed",
      "phone_transport_or_shell_failure","phone_not_ready","wrong_android_device",
-     "camera_process_unverified","native_camera_pid_changed_after_baseline"}
+     "camera_process_unverified","native_camera_pid_changed_after_baseline",
+     "native_4k_pipeline_unhealthy","native_4k_temperature_guard",
+     "native_4k_buffer_not_ready","native_4k_recording_in_progress",
+     "s9_background_work_queued"}
   result={"status":"deferred","reason":why if why in allowed
           else "unexpected_failure_no_private_detail",
           "yu_net_inference_executed":False,"model_or_image_opened":False,
