@@ -1,0 +1,52 @@
+name: S9 appearance score private endpoint and rollback contracts
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_multivector_appearance_api.py'
+      - 'ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-appearance-endpoint.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-multivector-appearance-endpoint.py'
+      - '.github/workflows/s9-private-multivector-endpoint.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_multivector_appearance_api.py'
+      - 'ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-appearance-endpoint.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-multivector-appearance-endpoint.py'
+      - '.github/workflows/s9-private-multivector-endpoint.yml'
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify source-scoped human-review-only route and atomic rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$folder/deploy-s9-multivector-appearance-endpoint.py" \
+            ops/c720p/s9-person-ml-v1/s9_multivector_appearance_api.py \
+            "$folder/test-s9-multivector-appearance-endpoint.py"
+          python3 "$folder/test-s9-multivector-appearance-endpoint.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          module=Path("ops/c720p/s9-person-ml-v1/s9_multivector_appearance_api.py").read_text()
+          install=Path("ops/c720p/s9-native-security/offline-worker/deploy-s9-multivector-appearance-endpoint.py").read_text()
+          for term in ("verified_same_person","identity_probability",
+                       "human_review_required","automatic_person_assignments",
+                       "appearance_only","Phone") if False else ():
+              pass
+          for term in ("verified_same_person","identity_probability",
+                       "human_review_required","automatic_person_assignments",
+                       "appearance_only","s9_appearance_rankings_v1"):
+              assert term in module,term
+          for term in ("--apply","S9_MULTIVECTOR_APPEARANCE_LIVE_API_VERIFIED",
+                       "S9_MULTIVECTOR_API_ROLLED_BACK","backup",
+                       "s9_sd_proxy_extension.py"):
+              assert term in install,term
+          for banned in ("pm install","am force-stop","CameraService.java",
+                         "review/review","automatic_assign(", "save_person("):
+              assert banned not in module and banned not in install,banned
+          print("S9_PRIVATE_MULTIVECTOR_ENDPOINT_SOURCE_PASS")
+          PY
