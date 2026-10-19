@@ -760,13 +760,15 @@ function chosenPortrait(f){
   try{saved=JSON.parse(localStorage.getItem(portraitKey(id))||'null')}catch(_){}
  }
  if(!saved||!faceName.test(String(saved.name||''))||!clipName.test(String(saved.clip||'')))return null;
- return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&credibleFaceCrop(x))||null;
+ if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;
+ return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&
+  x.face.snapshot_on_s9!==false)||null;
 }
 function choosePortrait(f,face){
  // The user, not the model, picks this folder's cover from an approved clip.
  const id=String(f.id||''),name=String(face?.face?.snapshot_name||'');
- if(!id||!faceName.test(name)||!credibleFaceCrop(face)||
-     !state.doc?.items?.some(x=>x.clip===face.clip&&x.decision==='approved')){
+ if(!id||!faceName.test(name)||face?.face?.snapshot_on_s9===false||
+     !assignedRecordingKeys(id).has('sd:'+face.clip)){
   alertText('Choose a face image from a recording confirmed for this person.');return;
  }
  const data={name,clip:face.clip};state.folderPortraits.set(id,data);
@@ -785,42 +787,26 @@ function approvedPreviewClip(preview){
  return '';
 }
 function automaticPortrait(f){
- if(!f||!num(f.approved_clips))return null;
- const approved=new Set((Array.isArray(f.previews)?f.previews:[])
-  .map(approvedPreviewClip).filter(Boolean));
- if(state.folder===f.id){
-  for(const item of state.doc?.items||[])if(item.decision==='approved'&&clipName.test(String(item.clip||'')))
-   approved.add(item.clip);
+ if(!f||!state.faceLoaded)return null;
+ // Source-qualified approved originals, not only the tiny previews sample.
+ // Multi-person footage is excluded; an explicit face choice is still possible.
+ const candidates=[];
+ for(const key of assignedRecordingKeys(f.id)){
+  if(!key.startsWith('sd:'))continue;
+  const clip=key.slice(3),rec=state.clipEvidence.get(clip);
+  if(!rec)continue;
+  const tracks=rec.anonymous_tracks||rec.person_tracks||[];
+  if(num(rec.frames_with_distinct_multiple_person_boxes)>0||tracks.length>1||
+     num(rec.person_count)>1)continue;
+  const faces=state.faceList.filter(x=>x.clip===clip&&
+   faceName.test(String(x.face?.snapshot_name||''))&&
+   x.face.snapshot_on_s9!==false);
+  if(faces.length!==1)continue;
+  candidates.push(faces[0]);
  }
- if(!approved.size)return null;
- // Never recycle the same face between people or guess from group footage.
- const proposed=new Map();
- const reserved=new Set();
- for(const folder of savedFolders().slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
-  const source=new Set((Array.isArray(folder.previews)?folder.previews:[])
-   .map(approvedPreviewClip).filter(Boolean));
-  if(state.folder===folder.id)for(const x of state.doc?.items||[])
-   if(x.decision==='approved'&&clipName.test(String(x.clip||'')))source.add(x.clip);
-  const options=[];
-  for(const clip of source){
-   const faces=reliableFaces(clip);
-   // A crop in a multi-person recording cannot be assigned to an individual.
-   const rec=state.clipEvidence.get(clip);
-   const tracks=rec?.anonymous_tracks||rec?.person_tracks||[];
-   if(faces.length!==1||tracks.length>1)continue;
-   const key=String(faces[0].face.snapshot_sha256||faces[0].face.snapshot_name);
-   if(!reserved.has(key))options.push(faces[0]);
-  }
-  options.sort((a,b)=>num(b.face.snapshot_size)-num(a.face.snapshot_size)||
-   String(a.face.snapshot_name).localeCompare(String(b.face.snapshot_name)));
-  const selected=options[0]||null;
-  if(selected){
-   const key=String(selected.face.snapshot_sha256||selected.face.snapshot_name);
-   reserved.add(key);
-  }
-  proposed.set(folder.id,selected);
- }
- return proposed.get(f.id)||null;
+ candidates.sort((a,b)=>num(b.face.snapshot_size)-num(a.face.snapshot_size)||
+  String(a.face.snapshot_name).localeCompare(String(b.face.snapshot_name)));
+ return candidates[0]||null;
 }
 function profileRow(f){
  const b=control('',()=>openFolder(f.id),'profile');b.replaceChildren();
@@ -832,8 +818,8 @@ function profileRow(f){
  }else avatar.append(elt('span',(String(f.label||'?')[0]||'?').toUpperCase()));
  const info=elt('div');info.append(elt('strong',f.label),
   elt('small',folderAssignmentCount(f)+' reviewed '+(folderAssignmentCount(f)===1?'recording':'recordings')+
-    (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need recheck':'')),
-  elt('small',face?'Portrait from reviewed recording':'No verified face portrait yet'));
+    ''),
+  elt('small',face?'Face candidate from a reviewed recording':'Open recordings to select a face image'));
  b.append(avatar,info,elt('span','Open recordings →','arrow'));
  return b;
 }
@@ -1276,7 +1262,8 @@ function renderFolder(){
  // A linked recording can still contain a different person: never label a crop as an identified face.
  const facePanel=$('folderFaces'),faceGrid=$('folderFaceGrid');faceGrid.replaceChildren();
  const clips=folderApprovedSDClips(state.folder);
- const faceMatches=state.faceList.filter(x=>clips.has(x.clip)&&credibleFaceCrop(x)).slice(0,16);
+ const faceMatches=state.faceList.filter(x=>clips.has(x.clip)&&
+  faceName.test(String(x.face?.snapshot_name||''))&&x.face.snapshot_on_s9!==false).slice(0,24);
  facePanel.hidden=state.tab!=='approved'||faceMatches.length===0;
  if(!facePanel.hidden)for(const face of faceMatches){
   const cell=elt('div','','folder-photo-choice');
