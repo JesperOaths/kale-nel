@@ -99,6 +99,7 @@ def launch(guard,remote):
  if (result.get("status")!="micro_sd_two_decisions_reloaded"
      or result.get("metadata_actions")!=2
      or result.get("nonce_replay_refused") is not True
+     or result.get("superseded_save_refused") is not True
      or result.get("delete_is_only_tombstone") is not True
      or result.get("journal_readback_verified") is not True
      or result.get("only_synthetic_directory_written") is not True
