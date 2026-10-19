@@ -240,6 +240,12 @@ def compute_one(clip):
         if (adb("shell","test -s "+roi,check=False).returncode or
             adb("shell","test -s "+metadata,check=False).returncode):
             raise RuntimeError("Recovered ROI still missing private evidence")
+    if has_crop and has_detector or has_crop != has_detector:
+        # The existing crop itself must still match its detector provenance;
+        # neither a stale ledger nor a valid vector substitutes for its SHA.
+        crop_sha=detector_provenance(clip,key,metadata)
+        if adb("shell","sha256sum "+roi,timeout=25).stdout.split()[0]!=crop_sha:
+            raise RuntimeError("Private ROI crop integrity mismatch")
     existing=adb("shell","test -s "+sidecar,check=False)
     if existing.returncode==0:
         # Previously generated features count only if detector provenance and
