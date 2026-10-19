@@ -69,7 +69,8 @@
   apply();
 
   const refresh=async()=>{
-    if(ended||inflight||document.hidden)return;
+    // SECURITY_NIGHT_VISIBLE_PANE_V1
+    if(ended||inflight||document.hidden||section.hidden)return;
     const relay=window.C720PSecureRelay;
     if(!relay||typeof relay.fetch!=='function')return;
     inflight=true;

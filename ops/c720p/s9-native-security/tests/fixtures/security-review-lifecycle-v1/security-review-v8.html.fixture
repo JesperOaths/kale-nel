@@ -1,0 +1,17 @@
+<!doctype html>
+<html><body>
+<script id="s9v8-review-script">
+(()=>{
+'use strict';
+function playbackStop(){if(state.activeVideo){state.activeVideo.pause();state.activeVideo.removeAttribute('src');state.activeVideo.load();state.activeVideo=null}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)state.activeVideo?.pause();else if(!state.all.length)refresh()});
+window.addEventListener('pagehide',playbackStop);
+refresh();setInterval(()=>{if(!document.hidden)refresh()},60000);
+function personFilingControls(source,name){return null;}
+})();
+</script>
+<script id="c720p-migrated-recordings-ui">
+/* INDEPENDENT_MIGRATION_PANEL_KEEP: synthetic preservation sentinel. */
+const migrationFixtureSentinel="unchanged";
+</script>
+</body></html>

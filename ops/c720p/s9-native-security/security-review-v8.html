@@ -730,9 +730,23 @@ async function refresh(){
 }
 $('refresh').onclick=refresh;
 for(const id of ['search','type','order'])$(id).addEventListener(id==='search'?'input':'change',render);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)state.activeVideo?.pause();else if(!state.all.length)refresh()});
+// SECURITY_REVIEW_ACTIVE_TAB_V1
+function reviewTabVisible(){return !document.hidden&&window.SecurityTabActive!==false}
+window.addEventListener('message',event=>{
+ if(event.source!==window.parent||event.origin!==location.origin)return;
+ if(event.data?.kind==='security-tab-refresh-v37'){refresh();return}
+ if(event.data?.kind!=='security-tab-visibility-v37')return;
+ window.SecurityTabActive=event.data.active===true;
+ if(!reviewTabVisible())playbackStop();
+ else if(!state.all.length)refresh();
+});
+if(window.parent!==window){
+ window.SecurityTabActive=false;
+ window.parent.postMessage({kind:'security-tab-ready-v37'},location.origin);
+}
+document.addEventListener('visibilitychange',()=>{if(!reviewTabVisible())playbackStop();else if(!state.all.length)refresh()});
 window.addEventListener('pagehide',playbackStop);
-refresh();setInterval(()=>{if(!document.hidden)refresh()},60000);
+refresh();setInterval(()=>{if(reviewTabVisible())refresh()},60000);
 
 function personFilingControls(source,name){
  const panel=document.createElement('div');
@@ -797,6 +811,15 @@ const count=$('auxRecoveryCount'),search=$('auxRecoverySearch'),label=$('auxReco
 const datefmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',dateStyle:'medium',timeStyle:'short'});
 let files=[],page=0,loaded=false,loading=false,player=null,serial=0;
 const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);return e};
+// SECURITY_UI_RECOVERY_RELAY_CONTINUITY_V1: use the existing authenticated parent.
+function recoveryRelay(){
+ for(const context of [window,window.parent]){
+  try{const api=context.C720PSecureRelay;
+   if(typeof api?.fetch==='function'&&typeof api?.url==='function')return api;
+  }catch(_){}
+ }
+ return null;
+}
 function stop(){serial++;if(player){player.pause();player.removeAttribute('src');player.load();player.remove();player=null}}
 function render(){
  stop();list.replaceChildren();
@@ -818,7 +841,7 @@ function render(){
   open.addEventListener('click',async()=>{
    stop();const id=serial;open.disabled=true;
    try{
-    const relay=window.C720PSecureRelay;
+    const relay=recoveryRelay();
     if(!relay?.url)throw Error('Secure relay unavailable');
     const url=await relay.url('/new/saved/recovery/clip/'+encodeURIComponent(f.name));
     if(id!==serial)return;
@@ -836,7 +859,7 @@ async function load(){
  if(loaded||loading)return;
  loading=true;status.textContent='Loading recoverable footage…';
  try{
-  const relay=window.C720PSecureRelay;
+  const relay=recoveryRelay();
   if(!relay?.fetch)throw Error('Secure relay unavailable');
   const response=await relay.fetch('/new/api/s9-auxiliary-recovery',{cache:'no-store'});
   if(!response.ok)throw Error('Recovery data unavailable');

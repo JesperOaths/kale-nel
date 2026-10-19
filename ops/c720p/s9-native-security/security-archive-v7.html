@@ -134,10 +134,13 @@ const day=r=>{const n=name(r),m=native.exec(n),l=older.exec(n);return m?datePart
 const time=r=>{const m=native.exec(name(r)),l=older.exec(name(r));return m?new Date(Number(m[1])).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit'}):l?l[2].replace('-',':'):'—'};
 const formatDay=d=>{const [y,m,dd]=d.split('-').map(Number);return new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(Date.UTC(y,m-1,dd,12)))};
 const formatMonth=d=>{const [y,m]=d.split('-').map(Number);return new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(Date.UTC(y,m-1,15,12)))};
-const category=r=>{const g=String(r.person_event_category||r.scene_category||'').toLowerCase(),tags=Array.isArray(r.content_categories)?r.content_categories.map(String):[];
-if(g.includes('person')||Number(r.person_count)>0)return 'Person';
+// SECURITY_UI_CATEGORY_CONTINUITY_V1: model evidence is not a confirmed person.
+const category=r=>{const g=String(r.person_event_category||r.scene_category||'').toLowerCase(),tags=Array.isArray(r.content_categories)?r.content_categories.map(x=>String(x).toLowerCase()):[];
+const labels={one_person:'Person candidate',multiple_people:'People candidates',single_person_repeated_candidate:'Person candidate',multiple_people_candidate:'People candidates',possible_group_needs_frame_review:'Possible people · review',possible_person_below_standard_threshold:'Possible person · review',single_frame_person_candidate:'Possible person · review'};
+if(Object.prototype.hasOwnProperty.call(labels,g))return labels[g];
+if(g!=='no_person_model_detection'&&Number(r.person_count)>0)return Number(r.person_count)>1?'People candidates':'Person candidate';
 if(g.includes('animal')||tags.includes('animal'))return 'Animal';
-if(g.includes('vehicle')||tags.includes('vehicle'))return 'Vehicle';return 'Motion'};
+if(g.includes('vehicle')||tags.includes('vehicle'))return 'Vehicle';return g==='no_person_model_detection'?'Motion · person unconfirmed':'Motion'};
 let records=[],openDays=new Set(),selectedMonth='all',loaded=false,playing=0;
 async function preview(img,r){const n=name(r),a=relay();if(!a?.url)return;
 try{const p=await a.url('/new/saved/snap/'+encodeURIComponent(n+'.thumb.jpg'));if(img.isConnected)img.src=p}catch(_){

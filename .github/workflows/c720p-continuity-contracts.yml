@@ -1,0 +1,92 @@
+name: C720P Security transport and UI continuity contracts
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/s9_continuity_relay_v1.py'
+      - 'ops/c720p/security-runtime/patch-security-transport-continuity-v1.py'
+      - 'ops/c720p/security-runtime/test-security-transport-continuity-v1.py'
+      - 'ops/c720p/security-runtime/deploy-security-continuity-v1.py'
+      - 'ops/c720p/security-runtime/deploy-security-ui-release-v1.py'
+      - 'ops/c720p/security-runtime/test-deploy-security-ui-release-v1.py'
+      - 'ops/c720p/security-runtime/SECURITY_CONTINUITY_V1.md'
+      - 'ops/c720p/security-runtime/c720p-screen-idle.py'
+      - 'ops/c720p/security-runtime/test-screen-motion-contract-v1.py'
+      - 'ops/c720p/security-runtime/security_cache_release_v1.py'
+      - 'ops/c720p/security-runtime/test-security-cache-release-v1.py'
+      - 'ops/c720p/s9-native-security/patch-security-ui-continuity-v1.py'
+      - 'ops/c720p/s9-native-security/test-security-ui-continuity*'
+      - 'ops/c720p/s9-native-security/tests/fixtures/security-ui-continuity-v1/**'
+      - 'ops/c720p/s9-native-security/patch-security-review-lifecycle-v1.py'
+      - 'ops/c720p/s9-native-security/test-security-review-lifecycle*'
+      - 'ops/c720p/s9-native-security/tests/fixtures/security-review-lifecycle-v1/**'
+      - 'ops/c720p/s9-native-security/security-archive-v7.html'
+      - 'ops/c720p/s9-native-security/security-hub-v30.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/security-review-v8.html'
+      - 'ops/c720p/s9-native-security/s9-night-visibility-v1.js'
+      - 'ops/c720p/s9-person-ml-v1/s9_phone_garden_status.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-storage-status-v15.py'
+      - 'ops/c720p/s9-native-security/test-native-garden-phone-status.py'
+      - 'ops/c720p/s9-native-security/test-phone-detector-version-contract.py'
+      - 'ops/c720p/s9-native-security/test-phone-sensor-telemetry.py'
+      - 'ops/c720p/s9-native-security/patch-native-garden-watch-ui.py'
+      - 'ops/c720p/s9-native-security/patch-live-person-watch-ui.py'
+      - 'ops/c720p/s9-native-security/check-s9-camera-fps.py'
+      - 'ops/c720p/s9-native-security/patch-security-sensor-timing-ui.py'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java'
+      - '.github/workflows/c720p-continuity-contracts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/s9_continuity_relay_v1.py'
+      - 'ops/c720p/security-runtime/patch-security-transport-continuity-v1.py'
+      - 'ops/c720p/security-runtime/test-security-transport-continuity-v1.py'
+      - 'ops/c720p/security-runtime/deploy-security-continuity-v1.py'
+      - 'ops/c720p/security-runtime/deploy-security-ui-release-v1.py'
+      - 'ops/c720p/security-runtime/test-deploy-security-ui-release-v1.py'
+      - 'ops/c720p/security-runtime/SECURITY_CONTINUITY_V1.md'
+      - 'ops/c720p/security-runtime/c720p-screen-idle.py'
+      - 'ops/c720p/security-runtime/test-screen-motion-contract-v1.py'
+      - 'ops/c720p/security-runtime/security_cache_release_v1.py'
+      - 'ops/c720p/security-runtime/test-security-cache-release-v1.py'
+      - 'ops/c720p/s9-native-security/patch-security-ui-continuity-v1.py'
+      - 'ops/c720p/s9-native-security/test-security-ui-continuity*'
+      - 'ops/c720p/s9-native-security/tests/fixtures/security-ui-continuity-v1/**'
+      - 'ops/c720p/s9-native-security/patch-security-review-lifecycle-v1.py'
+      - 'ops/c720p/s9-native-security/test-security-review-lifecycle*'
+      - 'ops/c720p/s9-native-security/tests/fixtures/security-review-lifecycle-v1/**'
+      - 'ops/c720p/s9-native-security/security-archive-v7.html'
+      - 'ops/c720p/s9-native-security/security-hub-v30.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/security-review-v8.html'
+      - 'ops/c720p/s9-native-security/s9-night-visibility-v1.js'
+      - 'ops/c720p/s9-person-ml-v1/s9_phone_garden_status.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-storage-status-v15.py'
+      - 'ops/c720p/s9-native-security/test-native-garden-phone-status.py'
+      - 'ops/c720p/s9-native-security/test-phone-detector-version-contract.py'
+      - 'ops/c720p/s9-native-security/test-phone-sensor-telemetry.py'
+      - 'ops/c720p/s9-native-security/patch-native-garden-watch-ui.py'
+      - 'ops/c720p/s9-native-security/patch-live-person-watch-ui.py'
+      - 'ops/c720p/s9-native-security/check-s9-camera-fps.py'
+      - 'ops/c720p/s9-native-security/patch-security-sensor-timing-ui.py'
+      - 'ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java'
+      - '.github/workflows/c720p-continuity-contracts.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          python3 -B ops/c720p/security-runtime/test-security-transport-continuity-v1.py
+          python3 -B ops/c720p/security-runtime/test-screen-motion-contract-v1.py
+          python3 -B ops/c720p/s9-native-security/test-security-ui-continuity-v1.py
+          python3 -B ops/c720p/security-runtime/test-security-cache-release-v1.py
+          python3 -B ops/c720p/security-runtime/test-deploy-security-ui-release-v1.py
+          python3 -B ops/c720p/s9-native-security/test-security-review-lifecycle-v1.py
+          python3 -B ops/c720p/s9-native-security/test-native-garden-phone-status.py
+          python3 -B ops/c720p/s9-native-security/test-phone-detector-version-contract.py
+          python3 -B ops/c720p/s9-person-ml-v1/test-s9-storage-status-v15.py
+          python3 -B ops/c720p/s9-native-security/test-phone-sensor-telemetry.py
