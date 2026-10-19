@@ -1,0 +1,26 @@
+name: C720P legacy generated index S9 migration bridge
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/patch-c720p-legacy-index-s9-v1.py'
+      - 'ops/c720p/security-runtime/test-c720p-legacy-index-s9-v1.py'
+      - 'ops/c720p/security-runtime/c720p-migrated-index-playback-v1.js'
+      - '.github/workflows/c720p-legacy-index-s9-bridge.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/patch-c720p-legacy-index-s9-v1.py'
+permissions:
+  contents: read
+jobs:
+  source-no-media-deletion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/patch-c720p-legacy-index-s9-v1.py
+          python3 ops/c720p/security-runtime/test-c720p-legacy-index-s9-v1.py
+          node --check ops/c720p/security-runtime/c720p-migrated-index-playback-v1.js
+          echo C720P_LEGACY_INDEX_AND_SAVE_CONTROLS_PRESERVED
