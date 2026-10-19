@@ -405,6 +405,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(autoPosts.length,1,'Denials use the audited suggestion endpoint');
  assert.equal(autoPosts[0].body.human_confirmed,true);
  assert.equal(linkPosts.length,postsBefore,'Deny must not modify any person assignment');
+ console.log('AUTO_PERSON_AFTER_DENY',JSON.stringify({status:el('automaticStatus').textContent,count:el('automaticTabCount').textContent,groups:el('automaticFolders').children.length,links:Object.keys(linkItems)}));
  const approve=scan(el('automaticFolders'),'✓ Approve');
  assert(approve,'Remaining match must support manual approval');
  approve.handlers.click();for(let i=0;i<15;i++)await flush();
