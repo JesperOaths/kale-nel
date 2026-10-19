@@ -139,22 +139,29 @@ def privacy_adb_intentionally_closed():
    "adb_port_not_listening","restored_private_adb")
  except (OSError,KeyError,ValueError,TypeError):return False
 
-def main():
- try: data=parse()
- except Exception as e:
-  private=privacy_adb_intentionally_closed()
-  data={
+def unavailable(private,error_type=None):
+ """Never claim an offline private port proves an operational camera."""
+ return {
    "sensor":"Galaxy S3 bedroom on-phone rear-camera motion",
    "checked_at_utc":dt.datetime.now(dt.timezone.utc).isoformat(),
    "healthy":None if private else False,
    "motion_analysis_active":None if private else False,
    "camera_active":None,
    "warnings":["s3_telemetry_unavailable_privacy_port_closed"] if private else ["s3_health_query_failed"],
-   "query_error_type":type(e).__name__,
+   "query_error_type":error_type,
    "privacy_adb_port_closed_recently":private,
    "motion_health_verified":False,
-   "images_or_audio_copied":False
-  }
+   "images_or_audio_copied":False,
+ }
+def main():
+ # The independent 30-minute privacy watchdog deliberately closes TCP/5555.
+ # Do not initiate an ADB connection merely to learn that it cannot work.
+ if privacy_adb_intentionally_closed():
+  data=unavailable(True,"intentionally_private")
+ else:
+  try:data=parse()
+  except Exception as e:
+   data=unavailable(False,type(e).__name__)
  for path in (USERSTATE,OUT):
   save(path,data)
  update_history(data)
