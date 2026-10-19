@@ -74,6 +74,15 @@ def verified_ready_subset(module,inventory):
         hsv_path=ROOT+"/features/"+key+"-hsv-v2.json"
         if not module.remote_exists(hsv_path):
             continue
+        # The 76-crop inventory may contain a new V40 HSV32 descriptor
+        # whose OSNet 512-D companion has not been completed yet. Confirm
+        # ABSENCE via the transport-safe remote_exists check; never mistake
+        # it for a corrupt present file or allow it to satisfy the 57
+        # immutable V2 references. A future cool-window backfill may fill
+        # the missing visual descriptor without overwriting existing HSV.
+        visual_path=ROOT+"/features/"+key+"-visual.json"
+        if not module.remote_exists(visual_path):
+            continue
         module.safe_visual(key,crop)
         hsv=module.phone_json(hsv_path)
         values=hsv.get("upper_hsv32")
