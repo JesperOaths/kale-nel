@@ -54,24 +54,73 @@ def exec_local(args,timeout=100):
 
 
 def trusted_pair_presence(module,inventory):
-    """Reuse the verified, transport-fail-closed 24-crop pair-mask protocol.
+    """Fail-closed, private S9_PAIR_MASK_V1 protocol in 24-crop batches.
 
-    The physical V3 phone module exposes adb; minimalist historical unit-test
-    doubles expose remote_exists only. Never fall back on a *failed* ADB batch.
-    No private vectors or clip identifiers enter the presence response.
+    This protocol is identical to the independently verified V102 helper,
+    but self-contained: both scheduled ranker and single-OSNet staging carry
+    only this file, so neither can silently omit a new helper dependency.
+    Historical fake unit-test modules still use their remote_exists method.
     """
-    if callable(getattr(module,"adb",None)):
-        path=Path(__file__).with_name("run-s9-v3-hsv-two-v102.py")
-        spec=importlib.util.spec_from_file_location("s9_v3_batched_pair_mask",path)
-        helper=importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(helper)
-        return helper.presence_inventory(module,inventory)
-    def historical_test_adapter(key,kind):
-        if kind not in ("visual","hsv") or not HEX.fullmatch(key):
+    if not callable(getattr(module,"adb",None)):
+        def synthetic_presence(key,kind):
+            if kind not in ("visual","hsv") or not HEX.fullmatch(key):
+                raise RuntimeError("untrusted_descriptor_presence_lookup")
+            suffix="-visual.json" if kind=="visual" else "-hsv-v2.json"
+            return module.remote_exists(ROOT+"/features/"+key+suffix)
+        return synthetic_presence
+    if not isinstance(inventory,list) or not 58<=len(inventory)<=400:
+        raise RuntimeError("reference_cohort_outside_bound")
+    root=module.ROOT
+    if (not isinstance(root,str) or not re.fullmatch(r"/[A-Za-z0-9_./-]+",root)
+        or ".." in root or len(root)>230):
+        raise RuntimeError("untrusted_phone_feature_root")
+    keys=[]
+    for row in inventory:
+        if not isinstance(row,dict):
+            raise RuntimeError("invalid_source_crop")
+        key=row.get("key")
+        sha=row.get("crop_sha256")
+        if not isinstance(key,str) or not HEX.fullmatch(key):
+            raise RuntimeError("invalid_source_qualified_key")
+        if not isinstance(sha,str) or not HEX.fullmatch(sha):
+            raise RuntimeError("invalid_crop_digest")
+        keys.append(key)
+    if len(keys)!=len(set(keys)):
+        raise RuntimeError("duplicate_source_qualified_key")
+    flags={}
+    for offset in range(0,len(keys),24):
+        chunk=keys[offset:offset+24]
+        script="set -eu; "
+        for key in chunk:
+            base=root+"/features/"+key
+            script+=(
+                f"if test -s {base}-visual.json; then v=1; else v=0; fi; "
+                f"if test -s {base}-hsv-v2.json; then h=1; else h=0; fi; "
+                f"printf 'S9_PAIR_MASK_V1 {key} %s %s\\n' \"$v\" \"$h\"; "
+            )
+        response=module.adb("shell",script,timeout=45,required=False)
+        raw=response.stdout
+        if (response.returncode!=0 or not isinstance(raw,str)
+            or not isinstance(response.stderr,str) or response.stderr.strip()
+            or len(raw)>len(chunk)*100):
+            raise RuntimeError("phone_descriptor_presence_indeterminate")
+        lines=raw.splitlines()
+        if len(lines)!=len(chunk):
+            raise RuntimeError("phone_descriptor_presence_incomplete")
+        for key,line in zip(chunk,lines):
+            parts=line.split()
+            if (len(parts)!=4 or parts[:2]!=["S9_PAIR_MASK_V1",key]
+                or parts[2] not in ("0","1") or parts[3] not in ("0","1")
+                or key in flags):
+                raise RuntimeError("phone_descriptor_presence_untrusted")
+            flags[key]=(parts[2]=="1",parts[3]=="1")
+    if len(flags)!=len(keys):
+        raise RuntimeError("phone_descriptor_presence_incomplete")
+    def present(key,kind):
+        if key not in flags or kind not in ("visual","hsv"):
             raise RuntimeError("untrusted_descriptor_presence_lookup")
-        suffix="-visual.json" if kind=="visual" else "-hsv-v2.json"
-        return module.remote_exists(ROOT+"/features/"+key+suffix)
-    return historical_test_adapter
+        return flags[key][0 if kind=="visual" else 1]
+    return present
 
 
 def verified_ready_subset(module,inventory):
