@@ -1,9 +1,9 @@
 name: S9 V3 bounded HSV32 source-descriptor completion V102
 on:
-  # Six low-duty attempts per day. The phone-side worker immediately defers
+  # Six low-duty windows per day, 15 minutes after OSNet. The worker defers
   # when Camera2, the 4K buffer, free space, or temperature is unsafe.
   schedule:
-    - cron: '11 1,5,9,13,17,21 * * *'
+    - cron: '20 1,5,9,13,17,21 * * *'
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-hsv-two-v102.py'
