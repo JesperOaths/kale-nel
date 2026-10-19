@@ -1,0 +1,27 @@
+name: S9-only migrated legacy Save Delete shadow contract V181
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/s9_migrated_save_delete_contract_v181.py'
+      - 'ops/c720p/security-runtime/test_s9_migrated_save_delete_contract_v181.py'
+      - '.github/workflows/s9-migrated-save-delete-shadow-v181.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/s9_migrated_save_delete_contract_v181.py'
+      - 'ops/c720p/security-runtime/test_s9_migrated_save_delete_contract_v181.py'
+      - '.github/workflows/s9-migrated-save-delete-shadow-v181.yml'
+permissions:
+  contents: read
+jobs:
+  pure-tests-no-media-actions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test no local deletion even with synthetic signed remote receipts
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/s9_migrated_save_delete_contract_v181.py"
+          python3 "$d/test_s9_migrated_save_delete_contract_v181.py"
