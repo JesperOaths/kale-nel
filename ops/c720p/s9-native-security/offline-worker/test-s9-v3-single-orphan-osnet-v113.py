@@ -93,6 +93,19 @@ class Tests(unittest.TestCase):
         with patch.object(m.urllib.request,"urlopen",
             return_value=Resp(camera(preroll_ready=False))):
             self.assertTrue(m.healthy()["continuous_4k_ready"])
+    def test_stage_marker_is_fixed_and_never_contains_clip_identity(self):
+        for stage in ("camera_health","historical_v2_provenance",
+                      "original_v40_crop_sha_provenance",
+                      "one_actual_on_phone_osnet_inference",
+                      "persisted_visual_and_hsv_sha_readback"):
+            m.mark(stage)
+            self.assertEqual(m.STAGE["value"],stage)
+            self.assertNotIn("motion_",m.STAGE["value"])
+        src=P.read_text()
+        self.assertIn('"stage":STAGE["value"]',src)
+        self.assertNotIn('traceback.print_exc(',src)
+        self.assertNotIn('print(str(exc))',src)
+
     def test_script_preserves_manual_evidence_and_no_auto_assign(self):
         src=P.read_text()
         for token in ("old.extract_one(old_source)",
