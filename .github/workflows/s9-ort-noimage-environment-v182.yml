@@ -1,0 +1,88 @@
+name: S9 ORT JNI no-image diagnostic V182
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9OrtJniNoImageV182.java'
+      - 'ops/c720p/s9-native-security/offline-worker/probe-s9-ort-jni-noimage-v182.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-probe-s9-ort-jni-noimage-v182.py'
+      - '.github/workflows/s9-ort-noimage-environment-v182.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9OrtJniNoImageV182.java'
+      - 'ops/c720p/s9-native-security/offline-worker/probe-s9-ort-jni-noimage-v182.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-probe-s9-ort-jni-noimage-v182.py'
+      - '.github/workflows/s9-ort-noimage-environment-v182.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-ort-noimage-v182-safety
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate no model, no face and only one JNI environment launch
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/probe-s9-ort-jni-noimage-v182.py"
+          python3 "$d/test-probe-s9-ort-jni-noimage-v182.py"
+          python3 "$d/test-probe-s9-app-process-noimage-v166.py"
+          curl -fsSL --retry 2 --max-time 80 https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar -o /tmp/s9-ort-v182.aar
+          echo "04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  /tmp/s9-ort-v182.aar" | sha256sum -c -
+          unzip -p /tmp/s9-ort-v182.aar classes.jar > /tmp/s9-ort-v182.jar
+          mkdir -p /tmp/s9-ort-v182-classes
+          javac -source 8 -target 8 -cp /tmp/s9-ort-v182.jar -d /tmp/s9-ort-v182-classes "$d/S9OrtJniNoImageV182.java"
+  physical:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Launch one no-image native ORT environment with capture-first protection
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          dir="ops/c720p/s9-native-security/offline-worker"
+          stage="/tmp/s9-ort-noimage-v182-${GITHUB_SHA:0:14}"
+          cmd="install -d -m 700 '$stage'"
+          for file in probe-s9-app-process-noimage-v166.py probe-s9-ort-jni-noimage-v182.py S9OrtJniNoImageV182.java; do
+            source="$dir/$file"
+            hash="$(sha256sum "$source" | cut -d' ' -f1)"
+            uri="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$source"
+            cmd="$cmd && curl -fsSL --max-time 35 '$uri' -o '$stage/$file' && printf '%s  %s\\n' '$hash' '$stage/$file' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/probe-s9-ort-jni-noimage-v182.py'"
+          idem="s9-native-ort-v182-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-s9-ort-noimage-v182','diagnostic',:'cmd',360,:'idem');
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_ORT_NOIMAGE_V182_JOB=$id"
+          for i in $(seq 1 125); do
+            result="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$result" == done* || "$result" == error* || "$result" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 3200)"
+              echo "$output"
+              [[ "$result" == 'done|0' ]] || exit 1
+              grep -q 'S9_ORT_JNI_NO_IMAGE_V182' <<< "$output"
+              grep -q '"camera_apk_modified":false' <<< "$output"
+              grep -q '"recordings_modified":false' <<< "$output"
+              grep -q '"models_loaded":0' <<< "$output"
+              grep -q '"face_images_read":0' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "No bounded S9 no-image ORT result";exit 1
