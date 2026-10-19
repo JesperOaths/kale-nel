@@ -53,7 +53,7 @@ def main():
     target=None;page=None
     try:
         target=ctl.call("Target.createTarget",{
-            "url":"http://localhost:8123/local/c720p-surveillance.html",
+            "url":"http://localhost:8123/local/c720p-surveillance.html?audit=reviewed-osnet-v1-20261019",
             "background":True})["targetId"]
         for _ in range(45):
             o=next((x for x in cdp.get("json/list") if x.get("id")==target),None)
