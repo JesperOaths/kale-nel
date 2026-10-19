@@ -26,6 +26,9 @@ on:
       - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
 permissions:
   contents: read
+concurrency:
+  group: s9-five-point-yunet-only-v120
+  cancel-in-progress: false
 jobs:
   pure-synthetic-only:
     runs-on: ubuntu-latest
