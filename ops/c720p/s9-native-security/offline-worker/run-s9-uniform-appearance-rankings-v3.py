@@ -184,7 +184,7 @@ def publish_verified_active(corpus_id,index_sha,map_sha,records):
          "rankings_sha256":index_sha,"verified_crops":records,
          "automatic_person_assignments":0,
          "human_review_required":True}
-    data=(json.dumps(doc,sort_keys=True,separators=(",",":"))+"\\n").encode()
+    data=(json.dumps(doc,sort_keys=True,separators=(",",":"))+"\n").encode()
     STATE_DIR.mkdir(parents=True,exist_ok=True)
     if pointer.is_symlink() or lock.is_symlink():
         raise RuntimeError("Unsafe active v3 pointer/lock symlink")
