@@ -38,12 +38,17 @@ function date(item){return stampMs(item.recorded_ms)}
 const driveName=/^[A-Za-z0-9._-]{1,180}[.]mp4$/;
 const driveSnap=/^[A-Za-z0-9._-]{1,180}[.]jpg$/;
 function assignmentKey(item){return (item.source==='drive'?'drive':'sd')+':'+String(item.name||item.clip||'')}
-function assignedFolder(item){
- const key=assignmentKey(item);
- const explicit=state.extraLinks?.items?.[key];
- if(explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder'))return explicit.folder||null;
- return state.legacyAssigned.get(key)||null;
+function assignedFolders(item){
+ const key=assignmentKey(item),explicit=state.extraLinks?.items?.[key];
+ if(explicit&&(Object.prototype.hasOwnProperty.call(explicit,'folders')||
+    Object.prototype.hasOwnProperty.call(explicit,'folder'))){
+  return Array.isArray(explicit.folders)?explicit.folders.filter(x=>typeof x==='string'&&x):
+    explicit.folder?[explicit.folder]:[];
+ }
+ const old=state.legacyAssigned.get(key);
+ return old?[old]:[];
 }
+function assignedFolder(item){return assignedFolders(item)[0]||null}
 function reviewDecision(item){
  const explicit=state.extraLinks?.items?.[assignmentKey(item)];
  if(explicit)return explicit.review_status|| (explicit.folder?'assigned':'inbox');
@@ -164,9 +169,12 @@ async function refreshArchiveReviewSources(folders){
 async function manualLink(item,folder,reviewAction=null){
  let errorAfterReload='';
  if(state.busy||!state.extraLinks)return false;
- const data={action:reviewAction||(folder?'assign':'return_to_queue'),
+ const selected=Array.isArray(folder)?folder.slice():folder?[folder]:[];
+ if(selected.length>8||new Set(selected).size!==selected.length)return false;
+ const data={action:reviewAction||(selected.length>1?'assign_many':selected.length?'assign':'return_to_queue'),
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
-   folder:folder||null,revision:state.linksRevision,human_confirmed:true};
+   folder:selected[0]||null,revision:state.linksRevision,human_confirmed:true};
+ if(data.action==='assign_many')data.folders=selected;
  state.busy=true;
  try{
   const response=await relay().fetch('/new/api/s9-manual-recording-links',{
@@ -188,22 +196,26 @@ async function manualLink(item,folder,reviewAction=null){
      outcome.manual_links_only!==true||
      !Number.isSafeInteger(outcome.revision)||outcome.revision<=data.revision||
      (outcome.folder||null)!==data.folder||
+     (data.action==='assign_many'&&(!Array.isArray(outcome.folders)||
+       outcome.folders.length!==selected.length||
+       selected.some((id,i)=>outcome.folders[i]!==id)))||
      (data.action==='skip'&&outcome.review_status!=='skipped')||
      (data.action==='reject'&&outcome.review_status!=='rejected'))
    throw Error('Save was not confirmed for this recording and person. Refresh and check before retrying.');
   const key=data.source+':'+data.name;
   state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder,
-   review_status:outcome.review_status|| (folder?'assigned':'inbox')};
+   folders:outcome.folders||selected.slice(),
+   review_status:outcome.review_status|| (selected.length?'assigned':'inbox')};
   state.extraLinks.revision=outcome.revision;
   state.linksRevision=outcome.revision;
-  state.lastFolder=folder||state.lastFolder;
+  state.lastFolder=selected[0]||state.lastFolder;
   // Commit the visible result before slower archive reads; never require a
   // successful refresh to finish a save that the server already acknowledged.
-  if(folder&&state.approvalItem&&assignmentKey(state.approvalItem)===key){
+  if(selected.length&&state.approvalItem&&assignmentKey(state.approvalItem)===key){
    $('approvalDialog').close();state.approvalItem=null;
   }
   if(state.doc)render();
-  const label=folder?'Recording filed under person':data.action==='skip'?
+  const label=selected.length?'Recording filed under '+selected.length+' '+(selected.length===1?'person':'people'):data.action==='skip'?
    'Recording skipped · restore from Skipped':data.action==='reject'?
    'Recording rejected from review · original retained; restore from Rejected':
    'Recording returned to review';
@@ -233,21 +245,19 @@ function folderApprovedSDClips(id){
   assignedFolder(row)===id).map(row=>row.clip));
 }
 function assignedRecordingKeys(folder){
- const keys=new Set();
- for(const [key,legacy] of state.legacyAssigned){
-  const explicit=state.extraLinks?.items?.[key];
-  const assigned=explicit&&Object.prototype.hasOwnProperty.call(explicit,'folder')?explicit.folder:legacy;
-  if(assigned&&(!folder||assigned===folder))keys.add(key);
- }
- for(const [key,entry] of Object.entries(state.extraLinks?.items||{}))
-  if(entry.folder&&(!folder||entry.folder===folder))keys.add(key);
- return keys;
+ const keys=new Set([...state.legacyAssigned.keys(),...Object.keys(state.extraLinks?.items||{})]);
+ return new Set([...keys].filter(key=>{
+  const [source,...parts]=key.split(':');
+  const people=assignedFolders({source,name:parts.join(':')});
+  return people.length&&(!folder||people.includes(folder));
+ }));
 }
 function folderAssignmentCount(f){
  if(state.assignedReady&&state.extraLinks)return assignedRecordingKeys(f.id).size;
  // While the complete native assignment scan is loading, manual links still
  // establish that this person has filed originals (including Drive-only people).
- const manual=Object.values(state.extraLinks?.items||{}).filter(x=>x.folder===f.id).length;
+ const manual=Object.values(state.extraLinks?.items||{}).filter(x=>
+  (Array.isArray(x.folders)?x.folders:x.folder?[x.folder]:[]).includes(f.id)).length;
  return Math.max(num(f.approved_clips),manual);
 }
 function totalAssignedCount(){
@@ -565,13 +575,27 @@ function openApproval(item){
  $('approvalLabel').value='';
  if(state.folder)select.value=state.folder;
  else if(state.lastFolder&&savedFolders().some(f=>f.id===state.lastFolder))select.value=state.lastFolder;
- const assigned=assignedFolder(item);
- if(assigned&&Array.from(select.options||select.children).some(o=>o.value===assigned))select.value=assigned;
+ const assigned=assignedFolders(item);
+ if(assigned[0]&&Array.from(select.options||select.children).some(o=>o.value===assigned[0]))select.value=assigned[0];
+ $('approvalMorePeople').replaceChildren();
+ for(const id of assigned.slice(1))addApprovalPerson(id);
  $('newLabel').hidden=!!select.value;
  $('approvalDialog').showModal();
  const main=$('approvalDialog').querySelector('.approval-main');
  if(main&&typeof main.scrollTop==='number')main.scrollTop=0;
  if(typeof $('approvalFolder').focus==='function')$('approvalFolder').focus();
+}
+function addApprovalPerson(value=''){
+ const host=$('approvalMorePeople'),options=savedFolders();
+ if(host.children.length>=7){$('approvalStatus').textContent='Maximum eight people per recording.';return}
+ if(!options.length){$('approvalStatus').textContent='Create a person first before adding another.';return}
+ const row=elt('div','','approval-extra-row'),select=elt('select');
+ select.setAttribute('aria-label','Additional person');
+ select.add(new Option('Choose another person',''));
+ for(const f of options)select.add(new Option(f.label,f.id));
+ if(value)select.value=value;
+ row.append(select,control('Remove',()=>row.remove(),'secondary'));
+ host.append(row);
 }
 function dismiss(item){
  const currentFolder=state.folder;
@@ -1221,15 +1245,15 @@ function renderFolder(){
  const host=$('folderGrid');host.replaceChildren();
  for(const item of state.doc?.items||[]){
   if(state.tab==='approved'&&state.recheckOnly&&!item.person_recheck_required)continue;
-  if(state.tab==='approved'&&state.extraLinks?.items?.['sd:'+item.clip]?.folder!==undefined&&
-     state.extraLinks.items['sd:'+item.clip].folder!==state.folder)continue;
+  if(state.tab==='approved'&&state.extraLinks?.items?.['sd:'+item.clip]&&
+     !assignedFolders({source:'sd',name:item.clip}).includes(state.folder))continue;
   host.append(reviewItem({...item,source:'sd',name:item.clip},false));
  }
  if(state.tab==='approved'&&!state.recheckOnly){
   // New manual links (Drive, unindexed SD, and corrected folder moves).
   for(const entry of state.archiveEntries){
    const override=state.extraLinks?.items?.[assignmentKey(entry)];
-   if(!override||override.folder!==state.folder)continue;
+   if(!override||!assignedFolders(entry).includes(state.folder))continue;
    if(Array.from(host.children).some(x=>x.dataset?.clip===entry.clip&&
       x.dataset?.source===entry.source))continue;
    host.append(reviewItem({...entry,decision:'approved',
@@ -1396,6 +1420,7 @@ $('editFolder').addEventListener('click',()=>openFolderEditor('edit'));
 $('cancelFolder').addEventListener('click',()=>$('folderDialog').close());
 $('cancelApproval').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalFolder').addEventListener('change',()=>{$('newLabel').hidden=!!$('approvalFolder').value});
+$('approvalAddPerson').addEventListener('click',()=>addApprovalPerson());
 $('approvalPlay').addEventListener('click',()=>{if(state.approvalItem)startVideo(state.approvalItem)});
 $('approvalCancelFooter').addEventListener('click',()=>$('approvalDialog').close());
 $('approvalForm').addEventListener('submit',async e=>{
@@ -1413,7 +1438,13 @@ $('approvalForm').addEventListener('submit',async e=>{
   if(!done||!created){alertText('Could not create a person.');return}
   folder=created;
  }
- const ok=await manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},folder);
+ const extras=[...$('approvalMorePeople').children].map(row=>row.children[0].value);
+ if(extras.some(id=>!id)){alertText('Select a person in every added row or remove the empty row.');return}
+ const selected=[folder,...extras];
+ if(new Set(selected).size!==selected.length){
+  alertText('Choose each person only once.');return;
+ }
+ const ok=await manualLink({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},selected);
  if(ok)$('approvalDialog').close();
 });
 $('folderForm').addEventListener('submit',async e=>{
