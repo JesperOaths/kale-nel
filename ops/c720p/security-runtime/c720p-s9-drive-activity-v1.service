@@ -1,0 +1,12 @@
+[Unit]
+Description=Private verified S9 and historical Drive security activity
+After=c720p-s9-standalone-catalog.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/combined-s9-drive-activity-v1.py
+TimeoutStartSec=25
+Nice=19
+CPUQuota=10%
+IOSchedulingClass=idle
+NoNewPrivileges=true
