@@ -23,8 +23,9 @@ class TestUI(unittest.TestCase):
         out=after.decode()
         old=self.old.decode()
         for identifier in ('appearanceTab','appearanceResults','casesSection',
-                           'browseGrid','saveCaseButton(entry)','faceGallery'):
+                           'browseGrid','faceGallery'):
             self.assertEqual(out.count(identifier),old.count(identifier))
+        self.assertEqual(out.count('saveCaseButton(entry)'),old.count('saveCaseButton(entry)')+1)
         self.assertIn('value="osnet_hsv" selected',out)
         self.assertIn('/new/api/appearance-multivector?',out)
         self.assertIn('/new/api/appearance-search?',out)
