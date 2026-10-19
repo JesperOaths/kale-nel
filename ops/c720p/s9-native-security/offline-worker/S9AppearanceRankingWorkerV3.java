@@ -200,7 +200,7 @@ public final class S9AppearanceRankingWorkerV3 {
       expect(seen.add(o.key),"Duplicate source-qualified crop entry");
       rows.add(o);
     }
-    expect(rows.size()>=2&&rows.size()<=200,"Unsupported ranking corpus size");
+    expect(rows.size()>=58&&rows.size()<=400,"Unsupported ranking corpus size");
     JSONObject doc=new JSONObject();
     doc.put("schema","s9_appearance_rankings_v3");
     doc.put("count",rows.size());
