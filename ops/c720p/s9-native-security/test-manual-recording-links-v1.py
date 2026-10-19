@@ -30,8 +30,14 @@ class ManualLinkCases(unittest.TestCase):
           "revision":revision,"human_confirmed":True}
  def mutate(self,**kw):return m.mutate(self.body(**kw),{SD:{"sd_verified":True}})
  def test_sd_and_drive_require_real_verified_sources(self):
-  self.assertEqual(self.mutate()[0],200)
-  self.assertEqual(self.mutate(source="drive",name=DRIVE,revision=1)[0],200)
+  code,receipt=self.mutate()
+  self.assertEqual(code,200)
+  self.assertTrue(receipt['persisted'])
+  self.assertEqual((receipt['source'],receipt['name'],receipt['folder']),('sd',SD,'G123'))
+  code,receipt=self.mutate(source="drive",name=DRIVE,revision=1)
+  self.assertEqual(code,200)
+  self.assertTrue(receipt['persisted'])
+  self.assertEqual((receipt['source'],receipt['name'],receipt['folder']),('drive',DRIVE,'G123'))
   self.assertEqual(m.report()["items"]["drive:"+DRIVE]["folder"],"G123")
   self.assertEqual(m.STORE.stat().st_mode&0o777,0o600)
   self.assertEqual(len(m.AUDIT.read_text().splitlines()),2)

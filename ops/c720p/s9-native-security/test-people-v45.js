@@ -72,7 +72,8 @@ const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observat
 const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg'}],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
 let posts=[],linkPosts=[],autoPosts=[],autoDenied=new Set(),fetches=[],faceReadFailures=0,holdAll=false,releaseHeldAll=null,linkRevision=0,linkItems={},linkReadFailures=0;
-let inboxOverride=null;
+let inboxOverride=null,driveOnlyPerson=null,badReceipt=false;
+const folders=()=>[saved,provisional,...(driveOnlyPerson?[driveOnlyPerson]:[])];
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
@@ -82,10 +83,11 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
     linkPosts.push({payload,opts});
     if(payload.revision!==linkRevision)
      return {ok:false,status:409,json:async()=>({ok:false,error:'review_revision_changed'})};
+    if(badReceipt)return {ok:true,json:async()=>({ok:true,persisted:true,manual_links_only:true,source:'sd',name:'wrong.mp4',revision:linkRevision+1,folder:payload.folder})};
     linkItems[payload.source+':'+payload.name]={source:payload.source,
       name:payload.name,folder:payload.folder,review_status:({assign:'assigned',return_to_queue:'inbox',skip:'skipped',reject:'rejected'})[payload.action]};
     linkRevision++;
-    return {ok:true,json:async()=>({ok:true,revision:linkRevision,
+    return {ok:true,json:async()=>({ok:true,persisted:true,source:payload.source,name:payload.name,manual_links_only:true,revision:linkRevision,
       folder:linkItems[payload.source+':'+payload.name].folder,
       review_status:linkItems[payload.source+':'+payload.name].review_status})};
    }
@@ -118,11 +120,11 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    if(tab==='all'&&holdAll)await new Promise(resolve=>{releaseHeldAll=resolve});
    if(tab==='inbox'&&inboxOverride){
     const start=Number(q.get('offset')),limit=Number(q.get('limit'));
-    return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],
+    return {ok:true,json:async()=>({ok:true,revision:0,folders:folders(),
      inbox_clips:inboxOverride.length,total:inboxOverride.length,
      items:inboxOverride.slice(start,start+limit),reference_examples:[]})};
    }
-   return {ok:true,json:async()=>({ok:true,revision:0,folders:[saved,provisional],person_detection:
+   return {ok:true,json:async()=>({ok:true,revision:0,folders:folders(),person_detection:
     {assessed_clips:80,total_clips:141,clips_with_supported_people:29,status:'in_progress'},
     inbox_clips:27,total:tab==='inbox'?1:tab==='approved'?1:1,
     items:tab==='approved'?[{...item,decision:'approved'}]:[item],
@@ -167,7 +169,7 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(el('reviewTabCount').textContent,' · 6');
  assert.equal(el('queueCount').textContent,'6');
  assert.equal(el('personCount').textContent,'1');
- assert.equal(el('approvalCount').textContent,'3');
+ assert.equal(el('approvalCount').textContent,'1');
  assert.equal(el('archiveCount').textContent,'7','All SD originals plus two historical Drive originals appear in archive');
  assert(!html.includes('data-pane="faces"'),'Face gallery tab must be removed');
  assert(!html.includes('id="faceGrid"'),'Invalid gallery not to be retained');
@@ -485,5 +487,46 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  assert.equal(linkPosts.at(-1).payload.folder,'G123');
  assert.equal(linkPosts.at(-1).payload.human_confirmed,true);
  assert.equal(el('automaticTabCount').textContent,'');
+ // A saved person with only Drive/manual originals has zero v40 approvals.
+ // Reopening must choose Approved, show the persisted links and count them.
+ driveOnlyPerson={id:'GDRIVE',label:'Drive-only person',automatic_appearance_group:false,
+  approved_clips:0,suggested_clips:0,previews:[]};
+ linkItems['drive:'+driveClip]={source:'drive',name:driveClip,folder:'GDRIVE',review_status:'assigned'};
+ linkRevision++;
+ el('refresh').handlers.click();for(let i=0;i<12;i++)await flush();
+ panes[2].handlers.click();for(let i=0;i<6;i++)await flush();
+ const person=el('savedList').children.find(x=>x.children[1]?.children[0]?.textContent==='Drive-only person');
+ assert(person,'Person with only Drive assignments must remain in People');
+ assert.match(person.children[1].children[1].textContent,/1 reviewed recording/);
+ person.handlers.click();for(let i=0;i<6;i++)await flush();
+ assert.equal(el('folderMode').value,'approved','Drive-only person must open filed recordings, not empty suggestions');
+ assert.match(el('folderDescription').textContent,/1 saved recording links/);
+ assert(el('folderGrid').children.some(x=>x.dataset.source==='drive'&&x.dataset.clip===driveClip),
+  'Persisted Drive assignment must appear after a full source refresh');
+ // Assignment to a former provisional group promotes it to a reviewed person.
+ driveOnlyPerson.automatic_appearance_group=true;
+ panes[2].handlers.click();for(let i=0;i<6;i++)await flush();
+ const promoted=el('savedList').children.find(x=>x.children[1]?.children[0]?.textContent==='Drive-only person');
+ assert(promoted,'A manual Drive approval must promote a provisional group');
+ promoted.handlers.click();for(let i=0;i<6;i++)await flush();
+ assert.equal(el('folderMode').value,'approved');
+ const returned=scan(el('folderGrid'),'↩ Return to review queue');assert(returned);
+ returned.handlers.click();for(let i=0;i<6;i++)await flush();
+ assert.equal(linkItems['drive:'+driveClip].folder,null);
+ assert(!el('folderGrid').children.some(x=>x.dataset.source==='drive'&&x.dataset.clip===driveClip));
+ // A generic/wrong-target success is never a persisted assignment receipt.
+ panes[1].handlers.click();for(let i=0;i<6;i++)await flush();
+ const retryRow=el('reviewGrid').children.find(x=>x.dataset.source==='drive'&&x.dataset.clip===driveClip);
+ scan(retryRow,'✓ File under person').handlers.click();el('approvalFolder').value='G123';badReceipt=true;
+ await el('approvalForm').handlers.submit({preventDefault(){}});
+ for(let i=0;i<6;i++)await flush();
+ assert.equal(el('approvalDialog').open,true,'Unverified save must remain actionable');
+ assert.match(el('approvalStatus').textContent,/Save was not confirmed/);
+ assert.equal(linkItems['drive:'+driveClip].folder,null);
+ assert(el('reviewGrid').children.some(x=>x.dataset.source==='drive'&&x.dataset.clip===driveClip));
+ badReceipt=false;await el('approvalForm').handlers.submit({preventDefault(){}});
+ for(let i=0;i<6;i++)await flush();
+ assert.equal(el('approvalDialog').open,false);
+ assert.equal(linkItems['drive:'+driveClip].folder,'G123');
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -23,7 +23,7 @@ DRIVE=BASE/"state/drive-security-archive.json"
 ROUTE="/new/api/s9-manual-recording-links"
 WRITE="/new/api/s9-manual-recording-links"
 WORKFLOW="manual_recording_links_v1"
-FILING_REVIEW_VERSION=65
+FILING_REVIEW_VERSION=66
 INTENT="manual-original-review-links-v1"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
 REMOTE=re.compile(r"[A-Za-z0-9._-]{1,180}[.]mp4\Z")
@@ -128,8 +128,13 @@ def mutate(body,sd_names):
    except BaseException:
     atomic(before);raise
   except OSError:return 503,{"ok":False,"error":"metadata_persistence_failed"}
-  return 200,{"ok":True,"revision":updated["revision"],
-    "folder":entry["folder"],"review_status":entry["review_status"],"manual_links_only":True}
+  # Confirm the persisted source-qualified entry before acknowledging the save.
+  saved=current()
+  if saved["revision"]!=updated["revision"] or saved["items"].get(key)!=entry:
+   return 503,{"ok":False,"error":"persisted_assignment_not_verified"}
+  return 200,{"ok":True,"revision":updated["revision"],"source":source,"name":name,
+    "folder":entry["folder"],"review_status":entry["review_status"],
+    "persisted":True,"manual_links_only":True}
 
 def install(H,sd_names):
  previous_get=H.go
