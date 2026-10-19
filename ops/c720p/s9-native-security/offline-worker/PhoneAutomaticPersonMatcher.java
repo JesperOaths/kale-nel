@@ -14,13 +14,21 @@ public final class PhoneAutomaticPersonMatcher {
   public static final class Face {
     public final String source,clip,folder,snapshotSha,modelSha;
     public final float[] vector;
-    public final boolean aligned,approvedReference;
+    public final boolean aligned,approvedReference,faceApprovedForPerson;
+    // Historical clip-level approval is deliberately NOT face-level proof:
+    // one group recording can contain multiple unrelated visitors.
     public Face(String source,String clip,String folder,String snapshotSha,
                 String modelSha,float[] vector,boolean aligned,boolean approved) {
+      this(source,clip,folder,snapshotSha,modelSha,vector,aligned,approved,false);
+    }
+    public Face(String source,String clip,String folder,String snapshotSha,
+                String modelSha,float[] vector,boolean aligned,boolean approved,
+                boolean faceApproved) {
       this.source=source;this.clip=clip;this.folder=folder;
       this.snapshotSha=snapshotSha;this.modelSha=modelSha;
       this.vector=vector==null?null:vector.clone();
       this.aligned=aligned;this.approvedReference=approved;
+      this.faceApprovedForPerson=faceApproved;
     }
   }
   public static final class Proposal {
@@ -55,24 +63,40 @@ public final class PhoneAutomaticPersonMatcher {
     return (float)(dot/Math.sqrt(aa*bb));
   }
   /**
-   * Need two independent human-approved reference clips in a known person
-   * folder, a compatible model and positive runner-up margin. Scores are
+   * Need two independent human-approved, face-to-person-labeled reference
+   * snapshots from different clips, a compatible model and a clear margin.
+   * Filing a group clip is NOT sufficient to label individual faces. Scores are
    * cosine similarities, NOT identity probabilities.
    */
   public static List<Proposal> rank(List<Face> candidates,List<Face> refs,Set<String> alreadyFiled) {
     List<Proposal> result=new ArrayList<>();
     if(candidates==null||refs==null||alreadyFiled==null)return result;
+    // A single aligned JPEG cannot be human-confirmed to identify two
+    // different people merely because its recording was filed to a group.
+    // Exclude those ambiguous face SHA references for EVERY affected folder.
+    Map<String,Set<String>> owners=new HashMap<>();
+    for(Face r:refs) {
+      if(valid(r)&&r.approvedReference&&r.faceApprovedForPerson&&r.folder!=null
+          &&r.folder.matches("[A-Za-z0-9_-]{1,100}"))
+        owners.computeIfAbsent(r.snapshotSha,k->new HashSet<>()).add(r.folder);
+    }
     for(Face query:candidates){
       if(!valid(query)||query.approvedReference||alreadyFiled.contains(query.clip))continue;
       Map<String,List<Float>> byFolder=new HashMap<>();
       Map<String,Set<String>> independent=new HashMap<>();
+      Map<String,Set<String>> distinctSnapshots=new HashMap<>();
       for(Face reference:refs){
-        if(!valid(reference)||!reference.approvedReference||reference.folder==null
+        if(!valid(reference)||!reference.approvedReference
+          ||!reference.faceApprovedForPerson||reference.folder==null
           ||!reference.folder.matches("[A-Za-z0-9_-]{1,100}")
           ||reference.clip.equals(query.clip)
-          ||!reference.modelSha.equals(query.modelSha))continue;
+          ||!reference.modelSha.equals(query.modelSha)
+          ||owners.getOrDefault(reference.snapshotSha,Set.of()).size()!=1)continue;
         Set<String> clips=independent.computeIfAbsent(reference.folder,k->new HashSet<>());
-        if(!clips.add(reference.clip))continue;
+        Set<String> images=distinctSnapshots.computeIfAbsent(reference.folder,k->new HashSet<>());
+        if(clips.contains(reference.clip)||images.contains(reference.snapshotSha))continue;
+        clips.add(reference.clip);
+        images.add(reference.snapshotSha);
         byFolder.computeIfAbsent(reference.folder,k->new ArrayList<>()).add(cosine(query,reference));
       }
       String winner=null;float high=-2,other=-2;int support=0;
