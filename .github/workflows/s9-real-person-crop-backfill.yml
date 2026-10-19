@@ -1,0 +1,50 @@
+name: Independent S9+ real-crop embedding persistence contracts
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9OnnxCropWorker.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-real-crop-worker.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-v40-person-rois-on-s9.py'
+      - '.github/workflows/s9-real-person-crop-backfill.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9OnnxCropWorker.java'
+      - 'ops/c720p/s9-native-security/offline-worker/install-s9-real-crop-worker.py'
+      - 'ops/c720p/s9-native-security/offline-worker/backfill-v40-person-rois-on-s9.py'
+      - '.github/workflows/s9-real-person-crop-backfill.yml'
+permissions:
+  contents: read
+jobs:
+  source-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify bounded offline-only process
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$folder/install-s9-real-crop-worker.py" "$folder/backfill-v40-person-rois-on-s9.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          folder=Path("ops/c720p/s9-native-security/offline-worker")
+          worker=(folder/"S9OnnxCropWorker.java").read_text()
+          backfill=(folder/"backfill-v40-person-rois-on-s9.py").read_text()
+          install=(folder/"install-s9-real-crop-worker.py").read_text()
+          for expected in ('visual_embedding','structural_crop_embedding',
+                           'BitmapFactory.decodeFile','--extract',
+                           's9_offline_appearance_embedding_v1',
+                           'source_qualified_key','verified_same_person'):
+            assert expected in worker,expected
+          for expected in ('--write','--limit','--offset','sha256sum',
+                           'full_crop','crop_sha256','--extract visual',
+                           'original_crops_modified'):
+            assert expected in backfill,expected
+          for expected in ('official','AAR_SHA','javac','d8','s9-crop-worker.jar'):
+            assert expected.lower() in install.lower(),expected
+          for bad in ('am force-stop','pm install','pm uninstall','review/review',
+                      'CameraService.java','original.mp4.unlink'):
+            assert not any(bad in source for source in (worker,backfill,install)),bad
+          print('S9_REAL_CROP_BACKFILL_SOURCE_GATES_PASS')
+          PY
