@@ -17,11 +17,17 @@ def fixture():
 class Test(unittest.TestCase):
  def test_remapping_uses_verified_relay_with_stable_selection(self):
   updated=m.patch(fixture())
-  self.assertIn("requestGeneration!==generation",updated)
-  self.assertIn("C720PSecureRelay.fetch",updated)
-  self.assertIn("C720PSecureRelay.url",updated)
+  self.assertIn("String(current.clip)!==requestClip",updated)
+  self.assertIn("String(current.clip_no)!==requestClipNo",updated)
+  self.assertNotIn("requestGeneration",updated)
+  self.assertNotIn("!==generation",updated)
+  self.assertIn("const relay=window.C720PSecureRelay",updated)
+  self.assertIn("window.parent.C720PSecureRelay",updated)
+  self.assertIn("await relay.fetch(",updated)
+  self.assertIn("await relay.url(",updated)
   self.assertIn("/new/saved/c720p-migrated/clip/",updated)
-  self.assertIn("rangeOrigin,src:url",updated)
+  self.assertIn("mode:\'range-local\',src:url",updated)
+  self.assertNotIn("rangeOrigin",updated)
   self.assertIn("url=BASE+path",updated)
  def test_source_drift_and_duplicate_patch_fail_closed(self):
   with self.assertRaises(ValueError):m.patch("<script></script>")
