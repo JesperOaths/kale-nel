@@ -724,13 +724,13 @@ function reviewItem(item,compact){
  info.append(main);
  if(!compact){const faceEvidence=reviewFacesForClip(item);if(faceEvidence)info.append(faceEvidence)}
  if(item.unindexed)info.append(elt('p',item.source==='drive'?'Google Drive':'Person analysis unavailable'));
- else if(item.person_recheck_required){
+ else if(item.person_recheck_required&&item.decision!=='approved'){
   info.append(elt('p','Person evidence needs recheck · inspect video and detector observations'));
   if(!compact)info.append(step3ClipEvidence(item));
  }
  else if(!item.temporal_support)info.append(elt('p','Person evidence uncertain'));
  const tools=elt('div','','actions');
- tools.append(control(item.person_recheck_required?'🔎 Recheck person evidence':'▶ Play',()=>startVideo(item)));
+ tools.append(control('▶ Play',()=>startVideo(item)));
  if(item.decision==='approved'){
   if(state.folder)tools.append(control('↩ Remove from this person',
     ()=>removeFromPerson({source:item.source||'sd',name:item.name||item.clip,clip:item.clip},state.folder),'secondary'));
@@ -848,7 +848,9 @@ function renderMetrics(){
  $('reviewTabCount').textContent=queue?' · '+queue:'';
  $('peopleReviewNotice').hidden=queue===0;
  $('peopleReviewSummary').textContent=queue+(queue===1?' recording needs':' recordings need')+' review';
- const recheck=saved.reduce((n,x)=>n+num(x.approvals_needing_person_recheck),0);
+ // Detector disagreement may be shown in forensic detail, but does not undo
+ // a human-reviewed assignment or require another review.
+ const recheck=0;
  $('peopleRecheckNotice').hidden=recheck===0;
  $('peopleRecheckSummary').textContent=recheck+' confirmed recording'+(recheck===1?' needs':'s need')+' evidence rechecking';
  $('personCount').textContent=String(saved.length);
@@ -890,7 +892,7 @@ function renderMetrics(){
  }
 }
 function renderOverview(){
- const flagged=savedFolders().filter(f=>num(f.approvals_needing_person_recheck)>0);
+ const flagged=[]; // Human-kept clips never need repeated confirmation.
  const reviewAlerts=$('reviewAlerts');reviewAlerts.replaceChildren();
  for(const f of flagged.slice(0,3)){
   const count=num(f.approvals_needing_person_recheck);
@@ -968,7 +970,7 @@ function renderReview(){
 
 function renderPeople(){
  const review=$('peopleRecheckActions');review.replaceChildren();
- const flagged=savedFolders().filter(x=>num(x.approvals_needing_person_recheck)>0);
+ const flagged=[]; // Human-kept clips never need repeated confirmation.
  for(const person of flagged){
   const number=num(person.approvals_needing_person_recheck);
   review.append(control('Recheck '+person.label+' · '+number+' recording'+(number===1?'':'s'),
@@ -1225,12 +1227,11 @@ function renderFolder(){
  if(!f){alertText('This person is no longer available');return}
  $('folderTitle').textContent=f.label;
  $('folderDescription').textContent=folderAssignmentCount(f)+' saved recording links · '+
-  num(f.suggested_clips)+' appearance suggestions'+
-  (num(f.approvals_needing_person_recheck)?' · '+num(f.approvals_needing_person_recheck)+' need person rechecking':'');
- $('folderRecheck').hidden=!num(f.approvals_needing_person_recheck);
+  num(f.suggested_clips)+' appearance suggestions';
+ $('folderRecheck').hidden=true;
  $('folderRecheck').textContent=num(f.approvals_needing_person_recheck)+
   ' saved clip(s) need rechecking against the original recording; a previous approval is not a current detector confirmation.';
- $('folderRecheckFilter').hidden=state.tab!=='approved'||!num(f.approvals_needing_person_recheck);
+ $('folderRecheckFilter').hidden=true;
  $('folderRecheckOnly').checked=state.recheckOnly;
  $('folderMode').value=state.tab;
  const suggestions=state.tab==='suggestions';
