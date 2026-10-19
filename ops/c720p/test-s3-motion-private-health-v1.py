@@ -31,9 +31,10 @@ class Tests(unittest.TestCase):
    local=Path(root)
    # A privacy-closed diagnostic must never claim the motion engine is healthy.
    with patch.object(m,"OUT",local/"status.json"),patch.object(m,"USERSTATE",local/"private.json"),\
-        patch.object(m,"HISTORY",local/"history.json"),patch.object(m,"parse",side_effect=RuntimeError("adb_unavailable")),\
+        patch.object(m,"HISTORY",local/"history.json"),patch.object(m,"parse") as parse,\
         patch.object(m,"privacy_adb_intentionally_closed",return_value=True):
     m.main()
+    parse.assert_not_called()
    report=json.loads((local/"private.json").read_text())
    self.assertIsNone(report["healthy"])
    self.assertIsNone(report["motion_analysis_active"])
