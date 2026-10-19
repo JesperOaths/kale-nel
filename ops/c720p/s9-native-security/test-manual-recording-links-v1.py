@@ -61,6 +61,37 @@ class ManualLinkCases(unittest.TestCase):
   self.assertEqual(m.mutate(body,{SD:1})[0],400)
   self.assertEqual(self.mutate()[0],200)
   self.assertEqual(self.mutate(revision=0)[0],409)
+ def test_multiple_people_are_one_atomic_audited_decision(self):
+  body=self.body(source="drive",name=DRIVE)
+  body["folders"]=["G123","G456","G789"]
+  code,receipt=m.mutate(body,{SD:1})
+  self.assertEqual(code,200)
+  self.assertEqual(receipt["folders"],body["folders"])
+  self.assertEqual(m.report()["items"]["drive:"+DRIVE]["folders"],body["folders"])
+  self.assertEqual(m.report()["revision"],1)
+  log=json.loads(m.AUDIT.read_text().splitlines()[0])
+  self.assertEqual(log["to_folders"],body["folders"])
+  self.assertEqual(len(m.AUDIT.read_text().splitlines()),1)
+  # Changing people is one revision and cannot silently retain an old member.
+  next_body=self.body(source="drive",name=DRIVE,revision=1,folder="G789")
+  next_body["folders"]=["G789","G123"]
+  self.assertEqual(m.mutate(next_body,{SD:1})[0],200)
+  self.assertEqual(m.report()["items"]["drive:"+DRIVE]["folders"],["G789","G123"])
+  self.assertEqual(m.report()["revision"],2)
+  self.assertEqual(m.mutate(next_body,{SD:1})[0],409)
+  clear=self.body(source="drive",name=DRIVE,folder=None,revision=2,action="return_to_queue")
+  self.assertEqual(m.mutate(clear,{SD:1})[0],200)
+  self.assertEqual(m.report()["items"]["drive:"+DRIVE]["folders"],[])
+  self.assertIsNone(m.report()["items"]["drive:"+DRIVE]["folder"])
+  self.assertEqual(len(m.AUDIT.read_text().splitlines()),3)
+ def test_reject_malformed_multi_people_without_changes(self):
+  baseline=self.body()
+  for group in ([],["G123","G123"],["G456"],["G123","../invalid"],
+                ["G123"]*13,["G123",None],"G123"):
+   body=dict(baseline,folders=group)
+   self.assertNotEqual(m.mutate(body,{SD:1})[0],200)
+  self.assertFalse(m.STORE.exists())
+  self.assertFalse(m.AUDIT.exists())
  def test_deleted_drive_files_cannot_be_added(self):
   m.DRIVE.write_text(json.dumps({"items":[{"remote_name":DRIVE,
    "size":4500000,"state":"deleted"}]}))
