@@ -20,14 +20,12 @@ public final class PhoneOfflineSimilarity {
         public final float[] structural;
         public final String visualModelSha;
         public final String structuralModelSha;
-        public final Float colorScore;
         public final boolean structuralAligned;
-        public Evidence(float[] v, float[] s, String vm, String sm, Float color, boolean aligned) {
+        public Evidence(float[] v, float[] s, String vm, String sm, boolean aligned) {
             visual = v == null ? null : v.clone();
             structural = s == null ? null : s.clone();
             visualModelSha = vm == null ? "" : vm;
             structuralModelSha = sm == null ? "" : sm;
-            colorScore = color;
             structuralAligned = aligned;
         }
     }
@@ -74,7 +72,7 @@ public final class PhoneOfflineSimilarity {
      * Structural ArcFace is only usable on a verified aligned face, NEVER the
      * arbitrary upper quarter of a bounding box.
      */
-    public static Result compare(Evidence a, Evidence b) {
+    public static Result compare(Evidence a, Evidence b, Float colorHistogramScore) {
         if (a == null || b == null
             || !comparable(a.visualModelSha,b.visualModelSha)) return null;
         float visual;
@@ -93,13 +91,12 @@ public final class PhoneOfflineSimilarity {
                 // declared colour fallback rather than inventing features.
             }
         }
-        if (a.colorScore==null || b.colorScore==null
-            || !Float.isFinite(a.colorScore) || !Float.isFinite(b.colorScore)
-            || a.colorScore<0f || a.colorScore>1f
-            || b.colorScore<0f || b.colorScore>1f) return null;
-        // Colour score belongs to a pair, not to an individual sample.
-        // Caller passes its independently measured pair score in both objects.
-        if (Math.abs(a.colorScore-b.colorScore)>0.0001f) return null;
-        return new Result(.75f*visual+.25f*a.colorScore,"visual_75_color_25");
+        // A histogram score is measured BETWEEN two crops at query time.
+        // Never store the resulting pair score inside either clip's record.
+        if (colorHistogramScore==null
+            || !Float.isFinite(colorHistogramScore)
+            || colorHistogramScore<0f || colorHistogramScore>1f) return null;
+        return new Result(.75f*visual+.25f*colorHistogramScore,
+                          "visual_75_color_25");
     }
 }
