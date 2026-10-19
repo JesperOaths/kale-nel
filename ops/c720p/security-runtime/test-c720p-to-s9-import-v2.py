@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Offline tests: migrated footage remains private, intact and separately counted."""
-import importlib.util,io,json,os,tempfile,time,unittest
+import importlib.util,io,json,os,tempfile,time,unittest,hashlib
+from types import SimpleNamespace
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch,call
 HERE=Path(__file__).resolve().parent
 def load(path,name):
  s=importlib.util.spec_from_file_location(name,path)
@@ -31,6 +32,54 @@ class Tests(unittest.TestCase):
    (clips/"linked.mp4").symlink_to(outside)
    with patch.object(stage,"CLIPS",clips):
     self.assertEqual({p.name for p,_ in stage.candidates()},{"motion_1792000010000.mp4","unindexed.mp4"})
+ def test_verified_interrupted_partial_promoted_without_retransfer(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   path=Path(tmp)/"motion_1792000010000.mp4"
+   path.write_bytes(b"a"*12000)
+   old=time.time()-600
+   os.utime(path,(old,old))
+   stat=path.stat()
+   digest=hashlib.sha256(path.read_bytes()).hexdigest()
+   # destination absent, partial exists, destination still absent
+   simulated=[SimpleNamespace(returncode=1),SimpleNamespace(returncode=0),
+              SimpleNamespace(returncode=1)]
+   with patch.object(stage.subprocess,"run",side_effect=simulated) as run,       patch.object(stage,"phone_file_matches",side_effect=[False,True,True]) as matches,       patch.object(stage,"camera_ready",return_value=True),       patch.object(stage,"adb") as adb:
+    self.assertEqual(stage.copy_one(path,stat,digest),"verified_partial_promoted")
+   self.assertEqual(run.call_count,3)
+   self.assertEqual(matches.call_count,3)
+   self.assertEqual(adb.call_count,1)
+   self.assertEqual(adb.call_args.args[0:2],("shell","mv"))
+   self.assertTrue(adb.call_args.args[2].endswith(".partial"))
+ def test_corrupt_existing_partial_kept_for_investigation(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   p=Path(tmp)/"motion_1792000010000.mp4"
+   p.write_bytes(b"b"*12000)
+   st=p.stat()
+   digest=hashlib.sha256(p.read_bytes()).hexdigest()
+   with patch.object(stage.subprocess,"run",side_effect=[
+            SimpleNamespace(returncode=1),SimpleNamespace(returncode=0)]),       patch.object(stage,"phone_file_matches",side_effect=[False,False]),       patch.object(stage,"camera_ready",return_value=True),       patch.object(stage,"adb") as adb:
+    with self.assertRaisesRegex(RuntimeError,"preexisting_partial_not_matching_preserved"):
+     stage.copy_one(p,st,digest)
+    adb.assert_not_called()
+ def test_resumed_partial_rechecks_source_and_temperature_before_rename(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   p=Path(tmp)/"motion_1792000010000.mp4";p.write_bytes(b"c"*12000)
+   st=p.stat();digest=hashlib.sha256(p.read_bytes()).hexdigest()
+   for reason,ready,digest_after in (
+       ("source_digest_changed_during_copy",[True], "0"*64),
+       ("camera_became_unhealthy_before_promotion",[True,False],digest)):
+    with self.subTest(reason=reason),         patch.object(stage.subprocess,"run",side_effect=[
+            SimpleNamespace(returncode=1),SimpleNamespace(returncode=0)]),         patch.object(stage,"phone_file_matches",side_effect=[False,True]),         patch.object(stage,"camera_ready",side_effect=ready),         patch.object(stage,"sha256_file",return_value=digest_after),         patch.object(stage,"adb") as adb:
+     with self.assertRaisesRegex(RuntimeError,reason):
+      stage.copy_one(p,st,digest)
+     adb.assert_not_called()
+ def test_existing_final_never_overwritten(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   p=Path(tmp)/"motion_1792000010000.mp4";p.write_bytes(b"d"*12000)
+   with patch.object(stage,"phone_file_matches",return_value=True),       patch.object(stage,"adb") as adb,       patch.object(stage.subprocess,"run") as cmd:
+    self.assertEqual(stage.copy_one(p,p.stat(),hashlib.sha256(p.read_bytes()).hexdigest()),"already_verified")
+    adb.assert_not_called()
+    cmd.assert_not_called()
  def test_tampered_report_denied(self):
   with tempfile.TemporaryDirectory() as tmp:
    p=Path(tmp)/"proof.json";p.write_text(json.dumps(record()));p.chmod(0o600)
