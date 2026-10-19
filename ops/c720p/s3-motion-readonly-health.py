@@ -18,6 +18,7 @@ WWW=Path("/opt/homeassistant/config/www")
 OUT=WWW/"s3-motion-health.json"
 HISTORY=WWW/"s3-motion-health-history.json"
 USERSTATE=Path("/home/jespern/c720p-home-hub/state/s3-motion-health.json")
+PRIVACY_STATE=Path("/home/jespern/c720p-home-hub/state/s3-privacy-watchdog.json")
 def adb(*args):
  p=subprocess.run(["adb","-s",SERIAL,*args],capture_output=True,
                   text=True,timeout=17)
@@ -124,17 +125,43 @@ def update_history(data):
  else:rows.append(row)
  save(HISTORY,rows[-330:])
 
-def main():
- try: data=parse()
- except Exception as e:
-  data={
+def privacy_adb_intentionally_closed():
+ """Distinguish a closed private ADB port from a verified camera outage.
+
+ Never reopen a bedroom debug port or infer camera health from port closure.
+ """
+ try:
+  if PRIVACY_STATE.is_symlink():return False
+  data=json.loads(PRIVACY_STATE.read_text())
+  stamp=dt.datetime.fromisoformat(data["checked_at_utc"])
+  age=(dt.datetime.now(dt.timezone.utc)-stamp).total_seconds()
+  return 0<=age<=3900 and data.get("result") in (
+   "adb_port_not_listening","restored_private_adb")
+ except (OSError,KeyError,ValueError,TypeError):return False
+
+def unavailable(private,error_type=None):
+ """Never claim an offline private port proves an operational camera."""
+ return {
    "sensor":"Galaxy S3 bedroom on-phone rear-camera motion",
    "checked_at_utc":dt.datetime.now(dt.timezone.utc).isoformat(),
-   "healthy":False,"motion_analysis_active":False,"camera_active":None,
-   "warnings":["s3_health_query_failed"],
-   "query_error_type":type(e).__name__,
-   "images_or_audio_copied":False
-  }
+   "healthy":None if private else False,
+   "motion_analysis_active":None if private else False,
+   "camera_active":None,
+   "warnings":["s3_telemetry_unavailable_privacy_port_closed"] if private else ["s3_health_query_failed"],
+   "query_error_type":error_type,
+   "privacy_adb_port_closed_recently":private,
+   "motion_health_verified":False,
+   "images_or_audio_copied":False,
+ }
+def main():
+ # The independent 30-minute privacy watchdog deliberately closes TCP/5555.
+ # Do not initiate an ADB connection merely to learn that it cannot work.
+ if privacy_adb_intentionally_closed():
+  data=unavailable(True,"intentionally_private")
+ else:
+  try:data=parse()
+  except Exception as e:
+   data=unavailable(False,type(e).__name__)
  for path in (USERSTATE,OUT):
   save(path,data)
  update_history(data)
