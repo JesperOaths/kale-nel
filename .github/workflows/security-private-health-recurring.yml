@@ -1,0 +1,27 @@
+name: Security private recurring health unit contract
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/c720p-security-health-diagnostics-v1.service'
+      - 'ops/c720p/security-runtime/c720p-security-health-diagnostics-v1.timer'
+      - '.github/workflows/security-private-health-recurring.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/c720p-security-health-diagnostics-v1.service'
+      - 'ops/c720p/security-runtime/c720p-security-health-diagnostics-v1.timer'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 ops/c720p/security-runtime/test-security-health-diagnostics-v1.py
+          grep -Fq 'ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/security-health-diagnostics-v1.py' ops/c720p/security-runtime/c720p-security-health-diagnostics-v1.service
+          grep -Fq 'CPUQuota=10%' ops/c720p/security-runtime/c720p-security-health-diagnostics-v1.service
+          grep -Fq 'NoNewPrivileges=true' ops/c720p/security-runtime/c720p-security-health-diagnostics-v1.service
+          grep -Fq 'OnUnitInactiveSec=15min' ops/c720p/security-runtime/c720p-security-health-diagnostics-v1.timer
