@@ -1,0 +1,30 @@
+name: Security mixed S9 and Drive review queue V64
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.html'
+      - 'ops/c720p/s9-native-security/test-people-v45.js'
+      - 'ops/c720p/s9-native-security/*drive-review-v64*.py'
+      - '.github/workflows/security-drive-review-v64.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/*drive-review-v64*.py'
+      - '.github/workflows/security-drive-review-v64.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+      - name: Test both review entry points, source filtering, paging and assignments
+        run: |
+          node --check ops/c720p/s9-native-security/security-people-v45.js
+          node ops/c720p/s9-native-security/test-people-v45.js
+          python3 ops/c720p/s9-native-security/test-drive-review-v64.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-drive-review-v64.py ops/c720p/s9-native-security/verify-drive-review-v64-browser.py
