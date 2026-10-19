@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Synthetic read-only review overlay precedence and group-reference tests."""
 import contextlib
+from collections import defaultdict
 import importlib.util
 import io
 import json
@@ -78,8 +79,8 @@ class ReviewOverlayTests(unittest.TestCase):
    if path=="/new/api/drive-saved":return {"ok":True,"events":[]}
    raise AssertionError(path)
   with patch.object(mod,"read",read),patch.object(mod,"review",return_value={
-       "folders":[{"id":"G123","approved_clips":3},{"id":"G456","approved_clips":1}]}),patch.object(mod,"approved_by_folder",return_value={
-        "G123":{CLIP_A,CLIP_B,CLIP_C},"G456":{CLIP_B}}):
+       "folders":[{"id":"G123","approved_clips":3},{"id":"G456","approved_clips":1}]}),patch.object(mod,"approved_by_folder",return_value=defaultdict(set,{
+        "G123":{CLIP_A,CLIP_B,CLIP_C},"G456":{CLIP_B}})):
    out=io.StringIO()
    with contextlib.redirect_stdout(out):mod.main()
    text=out.getvalue()
