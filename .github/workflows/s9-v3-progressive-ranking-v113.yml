@@ -1,8 +1,8 @@
 name: S9 V3 progressive appearance rankings cool-window publisher V113
 on:
   schedule:
-    # Follows the V102 descriptor attempt; repeat only in new, capture-safe windows.
-    - cron: '31 1,5,9,13,17,21 * * *'
+    # Follows OSNet :05 and HSV32 :20; publish only in a fresh safe 4K window.
+    - cron: '40 1,5,9,13,17,21 * * *'
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/run-s9-v3-progressive-ranking-v113.py'
@@ -13,6 +13,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-progressive-ranking-v113.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-phone-json-integrity-v114.py'
       - '.github/workflows/s9-v3-progressive-ranking-v113.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py'
   push:
     branches: [main]
     paths:
@@ -24,6 +25,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-progressive-ranking-v113.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-phone-json-integrity-v114.py'
       - '.github/workflows/s9-v3-progressive-ranking-v113.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py'
 permissions:
   contents: read
 concurrency:
@@ -41,6 +43,7 @@ jobs:
           d=ops/c720p/s9-native-security/offline-worker
           python3 -m py_compile "$d/run-s9-v3-progressive-ranking-v113.py"
           python3 "$d/test-s9-v3-progressive-ranking-v113.py"
+          python3 ops/c720p/s9-native-security/offline-worker/test-s9-v3-cool-window-stage-order-v118.py
           python3 "$d/test-s9-phone-json-integrity-v114.py"
           python3 "$d/test-s9-v3-ranker-capture-isolation-v106.py"
           python3 "$d/test-s9-v3-partial-inventory.py"

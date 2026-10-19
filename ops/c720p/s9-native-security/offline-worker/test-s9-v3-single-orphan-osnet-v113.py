@@ -165,7 +165,7 @@ class Tests(unittest.TestCase):
     def test_cool_window_schedule_is_unique_and_staggered(self):
         wf=Path(__file__).resolve().parents[4]/".github/workflows/s9-v3-single-orphan-osnet-v113.yml"
         content=wf.read_text()
-        self.assertIn("cron: '19 1,5,9,13,17,21 * * *'",content)
+        self.assertIn("cron: '5 1,5,9,13,17,21 * * *'",content)
         self.assertIn("${GITHUB_RUN_ID}",content)
         self.assertIn("github.event_name == 'schedule'",content)
         self.assertIn("github.event_name == 'push'",content)
