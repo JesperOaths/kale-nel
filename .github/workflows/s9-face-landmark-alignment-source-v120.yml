@@ -4,6 +4,8 @@ on:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGate.java'
       - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGateTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoder.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoderTest.java'
       - 'ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-face-landmark-stage-v120.py'
       - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
@@ -12,6 +14,8 @@ on:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGate.java'
       - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGateTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoder.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneYuNetLandmarkDecoderTest.java'
       - 'ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-face-landmark-stage-v120.py'
       - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
@@ -30,5 +34,6 @@ jobs:
           python3 -m py_compile "$d/stage-s9-five-point-yunet-v120.py"
           python3 "$d/test-s9-face-landmark-stage-v120.py"
           mkdir -p /tmp/s9-face-gate-v120
-          javac -d /tmp/s9-face-gate-v120 "$d/PhoneFaceLandmarkGate.java" "$d/PhoneFaceLandmarkGateTest.java"
+          javac -d /tmp/s9-face-gate-v120 "$d/PhoneFaceLandmarkGate.java" "$d/PhoneFaceLandmarkGateTest.java" "$d/PhoneYuNetLandmarkDecoder.java" "$d/PhoneYuNetLandmarkDecoderTest.java"
           java -cp /tmp/s9-face-gate-v120 nl.kalenel.s9offline.PhoneFaceLandmarkGateTest
+          java -cp /tmp/s9-face-gate-v120 nl.kalenel.s9offline.PhoneYuNetLandmarkDecoderTest
