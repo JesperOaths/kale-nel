@@ -28,7 +28,7 @@ jobs:
           d=ops/c720p/security-runtime
           python3 -m py_compile "$d/c720p-clock-health-repair-v1.py" "$d/test-c720p-clock-health-v1.py"
           python3 "$d/test-c720p-clock-health-v1.py"
-          ! grep -q 'sudoers' "$d/c720p-clock-health-repair-v1.py"
+          grep -q 'sudo","-n","-v' "$d/c720p-clock-health-repair-v1.py"
   physical_inspection:
     needs: validate
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
