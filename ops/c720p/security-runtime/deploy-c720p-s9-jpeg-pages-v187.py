@@ -100,7 +100,7 @@ def patched_guard(raw):
   "            +SNAPSHOT_BRIDGE.read_bytes()).hexdigest()!=EXPECTED_SNAPSHOT_GIT_BLOB):\n"
   "            print(\"C720P_LEGACY_INDEX_BRIDGE_DEFERRED snapshot_source_drift\");return \"deferred\"\n"
  )
- require(s.count(anchor2)==1,"guard_apply_hook_changed")
+ require(s.count(anchor2)==2,"guard_apply_hook_changed")
  s=s.replace(anchor2,new2+anchor2,1)
  compile(s,str(GUARD),"exec")
  return s.encode()
