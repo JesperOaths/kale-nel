@@ -41,8 +41,8 @@ class Tests(unittest.TestCase):
    stat=path.stat()
    digest=hashlib.sha256(path.read_bytes()).hexdigest()
    # destination absent, partial exists, destination still absent
-   simulated=[SimpleNamespace(returncode=1),SimpleNamespace(returncode=0),
-              SimpleNamespace(returncode=1)]
+   simulated=[SimpleNamespace(returncode=1,stderr=b""),SimpleNamespace(returncode=0,stderr=b""),
+              SimpleNamespace(returncode=1,stderr=b"")]
    with patch.object(stage.subprocess,"run",side_effect=simulated) as run,       patch.object(stage,"phone_file_matches",side_effect=[False,True,True]) as matches,       patch.object(stage,"camera_ready",return_value=True),       patch.object(stage,"adb") as adb:
     self.assertEqual(stage.copy_one(path,stat,digest),"verified_partial_promoted")
    self.assertEqual(run.call_count,3)
@@ -57,7 +57,7 @@ class Tests(unittest.TestCase):
    st=p.stat()
    digest=hashlib.sha256(p.read_bytes()).hexdigest()
    with patch.object(stage.subprocess,"run",side_effect=[
-            SimpleNamespace(returncode=1),SimpleNamespace(returncode=0)]),       patch.object(stage,"phone_file_matches",side_effect=[False,False]),       patch.object(stage,"camera_ready",return_value=True),       patch.object(stage,"adb") as adb:
+            SimpleNamespace(returncode=1,stderr=b""),SimpleNamespace(returncode=0,stderr=b"")]),       patch.object(stage,"phone_file_matches",side_effect=[False,False]),       patch.object(stage,"camera_ready",return_value=True),       patch.object(stage,"adb") as adb:
     with self.assertRaisesRegex(RuntimeError,"preexisting_partial_not_matching_preserved"):
      stage.copy_one(p,st,digest)
     adb.assert_not_called()
@@ -69,7 +69,7 @@ class Tests(unittest.TestCase):
        ("source_digest_changed_during_copy",[True], "0"*64),
        ("camera_became_unhealthy_before_promotion",[True,False],digest)):
     with self.subTest(reason=reason),         patch.object(stage.subprocess,"run",side_effect=[
-            SimpleNamespace(returncode=1),SimpleNamespace(returncode=0)]),         patch.object(stage,"phone_file_matches",side_effect=[False,True]),         patch.object(stage,"camera_ready",side_effect=ready),         patch.object(stage,"sha256_file",return_value=digest_after),         patch.object(stage,"adb") as adb:
+            SimpleNamespace(returncode=1,stderr=b""),SimpleNamespace(returncode=0,stderr=b"")]),         patch.object(stage,"phone_file_matches",side_effect=[False,True]),         patch.object(stage,"camera_ready",side_effect=ready),         patch.object(stage,"sha256_file",return_value=digest_after),         patch.object(stage,"adb") as adb:
      with self.assertRaisesRegex(RuntimeError,reason):
       stage.copy_one(p,st,digest)
      adb.assert_not_called()
@@ -80,6 +80,47 @@ class Tests(unittest.TestCase):
     self.assertEqual(stage.copy_one(p,p.stat(),hashlib.sha256(p.read_bytes()).hexdigest()),"already_verified")
     adb.assert_not_called()
     cmd.assert_not_called()
+ def test_adb_transport_failure_is_never_missing_file(self):
+  for status,stderr in ((255,b"device offline"),(1,b"permission denied"),(0,b"transport warning"),(127,b"shell unavailable")):
+   with self.subTest(status=status,stderr=stderr), patch.object(
+       stage.subprocess,"run",return_value=SimpleNamespace(returncode=status,stderr=stderr)):
+    with self.assertRaisesRegex(RuntimeError,"phone_path_existence_indeterminate"):
+     stage.phone_path_exists(stage.DEST+"/clip.mp4")
+  for status,expected in ((0,True),(1,False)):
+   with patch.object(stage.subprocess,"run",return_value=SimpleNamespace(returncode=status,stderr=b"")):
+    self.assertIs(stage.phone_path_exists(stage.DEST+"/clip.mp4"),expected)
+
+ def test_indeterminate_destination_or_partial_never_pushes_or_renames(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   p=Path(tmp)/"motion_1792000010000.mp4";p.write_bytes(b"e"*12000)
+   st=p.stat();digest=hashlib.sha256(p.read_bytes()).hexdigest()
+   for probes in ((RuntimeError("phone_path_existence_indeterminate"),),
+                  (False,RuntimeError("phone_path_existence_indeterminate")),
+                  (False,True,RuntimeError("phone_path_existence_indeterminate"))):
+    with self.subTest(probes=len(probes)), patch.object(
+         stage,"phone_path_exists",side_effect=probes) as exists, patch.object(
+         stage,"phone_file_matches",side_effect=[False,True,True]) as matches, patch.object(
+         stage,"camera_ready",return_value=True), patch.object(
+         stage,"adb") as adb:
+     with self.assertRaisesRegex(RuntimeError,"phone_path_existence_indeterminate"):
+      stage.copy_one(p,st,digest)
+     self.assertEqual(exists.call_count,len(probes))
+     adb.assert_not_called()
+
+ def test_untrusted_phone_checksum_never_satisfies_verification(self):
+  for output in ("","malformed",("a"*64)+" /unexpected/file.mp4"):
+   with self.subTest(output=output[:14]), patch.object(
+        stage,"phone_path_exists",return_value=True), patch.object(
+        stage,"adb",side_effect=["12000",output]):
+    with self.assertRaisesRegex(RuntimeError,"phone_checksum_response_indeterminate"):
+     stage.phone_file_matches(stage.DEST+"/clip.mp4","a"*64,12000)
+
+ def test_missing_file_probe_requires_clean_exit_one(self):
+  with patch.object(stage.subprocess,"run",return_value=SimpleNamespace(returncode=255,stderr=b"device offline")), patch.object(stage,"adb") as adb:
+   with self.assertRaisesRegex(RuntimeError,"phone_path_existence_indeterminate"):
+    stage.phone_file_matches(stage.DEST+"/clip.mp4","a"*64,12000)
+   adb.assert_not_called()
+
  def test_tampered_report_denied(self):
   with tempfile.TemporaryDirectory() as tmp:
    p=Path(tmp)/"proof.json";p.write_text(json.dumps(record()));p.chmod(0o600)

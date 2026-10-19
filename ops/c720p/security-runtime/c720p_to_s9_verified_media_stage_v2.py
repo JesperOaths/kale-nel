@@ -134,33 +134,48 @@ def atomic_write(doc):
     finally:
         if os.path.exists(temp):os.unlink(temp)
 
+def phone_path_exists(path,kind="-e"):
+    """Do not interpret an ADB transport error as an absent S9+ file.
+
+    Android shell test normally exits 0 for present or 1 for missing, both
+    without stderr. Lost transport, permission errors and malformed results
+    are unknown state: never push, rename or overwrite in that condition.
+    """
+    if kind not in ("-e","-f"):
+        raise RuntimeError("invalid_phone_path_test")
+    response=subprocess.run(["adb","-s",SERIAL,"shell","test",kind,path],
+                            capture_output=True,timeout=12)
+    if (response.returncode==0 or response.returncode==1) and response.stderr==b"":
+        return response.returncode==0
+    raise RuntimeError("phone_path_existence_indeterminate")
+
+
 def phone_file_matches(dest,digest,length):
-    # Filenames, paths and the shell argument string are fixed by allowlists.
-    exists=subprocess.run(["adb","-s",SERIAL,"shell","test","-f",dest],
-                           capture_output=True,timeout=12)
-    if exists.returncode!=0:return False
+    # SHA and byte length must agree; an unavailable phone is not absence.
+    if not phone_path_exists(dest,"-f"):
+        return False
     size=adb("shell","stat","-c","%s",dest)
     if size!=str(length):return False
-    actual=adb("shell","sha256sum",dest).split()[0].lower()
-    return actual==digest
+    fields=adb("shell","sha256sum",dest).split()
+    if (len(fields)!=2 or not re.fullmatch(r"[0-9a-fA-F]{64}",fields[0])
+        or fields[1]!=dest):
+        raise RuntimeError("phone_checksum_response_indeterminate")
+    return fields[0].lower()==digest
 
 def copy_one(path,stat,digest):
     dest=DEST+"/"+path.name
     if phone_file_matches(dest,digest,stat.st_size):
         return "already_verified"
-    exists=subprocess.run(["adb","-s",SERIAL,"shell","test","-e",dest],
-                           capture_output=True,timeout=12)
-    if exists.returncode==0:
+    if phone_path_exists(dest):
         raise RuntimeError("nonmatching_destination_collision_preserved")
     partial=dest+".partial"
-    partial_exists=subprocess.run(["adb","-s",SERIAL,"shell","test","-e",partial],
-                                   capture_output=True,timeout=12)
+    partial_exists=phone_path_exists(partial)
     if not camera_ready():
         raise RuntimeError("camera_became_unhealthy_or_hot")
 
     # Interrupted ADB copies may already be complete. NEVER delete or overwrite
     # an existing phone-side partial: prove exact source size and SHA256 first.
-    if partial_exists.returncode==0:
+    if partial_exists:
         if not phone_file_matches(partial,digest,stat.st_size):
             raise RuntimeError("preexisting_partial_not_matching_preserved")
         result="verified_partial_promoted"
@@ -178,9 +193,7 @@ def copy_one(path,stat,digest):
         raise RuntimeError("source_digest_changed_during_copy")
     if not camera_ready():
         raise RuntimeError("camera_became_unhealthy_before_promotion")
-    final_exists=subprocess.run(["adb","-s",SERIAL,"shell","test","-e",dest],
-                                capture_output=True,timeout=12)
-    if final_exists.returncode==0:
+    if phone_path_exists(dest):
         raise RuntimeError("destination_appeared_during_copy_preserved")
     adb("shell","mv",partial,dest)
     if not phone_file_matches(dest,digest,stat.st_size):
