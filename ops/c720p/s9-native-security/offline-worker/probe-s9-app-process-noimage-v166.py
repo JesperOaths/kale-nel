@@ -7,6 +7,7 @@ prove S9 Camera2 native 4K and its PID survived. Never expose the phone output,
 file paths, arguments, identities or command stderr. No Camera2 APK or review
 change, no archive touches, and never retry a terminated launcher.
 """
+import argparse
 import fcntl
 import hashlib
 import json
@@ -25,6 +26,7 @@ LOCK=Path("/home/jespern/c720p-home-hub/state/s9-v3-archive-backfill.lock")
 PHONE="192.168.178.250:5555"
 MODEL="SM-G965F"
 WORKER="/data/local/tmp/s9_worker"
+LIBS=WORKER+"/lib"
 CAMERA="http://127.0.0.1:18808/status"
 MARK="S9_APP_PROCESS_BASELINE_V166 "
 EXPECTED="S9_APP_PROCESS_NO_IMAGE_BASELINE_V166_OK"
@@ -138,9 +140,12 @@ def stage(jar):
  require(phone_digest(target)==sha,"minimal_worker_promotion_failed")
  return target
 
-def launch(target):
- # One bounded isolated shell startup. No ONNX, no model or private image.
- command="export CLASSPATH="+target+"; app_process /system/bin "+CLASS+" --baseline-no-image"
+def launch(target,native_env=False):
+ # Exactly one tiny Java startup, no ONNX/model or private image. Opt-in
+ # mode copies only the real worker's native-library path environment.
+ prefix=("export LD_LIBRARY_PATH="+LIBS+"; ") if native_env else ""
+ vmarg=("-Djava.library.path="+LIBS+" ") if native_env else ""
+ command=prefix+"export CLASSPATH="+target+"; app_process "+vmarg+"/system/bin "+CLASS+" --baseline-no-image"
  try:p=adb("shell",command,seconds=12)
  except Stop as e:
   return {"success":False,"reason":"bounded_transport_failure"}
@@ -150,7 +155,7 @@ def launch(target):
   return {"success":False,"reason":"android_baseline_terminated"}
  return {"success":False,"reason":"java_baseline_not_verified"}
 
-def run():
+def run(native_env=False):
  require(LOCK.is_file() and not LOCK.is_symlink(),"shared_s9_lock_unavailable")
  with LOCK.open("r") as f:
   try:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -165,12 +170,13 @@ def run():
    current_camera()
    remote=stage(jar)
    current_camera()
-   result=launch(remote)
+   result=launch(remote,native_env)
   after=current_camera()
   require(must_adb("shell","pidof nl.kalenel.s9security")==oldpid,
           "native_camera_pid_changed_after_baseline")
   return {"status":"physical_baseline_checked",
           "android_java_baseline_started":result["success"],
+          "native_library_path_enabled":native_env,
           "reason":result["reason"],
           "launch_attempts":1,
           "yu_net_inference_executed":False,
@@ -186,7 +192,10 @@ def run():
           "camera_pid_unchanged":True}
 
 def main():
- try:result=run()
+ parser=argparse.ArgumentParser()
+ parser.add_argument("--native-env",action="store_true")
+ args=parser.parse_args()
+ try:result=run(args.native_env)
  except Exception as error:
   why=str(error) if isinstance(error,Stop) else "unexpected_failure_no_private_detail"
   allowed={"shared_s9_lock_unavailable","other_phone_worker_running",
@@ -205,7 +214,8 @@ def main():
      "native_4k_pipeline_unhealthy","native_4k_temperature_guard",
      "native_4k_buffer_not_ready","native_4k_recording_in_progress",
      "s9_background_work_queued"}
-  result={"status":"deferred","reason":why if why in allowed
+  result={"status":"deferred","native_library_path_enabled":args.native_env,
+          "reason":why if why in allowed
           else "unexpected_failure_no_private_detail",
           "yu_net_inference_executed":False,"model_or_image_opened":False,
           "camera_apk_modified":False,"recordings_modified":False,
