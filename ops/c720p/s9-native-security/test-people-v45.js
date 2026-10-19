@@ -95,7 +95,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    return {ok:true,json:async()=>({ok:true,revision:autoDenied.size,decision:'denied'})};
   }
   if(p==='/new/api/automatic-person'){
-   const rows=[otherClip,extraClip].map((name,i)=>({id:(i?'e':'f').repeat(64),source:'sd',name,
+   const rows=[clip,pendingOutfitClip].map((name,i)=>({id:(i?'e':'f').repeat(64),source:'sd',name,
     folder:'G123',score:.94,margin:.12,reference_count:2,human_approved:false}));
    return {ok:true,json:async()=>({ok:true,status:'ready',revision:autoDenied.size,
     items:rows.filter(x=>!autoDenied.has(x.id))})};
@@ -143,7 +143,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
 const window={C720PSecureRelay:relay,confirm:()=>true};window.parent=window;window.addEventListener=()=>{};
 const ctx={window,document,Option:class Option{constructor(text,value){this.text=text;this.value=value}},
   URLSearchParams,Date,Promise,Number,String,Array,Math,Map,Set,Object,Error,JSON,RegExp,console};
-vm.createContext(ctx);vm.runInContext(js.replace("selectPane('people');loadView();fetchFaces();","window.__autoTestState=state;selectPane('people');loadView();fetchFaces();"),ctx);
+vm.createContext(ctx);vm.runInContext(js,ctx);
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')return root;for(const c of root.children||[]){
  const match=scan(c,name);if(match)return match;}return null}
@@ -397,12 +397,6 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  panes[4].handlers.click();for(let i=0;i<12;i++)await flush();
  assert.equal(el('automatic').hidden,false);
  assert.equal(el('automaticFolders').children.length,1,'Group candidates under one saved person');
- console.log('AUTO_FIXTURE_DIAGNOSTIC',JSON.stringify({
-  status:el('automaticStatus').textContent,
-  fetched:fetches.filter(x=>x==='/new/api/automatic-person').length,
-  rows:window.__autoTestState.automaticRows.map(x=>x.name),
-  links:linkItems,folders:window.__autoTestState.doc?.folders?.map(f=>f.id),
-  assigned:[otherClip,extraClip].map(name=>window.__autoTestState.extraLinks?.items?.['sd:'+name]?.folder)}));
  assert.match(el('automaticStatus').textContent,/requiring your decision/);
  const denied=scan(el('automaticFolders'),'✕ Deny');
  assert(denied,'Explicit person-match denial action missing');
