@@ -1,0 +1,54 @@
+name: Security Automatic Person UI and private review
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.html'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneAutomaticPersonMatcher*'
+      - 'ops/c720p/s9-person-ml-v1/s9_automatic_person_review.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py'
+      - 'ops/c720p/s9-native-security/test-automatic-person-review.py'
+      - '.github/workflows/c720p-security-automatic-person.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.html'
+      - 'ops/c720p/s9-person-ml-v1/s9_automatic_person_review.py'
+      - '.github/workflows/c720p-security-automatic-person.yml'
+permissions:
+  contents: read
+jobs:
+  confidence-gated-person-proposals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test frontend navigation and existing manual person decisions
+        run: |
+          node --check ops/c720p/s9-native-security/security-people-v45.js
+          node ops/c720p/s9-native-security/test-people-v45.js
+      - name: Test trusted face proposal index and persistent human denials
+        run: |
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_automatic_person_review.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
+          python3 ops/c720p/s9-native-security/test-automatic-person-review.py
+      - name: Compile S9 offline-only ArcFace proposal matcher
+        run: |
+          mkdir -p /tmp/s9-auto-person-classes
+          javac -d /tmp/s9-auto-person-classes ops/c720p/s9-native-security/offline-worker/PhoneAutomaticPersonMatcher.java ops/c720p/s9-native-security/offline-worker/PhoneAutomaticPersonMatcherTest.java
+          java -cp /tmp/s9-auto-person-classes nl.kalenel.s9offline.PhoneAutomaticPersonMatcherTest
+      - name: Prohibit automatic person filing or hub biometric vectors
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          js=Path("ops/c720p/s9-native-security/security-people-v45.js").read_text()
+          api=Path("ops/c720p/s9-person-ml-v1/s9_automatic_person_review.py").read_text()
+          html=Path("ops/c720p/s9-native-security/security-people-v45.html").read_text()
+          assert 'data-pane="automatic"' in html
+          assert 'id="automaticFolders"' in html
+          assert 'human_confirmed:true' in js
+          assert 'manualLink(' in js
+          assert 'automatic_assignments":False' in api
+          assert 'face_vectors_exported":False' in api
+          print("SECURITY_AUTOMATIC_PERSON_REVIEW_SOURCE_PASS")
+          PY

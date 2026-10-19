@@ -7,7 +7,7 @@ const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefin
 const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,recheckOnly:false,doc:null,
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
- faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0};
+ faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),assignedReady:false,linksRevision:0,archiveToken:0,automaticRows:[],automaticRevision:0,automaticStatus:'loading',automaticToken:0,automaticBusy:false};
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
 const cropName=/^[A-Za-z0-9._-]{1,200}[.]jpg$/;
@@ -121,6 +121,7 @@ async function refreshArchiveReviewSources(folders){
  makeArchiveRows();
  if(state.doc)render();
  if(state.pane==='clothing')searchClothingMatches();
+ if(state.pane==='automatic')fetchAutomatic();
 }
 async function manualLink(item,folder){
  let errorAfterReload='';
@@ -451,11 +452,12 @@ function openFolder(id,tab,recheckOnly=false){
 }
 function openHome(pane){
  state.pane=pane;state.folder='';state.tab='inbox';state.offset=0;
- selectPane(pane);loadView();if(pane==='people'||pane==='clothing'||pane==='review')fetchFaces();
+ selectPane(pane);loadView();if(['people','clothing','review','automatic'].includes(pane))fetchFaces();
+ if(pane==='automatic')fetchAutomatic();
  if(pane==='clothing'&&state.assignedReady)searchClothingMatches();
 }
 function selectPane(pane){
- for(const name of ['overview','review','people','clothing','folderView'])
+ for(const name of ['overview','review','people','clothing','automatic','folderView'])
   $(name).hidden=(name!==(pane==='folder'?'folderView':pane));
  for(const b of document.querySelectorAll('[data-pane]')){
   const expected=pane==='folder'?state.folderReturnPane:pane;
@@ -981,6 +983,110 @@ async function searchClothingMatches(force=false){
   state.clothingBusy=false;renderClothing();
  }
 }
+const autoId=/^[a-f0-9]{64}$/;
+async function fetchAutomatic(){
+ const token=++state.automaticToken;
+ state.automaticStatus='loading';renderAutomatic();
+ try{
+  const r=await relay().fetch('/new/api/automatic-person',{cache:'no-store'});
+  const doc=await r.json();
+  if(token!==state.automaticToken)return;
+  if(!r.ok||doc.ok!==true||!Array.isArray(doc.items))throw Error('index unavailable');
+  state.automaticRevision=num(doc.revision);
+  state.automaticStatus=doc.status||'unavailable';
+  const saved=new Set(savedFolders().map(p=>p.id));
+  state.automaticRows=doc.items.filter(row=>
+   row.source==='sd'&&clipName.test(String(row.name||''))&&
+   autoId.test(String(row.id||''))&&saved.has(row.folder)&&
+   row.human_approved===false&&num(row.reference_count)>=2&&
+   num(row.score)>=.84&&num(row.margin)>=.08&&
+   !assignedFolder({source:'sd',name:row.name}));
+ }catch(_){
+  if(token!==state.automaticToken)return;
+  state.automaticRows=[];state.automaticStatus='unavailable';
+ }
+ renderAutomatic();
+}
+async function denyAutomatic(row){
+ if(state.automaticBusy||!autoId.test(String(row?.id||'')))return;
+ state.automaticBusy=true;
+ try{
+  const response=await relay().fetch('/new/api/automatic-person',{
+   method:'POST',headers:{'Content-Type':'application/json',
+    'X-S9-Automatic-Person-Intent':'human-automatic-person-denial-v1'},
+   body:JSON.stringify({action:'deny',id:row.id,revision:state.automaticRevision,
+    human_confirmed:true})});
+  const result=await response.json();
+  if(!response.ok||result.ok!==true)throw Error(response.status===409?
+   'A different review was saved. Refresh and check this match again.':
+   result.error||'Denial not saved');
+  state.automaticRevision=result.revision;
+  state.automaticRows=state.automaticRows.filter(x=>x.id!==row.id);
+  notification('Suggestion denied. Original remains in Review recordings.');
+ }catch(e){alertText(e.message||'Could not deny suggestion')}
+ finally{state.automaticBusy=false;renderAutomatic()}
+}
+async function approveAutomatic(row){
+ if(state.automaticBusy||!savedFolders().some(p=>p.id===row.folder))return;
+ const person=savedFolders().find(p=>p.id===row.folder);
+ if(!window.confirm('Approve this recording for '+person.label+'? This is a manual decision.'))return;
+ state.automaticBusy=true;
+ try{
+  const ok=await manualLink({source:'sd',clip:row.name,name:row.name},row.folder);
+  if(ok){
+   state.automaticRows=state.automaticRows.filter(x=>x.id!==row.id);
+   notification('Approved and filed under '+person.label+'.');
+  }
+ }finally{state.automaticBusy=false;renderAutomatic()}
+}
+function renderAutomatic(){
+ const host=$('automaticFolders');host.replaceChildren();
+ const records=state.automaticRows||[];
+ $('automaticTabCount').textContent=records.length?' · '+records.length:'';
+ const status=$('automaticStatus');
+ if(state.automaticStatus==='loading'){
+  status.textContent='Checking S9+ face matches…';return;
+ }
+ if(state.automaticStatus!=='ready'){
+  status.textContent='S9+ aligned-face recognition results are not ready. No guessed identities.';
+  host.append(elt('p','The phone must finish creating validated face embeddings before person-specific suggestions can appear.','empty'));
+  return;
+ }
+ if(!records.length){
+  status.textContent='No new face-based suggestions awaiting approval.';
+  host.append(elt('p','All unassigned originals remain available under Review recordings.','empty'));
+  return;
+ }
+ status.textContent=records.length+' suggested match'+(records.length===1?'':'es')+
+  ' requiring your decision · face cosine scores are not identity probabilities';
+ for(const person of savedFolders()){
+  const items=records.filter(x=>x.folder===person.id);
+  if(!items.length)continue;
+  const group=elt('section','','auto-person-group');
+  group.append(elt('h3',person.label+' · '+items.length+' pending'));
+  const cards=elt('div','','auto-person-cards');
+  for(const row of items){
+   const clip={source:'sd',name:row.name,clip:row.name,
+    recorded_ms:Number(row.name.slice(7,20)),
+    video_path:'/new/saved/clip/'+encodeURIComponent(row.name)};
+   const tile=elt('article','','evidence');
+   const media=sceneFor(clip);badge(media,'FACE SUGGESTION');
+   const body=elt('div','','body');
+   body.append(elt('strong',date(clip)),
+    elt('p','Face cosine '+Number(row.score).toFixed(3)+
+      ' · difference from next candidate '+Number(row.margin).toFixed(3)),
+    elt('p',num(row.reference_count)+' approved independent reference recordings'));
+   const actions=elt('div','','actions');
+   actions.append(control('▶ Play original',()=>startVideo(clip)));
+   const face=reliableFaces(row.name)[0];
+   if(face)actions.append(control('Inspect face',()=>inspectFaceSnapshot(face)));
+   actions.append(control('✓ Approve',()=>approveAutomatic(row),'primary'),
+     control('✕ Deny',()=>denyAutomatic(row),'danger'));
+   body.append(actions);tile.append(media,body);cards.append(tile);
+  }
+  group.append(cards);host.append(group);
+ }
+}
 function renderClothing(){
  const host=$('clothingList');host.replaceChildren();
  const matches=state.clothingMatches||[];
@@ -1133,6 +1239,7 @@ function render(){
  if(state.pane==='people')renderPeople();
  if(state.pane==='folder')renderFolder();
  if(state.pane==='clothing')renderClothing();
+ if(state.pane==='automatic')renderAutomatic();
 }
 function compare(item){
  const examples=(state.doc?.reference_examples||[]).slice(0,3);
@@ -1173,6 +1280,7 @@ $('peopleRecheckNow').addEventListener('click',()=>{
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
 $('refreshClothing').addEventListener('click',()=>searchClothingMatches(true));
+$('refreshAutomatic').addEventListener('click',()=>fetchAutomatic());
 $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
 $('pageSize').addEventListener('change',()=>{
@@ -1193,8 +1301,10 @@ $('refresh').addEventListener('click',()=>{
  state.archiveClips=null;state.archiveEntries=[];state.driveRecords=[];
  state.extraLinks=null;state.assignedReady=false;state.clothingMatches=null;
  state.clothingToken++;state.clothingBusy=false;state.archiveToken=0;
+ state.automaticRows=[];state.automaticStatus='loading';state.automaticToken++;
  loadView();
  fetchFaces();
+ if(state.pane==='automatic')fetchAutomatic();
 });
 $('newFolder').addEventListener('click',()=>openFolderEditor('create'));
 $('newFolderInline').addEventListener('click',()=>openFolderEditor('create'));

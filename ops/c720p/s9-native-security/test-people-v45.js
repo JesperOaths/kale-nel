@@ -58,7 +58,7 @@ class E{
  load(){}pause(){}remove(){}get duration(){return 20}set currentTime(x){this.seek=x}
 }
 const idMap=new Map();const el=id=>{if(!idMap.has(id))idMap.set(id,new E());return idMap.get(id)};
-const panes=['overview','review','people','clothing'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
+const panes=['overview','review','people','clothing','automatic'].map(p=>{const b=new E('button');b.dataset.pane=p;return b});
 const document={getElementById:el,createElement:t=>new E(t),querySelectorAll:q=>q==='[data-pane]'?panes:[],addEventListener(){}};
 const clip='motion_1792200000000.mp4';
 const driveClip='historical_2026-05-12_08-30-00.mp4';
@@ -71,7 +71,7 @@ const item={recorded_ms:1792200000000,clip,source_sha256:'a'.repeat(64),observat
  temporal_support:true,decision:null,entry_zone:'front_garden',memberships:[]};
 const saved={id:'G123',label:'Jesper',automatic_appearance_group:false,approved_clips:3,suggested_clips:0,previews:[{name:'motion_1792200000000.mp4.t1.abcd.v44.34.full.jpg'}],approvals_needing_person_recheck:3};
 const provisional={id:'P345',label:'Appearance #4',automatic_appearance_group:true,approved_clips:0,suggested_clips:4,previews:[],approvals_needing_person_recheck:0};
-let posts=[],linkPosts=[],fetches=[],faceReadFailures=0,holdAll=false,releaseHeldAll=null,linkRevision=0,linkItems={},linkReadFailures=0;
+let posts=[],linkPosts=[],autoPosts=[],autoDenied=new Set(),fetches=[],faceReadFailures=0,holdAll=false,releaseHeldAll=null,linkRevision=0,linkItems={},linkReadFailures=0;
 const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
  fetch:async (p,opts={})=>{
   fetches.push(p);
@@ -89,6 +89,16 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
    }
    posts.push({payload,opts});
    return {ok:true,json:async()=>({ok:true,folder:payload.folder||'G123'})};
+  }
+  if(p==='/new/api/automatic-person'&&opts.method==='POST'){
+   const body=JSON.parse(opts.body);autoPosts.push({body,opts});autoDenied.add(body.id);
+   return {ok:true,json:async()=>({ok:true,revision:autoDenied.size,decision:'denied'})};
+  }
+  if(p==='/new/api/automatic-person'){
+   const rows=[clip,pendingOutfitClip].map((name,i)=>({id:(i?'e':'f').repeat(64),source:'sd',name,
+    folder:'G123',score:.94,margin:.12,reference_count:2,human_approved:false}));
+   return {ok:true,json:async()=>({ok:true,status:'ready',revision:autoDenied.size,
+    items:rows.filter(x=>!autoDenied.has(x.id))})};
   }
   if(p==='/new/api/s9-manual-recording-links'){
    if(linkReadFailures>0){linkReadFailures--;throw Error('Synthetic refresh outage')}
@@ -130,7 +140,7 @@ const relay={url:async p=>'https://signed.example.test/'+encodeURIComponent(p),
   if(p.startsWith('/new/saved/face/'))return {ok:true,status:200};
   throw Error('Unexpected request '+p);
  }};
-const window={C720PSecureRelay:relay};window.parent=window;window.addEventListener=()=>{};
+const window={C720PSecureRelay:relay,confirm:()=>true};window.parent=window;window.addEventListener=()=>{};
 const ctx={window,document,Option:class Option{constructor(text,value){this.text=text;this.value=value}},
   URLSearchParams,Date,Promise,Number,String,Array,Math,Map,Set,Object,Error,JSON,RegExp,console};
 vm.createContext(ctx);vm.runInContext(js,ctx);
@@ -382,5 +392,26 @@ function scan(root,name){if(root.textContent===name&&root.tagName==='BUTTON')ret
  for(let i=0;i<10;i++)await flush();
  assert.equal(el('faceScanLabel').textContent,'5 / 5 · reviewed');
  assert.equal(el('faceScanProgress').value,100);
+ // Automatic Person shows suggestions for known saved people, never files
+ // a clip until a reviewer explicitly approves it.
+ panes[4].handlers.click();for(let i=0;i<12;i++)await flush();
+ assert.equal(el('automatic').hidden,false);
+ assert.equal(el('automaticFolders').children.length,1,'Group candidates under one saved person');
+ assert.match(el('automaticStatus').textContent,/requiring your decision/);
+ const denied=scan(el('automaticFolders'),'✕ Deny');
+ assert(denied,'Explicit person-match denial action missing');
+ const postsBefore=linkPosts.length;
+ denied.handlers.click();for(let i=0;i<9;i++)await flush();
+ assert.equal(autoPosts.length,1,'Denials use the audited suggestion endpoint');
+ assert.equal(autoPosts[0].body.human_confirmed,true);
+ assert.equal(linkPosts.length,postsBefore,'Deny must not modify any person assignment');
+ console.log('AUTO_PERSON_AFTER_DENY',JSON.stringify({status:el('automaticStatus').textContent,count:el('automaticTabCount').textContent,groups:el('automaticFolders').children.length,links:Object.keys(linkItems)}));
+ const approve=scan(el('automaticFolders'),'✓ Approve');
+ assert(approve,'Remaining match must support manual approval');
+ approve.handlers.click();for(let i=0;i<15;i++)await flush();
+ assert.equal(linkPosts.length,postsBefore+1,'Approval uses existing human-confirmed filing');
+ assert.equal(linkPosts.at(-1).payload.folder,'G123');
+ assert.equal(linkPosts.at(-1).payload.human_confirmed,true);
+ assert.equal(el('automaticTabCount').textContent,'');
  console.log('S9_PEOPLE_FACES_V45_WORKSPACE_TEST_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});

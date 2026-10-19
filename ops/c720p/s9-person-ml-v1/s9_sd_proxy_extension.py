@@ -399,6 +399,10 @@ def install_local_sd(H):
  # sources, and reversible returns to the archive. Overlay, not biometrics.
  import s9_manual_recording_links
  s9_manual_recording_links.install(H,rows)
+ # Automatic Person proposals and denials remain private and opt-in to
+ # human approval. No machine result writes an approved person assignment.
+ import s9_automatic_person_review
+ s9_automatic_person_review.install(H,rows)
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
