@@ -6,6 +6,8 @@ import threading
 import tempfile
 import time
 import json
+from unittest.mock import patch
+from types import SimpleNamespace
 from pathlib import Path
 import unittest
 
@@ -102,6 +104,64 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    case["animal_confidence"]=0.0
    if confidence:case[confidence]=.7
    self.assertEqual(m.category_from_phone(case),expected)
+ def test_direct_h264_avoids_hub_transcode_only_on_compatible_opt_in(self):
+  with tempfile.TemporaryDirectory() as root:
+   movie=Path(root)/'source.mp4';movie.write_bytes(b'x'*500000)
+   meta={"format":{"duration":"18.2"},"streams":[
+      {"codec_type":"video","codec_name":"h264","width":1920,"height":1080}]}
+   with patch.object(m,"DIRECT_IMPORT_OPT_IN",True),patch.object(m,"execute",return_value=json.dumps(meta)) as probe:
+    self.assertTrue(m.can_phone_decode_original_h264(movie))
+    probe.assert_called_once()
+   with patch.object(m,"DIRECT_IMPORT_OPT_IN",False),patch.object(m,"execute") as probe:
+    self.assertFalse(m.can_phone_decode_original_h264(movie))
+    probe.assert_not_called()
+   with patch.object(m,"DIRECT_IMPORT_OPT_IN",True),patch.object(m,"execute",return_value=json.dumps({
+       "format":{"duration":"18.2"},"streams":[{"codec_type":"video","codec_name":"hevc","width":1920,"height":1080}]})):
+    self.assertFalse(m.can_phone_decode_original_h264(movie))
+
+ def test_direct_original_result_requires_identical_source_digest_and_bytes(self):
+  descriptor={"clip_id":self.id,"camera":"new","source_remote_name":self.name,
+    "source_sha256":self.hash,"original_source_sha256":self.hash,
+    "original_source_size":500000,"bytes":500000,
+    "derivative_transcode":"s9_native_decode_h264_original_v1"}
+  row=m.validate_result(self.result,self.verified,descriptor)
+  self.assertEqual(row["analysis_input_preprocessing"],"s9_native_decode_h264_original_v1")
+  for key,invalid in [("original_source_sha256","d"*64),("bytes",499999)]:
+   bad=dict(descriptor);bad[key]=invalid
+   with self.subTest(key=key),self.assertRaisesRegex(ValueError,"native_direct_import_must_match_exact_drive_original"):
+    m.validate_result(self.result,self.verified,bad)
+
+ def test_phone_generated_historical_jpeg_reused_without_drive_decode(self):
+  with tempfile.TemporaryDirectory() as root:
+   local=Path(root);source=local/'verified.json'
+   snapshot="NEW_20260916165945_person-1.00_20260916-165945-0189.jpg"
+   source.write_text(json.dumps({"items":[{"state":"verified","camera":"new",
+     "remote_name":self.name,"snapshot_name":snapshot}]}))
+   jpeg=b"\xff\xd8\xff"+b"x"*4995+b"\xff\xd9"
+   with patch.object(m,"DRIVE_THUMB_CACHE",local/'cache'),\
+        patch.object(m,"cpu_catalog",return_value=SimpleNamespace(SOURCE=source)),\
+        patch.object(m,"phone",return_value=str(len(jpeg))),\
+        patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0,stdout=jpeg,stderr=b"")) as adb:
+    self.assertTrue(m.reuse_native_drive_thumbnail(self.id,self.verified[self.id]))
+    self.assertEqual((local/'cache'/snapshot).read_bytes(),jpeg)
+    self.assertFalse(m.reuse_native_drive_thumbnail(self.id,self.verified[self.id]))
+    self.assertEqual(adb.call_count,1)
+   self.assertTrue(source.is_file())
+
+ def test_broken_native_historical_jpeg_does_not_poison_cache(self):
+  with tempfile.TemporaryDirectory() as root:
+   local=Path(root);source=local/'verified.json'
+   snapshot="NEW_20260916165945_person-1.00_20260916-165945-0189.jpg"
+   source.write_text(json.dumps({"items":[{"state":"verified","camera":"new",
+     "remote_name":self.name,"snapshot_name":snapshot}]}))
+   bad=b"\xff\xd8\xff"+b"x"*4997
+   with patch.object(m,"DRIVE_THUMB_CACHE",local/'cache'),\
+        patch.object(m,"cpu_catalog",return_value=SimpleNamespace(SOURCE=source)),\
+        patch.object(m,"phone",return_value=str(len(bad))),\
+        patch.object(m.subprocess,"run",return_value=SimpleNamespace(returncode=0,stdout=bad,stderr=b"")):
+    self.assertFalse(m.reuse_native_drive_thumbnail(self.id,self.verified[self.id]))
+    self.assertFalse((local/'cache'/snapshot).exists())
+
  def test_android_worker_keeps_native_4k_archive_separate(self):
   text=(HERE/"src/nl/kalenel/s9security/HistoricalImportWorker.java").read_text()
   self.assertIn("HistoricalDriveInbox",text)
