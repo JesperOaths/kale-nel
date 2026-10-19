@@ -106,10 +106,19 @@ public final class S9OnnxRuntimeWorker {
             require(env.getVersion()!=null && !env.getVersion().isEmpty(),
                     "ORT native runtime could not initialize");
             System.out.println("S9_STANDALONE_ORT_NATIVE_LOAD_PASS");
+            // Android 10 app_process triggers a native ORT static-destructor
+            // mutex abort AFTER this marker on ordinary JVM shutdown.
+            // This process is deliberately short-lived, does no archive writes
+            // and is isolated from Camera2. Exit immediately once stdout is
+            // confirmed flushed; real backfill is gated on separate tests.
+            System.out.flush();
+            Runtime.getRuntime().halt(0);
             return;
         }
         if (args.length==3 && args[0].equals("--model-smoke")) {
             runModel(args[1],Paths.get(args[2]));
+            System.out.flush();
+            Runtime.getRuntime().halt(0);
             return;
         }
         throw new IllegalArgumentException(
