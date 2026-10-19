@@ -1,0 +1,34 @@
+name: Isolated S9 true 5-point landmark model and geometry V120
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGate.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGateTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-face-landmark-stage-v120.py'
+      - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGate.java'
+      - 'ops/c720p/s9-native-security/offline-worker/PhoneFaceLandmarkGateTest.java'
+      - 'ops/c720p/s9-native-security/offline-worker/stage-s9-five-point-yunet-v120.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-face-landmark-stage-v120.py'
+      - '.github/workflows/s9-face-landmark-alignment-source-v120.yml'
+permissions:
+  contents: read
+jobs:
+  pure-synthetic-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test real-landmark requirements without human face images
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/stage-s9-five-point-yunet-v120.py"
+          python3 "$d/test-s9-face-landmark-stage-v120.py"
+          mkdir -p /tmp/s9-face-gate-v120
+          javac -d /tmp/s9-face-gate-v120 "$d/PhoneFaceLandmarkGate.java" "$d/PhoneFaceLandmarkGateTest.java"
+          java -cp /tmp/s9-face-gate-v120 nl.kalenel.s9offline.PhoneFaceLandmarkGateTest
