@@ -90,10 +90,15 @@ def main():
          return {visible:!!tab&&!tab.hidden,button:!!refresh,
                  status:d?.getElementById('clothingTotal')?.textContent||''};
         """,lambda v:v and v.get("visible") and v.get("button"))
-        ev(page,"""
-         peoplePage().getElementById('refreshClothing').click();
-         return true;
-        """)
+        # Source-qualified approval scans can load after the initial view.
+        # The initial "Waiting for reviewed reference recordings" label is
+        # NEVER sufficient for a passing results audit.
+        for attempt in range(3):
+            ev(page,"""
+             peoplePage().getElementById('refreshClothing').click();
+             return true;
+            """)
+            time.sleep(2)
         result=until(page,"""
          const d=peoplePage(),el=d?.getElementById('clothingTotal'),
            text=el?.textContent||'',cards=[...d?.querySelectorAll('#clothingList article')||[]];
@@ -104,11 +109,12 @@ def main():
                  reviewControls:cards.every(x=>[...x.querySelectorAll('button')].some(b=>
                   b.textContent.includes('Review original')))};
         """,lambda v:v and not v.get("busy") and v.get("status")
+           and not v.get("status","").startswith("Waiting for")
            and ("comparison" in v.get("status","").lower()
                 or "eligible" in v.get("status","").lower()
                 or "reference" in v.get("status","").lower()
                 or "index" in v.get("status","").lower()
-                or "refresh" in v.get("status","").lower()),90)
+                or "refresh" in v.get("status","").lower()),180)
         if not result["reviewControls"]:
             raise RuntimeError("Recorded-evidence actions disappeared")
         if result["modelCards"]+result["oldCards"]<result["count"]:
