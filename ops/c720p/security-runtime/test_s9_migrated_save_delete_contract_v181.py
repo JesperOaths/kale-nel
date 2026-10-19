@@ -12,12 +12,18 @@ ROWS={NAME:{"sd_path":ROOT+"/"+NAME,"sha256":SHA,
 SECRET=b"synthetic-test-key-for-no-real-remotes-000001"
 EVENT={"clip":"clips/"+NAME,"saved":False,"other":"must_survive"}
 
-def make_receipt(action):
+def make_receipt(action,*,status="s9_committed",durable=True,
+                 sequence=1,head="e"*64):
     nonce="f"*32
-    return {"status":"s9_committed","source":"s9_microsd","durable":True,
+    fields={"schema":"s9_c720p_migrated_action_v2",
+            "status":status,"source":"s9_microsd","durable":durable,
             "action":action,"nonce":nonce,
-            "hmac_sha256":hmac.new(SECRET,canonical_receipt(NAME,ROWS[NAME],
-              action,nonce),hashlib.sha256).hexdigest()}
+            "ledger_sequence":sequence,"ledger_head_sha256":head}
+    body=canonical_receipt(NAME,ROWS[NAME],action,nonce,
+          status=status,source=fields["source"],durable=durable,
+          ledger_sequence=sequence,ledger_head_sha256=head)
+    return {**fields,
+            "hmac_sha256":hmac.new(SECRET,body,hashlib.sha256).hexdigest()}
 
 class Tests(unittest.TestCase):
     def test_verified_source_manifest(self):
@@ -52,7 +58,8 @@ class Tests(unittest.TestCase):
         good=make_receipt("delete")
         for changes in ({"action":"save"},{"source":"other"},
            {"durable":False},{"status":"pending"},{"nonce":"0"*32},
-           {"hmac_sha256":"b"*64}):
+           {"hmac_sha256":"b"*64},{"ledger_sequence":2},
+           {"ledger_head_sha256":"0"*64},{"schema":"s9_c720p_migrated_action_v1"}):
             with self.subTest(changes=changes):
                 self.assertFalse(receipt_authorized(
                     {**good,**changes},NAME,ROWS[NAME],"delete",SECRET))
@@ -60,6 +67,35 @@ class Tests(unittest.TestCase):
         self.assertFalse(receipt_authorized(good,NAME,{**ROWS[NAME],"bytes":999999},
                                            "delete",SECRET))
         self.assertFalse(receipt_authorized(good,NAME,ROWS[NAME],"delete",b"weak"))
+    def test_pending_receipt_cannot_be_relabelled_durable_or_committed(self):
+        # A V1 HMAC did NOT cover these claim fields. V2 must cover all of
+        # them even when the attacker supplies a legitimate pending HMAC.
+        pending=make_receipt("save",status="pending",durable=False)
+        self.assertFalse(receipt_authorized(
+            pending,NAME,ROWS[NAME],"save",SECRET))
+        forged={**pending,"status":"s9_committed","durable":True}
+        self.assertFalse(receipt_authorized(
+            forged,NAME,ROWS[NAME],"save",SECRET))
+        self.assertEqual(preview(NAME,EVENT,ROWS,"save",
+                 receipt=forged,secret=SECRET).status,"blocked")
+        self.assertFalse(EVENT["saved"])
+
+    def test_ledger_attestation_fields_must_be_signed_and_typed(self):
+        valid=make_receipt("save")
+        for edit in ({"ledger_sequence":0},{"ledger_sequence":True},
+                     {"ledger_sequence":2**63},{"ledger_head_sha256":"z"*64},
+                     {"ledger_head_sha256":"e"*63},
+                     {"schema":"s9_c720p_migrated_action_v1"}):
+            with self.subTest(edit=edit):
+                self.assertFalse(receipt_authorized(
+                    {**valid,**edit},NAME,ROWS[NAME],"save",SECRET))
+        # The receipt is still only a synthetic claim, not a real durable
+        # phone-side commit. Even a valid one never permits local unlink.
+        result=preview(NAME,EVENT,ROWS,"save",receipt=valid,secret=SECRET)
+        self.assertEqual(result.status,"shadow_only")
+        self.assertFalse(result.may_remove_local_original)
+        self.assertFalse(result.remote_mutation_executed)
+
     def test_unsafe_names_and_actions_rejected(self):
         for n in ("../secret.mp4","bad/clip.mp4","",NAME+".exe"):
             with self.assertRaises(ValueError):validated_record(n,ROWS)
