@@ -1,0 +1,69 @@
+name: Isolated S9+ ONNX runtime and archive preservation contract
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/**'
+      - '.github/workflows/s9-standalone-offline-onnx.yml'
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/**'
+      - '.github/workflows/s9-standalone-offline-onnx.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate isolated scripts and source-qualified archive handling
+        shell: bash
+        run: |
+          set -euo pipefail
+          area='ops/c720p/s9-native-security/offline-worker'
+          python3 -m py_compile "$area/install-s9-standalone-ort.py" \
+            "$area/export-osnet-512d.py" "$area/stage-s9-dual-onnx.py" \
+            "$area/prepare-c720p-osnet-export.py" \
+            "$area/plan-s9-dual-archive-backfill.py" \
+            "$area/test-s9-backfill-plan.py"
+          python3 "$area/test-s9-backfill-plan.py"
+          python3 - <<'PY'
+          from pathlib import Path
+          base=Path('ops/c720p/s9-native-security/offline-worker')
+          scripts=[(base/n).read_text() for n in (
+            'install-s9-standalone-ort.py',
+            'stage-s9-dual-onnx.py',
+            'plan-s9-dual-archive-backfill.py'
+          )]
+          installer,staging,plan=scripts
+          for marker in ('04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2',
+                         'libonnxruntime.so','libonnxruntime4j_jni.so',
+                         'S9_STANDALONE_ORT_INSTALLED_VERIFIED'):
+            assert marker in installer,marker
+          for marker in ('4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43',
+                         '174383860','visual_backbone_512d.onnx',
+                         'structural_upper_crop_512d.onnx'):
+            assert marker in staging,marker
+          for marker in ('gdrive_archive','s9_sd','inspection_only',
+                         'source_qualified_recordings','embeddings_created'):
+            assert marker in plan,marker
+          for prohibited in ('am force-stop','pm install','pm disable',
+                             'CameraService.java','/Security4K/motion_*.mp4',
+                             'review/review'):
+            assert all(prohibited not in s for s in scripts),prohibited
+          print('S9_STANDALONE_OFFLINE_SAFETY_SOURCE_PASS')
+          PY
+      - name: Compile worker against verified official ONNX Android Java API
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/s9-ort-validate"
+          mkdir -p "$folder/classes"
+          url="https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar"
+          curl -fSsL --retry 2 --max-time 90 "$url" -o "$folder/ort.aar"
+          echo "04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  $folder/ort.aar" | sha256sum -c -
+          unzip -p "$folder/ort.aar" classes.jar > "$folder/ort.jar"
+          javac -source 8 -target 8 -cp "$folder/ort.jar" -d "$folder/classes" \
+            ops/c720p/s9-native-security/offline-worker/S9OnnxRuntimeWorker.java
+          test -f "$folder/classes/nl/kalenel/s9offline/S9OnnxRuntimeWorker.class"
+          echo 'S9_OFFLINE_ONNX_JAVA_API_COMPILE_PASS'
