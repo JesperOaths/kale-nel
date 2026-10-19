@@ -160,7 +160,8 @@ def jpeg_proof():
     proof=mod.read_proof()
     require(len(proof)==6 and sum(x["bytes"] for x in proof.values())==1956743,
             "snapshot_proof_not_expected")
-    return sorted(proof.items())[0]
+    # Every migrated JPEG must pass the same physical GET/HEAD/range proof.
+    return sorted(proof.items())
 
 def jpeg_endpoint(port,name,item):
     url="http://127.0.0.1:"+str(port)+"/new/saved/c720p-migrated/snap/"+name
@@ -203,17 +204,19 @@ def apply():
                 installed_module=True
             require(file_bytes(OUTER)==original_outer
                     and file_bytes(INNER)==original_inner,"source_changed_before_install")
-            atomic_write(INNER,new_inner,inner_mode)
             modified_inner=True
+            atomic_write(INNER,new_inner,inner_mode)
             restart_and_wait(UNITS[0][0],8795)
-            name,item=jpeg_proof()
-            jpeg_endpoint(8795,name,item)
+            all_jpegs=jpeg_proof()
+            for name,item in all_jpegs:
+                jpeg_endpoint(8795,name,item)
             require(camera()<37,"camera_not_safe_before_relay")
             require(file_bytes(OUTER)==original_outer,"outer_source_changed")
-            atomic_write(OUTER,new_outer,outer_mode)
             modified_outer=True
+            atomic_write(OUTER,new_outer,outer_mode)
             restart_and_wait(UNITS[1][0],8794)
-            jpeg_endpoint(8794,name,item)
+            for name,item in all_jpegs:
+                jpeg_endpoint(8794,name,item)
             require(inventory(8795) and inventory(8794),"mp4_playback_regressed")
             after=camera()
             return {"state":"installed_verified","private_snapshots_accessible":6,
@@ -225,15 +228,17 @@ def apply():
                     "saved_state_modified":False}
         except Exception:
             if backups_ready:
-                if modified_outer:
+                # Never overwrite another deployer's newer source changes.
+                # If the original source is still present, no rollback write is needed.
+                if modified_outer and file_bytes(OUTER)==new_outer:
                     atomic_write(OUTER,original_outer,outer_mode)
                     try:restart_and_wait(UNITS[1][0],8794)
                     except Exception:pass
-                if modified_inner:
+                if modified_inner and file_bytes(INNER)==new_inner:
                     atomic_write(INNER,original_inner,inner_mode)
                     try:restart_and_wait(UNITS[0][0],8795)
                     except Exception:pass
-            if installed_module and not modified_inner and MODULE.exists():
+            if installed_module and not modified_inner and MODULE.exists() and file_bytes(MODULE)==module:
                 MODULE.unlink()
             print("S9_JPEG_RELAY_V177_ROLLBACK "+json.dumps({
                 "outer_original_sha":digest(OUTER.read_bytes())==OUTER_OLD_SHA,
