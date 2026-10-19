@@ -21,4 +21,14 @@ jobs:
           set -euo pipefail
           python3 ops/c720p/security-runtime/test-patch-c720p-legacy-s9-migrated-player-v1.py
           python3 -m py_compile ops/c720p/security-runtime/patch-c720p-legacy-s9-migrated-player-v1.py
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          folder=Path('ops/c720p/security-runtime')
+          spec=importlib.util.spec_from_file_location('legacy_test',folder/'test-patch-c720p-legacy-s9-migrated-player-v1.py')
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          generated=mod.m.patch(mod.fixture()).replace('<script>','').replace('</script>','')
+          Path('/tmp/c720p-migrated-legacy-player-compiled.js').write_text(generated)
+          PY
+          node --check /tmp/c720p-migrated-legacy-player-compiled.js
           echo C720P_MIGRATED_PLAYER_LOCAL_FEATURE_PRESERVATION_PASS
