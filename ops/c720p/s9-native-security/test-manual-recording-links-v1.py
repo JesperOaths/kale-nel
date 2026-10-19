@@ -61,6 +61,42 @@ class ManualLinkCases(unittest.TestCase):
   self.assertEqual(m.mutate(body,{SD:1})[0],400)
   self.assertEqual(self.mutate()[0],200)
   self.assertEqual(self.mutate(revision=0)[0],409)
+ def test_atomic_group_assignments_on_verified_drive_and_sd(self):
+  for source,name in (("drive",DRIVE),("sd",SD)):
+   with self.subTest(source=source):
+    revision=m.report()["revision"]
+    body=self.body(source=source,name=name,revision=revision,action="assign_many")
+    body["folders"]=["G123","G456","G789"]
+    code,receipt=m.mutate(body,{SD:{"sd_verified":True}})
+    self.assertEqual(code,200)
+    self.assertEqual(receipt["folders"],["G123","G456","G789"])
+    self.assertEqual(receipt["folder"],"G123")
+    self.assertTrue(receipt["persisted"])
+    stored=m.report()["items"][source+":"+name]
+    self.assertEqual(stored["folders"],["G123","G456","G789"])
+    self.assertEqual(stored["review_status"],"assigned")
+  logs=[json.loads(line) for line in m.AUDIT.read_text().splitlines()]
+  self.assertEqual(len(logs),2)
+  self.assertEqual(logs[0]["to_folders"],["G123","G456","G789"])
+  self.assertEqual(logs[1]["to_folders"],["G123","G456","G789"])
+  # Returning one original to review clears every person membership atomically.
+  code,_=self.mutate(source="drive",name=DRIVE,folder=None,revision=2,action="return_to_queue")
+  self.assertEqual(code,200)
+  self.assertEqual(m.report()["items"]["drive:"+DRIVE]["folders"],[])
+  self.assertEqual(m.report()["items"]["sd:"+SD]["folders"],["G123","G456","G789"])
+
+ def test_group_filing_rejects_duplicates_unknown_format_and_stale_revision(self):
+  for chosen in ([],["G123","G123"],["G123","../X"],["G123"]*9,["G456","G123"]):
+   request=self.body(source="drive",name=DRIVE,action="assign_many")
+   request["folders"]=chosen
+   self.assertNotEqual(m.mutate(request,{SD:1})[0],200)
+  self.assertFalse(m.STORE.exists())
+  request=self.body(source="drive",name=DRIVE,action="assign_many")
+  request["folders"]=["G123","G456"]
+  self.assertEqual(m.mutate(request,{SD:1})[0],200)
+  self.assertEqual(m.mutate(request,{SD:1})[0],409)
+  self.assertEqual(m.report()["revision"],1)
+
  def test_deleted_drive_files_cannot_be_added(self):
   m.DRIVE.write_text(json.dumps({"items":[{"remote_name":DRIVE,
    "size":4500000,"state":"deleted"}]}))
