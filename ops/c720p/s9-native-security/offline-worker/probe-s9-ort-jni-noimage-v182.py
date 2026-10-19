@@ -84,7 +84,7 @@ def launch_once(guard,target):
         return {"success":False,"reason":"bounded_native_bootstrap_transport_failure"}
     if result.returncode==0 and result.stdout.strip()==EXPECTED:
         return {"success":True,"reason":"native_ort_environment_initialized"}
-    if result.returncode in (137,-9) or re.search(r"\\bkilled\\b",
+    if result.returncode in (137,-9) or re.search(r"\bkilled\b",
                  result.stderr+" "+result.stdout,re.I):
         return {"success":False,"reason":"native_ort_environment_terminated"}
     if "UnsatisfiedLinkError" in result.stderr or "NoClassDefFoundError" in result.stderr:
