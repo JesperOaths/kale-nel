@@ -181,11 +181,51 @@ public final class S9MigratedDualStoreCommitTestV197 {
         Files.delete(f.internal.resolve(".c720p-dual-store-commit-v197.lock"));
         denies(()->f.normal(),"preprovisioned_mutex_missing");
     }
+    private static void provePostConstructionLockReplacementRejected()
+            throws Exception {
+        Fixture f=new Fixture();
+        Path lock=f.internal.resolve(".c720p-dual-store-commit-v197.lock");
+        try(S9MigratedDualStoreCommitV197 instance=f.normal()) {
+            Files.delete(lock);
+            Files.createSymbolicLink(lock,
+                f.internal.resolve("c720p-ledger-trusted-head-v196"));
+            try {instance.currentDecision(NAME);
+                 throw new AssertionError("post_ctor_symlink_read_allowed");}
+            catch(IOException expected) {
+                ok("preprovisioned_coordinator_lock_required".equals(
+                    expected.getMessage()),"post_ctor_symlink_read_blocked");
+            }
+            try {instance.commitMetadataOnly("save",NAME,SHA,123456,
+                     N1,0,ZERO,TRUSTED_TEST);
+                 throw new AssertionError("post_ctor_symlink_write_allowed");}
+            catch(IOException expected) {
+                ok("preprovisioned_coordinator_lock_required".equals(
+                    expected.getMessage()),"post_ctor_symlink_write_blocked");
+            }
+        }
+        ok(Files.size(f.sd.resolve("actions-v193.log"))==0,
+           "symlink_replacement_never_committed");
+        Files.delete(lock);
+        Files.createFile(lock);
+        try(S9MigratedDualStoreCommitV197 instance=f.normal()) {
+            Files.write(lock,new byte[]{1});
+            try {instance.currentDecision(NAME);
+                 throw new AssertionError("nonempty_replaced_lock_allowed");}
+            catch(IOException expected) {
+                ok("preprovisioned_coordinator_lock_required".equals(
+                    expected.getMessage()),"nonempty_replaced_lock_blocked");
+            }
+        }
+        ok(Files.size(f.sd.resolve("actions-v193.log"))==0,
+           "nonempty_lock_never_committed");
+    }
+
     public static void main(String[] args)throws Exception {
         ok(args.length==0,"host_only_no_phone");
         proveSuccessfulPair();
         proveCrashGapNeverReceipted();
         proveConcurrentLockAndIndependentSecrets();
+        provePostConstructionLockReplacementRejected();
         System.out.println("S9_DUAL_STORE_COMMIT_V197_HOST_TESTS_OK");
     }
 }

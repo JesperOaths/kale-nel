@@ -111,6 +111,19 @@ public final class S9MigratedDualStoreCommitV197 implements AutoCloseable {
     private void requireOpen()throws IOException {
         if(closed)throw new IOException("dual_store_coordinator_closed");
     }
+    /**
+     * A preprovisioned lock is checked again for every operation: another
+     * actor might have replaced it after construction. NOFOLLOW_LINKS also
+     * blocks a symlink swapped between the check and channel.open.
+     */
+    private FileChannel openTrustedServiceLock() throws IOException {
+        if(Files.isSymbolicLink(serviceLock)
+                || !Files.isRegularFile(serviceLock,LinkOption.NOFOLLOW_LINKS)
+                || Files.size(serviceLock)!=0)
+            throw new IOException("preprovisioned_coordinator_lock_required");
+        return FileChannel.open(serviceLock,StandardOpenOption.WRITE,
+                                LinkOption.NOFOLLOW_LINKS);
+    }
     private FileLock takeLock(FileChannel channel)throws IOException {
         try{return channel.lock();}
         catch(OverlappingFileLockException e){
@@ -133,10 +146,21 @@ public final class S9MigratedDualStoreCommitV197 implements AutoCloseable {
     public synchronized S9MigratedMetadataLedgerV193.CurrentDecision
             currentDecision(String name)throws IOException {
         requireOpen();
-        try(FileChannel channel=FileChannel.open(serviceLock,StandardOpenOption.WRITE);
+        try(FileChannel channel=openTrustedServiceLock();
             FileLock held=takeLock(channel)) {
-            verifyBothStores();
-            return journal.latestDecision(name);
+            S9MigratedLedgerTrustedCheckpointV196.State before=verifyBothStores();
+            S9MigratedMetadataLedgerV193.CurrentDecision decision=
+                journal.latestDecision(name);
+            // A separate, uncoordinated writer must not make this per-clip
+            // projection silently stale while the read is being assembled.
+            S9MigratedLedgerTrustedCheckpointV196.State after=verifyBothStores();
+            if(before.sequence!=after.sequence
+                    || !MessageDigest.isEqual(before.headSha256.getBytes(
+                        java.nio.charset.StandardCharsets.US_ASCII),
+                        after.headSha256.getBytes(
+                        java.nio.charset.StandardCharsets.US_ASCII)))
+                throw new IOException("dual_store_changed_during_state_read");
+            return decision;
         }
     }
 
@@ -154,7 +178,7 @@ public final class S9MigratedDualStoreCommitV197 implements AutoCloseable {
         requireOpen();
         if(trustedSource==null)
             throw new IOException("authenticated_source_verifier_required");
-        try(FileChannel channel=FileChannel.open(serviceLock,StandardOpenOption.WRITE);
+        try(FileChannel channel=openTrustedServiceLock();
             FileLock held=takeLock(channel)) {
             S9MigratedLedgerTrustedCheckpointV196.State before=verifyBothStores();
             if(before.sequence!=expectedSequence || expectedHeadSha256==null ||
