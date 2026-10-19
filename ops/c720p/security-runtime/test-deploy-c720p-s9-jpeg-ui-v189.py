@@ -20,7 +20,8 @@ def clips():
  </script><img src="snaps/sample.jpg"></body></html>""").encode()
 def idx():
  return ("<html><head><title>Camera Security</title>"+VIDEO+"</head>"+
- "<body><button onclick='saveClip(1)'>Save</button><video src='clips/local.mp4'></video></body></html>").encode()
+ "<body><button onclick='saveClip(1)'>Save</button><video src='clips/local.mp4'></video></body></html>"+
+ "<!-- fixture size must satisfy the REAL watchdog's 500-byte minimum: "+ "x"*540+" -->").encode()
 def generator():
  return ('def write_html(events):\n'
    '    html = """<title>Camera Security</title>'+VIDEO+
