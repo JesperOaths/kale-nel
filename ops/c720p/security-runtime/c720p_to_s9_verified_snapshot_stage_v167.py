@@ -120,6 +120,11 @@ def candidates():
         result[name]=(p,video,st)
     if not 1<=len(result)<=MAX_FILES:
         raise RuntimeError("snapshot_inventory_missing_or_too_large")
+    # Physical C720P index currently contains six imported MP4s with six
+    # separate JPEGs. Refuse partial 5/6 inventory promotion; later new
+    # MP4 imports remain handled independently under this same lower bound.
+    if len(imported)>=6 and len(result)<6:
+        raise RuntimeError("legacy_six_jpeg_snapshot_parity_incomplete")
     if sum(st.st_size for _,_,st in result.values())>TOTAL_MAX_BYTES:
         raise RuntimeError("snapshot_inventory_bytes_outside_bounds")
     return dict(sorted(result.items()))
