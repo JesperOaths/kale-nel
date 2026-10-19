@@ -22,6 +22,9 @@ import tempfile
 import urllib.request
 
 JS=Path("/opt/homeassistant/config/www/frontyard-security-new/security-people-v45.js")
+PAGE=JS.with_name("security-people-v50.html")
+PAGE_SITE="http://127.0.0.1:8123/local/frontyard-security-new/security-people-v50.html"
+JS_ROUTE="security-people-v45.js?v=reviewed-osnet-v1-20261019"
 BACKUP=Path("/home/jespern/c720p-home-hub/backups/s9-reviewed-osnet-suggestions-v1")
 SITE="http://127.0.0.1:8123/local/frontyard-security-new/security-people-v45.js"
 API="http://127.0.0.1:8795"
@@ -92,6 +95,16 @@ MODEL_JS=r"""
 """
 
 def hash_bytes(payload):return hashlib.sha256(payload).hexdigest()
+
+def patch_page(old):
+    txt=old.decode("utf-8")
+    route=re.compile(r"security-people-v45[.]js[?]v=[A-Za-z0-9._-]+")
+    hits=route.findall(txt)
+    if len(hits)!=1:raise RuntimeError("Cannot safely locate exact person JS cache link")
+    result=txt.replace(hits[0],JS_ROUTE,1).encode("utf-8")
+    for marker in (b"People",b"Review recordings",b"security-people-v45.js"):
+        if marker not in result:raise RuntimeError("Unexpected People & Faces page")
+    return result,result!=old
 
 def patch(old):
     txt=old.decode("utf-8")
@@ -192,8 +205,11 @@ def main():
     parser.add_argument("--apply",action="store_true")
     args=parser.parse_args()
     if not JS.is_file() or JS.is_symlink():raise RuntimeError("Unsafe live JS preimage")
+    if not PAGE.is_file() or PAGE.is_symlink():raise RuntimeError("Unsafe live People page")
     old=JS.read_bytes();owner=JS.stat()
+    old_page=PAGE.read_bytes();page_owner=PAGE.stat()
     result,changed=patch(old)
+    page_result,page_changed=patch_page(old_page)
     smoke_source(result.decode("utf-8"))
     archive=json.loads(http(API+"/new/api/saved",4200000))
     originals={r.get("clip_no") for r in archive.get("events",[])
@@ -202,46 +218,63 @@ def main():
     served_before=http(SITE+"?before="+hash_bytes(old)[:12])
     if hash_bytes(served_before)!=hash_bytes(old):
         raise RuntimeError("Served JS differs from disk preimage")
+    served_page=http(PAGE_SITE+"?before="+hash_bytes(old_page)[:12])
+    if served_page!=old_page:raise RuntimeError("Live HTML differs from disk")
     sample=json.loads(http(API+"/new/api/appearance-multivector?clip="+
       json.loads(Path("/home/jespern/c720p-home-hub/state/s9-multivector-crop-map-v1.json").read_text())["rows"][0]["clip"],200000))
     if sample.get("ok") is not True or sample.get("model_sha256")!=MODEL_SHA or not sample.get("results"):
         raise RuntimeError("S9 model scoring endpoint unavailable")
-    report={"changed":changed,"baseline_sha256":hash_bytes(old),
+    report={"changed":changed,"html_changed":page_changed,
+            "baseline_sha256":hash_bytes(old),
             "new_sha256":hash_bytes(result),
+            "new_html_sha256":hash_bytes(page_result),
             "sd_originals_preserved":len(originals),
             "model_rankings_verified":len(sample["results"]),
             "camera_apk_modified":False,"recordings_modified":False,
             "assignments_modified":False,"service_restarted":False}
     print("S9_REVIEWED_OSNET_SUGGESTIONS_PREFLIGHT "+json.dumps(report),flush=True)
     if not args.apply:return
-    if not changed:
+    if not changed and not page_changed:
+        if http(SITE+"?osnet="+hash_bytes(result)[:16])!=result or http(PAGE_SITE+"?osnet=1")!=page_result:
+            raise RuntimeError("Idempotent JS or HTML served bytes differ")
         print("S9_REVIEWED_OSNET_SUGGESTIONS_LIVE_VERIFIED "+json.dumps({**report,"already":True}),flush=True)
         return
     BACKUP.mkdir(parents=True,mode=0o700,exist_ok=True)
-    backup=BACKUP/(dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")+".js")
-    with backup.open("xb") as f:
-        f.write(old);f.flush();os.fsync(f.fileno())
-    os.chmod(backup,0o600)
-    if backup.read_bytes()!=old or JS.read_bytes()!=old:
-        raise RuntimeError("Preimage changed; deployment aborted")
+    tag=dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    backup=BACKUP/(tag+".js")
+    backup_page=BACKUP/(tag+".html")
+    for file,payload in ((backup,old),(backup_page,old_page)):
+        with file.open("xb") as f:
+            f.write(payload);f.flush();os.fsync(f.fileno())
+        os.chmod(file,0o600)
+    if backup.read_bytes()!=old or backup_page.read_bytes()!=old_page or JS.read_bytes()!=old or PAGE.read_bytes()!=old_page:
+        raise RuntimeError("Live preimage changed or backup failed")
+    touched=[]
     try:
-        put(JS,result,owner)
-        if JS.read_bytes()!=result:
-            raise RuntimeError("Readback source mismatch")
+        if changed:put(JS,result,owner);touched.append("javascript")
+        if page_changed:put(PAGE,page_result,page_owner);touched.append("html")
+        if JS.read_bytes()!=result or PAGE.read_bytes()!=page_result:
+            raise RuntimeError("Source readback mismatch")
         served=http(SITE+"?osnet="+hash_bytes(result)[:16])
-        if served!=result:raise RuntimeError("Served JS source mismatch")
+        served_html=http(PAGE_SITE+"?osnet="+hash_bytes(page_result)[:16])
+        if served!=result or served_html!=page_result:
+            raise RuntimeError("Home Assistant served different JS or HTML")
         new_catalog=json.loads(http(API+"/new/api/saved",4200000))
         after={r.get("clip_no") for r in new_catalog.get("events",[])
                if isinstance(r,dict)}
         if not originals.issubset(after):
             raise RuntimeError("Existing SD originals became unavailable")
         print("S9_REVIEWED_OSNET_SUGGESTIONS_LIVE_VERIFIED "+json.dumps({
-            **report,"backup":str(backup),
-            "served_sha256":hash_bytes(served),"recordings_after":len(after),
+            **report,"backup":str(backup),"html_backup":str(backup_page),
+            "served_sha256":hash_bytes(served),
+            "html_served_sha256":hash_bytes(served_html),"recordings_after":len(after),
             "automatic_identifications_created":False}),flush=True)
     except BaseException:
-        try:put(JS,old,owner)
-        except Exception:print("S9_REVIEWED_OSNET_SUGGESTIONS_MANUAL_RESTORE_REQUIRED",flush=True)
+        try:
+            if "javascript" in touched:put(JS,old,owner)
+            if "html" in touched:put(PAGE,old_page,page_owner)
+        except Exception:
+            print("S9_REVIEWED_OSNET_SUGGESTIONS_MANUAL_RESTORE_REQUIRED",flush=True)
         print("S9_REVIEWED_OSNET_SUGGESTIONS_ROLLED_BACK",flush=True)
         raise
 
