@@ -319,7 +319,7 @@ def work():
         atomic(QUEUE,doc);journal(candidate["status"],candidate["last_reason"])
     return {"status":candidate["status"],"revision":doc["revision"],
          "attempts":candidate["attempts"],"tally":aggregate(doc["rows"]),
-         "verified_secondary":bool(candidate.get("outcome",{}).get("verified_secondary_report"))}
+         "verified_secondary":bool((candidate.get("outcome") or {}).get("verified_secondary_report"))}
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("action",choices=("produce","work","status"))
