@@ -73,7 +73,7 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["outcome"]["sampled_frames"],3)
   derived=json.loads(self.secondary.read_text())
   self.assertEqual(derived["recordings"][0]["clip_no"],original["clip_no"])
-  self.assertEqual(derived["queue_revision"],v.items()["revision"]-1)
+  self.assertEqual(derived["queue_revision"],v.items()["revision"])
   self.assertEqual(derived["identity_inference_performed"],False)
   self.assertEqual(v.produce()["new_admissions"],0)
   self.assertEqual(v.items()["rows"][0]["status"],"completed")
