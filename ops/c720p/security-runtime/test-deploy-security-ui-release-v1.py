@@ -53,8 +53,8 @@ class ReleaseTests(unittest.TestCase):
         self.dashboard.write_bytes(release.encoded(self.doc))
         self.before={str(p):p.read_bytes() for p in [*self.targets.values(),self.dashboard]}
 
-    def digest(self):
-        plan,_=release.prepare(self.stage)
+    def digest(self,release_key=release.cache.RELEASE):
+        plan,_=release.prepare(self.stage,release_key)
         return release.sha(release.encoded(plan))
 
     def test_preflight_is_read_only_and_deterministic(self):
@@ -135,6 +135,50 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(receipt['state'],'apply_failed_code_rollback')
         self.assertIn(str(self.dashboard),receipt['restored'])
         self.assertFalse(receipt['concurrent_conflicts_preserved'])
+
+    def test_new_release_apply_rollback_then_original_default_rollback(self):
+        original=release.apply(self.stage,self.digest())
+        legacy_bytes={str(p):p.read_bytes() for p in [*self.targets.values(),self.dashboard]}
+        key='component-health-20261020-v1'
+        self.manifest['release']=key
+        for item in self.manifest['files']:
+            target=Path(item['target']);new=('new component health '+item['staged']).encode()
+            item['before_sha256']=release.sha(target.read_bytes())
+            item['after_sha256']=release.sha(new)
+            (self.stage/item['staged']).write_bytes(new)
+        (self.stage/'manifest.json').write_bytes(release.encoded(self.manifest))
+        plan,_=release.prepare(self.stage,key)
+        self.assertEqual(plan['release'],key)
+        self.assertNotEqual(plan['release'],original['release'])
+        current=release.apply(self.stage,self.digest(key),key)
+        self.assertEqual(current['release'],key)
+        patched=json.loads(self.dashboard.read_bytes())
+        self.assertEqual(patched,release.cache.patch_dashboard(json.loads(legacy_bytes[str(self.dashboard)]),release=key))
+        self.assertIn('v='+key,patched['data']['config']['views'][1]['cards'][0]['url'])
+        release.rollback(current['receipt'],key)
+        self.assertEqual(legacy_bytes,{str(p):p.read_bytes() for p in [*self.targets.values(),self.dashboard]})
+        # Default rollback must still accept the original continuity receipt.
+        release.rollback(original['receipt'])
+        self.assertEqual(self.before,{str(p):p.read_bytes() for p in [*self.targets.values(),self.dashboard]})
+
+    def test_release_mismatch_and_invalid_keys_refuse_before_mutation(self):
+        key='component-health-20261020-v1'
+        self.manifest['release']=key
+        (self.stage/'manifest.json').write_bytes(release.encoded(self.manifest))
+        for wrong in (release.cache.RELEASE,'different-reviewed-release'):
+            with self.subTest(wrong=wrong):
+                with self.assertRaisesRegex(RuntimeError,'invalid_release_manifest'):
+                    release.apply(self.stage,self.digest(key),wrong)
+                self.assertFalse(self.backups.exists())
+        for invalid in ('bad&other=value','../unsafe',True,None):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(ValueError,'invalid_security_release_key'):
+                    release.prepare(self.stage,invalid)
+        current=release.apply(self.stage,self.digest(key),key)
+        applied={str(p):p.read_bytes() for p in [*self.targets.values(),self.dashboard]}
+        with self.assertRaisesRegex(RuntimeError,'rollback_receipt_contract_changed'):
+            release.rollback(current['receipt'])
+        self.assertEqual(applied,{str(p):p.read_bytes() for p in [*self.targets.values(),self.dashboard]})
 
 
 if __name__=='__main__':unittest.main()

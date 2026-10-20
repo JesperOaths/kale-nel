@@ -62,9 +62,10 @@ def differences(before, after, path=()):
     return [] if before == after else [path]
 
 
-def dashboard_bytes(raw):
+def dashboard_bytes(raw, release_key=cache.RELEASE):
+    cache.validate_release(release_key)
     before = json.loads(raw)
-    after = cache.patch_dashboard(before)
+    after = cache.patch_dashboard(before, release=release_key)
     changed = differences(before, after)
     if changed:
         if len(changed) != 1:
@@ -79,20 +80,21 @@ def dashboard_bytes(raw):
         old, new = before, after
         for key in path:
             old, new = old[key], new[key]
-        if new != cache.release_url(old, cache.ENTRY):
+        if new != cache.release_url(old, cache.ENTRY, release=release_key):
             raise RuntimeError('unexpected_dashboard_url_change')
         return encoded(after), [list(path)]
     # An already released dashboard retains its exact original serialization.
     return raw, []
 
 
-def prepare(stage):
+def prepare(stage, release_key=cache.RELEASE):
+    cache.validate_release(release_key)
     stage = Path(stage).resolve(strict=True)
     if not stage.is_dir():
         raise RuntimeError('invalid_stage_directory')
     manifest_raw, _ = read_regular(stage/'manifest.json', 100_000)
     manifest = json.loads(manifest_raw)
-    if (not isinstance(manifest, dict) or manifest.get('release') != cache.RELEASE
+    if (not isinstance(manifest, dict) or manifest.get('release') != release_key
             or not isinstance(manifest.get('files'), list) or len(manifest['files']) != len(NAMES)):
         raise RuntimeError('invalid_release_manifest')
     prepared, entries = {}, []
@@ -117,12 +119,12 @@ def prepare(stage):
     if set(prepared) != set(NAMES):
         raise RuntimeError('missing_release_target')
     old, metadata = read_regular(DASHBOARD)
-    new, paths = dashboard_bytes(old)
+    new, paths = dashboard_bytes(old, release_key)
     prepared[DASHBOARD.name] = {'path':DASHBOARD, 'old':old, 'new':new, 'metadata':metadata}
     entries.append({'target':str(DASHBOARD), 'backup_name':DASHBOARD.name,
                     'before_sha256':sha(old), 'after_sha256':sha(new),
                     'changed':old != new, 'metadata':metadata})
-    plan = {'schema':SCHEMA, 'release':cache.RELEASE, 'manifest_sha256':sha(manifest_raw),
+    plan = {'schema':SCHEMA, 'release':release_key, 'manifest_sha256':sha(manifest_raw),
             'deployer_sha256':sha(Path(__file__).read_bytes()),
             'cache_helper_sha256':sha(Path(cache.__file__).read_bytes()),
             'files':sorted(entries, key=lambda x:x['target']), 'dashboard_changed_paths':paths,
@@ -187,14 +189,14 @@ def rollback_entries(entries, backup):
     return restored, conflicts
 
 
-def apply(stage, expected_plan_sha256):
-    plan, prepared = prepare(stage)
+def apply(stage, expected_plan_sha256, release_key=cache.RELEASE):
+    plan, prepared = prepare(stage, release_key)
     digest = sha(encoded(plan))
     if digest != expected_plan_sha256:
         raise RuntimeError('release_plan_changed')
     changed = [e for e in plan['files'] if e['changed']]
     if not changed:
-        return {'release':cache.RELEASE, 'state':'already_applied', 'plan_sha256':digest,
+        return {'release':release_key, 'state':'already_applied', 'plan_sha256':digest,
                 'services_restarted':False, 'restart_required':False}
     if BACKUPS.is_symlink():
         raise RuntimeError('unsafe_backup_root')
@@ -209,7 +211,7 @@ def apply(stage, expected_plan_sha256):
             raise RuntimeError('concurrent_edit_before_backup:' + item['path'].name)
         private_write(backup/entry['backup_name'], item['old'])
     private_write(backup/'plan.json', encoded(plan))
-    receipt = {'schema':SCHEMA, 'release':cache.RELEASE, 'state':'prepared',
+    receipt = {'schema':SCHEMA, 'release':release_key, 'state':'prepared',
                'created_at_utc':dt.datetime.now(dt.timezone.utc).isoformat(),
                'plan_sha256':digest, 'backup':str(backup), 'files':plan['files'],
                'dashboard_changed_paths':plan['dashboard_changed_paths'],
@@ -237,7 +239,8 @@ def apply(stage, expected_plan_sha256):
         raise
 
 
-def rollback(receipt_path):
+def rollback(receipt_path, release_key=cache.RELEASE):
+    cache.validate_release(release_key)
     receipt_path = Path(receipt_path)
     resolved = receipt_path.resolve(strict=True)
     if (receipt_path.is_symlink() or resolved.name != 'receipt.json'
@@ -249,7 +252,8 @@ def rollback(receipt_path):
     receipt = json.loads(receipt_raw)
     plan_raw, _ = read_regular(resolved.parent/'plan.json')
     plan = json.loads(plan_raw)
-    if (receipt.get('schema') != SCHEMA or receipt.get('release') != cache.RELEASE
+    if (receipt.get('schema') != SCHEMA or receipt.get('release') != release_key
+            or plan.get('schema') != SCHEMA or plan.get('release') != release_key
             or receipt.get('backup') != str(resolved.parent)
             or sha(encoded(plan)) != receipt.get('plan_sha256') or receipt.get('files') != plan.get('files')):
         raise RuntimeError('rollback_receipt_contract_changed')
@@ -270,26 +274,29 @@ def rollback(receipt_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--stage', type=Path)
+    parser.add_argument('--release', default=cache.RELEASE,
+                        help='Explicit reviewed release/cache key; defaults to the original continuity release')
     parser.add_argument('--expected-plan-sha256')
     parser.add_argument('--apply', action='store_true')
     parser.add_argument('--rollback', type=Path)
     args = parser.parse_args()
+    cache.validate_release(args.release)
     if args.rollback:
         if args.stage or args.apply or args.expected_plan_sha256:
             parser.error('--rollback cannot be combined with stage/apply')
-        result = rollback(args.rollback)
+        result = rollback(args.rollback, args.release)
         print(json.dumps(result, sort_keys=True))
         return 2 if result['concurrent_conflicts_preserved'] else 0
     if not args.stage:
         parser.error('--stage is required')
-    plan, _ = prepare(args.stage)
+    plan, _ = prepare(args.stage, args.release)
     digest = sha(encoded(plan))
     if not args.apply:
         print(json.dumps({'plan_sha256':digest, 'plan':plan}, sort_keys=True))
         return 0
     if not args.expected_plan_sha256 or not SHA.fullmatch(args.expected_plan_sha256):
         parser.error('--apply requires the reviewed --expected-plan-sha256')
-    print(json.dumps(apply(args.stage, args.expected_plan_sha256), sort_keys=True))
+    print(json.dumps(apply(args.stage, args.expected_plan_sha256, args.release), sort_keys=True))
     return 0
 
 
