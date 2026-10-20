@@ -18,12 +18,17 @@ SD=STATE/"s9-standalone-archive-catalog-v1.json"
 DRIVE=STATE/"drive-security-archive.json"
 MARK="SECURITY_MANUAL_DIGEST_INVENTORY_TASK21 "
 
-def read(path,max_bytes):
+def read(path,max_bytes,private=True):
  if path.is_symlink() or not path.is_file():
   raise RuntimeError("private_source_missing")
  before=path.stat()
- if (not stat.S_ISREG(before.st_mode) or before.st_size>max_bytes
-     or before.st_size<3 or before.st_mode&0o077):
+ # Only the manual REVIEW store and append-only audit require 0600.
+ # Existing read-only camera/Drive catalogues may be 0644. Refuse
+ # group/world write bits even on those metadata catalogues.
+ forbidden=0o077 if private else 0o022
+ if (not stat.S_ISREG(before.st_mode) or before.st_nlink!=1
+     or before.st_size>max_bytes or before.st_size<3
+     or before.st_mode&forbidden):
   raise RuntimeError("private_source_untrusted")
  raw=path.read_bytes()
  after=path.stat()
@@ -97,7 +102,8 @@ def count(manual,sd,drive):
 def inventory():
  original=read(MANUAL,600000)
  journal=read(AUDIT,2500000) if AUDIT.exists() else b""
- sd_raw=read(SD,5000000);drive_raw=read(DRIVE,6000000)
+ sd_raw=read(SD,5000000,private=False)
+ drive_raw=read(DRIVE,6000000,private=False)
  result=count(json.loads(original),json.loads(sd_raw),json.loads(drive_raw))
  result["audit_log_line_count"]=len(journal.splitlines())
  if read(MANUAL,600000)!=original or (
