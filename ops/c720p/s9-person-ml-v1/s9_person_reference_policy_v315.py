@@ -30,6 +30,7 @@ CATALOG=ROOT/"s9-standalone-archive-catalog-v1.json"
 VERSION=1
 MAX_ENTRIES=2000
 CLIP=re.compile(r"motion_[0-9]{13}\.mp4\Z")
+FACE=re.compile(r"motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2]\.jpg\Z")
 HASH=re.compile(r"[0-9a-f]{64}\Z")
 FOLDER=re.compile(r"[A-Za-z0-9_-]{1,100}\Z")
 KEY_VERSION="s9_exact_face_reference_v315"
@@ -53,7 +54,9 @@ def initial():
     return obj
 def read_state():
     if REGISTRY.is_symlink():raise Invalid("reference_registry_symlink")
-    if not REGISTRY.exists():return initial()
+    if not REGISTRY.exists():
+        require(not AUDIT.exists(),"orphaned_revocation_audit_requires_manual_recovery")
+        return initial()
     st=REGISTRY.stat()
     require(st.st_size<2000000 and st.st_size>50 and st.st_mode&0o077==0,
             "reference_registry_permissions_or_size_invalid")
@@ -84,6 +87,28 @@ def read_state():
            "invalid_revocation_audit")
     require(d.get("active_generation")==generation(d["decisions"]),
             "reference_index_generation_drift")
+    # Explicit tombstones cannot be undone by rolling only the registry back
+    # while leaving the durable audit head. Crash between audit+state sync also
+    # REFUSES all proposals until reconciled, rather than reviving a person.
+    require(not AUDIT.is_symlink() and AUDIT.is_file()
+       and AUDIT.stat().st_size<1000000,"reference_audit_history_unavailable")
+    last=None;line_count=0
+    for line in AUDIT.read_text().splitlines():
+        try:entry=json.loads(line)
+        except (TypeError,ValueError):
+            raise Invalid("reference_audit_history_corrupt") from None
+        line_count+=1
+        require(type(entry.get("revision")) is int
+          and entry["revision"]==line_count
+          and exact_sha(entry.get("reference_id"))
+          and exact_sha(entry.get("active_generation"))
+          and entry.get("event") in
+           ("exact_face_human_approved","exact_face_reference_revoked"),
+          "reference_audit_nonmonotonic")
+        last=entry
+    require(line_count==d["revision"] and line_count>0
+      and last["active_generation"]==d["active_generation"],
+      "reference_audit_head_does_not_match_registry")
     return d
 
 def original_source(catalog,clip):
@@ -115,7 +140,7 @@ def active_person(clip,folder,manual):
     # a SPECIFIC person. Never infer a face from a generic group assignment.
     return True
 
-def source_crop(clip,face_digest,events):
+def source_crop(clip,face_digest,model_digest,events):
     if not isinstance(events,list):raise Invalid("native_face_catalog_untrusted")
     event=next((x for x in events if isinstance(x,dict)
                 and x.get("clip_no")==clip),None)
@@ -125,6 +150,17 @@ def source_crop(clip,face_digest,events):
     for face in event.get("face_candidates",[]):
         if not isinstance(face,dict):continue
         if face.get("snapshot_sha256")!=face_digest:continue
+        # Do NOT mistake a face-content JPEG or torso descriptor for a
+        # native aligned identity embedding. Both model and vector digest
+        # must have genuine on-phone signed provenance.
+        require(face.get("embedding_verified_on_s9") is True and
+           face.get("face_embedding_model_sha256")==model_digest and
+           exact_sha(face.get("face_embedding_sha256")),
+           "native_aligned_identity_embedding_unavailable")
+        snap=face.get("snapshot_name")
+        require(isinstance(snap,str) and FACE.fullmatch(snap)
+           and snap.startswith(clip[:-4]+"__"),
+           "face_snapshot_name_not_original_bound")
         require(face.get("snapshot_on_s9") is not False and
             face.get("face_crop_requires_manual_review") is False and
             face.get("face_crop_padded_context_only") is False and
@@ -154,7 +190,7 @@ def new_reference(body,manual,catalog,events,prior):
       "reference_identifiers_invalid")
     active_person(clip,folder,manual)
     source_sha,revision=original_source(catalog,clip)
-    source_crop(clip,digest,events)
+    source_crop(clip,digest,model,events)
     ident=make_id(clip,folder,digest,source_sha,revision,model)
     require(not any(x["id"]==ident for x in prior["decisions"]),
            "prior_reference_or_revocation_must_not_reenroll")
@@ -236,7 +272,7 @@ def valid_active(registry,manual,catalog,events):
             sha,revision=original_source(catalog,item["clip"])
             require(sha==item["original_sha256"] and revision==item["media_revision"],
                     "source_revision_changed_after_manual_confirmation")
-            source_crop(item["clip"],item["face_sha256"],events)
+            source_crop(item["clip"],item["face_sha256"],item["model_sha256"],events)
             by_id[item["id"]]=item
         except Invalid:pass
     return by_id
