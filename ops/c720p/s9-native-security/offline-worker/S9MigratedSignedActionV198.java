@@ -7,6 +7,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 import javax.crypto.Mac;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
@@ -33,6 +34,7 @@ public final class S9MigratedSignedActionV198 implements AutoCloseable {
     private static final Pattern HEX64=Pattern.compile("[a-f0-9]{64}");
     private static final Pattern HEX32=Pattern.compile("[a-f0-9]{32}");
     private final byte[] secret;
+    private final SecretKey signingKey;
     private boolean closed;
 
     /** Immutable parsed request; parser MUST reject duplicate/unknown fields. */
@@ -73,6 +75,20 @@ public final class S9MigratedSignedActionV198 implements AutoCloseable {
         if (key==null || key.length<32)
             throw new IOException("authenticated_relay_action_key_missing");
         secret=Arrays.copyOf(key,key.length);
+        signingKey=new SecretKeySpec(secret,"HmacSHA256");
+    }
+
+    /**
+     * Future app-private Android Keystore signer. Never export raw HMAC key
+     * bytes. The owning service must separately enforce caller identity,
+     * stable wall-clock confidence, authority and key-domain separation.
+     * No key is provisioned, installed or exposed by this class.
+     */
+    public S9MigratedSignedActionV198(SecretKey key)throws IOException {
+        if(key==null || !"HmacSHA256".equalsIgnoreCase(key.getAlgorithm()))
+            throw new IOException("authenticated_relay_keystore_hmac_required");
+        secret=null;
+        signingKey=key;
     }
 
     public synchronized Verified verify(Request r,long trustedPhoneMillis)
@@ -116,7 +132,7 @@ public final class S9MigratedSignedActionV198 implements AutoCloseable {
     }
     private String signBody(Request r)throws GeneralSecurityException {
         Mac h=Mac.getInstance("HmacSHA256");
-        h.init(new SecretKeySpec(secret,"HmacSHA256"));
+        h.init(signingKey);
         byte[] raw=h.doFinal(canonical(r).getBytes(StandardCharsets.US_ASCII));
         char[] alphabet="0123456789abcdef".toCharArray();
         char[] chars=new char[raw.length*2];
@@ -131,6 +147,7 @@ public final class S9MigratedSignedActionV198 implements AutoCloseable {
         return signBody(request);
     }
     @Override public synchronized void close() {
-        Arrays.fill(secret,(byte)0);closed=true;
+        if(secret!=null)Arrays.fill(secret,(byte)0);
+        closed=true;
     }
 }
