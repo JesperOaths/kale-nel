@@ -47,6 +47,8 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
     private final Path ledger;
     private final Path lockFile;
     private final byte[] key;
+    // AndroidKeyStore HMAC signer stays under OS-managed key ownership.
+    private final javax.crypto.SecretKey nonExportableSigningKey;
     private boolean closed;
 
     public static final class Receipt {
@@ -149,8 +151,22 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
 
     public S9MigratedMetadataLedgerV193(File privateMetadataDirectory, byte[] suppliedKey)
             throws IOException {
-        if (suppliedKey == null || suppliedKey.length < 32)
-            throw new IOException("ledger_key_missing");
+        this(privateMetadataDirectory,suppliedKey,null);
+    }
+
+    /** For the future app-owned Keystore context; no raw secret export. */
+    public S9MigratedMetadataLedgerV193(File privateMetadataDirectory,
+            javax.crypto.SecretKey signingKey) throws IOException {
+        this(privateMetadataDirectory,null,signingKey);
+    }
+
+    private S9MigratedMetadataLedgerV193(File privateMetadataDirectory,
+            byte[] suppliedKey,javax.crypto.SecretKey signingKey)
+            throws IOException {
+        if ((suppliedKey == null && (signingKey == null ||
+                !"HmacSHA256".equalsIgnoreCase(signingKey.getAlgorithm()))) ||
+            (suppliedKey != null && (suppliedKey.length < 32 || signingKey != null)))
+            throw new IOException("ledger_key_missing_or_unsupported");
         if (privateMetadataDirectory == null)
             throw new IOException("private_ledger_directory_missing");
         Path dir = privateMetadataDirectory.toPath();
@@ -161,7 +177,8 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
         ensureFile(ledger); ensureFile(lockFile);
         if (Files.size(ledger) > MAX_LOG_BYTES || Files.size(lockFile) != 0)
             throw new IOException("ledger_storage_untrusted");
-        key = Arrays.copyOf(suppliedKey, suppliedKey.length);
+        key = suppliedKey == null ? null : Arrays.copyOf(suppliedKey,suppliedKey.length);
+        nonExportableSigningKey=signingKey;
     }
 
     private static void ensureFile(Path file) throws IOException {
@@ -327,7 +344,8 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
     }
     private String hmac(String data) throws GeneralSecurityException {
         Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(key, "HmacSHA256"));
+        mac.init(nonExportableSigningKey != null ? nonExportableSigningKey
+                : new SecretKeySpec(key, "HmacSHA256"));
         return hex(mac.doFinal(data.getBytes(StandardCharsets.UTF_8)));
     }
     private static String sha256(String data) {
@@ -351,6 +369,8 @@ public final class S9MigratedMetadataLedgerV193 implements AutoCloseable {
         char[] out=new char[count];Arrays.fill(out,c);return new String(out);
     }
     @Override public synchronized void close() {
-        Arrays.fill(key,(byte)0);closed=true;
+        if(key!=null)Arrays.fill(key,(byte)0);
+        // AndroidKeyStore secret ownership remains with the OS, not this caller.
+        closed=true;
     }
 }
