@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 STATE=Path("/home/jespern/c720p-home-hub/state")
 SOURCE=STATE/"s9-auto-person-face-proposals-v1.json"
+REFERENCES=STATE/"s9-qualified-face-references-v1.json"
 REJECTED=STATE/"s9-auto-person-rejections-v1.json"
 LOCK=STATE/"s9-auto-person-rejections-v1.lock"
 AUDIT=STATE/"s9-auto-person-rejections-v1.audit.jsonl"
@@ -36,6 +37,44 @@ def state():
   raise ValueError("invalid_denials")
  return d
 
+def qualified_reference_index(model_sha,required_generation):
+ # Authoritative independent reviewer-approved aligned-face reference registry.
+ # An absent/incomplete registry means NO Automatic Person suggestions.
+ # Revoked evidence remains recorded; only active rows are eligible.
+ if REFERENCES.is_symlink():raise ValueError("unsafe_face_reference_index")
+ if not REFERENCES.is_file():return None
+ if REFERENCES.stat().st_size>1500000:raise ValueError("oversized_face_reference_index")
+ doc=json.loads(REFERENCES.read_text())
+ if (doc.get("schema")!="s9_qualified_face_references_v1"
+     or type(doc.get("generation")) is not int
+     or doc["generation"]<1 or doc["generation"]!=required_generation
+     or doc.get("model_sha256")!=model_sha):
+  raise ValueError("stale_or_unverified_face_reference_generation")
+ rows=doc.get("references")
+ if not isinstance(rows,list) or len(rows)>2500:
+  raise ValueError("invalid_qualified_face_reference_rows")
+ active={};all_ids=set()
+ for item in rows:
+  if not isinstance(item,dict):raise ValueError("invalid_reference_record")
+  rid=item.get("id")
+  if not isinstance(rid,str) or not HASH.fullmatch(rid) or rid in all_ids:
+   raise ValueError("duplicate_or_invalid_face_reference_id")
+  all_ids.add(rid)
+  if (item.get("model_sha256")!=model_sha
+      or not FOLDER.fullmatch(str(item.get("folder","")))
+      or not CLIP.fullmatch(str(item.get("source_name","")))
+      or not HASH.fullmatch(str(item.get("original_sha256","")))
+      or not HASH.fullmatch(str(item.get("human_decision_sha256","")))
+      or type(item.get("active")) is not bool
+      or type(item.get("human_approved")) is not bool
+      or type(item.get("aligned_face")) is not bool
+      or type(item.get("quality_passed")) is not bool):
+   raise ValueError("unqualified_face_reference_provenance")
+  if (item["active"] and item["human_approved"] and
+      item["aligned_face"] and item["quality_passed"]):
+   active[rid]=item["folder"]
+ return active
+
 def proposals():
  if SOURCE.is_symlink():raise ValueError("unsafe_proposals_path")
  if not SOURCE.is_file():return [],"face_embedding_index_not_ready"
@@ -45,6 +84,11 @@ def proposals():
   raise ValueError("unverified_face_model")
  rows=doc.get("suggestions")
  if not isinstance(rows,list) or len(rows)>2500:raise ValueError("invalid_proposals")
+ generation=doc.get("reference_generation")
+ if type(generation) is not int or generation<1:
+  return [],"qualified_face_reference_generation_missing"
+ refs=qualified_reference_index(doc["model_sha256"],generation)
+ if refs is None:return [],"qualified_face_reference_index_not_ready"
  verified=[];seen=set()
  for x in rows:
   if not isinstance(x,dict):continue
@@ -54,6 +98,13 @@ def proposals():
   if x.get("aligned_face") is not True or x.get("human_confirmed_reference") is not True:continue
   if x.get("pair_score_origin")!="s9_local_exact_face_pair_score_v1":continue
   if type(x.get("reference_count"))!=int or x["reference_count"]<2:continue
+  source_ids=x.get("reference_ids")
+  if (not isinstance(source_ids,list) or len(source_ids)<2
+      or len(source_ids)!=x["reference_count"]
+      or len(set(str(value) for value in source_ids))!=len(source_ids)
+      or any(not isinstance(ref,str) or not HASH.fullmatch(ref)
+          or refs.get(ref)!=x["folder"] for ref in source_ids)):
+   continue
   if type(x.get("score")) not in (int,float) or type(x.get("margin")) not in (int,float):continue
   if not 0.84<=x["score"]<=1 or not 0.08<=x["margin"]<=1:continue
   digest=hashlib.sha256(("sd|"+x["name"]+"|"+x["folder"]+"|"+
