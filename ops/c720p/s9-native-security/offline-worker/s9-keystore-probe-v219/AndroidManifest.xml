@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="nl.kalenel.s9keyprobev219">
+  <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28"/>
+  <application android:allowBackup="false" android:usesCleartextTraffic="false"
+      android:label="Temporary S9 Keystore Test">
+    <receiver android:name=".KeyProbe" android:exported="true">
+      <intent-filter>
+        <action android:name="nl.kalenel.s9keyprobev219.CHECK"/>
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>
