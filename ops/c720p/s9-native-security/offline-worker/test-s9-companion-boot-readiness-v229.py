@@ -27,7 +27,7 @@ class Tests(unittest.TestCase):
      str(ROOT/x) for x in PREREQS]
    compiled=subprocess.run(args,capture_output=True,text=True,timeout=45)
    self.assertEqual(compiled.returncode,0,
-     "prior_authenticated_six_state_java8_compilation_failed")
+     "prior_authenticated_six_state_java8_compilation_failed: "+compiled.stderr)
    executed=subprocess.run(["java","-cp",out,
      "nl.kalenel.s9offline.S9MigratedReadOnlyStateTestV225"],
       capture_output=True,text=True,timeout=35)
