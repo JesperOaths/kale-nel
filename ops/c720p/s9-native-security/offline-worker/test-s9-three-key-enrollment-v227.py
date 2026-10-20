@@ -28,7 +28,15 @@ class FirstEnrollment(unittest.TestCase):
   self.assertIn('"nl.kalenel.s9migrated.journal.hmac.v202"',prior)
   self.assertIn('"nl.kalenel.s9migrated.checkpoint.hmac.v202"',core)
   self.assertIn('"nl.kalenel.s9migrated.journal.hmac.v202"',core)
-  self.assertIn('"nl.kalenel.s9migrated.source-manifest.hmac.v227"',core)
+  self.assertIn('"nl.kalenel.s9migrated.source_manifest.hmac.v227"',core)
+  import re
+  custodian=(ROOT/"S9MigratedManifestKeyCustodyV227.java").read_text()
+  source=re.search(r'public static final String SOURCE="([^"]+)"',core)
+  existing=re.search(r'public static final String SOURCE_MANIFEST_ALIAS=\\s*"([^"]+)"',custodian)
+  self.assertIsNotNone(source)
+  self.assertIsNotNone(existing)
+  self.assertEqual(source.group(1),existing.group(1),
+                   "Source enrollment and read-only custody must use the same actual Android alias")
  def test_no_remote_media_mutations_or_automatic_rollback(self):
   core=(ROOT/"S9MigratedThreeKeyEnrollmentV227.java").read_text()
   android=(ROOT/"S9MigratedAndroidThreeKeyOwnerV227.java").read_text()
