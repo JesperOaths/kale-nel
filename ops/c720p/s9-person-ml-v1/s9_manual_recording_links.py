@@ -9,6 +9,7 @@ but the new overlay is authoritative for the People & Faces UI. No media writes.
 from pathlib import Path
 import datetime as dt
 import fcntl
+import importlib.util
 import json
 import os
 import re
@@ -31,6 +32,16 @@ FOLDER=re.compile(r"[A-Za-z0-9_-]{1,100}\Z")
 ORIGINS={"https://kalenel.nl","https://www.kalenel.nl",
          "http://localhost","http://127.0.0.1",
          "http://localhost:8123","http://127.0.0.1:8123"}
+
+def binding_protocol():
+ # Import only when a separately verified original-byte attestor is installed.
+ # Historical/manual legacy entry points cannot silently demand a new service.
+ path=Path(__file__).with_name("s9_manual_media_digest_binding_v1.py")
+ if path.is_symlink() or not path.is_file():
+  raise RuntimeError("trusted_original_binding_module_missing")
+ spec=importlib.util.spec_from_file_location("manual_original_binding_v1",path)
+ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+ return module
 
 def initial():return {"version":1,"revision":0,"items":{}}
 
@@ -81,7 +92,7 @@ def report():
  return {"ok":True,"revision":data["revision"],"items":data["items"],
    "manual_links_only":True,"automatic_identity_matching":False}
 
-def mutate(body,sd_names):
+def mutate(body,sd_names,attestor=None,require_binding=False):
  if not isinstance(body,dict):
   return 400,{"ok":False,"error":"wrong_fields"}
  multi=body.get("action")=="assign_many"
@@ -120,11 +131,29 @@ def mutate(body,sd_names):
    return 409,{"ok":False,"error":"review_revision_changed"}
   key=source+":"+name
   old=before["items"].get(key)
+  # A verified current/previous binding can NEVER be silently discarded
+  # by the legacy writer. New original-byte proof is opt-in until the
+  # separately trusted SD+Drive byte-hash attestor has physically passed.
+  if attestor is None and (require_binding or
+      isinstance(old,dict) and "media_binding" in old):
+   return 503,{"ok":False,"error":"independent_media_digest_required"}
+  binding=None
+  if attestor is not None:
+   try:
+    binding_module_=binding_protocol()
+    binding=binding_module_.bind_new_decision(source,name,attestor)
+    binding_module_.require_unchanged(binding,attestor)
+   except (OSError,ValueError,RuntimeError) as error:
+    return 503,{"ok":False,"error":"original_digest_unavailable"}
+   except Exception as error:
+    # Includes stale/replaced original revision, with no state mutation.
+    return 409,{"ok":False,"error":"original_digest_or_revision_unverified"}
   entry={"folder":selected[0] if selected else None,
          "folders":selected,
          "source":source,"name":name,
          "review_status":{"assign":"assigned","assign_many":"assigned",
                           "return_to_queue":"inbox","skip":"skipped","reject":"rejected"}[action]}
+  if binding is not None:entry["media_binding"]=binding
   updated={"version":1,"revision":before["revision"]+1,
            "items":{**before["items"],key:entry}}
   log={"at":dt.datetime.now(dt.timezone.utc).isoformat(),"source":source,
@@ -133,6 +162,7 @@ def mutate(body,sd_names):
        "manual":True,"action":action,"from_review_status":
        old.get("review_status") if isinstance(old,dict) else None,
        "to_review_status":entry["review_status"]}
+  if binding is not None:log["media_binding"]=binding
   try:
    atomic(updated)
    fd=os.open(AUDIT,os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW,0o600)
@@ -149,9 +179,10 @@ def mutate(body,sd_names):
   return 200,{"ok":True,"revision":updated["revision"],"source":source,"name":name,
     "folder":entry["folder"],"folders":list(selected),
     "review_status":entry["review_status"],
-    "persisted":True,"manual_links_only":True}
+    "persisted":True,"manual_links_only":True,
+    "media_binding_status":"bound" if binding is not None else "historically_unbound"}
 
-def install(H,sd_names):
+def install(H,sd_names,attestor=None,require_binding=False):
  previous_get=H.go
  previous_post=H.do_POST
  def get(self):
@@ -177,7 +208,7 @@ def install(H,sd_names):
    size=int(self.headers.get("Content-Length","0"))
    if not 35<=size<=1400:raise ValueError("body_size")
    body=json.loads(self.rfile.read(size))
-   code,result=mutate(body,sd_names())
+   code,result=mutate(body,sd_names(),attestor=attestor,require_binding=require_binding)
    self.js(code,result)
   except (ValueError,TypeError,RuntimeError,OSError):
    self.js(400,{"ok":False,"error":"invalid_manual_assignment"})
