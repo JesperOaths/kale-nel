@@ -1,0 +1,30 @@
+name: C720P corroborated ephemeral TLS UTC V234 (source only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/c720p-correlated-tls-utc-v234.py'
+      - 'ops/c720p/security-runtime/test-c720p-correlated-tls-utc-v234.py'
+      - '.github/workflows/c720p-correlated-tls-utc-v234.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/c720p-correlated-tls-utc-v234.py'
+      - 'ops/c720p/security-runtime/test-c720p-correlated-tls-utc-v234.py'
+      - '.github/workflows/c720p-correlated-tls-utc-v234.yml'
+permissions:
+  contents: read
+jobs:
+  verify-trusted-time-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify no signature relaxation, clock changes, or uncorrelated signing time
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/c720p-correlated-tls-utc-v234.py"
+          python3 "$d/test-c720p-correlated-tls-utc-v234.py"
+          python3 "$d/test-audit-c720p-signed-action-clock-v226.py"
+          echo C720P_CORRELATED_TLS_UTC_V234_SOURCE_ONLY_VERIFIED
