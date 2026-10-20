@@ -17,6 +17,7 @@ PREREQS=[
  "S9MigratedVerifiedSourceV198.java",
  "S9MigratedSealedSourceManifestV216.java",
  "S9MigratedReadOnlyStateV225.java",
+ "S9MigratedReadOnlyStateEnvelopeV229.java",
  "S9MigratedReadOnlyStateTestV225.java",
 ]
 
