@@ -17,6 +17,7 @@ class QueueTest(unittest.TestCase):
   self.root=Path(self.t.name);self.state=self.root/"queue";self.state.mkdir()
   self.catalog=self.root/"catalog.json";self.report=self.root/"report.json"
   self.secondary=self.root/"gap.json";self.lock=self.root/"s9lock";self.lock.touch()
+  self.image_lock=self.root/"image-worker.lock";self.image_lock.touch()
   self.orig={};self.rows=[]
   for i in range(4):
    name=f"motion_{1792000000000+i*1000}.mp4"
@@ -36,7 +37,8 @@ class QueueTest(unittest.TestCase):
    patch.object(v,"REPORT",self.report),
    patch.object(v,"ARCHIVE",self.catalog),
    patch.object(v,"SECONDARY",self.secondary),
-   patch.object(v,"CROSS_LOCK",self.lock)]
+   patch.object(v,"CROSS_LOCK",self.lock),
+   patch.object(v,"IMAGE_LOCK",self.image_lock)]
   for x in self.patch:x.start();self.addCleanup(x.stop)
   self.store()
  def store(self):
