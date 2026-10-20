@@ -5,6 +5,7 @@ on:
       - 'ops/c720p/security-runtime/audit-s9-true-joint-timing-v151.py'
       - 'ops/c720p/security-runtime/test-audit-s9-true-joint-timing-v151.py'
       - '.github/workflows/s9-true-joint-timing-v151.yml'
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -31,7 +32,7 @@ jobs:
           python3 "$d/test-s9-7s-saved-timing-proof-v1.py"
   physical:
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
