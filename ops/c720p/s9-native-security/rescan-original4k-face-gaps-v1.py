@@ -19,6 +19,12 @@ import subprocess
 import time
 
 MODULE = Path(__file__).resolve().parents[1] / 's9-person-ml-v1/s9_evidence_quality_v1.py'
+# Installed C720P runtime keeps the pre-existing evidence module in bin/.
+# Never download or substitute an untrusted model at worker import time.
+if not MODULE.is_file():
+    installed = Path('/home/jespern/c720p-home-hub/bin/s9_evidence_quality_v1.py')
+    if installed.is_file() and not installed.is_symlink():
+        MODULE = installed
 spec = importlib.util.spec_from_file_location('evidence', MODULE)
 q = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(q)
