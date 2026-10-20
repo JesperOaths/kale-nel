@@ -106,6 +106,27 @@ public final class S9MigratedReadOnlyStateTestV225 {
                afterDelete.journalHeadSha256.equals(deleted.trustedHeadSha256) &&
                afterDelete.rows.get(NAMES[0]).status.equals("deleted_tombstone"),
                "latest_delete_not_historical_save");
+            String challenge=rep('c',32);
+            String envelope=new String(
+                S9MigratedReadOnlyStateEnvelopeV229.encodeVerified(
+                    afterDelete,challenge),StandardCharsets.US_ASCII);
+            ok(envelope.contains("\\"schema\\":\\"s9_c720p_migrated_readonly_state_v229\\"")
+                && envelope.contains("\\"challenge\\":\\""+challenge+"\\"")
+                && envelope.contains("\\"journalSequence\\":2")
+                && envelope.contains("\\"allowsSaveDelete\\":false")
+                && envelope.contains("\\"allowsOriginalRemoval\\":false")
+                && envelope.contains("\\"provesVideoAvailability\\":false")
+                && envelope.contains("\\"state\\":\\"deleted_tombstone\\"")
+                && envelope.contains("\\"state\\":\\"no_remote_decision\\""),
+                "canonical_envelope_never_overstates_remote_state");
+            denied(()->S9MigratedReadOnlyStateEnvelopeV229.encodeVerified(
+                    afterDelete,"client-controlled-unsafe"),"invalid_client_challenge");
+            denied(()->S9MigratedReadOnlyStateEnvelopeV229.encodeVerified(
+                    null,challenge),"missing_source_and_journal_state");
+            ok(!S9MigratedReadOnlyStateEnvelopeV229.hasNetworkListener()
+                && !S9MigratedReadOnlyStateEnvelopeV229.canMutateSavedState()
+                && !S9MigratedReadOnlyStateEnvelopeV229.canRemoveOriginal(),
+                "no_transport_or_original_removal_authority");
             try {
                 afterDelete.rows.clear();
                 throw new AssertionError("snapshot_map_mutable");
