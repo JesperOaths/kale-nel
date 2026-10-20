@@ -66,6 +66,51 @@ public final class S9MigratedDualStoreCommitV197 implements AutoCloseable {
         this(privateInternalDir,microSdLedgerDir,independentInternalKey,
              microSdLedgerKey,false,null);
     }
+    /**
+     * Future Android-app-owned route: pass two distinct non-exportable
+     * HmacSHA256 signing handles, never raw key bytes or browser credentials.
+     * Keystore alias custody and app authentication belong to the caller.
+     * Like the byte[] production constructor, genesis remains forbidden.
+     */
+    public S9MigratedDualStoreCommitV197(File privateInternalDir,File microSdLedgerDir,
+            javax.crypto.SecretKey independentInternalKey,
+            javax.crypto.SecretKey microSdLedgerKey)throws IOException {
+        if (privateInternalDir==null || microSdLedgerDir==null ||
+                independentInternalKey==null || microSdLedgerKey==null ||
+                independentInternalKey==microSdLedgerKey ||
+                independentInternalKey.equals(microSdLedgerKey) ||
+                !"HmacSHA256".equalsIgnoreCase(independentInternalKey.getAlgorithm()) ||
+                !"HmacSHA256".equalsIgnoreCase(microSdLedgerKey.getAlgorithm()))
+            throw new IOException("independent_keystore_hmac_handles_required");
+        Path internal=privateInternalDir.toPath();
+        Path external=microSdLedgerDir.toPath();
+        if (Files.isSymbolicLink(internal) || Files.isSymbolicLink(external)
+                || !Files.isDirectory(internal,LinkOption.NOFOLLOW_LINKS)
+                || !Files.isDirectory(external,LinkOption.NOFOLLOW_LINKS)
+                || internal.toRealPath().equals(external.toRealPath()))
+            throw new IOException("separate_trusted_store_directories_required");
+        serviceLock=internal.resolve(LOCK_NAME);
+        if (Files.isSymbolicLink(serviceLock)
+                || !Files.isRegularFile(serviceLock,LinkOption.NOFOLLOW_LINKS)
+                || Files.size(serviceLock)!=0)
+            throw new IOException("preprovisioned_coordinator_lock_required");
+        syntheticGenesisOnly=false;
+        afterJournalHook=null;
+        S9MigratedMetadataLedgerV193 j=null;
+        S9MigratedLedgerTrustedCheckpointV196 c=null;
+        try {
+            j=new S9MigratedMetadataLedgerV193(microSdLedgerDir,microSdLedgerKey);
+            c=new S9MigratedLedgerTrustedCheckpointV196(privateInternalDir,
+                                                         independentInternalKey);
+        } catch(IOException error) {
+            if(j!=null)j.close();
+            if(c!=null)c.close();
+            throw error;
+        }
+        journal=j;
+        checkpoint=c;
+    }
+
     /** Synthetic host-only provisioning / fault injection; not a live route. */
     S9MigratedDualStoreCommitV197(File privateInternalDir,File microSdLedgerDir,
             byte[] independentInternalKey,byte[] microSdLedgerKey,
