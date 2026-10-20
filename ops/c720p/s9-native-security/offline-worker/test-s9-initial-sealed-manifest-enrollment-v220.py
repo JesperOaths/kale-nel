@@ -34,8 +34,7 @@ class Tests(unittest.TestCase):
      "initial_manifest_historical_total_mismatch",
      "firstEnrollmentAuthority.approvesVirginBatch",
      "verifyExisting(","OWNER_READ","OWNER_WRITE",
-     "INITIAL_SEALED_ENROLLMENT" if False else "Initial"):
-   if required=="Initial":continue
+     "initial_manifest_readback_invalid"):
    self.assertIn(required,source)
   for forbidden in ("Files.move(", "REPLACE_EXISTING","KeyGenerator",
      "KeyStore.getInstance(", "Files.walk(", "Socket(",
