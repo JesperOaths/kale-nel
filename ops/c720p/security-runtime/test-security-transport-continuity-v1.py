@@ -36,6 +36,33 @@ m.install(Handler)
 
 
 class Tests(unittest.TestCase):
+    def test_component_health_is_authenticated_read_only_local_metadata(self):
+        payload = {"ok": True, "schema_version": "security_component_health_v1", "components": {}}
+        with patch.object(m.component_health, "build", return_value=payload) as reader, \
+                patch.object(m.urllib.request, "urlopen") as network:
+            for head, auth, status in ((False, False, 401), (True, True, 405)):
+                h = Handler(m.HEALTH, authenticated=auth)
+                h.go(head); self.assertEqual(h.status, status)
+            reader.assert_not_called()
+            h = Handler(m.HEALTH + "?auth=consumed")
+            h.go(); self.assertEqual(h.status, 200)
+            self.assertEqual(json.loads(h.wfile.getvalue()), payload)
+            self.assertEqual(h.response_headers["Cache-Control"], "private, no-store")
+            reader.assert_called_once_with(); network.assert_not_called()
+            post = Handler(m.HEALTH); post.do_POST(); self.assertEqual(post.status, 404)
+
+    def test_component_health_rejects_queries_before_reading(self):
+        for query in ("?file=secret", "?auth=a&auth=b", "?refresh=1", "?clip=motion_1792000000000.mp4"):
+            with self.subTest(query=query), patch.object(m.component_health, "build") as reader:
+                h = Handler(m.HEALTH + query); h.go()
+                self.assertEqual(h.status, 400); reader.assert_not_called()
+
+    def test_component_health_never_emits_oversize_or_nonfinite_payload(self):
+        for payload in ({"value": "x" * 32768}, {"value": float('nan')}):
+            with patch.object(m.component_health, "build", return_value=payload):
+                h = Handler(m.HEALTH); h.go()
+                self.assertEqual(h.status, 502); self.assertEqual(h.wfile.getvalue(), b"")
+
     def test_truncated_upstream_fails_before_sending_success(self):
         class Response:
             status = 200

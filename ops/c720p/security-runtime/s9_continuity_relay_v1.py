@@ -10,13 +10,16 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import s9_security_component_health_v1 as component_health
+
 VERSION = "security_transport_continuity_v1"
+HEALTH = "/new/api/security-component-health"
 CLIP = re.compile(r"motion_[0-9]{13}[.]mp4\Z")
 RECOVERY = re.compile(r"/new/saved/recovery/clip/motion_[0-9]{13}[.]mp4[.](?:preroll|complete)[.]mp4\Z")
 JSON_ROUTES = frozenset((
     "/new/api/appearance-multivector", "/new/api/appearance-multivector-v3",
     "/new/api/appearance-search", "/new/api/automatic-person",
-    "/new/api/evidence-quality", "/new/api/s9-auxiliary-recovery",
+    "/new/api/evidence-quality", "/new/api/s9-auxiliary-recovery", HEALTH,
 ))
 AUTO = "/new/api/automatic-person"
 INTENT = "human-automatic-person-denial-v1"
@@ -73,6 +76,10 @@ def send_json(handler, request):
             status = response.status
     except (OSError, ValueError, TypeError, TimeoutError, http.client.HTTPException):
         return handler.empty(502)
+    return write_json(handler, status, raw)
+
+
+def write_json(handler, status, raw):
     try:
         handler.send_response(status)
         handler.cors()
@@ -86,6 +93,17 @@ def send_json(handler, request):
         # The status may already be sent. A client closing its tab must never
         # receive a second HTTP response or turn into an upstream failure.
         handler.close_connection = True
+
+
+def send_health(handler):
+    try:
+        raw = json.dumps(component_health.build(), allow_nan=False,
+                         separators=(",", ":")).encode("utf-8")
+        if len(raw) > 32768:
+            raise ValueError("oversize_component_health")
+    except (OSError, ValueError, TypeError):
+        return handler.empty(502)
+    return write_json(handler, 200, raw)
 
 
 def install(H):
@@ -114,6 +132,8 @@ def install(H):
             suffix = query_for(path, url.query)
         except ValueError:
             return self.empty(400)
+        if path == HEALTH:
+            return send_health(self)
         return send_json(self, urllib.request.Request("http://127.0.0.1:8795" + path + suffix))
 
     def post(self):

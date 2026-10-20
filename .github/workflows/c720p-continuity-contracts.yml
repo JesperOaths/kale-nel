@@ -5,6 +5,10 @@ on:
       - 'ops/c720p/security-runtime/s9_continuity_relay_v1.py'
       - 'ops/c720p/security-runtime/patch-security-transport-continuity-v1.py'
       - 'ops/c720p/security-runtime/test-security-transport-continuity-v1.py'
+      - 'ops/c720p/security-runtime/s9_security_component_health_v1.py'
+      - 'ops/c720p/security-runtime/test-security-component-health-v1.py'
+      - 'ops/c720p/security-runtime/deploy-security-component-health-v1.py'
+      - 'ops/c720p/security-runtime/test-deploy-security-component-health-v1.py'
       - 'ops/c720p/security-runtime/deploy-security-continuity-v1.py'
       - 'ops/c720p/security-runtime/deploy-security-ui-release-v1.py'
       - 'ops/c720p/security-runtime/test-deploy-security-ui-release-v1.py'
@@ -18,6 +22,8 @@ on:
       - 'ops/c720p/s9-native-security/tests/fixtures/security-ui-continuity-v1/**'
       - 'ops/c720p/s9-native-security/patch-security-review-lifecycle-v1.py'
       - 'ops/c720p/s9-native-security/test-security-review-lifecycle*'
+      - 'ops/c720p/s9-native-security/patch-security-component-health-ui-v1.py'
+      - 'ops/c720p/s9-native-security/test-security-component-health-ui*'
       - 'ops/c720p/s9-native-security/tests/fixtures/security-review-lifecycle-v1/**'
       - 'ops/c720p/s9-native-security/security-archive-v7.html'
       - 'ops/c720p/s9-native-security/security-hub-v30.js'
@@ -41,6 +47,10 @@ on:
       - 'ops/c720p/security-runtime/s9_continuity_relay_v1.py'
       - 'ops/c720p/security-runtime/patch-security-transport-continuity-v1.py'
       - 'ops/c720p/security-runtime/test-security-transport-continuity-v1.py'
+      - 'ops/c720p/security-runtime/s9_security_component_health_v1.py'
+      - 'ops/c720p/security-runtime/test-security-component-health-v1.py'
+      - 'ops/c720p/security-runtime/deploy-security-component-health-v1.py'
+      - 'ops/c720p/security-runtime/test-deploy-security-component-health-v1.py'
       - 'ops/c720p/security-runtime/deploy-security-continuity-v1.py'
       - 'ops/c720p/security-runtime/deploy-security-ui-release-v1.py'
       - 'ops/c720p/security-runtime/test-deploy-security-ui-release-v1.py'
@@ -54,6 +64,8 @@ on:
       - 'ops/c720p/s9-native-security/tests/fixtures/security-ui-continuity-v1/**'
       - 'ops/c720p/s9-native-security/patch-security-review-lifecycle-v1.py'
       - 'ops/c720p/s9-native-security/test-security-review-lifecycle*'
+      - 'ops/c720p/s9-native-security/patch-security-component-health-ui-v1.py'
+      - 'ops/c720p/s9-native-security/test-security-component-health-ui*'
       - 'ops/c720p/s9-native-security/tests/fixtures/security-review-lifecycle-v1/**'
       - 'ops/c720p/s9-native-security/security-archive-v7.html'
       - 'ops/c720p/s9-native-security/security-hub-v30.js'
@@ -81,11 +93,14 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - run: |
           python3 -B ops/c720p/security-runtime/test-security-transport-continuity-v1.py
+          python3 -B ops/c720p/security-runtime/test-security-component-health-v1.py
+          python3 -B ops/c720p/security-runtime/test-deploy-security-component-health-v1.py
           python3 -B ops/c720p/security-runtime/test-screen-motion-contract-v1.py
           python3 -B ops/c720p/s9-native-security/test-security-ui-continuity-v1.py
           python3 -B ops/c720p/security-runtime/test-security-cache-release-v1.py
           python3 -B ops/c720p/security-runtime/test-deploy-security-ui-release-v1.py
           python3 -B ops/c720p/s9-native-security/test-security-review-lifecycle-v1.py
+          python3 -B ops/c720p/s9-native-security/test-security-component-health-ui-v1.py
           python3 -B ops/c720p/s9-native-security/test-native-garden-phone-status.py
           python3 -B ops/c720p/s9-native-security/test-phone-detector-version-contract.py
           python3 -B ops/c720p/s9-person-ml-v1/test-s9-storage-status-v15.py

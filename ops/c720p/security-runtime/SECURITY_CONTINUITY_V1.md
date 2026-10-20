@@ -104,6 +104,60 @@ receipt/plan and restores only unchanged release bytes; conflicting independent
 edits are preserved and reported. The operator then restarts/rechecks HA as
 needed. Container backups are private under `/config/.security-ui-release-backups/`.
 
+## Shared component health
+
+`GET /new/api/security-component-health` uses the existing authenticated LAN
+relay. Its fixed local reader projects three existing private metadata reports:
+infrastructure, recognition evidence coverage and saved timing proof. It starts
+no worker, generates no report, reads no media and changes no review. HEAD is
+rejected with 405, POST has no health mutation route, and unsigned LAN access
+receives 401. Responses are private/no-store and contain no recording names,
+person IDs, hashes, raw report paths or arbitrary producer text.
+
+Every component has its own `current`, `stale` or `unavailable` status, source
+timestamp and age. Infrastructure/evidence become stale after 30 minutes; saved
+timing after three hours. Missing, unsafe, malformed or incompatible reports
+produce unavailable fields set to null. A stale report retains its historical
+values with its age. Report freshness does not establish healthy capture or a
+verified identity. Saved timing completion requires joint same-recording
+prefix/tail evidence with the producer's freshness guard and at least three
+paired recordings; this structural proof does not verify rendered playback.
+
+`../s9-native-security/patch-security-component-health-ui-v1.py` appends one
+self-contained UI block to the fresh hub script, preserving the original bytes
+as an exact prefix. Separate System status panels appear in Live and Controls;
+the capture badge remains independent. They share a monotonic one-minute
+request budget, pause when both panes or the document are hidden, prevent
+overlapping requests and bound each read to ten seconds. Unknown measurement
+coverage stays unreported; a measured zero is shown as zero.
+
+`deploy-security-component-health-v1.py` accepts exactly the reader and relay
+modules plus a digest-approved verification helper. Default preflight is
+read-only. Apply retains private backups, rechecks target hashes immediately
+before writing, restarts only the LAN relay, checks authorization/read-only
+routes and verifies original coverage/manual state. Failure rolls back only
+this dependency pair when neither file has an independent concurrent edit.
+
+```text
+python3 deploy-security-component-health-v1.py --stage <private-stage> --manifest-sha256 <reviewed-manifest-digest>
+python3 deploy-security-component-health-v1.py --stage <private-stage> --manifest-sha256 <reviewed-manifest-digest> --apply
+```
+
+After backend verification, use the existing pure cache helper and seven-file
+UI deployer with an explicit reviewed key, consistently for preflight, apply
+and rollback. For this release the key is `component-health-20261020-v1`:
+
+```text
+python3 deploy-security-ui-release-v1.py --stage <private-container-stage> --release component-health-20261020-v1
+python3 deploy-security-ui-release-v1.py --stage <private-container-stage> --release component-health-20261020-v1 --apply --expected-plan-sha256 <reviewed-plan-digest>
+python3 deploy-security-ui-release-v1.py --rollback <private-backup>/receipt.json --release component-health-20261020-v1
+```
+
+This summary exposes existing reports; it does not repair low storage, enable
+clock synchronization, add rescan scheduling, complete face/gait pipelines or
+prove every browser workflow. Keep fresh input snapshots, manifests and receipts
+outside the repository; commit only source, synthetic tests and documentation.
+
 ## Verification and handling artifacts
 
 The unified `c720p-continuity-contracts.yml` workflow validates transport,
