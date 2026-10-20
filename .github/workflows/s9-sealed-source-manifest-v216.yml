@@ -40,7 +40,7 @@ jobs:
             "$d/S9MigratedSealedSourceManifestTestV216.java"
           java -cp "$work" nl.kalenel.s9offline.S9MigratedSealedSourceManifestTestV216
           python3 "$d/test-s9-sealed-manifest-source-v216.py"
-          python3 "$d/test-s9-source-sha-verifier-v198.py"
+          python3 "$d/test-s9-migrated-source-v198.py"
       - name: Android 10 API28 DEX source compilation without phone access
         run: |
           set -euo pipefail
