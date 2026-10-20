@@ -1,0 +1,55 @@
+name: S9 first HMAC-sealed six-source manifest enrollment V220 (source only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedSealedManifestEnrollmentV220.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedSealedManifestEnrollmentTestV220.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-initial-sealed-manifest-enrollment-v220.py'
+      - '.github/workflows/s9-sealed-initial-enrollment-v220.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedSealedManifestEnrollmentV220.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedSealedManifestEnrollmentTestV220.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-initial-sealed-manifest-enrollment-v220.py'
+      - '.github/workflows/s9-sealed-initial-enrollment-v220.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Java8 create-only sealed manifest and tamper/rollback refusal
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 "$d/test-s9-initial-sealed-manifest-enrollment-v220.py"
+          python3 "$d/test-s9-sealed-manifest-source-v216.py"
+          python3 "$d/test-s9-migrated-source-v198.py"
+          echo S9_GENESIS_V220_SOURCE_ONLY_NO_PHONE_INSTALL
+      - name: Compile existing and new offline source into Android API 28 DEX
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          dex="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$jar" && test -x "$dex"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          mkdir -p "$work/classes" "$work/dex"
+          javac -source 8 -target 8 -cp "$jar" -d "$work/classes" \
+            "$d/S9MigratedMetadataLedgerV193.java" \
+            "$d/S9MigratedLedgerTrustedCheckpointV196.java" \
+            "$d/S9MigratedDualStoreCommitV197.java" \
+            "$d/S9MigratedVerifiedSourceV198.java" \
+            "$d/S9MigratedSealedSourceManifestV216.java" \
+            "$d/S9MigratedSealedManifestEnrollmentV220.java"
+          "$dex" --min-api 28 --output "$work/dex" $(find "$work/classes" -name '*.class' -print)
+          test -s "$work/dex/classes.dex"
+          echo S9_GENESIS_V220_ANDROID_API28_COMPILE_ONLY
