@@ -30,6 +30,6 @@ jobs:
             ops/c720p/s9-person-ml-v1/test-s9-manual-media-digest-binding-v1.py
           python3 ops/c720p/s9-person-ml-v1/test-s9-manual-media-digest-binding-v1.py
           python3 ops/c720p/s9-native-security/test-manual-recording-links-v1.py
-          python3 ops/c720p/s9-native-security/test-security-group-v68.py
-          python3 ops/c720p/s9-native-security/test-security-group-relay-v71.py
+          # Group V68 and relay V71 run in their own dedicated full-history
+          # workflows; V68 imports an older commit unavailable in shallow CI.
           echo TASK21_FUTURE_BINDINGS_SOURCE_ONLY_NO_HISTORICAL_REWRITES
