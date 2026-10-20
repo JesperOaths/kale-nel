@@ -1,0 +1,59 @@
+name: S9 create-only Android HMAC first enrollment V227 (host-only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedThreeKeyEnrollmentV227.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedThreeKeyEnrollmentTestV227.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedAndroidThreeKeyOwnerV227.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-three-key-enrollment-v227.py'
+      - '.github/workflows/s9-three-key-enrollment-v227.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedThreeKeyEnrollmentV227.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedThreeKeyEnrollmentTestV227.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedAndroidThreeKeyOwnerV227.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-three-key-enrollment-v227.py'
+      - '.github/workflows/s9-three-key-enrollment-v227.yml'
+permissions:
+  contents: read
+jobs:
+  host_synthetic_and_android_dex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Reject key rollback, re-enrollment, crash gaps and malformed authorization
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 -m py_compile "$d/test-s9-three-key-enrollment-v227.py"
+          python3 "$d/test-s9-three-key-enrollment-v227.py"
+          python3 "$d/test-s9-initial-sealed-manifest-enrollment-v220.py"
+          python3 "$d/test-s9-existing-keystore-v202.py"
+          echo "S9_V227_THREE_KEY_ENROLLMENT_SOURCE_ONLY_NO_KEYS_INSTALLED"
+      - name: Compile Android API28 production implementation without phone
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security/offline-worker
+          jar="$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -1)"
+          d8="$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -1)"
+          test -s "$jar" && test -x "$d8"
+          stage="$(mktemp -d)"
+          trap 'rm -rf "$stage"' EXIT
+          mkdir -p "$stage/classes" "$stage/dex"
+          javac -source 8 -target 8 -cp "$jar" -d "$stage/classes" \
+            "$root/S9MigratedThreeKeyEnrollmentV227.java" \
+            "$root/S9MigratedAndroidThreeKeyOwnerV227.java"
+          "$d8" --min-api 28 --output "$stage/dex" $(find "$stage/classes" -name '*.class' -print)
+          python3 - "$stage/dex/classes.dex" <<'PY'
+          from pathlib import Path
+          import sys
+          binary=Path(sys.argv[1]).read_bytes()
+          assert binary.startswith(b'dex\n') and 1500<len(binary)<750000
+          print("S9_V227_ANDROID_HMAC_OWNER_API28_DEX_OK",len(binary))
+          PY
