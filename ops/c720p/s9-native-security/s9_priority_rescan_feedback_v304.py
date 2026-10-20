@@ -25,6 +25,7 @@ import shutil
 import tempfile
 import time
 import urllib.request
+import urllib.error
 
 HOME=Path("/home/jespern/c720p-home-hub")
 STATE=HOME/"state/s9-priority-rescan-v304"
@@ -256,25 +257,66 @@ def publish(record,doc):
        "generated_at":dt.datetime.now(dt.timezone.utc).isoformat(),
        "original_archive_recordings":len(source()[1]),
        "recordings":list(previous.values()),
-       "source_sha256_verified_before_processing":True,
+       "source_sha256_verified_before_processing":False,
+       "source_sha256_bound_to_private_catalog_before_processing":True,
        "queue_revision":doc["revision"]+1,"human_review_required":True,
        "identity_inference_performed":False,
        "original_recordings_modified":False,
        "review_decisions_modified":False}
     atomic(SECONDARY,new)
     return new
-def work():
-    doc=items();candidate=None
+
+def consumer_visible(record):
+    """Require the real /new/api/evidence-quality reader to expose this revision."""
+    with urllib.request.urlopen(
+            "http://127.0.0.1:8795/new/api/evidence-quality",timeout=12) as response:
+        check(response.status==200,"secondary_consumer_http_failed")
+        body=response.read(6000001)
+    check(len(body)<=6000000,"secondary_consumer_payload_unbounded")
+    payload=json.loads(body)
+    gap=payload.get("original_gap_benchmark")
+    check(payload.get("ok") is True and isinstance(gap,dict) and
+          gap.get("analysis_version")==ANALYSIS and
+          gap.get("detector_model_sha256")==MODEL_SHA,
+          "secondary_consumer_not_reading_current_report")
+    rows=gap.get("recordings")
+    check(isinstance(rows,list) and any(
+          item.get("clip_no")==record["clip_no"] and
+          item.get("source_sha256")==record["source_sha256"] and
+          item.get("source_revision")==record["source_revision"] and
+          item.get("model_sha256")==record["model_sha256"] and
+          isinstance(item.get("samples"),list) and len(item["samples"])==3
+          for item in rows if isinstance(item,dict)),
+          "source_bound_secondary_result_not_visible")
+    return True
+
+def recover_expired_lease(doc):
+    changed=0
     for row in doc["rows"]:
-        if row["status"]=="processing" and row.get("lease_until",0)<now():
+        if row["status"]=="processing" and row.get("lease_until",0)<=now():
             row["status"]="pending" if row["attempts"]<MAX_ATTEMPTS else "dead_letter"
             row["last_reason"]="previous_worker_lease_expired"
             row["lease_until"]=0
+            row["next_attempt_at"]=(
+                now()+min(6*3600,60*2**max(0,row["attempts"]-1))
+                if row["status"]=="pending" else 0)
+            changed+=1
+    if changed:
+        doc["revision"]+=1
+        atomic(QUEUE,doc)
+        journal("recovered_expired_leases","bounded_requeue_or_dead_letter")
+    return changed
+
+def work():
+    doc=items();candidate=None
+    recovered=recover_expired_lease(doc)
+    for row in doc["rows"]:
         if (candidate is None and row["status"]=="pending" and
                 row.get("next_attempt_at",0)<=now()):
             candidate=row
     if candidate is None:
         return {"status":"no_runnable_originals","revision":doc["revision"],
+           "recovered_expired_leases":recovered,
            "tally":aggregate(doc["rows"])}
     # Acquire source/camera locks BEFORE taking a lease.
     check(CROSS_LOCK.is_file() and not CROSS_LOCK.is_symlink(),
@@ -294,14 +336,16 @@ def work():
         atomic(QUEUE,doc);journal("processing","source_and_model_pinned")
         try:
             evidence=evaluate_one(candidate)
+            publish(evidence,doc)
+            consumer_visible(evidence)
             candidate["outcome"]={
               "sampled_frames":len(evidence["samples"]),
               "supported_face_observations":sum(len(x["face_candidates"])
                      for x in evidence["samples"]),
               "source_revision":candidate["media_revision"],
               "model_sha256":MODEL_SHA,
-              "verified_secondary_report":True}
-            publish(evidence,doc)
+              "verified_secondary_report":True,
+              "consumer_visibility_confirmed":True}
             candidate["status"]="completed"
             candidate["last_reason"]="verified_secondary_original_gap_evidence_published"
         except Exception as err:
@@ -311,8 +355,10 @@ def work():
             if cause in ("original_no_longer_eligible","source_changed_during_rescan",
                 "source_revision_changed_after_analysis","model_version_changed_since_admission"):
                 candidate["status"]="rejected"
-            elif cause=="camera_battery_thermal_recording_or_worker_exclusion":
+            elif cause=="camera_battery_thermal_recording_or_worker_exclusion" or isinstance(err, (urllib.error.URLError, TimeoutError, ConnectionError)):
                 candidate["status"]="pending";candidate["attempts"]-=1
+                if cause=="analysis_failed_or_unavailable":
+                    cause="temporary_source_or_consumer_transport_unavailable"
             elif candidate["attempts"]>=MAX_ATTEMPTS:
                 candidate["status"]="dead_letter"
             else:
@@ -320,11 +366,14 @@ def work():
             candidate["last_reason"]=cause
             candidate["next_attempt_at"]=now()+min(6*3600,60*2**max(0,candidate["attempts"]-1))
         candidate["lease_until"]=0
+        if candidate["status"]!="completed":
+            candidate["outcome"]=None
         doc["revision"]+=1
         atomic(QUEUE,doc);journal(candidate["status"],candidate["last_reason"])
     return {"status":candidate["status"],"revision":doc["revision"],
          "attempts":candidate["attempts"],"tally":aggregate(doc["rows"]),
-         "verified_secondary":bool((candidate.get("outcome") or {}).get("verified_secondary_report"))}
+         "verified_secondary":bool((candidate.get("outcome") or {}).get("verified_secondary_report")),
+         "consumer_visibility_confirmed":bool((candidate.get("outcome") or {}).get("consumer_visibility_confirmed"))}
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("action",choices=("produce","work","status"))
