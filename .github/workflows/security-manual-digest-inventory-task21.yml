@@ -1,0 +1,75 @@
+name: Task 21 read-only physical manual digest coverage inventory
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-manual-digest-coverage-task21.py'
+      - 'ops/c720p/security-runtime/test-audit-manual-digest-coverage-task21.py'
+      - '.github/workflows/security-manual-digest-inventory-task21.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-manual-digest-coverage-task21.py'
+      - 'ops/c720p/security-runtime/test-audit-manual-digest-coverage-task21.py'
+      - '.github/workflows/security-manual-digest-inventory-task21.yml'
+permissions:
+  contents: read
+concurrency:
+  group: security-manual-digest-inventory-task21
+  cancel-in-progress: false
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate historical SD/Drive digest classifications without bytes
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/audit-manual-digest-coverage-task21.py"
+          python3 "$d/test-audit-manual-digest-coverage-task21.py"
+  physical:
+    needs: synthetic
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read authoritative C720P review source metadata only and report aggregate counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          src=ops/c720p/security-runtime/audit-manual-digest-coverage-task21.py
+          sha="$(sha256sum "$src" | cut -d' ' -f1)"
+          stage="/tmp/task21-manual-digest-${GITHUB_SHA:0:12}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+          cmd="umask 077 && curl -fsSL --max-time 35 '$url' -o '$stage' && printf '%s  %s\\n' '$sha' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage' --run"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="task21-manual-digest-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task21-manual-digest-inventory','diagnostic',:'cmd',190,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "TASK21_MANUAL_DIGEST_AUDIT_JOB=$job"
+          for attempt in $(seq 1 58); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'SECURITY_MANUAL_DIGEST_INVENTORY_TASK21' <<< "$output"
+              grep -q '"historical_digest_backfilled": false' <<< "$output"
+              grep -q '"original_bytes_hashed_in_this_audit": 0' <<< "$output"
+              grep -q '"reviews_or_media_changed": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Manual source integrity inventory not verified";exit 1
