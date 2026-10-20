@@ -114,7 +114,15 @@ if __name__=="__main__":
  else:
   try:
    print(MARK+json.dumps(inventory(),sort_keys=True),flush=True)
-  except Exception:
+  except Exception as error:
+   # Never log private paths, filenames, person IDs or raw exception strings.
+   known={"private_source_missing","private_source_untrusted",
+    "private_source_changed_during_read","manual_review_registry_invalid",
+    "source_catalog_unavailable","manual_entry_malformed",
+    "manual_source_key_malformed","concurrent_manual_writer_changed_state"}
+   reason=str(error)
+   if reason not in known:reason="unclassified_no_private_detail"
    print("SECURITY_MANUAL_DIGEST_INVENTORY_NOT_VERIFIED "+json.dumps({
-    "historical_writes":False,"original_bytes_read":0},sort_keys=True),flush=True)
+    "reason_code":reason,"historical_writes":False,
+    "original_bytes_read":0},sort_keys=True),flush=True)
    raise SystemExit(1)
