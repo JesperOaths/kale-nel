@@ -302,6 +302,45 @@ class FaceScreen:
                 'quality_score_is_not_face_presence_or_identity_probability': True}
 
 
+
+# Aggregate-only live status from the independent, durable V304 rescan owner.
+# No clip/file/face/person identifier can escape through this diagnostic.
+PRIORITY_QUEUE = ROOT / 'state/s9-priority-rescan-v304/queue.json'
+PRIORITY_STATES = ('pending', 'processing', 'completed', 'blocked', 'rejected', 'dead_letter')
+
+def priority_rescan_feedback():
+    empty = {'state': 'not_installed', 'queue_revision': None, 'tracked': 0,
+             **{name: 0 for name in PRIORITY_STATES},
+             'verified_secondary_completions': 0,
+             'automated_person_assignments': False}
+    try:
+        if not PRIORITY_QUEUE.is_file() or PRIORITY_QUEUE.is_symlink():
+            return empty
+        if PRIORITY_QUEUE.stat().st_size > 4000000:
+            raise ValueError('queue_size')
+        doc = json.loads(PRIORITY_QUEUE.read_text())
+        rows, revision = doc.get('rows'), doc.get('revision')
+        if (doc.get('schema') != 's9_priority_rescan_feedback_v304'
+                or type(revision) is not int or revision < 0
+                or not isinstance(rows, list) or len(rows) > 340):
+            raise ValueError('queue_schema')
+        summary = dict(empty, state='active', queue_revision=revision, tracked=len(rows))
+        for row in rows:
+            if not isinstance(row, dict) or row.get('status') not in PRIORITY_STATES:
+                raise ValueError('queue_row')
+            attempts = row.get('attempts')
+            if type(attempts) is not int or not 0 <= attempts <= 3:
+                raise ValueError('queue_attempts')
+            status = row['status']
+            summary[status] += 1
+            if (status == 'completed' and isinstance(row.get('outcome'), dict)
+                    and row['outcome'].get('verified_secondary_report') is True
+                    and row['outcome'].get('model_sha256') == MODEL_SHA):
+                summary['verified_secondary_completions'] += 1
+        return summary
+    except (OSError, ValueError, TypeError, KeyError):
+        return dict(empty, state='queue_unavailable')
+
 def install(handler_class, phone_rows):
     previous = handler_class.go
 
@@ -349,6 +388,7 @@ def install(handler_class, phone_rows):
                 if gap.get('detector_model_sha256') == MODEL_SHA:
                     report['original_gap_benchmark'] = dict(gap, recordings=[
                         row for row in gap.get('recordings', []) if row.get('clip_no') in current])
+            report['priority_rescan_feedback'] = priority_rescan_feedback()
             handler.js(200, dict(report, ok=True))
         except (OSError, ValueError, TypeError, KeyError):
             handler.js(200, {'ok': True, 'analysis_version': VERSION, 'state': 'not_yet_available'})
