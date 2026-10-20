@@ -106,13 +106,19 @@ public final class S9MigratedSealedManifestEnrollmentV220 {
         if(Files.exists(target,LinkOption.NOFOLLOW_LINKS))
             throw new IOException("initial_manifest_existing_target_never_replaced");
 
-        List<String> names=new ArrayList<String>(independentlyProven.keySet());
+        // Snapshot the approved import set BEFORE the external authorization
+        // callback. An upstream mutable catalog cannot change the record
+        // names or bytes after approval but before sealed publication.
+        Map<String,S9MigratedVerifiedSourceV198.Proof> stable=
+            new java.util.LinkedHashMap<String,S9MigratedVerifiedSourceV198.Proof>(
+                independentlyProven);
+        List<String> names=new ArrayList<String>(stable.keySet());
         Collections.sort(names);
         long total=0;
         String previous=null;
         StringBuilder body=new StringBuilder(HEADER);
         for(String name:names){
-            S9MigratedVerifiedSourceV198.Proof proof=independentlyProven.get(name);
+            S9MigratedVerifiedSourceV198.Proof proof=stable.get(name);
             if(name==null || !MP4.matcher(name).matches() || name.contains("..") ||
                (previous!=null && previous.compareTo(name)>=0) ||
                proof==null || !name.equals(proof.name) ||
@@ -129,7 +135,7 @@ public final class S9MigratedSealedManifestEnrollmentV220 {
         if(total!=HISTORICAL_TOTAL_BYTES)
             throw new IOException("initial_manifest_historical_total_mismatch");
         if(!firstEnrollmentAuthority.approvesVirginBatch(1L,
-                 Collections.unmodifiableMap(independentlyProven)))
+                 Collections.unmodifiableMap(stable)))
             throw new IOException("initial_manifest_independent_enrollment_denied");
 
         final String macHex;
@@ -177,7 +183,7 @@ public final class S9MigratedSealedManifestEnrollmentV220 {
                result.sourceRows.size()!=HISTORICAL_COUNT)
                 throw new IOException("initial_manifest_readback_invalid");
             for(String name:names){
-                S9MigratedVerifiedSourceV198.Proof expected=independentlyProven.get(name);
+                S9MigratedVerifiedSourceV198.Proof expected=stable.get(name);
                 S9MigratedVerifiedSourceV198.Proof actual=result.sourceRows.get(name);
                 if(actual==null || actual.bytes!=expected.bytes ||
                    !MessageDigest.isEqual(actual.sha256.getBytes(StandardCharsets.US_ASCII),
