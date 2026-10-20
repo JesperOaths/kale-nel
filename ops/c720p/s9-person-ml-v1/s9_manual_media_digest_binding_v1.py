@@ -55,7 +55,10 @@ def _validated(proof,source,name,now):
      source=="drive" and proof["verifier"]!="drive-original-byte-auditor"):
   raise Refused("original_proof_source_wrong_worker")
  age=(now-_iso(proof["verified_at_utc"])).total_seconds()
- if not 0<=age<=MAX_AGE_SECONDS:
+ # The authoritative SHA worker may complete microseconds after the
+ # server took its trusted request-time snapshot. Accept at most 2s clock
+ # overlap, never an unbounded future attestation.
+ if not -2<=age<=MAX_AGE_SECONDS:
   raise Refused("original_proof_expired_or_future")
  return {"schema_version":"manual_original_digest_binding_v1",
   "status":"bound_at_decision","source":source,"name":name,
