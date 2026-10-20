@@ -66,8 +66,8 @@ class TimeWitness(unittest.TestCase):
        patch.object(m.time,"monotonic",side_effect=[100.0,100.2]):
    observed=m.probe("www.cloudflare.com")
   self.assertEqual(observed.host,"www.cloudflare.com")
-  self.assertEqual(observed.rtt_seconds,0.2)
-  self.assertEqual(observed.midpoint_monotonic,100.1)
+  self.assertAlmostEqual(observed.rtt_seconds,0.2)
+  self.assertAlmostEqual(observed.midpoint_monotonic,100.1)
   for fake,expected in (
    (Response("http://www.cloudflare.com/"),"https_date_cross_origin_redirect"),
    (Response("https://evil.example/"),"https_date_cross_origin_redirect"),
