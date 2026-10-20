@@ -48,6 +48,7 @@ SCHEMA="s9_priority_rescan_feedback_v304"
 NAME=re.compile(r"motion_[0-9]{13}\.mp4\Z")
 HEX=re.compile(r"[a-f0-9]{64}\Z")
 MAX_ATTEMPTS=3
+MAX_TRANSIENT_DEFERRALS=8
 LIMIT=340
 LABEL="S9_PRIORITY_RESCAN_V304 "
 
@@ -130,7 +131,7 @@ def validate_priority(row,original):
       "native_pass":NATIVE,"model_sha256":MODEL_SHA,
       "required_analysis":ANALYSIS,"priority_reason":reason,
       "status":("pending" if reason=="no_indexed_image" else "blocked"),
-      "attempts":0,"next_attempt_at":0,"lease_until":0,
+      "attempts":0,"deferrals":0,"next_attempt_at":0,"lease_until":0,
       "last_reason":("awaiting_independent_original_4k_rescan" if reason=="no_indexed_image"
          else "same_yunet_model_cannot_validate_its_own_non_detection"),
       "outcome":None}
@@ -347,6 +348,7 @@ def work():
               "verified_secondary_report":True,
               "consumer_visibility_confirmed":True}
             candidate["status"]="completed"
+            candidate["deferrals"]=0
             candidate["last_reason"]="verified_secondary_original_gap_evidence_published"
         except Exception as err:
             # Always retain prior human-reviewed/original evidence. A model
@@ -357,14 +359,24 @@ def work():
                 candidate["status"]="rejected"
             elif cause=="camera_battery_thermal_recording_or_worker_exclusion" or isinstance(err, (urllib.error.URLError, TimeoutError, ConnectionError)):
                 candidate["status"]="pending";candidate["attempts"]-=1
+                candidate["deferrals"]=candidate.get("deferrals",0)+1
                 if cause=="analysis_failed_or_unavailable":
                     cause="temporary_source_or_consumer_transport_unavailable"
+                if candidate["deferrals"]>=MAX_TRANSIENT_DEFERRALS:
+                    candidate["status"]="blocked"
+                    cause="repeated_transient_dependency_unavailable"
             elif candidate["attempts"]>=MAX_ATTEMPTS:
                 candidate["status"]="dead_letter"
             else:
                 candidate["status"]="pending"
             candidate["last_reason"]=cause
-            candidate["next_attempt_at"]=now()+min(6*3600,60*2**max(0,candidate["attempts"]-1))
+            if candidate["status"]=="pending":
+                power=(candidate["deferrals"]-1 if candidate.get("deferrals",0)
+                       else candidate["attempts"]-1)
+                candidate["next_attempt_at"]=now()+min(
+                    6*3600,60*2**max(0,power))
+            else:
+                candidate["next_attempt_at"]=0
         candidate["lease_until"]=0
         if candidate["status"]!="completed":
             candidate["outcome"]=None
