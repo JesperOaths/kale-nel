@@ -110,14 +110,14 @@ public final class S9MigratedReadOnlyStateTestV225 {
             String envelope=new String(
                 S9MigratedReadOnlyStateEnvelopeV229.encodeVerified(
                     afterDelete,challenge),StandardCharsets.US_ASCII);
-            ok(envelope.contains("\\"schema\\":\\"s9_c720p_migrated_readonly_state_v229\\"")
-                && envelope.contains("\\"challenge\\":\\""+challenge+"\\"")
-                && envelope.contains("\\"journalSequence\\":2")
-                && envelope.contains("\\"allowsSaveDelete\\":false")
-                && envelope.contains("\\"allowsOriginalRemoval\\":false")
-                && envelope.contains("\\"provesVideoAvailability\\":false")
-                && envelope.contains("\\"state\\":\\"deleted_tombstone\\"")
-                && envelope.contains("\\"state\\":\\"no_remote_decision\\""),
+            ok(envelope.contains("\"schema\":\"s9_c720p_migrated_readonly_state_v229\"")
+                && envelope.contains("\"challenge\":\""+challenge+"\"")
+                && envelope.contains("\"journalSequence\":2")
+                && envelope.contains("\"allowsSaveDelete\":false")
+                && envelope.contains("\"allowsOriginalRemoval\":false")
+                && envelope.contains("\"provesVideoAvailability\":false")
+                && envelope.contains("\"state\":\"deleted_tombstone\"")
+                && envelope.contains("\"state\":\"no_remote_decision\""),
                 "canonical_envelope_never_overstates_remote_state");
             denied(()->S9MigratedReadOnlyStateEnvelopeV229.encodeVerified(
                     afterDelete,"client-controlled-unsafe"),"invalid_client_challenge");
