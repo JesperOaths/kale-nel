@@ -5,6 +5,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/S9MigratedDualStoreCommitV197.java'
       - 'ops/c720p/s9-native-security/offline-worker/S9MigratedReadOnlyStateV225.java'
       - 'ops/c720p/s9-native-security/offline-worker/S9MigratedReadOnlyStateTestV225.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedReadOnlyStateEnvelopeV229.java'
       - '.github/workflows/s9-verified-current-state-v225.yml'
   push:
     branches: [main]
@@ -12,6 +13,7 @@ on:
       - 'ops/c720p/s9-native-security/offline-worker/S9MigratedDualStoreCommitV197.java'
       - 'ops/c720p/s9-native-security/offline-worker/S9MigratedReadOnlyStateV225.java'
       - 'ops/c720p/s9-native-security/offline-worker/S9MigratedReadOnlyStateTestV225.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedReadOnlyStateEnvelopeV229.java'
       - '.github/workflows/s9-verified-current-state-v225.yml'
 permissions:
   contents: read
@@ -37,7 +39,8 @@ jobs:
             "$d/S9MigratedDualStoreCommitV197.java" \
             "$d/S9MigratedVerifiedSourceV198.java" \
             "$d/S9MigratedSealedSourceManifestV216.java" \
-            "$d/S9MigratedReadOnlyStateV225.java" \
+            "$d/S9MigratedReadOnlyStateV225.java"
+            "$d/S9MigratedReadOnlyStateEnvelopeV229.java" \
             "$d/S9MigratedReadOnlyStateTestV225.java"
           java -cp "$tmp" nl.kalenel.s9offline.S9MigratedReadOnlyStateTestV225
           python3 "$d/test-s9-dual-store-commit-v197.py"
@@ -60,6 +63,7 @@ jobs:
             "$d/S9MigratedVerifiedSourceV198.java" \
             "$d/S9MigratedSealedSourceManifestV216.java" \
             "$d/S9MigratedReadOnlyStateV225.java"
+            "$d/S9MigratedReadOnlyStateEnvelopeV229.java"
           "$d8" --min-api 28 --output "$tmp/dex" $(find "$tmp/classes" -name '*.class' -print)
           test -s "$tmp/dex/classes.dex"
           echo S9_STATE_V225_ANDROID_VERIFIED
