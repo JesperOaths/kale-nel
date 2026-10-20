@@ -88,15 +88,15 @@ public final class S9MigratedApprovedSixDigestTestV230 {
             changedSealed,trustedDigest),
             "valid_hmac_of_different_six_files_must_not_boot");
 
-        Map<String,S9MigratedVerifiedSourceV198.Proof> sizeWrong=six();
-        sizeWrong.remove("syntheticf.mp4");
-        denied(()->S9MigratedApprovedSixDigestV230.canonicalSha256(sizeWrong),
+        Map<String,S9MigratedVerifiedSourceV198.Proof> five=six();
+        five.remove("syntheticf.mp4");
+        denied(()->S9MigratedApprovedSixDigestV230.canonicalSha256(five),
                "five_files_not_approved");
-        sizeWrong=six();
-        S9MigratedVerifiedSourceV198.Proof one=sizeWrong.get("synthetica.mp4");
-        sizeWrong.put("synthetica.mp4",new S9MigratedVerifiedSourceV198.Proof(
+        Map<String,S9MigratedVerifiedSourceV198.Proof> wrongTotal=six();
+        S9MigratedVerifiedSourceV198.Proof one=wrongTotal.get("synthetica.mp4");
+        wrongTotal.put("synthetica.mp4",new S9MigratedVerifiedSourceV198.Proof(
             one.name,one.sha256,one.bytes-1,true));
-        denied(()->S9MigratedApprovedSixDigestV230.canonicalSha256(sizeWrong),
+        denied(()->S9MigratedApprovedSixDigestV230.canonicalSha256(wrongTotal),
                "wrong_total_not_approved");
         Map<String,S9MigratedVerifiedSourceV198.Proof> unindexed=six();
         S9MigratedVerifiedSourceV198.Proof existing=unindexed.get("synthetica.mp4");
