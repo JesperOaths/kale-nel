@@ -187,6 +187,55 @@ public final class S9MigratedDualStoreCommitV197 implements AutoCloseable {
         return head;
     }
 
+    /**
+     * One lock-consistent journal state for several already-verified source
+     * names. A UI must NOT stitch six independent read calls together: a
+     * metadata writer could change the shared head between those reads.
+     * Does not open media or provide any action or deletion authority.
+     */
+    public static final class TrustedSnapshot {
+        public final long trustedSequence;
+        public final String trustedHeadSha256;
+        public final java.util.Map<String,S9MigratedMetadataLedgerV193.CurrentDecision> decisions;
+        private TrustedSnapshot(S9MigratedLedgerTrustedCheckpointV196.State state,
+                java.util.Map<String,S9MigratedMetadataLedgerV193.CurrentDecision> items) {
+            trustedSequence=state.sequence;
+            trustedHeadSha256=state.headSha256;
+            decisions=java.util.Collections.unmodifiableMap(
+                new java.util.LinkedHashMap<String,S9MigratedMetadataLedgerV193.CurrentDecision>(items));
+        }
+        public boolean mayRemoveOriginal(){return false;}
+        public boolean grantsSaveDelete(){return false;}
+    }
+
+    public synchronized TrustedSnapshot currentDecisions(
+            java.util.List<String> names)throws IOException {
+        requireOpen();
+        if(names==null || names.isEmpty() || names.size()>5000)
+            throw new IOException("trusted_snapshot_names_unbounded");
+        java.util.HashSet<String> unique=new java.util.HashSet<String>();
+        for(String name:names) {
+            if(name==null || !unique.add(name))
+                throw new IOException("trusted_snapshot_name_repeated");
+        }
+        try(FileChannel channel=openTrustedServiceLock();
+            FileLock held=takeLock(channel)) {
+            S9MigratedLedgerTrustedCheckpointV196.State before=verifyBothStores();
+            java.util.Map<String,S9MigratedMetadataLedgerV193.CurrentDecision> byName=
+                new java.util.LinkedHashMap<String,S9MigratedMetadataLedgerV193.CurrentDecision>();
+            for(String name:names)
+                byName.put(name,journal.latestDecision(name));
+            S9MigratedLedgerTrustedCheckpointV196.State after=verifyBothStores();
+            if(before.sequence!=after.sequence ||
+                !MessageDigest.isEqual(before.headSha256.getBytes(
+                    java.nio.charset.StandardCharsets.US_ASCII),
+                    after.headSha256.getBytes(
+                    java.nio.charset.StandardCharsets.US_ASCII)))
+                throw new IOException("trusted_snapshot_changed_during_read");
+            return new TrustedSnapshot(after,byName);
+        }
+    }
+
     /** Read only an internally anchored, HMAC-verified latest decision. */
     public synchronized S9MigratedMetadataLedgerV193.CurrentDecision
             currentDecision(String name)throws IOException {
