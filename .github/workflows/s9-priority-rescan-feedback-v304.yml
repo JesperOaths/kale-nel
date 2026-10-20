@@ -27,5 +27,6 @@ jobs:
           d=ops/c720p/s9-native-security
           python3 -m py_compile "$d/s9_priority_rescan_feedback_v304.py" "$d/test-s9-priority-rescan-feedback-v304.py"
           python3 "$d/test-s9-priority-rescan-feedback-v304.py"
+          PYTHONHASHSEED=17 python3 "$d/test-s9-priority-rescan-feedback-v304.py"
           python3 "$d/test-evidence-quality-v1.py"
           echo S9_PRIORITY_RESCAN_V304_SYNTHETIC_NO_PHONE_CAMERA_MEDIA
