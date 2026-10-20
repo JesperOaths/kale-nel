@@ -176,11 +176,41 @@ def install(H,sd_names):
  original_get,original_post=H.go,H.do_POST
  def get(self):
   route=urlsplit(self.path)
-  if route.path!=ROUTE or route.query:return original_get(self)
+  if route.query or route.path not in (ROUTE,REF_ROUTE):return original_get(self)
+  if route.path==REF_ROUTE:
+   try:
+    registry=reference_policy.read_state()
+    links=manual.current()["items"]
+    cat=private_native_catalog()
+    active=reference_policy.valid_active(registry,links,cat,native_catalog_events(cat))
+    self.js(200,{"ok":True,**reference_policy.counts(registry,active)})
+   except (OSError,ValueError,TypeError,reference_policy.Invalid):
+    self.js(503,{"ok":False,"error":"face_reference_evidence_unavailable"})
+   return
   try:self.js(200,report(sd_names(),manual.current()["items"]))
-  except (OSError,ValueError,TypeError):self.js(503,{"ok":False,"error":"suggestions_unavailable"})
+  except (OSError,ValueError,TypeError,reference_policy.Invalid):
+   self.js(503,{"ok":False,"error":"suggestions_unavailable"})
  def post(self):
   route=urlsplit(self.path)
+  if route.path==REF_ROUTE and not route.query:
+   if self.headers.get("X-S9-Person-Reference-Intent")!=REF_INTENT:
+    return self.js(403,{"ok":False,"error":"human_reference_intent_required"})
+   if "application/json" not in self.headers.get("Content-Type","").lower():
+    return self.js(415,{"ok":False,"error":"json_only"})
+   origin=self.headers.get("Origin","").strip()
+   if origin and origin not in ORIGINS:return self.js(403,{"ok":False,"error":"cross_origin_denied"})
+   if self.headers.get("Sec-Fetch-Site","") not in ("","same-origin","none"):
+    return self.js(403,{"ok":False,"error":"cross_site_denied"})
+   try:
+    n=int(self.headers.get("Content-Length","0"))
+    if not 50<=n<=1100:raise ValueError("size")
+    body=json.loads(self.rfile.read(n))
+    cat=private_native_catalog()
+    result=reference_policy.mutate(body,manual.current()["items"],
+                            cat,native_catalog_events(cat))
+    return self.js(200,{"ok":True,**result})
+   except (ValueError,TypeError,OSError,reference_policy.Invalid):
+    return self.js(409,{"ok":False,"error":"reference_authority_or_evidence_refused"})
   if route.path!=ROUTE or route.query or self.headers.get("X-S9-Automatic-Person-Intent")!=INTENT:
    return original_post(self)
   if "application/json" not in self.headers.get("Content-Type","").lower():
