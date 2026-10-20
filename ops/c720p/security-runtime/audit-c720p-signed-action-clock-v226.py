@@ -12,6 +12,7 @@ import statistics
 import subprocess
 import time
 import urllib.request
+import urllib.parse
 from pathlib import Path
 
 LABEL="C720P_SIGNED_ACTION_CLOCK_V226 "
@@ -55,8 +56,10 @@ def source(host):
  try:
   # urllib uses the system CA bundle and hostname verification by default.
   with urllib.request.urlopen(request,timeout=TIMEOUT) as response:
-   require(response.status in (200,204,301,302,307,308),
-           "tls_time_http_status_untrusted")
+   require(response.status in (200,204),"tls_time_http_status_untrusted")
+   final=urllib.parse.urlparse(response.geturl())
+   require(final.scheme=="https" and final.hostname==host,
+           "time_source_redirected_to_untrusted_origin")
    remote=response.headers.get("Date")
  except (OSError,ValueError):
   raise Refusal("https_time_probe_unavailable") from None
