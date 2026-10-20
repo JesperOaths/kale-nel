@@ -81,14 +81,11 @@ def build(g,tmp):
  unsigned=tmp/"unsigned.apk"
  run_command(["aapt","package","-f","-M",str(MANIFEST),"-I",
               str(g.AND_JAR),"-F",str(unsigned)],30)
- run_command(["aapt","add",str(unsigned),str(code.name)],10) if False else None
  # aapt adds files under the archive's relative name.
- run_command(["aapt","add",str(unsigned),str(code)],10) if False else None
  with tempfile.TemporaryDirectory(prefix="s9-probe-aapt-") as nested:
   staging=Path(nested)/"classes.dex"
   shutil.copyfile(code,staging)
-  run_command(["aapt","add",str(unsigned),"classes.dex"],10) if False else None
-  # AAPT uses its current working directory for the new archive member.
+   # AAPT uses its current working directory for the new archive member.
   p=subprocess.run(["aapt","add",str(unsigned),"classes.dex"],cwd=nested,
        capture_output=True,text=True,timeout=10)
   require(p.returncode==0,"apk_dex_packaging_failed")
@@ -115,8 +112,10 @@ def packages(g):
 
 def invoke(g,apk):
  installed=False
+ initially_absent=False
  try:
   require(not packages(g),"probe_package_preexisting_not_touched")
+  initially_absent=True
   g.current_camera()
   p=g.adb("install","-g",str(apk),seconds=42)
   require(p.returncode==0 and "Success" in p.stdout,
@@ -135,8 +134,8 @@ def invoke(g,apk):
   return dict(zip(("directory_exists","enumeration_allowed",
       "found_mp4","opened_readonly"),[v=="true" for v in m.groups()]))
  finally:
-  # Never uninstall preexisting app; this package is unique + prechecked.
-  if installed or packages(g):
+  # Never uninstall an app observed to exist before this invocation.
+  if initially_absent and (installed or packages(g)):
    p=g.adb("uninstall",PACKAGE,seconds=30)
    require(p.returncode==0 and "Success" in p.stdout,
            "disposable_probe_uninstall_failed")
