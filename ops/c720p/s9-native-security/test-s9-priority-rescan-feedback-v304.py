@@ -187,6 +187,30 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["attempts"],3)
   self.assertEqual(v.items()["rows"][0]["status"],"dead_letter")
   self.assertNotIn("human_approved",MOD.read_text())
+ def test_transient_camera_or_network_deferrals_have_finite_block_limit(self):
+  import urllib.error
+  v.produce()
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",
+          side_effect=urllib.error.URLError("synthetic_transport_unreachable")):
+   for i in range(v.MAX_TRANSIENT_DEFERRALS):
+    output=v.work()
+    expected="blocked" if i==v.MAX_TRANSIENT_DEFERRALS-1 else "pending"
+    self.assertEqual(output["status"],expected)
+    queue=v.items()
+    row=queue["rows"][0]
+    self.assertEqual(row["attempts"],0)
+    self.assertEqual(row["deferrals"],i+1)
+    self.assertEqual(row["status"],expected)
+    if expected=="pending":
+     row["next_attempt_at"]=0
+     v.atomic(v.QUEUE,queue)
+  self.assertEqual(v.items()["rows"][0]["last_reason"],
+                   "repeated_transient_dependency_unavailable")
+  self.assertEqual(v.items()["rows"][0]["next_attempt_at"],0)
+  self.assertEqual(v.work()["status"],"no_runnable_originals")
+  self.assertEqual(v.items()["rows"][0]["status"],"blocked")
+
  def test_existing_image_worker_mutex_blocks_rescan(self):
   import fcntl
   v.produce()
