@@ -95,9 +95,9 @@ class Tests(unittest.TestCase):
         patch.object(m,"camera",return_value=safe()),\
         patch.object(m,"competing",return_value=None),\
         patch.object(m,"check_approval"),\
-        patch.object(m,"current_apk_sha",return_value=m.NEW_SHA) as sha,\\
-        patch.object(m,"adb") as adb,\\
-        patch.object(m,"launch_camera") as launch,\\
+        patch.object(m,"current_apk_sha",return_value=m.NEW_SHA) as sha,\
+        patch.object(m,"adb") as adb,\
+        patch.object(m,"launch_camera") as launch,\
         patch.object(m,"check_health_after_upgrade") as upgrade:
     self.assertEqual(m.one_attempt(),"done")
     sha.assert_called_once()
