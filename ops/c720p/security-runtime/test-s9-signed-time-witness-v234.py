@@ -4,13 +4,16 @@ import importlib.util
 import io
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 SOURCE=Path(__file__).with_name("s9_signed_time_witness_v234.py")
 spec=importlib.util.spec_from_file_location("s9_time_witness_234",SOURCE)
-m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+m=importlib.util.module_from_spec(spec)
+sys.modules[spec.name]=m
+spec.loader.exec_module(m)
 OFFLINE=SOURCE.parent.parent/"s9-native-security"/"offline-worker"
 JAVA=OFFLINE/"S9TrustedClockBridgeTestV234.java"
 V198=OFFLINE/"S9MigratedSignedActionV198.java"
