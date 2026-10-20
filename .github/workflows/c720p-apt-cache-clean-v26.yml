@@ -1,5 +1,11 @@
 name: C720P guarded APT cache reclaim for face V26
 on:
+  workflow_dispatch:
+    inputs:
+      confirm_live_cleanup:
+        description: 'Enter APPLY-C720P-APT-CACHE only when authorized to clean APT archives'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/clean-apt-cache-face-v26.py'
@@ -19,6 +25,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - run: |
           python3 -m py_compile ops/c720p/s9-native-security/clean-apt-cache-face-v26.py
+          python3 ops/c720p/test-apt-reclaim-manual-gate-v255.py
           python3 - <<'PY'
           from pathlib import Path
           s=Path('ops/c720p/s9-native-security/clean-apt-cache-face-v26.py').read_text()
@@ -31,7 +38,8 @@ jobs:
           PY
   reclaim:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    # Source merges run tests only; cache deletion requires explicit maintenance approval.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel' && inputs.confirm_live_cleanup == 'APPLY-C720P-APT-CACHE'
     runs-on: ubuntu-latest
     timeout-minutes: 9
     env:
