@@ -29,6 +29,22 @@ class GuardedReclaim(unittest.TestCase):
    (p/"link").symlink_to("/etc/passwd")
    size,_=mod.size_and_newest(p)
    self.assertLess(size,1048576)
+ def test_never_claim_another_filesystem_as_root_reclaim(self):
+  root_dev=Path("/").stat().st_dev
+  self.assertTrue(mod.same_root_filesystem(Path("/"),root_dev))
+  self.assertFalse(mod.same_root_filesystem(Path("/"),root_dev+1))
+  with tempfile.TemporaryDirectory() as d:
+   p=Path(d)/"candidate";p.mkdir()
+   self.assertFalse(mod.same_root_filesystem(p,p.stat().st_dev+1))
+   self.assertTrue(mod.same_root_filesystem(p,p.stat().st_dev))
+   link=Path(d)/"symlink"
+   link.symlink_to(p,target_is_directory=True)
+   self.assertFalse(mod.same_root_filesystem(link,p.stat().st_dev))
+  # Source must invoke the mount guard in *actual* deletion admission.
+  original=SRC.read_text()
+  self.assertIn("if not same_root_filesystem(path):return False",original)
+  self.assertIn("if not allowed(path, DIRECTORIES",original)
+
  def test_apply_is_opt_in_and_capped(self):
   s=SRC.read_text()
   self.assertIn('p.add_argument("--apply",action="store_true")',s)
