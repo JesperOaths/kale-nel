@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="nl.kalenel.s9storageprobev204">
+  <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28"/>
+  <!-- Read-only, disposable permission, granted only to THIS probe package. -->
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+  <application android:allowBackup="false" android:usesCleartextTraffic="false"
+      android:label="S9 Storage Read Probe">
+    <receiver android:name=".StorageProbe" android:exported="true">
+      <intent-filter>
+        <action android:name="nl.kalenel.s9storageprobev204.CHECK"/>
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>
