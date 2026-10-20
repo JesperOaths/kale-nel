@@ -269,8 +269,8 @@ def work():
             row["status"]="pending" if row["attempts"]<MAX_ATTEMPTS else "dead_letter"
             row["last_reason"]="previous_worker_lease_expired"
             row["lease_until"]=0
-        if candidate is None and row["status"]=="pending" and
-           row.get("next_attempt_at",0)<=now():
+        if (candidate is None and row["status"]=="pending" and
+                row.get("next_attempt_at",0)<=now()):
             candidate=row
     if candidate is None:
         return {"status":"no_runnable_originals","revision":doc["revision"],
