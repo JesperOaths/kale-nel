@@ -34,6 +34,22 @@ class Tests(unittest.TestCase):
   self.assertEqual(d["counts"]["source_unavailable"],1)
   self.assertEqual(d["counts"]["bound_at_decision"],1)
   self.assertEqual(d["counts"]["bound_without_current_record"],1)
+ def test_only_nonwritable_catalog_permissions_are_accepted(self):
+  import tempfile
+  with tempfile.TemporaryDirectory() as tmp:
+   src=Path(tmp)/"source"
+   src.write_bytes(b"x"*120)
+   src.chmod(0o644)
+   self.assertEqual(m.read(src,200,private=False),b"x"*120)
+   with self.assertRaisesRegex(RuntimeError,"private_source_untrusted"):
+    m.read(src,200,private=True)
+   for mode in (0o664,0o666,0o646):
+    src.chmod(mode)
+    with self.subTest(mode=oct(mode)),self.assertRaisesRegex(
+        RuntimeError,"private_source_untrusted"):
+     m.read(src,200,private=False)
+   src.chmod(0o600)
+   self.assertEqual(m.read(src,200,private=True),b"x"*120)
  def test_no_writes_or_privileged_browser_operations(self):
   text=SRC.read_text()
   for bad in ("write_text(","write_bytes(","unlink(","shutil.rmtree",
