@@ -38,7 +38,7 @@ public final class S9MigratedThreeKeyEnrollmentV227 {
     public static final String PACKAGE="nl.kalenel.s9migrated";
     public static final String CHECKPOINT="nl.kalenel.s9migrated.checkpoint.hmac.v202";
     public static final String JOURNAL="nl.kalenel.s9migrated.journal.hmac.v202";
-    public static final String SOURCE="nl.kalenel.s9migrated.source-manifest.hmac.v227";
+    public static final String SOURCE="nl.kalenel.s9migrated.source_manifest.hmac.v227";
     public static final String INTENT="s9-migrated-hmac-enrollment-intent-v227";
     public static final String COMPLETED="s9-migrated-hmac-enrollment-complete-v227";
     private static final String[] ALIASES={CHECKPOINT,JOURNAL,SOURCE};
