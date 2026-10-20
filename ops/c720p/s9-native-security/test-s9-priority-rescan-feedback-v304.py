@@ -108,6 +108,17 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["attempts"],3)
   self.assertEqual(v.items()["rows"][0]["status"],"dead_letter")
   self.assertNotIn("human_approved",MOD.read_text())
+ def test_existing_image_worker_mutex_blocks_rescan(self):
+  import fcntl
+  v.produce()
+  with self.image_lock.open("r") as conflicting:
+   fcntl.flock(conflicting,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   with self.assertRaises(v.Refusal) as caught:
+    v.work()
+   self.assertEqual(str(caught.exception),"evidence_quality_worker_busy")
+  self.assertEqual(v.items()["rows"][0]["attempts"],0)
+  self.assertEqual(v.items()["rows"][0]["status"],"pending")
+
  def test_camera_busy_does_not_consume_attempt(self):
   v.produce()
   with patch.object(v,"camera_guard",side_effect=v.Refusal("camera_battery_thermal_recording_or_worker_exclusion")):
