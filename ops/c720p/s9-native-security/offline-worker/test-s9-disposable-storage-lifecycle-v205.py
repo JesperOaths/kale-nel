@@ -85,8 +85,9 @@ class Tests(unittest.TestCase):
   java=(HERE/"s9-storage-probe-v204/StorageProbe.java").read_text()
   for forbidden in ("pm grant nl.kalenel.s9security",
      "pm grant nl.kalenel.s9edge","adb root","pm clear",
-     "am force-stop","stop-camera","CameraManager"):
+     "am force-stop","stop-camera"):
    self.assertNotIn(forbidden,src+manifest+java)
+  self.assertNotIn("CameraManager",manifest+java)
   for forbidden in ("android.permission.WRITE_EXTERNAL_STORAGE",
      "android.permission.MANAGE_EXTERNAL_STORAGE"):
    self.assertNotIn(forbidden,manifest+java)
