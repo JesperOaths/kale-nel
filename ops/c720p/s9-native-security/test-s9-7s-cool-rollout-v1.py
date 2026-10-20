@@ -3,6 +3,7 @@
 from pathlib import Path
 import importlib.util
 import json
+import importlib.util
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -61,6 +62,60 @@ class Tests(unittest.TestCase):
     "su -c","shutil.rmtree","CameraManager","review_decision_update"):
    self.assertNotIn(unsafe,txt)
   self.assertEqual(txt.count('adb("shell","am","force-stop"'),2)
+ def test_success_schema_and_original_timing_proof_consumer(self):
+  # Both branches must hand downstream timing proof the same validated
+  # installed=True candidate provenance, never implying a second install.
+  for already in (True,False):
+   with self.subTest(already_installed=already):
+    fields=m.verified_success_fields(safe(),already_installed=already)
+    self.assertIs(fields["installed"],True)
+    self.assertIs(fields["already_installed"],already)
+    self.assertFalse(fields["original_videos_intentionally_modified"])
+    self.assertFalse(fields["manual_person_reviews_intentionally_modified"])
+    with tempfile.TemporaryDirectory() as root:
+     state=Path(root)
+     result=state/"rollout.json"
+     with patch.object(m,"STATE",state),patch.object(m,"RESULT",result):
+      m.write_result("done",fields)
+     consumer_path=ROOT.parent/"security-runtime"/"s9_7s_saved_timing_proof_v1.py"
+     spec=importlib.util.spec_from_file_location("real_saved_timing_consumer",consumer_path)
+     reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
+     self.assertTrue(reader.verified_new_rollout(result))
+     self.assertIsInstance(reader.verified_rollout_epoch_ms(result),int)
+     doc=json.loads(result.read_text())
+     self.assertEqual(doc["candidate_sha256"],m.NEW_SHA)
+     self.assertEqual(doc["schema_version"],m.SCHEMA)
+
+ def test_already_installed_branch_never_force_stops_or_installs(self):
+  with tempfile.TemporaryDirectory() as root:
+   state=Path(root)
+   result=state/"rollout.json"
+   with patch.object(m,"STATE",state),patch.object(m,"RESULT",result),\
+        patch.object(m,"result_state",return_value=None),\
+        patch.object(m,"camera",return_value=safe()),\
+        patch.object(m,"competing",return_value=None),\
+        patch.object(m,"check_approval"),\
+        patch.object(m,"current_apk_sha",return_value=m.NEW_SHA) as sha,\
+        patch.object(m,"adb") as adb,\
+        patch.object(m,"launch_camera") as launch,\
+        patch.object(m,"check_health_after_upgrade") as upgrade:
+    self.assertEqual(m.one_attempt(),"done")
+    sha.assert_called_once()
+    adb.assert_not_called();launch.assert_not_called()
+    upgrade.assert_not_called()
+    doc=json.loads(result.read_text())
+    self.assertEqual(doc["state"],"done")
+    self.assertIs(doc["installed"],True)
+    self.assertIs(doc["already_installed"],True)
+    self.assertTrue(doc["continuous_4k_buffered_ms"]>=6500)
+
+ def test_both_successes_refuse_unhealthy_camera(self):
+  cold=safe();cold["continuous_4k_dropped_output_frames"]=3
+  with self.assertRaisesRegex(RuntimeError,"verified_success_requires_healthy_candidate"):
+   m.verified_success_fields(cold,already_installed=True)
+  with self.assertRaisesRegex(RuntimeError,"verified_success_requires_healthy_candidate"):
+   m.verified_success_fields(cold,already_installed=False)
+
  def test_unit_is_sparse_nonpersistent_and_user_scoped(self):
   timer=(ROOT/"c720p-s9-native-seven-second-rollout-v1.timer").read_text()
   service=(ROOT/"c720p-s9-native-seven-second-rollout-v1.service").read_text()

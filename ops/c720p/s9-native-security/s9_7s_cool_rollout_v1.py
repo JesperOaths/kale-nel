@@ -145,6 +145,25 @@ def write_result(status,extra=None):
         os.replace(tmp,RESULT)
     finally:
         if os.path.exists(tmp):os.unlink(tmp)
+def verified_success_fields(camera_status,already_installed):
+    """One response contract for both verified success branches.
+
+    May only be called after exact signed candidate SHA was independently
+    checked against the *installed* Camera2 APK. Does not install or restart.
+    Downstream timing proof requires installed=True for either provenance.
+    """
+    if type(already_installed) is not bool or not healthy(camera_status,pre=False):
+        raise RuntimeError("verified_success_requires_healthy_candidate")
+    return {
+        "installed":True,
+        "already_installed":already_installed,
+        "continuous_4k_buffered_ms":camera_status["continuous_4k_buffered_ms"],
+        "camera_temperature_after_c":camera_status["temperature_c"],
+        "original_videos_intentionally_modified":False,
+        "manual_person_reviews_intentionally_modified":False,
+        "video_or_reviews_modified":False,
+    }
+
 def result_state():
     if RESULT.is_symlink():raise RuntimeError("unsafe_result")
     if not RESULT.is_file():return None
@@ -186,7 +205,7 @@ def one_attempt():
     check_approval()
     if current_apk_sha()==NEW_SHA:
         if healthy(camera(),pre=False):
-            write_result("done",{"already_installed":True,"video_or_reviews_modified":False})
+            write_result("done",verified_success_fields(camera(),already_installed=True))
             print("S9_7S_ROLLOUT_ALREADY_VERIFIED");return "done"
         raise RuntimeError("candidate_installed_but_camera_unhealthy")
     if current_apk_sha()!=OLD_SHA:raise RuntimeError("installed_camera_changed_since_signed_build")
@@ -211,11 +230,7 @@ def one_attempt():
         if current_apk_sha()!=NEW_SHA:raise RuntimeError("new_camera_apk_digest_mismatch")
         launch_camera()
         after=check_health_after_upgrade()
-        write_result("done",{"installed":True,
-            "continuous_4k_buffered_ms":after.get("continuous_4k_buffered_ms"),
-            "camera_temperature_after_c":after.get("temperature_c"),
-            "original_videos_intentionally_modified":False,
-            "manual_person_reviews_intentionally_modified":False})
+        write_result("done",verified_success_fields(after,already_installed=False))
         print("S9_7S_ROLLOUT_DEPLOY_VERIFIED "+json.dumps({
             "source_sha":SOURCE_SHA,"apk_sha256":NEW_SHA,
             "continuous_4k_buffered_ms":after.get("continuous_4k_buffered_ms"),
