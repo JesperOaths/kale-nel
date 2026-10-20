@@ -80,9 +80,13 @@ public final class KeyProbe extends BroadcastReceiver {
             // generation or modify the production camera app.
         } finally {
             try {
-                if(store!=null) {
-                    if(createdB)store.deleteEntry(B);
-                    if(createdA)store.deleteEntry(A);
+                // KeyGenerator can create an alias and still throw before the
+                // Java assignment marks createdA/B. Only the initial absence
+                // of BOTH aliases gives this invocation authority to clean
+                // the test names. Never delete any pre-existing alias.
+                if(store!=null && !preexisting) {
+                    if(store.containsAlias(B))store.deleteEntry(B);
+                    if(store.containsAlias(A))store.deleteEntry(A);
                     cleaned=!store.containsAlias(A) && !store.containsAlias(B);
                 }
             } catch(Exception ignored) {cleaned=false;}
