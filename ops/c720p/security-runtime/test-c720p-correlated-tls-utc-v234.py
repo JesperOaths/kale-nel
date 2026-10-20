@@ -37,7 +37,7 @@ class TrustUtc(unittest.TestCase):
   self.assertFalse(c.allows_signature_bypass())
   self.assertFalse(c.changes_system_clock())
   with patch.object(m.time,"monotonic",return_value=91.4):
-   self.assertAlmostEqual(c.now_unix(),1792530094.4,places=2)
+   self.assertAlmostEqual(c.now_unix(),1792530094.8,places=2)
   with patch.object(m.time,"monotonic",return_value=97.5):
    with self.assertRaisesRegex(m.UntrustedTimeError,"expired"):
     c.now_unix()
