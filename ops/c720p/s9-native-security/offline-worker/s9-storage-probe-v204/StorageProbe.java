@@ -41,7 +41,7 @@ public final class StorageProbe extends BroadcastReceiver {
                     File file=new File(directory,name);
                     if(!file.isFile() || !file.canRead())continue;
                     try(FileInputStream stream=new FileInputStream(file)) {
-                        // Deliberately never call stream.read(); zero media bytes.
+                        // Deliberately do not consume the stream; zero media bytes.
                         oneFileOpenedReadOnly=true;
                     } catch(Exception ignored) {
                         // Only fixed booleans are logged; no private exceptions.
