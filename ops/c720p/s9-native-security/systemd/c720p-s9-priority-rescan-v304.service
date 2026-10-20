@@ -1,0 +1,21 @@
+[Unit]
+Description=S9 one-original independent gap rescan with strong Camera2 admission
+Documentation=https://github.com/JesperOaths/kale-nel/issues/914
+ConditionPathExists=/home/jespern/c720p-home-hub/bin/s9_priority_rescan_feedback_v304.py
+ConditionPathExists=/home/jespern/c720p-home-hub/bin/rescan-original4k-face-gaps-v1.py
+After=c720p-drive-security-archive.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub
+ExecStart=/home/jespern/c720p-home-hub/person-detector/venv/bin/python3 /home/jespern/c720p-home-hub/bin/s9_priority_rescan_feedback_v304.py work
+Nice=19
+IOSchedulingClass=idle
+CPUQuota=25%
+MemoryHigh=520M
+MemoryMax=640M
+TasksMax=48
+TimeoutStartSec=215
+UMask=0077
+NoNewPrivileges=true
+Restart=no
