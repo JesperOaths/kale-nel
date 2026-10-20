@@ -17,6 +17,7 @@ class QueueTest(unittest.TestCase):
   self.root=Path(self.t.name);self.state=self.root/"queue";self.state.mkdir()
   self.catalog=self.root/"catalog.json";self.report=self.root/"report.json"
   self.secondary=self.root/"gap.json";self.lock=self.root/"s9lock";self.lock.touch()
+  self.image_lock=self.root/"image-worker.lock";self.image_lock.touch()
   self.orig={};self.rows=[]
   for i in range(4):
    name=f"motion_{1792000000000+i*1000}.mp4"
@@ -36,7 +37,8 @@ class QueueTest(unittest.TestCase):
    patch.object(v,"REPORT",self.report),
    patch.object(v,"ARCHIVE",self.catalog),
    patch.object(v,"SECONDARY",self.secondary),
-   patch.object(v,"CROSS_LOCK",self.lock)]
+   patch.object(v,"CROSS_LOCK",self.lock),
+   patch.object(v,"IMAGE_LOCK",self.image_lock)]
   for x in self.patch:x.start();self.addCleanup(x.stop)
   self.store()
  def store(self):
@@ -106,6 +108,17 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["attempts"],3)
   self.assertEqual(v.items()["rows"][0]["status"],"dead_letter")
   self.assertNotIn("human_approved",MOD.read_text())
+ def test_existing_image_worker_mutex_blocks_rescan(self):
+  import fcntl
+  v.produce()
+  with self.image_lock.open("r") as conflicting:
+   fcntl.flock(conflicting,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   with self.assertRaises(v.Refusal) as caught:
+    v.work()
+   self.assertEqual(str(caught.exception),"evidence_quality_worker_busy")
+  self.assertEqual(v.items()["rows"][0]["attempts"],0)
+  self.assertEqual(v.items()["rows"][0]["status"],"pending")
+
  def test_camera_busy_does_not_consume_attempt(self):
   v.produce()
   with patch.object(v,"camera_guard",side_effect=v.Refusal("camera_battery_thermal_recording_or_worker_exclusion")):

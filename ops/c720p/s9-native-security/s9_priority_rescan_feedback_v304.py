@@ -38,6 +38,7 @@ EVIDENCE=HOME/"bin/s9_evidence_quality_v1.py"
 SCAN=HOME/"bin/rescan-original4k-face-gaps-v1.py"
 CAMERA="http://127.0.0.1:18808/status"
 CROSS_LOCK=HOME/"state/s9-v3-archive-backfill.lock"
+IMAGE_LOCK=HOME/"state/s9-evidence-quality-v1/worker.lock"
 MODEL=HOME/"state/s9-evidence-quality-v1/yunet-2023mar.onnx"
 MODEL_SHA="8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
 NATIVE="s9_onphone_36_samples_overlapping_tiles_v5"
@@ -278,9 +279,13 @@ def work():
     # Acquire source/camera locks BEFORE taking a lease.
     check(CROSS_LOCK.is_file() and not CROSS_LOCK.is_symlink(),
           "s9_shared_backfill_lock_unavailable")
-    with CROSS_LOCK.open("r") as c:
+    check(IMAGE_LOCK.is_file() and not IMAGE_LOCK.is_symlink(),
+          "evidence_quality_worker_lock_unavailable")
+    with CROSS_LOCK.open("r") as c, IMAGE_LOCK.open("r") as image_lock:
         try:fcntl.flock(c,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise Refusal("s9_backfill_worker_busy") from None
+        try:fcntl.flock(image_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:raise Refusal("evidence_quality_worker_busy") from None
         camera_guard()
         candidate["status"]="processing";candidate["attempts"]+=1
         candidate["lease_until"]=now()+240
