@@ -39,7 +39,7 @@ jobs:
             "$d/S9MigratedDualStoreCommitV197.java" \
             "$d/S9MigratedVerifiedSourceV198.java" \
             "$d/S9MigratedSealedSourceManifestV216.java" \
-            "$d/S9MigratedReadOnlyStateV225.java"
+            "$d/S9MigratedReadOnlyStateV225.java" \
             "$d/S9MigratedReadOnlyStateEnvelopeV229.java" \
             "$d/S9MigratedReadOnlyStateTestV225.java"
           java -cp "$tmp" nl.kalenel.s9offline.S9MigratedReadOnlyStateTestV225
@@ -62,7 +62,7 @@ jobs:
             "$d/S9MigratedDualStoreCommitV197.java" \
             "$d/S9MigratedVerifiedSourceV198.java" \
             "$d/S9MigratedSealedSourceManifestV216.java" \
-            "$d/S9MigratedReadOnlyStateV225.java"
+            "$d/S9MigratedReadOnlyStateV225.java" \
             "$d/S9MigratedReadOnlyStateEnvelopeV229.java"
           "$d8" --min-api 28 --output "$tmp/dex" $(find "$tmp/classes" -name '*.class' -print)
           test -s "$tmp/dex/classes.dex"
