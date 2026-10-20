@@ -1,0 +1,78 @@
+name: C720P signed S9 action clock skew V226 (read only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-c720p-signed-action-clock-v226.py'
+      - 'ops/c720p/security-runtime/test-audit-c720p-signed-action-clock-v226.py'
+      - '.github/workflows/c720p-signed-action-clock-v226.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-c720p-signed-action-clock-v226.py'
+      - 'ops/c720p/security-runtime/test-audit-c720p-signed-action-clock-v226.py'
+      - '.github/workflows/c720p-signed-action-clock-v226.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-signed-action-clock-v226
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Prove TLS clock and signed-action safety gates without altering time
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/audit-c720p-signed-action-clock-v226.py"
+          python3 "$d/test-audit-c720p-signed-action-clock-v226.py"
+  physical:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check actual C720P NTP and allowlisted HTTPS UTC Date against signed action window
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          d="ops/c720p/security-runtime"
+          file="audit-c720p-signed-action-clock-v226.py"
+          stage="/tmp/c720p-signed-action-clock-v226-${GITHUB_SHA:0:12}.py"
+          digest="$(sha256sum "$d/$file" | cut -d' ' -f1)"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$d/$file"
+          cmd="curl -fsSL --max-time 35 '$url' -o '$stage' && printf '%s  %s\\n' '$digest' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage'"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="c720p-signed-action-clock-v226-${GITHUB_SHA:0:12}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-clock-readiness-v226','diagnostic',:'cmd',125,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "C720P_SIGNED_ACTION_CLOCK_V226_JOB=$job"
+          for attempt in $(seq 1 110); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'C720P_SIGNED_ACTION_CLOCK_V226' <<< "$output"
+              grep -q '"read_only":true' <<< "$output"
+              grep -q '"clock_changed":false' <<< "$output"
+              grep -q '"media_read_or_modified":false' <<< "$output"
+              grep -q '"signed_media_auth_modified":false' <<< "$output"
+              grep -q '"camera_dropped_output_frames_after":0' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Read-only signed clock audit not verified";exit 1
