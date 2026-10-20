@@ -100,11 +100,22 @@ def size_and_newest(root):
             if size > MAX_TOTAL:raise RuntimeError("unexpected_total")
     return size, newest
 
+def same_root_filesystem(path, expected_root_device=None):
+    """Do not delete temporary files on another mount to 'free' root blocks."""
+    try:
+        root_device=Path("/").stat().st_dev if expected_root_device is None else expected_root_device
+        original=path.lstat()
+        return (not stat.S_ISLNK(original.st_mode)
+                and original.st_dev==root_device)
+    except (OSError,ValueError):
+        return False
+
 def allowed(path, roots):
     if path not in roots:return False
     if path.parent not in EXPECTED_PARENTS:return False
     if path.is_symlink() or not path.exists():return False
     if path.parent.is_symlink():return False
+    if not same_root_filesystem(path):return False
     return path.resolve() == path
 
 def audit(path, age_hours, cap_mb, process_refs):
