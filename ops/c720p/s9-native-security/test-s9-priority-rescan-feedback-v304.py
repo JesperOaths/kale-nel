@@ -119,6 +119,24 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["attempts"],0)
   self.assertEqual(v.items()["rows"][0]["status"],"pending")
 
+ def test_expired_worker_lease_persisted_even_if_no_task_runnable(self):
+  v.produce()
+  doc=v.items()
+  task=doc["rows"][0]
+  task.update({"status":"processing","attempts":1,"lease_until":100,"next_attempt_at":0})
+  v.atomic(v.QUEUE,doc)
+  recovered=v.recover_expired_leases(doc,200)
+  self.assertEqual(recovered,1)
+  persisted=v.items()
+  self.assertEqual(persisted["revision"],doc["revision"])
+  self.assertEqual(persisted["rows"][0]["status"],"pending")
+  self.assertEqual(persisted["rows"][0]["next_attempt_at"],260)
+  self.assertEqual(v.recover_expired_leases(persisted,201),0)
+  self.assertEqual(v.items()["revision"],persisted["revision"])
+  persisted["rows"][0].update({"status":"processing","attempts":3,"lease_until":100})
+  self.assertEqual(v.recover_expired_leases(persisted,210),1)
+  self.assertEqual(v.items()["rows"][0]["status"],"dead_letter")
+
  def test_camera_busy_does_not_consume_attempt(self):
   v.produce()
   with patch.object(v,"camera_guard",side_effect=v.Refusal("camera_battery_thermal_recording_or_worker_exclusion")):

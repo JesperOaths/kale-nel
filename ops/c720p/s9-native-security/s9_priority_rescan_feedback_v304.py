@@ -263,19 +263,36 @@ def publish(record,doc):
        "review_decisions_modified":False}
     atomic(SECONDARY,new)
     return new
-def work():
-    doc=items();candidate=None
+def recover_expired_leases(doc, timestamp):
+    """Durably recover a crashed worker even when no task can start."""
+    recovered=0
     for row in doc["rows"]:
-        if row["status"]=="processing" and row.get("lease_until",0)<now():
-            row["status"]="pending" if row["attempts"]<MAX_ATTEMPTS else "dead_letter"
-            row["last_reason"]="previous_worker_lease_expired"
-            row["lease_until"]=0
-        if (candidate is None and row["status"]=="pending" and
-                row.get("next_attempt_at",0)<=now()):
-            candidate=row
+        if row["status"]!="processing" or row.get("lease_until",0)>=timestamp:
+            continue
+        attempts=row.get("attempts")
+        check(type(attempts) is int and 0<=attempts<=MAX_ATTEMPTS,
+              "expired_lease_attempt_count_invalid")
+        row["status"]="pending" if attempts<MAX_ATTEMPTS else "dead_letter"
+        row["last_reason"]="previous_worker_lease_expired"
+        row["lease_until"]=0
+        # Never hot-loop on expired reservations.
+        row["next_attempt_at"]=timestamp+min(6*3600,60*2**max(0,attempts-1))
+        recovered+=1
+    if recovered:
+        doc["revision"]+=1
+        atomic(QUEUE,doc)
+        journal("lease_recovered","expired_worker_recovery_persisted")
+    return recovered
+
+def work():
+    doc=items()
+    recovered=recover_expired_leases(doc,now())
+    candidate=next((row for row in doc["rows"]
+         if row["status"]=="pending"
+         and row.get("next_attempt_at",0)<=now()),None)
     if candidate is None:
         return {"status":"no_runnable_originals","revision":doc["revision"],
-           "tally":aggregate(doc["rows"])}
+           "leases_recovered":recovered,"tally":aggregate(doc["rows"])}
     # Acquire source/camera locks BEFORE taking a lease.
     check(CROSS_LOCK.is_file() and not CROSS_LOCK.is_symlink(),
           "s9_shared_backfill_lock_unavailable")
