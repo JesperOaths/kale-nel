@@ -1,5 +1,11 @@
 name: C720P safe Chromium cache relief
 on:
+  workflow_dispatch:
+    inputs:
+      confirm_live_cleanup:
+        description: 'Enter APPLY-C720P-BROWSER-CACHES only in an authorized maintenance window'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'ops/c720p/reclaim-browser-caches-20261014.py'
@@ -9,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'ops/c720p/reclaim-browser-caches-20261014.py'
+      - '.github/workflows/c720p-browser-cache-reclaim-20261014.yml'
 permissions:
   contents: read
 concurrency:
@@ -22,11 +29,13 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - run: |
           python3 -m py_compile ops/c720p/reclaim-browser-caches-20261014.py
+          python3 ops/c720p/test-manual-reclaim-workflow-gates-v254.py
           python3 ops/c720p/test-reclaim-browser-caches-20261014.py
           python3 ops/c720p/reclaim-browser-caches-20261014.py --help
   clean:
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    # A merge to main is validation-only; never use it to submit destructive jobs.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel' && inputs.confirm_live_cleanup == 'APPLY-C720P-BROWSER-CACHES'
     runs-on: ubuntu-latest
     timeout-minutes: 9
     env:

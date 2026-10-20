@@ -1,5 +1,11 @@
 name: C720P guarded disposable artifact reclaim
 on:
+  workflow_dispatch:
+    inputs:
+      confirm_live_cleanup:
+        description: 'Enter APPLY-C720P-DISPOSABLES only in an authorized maintenance window'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'ops/c720p/reclaim-audited-disposable-20261014.py'
@@ -23,11 +29,13 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - run: |
           python3 -m py_compile ops/c720p/reclaim-audited-disposable-20261014.py
+          python3 ops/c720p/test-manual-reclaim-workflow-gates-v254.py
           python3 ops/c720p/c720p-disposable-contract-v2.py
           python3 ops/c720p/reclaim-audited-disposable-20261014.py --help
   execute:
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    # A merge to main is validation-only; never use it to submit destructive jobs.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel' && inputs.confirm_live_cleanup == 'APPLY-C720P-DISPOSABLES'
     runs-on: ubuntu-latest
     timeout-minutes: 14
     env:
