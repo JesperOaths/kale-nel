@@ -1,0 +1,31 @@
+name: C720P independent HTTPS issuer clock V234 (source-only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/s9_authenticated_issuer_https_clock_v234.py'
+      - 'ops/c720p/security-runtime/test-s9-authenticated-issuer-https-clock-v234.py'
+      - '.github/workflows/c720p-s9-https-issuer-clock-v234.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/s9_authenticated_issuer_https_clock_v234.py'
+      - 'ops/c720p/security-runtime/test-s9-authenticated-issuer-https-clock-v234.py'
+      - '.github/workflows/c720p-s9-https-issuer-clock-v234.yml'
+permissions:
+  contents: read
+jobs:
+  offline_fail_closed_clock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compile and test trust quorum without external traffic
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile \
+            "$d/s9_authenticated_issuer_https_clock_v234.py" \
+            "$d/test-s9-authenticated-issuer-https-clock-v234.py"
+          python3 "$d/test-s9-authenticated-issuer-https-clock-v234.py"
+          python3 "$d/test-audit-c720p-signed-action-clock-v226.py"
+          echo "S9_HTTPS_ISSUER_TIME_V234_HOST_ONLY_NO_NTP_NO_SIGNING"
