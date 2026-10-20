@@ -1,0 +1,29 @@
+name: C720P NTP provider and storage inspection V252 (read only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-c720p-ntp-providers-v252.py'
+      - 'ops/c720p/security-runtime/test-audit-c720p-ntp-providers-v252.py'
+      - '.github/workflows/c720p-storage-ntp-inspection-v252.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-c720p-ntp-providers-v252.py'
+      - 'ops/c720p/security-runtime/test-audit-c720p-ntp-providers-v252.py'
+      - '.github/workflows/c720p-storage-ntp-inspection-v252.yml'
+permissions:
+  contents: read
+jobs:
+  offline-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check NTP inventory source cannot mutate device
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/audit-c720p-ntp-providers-v252.py"
+          python3 "$d/test-audit-c720p-ntp-providers-v252.py"
+          python3 "$d/test-c720p-clock-health-v1.py"
+          python3 "$d/test-audit-c720p-signed-action-clock-v226.py"
