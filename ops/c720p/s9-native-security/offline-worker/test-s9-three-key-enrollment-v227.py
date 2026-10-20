@@ -32,7 +32,7 @@ class FirstEnrollment(unittest.TestCase):
   import re
   custodian=(ROOT/"S9MigratedManifestKeyCustodyV227.java").read_text()
   source=re.search(r'public static final String SOURCE="([^"]+)"',core)
-  existing=re.search(r'public static final String SOURCE_MANIFEST_ALIAS=\\s*"([^"]+)"',custodian)
+  existing=re.search(r'public static final String SOURCE_MANIFEST_ALIAS=\s*"([^"]+)"',custodian)
   self.assertIsNotNone(source)
   self.assertIsNotNone(existing)
   self.assertEqual(source.group(1),existing.group(1),
