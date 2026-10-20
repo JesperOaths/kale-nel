@@ -1,0 +1,31 @@
+name: S9 priority rescan durable feedback V304
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/s9_priority_rescan_feedback_v304.py'
+      - 'ops/c720p/s9-native-security/rescan-original4k-face-gaps-v1.py'
+      - 'ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py'
+      - '.github/workflows/s9-priority-rescan-feedback-v304.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/s9_priority_rescan_feedback_v304.py'
+      - 'ops/c720p/s9-native-security/rescan-original4k-face-gaps-v1.py'
+      - 'ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py'
+      - '.github/workflows/s9-priority-rescan-feedback-v304.yml'
+permissions:
+  contents: read
+jobs:
+  source_qualified_queue_and_evidence_feedback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Enforce source-qualification, idempotent leases and fail-closed V5 workers
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security
+          python3 -m py_compile "$d/s9_priority_rescan_feedback_v304.py" "$d/test-s9-priority-rescan-feedback-v304.py"
+          python3 "$d/test-s9-priority-rescan-feedback-v304.py"
+          python3 "$d/test-evidence-quality-v1.py"
+          echo S9_PRIORITY_RESCAN_V304_SYNTHETIC_NO_PHONE_CAMERA_MEDIA
