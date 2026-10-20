@@ -17,6 +17,7 @@ PREREQS=[
  "S9MigratedVerifiedSourceV198.java",
  "S9MigratedSealedSourceManifestV216.java",
  "S9MigratedReadOnlyStateV225.java",
+ "S9MigratedReadOnlyStateEnvelopeV229.java",
  "S9MigratedReadOnlyStateTestV225.java",
 ]
 
@@ -27,7 +28,7 @@ class Tests(unittest.TestCase):
      str(ROOT/x) for x in PREREQS]
    compiled=subprocess.run(args,capture_output=True,text=True,timeout=45)
    self.assertEqual(compiled.returncode,0,
-     "prior_authenticated_six_state_java8_compilation_failed")
+     "prior_authenticated_six_state_java8_compilation_failed: "+compiled.stderr)
    executed=subprocess.run(["java","-cp",out,
      "nl.kalenel.s9offline.S9MigratedReadOnlyStateTestV225"],
       capture_output=True,text=True,timeout=35)
@@ -45,6 +46,9 @@ class Tests(unittest.TestCase):
     "target.getParent()",
     "companion_external_metadata_not_app_owned",
     "trustedMinimumGeneration<1",
+    "companion_approved_six_source_digest_required",
+    "S9MigratedAndroidThreeKeyOwnerV227.verifyExistingOnly(",
+    "S9MigratedApprovedSixDigestV230.requireSealedManifestEqualsEnrollment(",
     "S9MigratedManifestKeyCustodyV227.openExisting(app)",
     "keys.verifyAlreadyEnrolled(trustedMinimumGeneration)",
     "sources.sourceRows.size()!=6",

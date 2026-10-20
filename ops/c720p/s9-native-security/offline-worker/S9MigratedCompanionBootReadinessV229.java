@@ -74,18 +74,40 @@ public final class S9MigratedCompanionBootReadinessV229 {
      * anti-rollback storage, NEVER a remote request or browser-supplied
      * header. This class does NOT supply or create that anchor.
      */
+    /**
+     * Legacy source-only signature cannot bind the first-enrollment-approved
+     * six-recording source digest. Refuse rather than silently downgrade.
+     */
     public static Assessment inspectExistingOnly(Context context,
                File preprovisionedCompanionMicroSdLedger,
                long trustedMinimumGeneration)throws IOException {
+        throw new IOException("companion_approved_six_source_digest_required");
+    }
+
+    /**
+     * trustedApprovedSixDigest MUST be an independently protected value
+     * established during the human-authorized, create-only first enrollment.
+     * Never accept it from a browser, relay request or S9 microSD metadata.
+     */
+    public static Assessment inspectExistingOnly(Context context,
+               File preprovisionedCompanionMicroSdLedger,
+               long trustedMinimumGeneration,
+               String trustedApprovedSixDigest)throws IOException {
         if(context==null || context.getApplicationContext()==null ||
-             trustedMinimumGeneration<1)
+             trustedMinimumGeneration<1 || trustedApprovedSixDigest==null)
             throw new IOException("companion_start_requires_trusted_generation");
         Context app=context.getApplicationContext();
         requireAppScopedLedger(app,preprovisionedCompanionMicroSdLedger);
+        // The startup must refuse orphaned/missing/partial first-use keys
+        // before considering an independently signed source-manifest valid.
+        S9MigratedAndroidThreeKeyOwnerV227.verifyExistingOnly(
+            app,trustedApprovedSixDigest);
         S9MigratedManifestKeyCustodyV227.Existing keys=
             S9MigratedManifestKeyCustodyV227.openExisting(app);
         S9MigratedSealedSourceManifestV216.Verified sources=
             keys.verifyAlreadyEnrolled(trustedMinimumGeneration);
+        S9MigratedApprovedSixDigestV230.requireSealedManifestEqualsEnrollment(
+            sources,trustedApprovedSixDigest);
         if(sources.sourceRows.size()!=6)
             throw new IOException("companion_six_source_manifest_required");
         long total=0;

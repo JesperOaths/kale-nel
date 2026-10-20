@@ -3,12 +3,18 @@ on:
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/S9MigratedCompanionBootReadinessV229.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedApprovedSixDigestV230.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedApprovedSixDigestTestV230.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-approved-six-digest-v230.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-companion-boot-readiness-v229.py'
       - '.github/workflows/s9-companion-readonly-boot-v229.yml'
   push:
     branches: [main]
     paths:
       - 'ops/c720p/s9-native-security/offline-worker/S9MigratedCompanionBootReadinessV229.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedApprovedSixDigestV230.java'
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedApprovedSixDigestTestV230.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-approved-six-digest-v230.py'
       - 'ops/c720p/s9-native-security/offline-worker/test-s9-companion-boot-readiness-v229.py'
       - '.github/workflows/s9-companion-readonly-boot-v229.yml'
 permissions:
@@ -28,6 +34,7 @@ jobs:
           set -euo pipefail
           d=ops/c720p/s9-native-security/offline-worker
           python3 "$d/test-s9-companion-boot-readiness-v229.py"
+          python3 "$d/test-s9-approved-six-digest-v230.py"
           python3 "$d/test-s9-three-key-custody-v227.py"
           python3 "$d/test-s9-sealed-manifest-source-v216.py"
       - name: Compile read-only app boot admission to Android API28 DEX
@@ -51,6 +58,9 @@ jobs:
             "$d/S9MigratedThreeKeyCustodyV227.java" \
             "$d/S9MigratedManifestKeyCustodyV227.java" \
             "$d/S9MigratedReadOnlyStateV225.java" \
+            "$d/S9MigratedThreeKeyEnrollmentV227.java" \
+            "$d/S9MigratedAndroidThreeKeyOwnerV227.java" \
+            "$d/S9MigratedApprovedSixDigestV230.java" \
             "$d/S9MigratedCompanionBootReadinessV229.java"
           "$d8" --min-api 28 --output "$work/dex" $(find "$work/classes" -name '*.class' -print)
           test -s "$work/dex/classes.dex"
