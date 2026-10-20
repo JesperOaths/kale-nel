@@ -1,0 +1,18 @@
+[Unit]
+Description=S9 source-qualified original-4K priority producer (metadata only)
+Documentation=https://github.com/JesperOaths/kale-nel/issues/914
+ConditionPathExists=/home/jespern/c720p-home-hub/bin/s9_priority_rescan_feedback_v304.py
+After=c720p-drive-security-archive.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9_priority_rescan_feedback_v304.py produce
+Nice=18
+IOSchedulingClass=idle
+CPUQuota=15%
+MemoryMax=160M
+TimeoutStartSec=90
+UMask=0077
+NoNewPrivileges=true
+Restart=no

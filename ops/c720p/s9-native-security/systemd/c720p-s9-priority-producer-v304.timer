@@ -1,0 +1,13 @@
+[Unit]
+Description=Incremental source-qualified S9 priority queue refresh
+
+[Timer]
+OnActiveSec=15min
+OnUnitInactiveSec=20min
+AccuracySec=2min
+RandomizedDelaySec=2min
+Persistent=false
+Unit=c720p-s9-priority-producer-v304.service
+
+[Install]
+WantedBy=timers.target

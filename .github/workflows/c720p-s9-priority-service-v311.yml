@@ -1,0 +1,31 @@
+name: C720P priority feedback service/timers V311
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/systemd/c720p-s9-priority-**'
+      - 'ops/c720p/s9-native-security/test-s9-priority-systemd-v311.py'
+      - '.github/workflows/c720p-s9-priority-service-v311.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/systemd/c720p-s9-priority-**'
+      - 'ops/c720p/s9-native-security/test-s9-priority-systemd-v311.py'
+      - '.github/workflows/c720p-s9-priority-service-v311.yml'
+permissions:
+  contents: read
+jobs:
+  unit_safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check unit contents without installing on C720P
+        run: |
+          set -euo pipefail
+          root=ops/c720p/s9-native-security
+          python3 "$root/test-s9-priority-systemd-v311.py"
+          for f in "$root"/systemd/c720p-s9-priority-*.service; do
+            systemd-analyze verify "$f" 2>&1 | tee /tmp/s9-service-verify.log || true
+            if grep -E 'Unknown key|Assignment outside of section|Bad unit file setting' /tmp/s9-service-verify.log; then exit 1; fi
+          done
+          echo S9_PRIORITY_V311_HOST_UNIT_VERIFIED_NO_DEVICE_ACTION

@@ -1,0 +1,13 @@
+[Unit]
+Description=Low-duty, strictly bounded S9 original-video priority feedback
+
+[Timer]
+OnActiveSec=45min
+OnUnitInactiveSec=45min
+AccuracySec=3min
+RandomizedDelaySec=5min
+Persistent=false
+Unit=c720p-s9-priority-rescan-v304.service
+
+[Install]
+WantedBy=timers.target
