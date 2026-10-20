@@ -93,6 +93,20 @@ public final class S9MigratedSealedManifestEnrollmentTestV220 {
            symbolic.toFile(),SIGNER,entries,YES),"symlink_dir_refused");
         require(java.util.Arrays.equals(approved,Files.readAllBytes(target)),
            "original_protected");
+        // Caller mutation during its own authorization must not replace the
+        // six source proofs already snapshotted for sealing and readback.
+        Path isolated=Files.createTempDirectory("s9-manifest-v220-mutable-input-");
+        Map<String,S9MigratedVerifiedSourceV198.Proof> mutable=six();
+        S9MigratedSealedManifestEnrollmentV220.EnrollmentReceipt stable=
+            S9MigratedSealedManifestEnrollmentV220.enrollFirstOnly(
+                isolated.toFile(),SIGNER,mutable,(generation,rows)->{
+                    mutable.clear();
+                    return generation==1L && rows.size()==6;
+                });
+        require(stable.privateReadbackVerified && mutable.isEmpty() &&
+            S9MigratedSealedSourceManifestV216.verifyExisting(
+                isolated.toFile(),SIGNER,1L).sourceRows.size()==6,
+                "caller_mutation_cannot_change_approved_payload");
         require(!S9MigratedSealedManifestEnrollmentV220.liveEndpointInstalled()
            && !S9MigratedSealedManifestEnrollmentV220.canRemoveLegacyMedia(),
            "no_production_authority");
