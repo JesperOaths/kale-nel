@@ -18,21 +18,33 @@ FOLDER="G123"
 class AutoPersonReviewTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-  for name,filename in (("STATE",""),("SOURCE","suggestions.json"),("REJECTED","denied.json"),
+  for name,filename in (("STATE",""),("SOURCE","suggestions.json"),("REFERENCES","references.json"),("REJECTED","denied.json"),
                         ("LOCK","review.lock"),("AUDIT","denied.audit.jsonl")):
    p=Path(self.tmp.name)/filename if filename else Path(self.tmp.name)
    patcher=patch.object(mod,name,p);patcher.start();self.addCleanup(patcher.stop)
   self.sd={CLIP:{"sd_verified":True}}
   self.links={}
+  self.reference_ids=["1"*64,"2"*64]
+  self.write_reference_index()
+ def write_reference_index(self,model=MODEL,revoked=(),generation=1):
+  entries=[]
+  for id in self.reference_ids:
+   entries.append({"id":id,"folder":FOLDER,"source_name":CLIP,
+      "original_sha256":SHA,"human_decision_sha256":"f"*64,
+      "model_sha256":model,"human_approved":True,
+      "aligned_face":True,"quality_passed":True,"active":id not in revoked})
+  mod.REFERENCES.write_text(json.dumps({
+    "schema":"s9_qualified_face_references_v1",
+    "generation":generation,"model_sha256":model,"references":entries}))
  def write(self,**overrides):
   row={"source":"sd","name":CLIP,"folder":FOLDER,
        "snapshot_sha256":SHA,"model_sha256":MODEL,
        "aligned_face":True,"human_confirmed_reference":True,
        "pair_score_origin":"s9_local_exact_face_pair_score_v1",
-       "reference_count":2,"score":.94,"margin":.11}
+       "reference_count":2,"reference_ids":self.reference_ids,"score":.94,"margin":.11}
   row.update(overrides)
   mod.SOURCE.write_text(json.dumps({"version":1,
-   "origin":"s9_offline_aligned_face_embeddings","model_sha256":MODEL,
+   "origin":"s9_offline_aligned_face_embeddings","model_sha256":MODEL,"reference_generation":1,
    "suggestions":[row]}))
  def deny(self,id,revision=0):
   return mod.deny({"action":"deny","id":id,"revision":revision,
@@ -87,11 +99,33 @@ class AutoPersonReviewTests(unittest.TestCase):
   doc["suggestions"][0]["model_sha256"]="c"*64
   doc["suggestions"][0]["snapshot_sha256"]="d"*64
   mod.SOURCE.write_text(json.dumps(doc))
+  self.write_reference_index(model="c"*64)
   refreshed,status=mod.proposals()
   self.assertEqual(status,"ready")
   self.assertNotEqual(refreshed[0]["id"],first["id"])
   self.assertEqual(mod.report(self.sd,self.links)["items"],[])
 
+ def test_revoked_reference_disappears_without_resetting_manual_decision(self):
+  self.write()
+  self.assertEqual(len(mod.report(self.sd,self.links)["items"]),1)
+  self.write_reference_index(revoked=(self.reference_ids[0],))
+  self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+  self.assertEqual(mod.proposals()[1],"ready")
+  self.assertFalse(mod.REJECTED.exists())
+  self.write_reference_index(generation=2)
+  with self.assertRaises(ValueError):mod.proposals()
+ def test_missing_reference_index_denies_all_proposals(self):
+  self.write()
+  mod.REFERENCES.unlink()
+  rows,status=mod.proposals()
+  self.assertEqual(rows,[])
+  self.assertEqual(status,"qualified_face_reference_index_not_ready")
+ def test_duplicate_reference_id_rejected(self):
+  self.write()
+  registry=json.loads(mod.REFERENCES.read_text())
+  registry["references"][1]["id"]=registry["references"][0]["id"]
+  mod.REFERENCES.write_text(json.dumps(registry))
+  with self.assertRaises(ValueError):mod.proposals()
  def test_existing_denial_registry_remains_compatible(self):
   self.write()
   mod.REJECTED.write_text(json.dumps({"version":1,"revision":1,"denied":[]}))
