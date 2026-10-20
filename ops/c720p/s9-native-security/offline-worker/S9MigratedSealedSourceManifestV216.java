@@ -100,7 +100,28 @@ public final class S9MigratedSealedSourceManifestV216 {
                                                         LinkOption.NOFOLLOW_LINKS);
         if(!before.isRegularFile() || before.size()<125 || before.size()>MAX_BYTES)
             throw new IOException("sealed_manifest_size_untrusted");
-        byte[] content=Files.readAllBytes(path);
+        // Open the already bounded file with NOFOLLOW as well; do not let a
+        // racing replacement turn a stat-checked path into another file read.
+        byte[] content;
+        try(java.nio.channels.SeekableByteChannel input=Files.newByteChannel(
+                path,new java.util.HashSet<java.nio.file.OpenOption>(
+                    java.util.Arrays.<java.nio.file.OpenOption>asList(
+                        java.nio.file.StandardOpenOption.READ,LinkOption.NOFOLLOW_LINKS)));
+            java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream(
+                    (int)before.size())) {
+            java.nio.ByteBuffer block=java.nio.ByteBuffer.allocate(32768);
+            int seen=0;
+            while(true){
+                block.clear();
+                int got=input.read(block);
+                if(got<0)break;
+                if(got==0 || seen+got>MAX_BYTES)
+                    throw new IOException("sealed_manifest_bounded_read_failed");
+                buffer.write(block.array(),0,got);
+                seen+=got;
+            }
+            content=buffer.toByteArray();
+        }
         BasicFileAttributes after=Files.readAttributes(path,BasicFileAttributes.class,
                                                         LinkOption.NOFOLLOW_LINKS);
         if(content.length!=before.size() || before.size()!=after.size()
