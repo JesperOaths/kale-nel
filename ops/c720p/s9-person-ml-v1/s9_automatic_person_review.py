@@ -9,6 +9,7 @@ import re
 import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
+import s9_person_reference_policy_v315 as reference_policy
 
 STATE=Path("/home/jespern/c720p-home-hub/state")
 SOURCE=STATE/"s9-auto-person-face-proposals-v1.json"
@@ -17,6 +18,8 @@ LOCK=STATE/"s9-auto-person-rejections-v1.lock"
 AUDIT=STATE/"s9-auto-person-rejections-v1.audit.jsonl"
 ROUTE="/new/api/automatic-person"
 INTENT="human-automatic-person-denial-v1"
+REF_INTENT="human-exact-face-reference-decision-v315"
+REF_ROUTE=ROUTE+"/references"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
 HASH=re.compile(r"[0-9a-f]{64}\Z")
 FOLDER=re.compile(r"[A-Za-z0-9_-]{1,100}\Z")
@@ -36,6 +39,25 @@ def state():
   raise ValueError("invalid_denials")
  return d
 
+def private_native_catalog():
+ path=STATE/"s9-standalone-archive-catalog-v1.json"
+ if path.is_symlink() or not path.is_file() or path.stat().st_size>8000000:
+  raise ValueError("native_catalog_not_ready")
+ return json.loads(path.read_text())
+
+def native_catalog_events(catalog):
+ rows=catalog.get("records")
+ if not isinstance(rows,dict):raise ValueError("invalid_private_native_sources")
+ return [{"clip_no":name,**(value.get("manifest") or {})}
+   for name,value in rows.items() if isinstance(value,dict)
+   and isinstance(value.get("manifest"),dict)]
+
+def manual_overlay():
+ import s9_manual_recording_links as manual
+ rows=manual.current().get("items")
+ if not isinstance(rows,dict):raise ValueError("manual_review_overlay_not_ready")
+ return rows
+
 def proposals():
  if SOURCE.is_symlink():raise ValueError("unsafe_proposals_path")
  if not SOURCE.is_file():return [],"face_embedding_index_not_ready"
@@ -45,7 +67,7 @@ def proposals():
   raise ValueError("unverified_face_model")
  rows=doc.get("suggestions")
  if not isinstance(rows,list) or len(rows)>2500:raise ValueError("invalid_proposals")
- verified=[];seen=set()
+ verified=[];seen=set();original_by_id={}
  for x in rows:
   if not isinstance(x,dict):continue
   if x.get("source")!="sd" or not CLIP.fullmatch(str(x.get("name",""))):continue
@@ -60,10 +82,19 @@ def proposals():
     x["snapshot_sha256"]+"|"+doc["model_sha256"]).encode()).hexdigest()
   if digest in seen:continue
   seen.add(digest)
+  original_by_id[digest]=x
   verified.append({"id":digest,"source":"sd","name":x["name"],"folder":x["folder"],
    "score":x["score"],"margin":x["margin"],"reference_count":x["reference_count"],
    "model_origin":"S9+ aligned face embeddings","human_approved":False})
- return verified,"ready"
+ # Never accept model claims that a crop is human-approved without
+ # validating exact active reference IDs against the current private catalog.
+ registry=reference_policy.read_state()
+ catalog=private_native_catalog()
+ active=reference_policy.valid_active(registry,manual_overlay(),
+      catalog,native_catalog_events(catalog))
+ verified=[x for x in verified if reference_policy.verify_proposal(
+      original_by_id.get(x["id"]),registry,active)]
+ return verified,("ready" if verified else "face_reference_generation_not_ready")
 
 def stable_pair_key(item):
  # A model upgrade, new face crop or rescoring must not revoke a human denial
@@ -92,9 +123,14 @@ def report(sd_names,manual_links):
       or stable_pair_key(x) in denied_pairs or x["name"] in used):continue
   if final_manual_decision(manual_links.get("sd:"+x["name"])):continue
   used.add(x["name"]);visible.append(x)
+ registry=reference_policy.read_state()
+ catalog=private_native_catalog() if registry["decisions"] else {}
+ active=reference_policy.valid_active(registry,manual_links,
+      catalog,native_catalog_events(catalog)) if registry["decisions"] else {}
  return {"ok":True,"status":status,"items":visible[:500],
   "revision":rejected["revision"],"human_approval_required":True,
-  "automatic_assignments":False,"face_vectors_exported":False}
+  "automatic_assignments":False,"face_vectors_exported":False,
+  "qualified_face_references":reference_policy.counts(registry,active)}
 
 def save(doc):
  STATE.mkdir(parents=True,exist_ok=True)
