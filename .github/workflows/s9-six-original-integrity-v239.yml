@@ -1,0 +1,28 @@
+name: S9 six migrated original SHA audit V239 (offline tests only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-s9-six-migrated-sha-v239.py'
+      - 'ops/c720p/security-runtime/test-audit-s9-six-migrated-sha-v239.py'
+      - '.github/workflows/s9-six-original-integrity-v239.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-s9-six-migrated-sha-v239.py'
+      - 'ops/c720p/security-runtime/test-audit-s9-six-migrated-sha-v239.py'
+      - '.github/workflows/s9-six-original-integrity-v239.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic_readonly_guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify six originals, no-action default and Camera2 thermal exclusions
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/audit-s9-six-migrated-sha-v239.py"
+          python3 "$d/test-audit-s9-six-migrated-sha-v239.py"
+          echo S9_SIX_SHA_V239_SYNTHETIC_ONLY_NO_PHONE_ORIGINALS_TOUCHED
