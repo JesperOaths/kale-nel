@@ -90,11 +90,11 @@ class Tests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as root:
    state=Path(root)
    result=state/"rollout.json"
-   with patch.object(m,"STATE",state),patch.object(m,"RESULT",result),\\
-        patch.object(m,"result_state",return_value=None),\\
-        patch.object(m,"camera",return_value=safe()),\\
-        patch.object(m,"competing",return_value=None),\\
-        patch.object(m,"check_approval"),\\
+   with patch.object(m,"STATE",state),patch.object(m,"RESULT",result),\
+        patch.object(m,"result_state",return_value=None),\
+        patch.object(m,"camera",return_value=safe()),\
+        patch.object(m,"competing",return_value=None),\
+        patch.object(m,"check_approval"),\
         patch.object(m,"current_apk_sha",return_value=m.NEW_SHA) as sha,\\
         patch.object(m,"adb") as adb,\\
         patch.object(m,"launch_camera") as launch,\\
