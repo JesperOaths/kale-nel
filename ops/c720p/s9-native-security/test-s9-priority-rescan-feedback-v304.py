@@ -68,7 +68,8 @@ class QueueTest(unittest.TestCase):
         "samples":[{"time_ms":t,"state":"decoded","face_candidates":[]}
                    for t in (3000,9000,15000)]}
   with patch.object(v,"camera_guard",return_value={"ok":True}),\
-       patch.object(v,"evaluate_one",return_value=record):
+       patch.object(v,"evaluate_one",return_value=record),\
+       patch.object(v,"consumer_visible",return_value=True):
    done=v.work()
   self.assertEqual(done["status"],"completed")
   self.assertEqual(done["verified_secondary"],True)
@@ -79,6 +80,84 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(derived["identity_inference_performed"],False)
   self.assertEqual(v.produce()["new_admissions"],0)
   self.assertEqual(v.items()["rows"][0]["status"],"completed")
+ def test_no_success_until_real_consumer_has_matching_source_revision(self):
+  v.produce()
+  row=v.items()["rows"][0]
+  record={"clip_no":row["clip_no"],"duration_ms":18000,
+      "source_sha256":row["source_sha256"],
+      "source_revision":row["media_revision"],
+      "model_sha256":v.MODEL_SHA,"samples":[
+          {"time_ms":3000,"state":"decoded","face_candidates":[]},
+          {"time_ms":9000,"state":"decoded","face_candidates":[]},
+          {"time_ms":15000,"state":"decoded","face_candidates":[]}]}
+  from unittest.mock import Mock
+  good={"ok":True,"original_gap_benchmark":{
+    "analysis_version":v.ANALYSIS,"detector_model_sha256":v.MODEL_SHA,
+    "recordings":[record]}}
+  class Reply:
+   status=200
+   def __init__(self,value):self.value=value
+   def __enter__(self):return self
+   def __exit__(self,*args):return False
+   def read(self,limit):
+    return json.dumps(self.value).encode()
+  with patch.object(v.urllib.request,"urlopen",
+      return_value=Reply(good)):
+   self.assertTrue(v.consumer_visible(record))
+  bad=json.loads(json.dumps(good))
+  bad["original_gap_benchmark"]["recordings"][0]["source_revision"]="f"*64
+  with patch.object(v.urllib.request,"urlopen",
+      return_value=Reply(bad)):
+   with self.assertRaises(v.Refusal):v.consumer_visible(record)
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",return_value=record),\
+       patch.object(v,"consumer_visible",
+            side_effect=v.Refusal("source_bound_secondary_result_not_visible")):
+   result=v.work()
+  self.assertEqual(result["status"],"pending")
+  self.assertFalse(result["verified_secondary"])
+  self.assertFalse(result["consumer_visibility_confirmed"])
+  self.assertEqual(v.items()["rows"][0]["attempts"],1)
+  self.assertIsNone(v.items()["rows"][0]["outcome"])
+  saved=json.loads(self.secondary.read_text())
+  self.assertFalse(saved["source_sha256_verified_before_processing"])
+  self.assertTrue(saved["source_sha256_bound_to_private_catalog_before_processing"])
+  self.assertTrue(saved["human_review_required"])
+
+ def test_expired_leases_persist_even_when_no_next_runnable_item(self):
+  v.produce()
+  doc=v.items()
+  selected=[r for r in doc["rows"] if r["status"]=="pending"]
+  self.assertEqual(len(selected),2)
+  selected[0].update({"status":"processing","attempts":1,"lease_until":1})
+  selected[1].update({"status":"processing","attempts":3,"lease_until":1})
+  v.atomic(v.QUEUE,doc)
+  before=doc["revision"]
+  response=v.work()
+  self.assertEqual(response["status"],"no_runnable_originals")
+  self.assertEqual(response["recovered_expired_leases"],2)
+  actual=v.items()
+  self.assertEqual(actual["revision"],before+1)
+  self.assertEqual(actual["rows"][0]["status"],"pending")
+  self.assertGreater(actual["rows"][0]["next_attempt_at"],v.now())
+  self.assertEqual(actual["rows"][1]["status"],"dead_letter")
+  self.assertEqual(actual["rows"][1]["attempts"],3)
+  self.assertIn("recovered_expired_leases",self.state.joinpath("transitions.jsonl").read_text())
+
+ def test_temporary_relay_outage_does_not_burn_retries(self):
+  import urllib.error
+  v.produce()
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",
+            side_effect=urllib.error.URLError("synthetic_transport_offline")):
+   result=v.work()
+  self.assertEqual(result["status"],"pending")
+  self.assertEqual(result["attempts"],0)
+  self.assertEqual(v.items()["rows"][0]["attempts"],0)
+  self.assertEqual(v.items()["rows"][0]["last_reason"],
+                   "temporary_source_or_consumer_transport_unavailable")
+  self.assertIsNone(v.items()["rows"][0]["outcome"])
+
  def test_stale_source_is_not_reused(self):
   v.produce()
   original=v.items()["rows"][0]
