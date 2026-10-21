@@ -140,16 +140,17 @@ def aggregate(rows):
     tally={x:0 for x in ("pending","processing","completed","rejected","blocked","dead_letter")}
     for item in rows:tally[item["status"]]=tally.get(item["status"],0)+1
     return tally
-def retire_obsolete(rows, relevant):
+def retire_obsolete(rows, relevant, pressure_ids=frozenset()):
     """Durably archive obsolete terminal IDs before freeing live queue slots.
 
-    A current blocked/completed entry is NEVER retired: the actual reader may
-    require its source and queue provenance. Old revisions remain queryable by
-    exact immutable ID in private 0600 files; no media or review bytes change.
+    Current COMPLETED observations remain in the queue for the live reader.
+    Only current BLOCKED rows whose exact same detector has already failed can
+    be parked under admission pressure; they are never consumer-eligible.
+    Old revisions and parked blockers remain queryable by immutable 0600 ID.
     """
     retained=[];count=0
     for row in rows:
-        if row["id"] in relevant or row["status"] not in (
+        if (row["id"] in relevant and row["id"] not in pressure_ids) or row["status"] not in (
                 "rejected","completed","blocked","dead_letter"):
             retained.append(row);continue
         key=row["id"]
@@ -169,6 +170,43 @@ def retire_obsolete(rows, relevant):
             atomic(dest,payload)
         count+=1
     return retained,count
+
+def retired_proof(approved):
+    """An archived immutable source/model ID cannot be re-enqueued by timer."""
+    key=approved["id"]
+    check(HEX.fullmatch(key),"invalid_retired_source_id")
+    path=retired_dir()/(key+".json")
+    if not path.exists() and not path.is_symlink():
+        return False
+    if path.is_symlink():
+        raise Refusal("retired_provenance_symlink")
+    record=safe_doc(path,20000)
+    final=record.get("final")
+    check(record.get("schema")=="s9_priority_retired_provenance_v1"
+          and record.get("id")==key and isinstance(final,dict)
+          and final.get("id")==key
+          and final.get("status") in ("rejected","completed","blocked","dead_letter")
+          and all(final.get(field)==approved.get(field)
+                  for field in ("clip_no","source_sha256","source_bytes",
+                                "media_revision","native_pass","model_sha256",
+                                "required_analysis","priority_reason")),
+          "retired_provenance_changed_or_untrusted")
+    return True
+
+def park_same_model_blockers(byid,relevant,fresh):
+    """Free capacity for *runnable* new work, never discard model failures."""
+    available=LIMIT-len(byid)
+    runnable=sum(x["priority_reason"]=="no_indexed_image" for x in fresh)
+    needed=max(0,runnable-available)
+    if not needed:
+        return frozenset()
+    blockers=sorted((x["id"] for x in byid.values()
+        if x["id"] in relevant
+        and x.get("status")=="blocked"
+        and x.get("priority_reason")=="secondary_detector_has_no_supported_face"
+        and x.get("last_reason")=="same_yunet_model_cannot_validate_its_own_non_detection"
+        and x.get("outcome") is None))
+    return frozenset(blockers[:needed])
 
 def produce():
     report,priorities,cat=source()
@@ -190,7 +228,12 @@ def produce():
             row["last_reason"]="source_revision_or_priority_no_longer_current"
             row["lease_until"]=0
             changed+=1
-    retained,retired=retire_obsolete(byid.values(),relevant)
+    # Re-admitting an unchanged archived source would burn capacity on every
+    # producer tick. Verify its exact durable record before selecting work.
+    incoming=[x for x in approved if x["id"] not in byid
+              and not retired_proof(x)]
+    pressure=park_same_model_blockers(byid,relevant,incoming)
+    retained,retired=retire_obsolete(byid.values(),relevant,pressure)
     byid={x["id"]:x for x in retained}
     added=0;deferred=0
     # Prioritize runnable work. The same immutable original/model/source ID
@@ -198,7 +241,7 @@ def produce():
     for row in sorted(approved,key=lambda x:(
            x["priority_reason"]!="no_indexed_image",x["id"])):
         key=row["id"]
-        if key in byid:continue
+        if key in byid or retired_proof(row):continue
         if len(byid)>=LIMIT:
             deferred+=1
             continue
@@ -211,7 +254,8 @@ def produce():
         journal("producer_persisted","qualified_originals_from_private_catalog")
     return {"status":"qualified_priority_produced","revision":doc["revision"],
             "new_admissions":added,"invalidated":changed,
-            "retired_with_provenance":retired,"capacity_deferred":deferred,
+            "retired_with_provenance":retired,"parked_same_model_blocked":len(pressure),
+            "capacity_deferred":deferred,
             "tally":aggregate(doc["rows"])}
 def camera_guard():
     with urllib.request.urlopen(CAMERA,timeout=7) as response:
