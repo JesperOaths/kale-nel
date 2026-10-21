@@ -165,14 +165,15 @@ def retirement_budget(rows):
                   metadata.st_uid==os.getuid() and
                   metadata.st_nlink==1 and not metadata.st_mode&0o077,
                   "retired_provenance_file_not_private")
-            check(20<metadata.st_size<20000,"retired_provenance_file_unbounded")
             total+=metadata.st_size
             if HEX.fullmatch(leaf.stem) and leaf.suffix==".json":
+                check(20<metadata.st_size<20000,
+                      "retired_provenance_file_unbounded")
                 count+=1
                 known.add(leaf.stem)
             else:
-                # Orphaned atomic temp files consume the same disk budget but
-                # are NOT silently deleted on restart. Unknown files refuse.
+                # Crash-leftover atomic temporary files can have 0 bytes.
+                # Account for them without deleting provenance on restart.
                 check(leaf.name.startswith(".rescan-v304-"),
                       "unexpected_private_retirement_entry")
     future=set()
