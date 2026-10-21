@@ -167,6 +167,8 @@ class QualityTests(unittest.TestCase):
                 q.install(Handler, lambda: {archive['events'][0]['clip_no']: {'face_candidates': []}})
                 handler = Handler()
                 handler.go()
+                self.assertEqual(handler.result[1]['gap_reader_contract'],
+                                 q.GAP_READER_HTTP_CONTRACT)
                 row = handler.result[1]['recordings'][0]
                 self.assertEqual(row['images'], [])
                 self.assertEqual(row['best_supported_snapshots'], [])

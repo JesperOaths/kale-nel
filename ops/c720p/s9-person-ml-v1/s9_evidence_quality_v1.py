@@ -347,6 +347,8 @@ def priority_rescan_feedback():
 # because an MP4 with the same filename still appears in the live index.
 PRIORITY_CATALOG = ROOT / 'state/s9-standalone-archive-catalog-v1.json'
 GAP_ANALYSIS = 's9_original4k_independent_gap_benchmark_v1'
+# Source-qualified HTTP reader implementation, not just a staged Python file.
+GAP_READER_HTTP_CONTRACT = 's9_source_current_priority_reader_v369'
 
 
 def source_current_gap_report(gap, current):
@@ -559,9 +561,14 @@ def install(handler_class, phone_rows):
                     # Never fall back to a filename-only secondary report.
                     report['original_gap_benchmark_state'] = 'source_attestation_unavailable'
             report['priority_rescan_feedback'] = priority_rescan_feedback()
-            handler.js(200, dict(report, ok=True))
+            handler.js(200, dict(report, ok=True,
+                                  gap_reader_contract=GAP_READER_HTTP_CONTRACT))
         except (OSError, ValueError, TypeError, KeyError):
-            handler.js(200, {'ok': True, 'analysis_version': VERSION, 'state': 'not_yet_available'})
+            # Prove the running handler contract even before a secondary
+            # report exists. Do NOT claim any gap evidence was admitted.
+            handler.js(200, {'ok': True, 'analysis_version': VERSION,
+                             'gap_reader_contract': GAP_READER_HTTP_CONTRACT,
+                             'state': 'not_yet_available'})
 
     handler_class.go = go
 

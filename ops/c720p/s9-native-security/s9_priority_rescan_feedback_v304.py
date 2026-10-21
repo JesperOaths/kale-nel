@@ -48,6 +48,7 @@ MODEL_SHA="8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
 NATIVE="s9_onphone_36_samples_overlapping_tiles_v5"
 ANALYSIS="s9_original4k_independent_gap_benchmark_v1"
 SCHEMA="s9_priority_rescan_feedback_v304"
+READER_HTTP_CONTRACT="s9_source_current_priority_reader_v369"
 NAME=re.compile(r"motion_[0-9]{13}\.mp4\Z")
 HEX=re.compile(r"[a-f0-9]{64}\Z")
 MAX_ATTEMPTS=3
@@ -491,6 +492,50 @@ def publish(record,doc):
        "review_decisions_modified":False}
     atomic(SECONDARY,new)
     return new
+def qualified_reader_preflight(candidate):
+    """Refuse BEFORE 4K decode if the running HTTP handler/clip is outdated.
+
+    An updated disk module alone is insufficient: the existing 8795 process
+    may still hold the old, filename-only evidence handler in memory.
+    This bounded GET is metadata-only and cannot spend a processing attempt.
+    """
+    try:
+        with urllib.request.urlopen(
+                "http://127.0.0.1:8795/new/api/evidence-quality",
+                timeout=12) as response:
+            check(response.status==200,
+                  "qualified_evidence_reader_unavailable_before_scan")
+            data=response.read(6000001)
+        check(len(data)<=6000000,
+              "qualified_evidence_reader_unavailable_before_scan")
+        doc=json.loads(data)
+        check(isinstance(doc,dict) and doc.get("ok") is True and
+              doc.get("gap_reader_contract")==READER_HTTP_CONTRACT,
+              "qualified_evidence_reader_unavailable_before_scan")
+        # The genuine v369 handler advertises capability even in its honest
+        # unavailable fallback. Do not mistake that fallback for a ready live
+        # reader and repeatedly decode originals during a phone/source outage.
+        check(doc.get("state")!="not_yet_available" and
+              isinstance(doc.get("recordings"),list) and
+              len(doc["recordings"])>=1,
+              "qualified_evidence_reader_not_ready_before_scan")
+        # The specific queued original must remain in the *running* reader
+        # and must still be an approved native no-crop priority. A healthy
+        # handler with only unrelated clips cannot authorize a decode.
+        matching=[item for item in doc["recordings"]
+            if isinstance(item,dict)
+            and item.get("clip_no")==candidate["clip_no"]]
+        check(len(matching)==1 and
+              matching[0].get("targeted_rescan_priority") is True and
+              matching[0].get("native_face_pass_complete") is True and
+              matching[0].get("extraction_status")==candidate["priority_reason"],
+              "qualified_evidence_reader_target_not_ready_before_scan")
+        return True
+    except Refusal:
+        raise
+    except (OSError,ValueError,TypeError,KeyError,TimeoutError):
+        raise Refusal("qualified_evidence_reader_unavailable_before_scan") from None
+
 def consumer_visible(record):
     """Verify this exact revision is served by the ACTUAL Evidence Quality API.
 
@@ -511,7 +556,8 @@ def consumer_visible(record):
     # A matching filename/revision in an unqualified reader is just an echo.
     # The live consumer must prove it applied its original-catalog/queue
     # attestation and revocation gate before a queue task can be completed.
-    check(gap.get("source_binding_status")=="source_qualified_active_queue_only"
+    check(doc.get("gap_reader_contract")==READER_HTTP_CONTRACT
+          and gap.get("source_binding_status")=="source_qualified_active_queue_only"
           and type(gap.get("source_bound_records_visible")) is int
           and gap["source_bound_records_visible"]>=1
           and type(gap.get("source_bound_records_not_current")) is int
@@ -605,6 +651,36 @@ def work():
     if candidate is None:
         return {"status":"no_runnable_originals","revision":doc["revision"],
            "leases_recovered":recovered,"tally":aggregate(doc["rows"])}
+    # A running older HTTP handler is a permanent dependency mismatch for this
+    # tick. Never decode the same original 4K repeatedly just to rediscover it.
+    try:
+        qualified_reader_preflight(candidate)
+    except Refusal as err:
+        if str(err)!="qualified_evidence_reader_target_not_ready_before_scan":
+            # Global stale/unavailable HTTP authority affects all candidates.
+            # Keep their task states intact until backend deployment/health.
+            raise
+        # Clip-specific mismatch must not starve unrelated runnable originals
+        # at the head of the fair work queue. Defer without decoding or
+        # spending a processing attempt, with an eventual explicit block.
+        count=candidate.get("deferrals",0)
+        check(type(count) is int and 0<=count<=MAX_TRANSIENT_DEFERRALS,
+              "target_preflight_deferral_count_untrusted")
+        candidate["deferrals"]=min(MAX_TRANSIENT_DEFERRALS,count+1)
+        candidate["next_attempt_at"]=now()+min(
+            6*3600,60*2**min(7,candidate["deferrals"]-1))
+        candidate["status"]=("blocked" if
+             candidate["deferrals"]>=MAX_TRANSIENT_DEFERRALS else "pending")
+        candidate["last_reason"]=(
+            "repeated_target_priority_unavailable" if
+            candidate["status"]=="blocked"
+            else "qualified_evidence_reader_target_not_ready_before_scan")
+        doc["revision"]+=1
+        atomic(QUEUE,doc)
+        journal(candidate["status"],candidate["last_reason"])
+        return {"status":candidate["status"],"revision":doc["revision"],
+                "reason":candidate["last_reason"],
+                "leases_recovered":recovered,"tally":aggregate(doc["rows"])}
     # Acquire source/camera locks BEFORE taking a lease.
     check(CROSS_LOCK.is_file() and not CROSS_LOCK.is_symlink(),
           "s9_shared_backfill_lock_unavailable")

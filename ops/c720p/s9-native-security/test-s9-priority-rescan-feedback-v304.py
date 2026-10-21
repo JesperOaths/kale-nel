@@ -9,6 +9,7 @@ HERE=Path(__file__).resolve().parent
 MOD=HERE/"s9_priority_rescan_feedback_v304.py"
 spec=importlib.util.spec_from_file_location("s9_priority_v304",MOD)
 v=importlib.util.module_from_spec(spec);spec.loader.exec_module(v)
+ACTUAL_READER_PREFLIGHT=v.qualified_reader_preflight
 
 class QueueTest(unittest.TestCase):
  def setUp(self):
@@ -41,7 +42,8 @@ class QueueTest(unittest.TestCase):
    patch.object(v,"SECONDARY",self.secondary),
    patch.object(v,"CROSS_LOCK",self.lock),
    patch.object(v,"IMAGE_LOCK",self.image_lock),
-   patch.object(v,"ANONYMOUS_CONSUMER",self.consumer)]
+   patch.object(v,"ANONYMOUS_CONSUMER",self.consumer),
+   patch.object(v,"qualified_reader_preflight",return_value=True)]
   for x in self.patch:x.start();self.addCleanup(x.stop)
   self.store()
  def store(self):
@@ -49,6 +51,107 @@ class QueueTest(unittest.TestCase):
    "detector_model_sha256":v.MODEL_SHA,"recordings":self.rows}))
   self.catalog.write_text(json.dumps({"schema_version":"s9_native_archive_catalog_v1",
    "snapshot_id":"a"*64,"records":self.orig}))
+
+ def test_running_http_reader_contract_must_precede_4k_or_any_lease(self):
+  v.produce()
+  old=v.QUEUE.read_bytes()
+  with patch.object(v,"qualified_reader_preflight",
+                    side_effect=v.Refusal("qualified_evidence_reader_unavailable_before_scan")),\
+       patch.object(v,"camera_guard") as camera,\
+       patch.object(v,"evaluate_one") as decode:
+   with self.assertRaisesRegex(v.Refusal,
+                               "qualified_evidence_reader_unavailable_before_scan"):
+    v.work()
+   camera.assert_not_called()
+   decode.assert_not_called()
+  self.assertEqual(v.QUEUE.read_bytes(),old)
+  self.assertEqual(v.items()["rows"][0]["attempts"],0)
+
+
+ def test_target_preflight_defers_fairly_then_blocks_without_any_4k_attempt(self):
+  v.produce()
+  pending=[r for r in v.items()["rows"] if r["status"]=="pending"]
+  self.assertEqual(len(pending),2)
+  reason="qualified_evidence_reader_target_not_ready_before_scan"
+  with patch.object(v,"qualified_reader_preflight",
+                    side_effect=v.Refusal(reason)) as preflight,\
+       patch.object(v,"camera_guard") as camera,\
+       patch.object(v,"evaluate_one") as decode:
+   first=v.work()
+   self.assertEqual(first["status"],"pending")
+   first_clip=preflight.call_args.args[0]["clip_no"]
+   row=next(r for r in v.items()["rows"] if r["clip_no"]==first_clip)
+   self.assertEqual(row["attempts"],0)
+   self.assertEqual(row["deferrals"],1)
+   self.assertGreater(row["next_attempt_at"],0)
+   second=v.work()
+   self.assertEqual(second["status"],"pending")
+   self.assertNotEqual(preflight.call_args.args[0]["clip_no"],first_clip)
+   # Exercise all remaining failures of the first clip without artificial
+   # scanning. The second clip's future backoff remains independent.
+   for count in range(2,v.MAX_TRANSIENT_DEFERRALS+1):
+    doc=v.items()
+    row=next(r for r in doc["rows"] if r["clip_no"]==first_clip)
+    row["next_attempt_at"]=0
+    v.atomic(v.QUEUE,doc)
+    result=v.work()
+    self.assertEqual(result["status"],"blocked" if
+                     count==v.MAX_TRANSIENT_DEFERRALS else "pending")
+   last=next(r for r in v.items()["rows"] if r["clip_no"]==first_clip)
+   self.assertEqual(last["status"],"blocked")
+   self.assertEqual(last["last_reason"],"repeated_target_priority_unavailable")
+   self.assertEqual(last["attempts"],0)
+   self.assertEqual(last["deferrals"],v.MAX_TRANSIENT_DEFERRALS)
+   camera.assert_not_called()
+   decode.assert_not_called()
+
+ def test_actual_http_reader_capability_rejects_old_echo_and_transport(self):
+  candidate={"clip_no":"motion_1792000000000.mp4",
+             "priority_reason":"no_indexed_image"}
+  class Reply:
+   status=200
+   def __init__(self,payload):self.payload=payload
+   def __enter__(self):return self
+   def __exit__(self,*args):return False
+   def read(self,limit):return json.dumps(self.payload).encode()
+  for payload in (
+      {"ok":True,"state":"not_yet_available"},
+      {"ok":True,"gap_reader_contract":"older_unqualified_reader"},
+      {"ok":False,"gap_reader_contract":v.READER_HTTP_CONTRACT},
+      []):
+   with self.subTest(payload=payload),\
+        patch.object(v.urllib.request,"urlopen",return_value=Reply(payload)):
+    with self.assertRaisesRegex(v.Refusal,
+                                "qualified_evidence_reader_unavailable_before_scan"):
+     ACTUAL_READER_PREFLIGHT(candidate)
+  with patch.object(v.urllib.request,"urlopen",side_effect=TimeoutError):
+   with self.assertRaisesRegex(v.Refusal,
+                               "qualified_evidence_reader_unavailable_before_scan"):
+    ACTUAL_READER_PREFLIGHT(candidate)
+  with patch.object(v.urllib.request,"urlopen",
+       return_value=Reply({"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
+                           "state":"not_yet_available"})):
+   with self.assertRaisesRegex(v.Refusal,
+                               "qualified_evidence_reader_not_ready_before_scan"):
+    ACTUAL_READER_PREFLIGHT(candidate)
+  with patch.object(v.urllib.request,"urlopen",
+       return_value=Reply({"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
+                           "analysis_version":"s9_evidence_quality_v1",
+                           "recordings":[{"clip_no":"motion_1792000000000.mp4",
+                                          "targeted_rescan_priority":True,
+                                          "native_face_pass_complete":True,
+                                          "extraction_status":"no_indexed_image"}]})):
+   self.assertTrue(ACTUAL_READER_PREFLIGHT(candidate))
+  with patch.object(v.urllib.request,"urlopen",
+       return_value=Reply({"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
+                           "recordings":[{"clip_no":"motion_1792000001000.mp4",
+                                          "targeted_rescan_priority":True,
+                                          "native_face_pass_complete":True,
+                                          "extraction_status":"no_indexed_image"}]})):
+   with self.assertRaisesRegex(v.Refusal,
+                               "qualified_evidence_reader_target_not_ready_before_scan"):
+    ACTUAL_READER_PREFLIGHT(candidate)
+
  def test_missing_or_symlinked_v361_backend_refuses_before_4k_or_lease(self):
   v.produce()
   old=v.QUEUE.read_bytes()
@@ -431,7 +534,8 @@ class QueueTest(unittest.TestCase):
       fake_quality if path==v.EVIDENCE else fake_consumer)
   pinned.start();self.addCleanup(pinned.stop)
   from unittest.mock import Mock
-  good={"ok":True,"original_gap_benchmark":{
+  good={"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
+        "original_gap_benchmark":{
     "analysis_version":v.ANALYSIS,"detector_model_sha256":v.MODEL_SHA,
     "source_binding_status":"source_qualified_active_queue_only",
     "source_bound_records_visible":1,"source_bound_records_not_current":0,
