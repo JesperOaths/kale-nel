@@ -21,6 +21,8 @@ jobs:
         run: node ops/c720p/s9-native-security/test-security-hub-v31-render.cjs
       - name: Downgrade expired and future-dated private health reports
         run: node ops/c720p/s9-native-security/test-security-hub-v31-freshness.cjs
+      - name: Preserve last known full disk as stale after refresh fails
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-transport.cjs
       - name: Refuse direct V31 auto activation
         run: |
           python3 - <<'PY'
