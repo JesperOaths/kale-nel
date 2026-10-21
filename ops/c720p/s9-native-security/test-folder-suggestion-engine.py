@@ -134,6 +134,44 @@ class FolderSuggestionsTest(unittest.TestCase):
                              for c in got["provisional_clusters"]))
         self.assertFalse(any(r["clip_id"]=="denied" for r in got["matches"]))
 
+    def test_online_reference_budget_refuses_expensive_scoring(self):
+        # 150 unreviewed * 150 approved => 22,500 comparisons.
+        # The synchronous hub endpoint must reject rather than hang or
+        # silently discard a subset of the 150 explicitly approved examples.
+        refs = [feature("approved-%03d.mp4" % i, upper=axis(0))
+                for i in range(150)]
+        pending = [feature("candidate-%03d.mp4" % i, upper=axis(0))
+                   for i in range(150)]
+        self.assertGreater(150 * 150, eng.MAX_ONLINE_REFERENCE_PAIRS)
+        with self.assertRaisesRegex(ValueError, "online budget"):
+            eng.rank_folders(refs + pending, folders("P1"),
+                             [decision(item) for item in refs])
+
+    def test_journal_storage_cap_does_not_mutate_existing_reviews(self):
+        clip = eng.ClipFeatures.from_dict(feature("one", upper=axis(0)))
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "reviews.json"
+            journal = eng.ReviewJournal(path)
+            good = journal.record(
+                clip=clip, folder_id="P1", action="approve",
+                expected_revision=0, opened_sha256=clip.media_sha256,
+                opened_revision=clip.media_revision,
+                authoritative_persisted=True, human_confirmed=True)
+            before = path.read_bytes()
+            self.assertEqual(good["revision"], 1)
+            saved_cap = eng.MAX_JOURNAL_BYTES
+            try:
+                eng.MAX_JOURNAL_BYTES = len(before) + 1
+                with self.assertRaisesRegex(ValueError, "bounded storage"):
+                    journal.record(
+                        clip=clip, folder_id="P1", action="reject",
+                        expected_revision=1, opened_sha256=clip.media_sha256,
+                        opened_revision=clip.media_revision,
+                        authoritative_persisted=True, human_confirmed=True)
+                self.assertEqual(path.read_bytes(), before)
+            finally:
+                eng.MAX_JOURNAL_BYTES = saved_cap
+
     def test_calibration_is_index_not_probability(self):
         self.assertAlmostEqual(eng.suggestion_confidence(.42),50.)
         self.assertGreater(eng.suggestion_confidence(.60),50)

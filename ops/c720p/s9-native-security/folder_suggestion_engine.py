@@ -26,6 +26,8 @@ MATCH_THRESHOLD = 0.55
 CLUSTER_THRESHOLD = 0.45
 NEGATIVE_THRESHOLD = 0.55
 NEGATIVE_PENALTY = 0.25
+MAX_ONLINE_REFERENCE_PAIRS = 20_000
+MAX_JOURNAL_BYTES = 2_000_000
 SCHEMA = "folder_suggestions_v1"
 
 
@@ -323,6 +325,15 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
             globally_approved.add(key)
         else:
             rejected[folder].append(clip)
+    # The GET handler is synchronous and must never monopolize the C720P.
+    # This conservative upper bound covers positive and negative exemplar
+    # comparisons; it is checked before making expensive 512-D dot products.
+    # Do not truncate approved references or silently drop candidate folders.
+    candidate_count = len(indexed) - len(globally_approved | historically_approved_keys)
+    pair_budget = candidate_count * sum(
+        len(refs[folder]) + len(rejected[folder]) for folder in folder_ids)
+    if pair_budget > MAX_ONLINE_REFERENCE_PAIRS:
+        raise ValueError("Folder scoring workload exceeds online budget")
     matches = []
     unmatched = []
     for clip in sorted(indexed.values(), key=lambda r: r.key):
@@ -401,8 +412,10 @@ class ReviewJournal:
     def read(self) -> dict[str, Any]:
         if not self.path.exists():
             return {"schema": "folder_suggestion_reviews_v1", "revision": 0, "decisions": []}
-        if self.path.is_symlink():
+        if self.path.is_symlink() or not self.path.is_file():
             raise ValueError("Unsafe review journal path")
+        if self.path.stat().st_size > MAX_JOURNAL_BYTES:
+            raise ValueError("Review journal exceeds bounded storage")
         doc = json.loads(self.path.read_text(encoding="utf-8"))
         if (doc.get("schema") != "folder_suggestion_reviews_v1"
                 or not isinstance(doc.get("revision"), int)
@@ -451,6 +464,9 @@ class ReviewJournal:
                "status": "approved" if action == "approve" else "rejected"}
         doc["revision"] += 1
         doc["decisions"].append(row)
+        # Reject oversized state BEFORE atomic replacement, not after writing.
+        if len(json.dumps(doc, sort_keys=True, separators=(",", ":")).encode("utf-8")) > MAX_JOURNAL_BYTES:
+            raise ValueError("Review journal exceeds bounded storage")
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         fd, temp = tempfile.mkstemp(prefix=".folder-review-", dir=self.path.parent)
         try:
