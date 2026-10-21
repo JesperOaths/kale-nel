@@ -238,7 +238,7 @@ def produce():
             changed+=1
     retained,retired=retire_obsolete(byid.values(),relevant)
     byid={x["id"]:x for x in retained}
-    added=0;deferred=0;archived_unsupported=0;retired_skipped=0
+    added=0;deferred=0;archived_unsupported=0;retired_skipped=0;requalification_required=0
     # Prioritize runnable work. For capacity pressure only, retire one
     # permanently same-model-unsupported current blocker to its exact-ID
     # private immutable record. The evidence reader never admits blocked
@@ -249,7 +249,13 @@ def produce():
         if key in byid:continue
         tombstone=archived_task(row)
         if tombstone is not None:
-            retired_skipped+=1
+            if tombstone.get("priority_reason") != row["priority_reason"]:
+                # Same immutable original/model ID, but the evidence producer
+                # changed its reason. Do not resurrect a terminal result.
+                # Require a new verified evidence/model revision contract.
+                requalification_required+=1
+            else:
+                retired_skipped+=1
             continue
         if len(byid)>=LIMIT and row["priority_reason"]=="no_indexed_image":
             victim=next((existing for existing in byid.values()
@@ -278,6 +284,7 @@ def produce():
             "retired_with_provenance":retired,
             "archived_unsupported_at_capacity":archived_unsupported,
             "retired_active_ids_not_reenqueued":retired_skipped,
+            "same_source_requalification_required":requalification_required,
             "capacity_deferred":deferred,"tally":aggregate(doc["rows"])}
 def camera_guard():
     with urllib.request.urlopen(CAMERA,timeout=7) as response:
