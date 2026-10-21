@@ -150,6 +150,31 @@ class Cases(unittest.TestCase):
   request=self.req();request["sha256"]=SHA
   self.assertEqual(self.write(request,attestor=self.att,required=True)[0],400)
   self.assertFalse(m.STORE.exists())
+ def test_hash_can_take_seventeen_seconds_without_future_proof_refusal(self):
+  # The clock moves only after the simulated original-byte verifier finishes.
+  from types import SimpleNamespace
+  start=dt.datetime(2026,10,21,2,0,tzinfo=dt.timezone.utc)
+  phase={"hash_completed":False}
+  class SlowHash(BytesAttested):
+   def verify_bytes(self,source,name):
+    proof=super().verify_bytes(source,name)
+    proof["verified_at_utc"]=(start+dt.timedelta(seconds=17)).isoformat()
+    phase["hash_completed"]=True
+    return proof
+  class Clock:
+   @staticmethod
+   def now(tz):
+    return start+dt.timedelta(seconds=17 if phase["hash_completed"] else 0)
+   @staticmethod
+   def fromisoformat(value):
+    return dt.datetime.fromisoformat(value)
+  with patch.object(b,"dt",SimpleNamespace(datetime=Clock,timezone=dt.timezone)):
+   binding=b.bind_new_decision("sd",SD,SlowHash())
+  self.assertEqual(binding["status"],"bound_at_decision")
+  self.assertTrue(binding["verified_at_decision"])
+  self.assertEqual(binding["verified_at_utc"],
+                   (start+dt.timedelta(seconds=17)).isoformat())
+
  def test_binding_status_not_authority_to_revoke_historical(self):
   self.assertEqual(self.write(self.req(),attestor=self.att,required=True)[0],200)
   entry=m.current()["items"]["sd:"+SD]
