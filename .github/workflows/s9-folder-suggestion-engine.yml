@@ -40,6 +40,7 @@ jobs:
           python -m py_compile folder_suggestion_engine.py folder_suggestion_api.py
           python test-folder-suggestion-engine.py
           python test-folder-suggestion-api.py
+          python test-folder-suggestion-http.py
       - name: Syntax-check the optional UI bridge and original People UI
         run: |
           node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
