@@ -32,6 +32,7 @@ STATE=HOME/"state/s9-priority-rescan-v304"
 QUEUE=STATE/"queue.json"
 LOCK=STATE/"queue.lock"
 AUDIT=STATE/"transitions.jsonl"
+TERMINALS=STATE/"terminal-archive-v360.json"
 REPORT=HOME/"state/s9-evidence-quality-v1/report.json"
 SECONDARY=HOME/"state/s9-evidence-quality-v1/original-gap-benchmark.json"
 ARCHIVE=HOME/"state/s9-standalone-archive-catalog-v1.json"
@@ -50,6 +51,9 @@ HEX=re.compile(r"[a-f0-9]{64}\Z")
 MAX_ATTEMPTS=3
 MAX_TRANSIENT_DEFERRALS=8
 LIMIT=340
+MAX_TERMINALS=10000
+TERMINAL_SCHEMA="s9_priority_rescan_terminal_ledger_v360"
+TERMINAL_STATES=("blocked","rejected","dead_letter")
 LABEL="S9_PRIORITY_RESCAN_V304 "
 
 class Refusal(Exception):pass
@@ -60,10 +64,10 @@ def safe_doc(path,maximum=7000000):
     check(path.is_file() and not path.is_symlink() and
           20<path.stat().st_size<maximum,"private_source_unavailable")
     return json.loads(path.read_text())
-def atomic(path,data):
+def atomic(path,data,maximum=4000000):
     path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
     payload=json.dumps(data,separators=(",",":"),sort_keys=True,allow_nan=False).encode()
-    check(len(payload)<4000000,"queue_limit_exceeded")
+    check(len(payload)<maximum,"durable_state_capacity_exceeded")
     fd,tmp=tempfile.mkstemp(dir=path.parent,prefix=".rescan-v304-")
     try:
         os.fchmod(fd,0o600)
@@ -91,6 +95,83 @@ def items():
           and isinstance(doc.get("rows"),list) and len(doc["rows"])<=LIMIT,
           "queue_integrity_invalid")
     return doc
+def terminal_ledger():
+    """A bounded, durable, never-pruned terminal history, separate from work.
+
+    Saturation refuses new admissions instead of discarding provenance.
+    A crash between the archive and queue commit may duplicate a terminal
+    row; reconciliation removes only byte-equivalent already archived rows.
+    """
+    if not TERMINALS.exists():
+        return {"schema":TERMINAL_SCHEMA,"rows":{}}
+    doc=safe_doc(TERMINALS,16000000)
+    rows=doc.get("rows")
+    check(doc.get("schema")==TERMINAL_SCHEMA and isinstance(rows,dict)
+          and len(rows)<=MAX_TERMINALS,"terminal_ledger_integrity_invalid")
+    for key,row in rows.items():
+        check(isinstance(key,str) and HEX.fullmatch(key)
+              and isinstance(row,dict) and row.get("id")==key
+              and row.get("status") in TERMINAL_STATES
+              and NAME.fullmatch(str(row.get("clip_no","")))
+              and HEX.fullmatch(str(row.get("source_sha256","")))
+              and HEX.fullmatch(str(row.get("media_revision","")))
+              and row.get("model_sha256")==MODEL_SHA
+              and type(row.get("attempts")) is int
+              and 0<=row["attempts"]<=MAX_ATTEMPTS,
+              "terminal_ledger_row_invalid")
+    return doc
+
+def reconcile_terminal_overlap(doc,archived):
+    """Complete an interrupted archive-first commit, without rewriting proof."""
+    keep=[]
+    removed=0
+    seen=set()
+    for row in doc["rows"]:
+        key=row.get("id") if isinstance(row,dict) else None
+        check(isinstance(key,str) and HEX.fullmatch(key) and key not in seen,
+              "duplicate_or_invalid_queue_id")
+        seen.add(key)
+        previous=archived.get(key)
+        if previous is not None:
+            check(row==previous and row["status"] in TERMINAL_STATES,
+                  "terminal_archive_queue_collision")
+            removed+=1
+        else:
+            keep.append(row)
+    if removed:
+        doc["rows"]=keep
+    return removed
+
+def compact_terminals(doc,ledger,required_slots):
+    """Archive only terminal rows, preserving completed/API-consumable ones."""
+    rows=doc["rows"]
+    if len(rows)+required_slots<=LIMIT:
+        return 0
+    outbound=[row for row in rows if row["status"] in TERMINAL_STATES]
+    if not outbound:
+        raise Refusal("active_queue_capacity_no_safe_terminal_rows")
+    archive=ledger["rows"]
+    check(len(archive)+len(outbound)<=MAX_TERMINALS,
+          "terminal_archive_capacity_requires_external_retention")
+    for row in outbound:
+        key=row["id"]
+        check(key not in archive or archive[key]==row,
+              "terminal_archive_identity_collision")
+        archive[key]=row
+    # Write the complete source/model/status proof BEFORE dropping queue rows.
+    atomic(TERMINALS,ledger,maximum=16000000)
+    doc["rows"]=[row for row in rows if row["status"] not in TERMINAL_STATES]
+    check(len(doc["rows"])+required_slots<=LIMIT,
+          "active_queue_capacity_after_safe_compaction")
+    return len(outbound)
+
+def aggregate_all(rows,archived):
+    stats=aggregate(rows)
+    for row in archived.values():
+        stats[row["status"]]+=1
+    stats["archived_terminal"]=len(archived)
+    return stats
+
 def source():
     report=safe_doc(REPORT)
     catalogue=safe_doc(ARCHIVE,8000000)
@@ -142,29 +223,49 @@ def aggregate(rows):
 def produce():
     report,priorities,cat=source()
     doc=items()
+    ledger=terminal_ledger()
+    archived=ledger["rows"]
+    overlaps=reconcile_terminal_overlap(doc,archived)
     byid={x["id"]:x for x in doc["rows"]}
+    check(len(byid)==len(doc["rows"]),"duplicate_active_queue_id")
     relevant=set()
-    added=0;changed=0
+    wanted={}
     for row in priorities:
-        if row.get("targeted_rescan_priority") is not True:continue
+        if row.get("targeted_rescan_priority") is not True:
+            continue
         name=row.get("clip_no")
         approved=validate_priority(row,cat["records"].get(name))
-        key=approved["id"];relevant.add(key)
-        if key not in byid:
-            check(len(byid)<LIMIT,"producer_queue_capacity_exceeded")
-            byid[key]=approved;added+=1
-    # A source/model change must not resurrect an old "completed" result.
+        key=approved["id"]
+        relevant.add(key)
+        if key not in byid and key not in archived:
+            wanted[key]=approved
+    # All 245 same-YuNet non-hits remain terminal in the archive; they are
+    # not re-enqueued on each producer tick. A changed original gets a new
+    # qualified ID, preserving the old audit row.
+    archived_count=compact_terminals(doc,ledger,len(wanted))
+    byid={x["id"]:x for x in doc["rows"]}
+    check(len(byid)+len(wanted)<=LIMIT,
+          "producer_active_queue_capacity_exceeded")
+    byid.update(wanted)
+    changed=0
     for key,row in byid.items():
         if key not in relevant and row["status"] in ("pending","processing","blocked"):
             row["status"]="rejected"
             row["last_reason"]="source_revision_or_priority_no_longer_current"
-            row["lease_until"]=0;changed+=1
-    if added or changed:
+            row["lease_until"]=0
+            changed+=1
+    if wanted or changed or archived_count or overlaps:
         doc["revision"]+=1
-        doc["rows"]=sorted(byid.values(),key=lambda x:(x["priority_reason"]!="no_indexed_image",x["id"]))
-        atomic(QUEUE,doc);journal("producer_persisted","qualified_originals_from_private_catalog")
+        doc["rows"]=sorted(byid.values(),
+                          key=lambda x:(x["priority_reason"]!="no_indexed_image",
+                                        x.get("next_attempt_at",0),x["id"]))
+        atomic(QUEUE,doc)
+        journal("producer_persisted","bounded_queue_and_terminal_provenance")
     return {"status":"qualified_priority_produced","revision":doc["revision"],
-            "new_admissions":added,"invalidated":changed,"tally":aggregate(doc["rows"])}
+            "new_admissions":len(wanted),"invalidated":changed,
+            "archived_this_tick":archived_count,
+            "tally":aggregate_all(doc["rows"],archived)}
+
 def camera_guard():
     with urllib.request.urlopen(CAMERA,timeout=7) as response:
         doc=json.loads(response.read(65536))
@@ -406,7 +507,8 @@ def main():
     parser.add_argument("action",choices=("produce","work","status"))
     args=parser.parse_args()
     STATE.mkdir(mode=0o700,parents=True,exist_ok=True)
-    check(not LOCK.is_symlink() and not QUEUE.is_symlink() and not AUDIT.is_symlink(),
+    check(not LOCK.is_symlink() and not QUEUE.is_symlink() and not AUDIT.is_symlink()
+          and not TERMINALS.is_symlink(),
           "unsafe_queue_state_link")
     with LOCK.open("a+") as f:
         fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -415,7 +517,7 @@ def main():
         else:
             d=items()
             out={"status":"read_only_queue_status","revision":d["revision"],
-                 "tally":aggregate(d["rows"])}
+                 "tally":aggregate_all(d["rows"],terminal_ledger()["rows"])}
     print(LABEL+json.dumps(out,sort_keys=True,separators=(",",":")),flush=True)
 if __name__=="__main__":
     try:main()
