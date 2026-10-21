@@ -1,0 +1,55 @@
+name: Chat3 signed original review and V361 contract
+
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/**'
+      - 'ops/c720p/s9-native-security/test-chat3-*.py'
+      - 'ops/c720p/s9-native-security/security-people-v324-preview.js'
+      - 'ops/c720p/s9-native-security/s9_review_original_browser_v1.js'
+      - '.github/workflows/chat3-original-review-contract-v1.yml'
+  push:
+    branches: ['chat3-manual-binding-v361-integration-20261021']
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/**'
+      - 'ops/c720p/s9-native-security/test-chat3-*.py'
+      - '.github/workflows/chat3-original-review-contract-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-synthetic-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax
+        run: |
+          python3 -m compileall -q ops/c720p/s9-person-ml-v1
+      - name: Exact V361 reader refusal and 200-410-503 mapping
+        run: |
+          python3 ops/c720p/s9-native-security/test-chat3-v361-bridge-v1.py -v
+      - name: Source-bound original Range delivery
+        run: |
+          python3 ops/c720p/s9-native-security/test-chat3-trusted-original-media-v1.py -v
+      - name: Canonical writer, restart, CAS and slow-SHA synthetic behavior
+        run: |
+          python3 ops/c720p/s9-native-security/test-chat3-forward-original-review-v1.py -v
+      - name: Protect installed V3 and migrated JPEG hooks
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py').read_text()
+          for x in ('s9_multivector_appearance_api_v3.install(H)', 's9_c720p_snapshots_v163.install(H)', 'v361_route.install(H,rows,v361_consumer,v369_transport.fetch_live_http)', "C720P_SIGNED_ORIGINAL_REVIEW_V1"):
+              if x not in p:
+                  raise SystemExit('Missing protected source hook: '+x)
+          ui=Path('ops/c720p/s9-native-security/security-people-v324-preview.js').read_text()
+          for phrase in ('review_ticket','anonymous outfit','verified original reviewer'):
+              if phrase not in ui.lower():
+                  raise SystemExit('Missing browser eligibility label: '+phrase)
+          PY
+      - name: Browser JavaScript syntax
+        run: |
+          node --check ops/c720p/s9-native-security/security-people-v324-preview.js
+          node --check ops/c720p/s9-native-security/s9_review_original_browser_v1.js
