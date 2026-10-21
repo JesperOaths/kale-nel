@@ -1,0 +1,35 @@
+name: S9 qualified outfit reference revocation V319
+on:
+  pull_request:
+    paths:
+      - ops/c720p/s9-native-security/security-people-v45.js
+      - ops/c720p/s9-native-security/test-qualified-outfit-reference-revocation-v319.cjs
+      - ops/c720p/s9-native-security/install-qualified-outfit-reference-revocation-v319.py
+      - .github/workflows/s9-qualified-outfit-reference-revocation-v319.yml
+  push:
+    branches: [main]
+    paths:
+      - ops/c720p/s9-native-security/security-people-v45.js
+      - ops/c720p/s9-native-security/test-qualified-outfit-reference-revocation-v319.cjs
+      - ops/c720p/s9-native-security/install-qualified-outfit-reference-revocation-v319.py
+      - .github/workflows/s9-qualified-outfit-reference-revocation-v319.yml
+permissions:
+  contents: read
+jobs:
+  group-reference-revocation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse JS and guard group/latest review authority
+        run: |
+          node --check ops/c720p/s9-native-security/security-people-v45.js
+          node ops/c720p/s9-native-security/test-qualified-outfit-reference-revocation-v319.cjs
+      - name: Compile additive guarded deployer
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path("ops/c720p/s9-native-security/install-qualified-outfit-reference-revocation-v319.py")
+          compile(path.read_bytes(),str(path),"exec")
+          print("guarded installer syntax verified")
+          PY

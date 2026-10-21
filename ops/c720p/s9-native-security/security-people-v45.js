@@ -1011,6 +1011,18 @@ function renderPeople(){
  // Clothing suggestions are not mixed into the saved-people list.
 }
 // SECURITY_OUTFIT_REVIEW_FINALITY_V1
+// QUALIFIED_OUTFIT_REFERENCE_REVOCATION_V319
+// Source-qualified latest manual assignments override V40 history.
+// Group-filed recordings may never become a named single-person reference.
+function qualifiedOutfitReference(item,personId=null){
+ if(item?.source!=='sd'||!state.assignedReady||!state.extraLinks)return false;
+ const people=assignedFolders(item);
+ if(people.length!==1||(personId!==null&&people[0]!==personId))return false;
+ const key=assignmentKey(item),explicit=state.extraLinks.items[key];
+ if(explicit!==undefined)
+  return !!explicit&&typeof explicit==='object'&&explicit.review_status==='assigned';
+ return state.legacyAssigned.get(key)===people[0];
+}
 function outfitReviewEligible(clip){
  const item={source:'sd',name:clip,clip},key=assignmentKey(item);
  const explicit=state.extraLinks?.items?.[key];
@@ -1027,7 +1039,7 @@ async function searchClothingMatches(force=false){
  if(state.clothingMatches&&!force)return;
  const token=++state.clothingToken;
  state.clothingBusy=true;state.clothingError='';state.clothingMatches=null;renderClothing();
- const sources=state.archiveEntries.filter(x=>x.source==='sd'&&assignedFolder(x)&&
+ const sources=state.archiveEntries.filter(x=>qualifiedOutfitReference(x)&&
     state.clipEvidence.has(x.clip)&&num(state.clipEvidence.get(x.clip).person_count)===1&&
     num(state.clipEvidence.get(x.clip).frames_with_distinct_multiple_person_boxes)===0);
  // Reviewed single-person clips act as labelled examples, not biometric
@@ -1038,6 +1050,7 @@ async function searchClothingMatches(force=false){
  // exhaust the reference budget and hide equally valid reviewed people.
  const perPerson=new Map(savedFolders().map(person=>[person.id,{person,refs:[]}]));
  for(const ref of sources){
+  if(!qualifiedOutfitReference(ref))continue;
   const group=perPerson.get(assignedFolder(ref));
   if(!group||group.refs.length>=3)continue;
   if(group.refs.some(x=>Math.abs(x.recorded_ms-ref.recorded_ms)<15*60*1000))continue;
@@ -1231,7 +1244,10 @@ function renderAutomatic(){
 }
 function renderClothing(){
  const host=$('clothingList');host.replaceChildren();
- const matches=(state.clothingMatches||[]).filter(match=>outfitReviewEligible(match.clip));
+ const matches=(state.clothingMatches||[]).filter(match=>
+   outfitReviewEligible(match.clip)&&Array.isArray(match.references)&&
+   match.references.length>0&&match.references.every(clip=>
+     qualifiedOutfitReference({source:'sd',name:clip,clip},match.person.id)));
  $('groupCount').textContent=state.clothingMatches?String(matches.length):'—';
  $('clothingTabCount').textContent=matches.length?' · '+matches.length:'';
  $('clothingTotal').textContent=state.clothingBusy?'Comparing approved reference recordings on S9+…':
