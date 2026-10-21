@@ -28,7 +28,15 @@ assert.equal(cached.saved_timing.status,'unavailable');
 assert.equal(last.infrastructure.status,'current');
 assert.equal(last.aggregate_stale,false);
 assert.equal(cached.pipeline_summary,last.pipeline_summary,'retain provenance but renderer must mask old readiness');
+const oldReport={...last,aggregate_observed_at_ms:Date.now()-3600*1000,
+ infrastructure:{...last.infrastructure,age_seconds:45},
+ evidence:{...last.evidence,age_seconds:20},
+ saved_timing:{...last.saved_timing,age_seconds:null}};
+const aged=degraded(oldReport);
+assert(aged.aggregate_age_seconds>=3590,'report must age while fetch fails');
+assert(aged.infrastructure.age_seconds>=3590,'component evidence age must also advance');
+assert.equal(aged.saved_timing.age_seconds,null);
 assert.match(src,/lastGood=data;render\(data\)/);
 assert.match(src,/render\(degradedSnapshot\(lastGood\)\)/);
 assert.match(src,/if\(data.report_transport_error\)warnings.push\('Private health request failed/);
-console.log('V31_FAILED_REFRESH_RETAINS_CRITICAL_AS_STALE_PASS 14');
+console.log('V31_FAILED_REFRESH_RETAINS_CRITICAL_AS_STALE_PASS 17');
