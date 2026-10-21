@@ -196,7 +196,7 @@ class FolderSuggestionsTest(unittest.TestCase):
         old_rejected.pop("media_revision")
         got = eng.rank_folders([approved,rejected,live_ref,fresh],
                                folders("P1", "P2"),
-                               [old_approved,old_rejected,decision(live_ref)])
+                               [old_approved,old_rejected,decision(live_ref),decision(live_ref,"P2")])
         self.assertEqual(got["approved_reference_counts"]["P1"], 1)
         self.assertEqual(got["excluded_unbound_or_legacy_decisions"], 2)
         self.assertFalse(any(m["clip_id"] == "historic.mp4" for m in got["matches"]))
