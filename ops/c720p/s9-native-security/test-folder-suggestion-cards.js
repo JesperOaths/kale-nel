@@ -40,7 +40,8 @@ const cards=context.window.FolderSuggestionCards;
 assert(cards && typeof cards.connect==='function');
 const doc={
  schema:'folder_suggestions_v1',status:'human_review_only',
- automatic_assignments:0,identity_probabilities:false,journal_revision:3,
+ automatic_assignments:0,identity_probabilities:false,
+ historic_review_index_verified:true,journal_revision:3,
  matches:[{
   state:'pending_review',human_review_required:true,verified_same_person:false,
   automatically_assigned:false,confidence_is_identity_probability:false,
@@ -136,6 +137,10 @@ const doc={
 
  const altered={...doc.matches[0],verified_same_person:true};
  assert.equal(cards.safeMatch(altered),false,'Identity claims must be rejected');
+ const noLegacy={...doc,historic_review_index_verified:false};
+ cards.render(host,noLegacy,{onOpen:async()=>{},onApprove:async()=>{},onReject:async()=>{}});
+ assert.equal(host.findButtons().length,0,
+   'Unsafe legacy-review-index snapshot must never expose controls');
  const malformed={...doc,identity_probabilities:true};
  cards.render(host,malformed,{onOpen:async()=>{},onApprove:async()=>{},onReject:async()=>{}});
  assert.equal(host.findButtons().length,0,'Unsafe snapshot must not expose controls');
