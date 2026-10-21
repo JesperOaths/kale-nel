@@ -54,6 +54,7 @@ class ApiTest(unittest.TestCase):
                 "folder_id":folder,"media_sha256":"a"*64,
                 "media_revision":"original-revision-1",
                 "journal_revision":self.journal.read()["revision"],
+                "feature_snapshot_revision":"signed-snapshot-1",
                 "opened_ticket":"signed-session-ticket-123",
                 "human_confirmed":True}
 
@@ -104,6 +105,24 @@ class ApiTest(unittest.TestCase):
         old["journal_revision"]=1
         self.assertEqual(api.review(old,self.provider,self.journal,
                          lambda *args:True,self.commit)[0],409)
+        self.assertEqual(self.calls,[])
+
+    def test_old_feature_snapshot_refuses_commit(self):
+        stale=self.body()
+        stale["feature_snapshot_revision"]="previous-model-revision"
+        result=api.review(stale,self.provider,self.journal,
+                          lambda *args:True,self.commit)
+        self.assertEqual(result[0],409)
+        self.assertEqual(result[1]["error"],"feature_snapshot_changed")
+        self.assertEqual(self.calls,[])
+
+    def test_feature_changed_while_attesting_original(self):
+        def attest(*args):
+            self.index={**self.index,"revision":"signed-snapshot-2"}
+            return True
+        result=api.review(self.body(),self.provider,self.journal,attest,self.commit)
+        self.assertEqual(result[0],409)
+        self.assertEqual(result[1]["error"],"original_changed_during_review")
         self.assertEqual(self.calls,[])
 
     def test_invalid_authoritative_receipt_never_creates_reference(self):
