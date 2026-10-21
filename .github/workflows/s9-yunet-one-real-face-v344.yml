@@ -1,0 +1,83 @@
+name: S9 genuine YuNet face snapshot one-only V344
+on:
+  pull_request:
+    paths: ['.github/workflows/s9-yunet-one-real-face-v344.yml']
+  push:
+    branches: [main]
+    paths: ['.github/workflows/s9-yunet-one-real-face-v344.yml']
+permissions:
+  contents: read
+concurrency:
+  group: s9-real-one-snapshot-v344
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Source and five-point geometry checks
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-native-security/offline-worker
+          python3 "$d/test-s9-yunet-one-snapshot-v129.py"
+          python3 "$d/test-s9-yunet-synthetic-smoke-v121.py"
+          javac -d /tmp "$d/PhoneFaceLandmarkGate.java" "$d/PhoneFaceLandmarkGateTest.java" "$d/PhoneYuNetLandmarkDecoder.java" "$d/PhoneYuNetLandmarkDecoderTest.java"
+          java -cp /tmp nl.kalenel.s9offline.PhoneFaceLandmarkGateTest
+          java -cp /tmp nl.kalenel.s9offline.PhoneYuNetLandmarkDecoderTest
+  phone:
+    needs: source
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      SUPABASE_DB_URL: ${ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: One SHA-pinned original face photo, actual Android ONNX inference only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          d=ops/c720p/s9-native-security/offline-worker
+          stage="/tmp/s9-real-face-${GITHUB_SHA:0:14}"
+          cmd="umask 077 && mkdir -p '$stage'"
+          for part in run-s9-yunet-one-snapshot-v129.py S9YuNetSingleSnapshotAudit.java PhoneYuNetLandmarkDecoder.java PhoneFaceLandmarkGate.java; do
+            f="$d/$part"
+            h="$(sha256sum "$f" | cut -d' ' -f1)"
+            u="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$f"
+            cmd="$cmd && curl -fsSL --max-time 40 '$u' -o '$stage/$part' && printf '%s  %s\\n' '$h' '$stage/$part' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && python3 -c 'import json,urllib.request,os;d=json.load(urllib.request.urlopen(\"http://127.0.0.1:18808/status\",timeout=12));assert d.get(\"ok\") is True and d.get(\"continuous_4k_ready\") is True and d.get(\"continuous_4k_dropped_output_frames\")==0 and float(d.get(\"temperature_c\",100))<=34.5 and d.get(\"recording_active\") is not True and os.statvfs(\"/dev/shm\").f_bavail*os.statvfs(\"/dev/shm\").f_frsize>=220000000, \"unsafe_idle_or_memory_state\"'"
+          cmd="$cmd && cd '$stage' && TMPDIR=/dev/shm PYTHONDONTWRITEBYTECODE=1 nice -n 19 ionice -c3 flock -n '/home/jespern/c720p-home-hub/state/s9-evidence-quality-v1/worker.lock' python3 '$stage/run-s9-yunet-one-snapshot-v129.py' --apply"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="one-real-face-v344-${GITHUB_SHA:0:14}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+             'github-actions-one-face-v344','diagnostic',:'cmd',740,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]]
+          echo "S9_ONE_REAL_FACE_JOB=$id"
+          for i in $(seq 1 185); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$id" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$id" | head -c 2700)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              if grep -q 'S9_YUNET_REAL_ONE_SNAPSHOT_VERIFIED' <<< "$output"; then
+                grep -q '"identity_or_reference_created": false' <<< "$output"
+                grep -q '"originals_modified": false' <<< "$output"
+                grep -q '"candidate_image_tested": 1' <<< "$output"
+                echo "Real independent face decoder physically passed without enrolling any identity."
+                exit 0
+              fi
+              echo "No verified genuine face inference; never promote a reference."
+              exit 1
+            fi
+            sleep 3
+          done
+          echo "One-photo job lacks a terminal receipt"; exit 1
