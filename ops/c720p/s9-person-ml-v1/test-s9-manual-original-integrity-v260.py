@@ -29,7 +29,7 @@ class Probe:
  def current_revision(self,source,name):
   self.revision_count+=1
   if self.fail:raise OSError("private_source_path")
-  if self.flips and self.revision_count==3:self.rev="rev:changed"
+  if self.flips and self.revision_count==2:self.rev="rev:changed"
   return {"source_identity":self.identity,"source_revision":self.rev}
  def verify_bytes(self,source,name):
   self.read_count+=1
