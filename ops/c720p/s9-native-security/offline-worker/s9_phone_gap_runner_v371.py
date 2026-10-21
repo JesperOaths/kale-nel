@@ -108,8 +108,12 @@ def phone_probe(row,requested_ms,remaining,release):
     require(1<=remaining<=65,"phone_attempt_unbounded")
     clip=row["clip_no"]
     frames.source_tuple(row)
-    cmd=("CLASSPATH="+PHONE_JAR+" LD_LIBRARY_PATH="+PHONE_LIB+
-         " /system/bin/app_process /system/bin "+PHONE_CLASS+
+    # Match the previously validated S9 standalone ONNX launcher:
+    # explicit JNI search path and official ONNX Java classes bundled in dex.
+    cmd=("export LD_LIBRARY_PATH="+PHONE_LIB+
+         "; export CLASSPATH="+PHONE_JAR+
+         "; app_process -Djava.library.path="+PHONE_LIB+
+         " /system/bin "+PHONE_CLASS+
          " --probe-one-frame "+clip+" "+row["source_sha256"]+
          " "+str(row["source_bytes"])+" "+row["media_revision"]+
          " "+str(requested_ms))
