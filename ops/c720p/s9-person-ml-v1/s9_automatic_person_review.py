@@ -119,7 +119,11 @@ def proposals(manual_links=None):
           or ref not in refs or refs[ref]["folder"]!=x["folder"]
           for ref in source_ids)
       or len({refs[ref]["source_name"] for ref in source_ids
-              if isinstance(ref,str) and ref in refs})<2):
+               if isinstance(ref,str) and ref in refs})<2
+       or len({refs[ref]["original_sha256"] for ref in source_ids
+               if isinstance(ref,str) and ref in refs})<2
+       or any(refs[ref]["source_name"]==x["name"]
+              for ref in source_ids if isinstance(ref,str) and ref in refs)):
    continue
   if type(x.get("score")) not in (int,float) or type(x.get("margin")) not in (int,float):continue
   if not 0.84<=x["score"]<=1 or not 0.08<=x["margin"]<=1:continue
