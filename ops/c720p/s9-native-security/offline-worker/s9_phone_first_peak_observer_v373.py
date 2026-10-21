@@ -62,8 +62,8 @@ def process_memory(status, meminfo):
             "mem_available_kib":int(available.group(1))}
 
 def supervise(*, command, recorder_pid, phone_mem_floor_kib,
-              camera_guard, read_phone, start=subprocess.Popen,
-              clock=time.monotonic, sleep=time.sleep):
+              camera_guard, read_phone, cleanup_remote, start=subprocess.Popen,
+              clock=time.monotonic):
     """Run exactly one already-authorized phone frame, with bounded monitor.
 
     read_phone() must return {ps,status,meminfo,cmdline}: a SINGLE bounded
@@ -149,3 +149,9 @@ def supervise(*, command, recorder_pid, phone_mem_floor_kib,
                 proc.kill()
                 try:proc.communicate(timeout=2)
                 except subprocess.TimeoutExpired:pass
+            # Remote termination is mandatory, never assume adb host exit
+            # implies the Android process exited. The callback must
+            # revalidate PID/JAR/class and stop ONLY the pinned worker.
+            if cleanup_remote is None:
+                raise Unsafe("remote_phone_cleanup_not_available")
+            cleanup_remote(report["worker_pid"],str(recorder_pid))
