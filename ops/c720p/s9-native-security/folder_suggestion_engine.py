@@ -315,7 +315,8 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                  folders: Sequence[Mapping[str, Any]],
                  decisions: Sequence[Mapping[str, Any]],
                  *, match_threshold: float = MATCH_THRESHOLD,
-                 cluster_threshold: float = CLUSTER_THRESHOLD) -> dict[str, Any]:
+                 cluster_threshold: float = CLUSTER_THRESHOLD,
+                 nonreference_reviewed: Sequence[str] = ()) -> dict[str, Any]:
     if not -1 <= match_threshold <= 1:
         raise ValueError("Invalid folder match threshold")
     if len(clips) > 2000 or len(folders) > 250:
@@ -329,6 +330,16 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     folder_ids = [str(f.get("id") or "") for f in folders]
     if any(not f for f in folder_ids) or len(set(folder_ids)) != len(folder_ids):
         raise ValueError("Invalid or duplicate folder identifiers")
+    # Old explicit human reviews stay authoritative for avoiding duplicate
+    # review prompts, but were NOT digest-bound at the time of the original
+    # decision. They must never enter the vector reference pool.
+    if not isinstance(nonreference_reviewed, (tuple, list, set)):
+        raise ValueError("Invalid legacy reviewed source index")
+    if len(nonreference_reviewed) > 20000 or any(
+            not isinstance(key, str) or ":" not in key or len(key) > 240
+            for key in nonreference_reviewed):
+        raise ValueError("Invalid source-qualified reviewed key")
+    suppressed = set(nonreference_reviewed)
     review = latest_decisions(decisions)
     refs: dict[str, list[ClipFeatures]] = {folder: [] for folder in folder_ids}
     rejected: dict[str, list[ClipFeatures]] = {folder: [] for folder in folder_ids}
@@ -361,7 +372,8 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     matches = []
     unmatched = []
     for clip in sorted(indexed.values(), key=lambda r: r.key):
-        if clip.key in globally_approved or clip.key in historically_approved_keys:
+        if (clip.key in globally_approved or clip.key in historically_approved_keys
+                or clip.key in suppressed):
             continue
         top = -math.inf
         for folder in folder_ids:
@@ -421,6 +433,7 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                                for f in folders],
             "approved_reference_counts": {key: len(refs[key]) for key in folder_ids},
             "excluded_unbound_or_legacy_decisions": legacy_or_unbound,
+            "suppressed_historical_reviewed_clips": len(set(indexed) & suppressed),
             "automatic_assignments": 0, "identity_probabilities": False}
 
 
