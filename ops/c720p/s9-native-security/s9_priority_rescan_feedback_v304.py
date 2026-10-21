@@ -284,7 +284,7 @@ def produce():
             deferred+=1
             continue
         byid[key]=row;added+=1
-    if added or changed or retired or archived_unsupported:
+    if added or changed or retired or archived_unsupported or new_unsupported_archived:
         doc["revision"]+=1
         doc["rows"]=sorted(byid.values(),key=lambda x:(
             x["priority_reason"]!="no_indexed_image",x["id"]))
