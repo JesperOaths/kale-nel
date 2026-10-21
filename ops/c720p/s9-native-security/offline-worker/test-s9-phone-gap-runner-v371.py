@@ -86,9 +86,38 @@ class RunnerTests(unittest.TestCase):
             if args[1].startswith("pidof"):return "1234"
             if args[1]=="cat /proc/meminfo":return "MemAvailable: 500000 kB\n"
             if args[1].startswith("df -k"):return "Filesystem Size Used Available Use%\nfoo 90000000 4000 60000000 4%\n"
+            if args[1].startswith("ps -A"):return "PID ARGS\n1234 /system/bin/nl.kalenel.s9security\\n"
             if args[1].startswith("sha256sum"):return H+"  /data/local/tmp/s9_worker/s9_gap_v371.dex.jar"
             raise AssertionError(args)
         with patch.object(m,"adb",fake):
             self.assertEqual(m.phone_readiness(approved(),recorder_pid="1234"),"1234")
 
+    def test_orphaned_app_process_prevents_new_frame(self):
+        def fake(*args,**kwargs):
+            if args==("get-state",):return "device"
+            if args[1].startswith("pidof"):return "1234"
+            if args[1]=="cat /proc/meminfo":return "MemAvailable: 500000 kB\\n"
+            if args[1].startswith("df -k"):return "Filesystem Size Used Available Use%\\nfoo 90000000 4000 60000000 4%\\n"
+            if args[1].startswith("ps -A"):
+                return "PID ARGS\\n4321 app_process -Djava.library.path=/data/local/tmp/s9_worker/lib /system/bin nl.kalenel.s9offline.S9Original4KGapAuditV370\\n"
+            raise AssertionError("phone probe reached unsafe step")
+        with patch.object(m,"adb",fake),self.assertRaisesRegex(m.frames.Deferred,"already_running"):
+            m.phone_readiness(approved())
+    def test_release_launch_matches_existing_jni_convention(self):
+        row={"clip_no":"motion_1792095266692.mp4","source":"s9_original_4k_microsd",
+             "source_bytes":48831739,"source_sha256":H,"media_revision":"b"*64,
+             "model_sha256":m.frames.MODEL_SHA,
+             "native_pass":"s9_onphone_36_samples_overlapping_tiles_v5",
+             "required_analysis":m.frames.ANALYSIS,"priority_reason":"no_indexed_image"}
+        seen=[]
+        def fake(*args,**kwargs):
+            seen.append(args)
+            return m.PREFIX+'{"schema":"synthetic_only"}'
+        with patch.object(m,"adb",fake):
+            m.phone_probe(row,2000,60,approved())
+        self.assertEqual(seen[0][0],"shell")
+        self.assertIn("export LD_LIBRARY_PATH=",seen[0][1])
+        self.assertIn("export CLASSPATH=",seen[0][1])
+        self.assertIn("app_process -Djava.library.path=",seen[0][1])
+        self.assertIn("--probe-one-frame motion_1792095266692.mp4",seen[0][1])
 if __name__=="__main__":unittest.main()
