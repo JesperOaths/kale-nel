@@ -157,7 +157,14 @@
         section.append(element('h4', 'Awaiting Review · ' + group.member_count +
           ' clip' + (group.member_count === 1 ? '' : 's')),
           element('p', 'No existing person folder passed the match threshold. ' +
-            'Only an explicit human decision after original playback may seed a folder.'));
+            'Only an explicit human decision after original playback may seed a folder.'),
+          element('p', 'Minimum within-group appearance similarity: ' +
+            formatScore(group.min_within_group_similarity) +
+            ' · Mean: ' + formatScore(group.mean_within_group_similarity) +
+            ' · Compared pairs: ' +
+            (Number.isSafeInteger(group.evidence_pair_count) ?
+              group.evidence_pair_count : 0) +
+            ' · These are resemblance scores, not identity probabilities.'));
         if (Array.isArray(group.members)) {
           for (const member of group.members.slice(0, 24)) {
             if (!member || member.state !== 'pending_review' ||
