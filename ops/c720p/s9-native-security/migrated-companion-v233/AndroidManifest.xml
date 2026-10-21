@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="nl.kalenel.s9migrated"
+          android:versionCode="1"
+          android:versionName="0.0.0-unenrolled">
+    <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="28"/>
+    <!-- Dedicated UID needs separate normal Android permission grant to READ
+         original historical S9 data. Packaging does not grant permission. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <application android:label="S9 Migrated Metadata (Unenrolled)"
+                 android:allowBackup="false"
+                 android:debuggable="false"
+                 android:usesCleartextTraffic="false"
+                 android:hasCode="true">
+      <!-- Intentionally NO exported receivers, providers, activities,
+           boot/autostart or network listeners pending owner approval. -->
+    </application>
+</manifest>
