@@ -66,7 +66,11 @@ def histogram(values: Any) -> tuple[float, ...] | None:
 
 
 def cosine(a: tuple[float, ...], b: tuple[float, ...]) -> float:
-    return max(-1.0, min(1.0, math.fsum(x * y for x, y in zip(a, b))))
+    # CPython 3.12+ computes float dot products in optimized C, avoiding
+    # expensive Python generator loops on the low-power C720P.
+    dot = math.sumprod(a, b) if hasattr(math, "sumprod") else math.fsum(
+        x * y for x, y in zip(a, b))
+    return max(-1.0, min(1.0, dot))
 
 
 def color_affinity(a: tuple[float, ...] | None,
@@ -224,11 +228,13 @@ def latest_decisions(rows: Sequence[Mapping[str, Any]]
 
 def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_THRESHOLD
                 ) -> list[dict[str, Any]]:
-    """Complete-linkage agglomerative clusters, quadratic feature comparison.
+    """Deterministic exact complete-linkage agglomeration.
 
-    A cluster may merge only if *every* cross-member score passes threshold.
-    The minimum pair score is incrementally cached, avoiding repeated vector
-    comparisons and cubic-or-worse rescans of entire clusters.
+    Every merged cluster has all cross-pairs at or above threshold. A heap
+    avoids rescanning every cluster pair after each merge (cubic behavior).
+    Original 512-D pair scores are computed once; subsequent cluster
+    similarities are their complete-linkage minima. A missing/incompatible
+    pair is NOT allowed to bridge clusters.
     """
     import heapq
     if not -1 <= threshold <= 1:
@@ -236,53 +242,83 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
     entries = sorted(unmatched, key=lambda r: r.key)
     if len(entries) > 400:
         raise ValueError("Too many unreviewed clips for bounded clustering")
-    clusters = {i: [entry] for i, entry in enumerate(entries)}
-    distances = {}
-    candidates = []
-    for i, a in enumerate(entries):
-        for j in range(i + 1, len(entries)):
-            pair = pair_score(a, entries[j])
-            if pair is None:
+
+    # Cluster IDs are never reused, making stale heap entries harmless.
+    # No source/media bytes are copied or changed.
+    count = len(entries)
+    active = {i: [i] for i in range(count)}
+    distance: dict[tuple[int, int], float] = {}
+    heap: list[tuple[float, int, int]] = []
+    for i in range(count):
+        for j in range(i + 1, count):
+            pair = pair_score(entries[i], entries[j])
+            if pair is None or pair["score"] < threshold:
                 continue
-            score = pair["score"]
-            distances[(i, j)] = score
-            if score >= threshold:
-                heapq.heappush(candidates, (-score, i, j))
-    next_id = len(entries)
-    while candidates:
-        negative, i, j = heapq.heappop(candidates)
-        if i not in clusters or j not in clusters:
-            continue  # stale priority queue entry after an earlier merge
-        merged = sorted(clusters.pop(i) + clusters.pop(j), key=lambda r: r.key)
-        k = next_id
+            sim = pair["score"]
+            distance[(i, j)] = sim
+            heapq.heappush(heap, (-sim, i, j))
+
+    def ordered(a: int, b: int) -> tuple[int, int]:
+        return (a, b) if a < b else (b, a)
+
+    next_id = count
+    while heap:
+        negative, i, j = heapq.heappop(heap)
+        if i not in active or j not in active:
+            continue
+        saved = distance.get(ordered(i, j))
+        if saved is None or saved < threshold:
+            continue
+        # Exactly the best complete-link score; tie order is deterministic.
+        if abs(saved + negative) > 1e-12:
+            continue
+        members = active.pop(i) + active.pop(j)
+        distance.pop(ordered(i, j), None)
+        # New cluster is compared with each still-active cluster using
+        # min(sim(k,i), sim(k,j)) -- never average/single-link linkage.
+        for k in list(active):
+            left = distance.pop(ordered(k, i), None)
+            right = distance.pop(ordered(k, j), None)
+            if left is None or right is None:
+                continue
+            sim = min(left, right)
+            if sim < threshold:
+                continue
+            pair_key = ordered(k, next_id)
+            distance[pair_key] = sim
+            heapq.heappush(heap, (-sim, *pair_key))
+        active[next_id] = members
         next_id += 1
-        for other in list(clusters):
-            first = distances.get(tuple(sorted((i, other))))
-            second = distances.get(tuple(sorted((j, other))))
-            if first is None or second is None:
-                continue
-            score = min(first, second)
-            distances[tuple(sorted((k, other)))] = score
-            if score >= threshold:
-                lo, hi = sorted((k, other))
-                heapq.heappush(candidates, (-score, lo, hi))
-        clusters[k] = merged
+
     groups = []
-    for cluster in clusters.values():
-        keys = [c.key for c in cluster]
-        digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()[:16]
-        groups.append({"id": "awaiting-review-" + digest,
+    for members in active.values():
+        keys = sorted(entries[i].key for i in members)
+        key_digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()[:16]
+        groups.append({"id": "awaiting-review-" + key_digest,
                        "label": "Awaiting Review", "state": "pending_review",
                        "source_qualified_clips": keys,
+                       "members": [
+                           {"source": entries[i].source,
+                            "clip_id": entries[i].clip_id,
+                            "source_qualified_clip_id": entries[i].key,
+                            "media_sha256": entries[i].media_sha256,
+                            "media_revision": entries[i].media_revision,
+                            "state": "pending_review",
+                            "human_review_required": True,
+                            "verified_same_person": False}
+                           for i in sorted(members, key=lambda index: entries[index].key)
+                       ],
                        "member_count": len(keys), "human_review_required": True,
                        "automatically_assigned": False})
     return sorted(groups, key=lambda row: (-row["member_count"], row["id"]))
+
 
 def rank_folders(clips: Sequence[Mapping[str, Any]],
                  folders: Sequence[Mapping[str, Any]],
                  decisions: Sequence[Mapping[str, Any]],
                  *, match_threshold: float = MATCH_THRESHOLD,
-                 cluster_threshold: float = CLUSTER_THRESHOLD) -> dict[str, Any]:
+                 cluster_threshold: float = CLUSTER_THRESHOLD,
+                 nonreference_reviewed: Sequence[str] = ()) -> dict[str, Any]:
     if not -1 <= match_threshold <= 1:
         raise ValueError("Invalid folder match threshold")
     if len(clips) > 2000 or len(folders) > 250:
@@ -296,6 +332,16 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     folder_ids = [str(f.get("id") or "") for f in folders]
     if any(not f for f in folder_ids) or len(set(folder_ids)) != len(folder_ids):
         raise ValueError("Invalid or duplicate folder identifiers")
+    # Old explicit human reviews stay authoritative for avoiding duplicate
+    # review prompts, but were NOT digest-bound at the time of the original
+    # decision. They must never enter the vector reference pool.
+    if not isinstance(nonreference_reviewed, (tuple, list, set)):
+        raise ValueError("Invalid legacy reviewed source index")
+    if len(nonreference_reviewed) > 20000 or any(
+            not isinstance(key, str) or ":" not in key or len(key) > 240
+            for key in nonreference_reviewed):
+        raise ValueError("Invalid source-qualified reviewed key")
+    suppressed = set(nonreference_reviewed)
     review = latest_decisions(decisions)
     refs: dict[str, list[ClipFeatures]] = {folder: [] for folder in folder_ids}
     rejected: dict[str, list[ClipFeatures]] = {folder: [] for folder in folder_ids}
@@ -325,10 +371,8 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
             globally_approved.add(key)
         else:
             rejected[folder].append(clip)
-    # The GET handler is synchronous and must never monopolize the C720P.
-    # This conservative upper bound covers positive and negative exemplar
-    # comparisons; it is checked before making expensive 512-D dot products.
-    # Do not truncate approved references or silently drop candidate folders.
+    # Preserve the mainline synchronous online CPU budget. Never silently
+    # truncate reference pools or skip folders to make a check pass.
     candidate_count = len(indexed) - len(globally_approved | historically_approved_keys)
     pair_budget = candidate_count * sum(
         len(refs[folder]) + len(rejected[folder]) for folder in folder_ids)
@@ -337,7 +381,8 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     matches = []
     unmatched = []
     for clip in sorted(indexed.values(), key=lambda r: r.key):
-        if clip.key in globally_approved or clip.key in historically_approved_keys:
+        if (clip.key in globally_approved or clip.key in historically_approved_keys
+                or clip.key in suppressed):
             continue
         top = -math.inf
         for folder in folder_ids:
@@ -393,8 +438,11 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     return {"schema": SCHEMA, "status": "human_review_only", "match_threshold": match_threshold,
             "cluster_threshold": cluster_threshold, "matches": matches,
             "provisional_clusters": agglomerate(unmatched, cluster_threshold),
+            "folder_options": [{"id": str(f["id"]), "label": str(f.get("label") or f["id"])}
+                               for f in folders],
             "approved_reference_counts": {key: len(refs[key]) for key in folder_ids},
             "excluded_unbound_or_legacy_decisions": legacy_or_unbound,
+            "suppressed_historical_reviewed_clips": len(set(indexed) & suppressed),
             "automatic_assignments": 0, "identity_probabilities": False}
 
 
@@ -464,7 +512,6 @@ class ReviewJournal:
                "status": "approved" if action == "approve" else "rejected"}
         doc["revision"] += 1
         doc["decisions"].append(row)
-        # Reject oversized state BEFORE atomic replacement, not after writing.
         if len(json.dumps(doc, sort_keys=True, separators=(",", ":")).encode("utf-8")) > MAX_JOURNAL_BYTES:
             raise ValueError("Review journal exceeds bounded storage")
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
