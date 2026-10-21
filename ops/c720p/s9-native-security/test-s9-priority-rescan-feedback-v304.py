@@ -275,6 +275,7 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(done["status"],"completed")
   self.assertEqual(done["verified_secondary"],True)
   self.assertEqual(v.items()["rows"][0]["outcome"]["sampled_frames"],3)
+  self.assertTrue(v.items()["rows"][0]["outcome"]["anonymous_v361_live_consumed_before_completion"])
   derived=json.loads(self.secondary.read_text())
   self.assertEqual(derived["recordings"][0]["clip_no"],original["clip_no"])
   self.assertEqual(derived["queue_revision"],v.items()["revision"])
@@ -285,12 +286,40 @@ class QueueTest(unittest.TestCase):
   v.produce()
   row=v.items()["rows"][0]
   record={"clip_no":row["clip_no"],"duration_ms":18000,
-      "source_sha256":row["source_sha256"],
+      "source_sha256":row["source_sha256"],"source_bytes":row["source_bytes"],
       "source_revision":row["media_revision"],
-      "model_sha256":v.MODEL_SHA,"samples":[
+      "model_sha256":v.MODEL_SHA,"analysis_version":v.ANALYSIS,"samples":[
           {"time_ms":3000,"state":"decoded","face_candidates":[]},
           {"time_ms":9000,"state":"decoded","face_candidates":[]},
           {"time_ms":15000,"state":"decoded","face_candidates":[]}]}
+  # Integrates the ACTUAL consumer call site; V361 itself has separate
+  # end-to-end source/queue/priority revocation contract tests.
+  from types import SimpleNamespace
+  fake_quality=SimpleNamespace(
+     MODEL_SHA=v.MODEL_SHA,
+     fetch=lambda url,limit: b'{"archive_mode":"S9-microSD-only"}',
+     validate_sources=lambda archive:[{"clip_no":row["clip_no"]}])
+  def admitted(document,current,clip):
+   return 200,{"ok":True,
+     "schema_version":"s9_anonymous_quality_consumption_v361",
+     "source_binding_status":"revalidated_original_and_queue_at_consumption",
+     "eligibility":"anonymous_quality_manual_review_only",
+     "clip_no":clip,"source_sha256":record["source_sha256"],
+     "source_bytes":record["source_bytes"],
+     "source_revision":record["source_revision"],
+     "model_sha256":record["model_sha256"],
+     "analysis_version":record["analysis_version"],
+     "sample_count":3,"sample_times_ms":[s["time_ms"] for s in record["samples"]],
+     "evidence_revision_sha256":"a"*64,
+     "human_review_required":True,"verified_same_person":False,
+     "pose_gait_measured":False,"appearance_evidence_eligible":False,
+     "automatic_person_assignments":0,"originals_modified":False,
+     "review_decisions_modified":False}
+  fake_consumer=SimpleNamespace(
+    SCHEMA="s9_anonymous_quality_consumption_v361",consume=admitted)
+  pinned=patch.object(v,"load_module",side_effect=lambda path,name:
+      fake_quality if path==v.EVIDENCE else fake_consumer)
+  pinned.start();self.addCleanup(pinned.stop)
   from unittest.mock import Mock
   good={"ok":True,"original_gap_benchmark":{
     "analysis_version":v.ANALYSIS,"detector_model_sha256":v.MODEL_SHA,
@@ -308,6 +337,16 @@ class QueueTest(unittest.TestCase):
   with patch.object(v.urllib.request,"urlopen",
       return_value=Reply(good)):
    self.assertTrue(v.consumer_visible(record))
+   fake_consumer.consume=lambda *args:(410,{"ok":False})
+   with self.assertRaisesRegex(v.Refusal,"anonymous_consumer_source_or_priority_revoked"):
+    v.consumer_visible(record)
+   fake_consumer.consume=lambda *args:(503,{"ok":False})
+   with self.assertRaisesRegex(v.Refusal,"anonymous_consumer_revalidation_unavailable"):
+    v.consumer_visible(record)
+   fake_consumer.consume=lambda *args:(200,dict(admitted(*args)[1],verified_same_person=True))
+   with self.assertRaisesRegex(v.Refusal,"anonymous_consumer_receipt_inconsistent"):
+    v.consumer_visible(record)
+   fake_consumer.consume=admitted
   bad=json.loads(json.dumps(good))
   bad["original_gap_benchmark"]["recordings"][0]["source_revision"]="f"*64
   with patch.object(v.urllib.request,"urlopen",
