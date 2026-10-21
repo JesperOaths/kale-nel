@@ -241,7 +241,8 @@ def produce():
             changed+=1
     retained,retired=retire_obsolete(byid.values(),relevant)
     byid={x["id"]:x for x in retained}
-    added=0;deferred=0;archived_unsupported=0;retired_skipped=0;requalification_required=0
+    added=0;deferred=0;archived_unsupported=0;new_unsupported_archived=0
+    retired_skipped=0;requalification_required=0
     # Prioritize runnable work. For capacity pressure only, retire one
     # permanently same-model-unsupported current blocker to its exact-ID
     # private immutable record. The evidence reader never admits blocked
@@ -273,6 +274,13 @@ def produce():
                 del byid[victim["id"]]
                 archived_unsupported+=1
         if len(byid)>=LIMIT:
+            if row["priority_reason"]=="secondary_detector_has_no_supported_face":
+                # The current same-model non-detection cannot be made
+                # actionable by another identical YuNet pass. Preserve its
+                # full blocked provenance directly, never drop it silently.
+                retire_obsolete([row],set())
+                new_unsupported_archived+=1
+                continue
             deferred+=1
             continue
         byid[key]=row;added+=1
@@ -286,6 +294,7 @@ def produce():
             "new_admissions":added,"invalidated":changed,
             "retired_with_provenance":retired,
             "archived_unsupported_at_capacity":archived_unsupported,
+            "new_unsupported_directly_archived":new_unsupported_archived,
             "retired_active_ids_not_reenqueued":retired_skipped,
             "same_source_requalification_required":requalification_required,
             "capacity_deferred":deferred,"tally":aggregate(doc["rows"])}
