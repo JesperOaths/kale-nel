@@ -20,6 +20,8 @@ class CurrentGap(unittest.TestCase):
   self.cat=root/"catalog.json";self.queue=root/"queue.json"
   for key,path in (("PRIORITY_CATALOG",self.cat),("PRIORITY_QUEUE",self.queue)):
    change=patch.object(m,key,path);change.start();self.addCleanup(change.stop)
+  clock=patch.object(m.time,"time",return_value=1700000000)
+  clock.start();self.addCleanup(clock.stop)
   self.name="motion_1792200000000.mp4"
   self.sha="a"*64;self.version="b"*64;self.size=2345678
   self.meta={"name":self.name,"bytes":self.size,
@@ -29,7 +31,7 @@ class CurrentGap(unittest.TestCase):
     "records":{self.name:{"manifest":self.meta,"bytes":self.size,
                            "version":self.version}}}
   self.row={"id":"d"*64,"clip_no":self.name,"status":"processing",
-            "attempts":1,"source_sha256":self.sha,
+            "attempts":1,"lease_until":1700000240,"source_sha256":self.sha,
             "source_bytes":self.size,"media_revision":self.version,
             "model_sha256":m.MODEL_SHA,"required_analysis":m.GAP_ANALYSIS}
   self.job={"schema":"s9_priority_rescan_feedback_v304",
@@ -43,7 +45,9 @@ class CurrentGap(unittest.TestCase):
   self.gap={"analysis_version":m.GAP_ANALYSIS,
             "detector_model_sha256":m.MODEL_SHA,
             "recordings":[self.record]}
-  self.current={self.name:{"clip_no":self.name}}
+  self.current={self.name:{"clip_no":self.name,
+                           "face_deep_review_version":m.NATIVE_PASS,
+                           "face_candidates":[]}}
   self.save()
  def save(self):
   self.cat.write_text(json.dumps(self.catalog))
@@ -106,6 +110,38 @@ class CurrentGap(unittest.TestCase):
   self.record["samples"][1]["original_resolution"]=[3840,2160]
   self.record["samples"][0]["state"]="estimated"
   self.assertEqual(self.read()["recordings"],[])
+ def test_processing_lease_expiry_and_future_time_revoke_pending_proof(self):
+  self.assertEqual(len(self.read()["recordings"]),1)
+  for lease in (1699999999,1700000000,1700003000,"1700000240",None):
+   with self.subTest(lease=lease):
+    self.row["lease_until"]=lease
+    self.assertEqual(self.read()["recordings"],[])
+  self.row["lease_until"]=1700000240
+  for attempts in (0,4,None,True):
+   with self.subTest(attempts=attempts):
+    self.row["attempts"]=attempts
+    self.assertEqual(self.read()["recordings"],[])
+  self.row["attempts"]=1
+  self.assertEqual(len(self.read()["recordings"]),1)
+  self.row["status"]="completed"
+  self.row["lease_until"]=0
+  self.row["outcome"]={"verified_secondary_report":True,
+       "consumer_visibility_confirmed":True,"model_sha256":m.MODEL_SHA,
+       "source_revision":self.version,"sampled_frames":3}
+  self.assertEqual(len(self.read()["recordings"]),1)
+
+ def test_new_native_crop_or_pass_revision_revokes_gap_without_rewriting_media(self):
+  self.assertEqual(len(self.read()["recordings"]),1)
+  self.current[self.name]["face_candidates"]=[{"snapshot_name":"new_native_crop"}]
+  self.assertEqual(self.read()["recordings"],[])
+  self.current[self.name]["face_candidates"]=[]
+  self.current[self.name]["face_deep_review_version"]="different_native_pass"
+  self.assertEqual(self.read()["recordings"],[])
+  del self.current[self.name]["face_deep_review_version"]
+  self.assertEqual(self.read()["recordings"],[])
+  self.current[self.name]["face_deep_review_version"]=m.NATIVE_PASS
+  self.assertEqual(len(self.read()["recordings"]),1)
+
  def test_unavailable_catalog_or_queue_fails_closed(self):
   self.cat.unlink()
   with self.assertRaisesRegex(ValueError,"source_attestation_file_unavailable"):
