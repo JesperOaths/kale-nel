@@ -18,6 +18,8 @@ class QueueTest(unittest.TestCase):
   self.catalog=self.root/"catalog.json";self.report=self.root/"report.json"
   self.secondary=self.root/"gap.json";self.lock=self.root/"s9lock";self.lock.touch()
   self.image_lock=self.root/"image-worker.lock";self.image_lock.touch()
+  self.consumer=self.root/"s9_anonymous_evidence_consumer_v361.py"
+  self.consumer.write_text("# synthetic installed downstream module only\\n"*12)
   self.orig={};self.rows=[]
   for i in range(4):
    name=f"motion_{1792000000000+i*1000}.mp4"
@@ -38,7 +40,8 @@ class QueueTest(unittest.TestCase):
    patch.object(v,"ARCHIVE",self.catalog),
    patch.object(v,"SECONDARY",self.secondary),
    patch.object(v,"CROSS_LOCK",self.lock),
-   patch.object(v,"IMAGE_LOCK",self.image_lock)]
+   patch.object(v,"IMAGE_LOCK",self.image_lock),
+   patch.object(v,"ANONYMOUS_CONSUMER",self.consumer)]
   for x in self.patch:x.start();self.addCleanup(x.stop)
   self.store()
  def store(self):
@@ -46,6 +49,26 @@ class QueueTest(unittest.TestCase):
    "detector_model_sha256":v.MODEL_SHA,"recordings":self.rows}))
   self.catalog.write_text(json.dumps({"schema_version":"s9_native_archive_catalog_v1",
    "snapshot_id":"a"*64,"records":self.orig}))
+ def test_missing_or_symlinked_v361_backend_refuses_before_4k_or_lease(self):
+  v.produce()
+  old=v.QUEUE.read_bytes()
+  self.consumer.unlink()
+  with patch.object(v,"camera_guard") as camera,\\
+       patch.object(v,"evaluate_one") as decode:
+   with self.assertRaisesRegex(v.Refusal,
+                               "anonymous_consumer_unavailable_before_scan"):
+    v.work()
+   camera.assert_not_called()
+   decode.assert_not_called()
+  self.assertEqual(v.QUEUE.read_bytes(),old)
+  self.consumer.symlink_to(self.root/"nonexistent")
+  with self.assertRaisesRegex(v.Refusal,
+                              "anonymous_consumer_unavailable_before_scan"):
+   v.work()
+  self.consumer.unlink()
+  self.consumer.write_text("# synthetic installed downstream module only\\n"*12)
+  self.assertEqual(v.items()["rows"][0]["attempts"],0)
+
  def test_producer_qualifies_and_prevents_duplicates(self):
   a=v.produce()
   self.assertEqual(a["new_admissions"],4)
