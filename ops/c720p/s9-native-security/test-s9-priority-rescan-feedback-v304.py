@@ -68,6 +68,8 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["attempts"],0)
 
  def test_actual_http_reader_capability_rejects_old_echo_and_transport(self):
+  candidate={"clip_no":"motion_1792000000000.mp4",
+             "priority_reason":"no_indexed_image"}
   class Reply:
    status=200
    def __init__(self,payload):self.payload=payload
@@ -83,22 +85,34 @@ class QueueTest(unittest.TestCase):
         patch.object(v.urllib.request,"urlopen",return_value=Reply(payload)):
     with self.assertRaisesRegex(v.Refusal,
                                 "qualified_evidence_reader_unavailable_before_scan"):
-     ACTUAL_READER_PREFLIGHT()
+     ACTUAL_READER_PREFLIGHT(candidate)
   with patch.object(v.urllib.request,"urlopen",side_effect=TimeoutError):
    with self.assertRaisesRegex(v.Refusal,
                                "qualified_evidence_reader_unavailable_before_scan"):
-    ACTUAL_READER_PREFLIGHT()
+    ACTUAL_READER_PREFLIGHT(candidate)
   with patch.object(v.urllib.request,"urlopen",
        return_value=Reply({"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
                            "state":"not_yet_available"})):
    with self.assertRaisesRegex(v.Refusal,
                                "qualified_evidence_reader_not_ready_before_scan"):
-    ACTUAL_READER_PREFLIGHT()
+    ACTUAL_READER_PREFLIGHT(candidate)
   with patch.object(v.urllib.request,"urlopen",
        return_value=Reply({"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
                            "analysis_version":"s9_evidence_quality_v1",
-                           "recordings":[{"clip_no":"motion_1792000000000.mp4"}]})):
-   self.assertTrue(ACTUAL_READER_PREFLIGHT())
+                           "recordings":[{"clip_no":"motion_1792000000000.mp4",
+                                          "targeted_rescan_priority":True,
+                                          "native_face_pass_complete":True,
+                                          "extraction_status":"no_indexed_image"}]})):
+   self.assertTrue(ACTUAL_READER_PREFLIGHT(candidate))
+  with patch.object(v.urllib.request,"urlopen",
+       return_value=Reply({"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
+                           "recordings":[{"clip_no":"motion_1792000001000.mp4",
+                                          "targeted_rescan_priority":True,
+                                          "native_face_pass_complete":True,
+                                          "extraction_status":"no_indexed_image"}]})):
+   with self.assertRaisesRegex(v.Refusal,
+                               "qualified_evidence_reader_target_not_ready_before_scan"):
+    ACTUAL_READER_PREFLIGHT(candidate)
 
  def test_missing_or_symlinked_v361_backend_refuses_before_4k_or_lease(self):
   v.produce()
