@@ -3,6 +3,7 @@
 import hashlib
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -57,6 +58,28 @@ class Crosscheck(unittest.TestCase):
   self.assertFalse(out["allows_signed_actions"])
   self.assertFalse(out["allows_media_retirement"])
   self.assertNotIn("approve_once",out)
+ def test_against_exact_java_v230_canonical_digest(self):
+  classes=[
+   "S9MigratedMetadataLedgerV193.java",
+   "S9MigratedLedgerTrustedCheckpointV196.java",
+   "S9MigratedDualStoreCommitV197.java",
+   "S9MigratedVerifiedSourceV198.java",
+   "S9MigratedApprovedSixDigestV230.java",
+   "S9MigratedCrosscheckParityTestV235.java",
+  ]
+  with tempfile.TemporaryDirectory(prefix="s9-cross-language-v235-") as build:
+   args=["javac","-source","8","-target","8","-d",build]+[
+       str(ROOT/name) for name in classes]
+   compiled=subprocess.run(args,capture_output=True,text=True,timeout=50)
+   self.assertEqual(compiled.returncode,0,compiled.stderr)
+   actual=subprocess.run(["java","-cp",build,
+       "nl.kalenel.s9offline.S9MigratedCrosscheckParityTestV235"],
+       capture_output=True,text=True,timeout=25)
+   self.assertEqual(actual.returncode,0,actual.stderr)
+   java_digest=actual.stdout.strip()
+   self.assertRegex(java_digest,r"^[a-f0-9]{64}$")
+   self.assertEqual(java_digest,V235.candidate_comparison(
+       self.first,self.second)["candidate_manifest_preimage_sha256"])
  def test_copy_mismatch_does_not_yield_candidate(self):
   self.copy["items"][0]["sha256"]="b"*64
   self.denies("independent_inventory_bytes_or_digest_mismatch")
