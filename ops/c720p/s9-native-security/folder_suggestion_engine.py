@@ -248,6 +248,11 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
     count = len(entries)
     active = {i: [i] for i in range(count)}
     distance: dict[tuple[int, int], float] = {}
+    # Carry cross-cluster pair sums as well as minimums. Group quality can
+    # then be reported without repeating a single 512-D comparison.
+    cross_sum: dict[tuple[int, int], float] = {}
+    within_sum: dict[int, float] = {i: 0.0 for i in range(count)}
+    within_min: dict[int, float | None] = {i: None for i in range(count)}
     heap: list[tuple[float, int, int]] = []
     for i in range(count):
         for j in range(i + 1, count):
@@ -256,6 +261,7 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
                 continue
             sim = pair["score"]
             distance[(i, j)] = sim
+            cross_sum[(i, j)] = sim
             heapq.heappush(heap, (-sim, i, j))
 
     def ordered(a: int, b: int) -> tuple[int, int]:
@@ -273,26 +279,46 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
         if abs(saved + negative) > 1e-12:
             continue
         members = active.pop(i) + active.pop(j)
+        between = cross_sum.pop(ordered(i, j))
         distance.pop(ordered(i, j), None)
+        # Intra-group minimum is the complete-link join score or a weaker
+        # minimum already present inside one of the merged groups.
+        prior = [value for value in (within_min.pop(i), within_min.pop(j))
+                 if value is not None]
+        merged_min = min([saved, *prior])
+        merged_sum = within_sum.pop(i) + within_sum.pop(j) + between
         # New cluster is compared with each still-active cluster using
         # min(sim(k,i), sim(k,j)) -- never average/single-link linkage.
         for k in list(active):
-            left = distance.pop(ordered(k, i), None)
-            right = distance.pop(ordered(k, j), None)
+            left_key, right_key = ordered(k, i), ordered(k, j)
+            left = distance.pop(left_key, None)
+            right = distance.pop(right_key, None)
+            left_sum = cross_sum.pop(left_key, None)
+            right_sum = cross_sum.pop(right_key, None)
             if left is None or right is None:
                 continue
+            if left_sum is None or right_sum is None:
+                raise ValueError("Incomplete similarity merge evidence")
             sim = min(left, right)
             if sim < threshold:
                 continue
             pair_key = ordered(k, next_id)
             distance[pair_key] = sim
+            cross_sum[pair_key] = left_sum + right_sum
             heapq.heappush(heap, (-sim, *pair_key))
         active[next_id] = members
+        within_sum[next_id] = merged_sum
+        within_min[next_id] = merged_min
         next_id += 1
 
     groups = []
-    for members in active.values():
+    for group_id, members in active.items():
         keys = sorted(entries[i].key for i in members)
+        pairs = len(members) * (len(members) - 1) // 2
+        minimum = within_min[group_id] if pairs else None
+        average = within_sum[group_id] / pairs if pairs else None
+        if pairs and minimum is None:
+            raise ValueError("Missing provisional group quality evidence")
         key_digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()[:16]
         groups.append({"id": "awaiting-review-" + key_digest,
                        "label": "Awaiting Review", "state": "pending_review",
@@ -308,7 +334,13 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
                             "verified_same_person": False}
                            for i in sorted(members, key=lambda index: entries[index].key)
                        ],
-                       "member_count": len(keys), "human_review_required": True,
+                       "member_count": len(keys),
+                       "min_within_group_similarity": (round(minimum, 6)
+                                                       if minimum is not None else None),
+                       "mean_within_group_similarity": (round(average, 6)
+                                                        if average is not None else None),
+                       "evidence_pair_count": pairs,
+                       "human_review_required": True,
                        "automatically_assigned": False})
     return sorted(groups, key=lambda row: (-row["member_count"], row["id"]))
 
