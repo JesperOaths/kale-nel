@@ -432,7 +432,7 @@ def work():
          and row.get("next_attempt_at",0)<=now()),None)
     if candidate is None:
         return {"status":"no_runnable_originals","revision":doc["revision"],
-           "leases_recovered":recovered,"tally":aggregate(doc["rows"])}
+           "leases_recovered":recovered,"tally":aggregate_all(doc["rows"],terminal_ledger()["rows"])}
     # Acquire source/camera locks BEFORE taking a lease.
     check(CROSS_LOCK.is_file() and not CROSS_LOCK.is_symlink(),
           "s9_shared_backfill_lock_unavailable")
@@ -499,7 +499,7 @@ def work():
         doc["revision"]+=1
         atomic(QUEUE,doc);journal(candidate["status"],candidate["last_reason"])
     return {"status":candidate["status"],"revision":doc["revision"],
-         "attempts":candidate["attempts"],"tally":aggregate(doc["rows"]),
+         "attempts":candidate["attempts"],"tally":aggregate_all(doc["rows"],terminal_ledger()["rows"]),
          "verified_secondary":bool((candidate.get("outcome") or {}).get("verified_secondary_report")),
          "consumer_visibility_confirmed":bool((candidate.get("outcome") or {}).get("consumer_visibility_confirmed"))}
 def main():
