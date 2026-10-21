@@ -88,12 +88,12 @@ class CoordinatorTests(unittest.TestCase):
         n=[0]
         def source(r):
             n[0]+=1
-            return n[0]<4
+            return n[0]<3
         with self.assertRaises(m.Revoked):
             self.exercise(source=source)
         self.assertEqual(len([e for e in self.events if isinstance(e,tuple)]),1)
     def test_lease_ends_before_third_frame(self):
-        self.r["lease_until"]=1041
+        self.r["lease_until"]=1040
         with self.assertRaises(m.Deferred):
             self.exercise()
         self.assertEqual(len([e for e in self.events if isinstance(e,tuple)]),0)
