@@ -189,6 +189,42 @@ class FolderSuggestionsTest(unittest.TestCase):
         clusters = eng.agglomerate(raw,threshold=.65)
         self.assertEqual(sorted(c["member_count"] for c in clusters),[1,2])
         self.assertTrue(all(c["state"]=="pending_review" for c in clusters))
+        for group in clusters:
+            count = group["member_count"]
+            self.assertEqual(group["evidence_pair_count"], count*(count-1)//2)
+            if count > 1:
+                self.assertGreaterEqual(group["min_within_group_similarity"], .65)
+                self.assertGreaterEqual(group["mean_within_group_similarity"],
+                                        group["min_within_group_similarity"])
+            else:
+                self.assertIsNone(group["min_within_group_similarity"])
+                self.assertIsNone(group["mean_within_group_similarity"])
+
+    def test_complete_linkage_group_mean_requires_no_extra_pair_scoring(self):
+        # Exact initial pair scores: .85, .70 and .97 -> mean .84.
+        one = axis(0)
+        two = [.8,.6]+[0]*510
+        three = [.6,.8]+[0]*510
+        clips = [feature("one",visual=one,aligned=False,hsv=[1]+[0]*31),
+                 feature("two",visual=two,aligned=False,hsv=[1]+[0]*31),
+                 feature("three",visual=three,aligned=False,hsv=[1]+[0]*31)]
+        entries = [eng.ClipFeatures.from_dict(c) for c in clips]
+        original = eng.pair_score
+        counted = []
+        def tracked(a,b):
+            counted.append((a.key,b.key))
+            return original(a,b)
+        eng.pair_score = tracked
+        try:
+            groups = eng.agglomerate(entries,threshold=.65)
+        finally:
+            eng.pair_score = original
+        self.assertEqual(len(counted),3,"Must compute each original pair only once")
+        self.assertEqual(len(groups),1)
+        group = groups[0]
+        self.assertEqual(group["evidence_pair_count"],3)
+        self.assertAlmostEqual(group["min_within_group_similarity"],.70,places=5)
+        self.assertAlmostEqual(group["mean_within_group_similarity"],.84,places=5)
 
     def test_missing_provenance_fails_closed(self):
         a = feature("one",upper=axis(0))
