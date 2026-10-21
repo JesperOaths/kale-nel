@@ -141,16 +141,17 @@ def aggregate(rows):
     tally={x:0 for x in ("pending","processing","completed","rejected","blocked","dead_letter")}
     for item in rows:tally[item["status"]]=tally.get(item["status"],0)+1
     return tally
-def retire_obsolete(rows, relevant):
+def retire_obsolete(rows, relevant, pressure_ids=frozenset()):
     """Durably archive obsolete terminal IDs before freeing live queue slots.
 
-    A current blocked/completed entry is NEVER retired: the actual reader may
-    require its source and queue provenance. Old revisions remain queryable by
-    exact immutable ID in private 0600 files; no media or review bytes change.
+    A current completed row remains active for the evidence reader. Only
+    current BLOCKED same-YuNet model negatives may be parked under runnable
+    admission pressure. They remain immutable private 0600 audit records;
+    unrelated terminal rows are archived only when obsolete.
     """
     retained=[];count=0
     for row in rows:
-        if row["id"] in relevant or row["status"] not in (
+        if (row["id"] in relevant and row["id"] not in pressure_ids) or row["status"] not in (
                 "rejected","completed","blocked","dead_letter"):
             retained.append(row);continue
         key=row["id"]
@@ -182,6 +183,51 @@ def retire_obsolete(rows, relevant):
         count+=1
     return retained,count
 
+def retired_proof(approved):
+    """Do not re-enqueue a permanently archived source/model/analysis ID."""
+    key=approved["id"]
+    check(isinstance(key,str) and HEX.fullmatch(key),"invalid_retired_source_id")
+    root=retired_dir()
+    dest=root/(key+".json")
+    if not dest.exists() and not dest.is_symlink():return False
+    check(not root.is_symlink() and root.is_dir(),
+          "unsafe_retired_directory")
+    directory=root.stat()
+    check(stat.S_ISDIR(directory.st_mode) and directory.st_uid==os.getuid()
+          and not directory.st_mode&0o077,
+          "retired_provenance_directory_not_private")
+    check(not dest.is_symlink(),"retired_provenance_symlink_refused")
+    meta=dest.stat()
+    check(stat.S_ISREG(meta.st_mode) and meta.st_uid==os.getuid()
+          and meta.st_nlink==1 and not meta.st_mode&0o077,
+          "retired_provenance_file_not_private")
+    body=safe_doc(dest,20000)
+    past=body.get("final")
+    check(body.get("schema")=="s9_priority_retired_provenance_v1"
+          and body.get("id")==key and isinstance(past,dict)
+          and past.get("id")==key
+          and past.get("status") in ("rejected","completed","blocked","dead_letter")
+          and all(past.get(field)==approved.get(field)
+                  for field in ("clip_no","source_sha256","source_bytes",
+                                "media_revision","native_pass","model_sha256",
+                                "required_analysis","priority_reason")),
+          "retired_provenance_changed_or_untrusted")
+    return True
+
+def park_same_model_blockers(byid,relevant,fresh):
+    """Never let a full permanently-blocked queue starve a runnable original."""
+    available=LIMIT-len(byid)
+    runnable=sum(row["priority_reason"]=="no_indexed_image" for row in fresh)
+    needed=max(0,runnable-available)
+    if not needed:return frozenset()
+    candidates=sorted(row["id"] for row in byid.values()
+       if row["id"] in relevant
+       and row.get("status")=="blocked"
+       and row.get("priority_reason")=="secondary_detector_has_no_supported_face"
+       and row.get("last_reason")=="same_yunet_model_cannot_validate_its_own_non_detection"
+       and row.get("outcome") is None)
+    return frozenset(candidates[:needed])
+
 def produce():
     report,priorities,cat=source()
     doc=items()
@@ -202,7 +248,10 @@ def produce():
             row["last_reason"]="source_revision_or_priority_no_longer_current"
             row["lease_until"]=0
             changed+=1
-    retained,retired=retire_obsolete(byid.values(),relevant)
+    fresh=[item for item in approved if item["id"] not in byid
+           and not retired_proof(item)]
+    pressure=park_same_model_blockers(byid,relevant,fresh)
+    retained,retired=retire_obsolete(byid.values(),relevant,pressure)
     byid={x["id"]:x for x in retained}
     added=0;deferred=0
     # Prioritize runnable work. The same immutable original/model/source ID
@@ -210,7 +259,7 @@ def produce():
     for row in sorted(approved,key=lambda x:(
            x["priority_reason"]!="no_indexed_image",x["id"])):
         key=row["id"]
-        if key in byid:continue
+        if key in byid or retired_proof(row):continue
         if len(byid)>=LIMIT:
             deferred+=1
             continue
@@ -223,7 +272,8 @@ def produce():
         journal("producer_persisted","qualified_originals_from_private_catalog")
     return {"status":"qualified_priority_produced","revision":doc["revision"],
             "new_admissions":added,"invalidated":changed,
-            "retired_with_provenance":retired,"capacity_deferred":deferred,
+            "retired_with_provenance":retired,"parked_same_model_blocked":len(pressure),
+            "capacity_deferred":deferred,
             "tally":aggregate(doc["rows"])}
 def camera_guard():
     with urllib.request.urlopen(CAMERA,timeout=7) as response:
