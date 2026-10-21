@@ -395,6 +395,18 @@ def source_current_gap_report(gap, current):
             not DIGEST.fullmatch(str(row.get('media_revision', ''))) or
             not integer(row.get('source_bytes'), 100001, 799999999)):
             raise ValueError('untrusted_active_queue_source')
+        if row['status'] == 'processing':
+            # An expired lease is no longer authority to consume a derived
+            # observation, even before the periodic recovery worker runs.
+            # Lease duration is 240s in V304; a distant future lease is
+            # not admissible either (including when the hub clock changes).
+            lease = row.get('lease_until')
+            attempts = row.get('attempts')
+            instant = int(time.time())
+            if (type(lease) is not int or
+                not instant < lease <= instant+900 or
+                type(attempts) is not int or not 1 <= attempts <= 3):
+                continue
         if row['status'] == 'completed':
             outcome = row.get('outcome')
             if (not isinstance(outcome, dict) or
@@ -421,7 +433,14 @@ def source_current_gap_report(gap, current):
         if not isinstance(name, str) or not CLIP.fullmatch(name) or name in seen:
             continue
         seen.add(name)
-        if name not in current:
+        source = current.get(name)
+        if not isinstance(source, dict):
+            continue
+        # A newer native face pass or an indexed crop supersedes the old
+        # zero-crop gap observation without changing the original 4K bytes.
+        # Never use an earlier gap result once its reason is no longer true.
+        if (source.get('face_deep_review_version') != NATIVE_PASS or
+            source.get('face_candidates') != []):
             continue
         record = catalog['records'].get(name)
         meta = record.get('manifest') if isinstance(record, dict) else None
