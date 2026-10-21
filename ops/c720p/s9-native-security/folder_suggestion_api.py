@@ -39,12 +39,15 @@ def snapshot(provider, journal: ReviewJournal) -> dict:
     if (not isinstance(data, dict) or data.get("features_verified") is not True
             or not isinstance(data.get("clips"), list)
             or not isinstance(data.get("folders"), list)
+            or data.get("historic_review_index_verified") is not True
+            or not isinstance(data.get("historic_reviewed_keys"), list)
             or not isinstance(data.get("revision"), str)
             or not data["revision"]):
         raise ValueError("No verified original/feature snapshot")
     state = journal.read()
     # Only decisions written by the media-bound journal become references.
-    result = rank_folders(data["clips"], data["folders"], state["decisions"])
+    result = rank_folders(data["clips"], data["folders"], state["decisions"],
+                          nonreference_reviewed=data["historic_reviewed_keys"])
     result["journal_revision"] = state["revision"]
     result["feature_snapshot_revision"] = data.get("revision")
     result["verified_media_evidence"] = True
@@ -87,8 +90,10 @@ def review(payload, provider, journal: ReviewJournal,
     with GUARD:
         try:
             data = provider()
-            if data.get("features_verified") is not True:
-                raise ValueError("Unverified features")
+            if (data.get("features_verified") is not True or
+                    data.get("historic_review_index_verified") is not True or
+                    not isinstance(data.get("historic_reviewed_keys"), list)):
+                raise ValueError("Unverified features or historical review index")
             if payload["feature_snapshot_revision"] != data.get("revision"):
                 return 409, {"ok": False, "error": "feature_snapshot_changed"}
             clips = [ClipFeatures.from_dict(raw) for raw in data["clips"]]
@@ -100,7 +105,9 @@ def review(payload, provider, journal: ReviewJournal,
                 return 409, {"ok": False, "error": "source_or_original_changed"}
             if journal.read()["revision"] != payload["journal_revision"]:
                 return 409, {"ok": False, "error": "review_revision_changed"}
-            ranking = rank_folders(data["clips"], data["folders"], journal.read()["decisions"])
+            ranking = rank_folders(data["clips"], data["folders"],
+                                   journal.read()["decisions"],
+                                   nonreference_reviewed=data["historic_reviewed_keys"])
             nominated = any(
                 row["source"] == source and row["clip_id"] == name
                 and row["folder_id"] == folder and row["state"] == "pending_review"
@@ -128,6 +135,8 @@ def review(payload, provider, journal: ReviewJournal,
             # the provider AFTER it finishes, before any authoritative write.
             fresh = provider()
             if (fresh.get("features_verified") is not True or
+                    fresh.get("historic_review_index_verified") is not True or
+                    fresh.get("historic_reviewed_keys") != data["historic_reviewed_keys"] or
                     fresh.get("revision") != data["revision"] or
                     not any(raw.get("source") == source and raw.get("clip_id") == name
                             and raw.get("media_sha256") == matched.media_sha256
