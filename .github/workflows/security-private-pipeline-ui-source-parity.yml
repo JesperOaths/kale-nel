@@ -4,8 +4,8 @@ on:
     paths:
       - 'ops/c720p/security-runtime/s9_security_component_health_v1.py'
       - 'ops/c720p/s9-native-security/security-hub-v30.js'
-      - 'ops/c720p/s9-native-security/security-hub-v30.html'
-      - 'ops/c720p/s9-native-security/c720p-surveillance.html'
+      - 'ops/c720p/s9-native-security/security-hub-v30.html.snapshot.txt'
+      - 'ops/c720p/s9-native-security/c720p-surveillance.html.snapshot.txt'
       - 'ops/c720p/s9-native-security/test-private-pipeline-ui-source-parity-v1.py'
       - '.github/workflows/security-private-pipeline-ui-source-parity.yml'
   push:
@@ -13,8 +13,8 @@ on:
     paths:
       - 'ops/c720p/security-runtime/s9_security_component_health_v1.py'
       - 'ops/c720p/s9-native-security/security-hub-v30.js'
-      - 'ops/c720p/s9-native-security/security-hub-v30.html'
-      - 'ops/c720p/s9-native-security/c720p-surveillance.html'
+      - 'ops/c720p/s9-native-security/security-hub-v30.html.snapshot.txt'
+      - 'ops/c720p/s9-native-security/c720p-surveillance.html.snapshot.txt'
       - 'ops/c720p/s9-native-security/test-private-pipeline-ui-source-parity-v1.py'
       - '.github/workflows/security-private-pipeline-ui-source-parity.yml'
 permissions:
