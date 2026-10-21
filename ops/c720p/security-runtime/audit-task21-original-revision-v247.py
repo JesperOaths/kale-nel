@@ -8,6 +8,7 @@ person labels, OAuth secrets or timestamps. This cannot retro-bind any review.
 """
 import argparse
 import json
+import os
 import re
 import stat
 import subprocess
@@ -46,11 +47,26 @@ def read_role(path,limit,private,role):
    raise RuntimeError(role+"_"+str(exc)) from None
   raise RuntimeError(role+"_metadata_unknown") from None
 
+def config_read():
+ # This is a shared archive service CONFIG file, not the private manual
+ # review/audit store. A 0644 metadata config is readable by the
+ # archive's existing worker. Refuse foreign ownership, unsafe parent,
+ # symlinks, non-regular, oversized and any group/world WRITE.
+ if CFG.is_symlink() or not CFG.is_file():
+  raise RuntimeError("rclone_config_private_schema_missing")
+ st=CFG.stat();parent=CFG.parent.stat()
+ if (not stat.S_ISREG(st.st_mode) or st.st_nlink!=1
+    or not 10<st.st_size<=100000 or st.st_uid!=os.geteuid()
+    or parent.st_uid!=os.geteuid() or parent.st_mode&0o022
+    or st.st_mode&0o022):
+  raise RuntimeError("rclone_config_private_schema_mode_or_size")
+ return read_role(CFG,100000,False,"rclone_config")
+
 def collect():
  manual=read_role(MANUAL,600000,True,"manual")
  sd=read_role(SD,5000000,False,"sd")
  drive=read_role(DRIVE,6000000,False,"drive")
- cfg=read_role(CFG,100000,True,"rclone_config")
+ cfg=config_read()
  if (manual.get("version")!=1 or not isinstance(manual.get("items"),dict)
      or not isinstance(sd.get("records"),dict) or
      not isinstance(drive.get("items"),list)):

@@ -37,7 +37,7 @@ class Tests(unittest.TestCase):
      "ID":"abcdefghijklmnop","ModTime":"2026-10-20T10:10:00Z",
      "Hashes":{"MD5":"a"*32},"Size":60000,
      "Metadata":{"version":"12"}}),stderr="")
-  with patch.object(m,"read_json",side_effect=read),patch.object(
+  with patch.object(m,"read_json",side_effect=read),patch.object(m,"config_read",return_value=docs["cfg"]),patch.object(
      m.subprocess,"run",side_effect=command) as spy:
    summary=m.collect()
   self.assertEqual(spy.call_count,2)
@@ -51,7 +51,7 @@ class Tests(unittest.TestCase):
   docs["manual"]["items"]={"sd:"+SD:{"review_status":"assigned"}}
   with patch.object(m,"read_json",side_effect=lambda p,*args:
        docs["manual"] if p==m.MANUAL else docs["sd"] if p==m.SD else
-       docs["drive"] if p==m.DRIVE else docs["cfg"]):
+       docs["drive"] if p==m.DRIVE else docs["cfg"]),patch.object(m,"config_read",return_value=docs["cfg"]):
    with self.assertRaisesRegex(RuntimeError,"source_qualified_review_sample_missing"):
     m.collect()
  def test_role_specific_refusal_has_no_private_path(self):
