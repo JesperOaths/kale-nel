@@ -53,7 +53,7 @@ class QueueTest(unittest.TestCase):
   v.produce()
   old=v.QUEUE.read_bytes()
   self.consumer.unlink()
-  with patch.object(v,"camera_guard") as camera,\\
+  with patch.object(v,"camera_guard") as camera,\
        patch.object(v,"evaluate_one") as decode:
    with self.assertRaisesRegex(v.Refusal,
                                "anonymous_consumer_unavailable_before_scan"):
