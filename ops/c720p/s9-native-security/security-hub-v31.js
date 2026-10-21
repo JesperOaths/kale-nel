@@ -146,6 +146,7 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
    const storage=storageAlert(i);
    const mismatch=i.original_digest_mismatches!==null&&i.original_digest_mismatches>0;
    const warnings=[];
+   if(data.report_transport_error)warnings.push('Private health request failed; showing last known report only');
    if(data.aggregate_stale)warnings.push('Private aggregate report is stale; current recording health is unverified');
    if(storage)warnings.push(storage);
    if(i.ntp_synchronized===false)warnings.push('Clock is not synchronized');
@@ -184,6 +185,16 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
   }
   for(const panel of panels){panel.summary.textContent=summary;panel.rows.replaceChildren();for(const [label,value]of rows)panel.rows.append(create('dt','',label),create('dd','',value));}
  }
+ function degradedSnapshot(last){
+  if(!last)return null;
+  const downgrade=row=>({...row,status:row.status==='current'?'stale':row.status});
+  return {...last,aggregate_stale:true,report_transport_error:true,
+   aggregate_age_seconds:Math.max(301,last.aggregate_age_seconds||0),
+   infrastructure:downgrade(last.infrastructure),
+   evidence:downgrade(last.evidence),
+   saved_timing:downgrade(last.saved_timing)};
+ }
+ let lastGood=null;
  let busy=false,ended=false,lastAttempt=null;
  const visible=()=>!ended&&!document.hidden&&(!live.hidden||!controls.hidden);
  async function refresh(){
@@ -198,8 +209,8 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
     const data=contract(await response.json());if(!data)throw Error('report_contract');return data;
    };
    const data=await Promise.race([read(),deadline]);
-   if(!ended)render(data);
-  }catch(_){if(!ended)render(null);}
+   if(!ended){lastGood=data;render(data);}
+  }catch(_){if(!ended)render(degradedSnapshot(lastGood));}
   finally{clearTimeout(timeout);busy=false;}
  }
  const observer=new MutationObserver(refresh);observer.observe(live,{attributes:true,attributeFilter:['hidden']});observer.observe(controls,{attributes:true,attributeFilter:['hidden']});
