@@ -63,6 +63,42 @@ class Tests(unittest.TestCase):
         compile(new,'patched-worker','exec')
         with self.assertRaises(ValueError):h.patch_worker(new)
 
+    def test_capture_deferral_makes_room_for_an_older_pair_without_using_failures(self):
+        now=10000
+        newest=h.defer_entry({'failures':0,'last_attempt':9000},now,
+                            'live_recording_or_camera_health_changed')
+        self.assertFalse(h.retry_ready(newest,now+179))
+        self.assertTrue(h.retry_ready({},now+179))
+        self.assertTrue(h.retry_ready(newest,now+180))
+        self.assertEqual(newest['failures'],0)
+        repeated=h.defer_entry(newest,now+180,'phone_not_stable')
+        self.assertEqual(repeated['retry_after'],now+180+360)
+        self.assertEqual(repeated['failures'],0)
+
+    def test_retry_is_bounded_and_existing_exhausted_media_failures_stay_exhausted(self):
+        item={'guard_deferrals':999999,'failures':2,'last_error':'previous_media_error'}
+        result=h.defer_entry(item,10000,'untrusted private details')
+        self.assertEqual(result['retry_after'],13600)
+        self.assertEqual(result['last_guard_reason'],'capture_guard_interrupted')
+        self.assertEqual(result['last_error'],'previous_media_error')
+        self.assertEqual(result['failures'],2)
+        self.assertFalse(h.retry_ready({'failures':3},20000))
+        self.assertFalse(h.retry_ready({'retry_after':float('nan')},20000))
+        self.assertFalse(h.retry_ready({'failures':True},20000))
+
+    def test_retry_patch_only_changes_pick_cooldown_and_cancel_persistence(self):
+        source=('def pick():\n'
+            '  if now-float(item.get("last_attempt",0))<min(3600,90*2**item.get("failures",0)):\n'
+            '   continue\n'
+            'MEDIA_PIPELINE_SENTINEL\n'
+            '  # Reschedule short-lived guard failures without exhausting attempts.\n'
+            '  return 0\nrun_exclusive(main)')
+        after=h.patch_retry_worker(source)
+        self.assertIn('MEDIA_PIPELINE_SENTINEL',after)
+        self.assertIn('retry_ready(item,now)',after)
+        self.assertIn('atomic_json(STATE,failures)',after)
+        with self.assertRaises(ValueError):h.patch_retry_worker(after)
+
     @unittest.skipIf(os.name=='nt','Linux flock/owner semantics')
     def test_same_inode_lock_excludes_other_worker_and_releases_on_error(self):
         import fcntl

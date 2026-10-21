@@ -66,7 +66,9 @@ def reviews():
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--apply',action='store_true')
     ap.add_argument('--expected-worker-sha256',required=True)
-    ap.add_argument('--helper-sha256',required=True);args=ap.parse_args()
+    ap.add_argument('--helper-sha256',required=True)
+    ap.add_argument('--expected-helper-sha256')
+    ap.add_argument('--retry-policy',action='store_true');args=ap.parse_args()
     raw,_=read(Path(__file__).with_name(NAME))
     if sha(raw)!=args.helper_sha256:raise RuntimeError('staged_helper_changed')
     # Execute exactly the approved helper bytes, without rereading their path.
@@ -75,28 +77,40 @@ def main():
     exec(compile(raw,NAME,'exec'),module.__dict__)
     before,mode=read(WORKER)
     if sha(before)!=args.expected_worker_sha256:raise RuntimeError('concurrent_worker_change')
-    if HELPER.exists() or HELPER.is_symlink():raise RuntimeError('helper_already_present_reinspect')
-    after=module.patch_worker(before.decode()).encode()
+    helper_before=None;helper_mode=0o600
+    if HELPER.is_symlink():raise RuntimeError('unsafe_existing_helper')
+    if HELPER.exists():
+        helper_before,helper_mode=read(HELPER)
+        if not args.retry_policy or sha(helper_before)!=args.expected_helper_sha256:
+            raise RuntimeError('helper_already_present_reinspect')
+    elif args.retry_policy or args.expected_helper_sha256:
+        raise RuntimeError('expected_existing_helper_missing')
+    patcher=module.patch_retry_worker if args.retry_policy else module.patch_worker
+    after=patcher(before.decode()).encode()
     compile(after,str(WORKER),'exec')
     before_camera=camera()
     if not module.safe(before_camera):raise RuntimeError('capture_not_ready_defer')
     if not module.reserves():raise RuntimeError('hub_reserve_not_ready_defer')
     old_originals=originals();old_reviews=reviews()
     plan={'worker_before_sha256':sha(before),'worker_after_sha256':sha(after),
-          'helper_sha256':sha(raw),'originals_before':len(old_originals),
+          'helper_sha256':sha(raw),'helper_before_sha256':sha(helper_before) if helper_before else None,
+          'retry_policy':args.retry_policy,'originals_before':len(old_originals),
           'camera_changed':False,'applied':False}
     if not args.apply:print(json.dumps(plan,sort_keys=True));return
     backup=ROOT/'backups/historical-joiner-continuity-v1'/dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     backup.mkdir(parents=True,mode=0o700)
     atomic(backup/'worker.before.py',before,0o600)
+    if helper_before is not None:atomic(backup/'helper.before.py',helper_before,0o600)
     helper_installed=False;worker_installed=False
     try:
         with module.exclusion():
             p=subprocess.run(['systemctl','--user','is-active','--quiet',
                 'c720p-s9-complete-clip-worker.service'],timeout=10)
             if p.returncode==0:raise RuntimeError('existing_joiner_running_defer')
-            if read(WORKER)[0]!=before or HELPER.exists():raise RuntimeError('concurrent_source_change')
-            atomic(HELPER,raw,0o600);helper_installed=True
+            if read(WORKER)[0]!=before:raise RuntimeError('concurrent_source_change')
+            actual_helper=read(HELPER)[0] if HELPER.exists() else None
+            if actual_helper!=helper_before:raise RuntimeError('concurrent_helper_change')
+            atomic(HELPER,raw,helper_mode);helper_installed=True
             atomic(WORKER,after,mode);worker_installed=True
         check=subprocess.run(['/usr/bin/python3',str(WORKER),'--dry-run'],
                              capture_output=True,text=True,timeout=85)
@@ -122,7 +136,8 @@ def main():
             atomic(WORKER,before,mode);worker_installed=False
         if (helper_installed and not worker_installed and read(WORKER)[0]==before
                 and read(HELPER)[0]==raw):
-            HELPER.unlink()
+            if helper_before is None:HELPER.unlink()
+            else:atomic(HELPER,helper_before,helper_mode)
         raise
 
 
