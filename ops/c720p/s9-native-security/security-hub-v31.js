@@ -82,10 +82,15 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
  };
  function contract(data){
   if(!object(data)||data.ok!==true||data.schema_version!=='security_component_health_v1'||!object(data.components)||typeof data.observed_at_utc!=='string'||!/(?:Z|[+-]\d{2}:\d{2})$/.test(data.observed_at_utc)||!Number.isFinite(Date.parse(data.observed_at_utc)))return null;
-  const result={};
+  // Treat old aggregate snapshots as history, even when their individual
+  // component status said "current" at the original time of publication.
+  const ageSeconds=(Date.now()-Date.parse(data.observed_at_utc))/1000;
+  if(!Number.isFinite(ageSeconds)||ageSeconds < -180)return null;
+  const aggregateStale=ageSeconds>300;
+  const result={aggregate_age_seconds:Math.max(0,Math.floor(ageSeconds)),aggregate_stale:aggregateStale};
   for(const [key,types]of Object.entries(fields)){
    const raw=data.components[key];if(!object(raw)||!['current','stale','unavailable'].includes(raw.status)||!(raw.age_seconds===null||nonnegative(raw.age_seconds)))return null;
-   const row={status:raw.status,age_seconds:raw.age_seconds};
+   const row={status:aggregateStale&&raw.status==='current'?'stale':raw.status,age_seconds:raw.age_seconds};
    for(const [kind,names]of Object.entries(types))for(const name of names){
     const value=raw[name],parsed=kind==='counts'?count(value):kind==='numbers'?number(value):boolean(value);
     if(value!==undefined&&value!==null&&parsed===null)return null;
@@ -141,6 +146,7 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
    const storage=storageAlert(i);
    const mismatch=i.original_digest_mismatches!==null&&i.original_digest_mismatches>0;
    const warnings=[];
+   if(data.aggregate_stale)warnings.push('Private aggregate report is stale; current recording health is unverified');
    if(storage)warnings.push(storage);
    if(i.ntp_synchronized===false)warnings.push('Clock is not synchronized');
    else if(i.ntp_synchronized===null)warnings.push('Clock synchronization unknown');
@@ -150,7 +156,8 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
    if(t.reported_complete===false||t.joint_same_recording_required===false)warnings.push('Saved timing checks require review');
    if([i,e,t].some(x=>x.status!=='current'))warnings.push('Some reports are stale or unavailable');
    summary=warnings.length?warnings.join(' · '):'Independent reports loaded';
-   rows.push(['Infrastructure report',report(i)],['Storage',(i.status==='current'?'Current':'Last reported')+' · '+bytes(i.root_available_bytes)+' free of '+bytes(i.root_total_bytes)],
+   rows.push(['Aggregate report',data.aggregate_stale?'Stale · last update '+age(data.aggregate_age_seconds):'Last update '+age(data.aggregate_age_seconds)],
+    ['Infrastructure report',report(i)],['Storage',(i.status==='current'?'Current':'Last reported')+' · '+bytes(i.root_available_bytes)+' free of '+bytes(i.root_total_bytes)],
     ['Clock','Synchronized: '+yes(i.ntp_synchronized)+' · External clock offset: '+(i.external_clock_minus_hub_seconds===null?'Not reported':i.external_clock_minus_hub_seconds.toFixed(1)+' seconds')],
     ['Original integrity','Digest matches: '+known(i.original_digest_matches)+' · Mismatches: '+known(i.original_digest_mismatches)+' · Hash coverage complete: '+yes(i.original_integrity_coverage_complete)+' · Originals indexed: '+known(i.originals_indexed)],
     ['Evidence report',report(e)],['Observation coverage','Recordings: '+known(e.recordings_indexed)+' · Tracked observations: '+known(e.tracked_observations)+' · Colour: '+known(e.observations_with_colour)+' · Direction: '+known(e.observations_with_direction)],
@@ -160,12 +167,12 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
   }else rows.push(['Reports','Unavailable · no current system report could be read']);
   if(data){
     const p=data.pipeline_summary;
-    const flag=x=>x===true?'Verified':x===false?'Not verified':'Unknown';
+    const flag=x=>data.aggregate_stale?'Unknown (stale report)':x===true?'Verified':x===false?'Not verified':'Unknown';
     if(p){
       const r=p.rescan,s=p.s3,m=p.manual_binding;
-      rows.push(['Rescan queue',r.state+' · '+r.tracked+' tracked · '+r.pending+' pending · '+r.completed+' completed · '+r.blocked+' blocked']);
+      rows.push(['Rescan queue',(data.aggregate_stale?'Last reported: ': '')+r.state+' · '+r.tracked+' tracked · '+r.pending+' pending · '+r.completed+' completed · '+r.blocked+' blocked']);
       rows.push(['Rescan provenance','Worker activity: '+flag(r.worker_activity_verified)+' · Original-source evidence current: '+flag(r.results_current_source_verified)+' · Per-record blocked reasons/revocations unavailable in this aggregate']);
-      rows.push(['Bedroom S3 motion',s.motion_health_verified===true?'Verified · camera '+flag(s.healthy)+' · analysis '+flag(s.motion_analysis_active):'UNKNOWN · private motion/heartbeat not independently verified']);
+      rows.push(['Bedroom S3 motion',!data.aggregate_stale&&s.motion_health_verified===true?'Verified · camera '+flag(s.healthy)+' · analysis '+flag(s.motion_analysis_active):'UNKNOWN · private motion/heartbeat not independently verified']);
       rows.push(['Manual review media binding',m.without_reported_binding+' historical/unbound of '+m.decisions+' decisions · future writer: '+flag(m.live_write_binding_verified)+' · current original digest: '+flag(m.current_source_binding_verified)]);
       if(r.results_current_source_verified!==true||m.live_write_binding_verified!==true||s.motion_health_verified!==true){
         summary+=' · Rescan, digest binding or S3 evidence unverified';
