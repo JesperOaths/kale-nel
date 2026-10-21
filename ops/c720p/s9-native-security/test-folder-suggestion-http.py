@@ -44,6 +44,8 @@ class ApiHttpAcceptance(unittest.TestCase):
         self.candidate = feature("candidate.mp4")
         self.data = {
             "features_verified": True, "revision": "verified-snapshot-1",
+            "historic_review_index_verified": True,
+            "historic_reviewed_keys": [],
             "clips": [ref, self.candidate],
             "folders": [{"id": "p1"}, {"id": "p2"}],
         }
