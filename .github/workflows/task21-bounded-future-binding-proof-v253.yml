@@ -1,0 +1,89 @@
+name: Task21 bounded physical original SHA and future-binding protocol proof V253
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-fresh-original-binding-v253.py'
+      - 'ops/c720p/security-runtime/test-audit-task21-fresh-original-binding-v253.py'
+      - '.github/workflows/task21-bounded-future-binding-proof-v253.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-fresh-original-binding-v253.py'
+      - 'ops/c720p/security-runtime/test-audit-task21-fresh-original-binding-v253.py'
+      - '.github/workflows/task21-bounded-future-binding-proof-v253.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Reject any historical decision/audit write in a future-only SHA proof
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/audit-task21-fresh-original-binding-v253.py"
+          python3 "$d/test-audit-task21-fresh-original-binding-v253.py"
+          python3 ops/c720p/s9-person-ml-v1/test-s9-manual-original-byte-attestor-v252.py
+          python3 ops/c720p/s9-person-ml-v1/test-s9-manual-media-digest-binding-v1.py
+  physical:
+    needs: synthetic
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        source: [sd, drive]
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: One SHA-qualified existing original per source without touching review history
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          stage="/tmp/task21-proof-v253-${GITHUB_SHA:0:12}-${{ matrix.source }}"
+          cmd="umask 077 && install -d -m 700 '$stage'"
+          for file in \
+            ops/c720p/security-runtime/audit-task21-fresh-original-binding-v253.py \
+            ops/c720p/s9-person-ml-v1/s9_manual_original_byte_attestor_v252.py \
+            ops/c720p/s9-person-ml-v1/s9_manual_media_digest_binding_v1.py; do
+            hash="$(sha256sum "$file" | cut -d' ' -f1)"
+            dest="$stage/$(basename "$file")"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+            cmd="$cmd && curl -fsSL --max-time 40 '$url' -o '$dest' && printf '%s  %s\\n' '$hash' '$dest' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/audit-task21-fresh-original-binding-v253.py' --source '${{ matrix.source }}'"
+          idem="task21-v253-${{ matrix.source }}-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task21-future-proof-v253','diagnostic',:'cmd',340,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "TASK21_FUTURE_BYTE_PROOF_V253_JOB=$job"
+          for i in $(seq 1 135); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 4300)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'TASK21_FRESH_ORIGINAL_BYTE_V253_VERIFIED' <<< "$output"
+              grep -q '"physical_original_sha256_verified": true' <<< "$output"
+              grep -q '"future_binding_consumer_accepted": true' <<< "$output"
+              grep -q '"decision_store_checksum_unchanged": true' <<< "$output"
+              grep -q '"append_only_review_audit_unchanged": true' <<< "$output"
+              grep -q '"historical_binding_backfilled": false' <<< "$output"
+              grep -q '"manual_reviews_written": 0' <<< "$output"
+              grep -q '"production_binding_activated": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Bounded original/consumer physical proof incomplete";exit 1
