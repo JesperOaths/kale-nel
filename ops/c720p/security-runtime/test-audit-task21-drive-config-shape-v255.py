@@ -21,6 +21,8 @@ class Test(unittest.TestCase):
    self.assertEqual(out["manual_decisions_modified"],0)
    self.assertIn("binary_root_owned",out)
    self.assertIn("binary_named_usr_local_bin",out)
+   self.assertIn("usr_bin_independent_system_binary_trusted_metadata",out)
+   self.assertIn("usr_local_bin_independent_system_binary_trusted_metadata",out)
    self.assertNotIn("trusted123",str(out))
  def test_bad_remote_and_binary_do_not_leak(self):
   with tempfile.TemporaryDirectory() as td:
