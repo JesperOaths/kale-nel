@@ -572,6 +572,14 @@ def work():
         except BlockingIOError:raise Refusal("s9_backfill_worker_busy") from None
         try:fcntl.flock(image_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise Refusal("evidence_quality_worker_busy") from None
+        # A missing V361 backend contract cannot be repaired by decoding
+        # the same original again. Refuse BEFORE hardware work/lease mutation.
+        # Rescan resumes naturally when the independently installed module is
+        # present and the existing thermal/idle/root gates pass.
+        check(ANONYMOUS_CONSUMER.is_file() and
+              not ANONYMOUS_CONSUMER.is_symlink() and
+              100<ANONYMOUS_CONSUMER.stat().st_size<100000,
+              "anonymous_consumer_unavailable_before_scan")
         camera_guard()
         candidate["status"]="processing";candidate["attempts"]+=1
         candidate["lease_until"]=now()+240
