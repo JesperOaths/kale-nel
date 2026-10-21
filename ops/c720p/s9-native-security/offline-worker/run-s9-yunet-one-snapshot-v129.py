@@ -57,7 +57,7 @@ def call(argv,seconds=90):
   # tensors. Map ONLY a few well-known Android/runtime failure families.
   if (len(argv)>=5 and argv[0]=="adb" and argv[3]=="shell"
       and isinstance(argv[4],str)
-      and re.search(r"(?:^|[; ])app_process(?:\\s|$)",argv[4])):
+      and re.search(r"(?:^|[; ])app_process(?:\s|$)",argv[4])):
    detail=((p.stderr or "")+"\\n"+(p.stdout or ""))[:12000]
    categories=(
      ("missing_java_class",r"(?:ClassNotFoundException|NoClassDefFoundError|Could not find class)"),
