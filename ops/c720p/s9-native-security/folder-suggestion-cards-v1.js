@@ -146,7 +146,11 @@
           ' clip' + (group.member_count === 1 ? '' : 's')),
           element('p', group.source_qualified_clips.join(' · ')));
         if (typeof hooks.onClusterOpen === 'function')
-          section.append(invoke(section, 'Inspect provisional group', hooks.onClusterOpen, group));
+          for (const key of group.source_qualified_clips.slice(0, 24)) {
+            if (typeof key === 'string' && key.length <= 240)
+              section.append(invoke(section, 'Inspect ' + key,
+                () => hooks.onClusterOpen(group, key), group));
+          }
         if (typeof hooks.onClusterName === 'function')
           section.append(invoke(section, 'Name after review', hooks.onClusterName, group));
         host.append(section);
