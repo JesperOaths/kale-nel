@@ -165,12 +165,6 @@ public final class S9MigratedBoundActionReceiptTestV234 {
                     .executeAfterIndependentAuthentication(
                      valid,NOW,challenge,sources,repeat('f',64),
                      postcommit,existing),"wrong_external_digest_precommit");
-            byte[] other=signAction(signer,"delete",NAMES[1],SHA,size(1),
-                    repeat('3',32),1,priorHead);
-            denied(()->S9MigratedBoundActionReceiptV234
-                    .executeAfterIndependentAuthentication(
-                     other,NOW,challenge,sources,trustedDigest,
-                     postcommit,existing),"unapproved_source_refused");
             byte[] wrongSha=signAction(signer,"delete",NAMES[0],
                      repeat('e',64),size(0),repeat('4',32),1,priorHead);
             denied(()->S9MigratedBoundActionReceiptV234
@@ -186,6 +180,19 @@ public final class S9MigratedBoundActionReceiptTestV234 {
             ok(approved.get()==0&&currentSourceChecks.get()==0 &&
                existing.currentDecision(NAMES[0]).isSaved(),
                "precommit_denials_did_not_invoke_authority");
+            // A different yet manifest-listed source reaches V201's
+            // independent human/live-source gates; it must be denied, without
+            // changing the current decision, but gate callbacks may execute.
+            byte[] other=signAction(signer,"delete",NAMES[1],SHA,size(1),
+                    repeat('3',32),1,priorHead);
+            denied(()->S9MigratedBoundActionReceiptV234
+                    .executeAfterIndependentAuthentication(
+                     other,NOW,challenge,sources,trustedDigest,
+                     postcommit,existing),"unapproved_source_refused");
+            ok(existing.currentDecision(NAMES[0]).isSaved(),
+               "different_source_denial_preserves_saved");
+            int approvalsBeforeValid=approved.get();
+            int proofChecksBeforeValid=currentSourceChecks.get();
             byte[] output=S9MigratedBoundActionReceiptV234
                     .executeAfterIndependentAuthentication(
                      valid,NOW,challenge,sources,trustedDigest,
@@ -201,7 +208,8 @@ public final class S9MigratedBoundActionReceiptTestV234 {
               && payload.contains("\"allowsOriginalRemoval\":false")
               && payload.contains("\"provesHumanViewedMedia\":false")
               && payload.contains("\"provesOriginalAvailable\":false")
-              && approved.get()==1 && currentSourceChecks.get()==1,
+              && approved.get()==approvalsBeforeValid+1 &&
+                 currentSourceChecks.get()==proofChecksBeforeValid+1,
               "source_qualified_metadata_only_receipt");
             denied(()->S9MigratedBoundActionReceiptV234
                     .executeAfterIndependentAuthentication(
