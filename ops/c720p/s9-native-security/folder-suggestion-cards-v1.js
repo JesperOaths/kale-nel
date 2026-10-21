@@ -150,5 +150,90 @@
     }
     return {visible: matches.length, provisional_groups: waiting.length};
   }
-  root.FolderSuggestionCards = Object.freeze({render, safeMatch});
+  async function connect(host, options) {
+    /* Secure bridge into the existing People review shell:
+     * - relay is the already-authenticated C720PSecureRelay
+     * - onOpen must OPEN the original and obtain a session-bound attestation
+     * - the backend independently verifies the opaque opened_ticket
+     */
+    if (!options || !options.relay || typeof options.relay.fetch !== 'function' ||
+        typeof options.onOpen !== 'function')
+      throw Error('Authenticated relay and original-media reviewer required');
+    const relay = options.relay;
+    const opened = new Map();
+    const key = row => row.folder_id + '/' + row.source_qualified_clip_id +
+      '/' + row.media_revision + '/' + row.media_sha256;
+    const saved = options.onSaved;
+    let current = null;
+    async function send(action, row) {
+      const ticket = opened.get(key(row));
+      if (!ticket) throw Error('Inspect and attest this original before reviewing.');
+      if (!current || !Number.isSafeInteger(current.journal_revision))
+        throw Error('Review revision unavailable');
+      const request = {
+        action, source: row.source, clip_id: row.clip_id,
+        folder_id: row.folder_id, media_sha256: row.media_sha256,
+        media_revision: row.media_revision,
+        journal_revision: current.journal_revision,
+        opened_ticket: ticket, human_confirmed: true
+      };
+      const response = await relay.fetch('/new/api/folder-suggestions/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-S9-Folder-Suggestion-Intent': 'human-folder-suggestions-v1'
+        },
+        body: JSON.stringify(request)
+      });
+      const outcome = await response.json();
+      if (!response.ok || outcome.ok !== true || outcome.persisted !== true ||
+          outcome.media_verified !== true ||
+          outcome.status !== (action === 'approve' ? 'approved' : 'rejected'))
+        throw Error(outcome.error || 'Human review was not committed.');
+      opened.delete(key(row));
+      return outcome;
+    }
+    async function refresh() {
+      const response = await relay.fetch('/new/api/folder-suggestions', {cache:'no-store'});
+      const snapshot = await response.json();
+      if (!response.ok) {
+        host.replaceChildren(element('p',
+          'Verified folder rankings unavailable. Existing manual review is unaffected.'));
+        return {visible: 0};
+      }
+      current = snapshot;
+      const narrowed = Object.assign({}, snapshot, {
+        matches: (snapshot.matches || []).filter(row =>
+          !options.folderId || row.folder_id === options.folderId),
+        provisional_clusters: options.showProvisional === false ? [] :
+          snapshot.provisional_clusters
+      });
+      return render(host, narrowed, {
+        onOpen: async row => {
+          const proof = await options.onOpen(row);
+          if (proof && proof.verified === true &&
+              proof.media_sha256 === row.media_sha256 &&
+              proof.media_revision === row.media_revision &&
+              typeof proof.opened_ticket === 'string' &&
+              proof.opened_ticket.length >= 10) {
+            opened.set(key(row), proof.opened_ticket);
+          }
+          return proof;
+        },
+        onApprove: row => send('approve', row),
+        onReject: row => send('reject', row),
+        onClusterOpen: options.onClusterOpen,
+        onClusterName: options.onClusterName,
+        onSaved: result => {
+          if (typeof saved === 'function') saved(result);
+          Promise.resolve().then(refresh).catch(() => {
+            host.replaceChildren(element('p',
+              'Decision saved; refresh the review queue before continuing.'));
+          });
+        }
+      });
+    }
+    return refresh();
+  }
+  root.FolderSuggestionCards = Object.freeze({render, safeMatch, connect});
 })(typeof window !== 'undefined' ? window : globalThis);
