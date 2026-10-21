@@ -6,6 +6,7 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v51.html'
       - 'ops/c720p/s9-native-security/test-folder-suggestion-v320-bridge.js'
       - 'ops/c720p/s9-native-security/stage-people-v321-readonly.py'
+      - 'ops/c720p/s9-native-security/test-stage-people-v321-readonly.py'
       - '.github/workflows/s9-folder-v321-staged-ui.yml'
   push:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v51.html'
       - 'ops/c720p/s9-native-security/test-folder-suggestion-v320-bridge.js'
       - 'ops/c720p/s9-native-security/stage-people-v321-readonly.py'
+      - 'ops/c720p/s9-native-security/test-stage-people-v321-readonly.py'
       - '.github/workflows/s9-folder-v321-staged-ui.yml'
 permissions:
   contents: read
@@ -35,6 +37,7 @@ jobs:
       - name: Compile guarded versioned staging module
         run: |
           python3 -m py_compile ops/c720p/s9-native-security/stage-people-v321-readonly.py
+          python3 ops/c720p/s9-native-security/test-stage-people-v321-readonly.py
       - name: Keep UI release opt-in and source parity intact
         run: |
           python3 ops/c720p/s9-native-security/test-live-people-v320-parity.py
