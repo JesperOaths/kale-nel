@@ -111,3 +111,50 @@ def patch_worker(source):
         'if __name__=="__main__":\n'
         ' from s9_historical_joiner_health_v1 import run_exclusive\n'
         ' raise SystemExit(run_exclusive(main))', 1)
+
+
+def retry_ready(item, now):
+    """Keep interrupted jobs from monopolizing the newest-first picker."""
+    if not isinstance(item, dict) or not number(now):
+        return False
+    failures=item.get('failures',0)
+    last=item.get('last_attempt',0)
+    until=item.get('retry_after',0)
+    if (type(failures) is not int or not 0<=failures<3
+            or not number(last) or last<0 or not number(until) or until<0):
+        return False
+    return now>=until and now-last>=min(3600,90*2**failures)
+
+
+def defer_entry(item, now, reason):
+    """A capture interruption is not a media failure or a completed job."""
+    if not isinstance(item,dict) or not number(now) or now<0:
+        raise ValueError('invalid_retry_state')
+    previous=item.get('guard_deferrals',0)
+    if type(previous) is not int or not 0<=previous<=1000000:
+        raise ValueError('invalid_guard_deferrals')
+    attempts=min(1000000,previous+1)
+    allowed={'encoding_time_limit','live_recording_or_camera_health_changed',
+        'phone_status_unavailable','hub_ram_tmpfs_insufficient','phone_not_stable',
+        'source_files_changed_after_encoding','phone_unhealthy_before_publish'}
+    return dict(item,guard_deferrals=attempts,last_attempt=now,
+        retry_after=now+min(3600,180*2**min(attempts-1,5)),
+        last_guard_reason=reason if reason in allowed else 'capture_guard_interrupted')
+
+
+def patch_retry_worker(source):
+    old=('  if now-float(item.get("last_attempt",0))<min(3600,90*2**item.get("failures",0)):\n'
+         '   continue')
+    new=('  from s9_historical_joiner_health_v1 import retry_ready\n'
+         '  if not retry_ready(item,now):continue')
+    cancel=('  # Reschedule short-lived guard failures without exhausting attempts.\n'
+            '  return 0')
+    replacement=('  # Persist a bounded capture deferral, keeping other pairs eligible.\n'
+        '  from s9_historical_joiner_health_v1 import defer_entry\n'
+        '  failures[name]=defer_entry(failures[name],time.time(),str(exc))\n'
+        '  atomic_json(STATE,failures)\n'
+        '  return 0')
+    if (source.count(old)!=1 or source.count(cancel)!=1
+            or 'run_exclusive(main)' not in source):
+        raise ValueError('unexpected_joiner_retry_contract')
+    return source.replace(old,new,1).replace(cancel,replacement,1)
