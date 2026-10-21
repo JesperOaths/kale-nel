@@ -395,12 +395,22 @@ def source_current_gap_report(gap, current):
             not DIGEST.fullmatch(str(row.get('media_revision', ''))) or
             not integer(row.get('source_bytes'), 100001, 799999999)):
             raise ValueError('untrusted_active_queue_source')
-        if row['status'] == 'completed' and (
-                not isinstance(row.get('outcome'), dict) or
-                row['outcome'].get('verified_secondary_report') is not True or
-                row['outcome'].get('consumer_visibility_confirmed') is not True or
-                row['outcome'].get('model_sha256') != MODEL_SHA):
-            continue
+        if row['status'] == 'completed':
+            outcome = row.get('outcome')
+            if (not isinstance(outcome, dict) or
+                outcome.get('verified_secondary_report') is not True or
+                outcome.get('model_sha256') != MODEL_SHA or
+                outcome.get('source_revision') != row.get('media_revision') or
+                outcome.get('sampled_frames') != 3):
+                continue
+            # Two historically completed V304 rows predate the V314 explicit
+            # consumer-acknowledgment field. Never rewrite their audited
+            # outcome or discard their source-qualified measured results.
+            # This exact authenticated GET validates and serves their source
+            # afresh; an explicit False is never treated as legacy success.
+            if (outcome.get('consumer_visibility_confirmed') is not True and
+                'consumer_visibility_confirmed' in outcome):
+                continue
         by_clip.setdefault(row['clip_no'], []).append(row)
     visible = []
     seen = set()
