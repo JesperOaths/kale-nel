@@ -135,6 +135,88 @@ class QueueTest(unittest.TestCase):
   self.assertIn(live["id"],{r["id"] for r in v.items()["rows"]})
   self.assertEqual(len({r["id"] for r in v.items()["rows"]}),len(v.items()["rows"]))
 
+ def test_queue_pressure_retires_only_unsupported_current_blockers(self):
+  v.produce()
+  for i in range(v.LIMIT-4):
+   name=f"motion_{1793000000000+i}.mp4"
+   self.orig[name]={"name":name,"bytes":1000500+i,"version":"b"*64,
+      "manifest":{"name":name,"bytes":1000500+i,"sha256":"c"*64,
+                  "width":3840,"height":2160}}
+   self.rows.append({"clip_no":name,"native_face_pass_complete":True,
+       "targeted_rescan_priority":True,
+       "extraction_status":"secondary_detector_has_no_supported_face"})
+  self.store()
+  first=v.produce()
+  self.assertEqual(len(v.items()["rows"]),v.LIMIT)
+  self.assertEqual(first["tally"]["blocked"],v.LIMIT-2)
+  current_ids={r["id"] for r in v.items()["rows"]}
+  fresh="motion_1793777777777.mp4"
+  self.orig[fresh]={"name":fresh,"bytes":1040404,"version":"d"*64,
+    "manifest":{"name":fresh,"bytes":1040404,"sha256":"e"*64,
+                "width":3840,"height":2160}}
+  self.rows.append({"clip_no":fresh,"native_face_pass_complete":True,
+      "targeted_rescan_priority":True,"extraction_status":"no_indexed_image"})
+  self.store()
+  result=v.produce()
+  self.assertEqual(result["new_admissions"],1)
+  self.assertEqual(result["archived_unsupported_at_capacity"],1)
+  active=v.items()["rows"]
+  self.assertEqual(len(active),v.LIMIT)
+  self.assertEqual(sum(x["clip_no"]==fresh for x in active),1)
+  lost=current_ids-{r["id"] for r in active}
+  self.assertEqual(len(lost),1)
+  tombstone=json.loads((v.retired_dir()/(next(iter(lost))+".json")).read_text())
+  self.assertEqual(tombstone["final"]["status"],"blocked")
+  self.assertEqual(tombstone["final"]["priority_reason"],
+                   "secondary_detector_has_no_supported_face")
+  repeated=v.produce()
+  self.assertEqual(repeated["new_admissions"],0)
+  self.assertEqual(repeated["retired_active_ids_not_reenqueued"],1)
+  self.assertEqual(repeated["archived_unsupported_at_capacity"],0)
+
+ def test_same_source_changed_reason_requires_new_provenance_not_requeue(self):
+  v.produce()
+  d=v.items()
+  item=next(x for x in d["rows"]
+             if x["priority_reason"]=="secondary_detector_has_no_supported_face")
+  # Bounded terminal tombstone may not silently become eligible when an
+  # independent source reason changes but original/model IDs remain same.
+  v.retire_obsolete([item],set())
+  d["rows"]=[r for r in d["rows"] if r["id"]!=item["id"]]
+  v.atomic(v.QUEUE,d)
+  source=next(r for r in self.rows if r["clip_no"]==item["clip_no"])
+  source["extraction_status"]="no_indexed_image"
+  self.store()
+  result=v.produce()
+  self.assertEqual(result["same_source_requalification_required"],1)
+  self.assertEqual(result["new_admissions"],0)
+  self.assertNotIn(item["id"],{r["id"] for r in v.items()["rows"]})
+
+ def test_all_pending_full_queue_reports_deferral_without_eviction(self):
+  v.produce()
+  for i in range(v.LIMIT-4):
+   name=f"motion_{1794000000000+i}.mp4"
+   self.orig[name]={"name":name,"bytes":1000800+i,"version":"b"*64,
+      "manifest":{"name":name,"bytes":1000800+i,"sha256":"c"*64,
+                  "width":3840,"height":2160}}
+   self.rows.append({"clip_no":name,"native_face_pass_complete":True,
+       "targeted_rescan_priority":True,"extraction_status":"no_indexed_image"})
+  self.store()
+  v.produce()
+  # The two originally blocked rows still occupy slots; no current blocked
+  # can be evicted simply because another runnable original exists.
+  fresh="motion_1794888888888.mp4"
+  self.orig[fresh]={"name":fresh,"bytes":1030404,"version":"d"*64,
+    "manifest":{"name":fresh,"bytes":1030404,"sha256":"e"*64,
+                "width":3840,"height":2160}}
+  self.rows.append({"clip_no":fresh,"native_face_pass_complete":True,
+      "targeted_rescan_priority":True,"extraction_status":"no_indexed_image"})
+  self.store()
+  result=v.produce()
+  self.assertEqual(result["new_admissions"],1)
+  self.assertEqual(result["archived_unsupported_at_capacity"],1)
+  self.assertEqual(result["capacity_deferred"],0)
+
  def test_current_blocked_and_completed_are_never_retired(self):
   v.produce()
   d=v.items()
