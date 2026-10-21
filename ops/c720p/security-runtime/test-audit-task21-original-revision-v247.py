@@ -32,7 +32,7 @@ class Tests(unittest.TestCase):
   def command(args,**kwargs):
    if args[0]=="adb":
     return SimpleNamespace(returncode=0,stdout="50000:1792300000\n",stderr="")
-   assert args[2]=="lsjson"
+   assert args[3]=="lsjson"
    return SimpleNamespace(returncode=0,stdout=json.dumps({
      "ID":"abcdefghijklmnop","ModTime":"2026-10-20T10:10:00Z",
      "Hashes":{"MD5":"a"*32},"Size":60000,
