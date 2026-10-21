@@ -45,6 +45,23 @@ class GuardedReclaim(unittest.TestCase):
   self.assertIn("if not same_root_filesystem(path):return False",original)
   self.assertIn("if not allowed(path, DIRECTORIES",original)
 
+ def test_cross_filesystem_cleanup_is_rejected(self):
+  with tempfile.TemporaryDirectory() as temp:
+   candidate=Path(temp)/"transient-build"
+   candidate.mkdir()
+   local_device=candidate.stat().st_dev
+   self.assertTrue(mod.same_root_filesystem(candidate,local_device))
+   self.assertFalse(mod.same_root_filesystem(candidate,local_device+1))
+   self.assertFalse(mod.same_root_filesystem(Path(temp)/"missing",local_device))
+   outside=Path(temp)/"link"
+   outside.symlink_to(candidate,target_is_directory=True)
+   self.assertFalse(mod.same_root_filesystem(outside,local_device))
+ def test_root_only_policy_cannot_target_protected_origins(self):
+  source=SRC.read_text()
+  self.assertIn("if not same_root_filesystem(path):return False",source)
+  self.assertIn("original.st_dev==root_device",source)
+  for forbidden in ("os.system(","sudo -S","docker system prune","/opt/homeassistant/config/www/frontyard-security-new/clips"):
+   self.assertNotIn(forbidden,source)
  def test_apply_is_opt_in_and_capped(self):
   s=SRC.read_text()
   self.assertIn('p.add_argument("--apply",action="store_true")',s)
