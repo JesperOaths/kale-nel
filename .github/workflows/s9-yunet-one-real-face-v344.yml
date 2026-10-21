@@ -4,7 +4,9 @@ on:
     paths: ['.github/workflows/s9-yunet-one-real-face-v344.yml']
   push:
     branches: [main]
-    paths: ['.github/workflows/s9-yunet-one-real-face-v344.yml']
+    paths:
+      - '.github/workflows/s9-yunet-one-real-face-v344.yml'
+      - 'ops/c720p/s9-native-security/offline-worker/run-s9-yunet-one-snapshot-v129.py'
 permissions:
   contents: read
 concurrency:
