@@ -191,7 +191,7 @@ class FolderSuggestionsTest(unittest.TestCase):
         live_ref = feature("live-ref.mp4", upper=axis(0))
         fresh = feature("fresh.mp4", upper=axis(0))
         old_approved = decision(approved)
-        old_rejected = decision(rejected)
+        old_rejected = decision(rejected, status="rejected")
         old_approved.pop("media_revision")
         old_rejected.pop("media_revision")
         got = eng.rank_folders([approved,rejected,live_ref,fresh],
