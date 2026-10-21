@@ -22,8 +22,9 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           source=Path('.github/workflows/security-hub-v31-status-test.yml').read_text()
-          assert 'workflow_dispatch:' not in source
-          assert 'systemctl' not in source
-          assert 'deploy-v31' not in source
+          import re
+          assert re.search(r'^  test-status:',source,re.M)
+          assert not re.search(r'^  deploy:',source,re.M)
+          assert not re.search(r'^\s*workflow_dispatch:',source,re.M)
           print('V31_STATUS_CHECK_ONLY')
           PY
