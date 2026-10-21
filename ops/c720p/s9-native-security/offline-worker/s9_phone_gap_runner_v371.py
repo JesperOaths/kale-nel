@@ -64,6 +64,10 @@ def policy(path):
             and 12<=len(document["approval_record"])<=160
             and isinstance(document.get("phone_frame_jar_sha256"),str)
             and HEX.fullmatch(document["phone_frame_jar_sha256"])
+            and isinstance(document.get("runner_sha256"),str)
+            and HEX.fullmatch(document["runner_sha256"])
+            and isinstance(document.get("coordinator_sha256"),str)
+            and HEX.fullmatch(document["coordinator_sha256"])
             and type(document.get("min_phone_mem_available_kib")) is int
             and document["min_phone_mem_available_kib"]>0
             and type(document.get("min_phone_sd_free_bytes")) is int
@@ -94,7 +98,9 @@ def phone_readiness(cfg,recorder_pid=None):
             int(parts[3])*1024>=cfg["min_phone_sd_free_bytes"],
             "phone_sd_reserve_not_met")
     digest=adb("shell","sha256sum "+PHONE_JAR,timeout=12,cap=600)
-    require(digest.split()[0]==cfg["phone_frame_jar_sha256"],
+    tokens=digest.split()
+    require(len(tokens)==2 and HEX.fullmatch(tokens[0])
+            and tokens[0]==cfg["phone_frame_jar_sha256"],
             "phone_worker_jar_revision_not_approved")
     return pid
 
