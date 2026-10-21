@@ -1,0 +1,41 @@
+name: Security People V320 production source parity (validation only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v50.html'
+      - 'ops/c720p/s9-native-security/security-people-v320.js'
+      - 'ops/c720p/s9-native-security/deploy-people-v45.py'
+      - 'ops/c720p/s9-native-security/test-live-people-v320-parity.py'
+      - '.github/workflows/security-people-v320-source-parity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v50.html'
+      - 'ops/c720p/s9-native-security/security-people-v320.js'
+      - 'ops/c720p/s9-native-security/deploy-people-v45.py'
+      - 'ops/c720p/s9-native-security/test-live-people-v320-parity.py'
+      - '.github/workflows/security-people-v320-source-parity.yml'
+permissions:
+  contents: read
+jobs:
+  source-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compare exact deployed source and fail-closed older deployment
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-people-v45.py
+          python3 ops/c720p/s9-native-security/test-live-people-v320-parity.py
+          node --check ops/c720p/s9-native-security/security-people-v320.js
+      - name: Keep the release validation-only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          body=Path('.github/workflows/security-people-v320-source-parity.yml').read_text()
+          assert 'workflow_dispatch' not in body
+          assert 'systemd-run' not in body
+          assert 'submit_management_job' not in body
+          print('V320_SOURCE_PARITY_NO_AUTOMATIC_DEPLOYMENT')
+          PY
