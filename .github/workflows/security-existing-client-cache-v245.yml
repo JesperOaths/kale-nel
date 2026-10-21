@@ -1,0 +1,87 @@
+name: Verify real existing Security browser cache version refresh V245
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/smoke-security-existing-client-cache-v245.py'
+      - 'ops/c720p/security-runtime/test-smoke-security-existing-client-cache-v245.py'
+      - '.github/workflows/security-existing-client-cache-v245.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/smoke-security-existing-client-cache-v245.py'
+      - 'ops/c720p/security-runtime/test-smoke-security-existing-client-cache-v245.py'
+      - '.github/workflows/security-existing-client-cache-v245.yml'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-security-browser-cache-v245
+  cancel-in-progress: false
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate controlled asset version smoke and no Save/Delete calls
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/smoke-security-existing-client-cache-v245.py"
+          python3 "$d/test-smoke-security-existing-client-cache-v245.py"
+          python3 "$d/test-security-cache-release-v1.py"
+          python3 "$d/test-smoke-security-rendered-browser-v240.py"
+  physical:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Controlled version transition of actual People JS in existing disposable browser client
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          stage="/tmp/security-cache-v245-${GITHUB_SHA:0:13}"
+          cmd="umask 077 && install -d -m 700 '$stage'"
+          for path in \
+            ops/c720p/security-runtime/smoke-security-existing-client-cache-v245.py \
+            ops/c720p/security-runtime/smoke-c720p-migrated-decoded-browser-v145.py; do
+            checksum="$(sha256sum "$path"|cut -d' ' -f1)"
+            file="$(basename "$path")"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$path"
+            cmd="$cmd && curl -fsSL --max-time 40 '$url' -o '$stage/$file' && printf '%s  %s\\n' '$checksum' '$stage/$file' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/smoke-security-existing-client-cache-v245.py' --run"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="security-client-cache-v245-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-security-client-cache-v245','diagnostic',:'cmd',340,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "SECURITY_CLIENT_CACHE_V245_JOB=$job"
+          for i in $(seq 1 110); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job"|head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job"|head -c 3600)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'SECURITY_CLIENT_CACHE_V245_VERIFIED' <<<"$output"
+              grep -q '"controlled_asset_version_change_verified": true' <<<"$output"
+              grep -q '"same_existing_iframe_client_refreshed": true' <<<"$output"
+              grep -q '"actual_browser_resource_requests": 2' <<<"$output"
+              grep -q '"rendered_people_controls_retained": true' <<<"$output"
+              grep -q '"production_release_changed": false' <<<"$output"
+              grep -q '"camera_dropped_output_frames_after": 0' <<<"$output"
+              grep -q '"no_media_review_or_camera_changes": true' <<<"$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Existing browser cache transition not physically verified"; exit 1
