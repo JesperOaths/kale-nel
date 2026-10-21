@@ -465,7 +465,19 @@ def install_local_sd(H):
  # Human-only folder links for original clips without person index, Drive
  # sources, and reversible returns to the archive. Overlay, not biometrics.
  import s9_manual_recording_links
- s9_manual_recording_links.install(H,rows)
+ # Manual migration is disabled by default. Never run two canonical writers.
+ # Activate only after the separately authenticated original-open, range,
+ # player-loaded and ticket-forwarding HTTP paths pass real acceptance.
+ import os as _chat3_os
+ if _chat3_os.environ.get('C720P_SIGNED_ORIGINAL_REVIEW_V1')=='verified':
+  import s9_review_activation_v1 as _chat3_activation
+  import s9_trusted_original_media_bridge_v1 as _chat3_media
+  _chat3_activation.activate(H,rows,
+   original_delegate=_chat3_media.serve_pinned_original,
+   source_resolver=_chat3_media.resolve_original,
+   relay_review_routes_verified=True)
+ else:
+  s9_manual_recording_links.install(H,rows)
  # Automatic Person proposals and denials remain private and opt-in to
  # human approval. No machine result writes an approved person assignment.
  import s9_automatic_person_review
