@@ -15,7 +15,8 @@ import s9_evidence_quality_v1 as quality
 
 SCHEMA="s9_anonymous_quality_consumption_v361"
 CLIP=re.compile(r"motion_[0-9]{13}[.]mp4\Z")
-MAX_SOURCE=(8000000,4000000)
+# Both original provenance AND current quality priority are revocation sources.
+MAX_SOURCE=(8000000,4000000,6000000)
 
 class NotCurrent(ValueError):
     pass
@@ -28,10 +29,10 @@ def canonical(value):
                       allow_nan=False).encode("utf-8")
 
 def snapshot_state():
-    """Read only the catalogue and queue, never images, identities or MP4s."""
+    """Read catalog, queue AND latest priority report; never media or identities."""
     snapshots=[]
-    for path,limit in zip((quality.PRIORITY_CATALOG,quality.PRIORITY_QUEUE),
-                          MAX_SOURCE):
+    for path,limit in zip((quality.PRIORITY_CATALOG,quality.PRIORITY_QUEUE,
+                           quality.REPORT),MAX_SOURCE):
         path=Path(path)
         if path.is_symlink() or not path.is_file():
             raise Unavailable("attestation_source_unavailable")
