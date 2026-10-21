@@ -1,0 +1,31 @@
+name: Task21 read-only manual review original-digest status projection V255
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_manual_recording_links.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-manual-binding-status-projection-v255.py'
+      - '.github/workflows/task21-manual-review-binding-projection-v255.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_manual_recording_links.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-manual-binding-status-projection-v255.py'
+      - '.github/workflows/task21-manual-review-binding-projection-v255.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Preserve historical manual authority and private media digest confidentiality
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-person-ml-v1
+          python3 -m py_compile "$d/s9_manual_recording_links.py"
+          python3 "$d/test-s9-manual-binding-status-projection-v255.py"
+          python3 "$d/test-s9-manual-media-digest-binding-v1.py"
+          python3 ops/c720p/s9-native-security/test-manual-recording-links-v1.py
+          python3 "$d/test-s9-manual-original-byte-attestor-v252.py"
+          echo TASK21_MANUAL_BINDING_PROJECTION_V255_SOURCE_ONLY
