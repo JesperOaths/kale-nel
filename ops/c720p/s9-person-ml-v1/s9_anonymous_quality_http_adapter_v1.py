@@ -11,7 +11,7 @@ from urllib.parse import urlsplit,parse_qs
 PATH='/new/api/anonymous-quality-consumption'
 SCHEMA='s9_anonymous_quality_consumption_v361'
 READER='s9_source_current_priority_reader_v369'
-NAME=re.compile(r'motion_[0-9]{13}[.]mp4
+NAME=re.compile(r'motion_[0-9]{13}[.]mp4$')
 MAX=6_000_000
 
 def parse_request(url):
