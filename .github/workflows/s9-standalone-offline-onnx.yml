@@ -100,11 +100,14 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           source=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KGapAuditV370.java').read_text()
-          for marker in ('MAX_RUN_NS','MAX_SOURCE_BYTES','MediaMetadataRetriever.OPTION_CLOSEST',
+          for marker in ('MAX_RUN_NS','MAX_SOURCE_BYTES','S9Original4KTimedDecoderV371.decode',
                          'MODEL_SHA','source_revision_changed_after_phone_inference',
                          'eligible_to_publish",false','host_attestation_required",true',
                          'one_frame_only",true','automatic_person_assignments",0'):
               assert marker in source,marker
+          timed=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KTimedDecoderV371.java').read_text()
+          assert 'info.presentationTimeUs' in timed and 'MediaCodec' in timed
+          assert 'MediaMetadataRetriever' not in timed
           for forbidden in ('pm install','am force-stop','CameraService.java',
                             'requestPermissions','--bulk','System.loadLibrary("camera'):
               assert forbidden not in source,forbidden
