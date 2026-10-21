@@ -260,7 +260,7 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
             if first is None or second is None:
                 continue
             score = min(first, second)
-            distances[tuple(sorted((k, other))] = score
+            distances[tuple(sorted((k, other)))] = score
             if score >= threshold:
                 lo, hi = sorted((k, other))
                 heapq.heappush(candidates, (-score, lo, hi))
