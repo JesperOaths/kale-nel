@@ -784,26 +784,15 @@ function approvedPreviewClip(preview){
  return '';
 }
 function automaticPortrait(f){
- if(!f||!num(f.approved_clips))return null;
- const approved=new Set((Array.isArray(f.previews)?f.previews:[])
-  .map(approvedPreviewClip).filter(Boolean));
- if(state.folder===f.id){
-  for(const item of state.doc?.items||[])if(item.decision==='approved'&&clipName.test(String(item.clip||'')))
-   approved.add(item.clip);
- }
- if(!approved.size)return null;
- // Never recycle the same face between people or guess from group footage.
- const proposed=new Map();
- const reserved=new Set();
+ // QUALIFIED_PORTRAIT_REVOCATION_V350: V40 previews are not current approvals.
+ // Never recycle moved, skipped, rejected, group-filed or stale-source crops.
+ if(!f||!state.assignedReady||!state.extraLinks)return null;
+ const proposed=new Map(),reserved=new Set();
  for(const folder of savedFolders().slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
-  const source=new Set((Array.isArray(folder.previews)?folder.previews:[])
-   .map(approvedPreviewClip).filter(Boolean));
-  if(state.folder===folder.id)for(const x of state.doc?.items||[])
-   if(x.decision==='approved'&&clipName.test(String(x.clip||'')))source.add(x.clip);
   const options=[];
-  for(const clip of source){
+  for(const clip of folderApprovedSDClips(folder.id)){
+   if(!qualifiedOutfitReference({source:'sd',name:clip,clip},folder.id))continue;
    const faces=reliableFaces(clip);
-   // A crop in a multi-person recording cannot be assigned to an individual.
    const rec=state.clipEvidence.get(clip);
    const tracks=rec?.anonymous_tracks||rec?.person_tracks||[];
    if(faces.length!==1||tracks.length>1)continue;
@@ -813,10 +802,7 @@ function automaticPortrait(f){
   options.sort((a,b)=>num(b.face.snapshot_size)-num(a.face.snapshot_size)||
    String(a.face.snapshot_name).localeCompare(String(b.face.snapshot_name)));
   const selected=options[0]||null;
-  if(selected){
-   const key=String(selected.face.snapshot_sha256||selected.face.snapshot_name);
-   reserved.add(key);
-  }
+  if(selected)reserved.add(String(selected.face.snapshot_sha256||selected.face.snapshot_name));
   proposed.set(folder.id,selected);
  }
  return proposed.get(f.id)||null;
@@ -827,6 +813,7 @@ function representativeReviewedImage(f){
  // Human-labelled person only. A multi-person frame is NOT proof that a
  // particular captured face belongs to the labelled person.
  for(const clip of clips){
+  if(!qualifiedOutfitReference({source:'sd',name:clip,clip},f.id))continue;
   const rec=state.clipEvidence.get(clip);
   const found=state.faceList.filter(x=>x.clip===clip&&
     faceName.test(String(x.face?.snapshot_name||''))&&x.face?.snapshot_on_s9!==false);
