@@ -1,0 +1,83 @@
+name: Task21 narrow Drive catalog metadata permission correction V244
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/restrict-task21-drive-catalog-mode-v244.py'
+      - 'ops/c720p/security-runtime/test-restrict-task21-drive-catalog-mode-v244.py'
+      - '.github/workflows/task21-drive-catalog-mode-v244.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/restrict-task21-drive-catalog-mode-v244.py'
+      - 'ops/c720p/security-runtime/test-restrict-task21-drive-catalog-mode-v244.py'
+      - '.github/workflows/task21-drive-catalog-mode-v244.yml'
+permissions:
+  contents: read
+concurrency:
+  group: task21-drive-catalog-mode-v244
+  cancel-in-progress: false
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Refuse altered/manual/media sources and only narrow archive file mode
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/restrict-task21-drive-catalog-mode-v244.py"
+          python3 "$d/test-restrict-task21-drive-catalog-mode-v244.py"
+          python3 "$d/test-audit-task21-input-metadata-v241.py"
+  physical:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: SHA-pinned one-file owner-verified group-write removal, then read-only four-source admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          stage="/tmp/task21-mode-v244-${GITHUB_SHA:0:13}"
+          cmd="umask 077 && install -d -m 700 '$stage'"
+          for source in \
+            ops/c720p/security-runtime/restrict-task21-drive-catalog-mode-v244.py \
+            ops/c720p/security-runtime/audit-task21-input-metadata-v241.py; do
+            checksum="$(sha256sum "$source"|cut -d' ' -f1)"
+            name="$(basename "$source")"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$source"
+            cmd="$cmd && curl -fsSL --max-time 30 '$url' -o '$stage/$name' && printf '%s  %s\\n' '$checksum' '$stage/$name' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/restrict-task21-drive-catalog-mode-v244.py' --apply && /usr/bin/python3 '$stage/audit-task21-input-metadata-v241.py' --run"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="task21-mode-v244-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task21-drive-mode-v244','deployment',:'cmd',140,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "TASK21_MODE_V244_JOB=$job"
+          for attempt in $(seq 1 52); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job"|head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 6500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q '"drive_catalog_group_write_removed": true' <<<"$output"
+              grep -q '"manual_reviews_modified": false' <<<"$output"
+              grep -q '"catalog_content_modified": false' <<<"$output"
+              grep -q '"original_bytes_read": 0' <<<"$output"
+              grep -q '"permissions_admissible": true' <<<"$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Task21 catalog mode correction not verified";exit 1
