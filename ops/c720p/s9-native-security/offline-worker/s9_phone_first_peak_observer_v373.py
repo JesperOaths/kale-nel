@@ -36,8 +36,10 @@ def phone_pid(ps, *, camera_pid):
         terms=line.strip().split(maxsplit=1)
         if len(terms)!=2 or not PID_RX.fullmatch(terms[0]):continue
         args=terms[1]
+        # CLASSPATH is an environment variable, not app_process argv.
+        # The jar SHA is checked separately by the enrolled V372 runner.
         if ("app_process" in args and PHONE_CLASS in args
-                and PHONE_JAR in args):
+                and "--probe-one-frame" in args):
             matches.append(terms[0])
     if len(matches)>1:
         raise Unsafe("multiple_phone_workers")
@@ -122,7 +124,7 @@ def supervise(*, command, recorder_pid, phone_mem_floor_kib,
             # Read identity twice in caller when sampling /proc, including
             # process cmdline; reject a recycled PID or a wrapper shell.
             cmdline=sample.get("cmdline","")
-            if PHONE_CLASS not in cmdline or PHONE_JAR not in cmdline:
+            if PHONE_CLASS not in cmdline or "--probe-one-frame" not in cmdline:
                 raise Unsafe("worker_cmdline_not_pinned")
             if report["worker_pid"] not in (None,pid):
                 raise Unsafe("phone_worker_pid_changed")
