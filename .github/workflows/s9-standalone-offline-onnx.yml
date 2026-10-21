@@ -73,7 +73,7 @@ jobs:
         run: |
           set -euo pipefail
           folder="$RUNNER_TEMP/s9-ort-validate"
-          sdk="\${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          sdk="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           android_jar="$(find "$sdk/platforms" -mindepth 2 -maxdepth 2 -name android.jar | sort -V | tail -n 1)"
           test -f "$android_jar"
           test -f "$folder/ort.jar"
