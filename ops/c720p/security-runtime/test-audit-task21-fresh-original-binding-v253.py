@@ -67,6 +67,14 @@ class Tests(unittest.TestCase):
      m,"secure_source",side_effect=[payload,b"old journal",payload,b"changed journal"]):
    with self.assertRaisesRegex(RuntimeError,"historical_review_audit_changed"):
     m.execute("sd")
+ def test_safe_refusal_categories_distinguish_untrusted_config(self):
+  doc={"version":1,"revision":3,"items":{"drive:synthetic_001.mp4":{}}}
+  att=SimpleNamespace(source=lambda *_:(_ for _ in ()).throw(
+      RuntimeError("drive_worker_config_untrusted")))
+  with self.assertRaisesRegex(RuntimeError,
+       "candidate_drive_worker_config_untrusted"):
+   m.choose("drive",doc,att)
+
  def test_no_real_or_historical_review_actions(self):
   source=FILE.read_text()
   for bad in ("manual_links.mutate(","unlink(","write_bytes(","write_text(",
