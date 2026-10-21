@@ -54,6 +54,7 @@ const doc={
  provisional_clusters:[{
   id:'awaiting-review-0123456789abcdef',member_count:2,
   source_qualified_clips:['sd:clip2.mp4','sd:clip3.mp4'],
+  min_within_group_similarity:.47,mean_within_group_similarity:.59,evidence_pair_count:1,
   state:'pending_review',human_review_required:true,automatically_assigned:false
  }]
 };
@@ -71,6 +72,8 @@ const doc={
  });
  assert.equal(first.visible,1);
  assert.equal(first.provisional_groups,1);
+ assert(host.textContent.includes('Minimum within-group similarity: 0.470'),
+        'Cluster pair evidence must be visible to the reviewer');
  const card=host.children.find(c=>c.tagName==='article');
  const buttons=card.findButtons();
  assert.equal(buttons.length,3);
