@@ -1,0 +1,76 @@
+name: Task21 original SD and Drive revision metadata capability V247
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-original-revision-v247.py'
+      - 'ops/c720p/security-runtime/test-audit-task21-original-revision-v247.py'
+      - '.github/workflows/task21-original-revision-metadata-v247.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-original-revision-v247.py'
+      - 'ops/c720p/security-runtime/test-audit-task21-original-revision-v247.py'
+      - '.github/workflows/task21-original-revision-metadata-v247.yml'
+permissions:
+  contents: read
+concurrency:
+  group: task21-source-revision-v247
+  cancel-in-progress: false
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Ensure one metadata read for each reviewed archive and no original reads
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/audit-task21-original-revision-v247.py"
+          python3 "$d/test-audit-task21-original-revision-v247.py"
+          python3 "$d/test-audit-manual-digest-coverage-task21.py"
+  physical:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: SHA-pinned read-only SD stat and Google Drive lsjson metadata for one current review per source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          script=ops/c720p/security-runtime/audit-task21-original-revision-v247.py
+          hash="$(sha256sum "$script"|cut -d' ' -f1)"
+          stage="/tmp/task21-revision-v247-${GITHUB_SHA:0:13}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$script"
+          cmd="umask 077 && curl -fsSL --max-time 35 '$url' -o '$stage' && printf '%s  %s\\n' '$hash' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage' --run"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="task21-revision-v247-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task21-revision-v247','diagnostic',:'cmd',175,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "TASK21_SOURCE_REVISION_V247_JOB=$job"
+          for attempt in $(seq 1 60); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job"|head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job"|head -c 4000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'TASK21_SOURCE_REVISION_CAPABILITIES_V247' <<< "$output"
+              grep -q '"media_bytes_read": 0' <<< "$output"
+              grep -q '"review_decisions_modified": false' <<< "$output"
+              grep -q '"no_media_filenames_or_ids_disclosed": true' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Task21 metadata-only original revision capability not physically verified";exit 1
