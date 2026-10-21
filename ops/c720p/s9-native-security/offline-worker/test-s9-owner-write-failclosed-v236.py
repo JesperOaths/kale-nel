@@ -128,7 +128,7 @@ public final class Fixture {
  static final android.content.Context context=new android.content.Context();
  static final String challenge=rep('d',32);
  static final File sd=new File("/synthetic/companion-app-only/sd-ledger");
- static final byte[] wire="synthetic_not_signed".getBytes("US-ASCII");
+ static final byte[] wire="synthetic_not_signed".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
  static S9MigratedAndroidOwnerWriteGatewayV236.IndependentlyAnchoredEnrollment
        anchored(final boolean valid) {
   return new S9MigratedAndroidOwnerWriteGatewayV236.IndependentlyAnchoredEnrollment(){
