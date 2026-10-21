@@ -1340,6 +1340,59 @@ function renderClothing(){
   body.append(actions);card.append(media,body);host.append(card);
  }
 }
+// Optional source-level bridge to media-bound model suggestions. A missing
+// signed original-open attestor leaves Approve/Reject disabled; legacy manual
+// filing and the live camera are never modified by displaying these cards.
+function renderFolderRankedButton(){
+ const host=$('folderRankedCards');
+ if(!host)return;
+ host.hidden=state.pane!=='folder'||state.tab!=='suggestions';
+ host.replaceChildren();
+ if(host.hidden)return;
+ const folderId=state.folder;
+ const launch=control('Load verified ranked suggestions',async()=>{
+  if(!window.FolderSuggestionCards?.connect){
+   alertText('Verified folder suggestion viewer is not installed.');return;
+  }
+  host.replaceChildren(elt('p','Loading verified provisional suggestions…'));
+  try{
+   await window.FolderSuggestionCards.connect(host,{
+    relay:relay(),folderId,showProvisional:true,
+    onOpen:async row=>{
+     // Never attest a screenshot, filename, old digest, or unchecked replay.
+     // This hook must issue proof from the *authenticated original player*.
+     const clip=state.archiveEntries.find(x=>assignmentKey(x)===
+      row.source_qualified_clip_id);
+     const signed=window.S9SignedOriginalReview;
+     if(!clip||typeof signed?.openAndAttest!=='function'){
+      if(clip)startVideo(clip);
+      return {verified:false};
+     }
+     return signed.openAndAttest(row,()=>startVideo(clip));
+    },
+    onClusterOpen:async (group,key)=>{
+     const first=state.archiveEntries.find(row=>assignmentKey(row)===key);
+     if(first)startVideo(first);
+     else openReview('inbox');
+    },
+    onClusterName:async group=>{
+     // Naming opens the existing human-managed New person form. The label is
+     // entered by a human; clips are NOT automatically attached to that person.
+     openFolderEditor('create');
+     $('folderNotes').value=('Provisional appearance group; inspect each original '+
+      'before filing any clip. Candidate recordings: '+
+      (group.source_qualified_clips||[]).slice(0,7).join(', ')).slice(0,2000);
+    },
+    onSaved:()=>{if(state.pane==='folder'&&state.folder===folderId)loadView();}
+   });
+  }catch(_){
+   host.replaceChildren(elt('p',
+    'Verified folder suggestions unavailable; use the existing manual review queue.'));
+  }
+ },'secondary');
+ host.append(launch,elt('p',
+  'Model resemblance only · original playback attestation required before decisions.'));
+}
 function renderFolder(){
  const f=actualFolder();
  if(!f){alertText('This person is no longer available');return}
@@ -1403,6 +1456,7 @@ function renderFolder(){
   set.setAttribute('aria-pressed',String(selected));
   cell.append(button,set);faceGrid.append(cell);
  }
+ renderFolderRankedButton();
  paginate($('folderPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
  const ref=$('references'),list=$('referenceList');list.replaceChildren();
  const references=state.doc?.reference_examples||[];
