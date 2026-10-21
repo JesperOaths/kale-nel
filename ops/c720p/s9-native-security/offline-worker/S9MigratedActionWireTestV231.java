@@ -107,7 +107,7 @@ public final class S9MigratedActionWireTestV231 {
                 }
                 check(unpadded!=null,"canonical_field_present_"+field);
                 final String alias=canonical.replace(
-                    field+"="+unpadded+"\\n",field+"=0"+unpadded+"\\n");
+                    field+"="+unpadded+"\n",field+"=0"+unpadded+"\n");
                 check(!alias.equals(canonical),"numerical_alias_really_modified");
                 deny(()->S9MigratedActionWireV231.decode(b(alias)),
                      "leading_zero_numeric_field_rejected_"+field);
