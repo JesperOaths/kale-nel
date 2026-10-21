@@ -37,11 +37,20 @@ def read_json(path,limit,private):
   raise RuntimeError("source_changed_during_scan")
  return json.loads(raw)
 
+def read_role(path,limit,private,role):
+ try:return read_json(path,limit,private)
+ except RuntimeError as exc:
+  # Authored role names only; no file contents, paths or secret values.
+  if str(exc) in ("private_schema_missing","private_schema_mode_or_size",
+                  "source_changed_during_scan"):
+   raise RuntimeError(role+"_"+str(exc)) from None
+  raise RuntimeError(role+"_metadata_unknown") from None
+
 def collect():
- manual=read_json(MANUAL,600000,True)
- sd=read_json(SD,5000000,False)
- drive=read_json(DRIVE,6000000,False)
- cfg=read_json(CFG,100000,True)
+ manual=read_role(MANUAL,600000,True,"manual")
+ sd=read_role(SD,5000000,False,"sd")
+ drive=read_role(DRIVE,6000000,False,"drive")
+ cfg=read_role(CFG,100000,True,"rclone_config")
  if (manual.get("version")!=1 or not isinstance(manual.get("items"),dict)
      or not isinstance(sd.get("records"),dict) or
      not isinstance(drive.get("items"),list)):
@@ -124,10 +133,12 @@ if __name__=="__main__":
   try:
    print(MARK+json.dumps(collect(),sort_keys=True),flush=True)
   except Exception as e:
-   permitted={"private_schema_missing","private_schema_mode_or_size",
-    "source_changed_during_scan","manual_or_catalog_schema_missing",
+   permitted={"manual_or_catalog_schema_missing",
     "source_qualified_review_sample_missing","sd_catalog_row_untrusted",
     "existing_drive_config_untrusted"}
+   permitted.update(role+"_"+why for role in ("manual","sd","drive","rclone_config")
+     for why in ("private_schema_missing","private_schema_mode_or_size",
+       "source_changed_during_scan","metadata_unknown"))
    reason=str(e)
    if reason not in permitted:reason="source_metadata_unavailable"
    print("TASK21_REVISION_V247_NOT_VERIFIED "+json.dumps({
