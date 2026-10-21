@@ -34,6 +34,7 @@ class QueueTest(unittest.TestCase):
    patch.object(v,"QUEUE",self.state/"queue.json"),
    patch.object(v,"LOCK",self.state/"queue.lock"),
    patch.object(v,"AUDIT",self.state/"transitions.jsonl"),
+   patch.object(v,"TERMINALS",self.state/"terminal-archive-v360.json"),
    patch.object(v,"REPORT",self.report),
    patch.object(v,"ARCHIVE",self.catalog),
    patch.object(v,"SECONDARY",self.secondary),
@@ -233,6 +234,81 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["attempts"],3)
   self.assertEqual(v.items()["rows"][0]["status"],"dead_letter")
   self.assertNotIn("human_approved",MOD.read_text())
+ def test_terminal_capacity_compaction_and_restart_dedup(self):
+  # Two producer generations: terminal non-hits once occupied the entire
+  # 340-row lifetime cap. A larger catalog must not lose their provenance.
+  def extend(end):
+   for i in range(len(self.rows),end):
+    name=f"motion_{1792000000000+i*1000}.mp4"
+    size=1000000+i
+    sha=f"{i+1000:064x}";revision=f"{i+2000:064x}"
+    self.orig[name]={"name":name,"bytes":size,"version":revision,
+                     "manifest":{"name":name,"bytes":size,
+                                 "width":3840,"height":2160,"sha256":sha}}
+    self.rows.append({"clip_no":name,"native_face_pass_complete":True,
+          "targeted_rescan_priority":True,
+          "extraction_status":"secondary_detector_has_no_supported_face"})
+   self.store()
+  extend(290)
+  one=v.produce()
+  self.assertEqual(one["new_admissions"],290)
+  self.assertEqual(one["tally"]["blocked"],288)
+  self.assertEqual(one["tally"]["pending"],2)
+  self.assertFalse(v.TERMINALS.exists())
+  extend(360)
+  two=v.produce()
+  self.assertEqual(two["new_admissions"],70)
+  self.assertEqual(two["archived_this_tick"],288)
+  self.assertEqual(two["tally"]["blocked"],358)
+  self.assertEqual(two["tally"]["pending"],2)
+  self.assertEqual(two["tally"]["archived_terminal"],288)
+  self.assertEqual(len(v.items()["rows"]),72)
+  archived=v.terminal_ledger()["rows"]
+  self.assertEqual(len(archived),288)
+  self.assertTrue(all(x["last_reason"]=="same_yunet_model_cannot_validate_its_own_non_detection"
+                      for x in archived.values()))
+  self.assertEqual(v.produce()["new_admissions"],0)
+  # Mimic power loss after terminal ledger fsync but before queue replace.
+  backup=v.items()
+  restored=next(iter(archived.values()))
+  backup["rows"].append(dict(restored))
+  v.atomic(v.QUEUE,backup)
+  recovered=v.produce()
+  self.assertEqual(recovered["new_admissions"],0)
+  self.assertEqual(len(v.items()["rows"]),72)
+  self.assertEqual(recovered["tally"]["blocked"],358)
+
+ def test_terminal_source_collision_fails_closed(self):
+  v.produce()
+  d=v.items();x=dict(d["rows"][2])
+  ledger={"schema":v.TERMINAL_SCHEMA,"rows":{x["id"]:dict(x)}}
+  v.atomic(v.TERMINALS,ledger,maximum=16000000)
+  self.assertEqual(v.produce()["new_admissions"],0)
+  self.assertEqual(len(v.items()["rows"]),3)
+  d=v.items()
+  d["rows"].append(dict(x,status="pending"))
+  v.atomic(v.QUEUE,d)
+  with self.assertRaisesRegex(v.Refusal,"terminal_archive_queue_collision"):
+   v.produce()
+
+ def test_full_terminal_archive_refuses_with_all_state_preserved(self):
+  v.produce()
+  archive=v.terminal_ledger()
+  row=dict(v.items()["rows"][2])
+  for i in range(v.MAX_TERMINALS):
+   key=f"{i:064x}"
+   archive["rows"][key]=dict(row,id=key)
+  v.atomic(v.TERMINALS,archive,maximum=16000000)
+  before=v.QUEUE.read_bytes()
+  with self.assertRaisesRegex(v.Refusal,"terminal_ledger_integrity_invalid|terminal_archive_capacity"):
+   # Next generation must exceed active LIMIT before archival is needed.
+   v.MAX_TERMINALS=10
+   try:
+    v.produce()
+   finally:
+    v.MAX_TERMINALS=10000
+  self.assertEqual(v.QUEUE.read_bytes(),before)
+
  def test_existing_image_worker_mutex_blocks_rescan(self):
   import fcntl
   v.produce()
