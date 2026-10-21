@@ -1,0 +1,22 @@
+--- /home/jespern/c720p-home-hub/backups/infra-battery-history-retention-20261021/c720p-camera-android-power-save.sh.before	2026-09-10 19:16:08.744576767 +0200
++++ /home/jespern/c720p-home-hub/bin/c720p-camera-android-power-save.sh	2026-10-21 15:24:14.651275071 +0200
+@@ -6,6 +6,12 @@
+ STATE=/home/jespern/c720p-home-hub/state/camera-android-power-save.jsonl
+ mkdir -p "$(dirname "$LOG")" "$(dirname "$STATE")"
+ log(){ printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "$LOG"; }
++# Serialize battery JSONL appends and atomic retention against overlapping invocations.
++exec 9>"${STATE}.retention.lock"
++if ! flock -n 9; then
++  log "BATTERY_RETENTION=SKIP_OVERLAPPING_WRITER"
++  exit 0
++fi
+ serial_of(){ timeout 4 adb -s "$1" shell getprop ro.serialno 2>/dev/null | tr -d '\r'; }
+ model_of(){ timeout 4 adb -s "$1" shell getprop ro.product.model 2>/dev/null | tr -d '\r'; }
+ role_of(){
+@@ -85,3 +91,6 @@
+     apply_one "$dev"
+   done < <(timeout 5 adb devices | awk 'NR>1 && NF>=2 {print $1, $2}')
+ fi
++
++# Bound disposable battery telemetry only after all reads and appliance settings finish.
++python3 "/home/jespern/c720p-home-hub/bin/c720p-battery-history-retention-v1.py" --apply || log "BATTERY_RETENTION=ERROR_OLD_LOG_RETAINED"
