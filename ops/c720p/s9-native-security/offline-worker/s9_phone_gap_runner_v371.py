@@ -97,6 +97,17 @@ def phone_readiness(cfg,recorder_pid=None):
     require(len(parts)>=4 and parts[3].isdigit() and
             int(parts[3])*1024>=cfg["min_phone_sd_free_bytes"],
             "phone_sd_reserve_not_met")
+    # Local adb timeout can leave a detached app_process running on Android.
+    # Never start/retry another original while a prior phone probe is alive.
+    # If the process list is unsupported or truncated, refuse admission.
+    listing=adb("shell","ps -A -o PID,ARGS",timeout=9,cap=65536)
+    lines=listing.splitlines()
+    require(1<=len(lines)<=2000 and
+            any("PID" in line and "ARGS" in line for line in lines[:2]),
+            "phone_process_exclusion_unavailable")
+    require(not any(PHONE_CLASS in line and "app_process" in line
+                    for line in lines[1:]),
+            "phone_original_4k_probe_already_running")
     digest=adb("shell","sha256sum "+PHONE_JAR,timeout=12,cap=600)
     tokens=digest.split()
     require(len(tokens)==2 and HEX.fullmatch(tokens[0])
