@@ -23,6 +23,9 @@ PHONE_LIB="/data/local/tmp/s9_worker/lib"
 PHONE_CLASS="nl.kalenel.s9offline.S9Original4KGapAuditV370"
 PREFIX="S9_ORIGINAL4K_PHONE_FRAME_V370 "
 POLICY_SCHEMA="task9_phone_first_enrolled_release_v371"
+# Independent prospective (non-inference) V372 native decoder/ONNX envelope.
+# 1.5GiB phone reserve is NOT C720P hub's independent 900MiB floor.
+PHONE_MEMORY_ENVELOPE_KIB=1536*1024
 HEX=re.compile(r"[a-f0-9]{64}\Z")
 # C720P existing V304 guards remain authoritative during all transitions.
 # S9 minimum memory is separately reviewed by Chat1; DO NOT assume 900 MiB.
@@ -72,7 +75,7 @@ def policy(path):
             and isinstance(document.get("coordinator_sha256"),str)
             and HEX.fullmatch(document["coordinator_sha256"])
             and type(document.get("min_phone_mem_available_kib")) is int
-            and document["min_phone_mem_available_kib"]>0
+            and document["min_phone_mem_available_kib"]>=PHONE_MEMORY_ENVELOPE_KIB
             and type(document.get("min_phone_sd_free_bytes")) is int
             and document["min_phone_sd_free_bytes"]>=20*1024**3
             and document.get("source_reader")=="s9_source_current_priority_reader_v369"
