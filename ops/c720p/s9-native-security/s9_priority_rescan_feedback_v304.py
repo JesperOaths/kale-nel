@@ -182,6 +182,40 @@ def retire_obsolete(rows, relevant):
         count+=1
     return retained,count
 
+def archived_task(row):
+    """Fail-closed exact-ID tombstone for already retired work.
+
+    A retired status is NEVER silently reactivated by a periodic producer.
+    A genuinely different original SHA/revision/model produces a different ID.
+    No directory listing or private media is needed.
+    """
+    key=row["id"]
+    check(isinstance(key,str) and HEX.fullmatch(key),"invalid_archived_task_identifier")
+    directory=retired_dir()
+    if not directory.exists() and not directory.is_symlink():return None
+    check(directory.is_dir() and not directory.is_symlink(),
+          "unsafe_retired_directory")
+    status=directory.stat()
+    check(status.st_uid==os.getuid() and not status.st_mode&0o077,
+          "retired_provenance_directory_not_private")
+    dest=directory/(key+".json")
+    if not dest.exists() and not dest.is_symlink():return None
+    check(not dest.is_symlink(),"retired_provenance_symlink_refused")
+    status=dest.stat()
+    check(stat.S_ISREG(status.st_mode) and status.st_uid==os.getuid()
+          and status.st_nlink==1 and not status.st_mode&0o077,
+          "retired_provenance_file_not_private")
+    doc=safe_doc(dest,20000)
+    old=doc.get("final")
+    check(doc.get("schema")=="s9_priority_retired_provenance_v1"
+          and doc.get("id")==key and isinstance(old,dict)
+          and old.get("id")==key and
+          all(old.get(field)==row.get(field) for field in (
+              "clip_no","source_sha256","source_bytes","media_revision",
+              "native_pass","model_sha256","required_analysis")),
+          "retired_provenance_conflict")
+    return old
+
 def produce():
     report,priorities,cat=source()
     doc=items()
@@ -204,18 +238,36 @@ def produce():
             changed+=1
     retained,retired=retire_obsolete(byid.values(),relevant)
     byid={x["id"]:x for x in retained}
-    added=0;deferred=0
-    # Prioritize runnable work. The same immutable original/model/source ID
-    # never receives a second admission; unsupported model misses stay blocked.
+    added=0;deferred=0;archived_unsupported=0;retired_skipped=0
+    # Prioritize runnable work. For capacity pressure only, retire one
+    # permanently same-model-unsupported current blocker to its exact-ID
+    # private immutable record. The evidence reader never admits blocked
+    # rows, and current completed/processing/pending rows cannot be evicted.
     for row in sorted(approved,key=lambda x:(
            x["priority_reason"]!="no_indexed_image",x["id"])):
         key=row["id"]
         if key in byid:continue
+        tombstone=archived_task(row)
+        if tombstone is not None:
+            retired_skipped+=1
+            continue
+        if len(byid)>=LIMIT and row["priority_reason"]=="no_indexed_image":
+            victim=next((existing for existing in byid.values()
+                if existing["status"]=="blocked"
+                and existing["priority_reason"]=="secondary_detector_has_no_supported_face"
+                and existing["id"] in relevant),None)
+            if victim is not None:
+                old=archived_task(victim)
+                check(old is None or old==victim,
+                      "conflicting_blocked_provenance_archive")
+                retire_obsolete([victim],set())
+                del byid[victim["id"]]
+                archived_unsupported+=1
         if len(byid)>=LIMIT:
             deferred+=1
             continue
         byid[key]=row;added+=1
-    if added or changed or retired:
+    if added or changed or retired or archived_unsupported:
         doc["revision"]+=1
         doc["rows"]=sorted(byid.values(),key=lambda x:(
             x["priority_reason"]!="no_indexed_image",x["id"]))
@@ -223,8 +275,10 @@ def produce():
         journal("producer_persisted","qualified_originals_from_private_catalog")
     return {"status":"qualified_priority_produced","revision":doc["revision"],
             "new_admissions":added,"invalidated":changed,
-            "retired_with_provenance":retired,"capacity_deferred":deferred,
-            "tally":aggregate(doc["rows"])}
+            "retired_with_provenance":retired,
+            "archived_unsupported_at_capacity":archived_unsupported,
+            "retired_active_ids_not_reenqueued":retired_skipped,
+            "capacity_deferred":deferred,"tally":aggregate(doc["rows"])}
 def camera_guard():
     with urllib.request.urlopen(CAMERA,timeout=7) as response:
         doc=json.loads(response.read(65536))
