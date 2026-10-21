@@ -85,6 +85,10 @@ def main():
   if path.is_symlink():raise RuntimeError("symlink_refused_"+k)
   b=path.read_bytes() if path.exists() else None
   prior[k]=(b,path.stat() if b is not None else None)
+ if prior["people50"][0] is not None and b"security-people-v320.js" in prior["people50"][0]:
+  # V50/V320 is a newer manually reviewed production route. An older V45
+  # deployment MUST fail before any overwrite of HTML, JS or hub references.
+  raise RuntimeError("protected_live_people_v320_requires_versioned_deployer")
  if prior["hub"][0] is None or prior["entry"][0] is None:
   raise RuntimeError("live_hub_files_missing")
  out={}
