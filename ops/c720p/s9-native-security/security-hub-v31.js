@@ -181,7 +181,7 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
       rows.push(['Rescan queue',(data.aggregate_stale?'Last reported: ': '')+r.state+' · '+r.tracked+' tracked · '+r.pending+' pending · '+r.completed+' completed · '+r.blocked+' blocked']);
       rows.push(['Rescan provenance','Worker activity: '+flag(r.worker_activity_verified)+' · Original-source evidence current: '+flag(r.results_current_source_verified)+' · Per-record blocked reasons/revocations unavailable in this aggregate']);
       rows.push(['Bedroom S3 motion',!data.aggregate_stale&&s.motion_health_verified===true?'Verified · camera '+flag(s.healthy)+' · analysis '+flag(s.motion_analysis_active):'UNKNOWN · private motion/heartbeat not independently verified']);
-      rows.push(['Manual review media binding',m.without_reported_binding+' historical/unbound of '+m.decisions+' decisions · future writer: '+flag(m.live_write_binding_verified)+' · current original digest: '+flag(m.current_source_binding_verified)]);
+      rows.push(['Manual review media binding',(data.aggregate_stale?'Last reported: ':'')+m.without_reported_binding+' historical/unbound of '+m.decisions+' decisions · future writer: '+flag(m.live_write_binding_verified)+' · current original digest: '+flag(m.current_source_binding_verified)]);
       if(r.results_current_source_verified!==true||m.live_write_binding_verified!==true||s.motion_health_verified!==true){
         summary+=' · Rescan, digest binding or S3 evidence unverified';
       }
