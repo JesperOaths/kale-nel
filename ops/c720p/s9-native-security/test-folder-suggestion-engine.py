@@ -93,8 +93,9 @@ class FolderSuggestionsTest(unittest.TestCase):
         a = feature("same.mp4",source="sd",upper=axis(0))
         b = feature("same.mp4",source="drive",upper=axis(1),media_sha="b"*64)
         got = eng.rank_folders([a,b],folders("P1"),[decision(a)])
-        self.assertEqual(len(got["matches"]),1)
-        self.assertEqual(got["matches"][0]["source_qualified_clip_id"],"drive:same.mp4")
+        self.assertEqual(got["matches"], [], "below-threshold cannot enter named-folder queue")
+        self.assertEqual(got["provisional_clusters"][0]["source_qualified_clips"],
+                         ["drive:same.mp4"])
 
     def test_negative_penalty_only_for_target_folder(self):
         approved = feature("ref", upper=axis(0))
@@ -118,6 +119,15 @@ class FolderSuggestionsTest(unittest.TestCase):
         self.assertAlmostEqual(hit["exemplar_score"],1.0)
         self.assertAlmostEqual(hit["centroid_score"],2**-.5,places=6)
         self.assertAlmostEqual(hit["score"],.6+.4*2**-.5,places=6)
+
+    def test_reviewed_rejection_is_not_an_unreviewed_cluster(self):
+        ref = feature("ref",upper=axis(0))
+        denied = feature("denied",upper=axis(1),visual=axis(1))
+        got = eng.rank_folders([ref,denied],folders("P1"),
+                               [decision(ref),decision(denied,"P1","rejected")])
+        self.assertFalse(any("sd:denied" in c["source_qualified_clips"]
+                             for c in got["provisional_clusters"]))
+        self.assertFalse(any(r["clip_id"]=="denied" for r in got["matches"]))
 
     def test_calibration_is_index_not_probability(self):
         self.assertAlmostEqual(eng.suggestion_confidence(.42),50.)
