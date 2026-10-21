@@ -82,8 +82,11 @@ jobs:
             -d "$folder/classes" \
             "$area/PhoneFaceLandmarkGate.java" \
             "$area/PhoneYuNetLandmarkDecoder.java" \
+            "$area/S9YuNetNativeQualityDecoderV370.java" \
+            "$area/S9YuNetNativeQualityDecoderV370Test.java" \
             "$area/S9Original4KGapAuditV370.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
+          java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
           python3 - <<'PY'
           from pathlib import Path
           source=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KGapAuditV370.java').read_text()
