@@ -89,6 +89,7 @@ def collect() -> dict:
                 checks["live_verified_feature_snapshot"] = (
                     checks["live_authenticated_rank_route"] and
                     doc.get("verified_media_evidence") is True and
+                    doc.get("historic_review_index_verified") is True and
                     doc.get("raw_embeddings_exposed") is False and
                     isinstance(doc.get("feature_snapshot_revision"), str) and
                     bool(doc.get("feature_snapshot_revision")))
