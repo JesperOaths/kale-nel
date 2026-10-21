@@ -45,6 +45,7 @@ def choose(source,registry,attestor):
  if not isinstance(registry,dict) or registry.get("version")!=1 or not isinstance(registry.get("items"),dict):
   raise RuntimeError("review_registry_schema_changed")
  candidates=[]
+ refusals=[]
  for key,item in registry["items"].items():
   if not isinstance(key,str) or not key.startswith(source+":") or not isinstance(item,dict):
    continue
@@ -54,9 +55,18 @@ def choose(source,registry,attestor):
    size=record.get("bytes") if source=="sd" else record.get("size")
    if type(size) is int and 10000<=size<=MAX_SAMPLE:
     candidates.append((size,name))
-  except (OSError,KeyError,RuntimeError,ValueError):
-   continue
+  except (OSError,KeyError,RuntimeError,ValueError) as error:
+   reason=str(error)
+   if reason not in ("drive_worker_config_untrusted",
+     "drive_original_not_uniquely_indexed","sd_original_not_indexed",
+     "trusted_source_missing","trusted_metadata_mode",
+     "trusted_metadata_changed","unsafe_original_basename"):
+    reason="source_catalog_refusal"
+   refusals.append(reason)
  if not candidates:
+  if refusals and len(set(refusals))==1:
+   raise RuntimeError("candidate_"+refusals[0])
+  if refusals:raise RuntimeError("candidate_source_metadata_incomplete")
   raise RuntimeError("bounded_original_sample_not_available")
  candidates.sort()
  return candidates[0][1],candidates[0][0]
@@ -114,6 +124,26 @@ if __name__=="__main__":
    "review_registry_schema_changed","bounded_original_sample_not_available",
    "invalid_source_qualifier","independent_digest_binding_contract_missing",
    "historical_review_audit_changed","historical_review_revision_changed"}
+  allow.update({
+   "worker_mutex_unavailable","worker_mutex_busy",
+   "hub_root_reserve_low","native_camera_unavailable",
+   "native_camera_unhealthy","native_camera_temperature_guard",
+   "native_camera_or_worker_busy","phone_original_unavailable",
+   "sd_original_revision_unavailable","drive_metadata_unavailable",
+   "drive_metadata_invalid","drive_revision_incomplete",
+   "drive_stream_unavailable","drive_stream_timeout",
+   "drive_stream_size_exceeded","drive_stream_incomplete",
+   "drive_stream_cleanup_failed","original_changed_while_hashed",
+   "phone_original_sha256_unavailable","trusted_source_missing",
+   "trusted_metadata_mode","trusted_metadata_changed",
+   "drive_worker_config_untrusted","sd_original_not_indexed",
+   "drive_original_not_uniquely_indexed","candidate_source_metadata_incomplete"
+  })
+  allow.update("candidate_"+why for why in (
+   "drive_worker_config_untrusted","drive_original_not_uniquely_indexed",
+   "sd_original_not_indexed","trusted_source_missing",
+   "trusted_metadata_mode","trusted_metadata_changed",
+   "unsafe_original_basename","source_catalog_refusal"))
   code=str(error)
   if code not in allow:code="source_proof_unavailable_or_camera_busy"
   print("TASK21_FRESH_ORIGINAL_BYTE_V253_NOT_VERIFIED "+
