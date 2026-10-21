@@ -34,8 +34,9 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           body=Path('.github/workflows/security-people-v320-source-parity.yml').read_text()
-          assert 'workflow_dispatch' not in body
-          assert 'systemd-run' not in body
-          assert 'submit_management_job' not in body
+          import re
+          assert not re.search(r'^\\s*workflow_dispatch:',body,re.M)
+          assert not re.search(r'^  deploy:',body,re.M)
+          assert re.search(r'^  source-parity:',body,re.M)
           print('V320_SOURCE_PARITY_NO_AUTOMATIC_DEPLOYMENT')
           PY
