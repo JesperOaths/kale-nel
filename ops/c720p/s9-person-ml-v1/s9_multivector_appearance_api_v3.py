@@ -195,7 +195,12 @@ def report(clip):
                 candidates[other]=score
     best=sorted(candidates.items(),key=lambda x:(-x[1],x[0]))[:5]
     return 200,{
-        "ok":True,"status":"ready_real_s9_v3",
+        "ok":True,"status":"provisional_appearance_only_original_revision_unverified",
+        "source_binding_status":"crop_and_corpus_sha_valid_original_revision_unverified",
+        "evidence_consumption_eligible":False,
+        "person_reference_eligible":False,
+        "source_current_at_utc":None,
+        "revalidation_required":"fresh_original_sha_bytes_revision_and_human_review",
         "ranking_schema":"s9_appearance_rankings_v3",
         "color_histogram_schema":SCHEMA,
         "corpus_id":pointer["corpus_id"],
