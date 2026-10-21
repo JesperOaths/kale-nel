@@ -37,7 +37,7 @@ def state():
   raise ValueError("invalid_denials")
  return d
 
-def qualified_reference_index(model_sha,required_generation):
+def qualified_reference_index(model_sha,required_generation,manual_links):
  # Authoritative independent reviewer-approved aligned-face reference registry.
  # An absent/incomplete registry means NO Automatic Person suggestions.
  # Revoked evidence remains recorded; only active rows are eligible.
@@ -72,10 +72,23 @@ def qualified_reference_index(model_sha,required_generation):
    raise ValueError("unqualified_face_reference_provenance")
   if (item["active"] and item["human_approved"] and
       item["aligned_face"] and item["quality_passed"]):
-   active[rid]=item["folder"]
+   # Check the latest source-qualified manual decision at every read,
+   # not merely a cached boolean in the independently reviewed index.
+   entry=(manual_links.get("sd:"+item["source_name"])
+          if isinstance(manual_links,dict) else None)
+   if not isinstance(entry,dict) or entry.get("review_status")!="assigned":
+    continue
+   folders=entry.get("folders")
+   if folders is None:
+    folders=[entry.get("folder")] if entry.get("folder") else []
+   if (not isinstance(folders,list) or len(folders)!=1
+       or folders[0]!=item["folder"]):
+    continue
+   active[rid]={"folder":item["folder"],"source_name":item["source_name"],
+                "original_sha256":item["original_sha256"]}
  return active
 
-def proposals():
+def proposals(manual_links=None):
  if SOURCE.is_symlink():raise ValueError("unsafe_proposals_path")
  if not SOURCE.is_file():return [],"face_embedding_index_not_ready"
  if SOURCE.stat().st_size>1400000:raise ValueError("too_many_proposals")
@@ -87,7 +100,7 @@ def proposals():
  generation=doc.get("reference_generation")
  if type(generation) is not int or generation<1:
   return [],"qualified_face_reference_generation_missing"
- refs=qualified_reference_index(doc["model_sha256"],generation)
+ refs=qualified_reference_index(doc["model_sha256"],generation,manual_links)
  if refs is None:return [],"qualified_face_reference_index_not_ready"
  verified=[];seen=set()
  for x in rows:
@@ -103,7 +116,10 @@ def proposals():
       or len(source_ids)!=x["reference_count"]
       or len(set(str(value) for value in source_ids))!=len(source_ids)
       or any(not isinstance(ref,str) or not HASH.fullmatch(ref)
-          or refs.get(ref)!=x["folder"] for ref in source_ids)):
+          or ref not in refs or refs[ref]["folder"]!=x["folder"]
+          for ref in source_ids)
+      or len({refs[ref]["source_name"] for ref in source_ids
+              if isinstance(ref,str) and ref in refs})<2):
    continue
   if type(x.get("score")) not in (int,float) or type(x.get("margin")) not in (int,float):continue
   if not 0.84<=x["score"]<=1 or not 0.08<=x["margin"]<=1:continue
@@ -134,7 +150,7 @@ def final_manual_decision(entry):
  return True
 
 def report(sd_names,manual_links):
- rows,status=proposals();rejected=state();denied=set(rejected["denied"])
+ rows,status=proposals(manual_links);rejected=state();denied=set(rejected["denied"])
  denied_pairs=set(rejected["denied_pairs"]);visible=[]
  if not isinstance(manual_links,dict):raise ValueError("invalid_manual_review_registry")
  used=set()
