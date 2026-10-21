@@ -72,19 +72,25 @@ class CurrentGap(unittest.TestCase):
     self.assertEqual(d["recordings"],[])
     self.assertEqual(d["source_bound_records_not_current"],1)
  def test_media_version_bytes_sha_and_model_all_authoritative(self):
-  for mutation in (
-    lambda:self.catalog["records"][self.name].__setitem__("version","0"*64),
-    lambda:self.meta.__setitem__("sha256","1"*64),
-    lambda:self.meta.__setitem__("bytes",self.size+1),
-    lambda:self.gap.__setitem__("detector_model_sha256","f"*64),
-    lambda:self.row.__setitem__("media_revision","9"*64),
-    lambda:self.current.clear(),
-   ):
-   with self.subTest(mutation=str(mutation)):
-    # Recreate each case without changing any other case's baseline.
-    self.setUp()
-    mutation()
-    if self.gap["detector_model_sha256"]!=m.MODEL_SHA:
+  import copy
+  original=(copy.deepcopy(self.catalog),copy.deepcopy(self.gap),
+            copy.deepcopy(self.job),copy.deepcopy(self.current))
+  tests=(
+    ("revision",lambda:self.catalog["records"][self.name].__setitem__("version","0"*64),False),
+    ("sha",lambda:self.meta.__setitem__("sha256","1"*64),False),
+    ("bytes",lambda:self.meta.__setitem__("bytes",self.size+1),False),
+    ("model",lambda:self.gap.__setitem__("detector_model_sha256","f"*64),True),
+    ("queue_revision",lambda:self.row.__setitem__("media_revision","9"*64),False),
+    ("original_removed",lambda:self.current.clear(),False),
+  )
+  for key,action,raise_bad in tests:
+   with self.subTest(key=key):
+    self.catalog,self.gap,self.job,self.current=copy.deepcopy(original)
+    self.meta=self.catalog["records"][self.name]["manifest"]
+    self.row=self.job["rows"][0]
+    self.record=self.gap["recordings"][0]
+    action()
+    if raise_bad:
      with self.assertRaises(ValueError):self.read()
     else:self.assertEqual(self.read()["recordings"],[])
  def test_unproven_sampling_shape_is_revoked(self):
