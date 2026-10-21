@@ -62,7 +62,8 @@ const doc={
  let approved=0,opened=0,saved=0;
  const first=cards.render(host,doc,{
    onOpen:async row=>{opened++;return {
-     verified:true,media_sha256:row.media_sha256,media_revision:row.media_revision
+     verified:true,media_sha256:row.media_sha256,media_revision:row.media_revision,
+     opened_ticket:'signed-original-open-ticket-123'
    }},
    onApprove:async()=>{approved++;return{
      persisted:true,media_verified:true,status:'approved'}},
@@ -85,6 +86,20 @@ const doc={
  assert.equal(saved,1);
  assert.equal(buttons[1].disabled,true);
  assert.equal(buttons[2].disabled,true);
+ await buttons[0].click();
+ assert.equal(buttons[1].disabled,true,'Saved approval stays locked after replay');
+ assert.equal(buttons[2].disabled,true,'Saved rejection stays locked after replay');
+ const unboundHost=new Element('section');
+ cards.render(unboundHost,doc,{
+   onOpen: async row=>({verified:true,media_sha256:row.media_sha256,
+     media_revision:row.media_revision}),
+   onApprove: async()=>{throw Error('must not approve without ticket')},
+   onReject: async()=>{throw Error('must not reject without ticket')}
+ });
+ const unboundButtons=unboundHost.children.find(c=>c.tagName==='article').findButtons();
+ await unboundButtons[0].click();
+ assert.equal(unboundButtons[1].disabled,true,'Missing ticket must keep approval locked');
+ assert.equal(unboundButtons[2].disabled,true,'Missing ticket must keep rejection locked');
  const altered={...doc.matches[0],verified_same_person:true};
  assert.equal(cards.safeMatch(altered),false,'Identity claims must be rejected');
  const malformed={...doc,identity_probabilities:true};
