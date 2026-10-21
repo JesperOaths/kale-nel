@@ -146,6 +146,71 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["status"],"completed")
   self.assertEqual(v.items()["rows"][2]["status"],"blocked")
 
+ def test_current_unsupported_backlog_is_parked_only_for_new_runnable_work(self):
+  # Every blocker remains a real current catalog priority, not an obsolete
+  # row. Old V358 could never admit the next runnable clip once full.
+  for i in range(4,v.LIMIT):
+   name=f"motion_{1792700000000+i*1000}.mp4"
+   size=1000000+i
+   self.orig[name]={"name":name,"bytes":size,"version":f"{i+2000:064x}",
+      "manifest":{"name":name,"bytes":size,"sha256":f"{i+1000:064x}",
+                  "width":3840,"height":2160}}
+   self.rows.append({"clip_no":name,"native_face_pass_complete":True,
+        "targeted_rescan_priority":True,
+        "extraction_status":"secondary_detector_has_no_supported_face"})
+  self.store()
+  initial=v.produce()
+  self.assertEqual(initial["new_admissions"],v.LIMIT)
+  self.assertEqual(initial["tally"]["blocked"],v.LIMIT-2)
+  self.assertEqual(initial["parked_same_model_blocked"],0)
+  new="motion_1792999999999.mp4"
+  self.orig[new]={"name":new,"bytes":1234567,"version":"d"*64,
+     "manifest":{"name":new,"bytes":1234567,"width":3840,
+                 "height":2160,"sha256":"e"*64}}
+  self.rows.append({"clip_no":new,"native_face_pass_complete":True,
+        "targeted_rescan_priority":True,"extraction_status":"no_indexed_image"})
+  self.store()
+  out=v.produce()
+  self.assertEqual(out["new_admissions"],1)
+  self.assertEqual(out["parked_same_model_blocked"],1)
+  self.assertEqual(out["capacity_deferred"],0)
+  state=v.items()
+  self.assertEqual(len(state["rows"]),v.LIMIT)
+  self.assertIn(new,[row["clip_no"] for row in state["rows"]])
+  archived=list(v.retired_dir().glob("*.json"))
+  self.assertEqual(len(archived),1)
+  body=json.loads(archived[0].read_text())
+  self.assertEqual(body["final"]["status"],"blocked")
+  self.assertEqual(body["final"]["last_reason"],
+                   "same_yunet_model_cannot_validate_its_own_non_detection")
+  self.assertEqual(archived[0].stat().st_mode & 0o077,0)
+  # A subsequent restart/tick must NOT re-enqueue this archived blocker.
+  again=v.produce()
+  self.assertEqual(again["new_admissions"],0)
+  self.assertEqual(again["parked_same_model_blocked"],0)
+  self.assertEqual(len(list(v.retired_dir().glob("*.json"))),1)
+  self.assertEqual(len(v.items()["rows"]),v.LIMIT)
+  # Tampering source or model provenance of an archived key must fail
+  # closed without rewriting the intact running queue or audit.
+  old=v.QUEUE.read_bytes()
+  body["final"]["source_sha256"]="f"*64
+  archived[0].write_text(json.dumps(body))
+  with self.assertRaisesRegex(v.Refusal,"retired_provenance_changed_or_untrusted"):
+   v.produce()
+  self.assertEqual(v.QUEUE.read_bytes(),old)
+
+ def test_no_parked_current_completed_or_other_blocker_reason(self):
+  v.produce()
+  rows=v.items()["rows"]
+  rows[2]["last_reason"]="repeated_transient_dependency_unavailable"
+  ids=v.park_same_model_blockers({x["id"]:x for x in rows},
+    {x["id"] for x in rows},[{"priority_reason":"no_indexed_image"}]*v.LIMIT)
+  self.assertNotIn(rows[2]["id"],ids)
+  rows[0]["status"]="completed"
+  ids=v.park_same_model_blockers({x["id"]:x for x in rows},
+    {x["id"] for x in rows},[{"priority_reason":"no_indexed_image"}]*v.LIMIT)
+  self.assertNotIn(rows[0]["id"],ids)
+
  def test_processing_persists_real_secondary_feedback(self):
   v.produce()
   original=v.items()["rows"][0]
