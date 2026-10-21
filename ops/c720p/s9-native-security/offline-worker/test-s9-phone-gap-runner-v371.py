@@ -86,7 +86,7 @@ class RunnerTests(unittest.TestCase):
             if args[1].startswith("pidof"):return "1234"
             if args[1]=="cat /proc/meminfo":return "MemAvailable: 500000 kB\n"
             if args[1].startswith("df -k"):return "Filesystem Size Used Available Use%\nfoo 90000000 4000 60000000 4%\n"
-            if args[1].startswith("ps -A"):return "PID ARGS\n1234 /system/bin/nl.kalenel.s9security\\n"
+            if args[1].startswith("ps -A"):return "PID ARGS\n1234 /system/bin/nl.kalenel.s9security\n"
             if args[1].startswith("sha256sum"):return H+"  /data/local/tmp/s9_worker/s9_gap_v371.dex.jar"
             raise AssertionError(args)
         with patch.object(m,"adb",fake):
@@ -96,10 +96,10 @@ class RunnerTests(unittest.TestCase):
         def fake(*args,**kwargs):
             if args==("get-state",):return "device"
             if args[1].startswith("pidof"):return "1234"
-            if args[1]=="cat /proc/meminfo":return "MemAvailable: 500000 kB\\n"
-            if args[1].startswith("df -k"):return "Filesystem Size Used Available Use%\\nfoo 90000000 4000 60000000 4%\\n"
+            if args[1]=="cat /proc/meminfo":return "MemAvailable: 500000 kB\n"
+            if args[1].startswith("df -k"):return "Filesystem Size Used Available Use%\nfoo 90000000 4000 60000000 4%\n"
             if args[1].startswith("ps -A"):
-                return "PID ARGS\\n4321 app_process -Djava.library.path=/data/local/tmp/s9_worker/lib /system/bin nl.kalenel.s9offline.S9Original4KGapAuditV370\\n"
+                return "PID ARGS\n4321 app_process -Djava.library.path=/data/local/tmp/s9_worker/lib /system/bin nl.kalenel.s9offline.S9Original4KGapAuditV370\n"
             raise AssertionError("phone probe reached unsafe step")
         with patch.object(m,"adb",fake),self.assertRaisesRegex(m.frames.Deferred,"already_running"):
             m.phone_readiness(approved())
