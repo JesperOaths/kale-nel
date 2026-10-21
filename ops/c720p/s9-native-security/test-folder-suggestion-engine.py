@@ -189,6 +189,16 @@ class FolderSuggestionsTest(unittest.TestCase):
         clusters = eng.agglomerate(raw,threshold=.65)
         self.assertEqual(sorted(c["member_count"] for c in clusters),[1,2])
         self.assertTrue(all(c["state"]=="pending_review" for c in clusters))
+        for cluster in clusters:
+            count = cluster["member_count"]
+            self.assertEqual(cluster["evidence_pair_count"], count*(count-1)//2)
+            if count > 1:
+                self.assertGreaterEqual(cluster["min_within_group_similarity"], .65)
+                self.assertGreaterEqual(cluster["mean_within_group_similarity"],
+                                        cluster["min_within_group_similarity"])
+            else:
+                self.assertIsNone(cluster["min_within_group_similarity"])
+                self.assertIsNone(cluster["mean_within_group_similarity"])
 
     def test_missing_provenance_fails_closed(self):
         a = feature("one",upper=axis(0))
