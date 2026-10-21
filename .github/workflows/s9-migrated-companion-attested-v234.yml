@@ -1,0 +1,70 @@
+name: S9 migrated companion V234 attested unsigned preview
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/migrated-companion-v233/**'
+      - '.github/workflows/s9-migrated-companion-attested-v234.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unsigned_preview_android10:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout reviewed build source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          path: build
+      - name: Checkout exact PR 1169 code without altering its branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: 58fe20a65561b4283153c1249228790905b93027
+          path: pinned
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Provision official Android 36 build-tools (no APK signing)
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+          echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+      - name: Assert current staging is immutable and test preview signed-action guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          P=build/ops/c720p/s9-native-security/migrated-companion-v233
+          T=pinned/ops/c720p/s9-native-security/offline-worker
+          python3 "$P/test_companion_v233.py"
+          python3 "$P/test_attested_unsigned_v234.py"
+          python3 "$T/test-action-wire-v231.py"
+          python3 "$T/test-s9-signed-action-v198.py"
+          python3 "$T/test-s9-migrated-postcommit-v232.py"
+          python3 "$T/test-s9-dual-store-commit-v197.py"
+      - name: Build exact PR 1169 parser into genuinely compiled Android DEX
+        shell: bash
+        env:
+          S9_COMPANION_PIN_MANIFEST: source-pins-preview-1169.json
+          S9_COMPANION_PINNED_SOURCE_DIR: ${{ github.workspace }}/pinned/ops/c720p/s9-native-security/offline-worker
+          S9_COMPANION_STAGING_DIR: ${{ runner.temp }}/s9-companion-preview
+        run: |
+          set -euo pipefail
+          P=build/ops/c720p/s9-native-security/migrated-companion-v233
+          python3 "$P/build_unsigned.py"
+          python3 "$P/test_attested_unsigned_v234.py"
+          sha256sum "$S9_COMPANION_STAGING_DIR"/*.apk
+      - name: Retain unsigned APK and verification receipt only (not approved for deployment)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: s9-migrated-unenrolled-unsigned-preview-1169
+          path: |
+            ${{ runner.temp }}/s9-companion-preview/s9-migrated-companion-unenrolled-unsigned-preview-1169.apk
+            ${{ runner.temp }}/s9-companion-preview/companion-build-attestation-preview-1169.json
+          retention-days: 3
+          if-no-files-found: error
