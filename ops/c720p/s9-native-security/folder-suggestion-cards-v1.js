@@ -145,19 +145,112 @@
     const waiting = snapshot.provisional_clusters.filter(c =>
       c && c.state === 'pending_review' && c.human_review_required === true &&
       c.automatically_assigned === false && Array.isArray(c.source_qualified_clips));
+    const choices = Array.isArray(snapshot.folder_options) ?
+      snapshot.folder_options.filter(f =>
+        f && typeof f.id === 'string' &&
+        /^[A-Za-z0-9_-]{1,100}$/.test(f.id)).slice(0, 250) : [];
     if (waiting.length) {
       host.append(element('h3', 'Awaiting Review · provisional groups'));
       for (const group of waiting.slice(0, 200)) {
         const section = element('section', undefined, 'folder-provisional-group');
         section.append(element('h4', 'Awaiting Review · ' + group.member_count +
           ' clip' + (group.member_count === 1 ? '' : 's')),
-          element('p', group.source_qualified_clips.join(' · ')));
-        if (typeof hooks.onClusterOpen === 'function')
+          element('p', 'No existing person folder passed the match threshold. ' +
+            'Only an explicit human decision after original playback may seed a folder.'));
+        if (Array.isArray(group.members)) {
+          for (const member of group.members.slice(0, 24)) {
+            if (!member || member.state !== 'pending_review' ||
+                member.human_review_required !== true ||
+                member.source_qualified_clip_id !== member.source + ':' + member.clip_id ||
+                !/^[a-f0-9]{64}$/.test(String(member.media_sha256)) ||
+                typeof member.media_revision !== 'string' || !member.media_revision)
+              continue;
+            const card = element('article', undefined, 'folder-suggestion-card');
+            card.append(element('strong', member.source_qualified_clip_id),
+              element('p', 'Provisional group member · no verified folder confidence yet'));
+            const rowChoices = element('select');
+            rowChoices.setAttribute('aria-label', 'Choose an existing person folder');
+            for (const f of choices) {
+              const option = element('option', f.label || f.id);
+              option.value = f.id;
+              rowChoices.append(option);
+            }
+            rowChoices.value = choices.find(f => f.id === hooks.preferredFolder)?.id ||
+              choices[0]?.id || '';
+            const stateNote = element('p',
+              'Inspect the original first, then choose Approve or Reject.');
+            stateNote.setAttribute('data-review-status', '');
+            let attestedRow = null;
+            let approve = null, reject = null;
+            const invalidate = () => {
+              attestedRow = null;
+              if (approve) approve.disabled = true;
+              if (reject) reject.disabled = true;
+            };
+            rowChoices.addEventListener('change', invalidate);
+            if (choices.length) {
+              approve = invoke(card, 'Approve selected provisional clip', async () => {
+                if (!attestedRow) throw Error('Original review proof is missing.');
+                const result = await hooks.onApprove(attestedRow);
+                if (!result || result.persisted !== true ||
+                    result.media_verified !== true || result.status !== 'approved')
+                  throw Error('First-folder approval not verified as persisted.');
+                stateNote.textContent = 'Verified folder seed approved; refresh suggestions.';
+                approve.__persistentlyDisabled = true;
+                reject.__persistentlyDisabled = true;
+                approve.disabled = true;
+                reject.disabled = true;
+                if (typeof hooks.onSaved === 'function') hooks.onSaved(result);
+              }, member);
+              reject = invoke(card, 'Reject for selected folder', async () => {
+                if (!attestedRow) throw Error('Original review proof is missing.');
+                const result = await hooks.onReject(attestedRow);
+                if (!result || result.persisted !== true ||
+                    result.media_verified !== true || result.status !== 'rejected')
+                  throw Error('Folder exclusion not verified as persisted.');
+                stateNote.textContent = 'Excluded from this folder; original retained.';
+                approve.__persistentlyDisabled = true;
+                reject.__persistentlyDisabled = true;
+                approve.disabled = true;
+                reject.disabled = true;
+                if (typeof hooks.onSaved === 'function') hooks.onSaved(result);
+              }, member);
+              approve.disabled = true;
+              reject.disabled = true;
+            }
+            const inspect = invoke(card, 'Inspect original', async () => {
+              if (!rowChoices.value) {
+                stateNote.textContent = 'Create a named person folder first.';
+                return;
+              }
+              const row = {...member, folder_id: rowChoices.value};
+              const proof = await hooks.onOpen(row);
+              if (!proof || proof.verified !== true ||
+                  proof.media_sha256 !== member.media_sha256 ||
+                  proof.media_revision !== member.media_revision ||
+                  typeof proof.opened_ticket !== 'string' ||
+                  proof.opened_ticket.length < 10) {
+                invalidate();
+                stateNote.textContent = 'Opened original not attested; approval locked.';
+                return;
+              }
+              attestedRow = row;
+              stateNote.textContent = 'Original opened and attested · select a human review decision.';
+              if (approve && !approve.__persistentlyDisabled) approve.disabled = false;
+              if (reject && !reject.__persistentlyDisabled) reject.disabled = false;
+            }, member);
+            card.append(rowChoices, inspect);
+            if (approve && reject) card.append(approve, reject);
+            card.append(stateNote);
+            section.append(card);
+          }
+        } else if (typeof hooks.onClusterOpen === 'function') {
           for (const key of group.source_qualified_clips.slice(0, 24)) {
             if (typeof key === 'string' && key.length <= 240)
               section.append(invoke(section, 'Inspect ' + key,
                 () => hooks.onClusterOpen(group, key), group));
           }
+        }
         if (typeof hooks.onClusterName === 'function')
           section.append(invoke(section, 'Name after review', hooks.onClusterName, group));
         host.append(section);
@@ -240,6 +333,7 @@
         },
         onApprove: row => send('approve', row),
         onReject: row => send('reject', row),
+        preferredFolder: options.folderId,
         onClusterOpen: options.onClusterOpen,
         onClusterName: options.onClusterName,
         onSaved: result => {
