@@ -563,8 +563,80 @@ function selectPane(pane){
   b.setAttribute('aria-selected',String(b.dataset.pane===expected));
  }
 }
+
+const sourceDigest=/^[a-f0-9]{64}$/;
+function decisionDigestStatus(item){
+ const link=state.extraLinks?.items?.[assignmentKey(item)];
+ if(!state.extraLinks)return 'Review digest status unavailable; verification unknown.';
+ if(!link)return 'No current manually bound digest reported; legacy reviews remain unchanged.';
+ const b=link.media_binding;
+ if(b==null)return 'Historically unbound: original bytes were not verified at the time of manual review.';
+ if(b.schema_version!=='manual_original_digest_binding_v1'||b.status!=='bound_at_decision'||
+    b.verified_at_decision!==true||b.source!==item.source||
+    b.name!==String(item.name||item.clip||'')||!sourceDigest.test(String(b.sha256||''))||
+    typeof b.source_revision!=='string')
+  return 'Invalid media-binding metadata; verification unavailable.';
+ return 'Original SHA bound at decision time; current media bytes have not been independently rechecked.';
+}
+function evidenceQualityLabel(doc,clip){
+ const r=doc?.original_gap_benchmark;
+ if(doc?.ok!==true||r?.analysis_version!=='s9_original4k_independent_gap_benchmark_v1'||
+    r.source_binding_status!=='source_qualified_active_queue_only'||
+    !Array.isArray(r.recordings))
+  return 'Original 4K evidence status unavailable or unsupported.';
+ const row=r.recordings.find(x=>x?.clip_no===clip);
+ if(!row)return 'No currently qualified 4K evidence reported; this does not mean no person was present.';
+ if(row.analysis_version!==r.analysis_version||!sourceDigest.test(String(row.source_sha256||''))||
+    !sourceDigest.test(String(row.source_revision||''))||
+    !sourceDigest.test(String(row.model_sha256||''))||
+    row.model_sha256!==r.detector_model_sha256||
+    !Number.isSafeInteger(row.source_bytes)||row.source_bytes<10000||
+    !Array.isArray(row.samples)||row.samples.length!==3||
+    !row.samples.every(x=>Number.isSafeInteger(x.time_ms)&&x.time_ms>=0&&
+      x.state==='decoded'&&Array.isArray(x.original_resolution)&&
+      x.original_resolution[0]===3840&&x.original_resolution[1]===2160))
+  return '4K evidence provenance incomplete; no eligibility inferred.';
+ return 'Three original 4K detector samples are source-qualified in the report; anonymous only. Separate V361 consumption is not verified here.';
+}
+function appearanceV3Label(response,doc){
+ if(response.status===404)return 'V3 appearance: no verified crop indexed, not evidence of absence.';
+ if(response.status===503)return 'V3 appearance index unavailable; readiness unknown.';
+ if(!response.ok||doc?.ok!==true||
+    doc.status!=='provisional_appearance_only_original_revision_unverified'||
+    doc.source_binding_status!=='crop_and_corpus_sha_valid_original_revision_unverified'||
+    doc.evidence_consumption_eligible!==false||doc.person_reference_eligible!==false||
+    doc.human_review_required!==true||doc.verified_same_person!==false||
+    doc.identity_probability!==false||doc.automatic_person_assignments!==0)
+  return 'V3 appearance status unsupported or unavailable; no identity inferred.';
+ return 'V3 appearance provisional only: source video revision unverified; never an identity match or automatic filing.';
+}
+async function checkVideoEvidence(){
+ const item=state.playingItem,serial=state.playSerial,host=$('videoEvidenceStatus');
+ const clip=String(item?.clip||item?.name||'');
+ if(!item||item.source!=='sd'||!clipName.test(clip)){
+  host.textContent='No original S9 4K model evidence for this source.';return;
+ }
+ const button=$('checkVideoEvidence');button.disabled=true;
+ host.textContent='Checking current evidence…';
+ try{
+  const q=await relay().fetch('/new/api/evidence-quality',{cache:'no-store'});
+  const doc=q.ok?await q.json():null;
+  if(serial!==state.playSerial)return;
+  const evidence=q.ok?evidenceQualityLabel(doc,clip):
+   '4K source report unavailable; no eligibility inferred.';
+  const v=await relay().fetch('/new/api/appearance-multivector-v3?'+
+    new URLSearchParams({clip}),{cache:'no-store'});
+  const vd=v.ok?await v.json():null;
+  if(serial!==state.playSerial)return;
+  host.textContent=evidence+' '+appearanceV3Label(v,vd);
+ }catch(_){
+  if(serial===state.playSerial)host.textContent=
+   'Current evidence refresh unavailable. Prior results do not grant eligibility.';
+ }finally{if(serial===state.playSerial)button.disabled=false;}
+}
 function openApproval(item){
  state.approvalItem=item;$('approvalStatus').textContent='';
+ $('approvalProvenanceStatus').textContent=decisionDigestStatus(item);
  $('approvalClip').textContent='Recording · '+date(item);
  const select=$('approvalFolder');select.replaceChildren();
  select.add(new Option('Create a new person',''));
@@ -638,6 +710,9 @@ async function playVideo(path,title,seconds,originItem=null){
  $('viewerReturn').hidden=!state.playingItem||
    !(assignedFolder(state.playingItem)||state.playingItem.approvedFolderContext);
  $('videoStatus').textContent='Opening original recording…';state.playTime=Math.max(0,seconds||0);
+ $('videoProvenanceStatus').textContent=state.playingItem?decisionDigestStatus(state.playingItem):'Review digest status unknown.';
+ $('videoEvidenceStatus').textContent='Evidence not checked for this recording.';
+ $('checkVideoEvidence').disabled=!state.playingItem||source!=='sd';
  if(!modal.open)modal.showModal();
  try{
   const url=await relay().url(path);
@@ -1508,6 +1583,7 @@ $('peopleRecheckNow').addEventListener('click',()=>{
 $('openPeople').addEventListener('click',()=>openHome('people'));
 $('openClothing').addEventListener('click',()=>openHome('clothing'));
 $('refreshClothing').addEventListener('click',()=>searchClothingMatches(true));
+$('checkVideoEvidence').addEventListener('click',()=>checkVideoEvidence());
 $('refreshAutomatic').addEventListener('click',()=>fetchAutomatic());
 $('backFolders').addEventListener('click',()=>openHome(state.folderReturnPane));
 $('reviewMode').addEventListener('change',()=>{state.tab=$('reviewMode').value;state.offset=0;loadView()});
