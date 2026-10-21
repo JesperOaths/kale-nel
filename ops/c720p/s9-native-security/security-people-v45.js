@@ -1370,9 +1370,8 @@ function renderFolderRankedButton(){
      }
      return signed.openAndAttest(row,()=>startVideo(clip));
     },
-    onClusterOpen:async group=>{
-     const first=(group.source_qualified_clips||[]).map(key=>
-      state.archiveEntries.find(row=>assignmentKey(row)===key)).find(Boolean);
+    onClusterOpen:async (group,key)=>{
+     const first=state.archiveEntries.find(row=>assignmentKey(row)===key);
      if(first)startVideo(first);
      else openReview('inbox');
     },
