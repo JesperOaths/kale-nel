@@ -42,13 +42,18 @@ def age_seconds(report=REPORT,now=None):
     if age < -300:raise ValueError("untrusted_recovery_clock")
     return age
 
+class CompetingJobDeferral(RuntimeError):
+    """A transient shared-worker conflict, not a broken recovery job."""
+    pass
+
+
 def check_other_jobs():
     for name in ("c720p-s9-original-hash-ledger-v1.service",
                  "c720p-s9-standalone-catalog.service"):
         result=subprocess.run(["systemctl","--user","is-active",name],
                    capture_output=True,text=True,timeout=8)
         if result.stdout.strip() in ("active","activating"):
-            raise RuntimeError("competing_s9_integrity_or_catalog_job")
+            raise CompetingJobDeferral("competing_s9_integrity_or_catalog_job")
 
 def run(*,execute=False):
     STATE.mkdir(parents=True,exist_ok=True)
@@ -77,10 +82,17 @@ def run(*,execute=False):
         if os.statvfs("/").f_bavail*os.statvfs("/").f_frsize<MIN_ROOT_AVAILABLE:
             print("S9_AUX_RECOVERY_REFRESH_DEFERRED low_root_space")
             return "deferred"
-        check_other_jobs()
-        if DEX.is_symlink() or not DEX.is_file() or hashlib.sha256(DEX.read_bytes()).hexdigest()!=DEX_SHA:
-            raise ValueError("missing_pinned_isolated_phone_worker")
-        report=scanlib.scan(DEX,DEX_SHA,save=True,health_check=check_other_jobs)
+        try:
+            check_other_jobs()
+            if DEX.is_symlink() or not DEX.is_file() or hashlib.sha256(DEX.read_bytes()).hexdigest()!=DEX_SHA:
+                raise ValueError("missing_pinned_isolated_phone_worker")
+            report=scanlib.scan(DEX,DEX_SHA,save=True,health_check=check_other_jobs)
+        except CompetingJobDeferral:
+            # The isolated scan may notice a competing producer mid-batch.
+            # Its writer publishes only after a complete verified scan.
+            # Keep the previous private report and retry at the normal timer.
+            print("S9_AUX_RECOVERY_REFRESH_DEFERRED competing_s9_integrity_or_catalog_job")
+            return "deferred"
         if report["total_unpaired"]!=sum(x["checked"] for x in report["by_role"].values()):
             raise ValueError("postscan_auxiliary_reconciliation")
         if report["originals_modified"] is not False or report["manual_person_reviews_modified"] is not False:
