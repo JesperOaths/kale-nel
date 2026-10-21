@@ -101,9 +101,24 @@ def review(payload, provider, journal: ReviewJournal,
             if journal.read()["revision"] != payload["journal_revision"]:
                 return 409, {"ok": False, "error": "review_revision_changed"}
             ranking = rank_folders(data["clips"], data["folders"], journal.read()["decisions"])
-            if not any(row["source"] == source and row["clip_id"] == name
-                       and row["folder_id"] == folder and row["state"] == "pending_review"
-                       for row in ranking["matches"]):
+            nominated = any(
+                row["source"] == source and row["clip_id"] == name
+                and row["folder_id"] == folder and row["state"] == "pending_review"
+                and row["media_sha256"] == matched.media_sha256
+                and row["media_revision"] == matched.media_revision
+                for row in ranking["matches"])
+            # Cold-start bootstrap: after independent original-open attestation,
+            # a human may choose an existing named folder for a member of an
+            # Awaiting Review provisional cluster. The approval becomes its
+            # first verified exemplar, without silently trusting legacy labels.
+            manual_seed = any(
+                member["source"] == source and member["clip_id"] == name
+                and member["media_sha256"] == matched.media_sha256
+                and member["media_revision"] == matched.media_revision
+                and member["state"] == "pending_review"
+                for group in ranking["provisional_clusters"]
+                for member in group["members"])
+            if not nominated and not manual_seed:
                 return 409, {"ok": False, "error": "candidate_no_longer_pending"}
             attested = opened_attestor(payload["opened_ticket"], source, name,
                                         matched.media_sha256, matched.media_revision)
