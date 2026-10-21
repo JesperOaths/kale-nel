@@ -104,7 +104,10 @@ class FutureWriter:
    return 200,result
   except Conflict:return 409,dict(ok=False,error='review_revision_changed')
   except ValueError:return 409,dict(ok=False,error='reviewed_original_ticket_or_source_stale')
-  except (OSError,RuntimeError,TypeError):return 503,dict(ok=False,error='trusted_original_or_persistence_unavailable')
+  except (OSError,RuntimeError,TypeError,Exception):
+   # Includes the binder's own Refused(Exception), not merely ValueError.
+   # It can never become an unbound acceptance or an HTTP handler traceback.
+   return 503,dict(ok=False,error='trusted_original_or_persistence_unavailable')
 
 def install(H,legacy,sd_names,attestor,binder,tickets):
  future=FutureWriter(legacy,attestor,binder,tickets)
