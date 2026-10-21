@@ -176,13 +176,16 @@
     async function send(action, row) {
       const ticket = opened.get(key(row));
       if (!ticket) throw Error('Inspect and attest this original before reviewing.');
-      if (!current || !Number.isSafeInteger(current.journal_revision))
+      if (!current || !Number.isSafeInteger(current.journal_revision) ||
+          typeof current.feature_snapshot_revision !== 'string' ||
+          !current.feature_snapshot_revision)
         throw Error('Review revision unavailable');
       const request = {
         action, source: row.source, clip_id: row.clip_id,
         folder_id: row.folder_id, media_sha256: row.media_sha256,
         media_revision: row.media_revision,
         journal_revision: current.journal_revision,
+        feature_snapshot_revision: current.feature_snapshot_revision,
         opened_ticket: ticket, human_confirmed: true
       };
       const response = await relay.fetch('/new/api/folder-suggestions/review', {
