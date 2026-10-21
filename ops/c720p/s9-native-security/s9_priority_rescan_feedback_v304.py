@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import tempfile
 import time
 import urllib.request
@@ -157,10 +158,21 @@ def retire_obsolete(rows, relevant):
               "invalid_archived_task_identifier")
         retired_dir().mkdir(mode=0o700,parents=True,exist_ok=True)
         check(not retired_dir().is_symlink(),"unsafe_retired_directory")
+        directory=retired_dir().stat()
+        check(stat.S_ISDIR(directory.st_mode) and
+              directory.st_uid==os.getuid() and
+              not directory.st_mode&0o077,
+              "retired_provenance_directory_not_private")
         dest=retired_dir()/(key+".json")
         payload={"schema":"s9_priority_retired_provenance_v1",
                  "id":key,"final":row,"retired_at":now()}
-        if dest.exists():
+        if dest.exists() or dest.is_symlink():
+            check(not dest.is_symlink(),"retired_provenance_symlink_refused")
+            status=dest.stat()
+            check(stat.S_ISREG(status.st_mode) and
+                  status.st_uid==os.getuid() and
+                  status.st_nlink==1 and not status.st_mode&0o077,
+                  "retired_provenance_file_not_private")
             old=safe_doc(dest,20000)
             check(old.get("schema")==payload["schema"] and
                   old.get("id")==key and old.get("final")==row,
