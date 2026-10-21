@@ -123,6 +123,32 @@ class QueueTest(unittest.TestCase):
   self.store()
   self.assertEqual(v.produce()["new_admissions"],0)
 
+
+ def test_previously_parked_unsupported_source_can_qualify_new_reason_once(self):
+  v.produce()
+  name=self.rows[2]["clip_no"]
+  old=next(r for r in v.items()["rows"] if r["clip_no"]==name)
+  # First persist immutable unsupported provenance as on a capacity park.
+  self.rows[2]["targeted_rescan_priority"]=False
+  self.store()
+  retired=v.produce()
+  self.assertEqual(retired["retired_with_provenance"],1)
+  proof=v.retired_dir()/(old["id"]+".json")
+  self.assertTrue(proof.is_file())
+  immutable_before=proof.read_bytes()
+  self.rows[2]["targeted_rescan_priority"]=True
+  self.rows[2]["extraction_status"]="no_indexed_image"
+  self.store()
+  admitted=v.produce()
+  self.assertEqual(admitted["new_admissions"],1)
+  row=next(r for r in v.items()["rows"] if r["clip_no"]==name)
+  self.assertEqual(row["status"],"pending")
+  self.assertNotEqual(row["id"],old["id"])
+  self.assertEqual(row["legacy_source_key"],old["id"])
+  self.assertEqual(row["source_sha256"],old["source_sha256"])
+  self.assertEqual(proof.read_bytes(),immutable_before)
+  self.assertEqual(v.produce()["new_admissions"],0)
+
  def test_live_runnable_reclassified_unsupported_is_not_reprocessed(self):
   v.produce()
   name=self.rows[0]["clip_no"]
