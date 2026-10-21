@@ -86,7 +86,7 @@ def serve_pinned_original(handler,source,name,nonce,pinned,after_transfer):
             'response_original_sha256':pinned['original_sha256'],
             'source_revision':pinned['source_revision'],
             'source_identity':pinned['source_identity']})
-    except (HTTPError,URLError,TimeoutError,ValueError,TypeError,Unavailable) as exc:
+    except (HTTPError,URLError,TimeoutError,ValueError,TypeError,OSError,Unavailable) as exc:
         # If headers were already sent, the review ticket remains unavailable.
         # Do not forge a 200 or claim that the browser loaded verified media.
         raise Unavailable('pinned_original_delivery_refused') from exc
