@@ -48,6 +48,15 @@ jobs:
           python3 "$T/test-s9-signed-action-v198.py"
           python3 "$T/test-s9-migrated-postcommit-v232.py"
           python3 "$T/test-s9-dual-store-commit-v197.py"
+          python3 "$T/test-s9-approved-six-digest-v230.py"
+          python3 "$T/test-s9-companion-boot-readiness-v229.py"
+          python3 "$T/test-s9-three-key-custody-v227.py"
+          python3 "$T/test-s9-three-key-enrollment-v227.py"
+          python3 "$T/test-s9-initial-sealed-manifest-enrollment-v220.py"
+          python3 "$T/test-s9-signed-commit-gate-v201.py"
+          python3 "$T/test-s9-migrated-source-v198.py"
+          python3 "$T/test-s9-ledger-internal-checkpoint-v196.py"
+          python3 "$T/test-s9-strict-signed-json-v223.py"
       - name: Build exact PR 1169 parser into genuinely compiled Android DEX
         shell: bash
         env:
