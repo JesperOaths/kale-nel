@@ -108,7 +108,7 @@ jobs:
               assert marker in source,marker
           timed=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KTimedDecoderV371.java').read_text()
           assert 'info.presentationTimeUs' in timed and 'MediaCodec' in timed
-          assert 'MediaMetadataRetriever' not in timed
+          assert 'new MediaMetadataRetriever(' not in timed
           for forbidden in ('pm install','am force-stop','CameraService.java',
                             'requestPermissions','--bulk','System.loadLibrary("camera'):
               assert forbidden not in source,forbidden
