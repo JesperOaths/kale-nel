@@ -36,7 +36,9 @@ class ApiTest(unittest.TestCase):
         self.refs=[self.a,self.b]
         self.folders=[{"id":"P1"},{"id":"P2"}]
         self.index={"features_verified":True,"clips":self.refs,
-                    "folders":self.folders,"revision":"signed-snapshot-1"}
+                    "folders":self.folders,"revision":"signed-snapshot-1",
+                    "historic_review_index_verified":True,
+                    "historic_reviewed_keys":[]}
         self.provider=lambda:self.index
         self.known=eng.ClipFeatures.from_dict(self.a)
         self.journal.record(clip=self.known,folder_id="P1",action="approve",
@@ -168,6 +170,31 @@ class ApiTest(unittest.TestCase):
                              lambda *args: False,self.commit)
         self.assertEqual(outcome[0],409)
         self.assertEqual(cold.read()["revision"],0)
+
+    def test_historic_review_index_never_reopens_assigned_clips(self):
+        # The old 48 human decisions may lack review-time digest proof.
+        # They are suppressed as already reviewed, but never used as vectors.
+        self.index["historic_reviewed_keys"] = ["sd:candidate.mp4"]
+        snap = api.snapshot(self.provider, self.journal)
+        self.assertEqual(snap["suppressed_historical_reviewed_clips"],1)
+        self.assertFalse(any(row["clip_id"] == "candidate.mp4"
+                             for row in snap["matches"]))
+        self.assertFalse(any(member["clip_id"] == "candidate.mp4"
+                             for group in snap["provisional_clusters"]
+                             for member in group["members"]))
+        status, result = api.review(self.body(),self.provider,self.journal,
+                                    lambda *args:True,self.commit)
+        self.assertEqual(status,409)
+        self.assertEqual(self.calls,[])
+
+    def test_provider_must_verify_completeness_of_historic_review_index(self):
+        self.index.pop("historic_review_index_verified")
+        with self.assertRaises(ValueError):
+            api.snapshot(self.provider,self.journal)
+        status,_ = api.review(self.body(),self.provider,self.journal,
+                              lambda *args:True,self.commit)
+        self.assertEqual(status,503)
+        self.assertEqual(self.calls,[])
 
 if __name__=="__main__":
     unittest.main(verbosity=2)
