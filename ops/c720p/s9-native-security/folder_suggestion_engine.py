@@ -64,7 +64,7 @@ def histogram(values: Any) -> tuple[float, ...] | None:
 
 
 def cosine(a: tuple[float, ...], b: tuple[float, ...]) -> float:
-    return max(-1.0, min(1.0, math.fsum(x * y for x, y in zip(a, b))))
+    # CPython 3.12+ computes exact float products in optimized C, avoiding\n    # expensive Python generator loops on the low-power C720P.\n    dot = math.sumprod(a, b) if hasattr(math, "sumprod") else math.fsum(\n        x * y for x, y in zip(a, b))\n    return max(-1.0, min(1.0, dot))
 
 
 def color_affinity(a: tuple[float, ...] | None,
@@ -287,7 +287,7 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
     groups = []
     for members in active.values():
         keys = sorted(entries[i].key for i in members)
-        key_digest = hashlib.sha256("\\n".join(keys).encode("utf-8")).hexdigest()[:16]
+        key_digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()[:16]
         groups.append({"id": "awaiting-review-" + key_digest,
                        "label": "Awaiting Review", "state": "pending_review",
                        "source_qualified_clips": keys,
