@@ -1,0 +1,26 @@
+name: S9 migrated postcommit V232 verification
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/*V232.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-migrated-postcommit-v232.py'
+      - '.github/workflows/s9-migrated-postcommit-v232.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/*V232.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-migrated-postcommit-v232.py'
+      - '.github/workflows/s9-migrated-postcommit-v232.yml'
+permissions:
+  contents: read
+jobs:
+  host_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: python3 ops/c720p/s9-native-security/offline-worker/test-s9-migrated-postcommit-v232.py
