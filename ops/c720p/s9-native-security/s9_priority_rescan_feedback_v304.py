@@ -32,7 +32,7 @@ STATE=HOME/"state/s9-priority-rescan-v304"
 QUEUE=STATE/"queue.json"
 LOCK=STATE/"queue.lock"
 AUDIT=STATE/"transitions.jsonl"
-RETIRED=STATE/"retired"
+def retired_dir():return STATE/"retired"
 REPORT=HOME/"state/s9-evidence-quality-v1/report.json"
 SECONDARY=HOME/"state/s9-evidence-quality-v1/original-gap-benchmark.json"
 ARCHIVE=HOME/"state/s9-standalone-archive-catalog-v1.json"
@@ -155,9 +155,9 @@ def retire_obsolete(rows, relevant):
         key=row["id"]
         check(isinstance(key,str) and HEX.fullmatch(key),
               "invalid_archived_task_identifier")
-        RETIRED.mkdir(mode=0o700,parents=True,exist_ok=True)
-        check(not RETIRED.is_symlink(),"unsafe_retired_directory")
-        dest=RETIRED/(key+".json")
+        retired_dir().mkdir(mode=0o700,parents=True,exist_ok=True)
+        check(not retired_dir().is_symlink(),"unsafe_retired_directory")
+        dest=retired_dir()/(key+".json")
         payload={"schema":"s9_priority_retired_provenance_v1",
                  "id":key,"final":row,"retired_at":now()}
         if dest.exists():
