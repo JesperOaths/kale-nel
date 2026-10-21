@@ -38,6 +38,7 @@ REPORT=HOME/"state/s9-evidence-quality-v1/report.json"
 SECONDARY=HOME/"state/s9-evidence-quality-v1/original-gap-benchmark.json"
 ARCHIVE=HOME/"state/s9-standalone-archive-catalog-v1.json"
 EVIDENCE=HOME/"bin/s9_evidence_quality_v1.py"
+ANONYMOUS_CONSUMER=HOME/"bin/s9_anonymous_evidence_consumer_v361.py"
 SCAN=HOME/"bin/rescan-original4k-face-gaps-v1.py"
 CAMERA="http://127.0.0.1:18808/status"
 CROSS_LOCK=HOME/"state/s9-v3-archive-backfill.lock"
@@ -481,6 +482,54 @@ def consumer_visible(record):
     check(isinstance(records,list) and any(
           item==record for item in records if isinstance(item,dict)),
           "source_bound_secondary_result_not_visible")
+    # A qualified GET is not a completed *downstream* consumption. Invoke
+    # V361 against a fresh native source view before acknowledging this task.
+    # V361 independently reopens and hashes catalog, queue and latest quality
+    # priorities before/after admission; never accept an old cached 200.
+    q=load_module(EVIDENCE,"s9_evidence_quality_v1")
+    consumer=load_module(ANONYMOUS_CONSUMER,
+                         "s9_anonymous_evidence_consumer_v361")
+    check(q.MODEL_SHA==MODEL_SHA and
+          consumer.SCHEMA=="s9_anonymous_quality_consumption_v361",
+          "anonymous_consumer_model_or_schema_mismatch")
+    # The pinned reader module is the authority; prevent a Python import
+    # shadowing it in the V361 module's global quality reference.
+    consumer.quality=q
+    saved=json.loads(q.fetch("http://127.0.0.1:8795/new/api/saved",6000000))
+    native=q.validate_sources(saved)
+    current={item["clip_no"]:item for item in native}
+    check(len(current)==len(native),"anonymous_consumer_native_duplicate")
+    status,receipt=consumer.consume(doc,current,record["clip_no"])
+    if status==410:
+        raise Refusal("anonymous_consumer_source_or_priority_revoked")
+    check(status==200 and isinstance(receipt,dict),
+          "anonymous_consumer_revalidation_unavailable")
+    check(receipt.get("ok") is True and
+          receipt.get("schema_version")==consumer.SCHEMA and
+          receipt.get("source_binding_status")==
+              "revalidated_original_and_queue_at_consumption" and
+          receipt.get("eligibility")=="anonymous_quality_manual_review_only" and
+          receipt.get("clip_no")==record["clip_no"] and
+          receipt.get("source_sha256")==record["source_sha256"] and
+          receipt.get("source_bytes")==record["source_bytes"] and
+          receipt.get("source_revision")==record["source_revision"] and
+          receipt.get("model_sha256")==record["model_sha256"] and
+          receipt.get("analysis_version")==record["analysis_version"] and
+          receipt.get("sample_count")==3 and
+          receipt.get("sample_times_ms")==[x["time_ms"] for x in record["samples"]] and
+          isinstance(receipt.get("evidence_revision_sha256"),str) and
+          HEX.fullmatch(receipt["evidence_revision_sha256"]) and
+          receipt.get("human_review_required") is True and
+          receipt.get("verified_same_person") is False and
+          receipt.get("pose_gait_measured") is False and
+          receipt.get("appearance_evidence_eligible") is False and
+          receipt.get("automatic_person_assignments")==0 and
+          receipt.get("originals_modified") is False and
+          receipt.get("review_decisions_modified") is False,
+          "anonymous_consumer_receipt_inconsistent")
+    # Never persist the precompletion SHA in the queue: the queue's own
+    # processing -> completed transition necessarily changes its fingerprint.
+    # Future consumers MUST request a fresh revision after completion.
     return True
 
 def recover_expired_leases(doc, timestamp):
@@ -540,7 +589,9 @@ def work():
               "source_revision":candidate["media_revision"],
               "model_sha256":MODEL_SHA,
               "verified_secondary_report":True,
-              "consumer_visibility_confirmed":True}
+              "consumer_visibility_confirmed":True,
+              "anonymous_v361_live_consumed_before_completion":True,
+              "anonymous_v361_schema":"s9_anonymous_quality_consumption_v361"}
             candidate["status"]="completed"
             candidate["deferrals"]=0
             candidate["last_reason"]="verified_secondary_original_gap_evidence_published"
@@ -549,11 +600,15 @@ def work():
             # miss is not a negative-person or negative-identity decision.
             cause=str(err) if isinstance(err,Refusal) else "analysis_failed_or_unavailable"
             if cause in ("original_no_longer_eligible","source_changed_during_rescan",
-                "source_revision_changed_after_analysis","model_version_changed_since_admission"):
+                "source_revision_changed_after_analysis","model_version_changed_since_admission",
+                "anonymous_consumer_source_or_priority_revoked"):
                 candidate["status"]="rejected"
             elif (cause in ("camera_battery_thermal_recording_or_worker_exclusion",
                             "secondary_consumer_source_attestation_unavailable",
-                            "secondary_consumer_not_reading_current_report")
+                            "secondary_consumer_not_reading_current_report",
+                            "anonymous_consumer_revalidation_unavailable",
+                            "anonymous_consumer_model_or_schema_mismatch",
+                            "approved_worker_unavailable")
                   or isinstance(err,(urllib.error.URLError,TimeoutError,ConnectionError))):
                 candidate["status"]="pending";candidate["attempts"]-=1
                 candidate["deferrals"]=candidate.get("deferrals",0)+1
