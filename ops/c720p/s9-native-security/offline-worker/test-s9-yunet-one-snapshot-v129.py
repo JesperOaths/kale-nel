@@ -77,7 +77,6 @@ class Tests(TestCase):
  def test_non_launcher_or_other_exit_keeps_generic_failure(self):
   cases=(
    (["adb","-s","test-device","shell","sha256sum /safe/model"],137),
-   (["adb","-s","test-device","shell","app_process /system/bin Class"],1),
    (["javac","-version"],137),
   )
   for argv,code in cases:
@@ -86,6 +85,29 @@ class Tests(TestCase):
     with patch.object(m.subprocess,"run",return_value=result):
      with self.assertRaisesRegex(RuntimeError,"^separate_phone_operation_failed$"):
       m.call(argv,seconds=2)
+ def test_android_nonzero_specific_reason_codes_are_private(self):
+  name="motion_1792200000000__a_private_person__1000_0.jpg"
+  argv=["adb","-s","test-device","shell",
+        "export CLASSPATH=/safe/x; app_process -Djava.library.path=/safe /system/bin FaceAudit --audit-single "+name]
+  cases=(
+   ("java.lang.ClassNotFoundException: "+name,"face_app_process_missing_java_class_unverified"),
+   ("java.lang.UnsatisfiedLinkError: "+name,"face_app_process_native_library_unavailable_unverified"),
+   ("java.lang.SecurityException: "+name,"face_app_process_android_storage_denied_unverified"),
+   ("java.lang.IllegalArgumentException: not_native_square_face_snapshot "+name,
+    "face_app_process_bitmap_decoder_unavailable_unverified"),
+   ("ai.onnxruntime.OrtException: "+name,"face_app_process_model_runtime_exception_unverified"),
+   ("java.lang.IllegalArgumentException: unknown "+name,
+    "face_app_process_java_uncategorized_exception_unverified"),
+   ("random failure text "+name,"face_app_process_nonzero_unclassified_unverified"),
+  )
+  for output,expected in cases:
+   with self.subTest(reason=expected):
+    process=m.subprocess.CompletedProcess(argv,1,"",output)
+    with patch.object(m.subprocess,"run",return_value=process),self.assertRaisesRegex(
+       RuntimeError,"^"+expected+"$") as got:
+     m.call(argv,seconds=5)
+    self.assertNotIn(name,str(got.exception))
+    self.assertNotIn("private_person",str(got.exception))
  def test_android_exit_137_sigkill_and_explicit_killed_are_not_face_evidence(self):
   from types import SimpleNamespace
   private="private_face_filename_must_not_be_logged.jpg"
