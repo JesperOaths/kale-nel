@@ -17,9 +17,8 @@ H="a"*64
 
 def approved():
     return {"schema":m.POLICY_SCHEMA,"active":True,
-            "approved_by_camera_owner":True,
-            "approved_by_infrastructure_owner":True,
-            "approved_by_task9_owner":True,
+            "authorization_basis":"user_explicit_guarded_task9_20261021",
+            "camera2_apk_unchanged":True,
             "approval_record":"task9-source-only-synthetic-fixture",
             "phone_frame_jar_sha256":H,
             "coordinator_sha256":H,"runner_sha256":H,
@@ -40,7 +39,7 @@ class RunnerTests(unittest.TestCase):
     def test_release_absent_refuses(self):
         with self.assertRaises(m.frames.Deferred):m.policy(self.file)
     def test_release_unapproved_refuses(self):
-        p=approved();p["approved_by_infrastructure_owner"]=False
+        p=approved();p["authorization_basis"]="unverified_external_authorization"
         self.write(p)
         with self.assertRaises(m.frames.Deferred):m.policy(self.file)
     def test_release_without_source_pins_refuses(self):
