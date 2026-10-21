@@ -25,6 +25,7 @@ import shutil
 import tempfile
 import time
 import urllib.request
+import urllib.error
 
 HOME=Path("/home/jespern/c720p-home-hub")
 STATE=HOME/"state/s9-priority-rescan-v304"
@@ -47,6 +48,7 @@ SCHEMA="s9_priority_rescan_feedback_v304"
 NAME=re.compile(r"motion_[0-9]{13}\.mp4\Z")
 HEX=re.compile(r"[a-f0-9]{64}\Z")
 MAX_ATTEMPTS=3
+MAX_TRANSIENT_DEFERRALS=8
 LIMIT=340
 LABEL="S9_PRIORITY_RESCAN_V304 "
 
@@ -129,7 +131,7 @@ def validate_priority(row,original):
       "native_pass":NATIVE,"model_sha256":MODEL_SHA,
       "required_analysis":ANALYSIS,"priority_reason":reason,
       "status":("pending" if reason=="no_indexed_image" else "blocked"),
-      "attempts":0,"next_attempt_at":0,"lease_until":0,
+      "attempts":0,"deferrals":0,"next_attempt_at":0,"lease_until":0,
       "last_reason":("awaiting_independent_original_4k_rescan" if reason=="no_indexed_image"
          else "same_yunet_model_cannot_validate_its_own_non_detection"),
       "outcome":None}
@@ -256,13 +258,43 @@ def publish(record,doc):
        "generated_at":dt.datetime.now(dt.timezone.utc).isoformat(),
        "original_archive_recordings":len(source()[1]),
        "recordings":list(previous.values()),
-       "source_sha256_verified_before_processing":True,
+       "source_sha256_verified_before_processing":False,
+       "source_sha256_bound_to_private_catalog_before_processing":True,
        "queue_revision":doc["revision"]+1,"human_review_required":True,
        "identity_inference_performed":False,
        "original_recordings_modified":False,
        "review_decisions_modified":False}
     atomic(SECONDARY,new)
     return new
+def consumer_visible(record):
+    """Verify this exact revision is served by the ACTUAL Evidence Quality API.
+
+    Reading/writing our own report file is insufficient downstream feedback.
+    These are secondary face-content observations, never person identities.
+    """
+    with urllib.request.urlopen(
+            "http://127.0.0.1:8795/new/api/evidence-quality",timeout=12) as response:
+        check(response.status==200,"secondary_consumer_http_failed")
+        data=response.read(6000001)
+    check(len(data)<=6000000,"secondary_consumer_payload_unbounded")
+    doc=json.loads(data)
+    gap=doc.get("original_gap_benchmark")
+    check(doc.get("ok") is True and isinstance(gap,dict)
+          and gap.get("analysis_version")==ANALYSIS
+          and gap.get("detector_model_sha256")==MODEL_SHA,
+          "secondary_consumer_not_reading_current_report")
+    records=gap.get("recordings")
+    check(isinstance(records,list) and any(
+          item.get("clip_no")==record["clip_no"]
+          and item.get("source_sha256")==record["source_sha256"]
+          and item.get("source_revision")==record["source_revision"]
+          and item.get("model_sha256")==record["model_sha256"]
+          and isinstance(item.get("samples"),list)
+          and len(item["samples"])==3
+          for item in records if isinstance(item,dict)),
+          "source_bound_secondary_result_not_visible")
+    return True
+
 def recover_expired_leases(doc, timestamp):
     """Durably recover a crashed worker even when no task can start."""
     recovered=0
@@ -311,15 +343,18 @@ def work():
         atomic(QUEUE,doc);journal("processing","source_and_model_pinned")
         try:
             evidence=evaluate_one(candidate)
+            publish(evidence,doc)
+            consumer_visible(evidence)
             candidate["outcome"]={
               "sampled_frames":len(evidence["samples"]),
               "supported_face_observations":sum(len(x["face_candidates"])
                      for x in evidence["samples"]),
               "source_revision":candidate["media_revision"],
               "model_sha256":MODEL_SHA,
-              "verified_secondary_report":True}
-            publish(evidence,doc)
+              "verified_secondary_report":True,
+              "consumer_visibility_confirmed":True}
             candidate["status"]="completed"
+            candidate["deferrals"]=0
             candidate["last_reason"]="verified_secondary_original_gap_evidence_published"
         except Exception as err:
             # Always retain prior human-reviewed/original evidence. A model
@@ -328,20 +363,35 @@ def work():
             if cause in ("original_no_longer_eligible","source_changed_during_rescan",
                 "source_revision_changed_after_analysis","model_version_changed_since_admission"):
                 candidate["status"]="rejected"
-            elif cause=="camera_battery_thermal_recording_or_worker_exclusion":
+            elif (cause=="camera_battery_thermal_recording_or_worker_exclusion"
+                  or isinstance(err,(urllib.error.URLError,TimeoutError,ConnectionError))):
                 candidate["status"]="pending";candidate["attempts"]-=1
+                candidate["deferrals"]=candidate.get("deferrals",0)+1
+                if cause=="analysis_failed_or_unavailable":
+                    cause="temporary_source_or_consumer_transport_unavailable"
+                if candidate["deferrals"]>=MAX_TRANSIENT_DEFERRALS:
+                    candidate["status"]="blocked"
+                    cause="repeated_transient_dependency_unavailable"
             elif candidate["attempts"]>=MAX_ATTEMPTS:
                 candidate["status"]="dead_letter"
             else:
                 candidate["status"]="pending"
             candidate["last_reason"]=cause
-            candidate["next_attempt_at"]=now()+min(6*3600,60*2**max(0,candidate["attempts"]-1))
+            if candidate["status"]=="pending":
+                backoff=(candidate["deferrals"]-1 if candidate.get("deferrals",0)
+                         else candidate["attempts"]-1)
+                candidate["next_attempt_at"]=now()+min(6*3600,60*2**max(0,backoff))
+            else:
+                candidate["next_attempt_at"]=0
         candidate["lease_until"]=0
+        if candidate["status"]!="completed":
+            candidate["outcome"]=None
         doc["revision"]+=1
         atomic(QUEUE,doc);journal(candidate["status"],candidate["last_reason"])
     return {"status":candidate["status"],"revision":doc["revision"],
          "attempts":candidate["attempts"],"tally":aggregate(doc["rows"]),
-         "verified_secondary":bool((candidate.get("outcome") or {}).get("verified_secondary_report"))}
+         "verified_secondary":bool((candidate.get("outcome") or {}).get("verified_secondary_report")),
+         "consumer_visibility_confirmed":bool((candidate.get("outcome") or {}).get("consumer_visibility_confirmed"))}
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("action",choices=("produce","work","status"))

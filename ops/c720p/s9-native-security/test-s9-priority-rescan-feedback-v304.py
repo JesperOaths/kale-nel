@@ -68,7 +68,8 @@ class QueueTest(unittest.TestCase):
         "samples":[{"time_ms":t,"state":"decoded","face_candidates":[]}
                    for t in (3000,9000,15000)]}
   with patch.object(v,"camera_guard",return_value={"ok":True}),\
-       patch.object(v,"evaluate_one",return_value=record):
+       patch.object(v,"evaluate_one",return_value=record),\
+       patch.object(v,"consumer_visible",return_value=True):
    done=v.work()
   self.assertEqual(done["status"],"completed")
   self.assertEqual(done["verified_secondary"],True)
@@ -79,6 +80,94 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(derived["identity_inference_performed"],False)
   self.assertEqual(v.produce()["new_admissions"],0)
   self.assertEqual(v.items()["rows"][0]["status"],"completed")
+ def test_no_success_until_real_consumer_has_matching_source_revision(self):
+  v.produce()
+  row=v.items()["rows"][0]
+  record={"clip_no":row["clip_no"],"duration_ms":18000,
+      "source_sha256":row["source_sha256"],
+      "source_revision":row["media_revision"],
+      "model_sha256":v.MODEL_SHA,"samples":[
+          {"time_ms":3000,"state":"decoded","face_candidates":[]},
+          {"time_ms":9000,"state":"decoded","face_candidates":[]},
+          {"time_ms":15000,"state":"decoded","face_candidates":[]}]}
+  from unittest.mock import Mock
+  good={"ok":True,"original_gap_benchmark":{
+    "analysis_version":v.ANALYSIS,"detector_model_sha256":v.MODEL_SHA,
+    "recordings":[record]}}
+  class Reply:
+   status=200
+   def __init__(self,value):self.value=value
+   def __enter__(self):return self
+   def __exit__(self,*args):return False
+   def read(self,limit):
+    return json.dumps(self.value).encode()
+  with patch.object(v.urllib.request,"urlopen",
+      return_value=Reply(good)):
+   self.assertTrue(v.consumer_visible(record))
+  bad=json.loads(json.dumps(good))
+  bad["original_gap_benchmark"]["recordings"][0]["source_revision"]="f"*64
+  with patch.object(v.urllib.request,"urlopen",
+      return_value=Reply(bad)):
+   with self.assertRaises(v.Refusal):v.consumer_visible(record)
+  bad_hash=json.loads(json.dumps(good))
+  bad_hash["original_gap_benchmark"]["recordings"][0]["source_sha256"]="0"*64
+  with patch.object(v.urllib.request,"urlopen",
+      return_value=Reply(bad_hash)):
+   with self.assertRaises(v.Refusal):v.consumer_visible(record)
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",return_value=record),\
+       patch.object(v,"consumer_visible",
+            side_effect=v.Refusal("source_bound_secondary_result_not_visible")):
+   result=v.work()
+  self.assertEqual(result["status"],"pending")
+  self.assertFalse(result["verified_secondary"])
+  self.assertFalse(result["consumer_visibility_confirmed"])
+  self.assertEqual(v.items()["rows"][0]["attempts"],1)
+  self.assertIsNone(v.items()["rows"][0]["outcome"])
+  saved=json.loads(self.secondary.read_text())
+  self.assertFalse(saved["source_sha256_verified_before_processing"])
+  self.assertTrue(saved["source_sha256_bound_to_private_catalog_before_processing"])
+  self.assertTrue(saved["human_review_required"])
+
+ def test_temporary_relay_outage_does_not_burn_retries(self):
+  import urllib.error
+  v.produce()
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",
+            side_effect=urllib.error.URLError("synthetic_transport_offline")):
+   result=v.work()
+  self.assertEqual(result["status"],"pending")
+  self.assertEqual(result["attempts"],0)
+  self.assertEqual(v.items()["rows"][0]["attempts"],0)
+  self.assertEqual(v.items()["rows"][0]["last_reason"],
+                   "temporary_source_or_consumer_transport_unavailable")
+  self.assertIsNone(v.items()["rows"][0]["outcome"])
+
+ def test_transient_camera_or_network_deferrals_have_finite_block_limit(self):
+  import urllib.error
+  v.produce()
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",
+          side_effect=urllib.error.URLError("synthetic_transport_unreachable")):
+   for i in range(v.MAX_TRANSIENT_DEFERRALS):
+    output=v.work()
+    expected="blocked" if i==v.MAX_TRANSIENT_DEFERRALS-1 else "pending"
+    self.assertEqual(output["status"],expected)
+    queue=v.items()
+    row=queue["rows"][0]
+    self.assertEqual(row["attempts"],0)
+    self.assertEqual(row["deferrals"],i+1)
+    self.assertEqual(row["status"],expected)
+    if expected=="pending":
+     row["next_attempt_at"]=0
+     v.atomic(v.QUEUE,queue)
+  self.assertEqual(v.items()["rows"][0]["last_reason"],
+                   "repeated_transient_dependency_unavailable")
+  self.assertEqual(v.items()["rows"][0]["next_attempt_at"],0)
+  # Another pending clip remains eligible, but this failed clip is now
+  # permanently blocked until a separately reviewed requalification.
+  self.assertEqual(v.items()["rows"][0]["status"],"blocked")
+
  def test_stale_source_is_not_reused(self):
   v.produce()
   original=v.items()["rows"][0]
