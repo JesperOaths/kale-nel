@@ -270,7 +270,8 @@ class QueueTest(unittest.TestCase):
   result=v.produce()
   self.assertEqual(result["new_admissions"],1)
   states={row["id"]:row["status"] for row in v.items()["rows"]}
-  self.assertEqual(states[original["id"]],"rejected")
+  self.assertNotIn(original["id"],states)
+  self.assertEqual(json.loads((v.retired_dir()/(original["id"]+".json")).read_text())["final"]["status"],"rejected")
  def test_denied_unbounded_or_missing_catalog(self):
   v.produce()
   self.catalog.unlink()
