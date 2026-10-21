@@ -45,13 +45,13 @@ class CoordinatorTests(unittest.TestCase):
     def probe(self,r,at,budget):
         self.events.append(("probe",at))
         return receipt(r,at)
-    def run(self,**overrides):
+    def exercise(self,**overrides):
         return m.coordinate(self.r,12_000,guard=overrides.get("guard",self.guard),
           source_check=overrides.get("source",self.source),
           probe=overrides.get("probe",self.probe),
           clock=lambda:self.now,wall=lambda:self.now)
     def test_three_actual_pts_and_guards(self):
-        record=self.run()
+        record=self.exercise()
         self.assertEqual(record["analysis_version"],m.ANALYSIS)
         self.assertEqual([s["time_ms"] for s in record["samples"]],
                          [2032,6032,10032])
@@ -66,44 +66,44 @@ class CoordinatorTests(unittest.TestCase):
             if count[0]==2:raise TimeoutError("offline")
             return receipt(r,at)
         with self.assertRaisesRegex(m.Deferred,"transport_interrupted"):
-            self.run(probe=bad)
+            self.exercise(probe=bad)
         self.assertEqual(count[0],2)
     def test_partial_invalid_timestamp_not_result(self):
         def bad(r,at,budget):
             return receipt(r,at,lambda z:z["sample"].update(
                 {"time_ms":at+1000}))
         with self.assertRaisesRegex(m.Deferred,"decoded_timestamp"):
-            self.run(probe=bad)
+            self.exercise(probe=bad)
     def test_fabricated_seek_time_not_result(self):
         def bad(r,at,budget):
             return receipt(r,at,lambda z:z["sample"].update(
                 {"pts_source":"unverified_retriever_seek"}))
-        with self.assertRaises(m.Deferred):self.run(probe=bad)
+        with self.assertRaises(m.Deferred):self.exercise(probe=bad)
     def test_wrong_original_refused(self):
         def bad(r,at,budget):
             return receipt(r,at,lambda z:z.update(source_revision=HEX("f")))
         with self.assertRaisesRegex(m.Revoked,"provenance_mismatch"):
-            self.run(probe=bad)
+            self.exercise(probe=bad)
     def test_priority_revoked_between_frames(self):
         n=[0]
         def source(r):
             n[0]+=1
             return n[0]<4
         with self.assertRaises(m.Revoked):
-            self.run(source=source)
+            self.exercise(source=source)
         self.assertEqual(len([e for e in self.events if isinstance(e,tuple)]),1)
     def test_lease_ends_before_third_frame(self):
         self.r["lease_until"]=1041
         with self.assertRaises(m.Deferred):
-            self.run()
+            self.exercise()
         self.assertEqual(len([e for e in self.events if isinstance(e,tuple)]),0)
     def test_thermal_guard_refuses_before_phone(self):
         def hot(r):raise m.Deferred("phone_thermal_exclusion")
-        with self.assertRaises(m.Deferred):self.run(guard=hot)
+        with self.assertRaises(m.Deferred):self.exercise(guard=hot)
         self.assertEqual(len([e for e in self.events if isinstance(e,tuple)]),0)
     def test_pending_queue_cannot_start(self):
         self.r["status"]="pending"
-        with self.assertRaises(m.Deferred):self.run()
+        with self.assertRaises(m.Deferred):self.exercise()
     def test_all_sample_times_unique_and_in_bounds(self):
         self.assertEqual(m.sample_times(12000),[2000,6000,10000])
         for duration in (1,300001):
@@ -112,13 +112,13 @@ class CoordinatorTests(unittest.TestCase):
         def unsafe(r,at,budget):
             return receipt(r,at,lambda z:z.update(
                 automatic_person_assignments=1))
-        with self.assertRaises(m.Revoked):self.run(probe=unsafe)
+        with self.assertRaises(m.Revoked):self.exercise(probe=unsafe)
     def test_source_changed_final_guard(self):
         count=[0]
         def source(r):
             count[0]+=1
             return count[0]<7
-        with self.assertRaises(m.Revoked):self.run(source=source)
+        with self.assertRaises(m.Revoked):self.exercise(source=source)
         self.assertEqual(len([x for x in self.events if isinstance(x,tuple)]),3)
 
 if __name__=="__main__":unittest.main()
