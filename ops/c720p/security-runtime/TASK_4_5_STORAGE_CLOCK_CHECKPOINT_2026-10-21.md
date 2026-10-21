@@ -1,5 +1,5 @@
 # C720P Task #4 storage / Task #5 clock checkpoint
-Updated: 2026-10-21 06:19–06:40 Europe/Amsterdam (source and physical evidence from jobs)
+Updated: 2026-10-21, based on current repository checks and cited physical job timestamps (Europe/Amsterdam)
 Owner boundary: C720P host storage and NTP only. Preserve S9+ Camera2, 4K buffer, original videos/JPEGs, people/reviews, rollback material; do not own Save/Delete migration.
 
 ## Exact last independently observed live state
