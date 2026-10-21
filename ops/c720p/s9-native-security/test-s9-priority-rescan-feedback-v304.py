@@ -390,6 +390,47 @@ class QueueTest(unittest.TestCase):
   self.assertTrue(saved["source_sha256_bound_to_private_catalog_before_processing"])
   self.assertTrue(saved["human_review_required"])
 
+ def test_v361_revocation_rejects_and_never_completes_stale_source(self):
+  v.produce()
+  row=v.items()["rows"][0]
+  evidence={"clip_no":row["clip_no"],"duration_ms":18000,
+     "source_sha256":row["source_sha256"],"source_bytes":row["source_bytes"],
+     "source_revision":row["media_revision"],"model_sha256":v.MODEL_SHA,
+     "analysis_version":v.ANALYSIS,"samples":[
+        {"time_ms":t,"state":"decoded","original_resolution":[3840,2160],
+         "face_candidates":[]} for t in (3000,9000,15000)]}
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\\
+       patch.object(v,"evaluate_one",return_value=evidence),\\
+       patch.object(v,"consumer_visible",
+         side_effect=v.Refusal("anonymous_consumer_source_or_priority_revoked")):
+   result=v.work()
+  self.assertEqual(result["status"],"rejected")
+  self.assertFalse(result["consumer_visibility_confirmed"])
+  self.assertIsNone(v.items()["rows"][0]["outcome"])
+  self.assertEqual(v.items()["rows"][0]["last_reason"],
+                   "anonymous_consumer_source_or_priority_revoked")
+  self.assertEqual(v.produce()["new_admissions"],0)
+
+ def test_v361_unavailable_defers_without_spending_retry_or_authorizing_person(self):
+  v.produce()
+  row=v.items()["rows"][0]
+  evidence={"clip_no":row["clip_no"],"duration_ms":18000,
+     "source_sha256":row["source_sha256"],"source_bytes":row["source_bytes"],
+     "source_revision":row["media_revision"],"model_sha256":v.MODEL_SHA,
+     "analysis_version":v.ANALYSIS,"samples":[
+        {"time_ms":t,"state":"decoded","original_resolution":[3840,2160],
+         "face_candidates":[]} for t in (3000,9000,15000)]}
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\\
+       patch.object(v,"evaluate_one",return_value=evidence),\\
+       patch.object(v,"consumer_visible",
+         side_effect=v.Refusal("anonymous_consumer_revalidation_unavailable")):
+   result=v.work()
+  self.assertEqual(result["status"],"pending")
+  self.assertFalse(result["consumer_visibility_confirmed"])
+  self.assertEqual(v.items()["rows"][0]["attempts"],0)
+  self.assertEqual(v.items()["rows"][0]["deferrals"],1)
+  self.assertIsNone(v.items()["rows"][0]["outcome"])
+
  def test_live_consumer_without_attestation_defers_without_burning_retry(self):
   v.produce()
   with patch.object(v,"camera_guard",return_value={"ok":True}),\
