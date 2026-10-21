@@ -7,7 +7,6 @@ import ai.onnxruntime.OrtSession;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.media.MediaMetadataRetriever;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.InputStream;
@@ -180,22 +179,27 @@ public final class S9Original4KGapAuditV370 {
     need(!Files.isSymbolicLink(modelFile)&&Files.isRegularFile(modelFile)
          &&Files.size(modelFile)>100_000&&Files.size(modelFile)<512_000
          &&sha(modelFile).equals(MODEL_SHA),"yunet_model_provenance_invalid");
-    MediaMetadataRetriever video=new MediaMetadataRetriever();
-    Bitmap frame=null;
+    S9Original4KTimedDecoderV371.Frame decoded=
+        S9Original4KTimedDecoderV371.decode(source,requestedMs,deadline);
+    Bitmap frame=decoded.image;
     JSONArray candidates;
-    long duration;
+    long duration=decoded.durationMs,actualPts=decoded.actualPtsMs;
     try {
-      video.setDataSource(source.toString());
-      duration=Long.parseLong(
-          video.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
-      need(duration>=3000&&duration<=300000
-           &&requestedMs>=0&&requestedMs<duration,
-           "requested_sample_not_within_recording");
-      frame=video.getFrameAtTime(requestedMs*1000L,
-          MediaMetadataRetriever.OPTION_CLOSEST);
       need(frame!=null&&frame.getWidth()==FRAME_W
            &&frame.getHeight()==FRAME_H,"not_original_3840x2160_decoded_frame");
       need(System.nanoTime()<deadline,"bounded_phone_decode_deadline");
+      OrtEnvironment env=OrtEnvironment.getEnvironment("s9-source-4k-v371");
+      try(OrtSession.SessionOptions options=new OrtSession.SessionOptions()) {
+        options.setIntraOpNumThreads(1);
+        options.setInterOpNumThreads(1);
+        try(OrtSession session=env.createSession(MODEL,options)) {
+          candidates=detect(env,session,frame,deadline);
+        }
+      }
+    } finally {
+      if(frame!=null)frame.recycle();
+    }
+    need(System.nanoTime()<deadline,"bounded_phone_decode_deadline");
       OrtEnvironment env=OrtEnvironment.getEnvironment("s9-source-4k-v370");
       try(OrtSession.SessionOptions options=new OrtSession.SessionOptions()) {
         options.setIntraOpNumThreads(1);
@@ -223,11 +227,14 @@ public final class S9Original4KGapAuditV370 {
       .put("model_sha256",MODEL_SHA)
       .put("duration_ms",duration)
       .put("sample",new JSONObject()
-        .put("time_ms",requestedMs)
+        .put("time_ms",actualPts)
+        .put("requested_time_ms",requestedMs)
+        .put("decoded_pts_verified",true)
+        .put("pts_source","mediacodec_output_buffer_info")
         .put("state","decoded")
         .put("original_resolution",new JSONArray().put(FRAME_W).put(FRAME_H))
         .put("face_candidates",candidates))
-      .put("frame_requested_not_actual_pts",true)
+      .put("frame_requested_not_actual_pts",false)
       .put("one_frame_only",true)
       .put("host_attestation_required",true)
       .put("eligible_to_publish",false)
