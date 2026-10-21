@@ -1354,6 +1354,60 @@ function renderClothing(){
   body.append(actions);card.append(media,body);host.append(card);
  }
 }
+// Forward-only optional V320 bridge. Never show ranked review controls without
+// a signed original-open attestor installed by the authenticated player.
+// Does not modify existing Save/Delete or global Reject behavior.
+function renderVerifiedFolderSuggestions(){
+ const host=$('folderRankedCards');
+ if(!host)return;
+ const signed=window.S9SignedOriginalReview;
+ const available=state.pane==='folder'&&state.tab==='suggestions'&&
+  typeof signed?.openAndAttest==='function'&&
+  typeof window.FolderSuggestionCards?.connect==='function';
+ host.hidden=!available;
+ host.replaceChildren();
+ if(!available)return;
+ const personId=state.folder;
+ const view=control('Load verified appearance suggestions',async()=>{
+  if(!window.S9SignedOriginalReview?.openAndAttest){
+   alertText('Original playback attestor unavailable; existing manual review is unchanged.');
+   return;
+  }
+  host.replaceChildren(elt('p','Loading verified, human-review-only suggestions…'));
+  try{
+   await window.FolderSuggestionCards.connect(host,{
+    relay:relay(),folderId:personId,showProvisional:true,
+    onOpen:async row=>{
+     const clip=state.archiveEntries.find(x=>assignmentKey(x)===row.source_qualified_clip_id);
+     if(!clip)return {verified:false};
+     const hook=window.S9SignedOriginalReview;
+     if(typeof hook?.openAndAttest!=='function')return {verified:false};
+     // Only authenticated original playback can mint a session-bound ticket.
+     return hook.openAndAttest(row,()=>startVideo(clip));
+    },
+    onClusterOpen:async (group,key)=>{
+     const clip=state.archiveEntries.find(x=>assignmentKey(x)===key);
+     if(clip)startVideo(clip);
+     else openReview('inbox');
+    },
+    onClusterName:async group=>{
+     // Naming is human-driven; no candidate recordings are auto-assigned.
+     openFolderEditor('create');
+     const notes=$('folderNotes');
+     if(notes)notes.value=('Provisional appearance review. Review each original before filing: '+
+      (group.source_qualified_clips||[]).slice(0,7).join(', ')).slice(0,1900);
+    },
+    onSaved:()=>{if(state.pane==='folder'&&state.folder===personId)loadView();}
+   });
+  }catch(_){
+   host.replaceChildren(elt('p',
+     'Verified review currently unavailable. Existing manual review is unchanged.'));
+  }
+ },'secondary');
+ host.append(view,elt('p',
+  'Appearance similarity only; no identity probability or automatic filing. Inspect the original to unlock each decision.'));
+}
+
 function renderFolder(){
  const f=actualFolder();
  if(!f){alertText('This person is no longer available');return}
@@ -1367,6 +1421,7 @@ function renderFolder(){
  $('folderRecheckOnly').checked=state.recheckOnly;
  $('folderMode').value=state.tab;
  const suggestions=state.tab==='suggestions';
+ renderVerifiedFolderSuggestions();
  for(const id of ['distanceLabel','weakLabel','routeLabel'])$(id).hidden=!suggestions;
  const context=$('folderContext');context.hidden=!f.automatic_appearance_group;
  $('folderContextText').textContent='Provisional clothing match. These recordings must be reviewed separately; this folder is NOT an automatically identified person.';
