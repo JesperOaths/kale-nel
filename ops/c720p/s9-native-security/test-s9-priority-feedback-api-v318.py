@@ -74,6 +74,9 @@ class Feedback(unittest.TestCase):
   code=SOURCE.read_text()
   self.assertIn("report['priority_rescan_feedback'] = priority_rescan_feedback()",code)
   self.assertNotIn("report['priority_rescan_feedback'] = doc",code)
-  self.assertIn("handler.js(200, dict(report, ok=True))",code)
+  self.assertIn("handler.js(200, dict(report, ok=True,",code)
+  self.assertIn("gap_reader_contract=GAP_READER_HTTP_CONTRACT",code)
+  self.assertEqual(m.GAP_READER_HTTP_CONTRACT,
+                   "s9_source_current_priority_reader_v369")
 
 if __name__=="__main__":unittest.main(verbosity=2)
