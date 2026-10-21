@@ -68,6 +68,15 @@ jobs:
           test -f "$folder/classes/nl/kalenel/s9offline/S9OnnxRuntimeWorker.class"
           echo 'S9_OFFLINE_ONNX_JAVA_API_COMPILE_PASS'
 
+      - name: Synthetic-only phone orchestration and V304 queue fairness
+        shell: bash
+        run: |
+          set -euo pipefail
+          area='ops/c720p/s9-native-security/offline-worker'
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/test-s9-phone-gap-coordinator-v371.py" -q
+          PYTHONDONTWRITEBYTECODE=1 python3 ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py -q
+          python3 -m py_compile "$area/s9_phone_gap_coordinator_v371.py" "$area/s9_phone_gap_runner_v371.py" ops/c720p/s9-native-security/s9_priority_rescan_feedback_v304.py
+          echo 'S9_PHONE_GAP_SOURCE_ONLY_SYNTHETIC_PASS'
       - name: Compile source-only phone-first original-4K probe (never run Android/inference)
         shell: bash
         run: |
@@ -84,6 +93,7 @@ jobs:
             "$area/PhoneYuNetLandmarkDecoder.java" \
             "$area/S9YuNetNativeQualityDecoderV370.java" \
             "$area/S9YuNetNativeQualityDecoderV370Test.java" \
+            "$area/S9Original4KTimedDecoderV371.java" \
             "$area/S9Original4KGapAuditV370.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
