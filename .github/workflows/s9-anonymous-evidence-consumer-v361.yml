@@ -1,0 +1,28 @@
+name: S9 anonymous evidence downstream consumer V361
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_anonymous_evidence_consumer_v361.py'
+      - 'ops/c720p/s9-native-security/test-s9-anonymous-evidence-consumer-v361.py'
+      - '.github/workflows/s9-anonymous-evidence-consumer-v361.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_anonymous_evidence_consumer_v361.py'
+      - 'ops/c720p/s9-native-security/test-s9-anonymous-evidence-consumer-v361.py'
+      - '.github/workflows/s9-anonymous-evidence-consumer-v361.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: No video, identity, or hub execution
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_anonymous_evidence_consumer_v361.py
+          python3 ops/c720p/s9-native-security/test-s9-anonymous-evidence-consumer-v361.py
+          PYTHONHASHSEED=13 python3 ops/c720p/s9-native-security/test-s9-anonymous-evidence-consumer-v361.py
+          echo TASK9_V361_SOURCE_ONLY_NO_HUB_MEDIA_OR_REVIEWS
