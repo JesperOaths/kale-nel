@@ -1,0 +1,31 @@
+name: Task21 future source-bound original SD Drive digest attestor V252
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_manual_original_byte_attestor_v252.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-manual-original-byte-attestor-v252.py'
+      - '.github/workflows/task21-original-byte-attestor-v252.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_manual_original_byte_attestor_v252.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-manual-original-byte-attestor-v252.py'
+      - '.github/workflows/task21-original-byte-attestor-v252.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Trusted byte source, revision and historical integrity contracts
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-person-ml-v1
+          python3 -m py_compile "$d/s9_manual_original_byte_attestor_v252.py"
+          python3 "$d/test-s9-manual-original-byte-attestor-v252.py"
+          python3 "$d/test-s9-manual-media-digest-binding-v1.py"
+          python3 ops/c720p/s9-native-security/test-manual-recording-links-v1.py
+          python3 ops/c720p/security-runtime/test-audit-task21-original-revision-v247.py
+          echo TASK21_V252_ORIGINAL_ATTESTOR_HOST_ONLY_NO_REVIEW_WRITES
