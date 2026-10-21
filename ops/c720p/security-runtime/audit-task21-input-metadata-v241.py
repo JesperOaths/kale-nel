@@ -6,6 +6,7 @@ user permissions or decision state. Names only logical roles, not host paths.
 """
 import argparse
 import json
+import os
 import stat
 from pathlib import Path
 
@@ -22,6 +23,10 @@ def classify(path,limit,private):
  out={"exists":False,"regular":False,"symlink":False,
       "single_link":False,"size_bounded":False,
       "permissions_admissible":False,"owner_readable":False,
+      "file_owned_by_current_agent":False,
+      "group_writable":False,"world_writable":False,
+      "parent_owned_by_current_agent":False,
+      "parent_not_group_world_writable":False,
       "identity_stable":False,"reason":"missing"}
  try:
   st=path.lstat()
@@ -29,6 +34,14 @@ def classify(path,limit,private):
  except OSError:
   out["reason"]="metadata_unavailable";return out
  out["exists"]=True
+ out["file_owned_by_current_agent"]=st.st_uid==os.geteuid()
+ out["group_writable"]=bool(st.st_mode&stat.S_IWGRP)
+ out["world_writable"]=bool(st.st_mode&stat.S_IWOTH)
+ try:
+  parent=path.parent.stat()
+  out["parent_owned_by_current_agent"]=parent.st_uid==os.geteuid()
+  out["parent_not_group_world_writable"]=(parent.st_mode&0o022)==0
+ except OSError:pass
  out["symlink"]=stat.S_ISLNK(st.st_mode)
  out["regular"]=stat.S_ISREG(st.st_mode)
  out["single_link"]=st.st_nlink==1
