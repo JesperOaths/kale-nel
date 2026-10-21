@@ -1,0 +1,36 @@
+name: C720P root-only cleanup contract V253 (offline only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/reclaim-audited-disposable-20261014.py'
+      - 'ops/c720p/c720p-disposable-contract-v2.py'
+      - 'ops/c720p/security-runtime/TASK_4_5_STORAGE_CLOCK_CHECKPOINT_2026-10-21.md'
+      - '.github/workflows/c720p-root-only-reclaim-contract-v253.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/c720p-root-only-reclaim-contract-v253.yml'
+permissions:
+  contents: read
+jobs:
+  no-live-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate cross-mount refusal and original footage exclusions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/reclaim-audited-disposable-20261014.py
+          python3 ops/c720p/c720p-disposable-contract-v2.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('ops/c720p/reclaim-audited-disposable-20261014.py').read_text()
+          assert 'if not same_root_filesystem(path):return False' in s
+          assert 'original.st_dev==root_device' in s
+          assert 'root_not_available' not in s
+          for item in ('docker system prune','/opt/homeassistant/config/www/frontyard-security-new/clips', 'sudo -S'):
+              assert item not in s, item
+          print('C720P_DISPOSABLE_V253_OFFLINE_SAFE')
+          PY
