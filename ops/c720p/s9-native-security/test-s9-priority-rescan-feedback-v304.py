@@ -68,7 +68,7 @@ class QueueTest(unittest.TestCase):
   result=v.produce()
   self.assertEqual(result["retired_with_provenance"],1)
   self.assertEqual(result["new_admissions"],1)
-  archived=v.RETIRED/(old["id"]+".json")
+  archived=v.retired_dir()/(old["id"]+".json")
   self.assertTrue(archived.is_file())
   self.assertEqual(archived.stat().st_mode & 0o077,0)
   saved=json.loads(archived.read_text())
