@@ -1,0 +1,85 @@
+name: Task21 authorized Drive uploader config narrow metadata repair V251
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/tighten-task21-drive-config-mode-v251.py'
+      - 'ops/c720p/security-runtime/test-tighten-task21-drive-config-mode-v251.py'
+      - '.github/workflows/task21-drive-config-narrow-mode-v251.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/tighten-task21-drive-config-mode-v251.py'
+      - 'ops/c720p/security-runtime/test-tighten-task21-drive-config-mode-v251.py'
+      - '.github/workflows/task21-drive-config-narrow-mode-v251.yml'
+permissions:
+  contents: read
+concurrency:
+  group: task21-drive-config-mode-v251
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Zero config bytes and only fchmod group-write
+        run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/tighten-task21-drive-config-mode-v251.py"
+          python3 "$d/test-tighten-task21-drive-config-mode-v251.py"
+          python3 "$d/test-audit-task21-original-revision-v247.py"
+          python3 "$d/test-audit-manual-digest-coverage-task21.py"
+  physical:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Restore trusted narrow service config file metadata and retry read-only SD and Drive revision inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          stage="/tmp/task21-config-v251-${GITHUB_SHA:0:12}"
+          cmd="umask 077 && install -d -m 700 '$stage'"
+          for file in \
+            ops/c720p/security-runtime/tighten-task21-drive-config-mode-v251.py \
+            ops/c720p/security-runtime/audit-task21-original-revision-v247.py; do
+            hash="$(sha256sum "$file" | cut -d' ' -f1)"
+            dest="$stage/$(basename "$file")"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+            cmd="$cmd && curl -fsSL --max-time 40 '$url' -o '$dest' && printf '%s  %s\\n' '$hash' '$dest' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/tighten-task21-drive-config-mode-v251.py' --apply && /usr/bin/python3 '$stage/audit-task21-original-revision-v247.py' --run"
+          idem="task21-config-v251-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task21-v251','deployment',:'cmd',300,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "TASK21_CONFIG_V251_JOB=$job"
+          for i in $(seq 1 95); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 6000)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'TASK21_DRIVE_SERVICE_CONFIG_V251_VERIFIED' <<< "$output"
+              grep -q '"no_config_contents_read": true' <<< "$output"
+              grep -q '"no_review_or_original_media_changes": true' <<< "$output"
+              grep -q '"result_mode_safe": true' <<< "$output"
+              grep -q 'TASK21_SOURCE_REVISION_CAPABILITIES_V247' <<< "$output"
+              grep -q '"media_bytes_read": 0' <<< "$output"
+              grep -q '"review_decisions_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Task21 config mode or revision capability not verified";exit 1
