@@ -14,8 +14,12 @@ class Safety(unittest.TestCase):
    p.chmod(0o644)
    self.assertEqual(m.classify(p,4000,True)["reason"],"mode_not_admitted")
    self.assertEqual(m.classify(p,4000,False)["reason"],"eligible_metadata")
+   self.assertTrue(m.classify(p,4000,False)["file_owned_by_current_agent"])
    p.chmod(0o666)
-   self.assertEqual(m.classify(p,4000,False)["reason"],"mode_not_admitted")
+   verdict=m.classify(p,4000,False)
+   self.assertEqual(verdict["reason"],"mode_not_admitted")
+   self.assertTrue(verdict["group_writable"])
+   self.assertTrue(verdict["world_writable"])
    alias=Path(d)/"alias";alias.symlink_to(p)
    self.assertEqual(m.classify(alias,4000,False)["reason"],"symlink")
  def test_no_file_contents_or_mutators(self):
