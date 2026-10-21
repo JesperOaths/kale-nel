@@ -39,6 +39,10 @@ SECONDARY=HOME/"state/s9-evidence-quality-v1/original-gap-benchmark.json"
 ARCHIVE=HOME/"state/s9-standalone-archive-catalog-v1.json"
 EVIDENCE=HOME/"bin/s9_evidence_quality_v1.py"
 ANONYMOUS_CONSUMER=HOME/"bin/s9_anonymous_evidence_consumer_v361.py"
+# An opt-in manifest is deliberately ABSENT in the deployed interim release.
+PHONE_RELEASE=STATE/"phone-first-release-v371.json"
+PHONE_RUNNER=HOME/"bin/s9_phone_gap_runner_v371.py"
+PHONE_COORDINATOR=HOME/"bin/s9_phone_gap_coordinator_v371.py"
 SCAN=HOME/"bin/rescan-original4k-face-gaps-v1.py"
 CAMERA="http://127.0.0.1:18808/status"
 CROSS_LOCK=HOME/"state/s9-v3-archive-backfill.lock"
@@ -440,6 +444,22 @@ def evaluate_one(row):
           cat["bytes"]==row["source_bytes"] and
           cat["version"]==row["media_revision"],
           "source_changed_during_rescan")
+    # Phone-first is an explicitly approved CUTOVER of this SAME executor.
+    # No new worker/timer exists; locks/lease/publication stay V304-owned.
+    if PHONE_RELEASE.exists() or PHONE_RELEASE.is_symlink():
+        check(PHONE_RUNNER.is_file() and not PHONE_RUNNER.is_symlink() and
+              PHONE_COORDINATOR.is_file() and not PHONE_COORDINATOR.is_symlink(),
+              "phone_first_runtime_not_installed")
+        runner=load_module(PHONE_RUNNER,"s9_phone_gap_runner_v371")
+        try:
+            return runner.run(row,target,worker=__import__('types').SimpleNamespace(
+                       camera_guard=camera_guard,source=source,
+                       NATIVE=NATIVE,MODEL_SHA=MODEL_SHA),quality=q,
+                              release_path=PHONE_RELEASE)
+        except runner.frames.Revoked:
+            raise Refusal("original_no_longer_eligible") from None
+        except runner.frames.Deferred:
+            raise Refusal("phone_first_recoverable_deferred") from None
     screen=q.FaceScreen(MODEL)
     sample=[]
     try:
@@ -700,6 +720,18 @@ def work():
               100<ANONYMOUS_CONSUMER.stat().st_size<100000,
               "anonymous_consumer_unavailable_before_scan")
         camera_guard()
+        # Fail closed BEFORE lease mutation if a phone-first opt-in was
+        # provisioned incorrectly. Never fall back to C720P after opt-in.
+        if PHONE_RELEASE.exists() or PHONE_RELEASE.is_symlink():
+            check(PHONE_RUNNER.is_file() and not PHONE_RUNNER.is_symlink() and
+                  PHONE_COORDINATOR.is_file() and not PHONE_COORDINATOR.is_symlink(),
+                  "phone_first_runtime_not_installed")
+            runner=load_module(PHONE_RUNNER,"s9_phone_gap_runner_v371")
+            cfg=runner.policy(PHONE_RELEASE)
+            check(hashlib.sha256(PHONE_RUNNER.read_bytes()).hexdigest()==
+                  cfg["runner_sha256"] and
+                  hashlib.sha256(PHONE_COORDINATOR.read_bytes()).hexdigest()==
+                  cfg["coordinator_sha256"],"phone_first_source_hash_not_approved")
         candidate["status"]="processing";candidate["attempts"]+=1
         candidate["lease_until"]=now()+240
         candidate["last_reason"]="bounded_original_4k_rescan_started"
@@ -735,7 +767,8 @@ def work():
                             "secondary_consumer_not_reading_current_report",
                             "anonymous_consumer_revalidation_unavailable",
                             "anonymous_consumer_model_or_schema_mismatch",
-                            "approved_worker_unavailable")
+                            "approved_worker_unavailable",
+                            "phone_first_recoverable_deferred")
                   or isinstance(err,(urllib.error.URLError,TimeoutError,ConnectionError))):
                 candidate["status"]="pending";candidate["attempts"]-=1
                 candidate["deferrals"]=candidate.get("deferrals",0)+1
