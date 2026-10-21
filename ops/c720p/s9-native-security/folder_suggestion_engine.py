@@ -49,8 +49,8 @@ def unit(values: Any, *, dimension: int = DIM) -> tuple[float, ...] | None:
 def histogram(values: Any) -> tuple[float, ...] | None:
     if values is None:
         return None
-    if not isinstance(values, (list, tuple)) or len(values) not in (32, 48):
-        raise ValueError("Expected 32- or 48-bin pairwise-comparable histogram")
+    if not isinstance(values, (list, tuple)) or len(values) != 32:
+        raise ValueError("Expected 32-bin pairwise-comparable HSV histogram")
     try:
         nums = tuple(float(v) for v in values)
     except (ValueError, TypeError, OverflowError) as exc:
