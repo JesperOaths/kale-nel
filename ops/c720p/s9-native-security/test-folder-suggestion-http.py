@@ -119,7 +119,6 @@ class ApiHttpAcceptance(unittest.TestCase):
         uri = self.root + path
         options = {
             "url": uri,
-            "timeout": 3,
             "headers": headers or {},
         }
         if body is not None:
@@ -128,7 +127,7 @@ class ApiHttpAcceptance(unittest.TestCase):
         if method:
             options["method"] = method
         try:
-            with urlopen(Request(**options)) as response:
+            with urlopen(Request(**options), timeout=3) as response:
                 return response.status, json.loads(response.read())
         except HTTPError as error:
             return error.code, json.loads(error.read())
