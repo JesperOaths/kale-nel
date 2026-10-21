@@ -1,0 +1,56 @@
+name: S9 migrated Android owner-read V235
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedAndroidOwnerReadGatewayV235.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-migrated-owner-read-v235.py'
+      - '.github/workflows/s9-migrated-owner-read-v235.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9MigratedAndroidOwnerReadGatewayV235.java'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-migrated-owner-read-v235.py'
+      - '.github/workflows/s9-migrated-owner-read-v235.yml'
+permissions:
+  contents: read
+jobs:
+  compile_real_android_api_and_synthetic_read_state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Check owner trust and no exported component/source mutation
+        run: python3 ops/c720p/s9-native-security/offline-worker/test-s9-migrated-owner-read-v235.py
+      - name: Compile actual SDK Android-context gateway with 20 source-pinned Java classes
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDK_JAR="$(find "$SDK_ROOT/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$SDK_JAR"
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+          mkdir -p "$WORK/classes"
+          SRC=ops/c720p/s9-native-security/offline-worker
+          mapfile -t DEPS < <(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('ops/c720p/s9-native-security')
+          pins=json.loads((root/'migrated-companion-v233/source-pins.json').read_text())
+          assert pins['revision']=='f3d5c00006d5147f1cff08e02c70c367e81533bb'
+          assert len(pins['files'])==20
+          for row in pins['files']:
+              print(root/'offline-worker'/(row['name']+'.java'))
+          PY
+          )
+          javac -source 8 -target 8 -cp "$SDK_JAR" -d "$WORK/classes" \
+            "${DEPS[@]}" \
+            "$SRC/S9MigratedAndroidOwnerReadGatewayV235.java" \
+            "$SRC/S9MigratedReadOnlyStateTestV225.java"
+          test -s "$WORK/classes/nl/kalenel/s9offline/S9MigratedAndroidOwnerReadGatewayV235.class"
+          java -cp "$WORK/classes" nl.kalenel.s9offline.S9MigratedReadOnlyStateTestV225
+          echo "S9_V235_ANDROID_REAL_SDK_COMPILE_AND_V225_JOURNAL_SYNTHETIC_PASS"
