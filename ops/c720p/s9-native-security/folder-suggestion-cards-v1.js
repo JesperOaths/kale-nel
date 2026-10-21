@@ -51,7 +51,7 @@
         if (note) note.textContent = error && error.message ?
           error.message : 'Review action failed. No decision recorded.';
       }
-      finally { button.disabled = false; }
+      finally { if (!button.__persistentlyDisabled) button.disabled = false; }
     });
     return button;
   }
@@ -96,6 +96,8 @@
           throw Error('Approval not verified as saved. Refresh before retrying.');
         }
         message.textContent = 'Approved and persisted; refresh ranked suggestions.';
+        approve.__persistentlyDisabled = true;
+        reject.__persistentlyDisabled = true;
         approve.disabled = true;
         reject.disabled = true;
         if (typeof hooks.onSaved === 'function') hooks.onSaved(result);
@@ -107,6 +109,8 @@
           throw Error('Folder-specific exclusion not verified as saved.');
         }
         message.textContent = 'Rejected for this folder; original retained.';
+        approve.__persistentlyDisabled = true;
+        reject.__persistentlyDisabled = true;
         approve.disabled = true;
         reject.disabled = true;
         if (typeof hooks.onSaved === 'function') hooks.onSaved(result);
