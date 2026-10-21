@@ -1,0 +1,40 @@
+name: Security Hub V31 status semantics (validation only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-hub-v31.js'
+      - 'ops/c720p/s9-native-security/test-security-hub-v31-status.cjs'
+      - '.github/workflows/security-hub-v31-status-test.yml'
+permissions:
+  contents: read
+jobs:
+  test-status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify read-only status candidate is valid JS
+        run: node --check ops/c720p/s9-native-security/security-hub-v31.js
+      - name: Verify critical, stale and unsupported health states
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-status.cjs
+      - name: Verify actual read-only status renderer warnings
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-render.cjs
+      - name: Downgrade expired and future-dated private health reports
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-freshness.cjs
+      - name: Preserve last known full disk as stale after refresh fails
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-transport.cjs
+      - name: Verify live aggregate contract rejects stale or impossible disk measurements
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-contract.cjs
+      - name: Preserve V30 navigation, relay and visibility recovery behavior
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-route-parity.cjs
+      - name: Refuse direct V31 auto activation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('.github/workflows/security-hub-v31-status-test.yml').read_text()
+          import re
+          assert re.search(r'^  test-status:',source,re.M)
+          assert not re.search(r'^  deploy:',source,re.M)
+          assert not re.search(r'^\s*workflow_dispatch:',source,re.M)
+          print('V31_STATUS_CHECK_ONLY')
+          PY
