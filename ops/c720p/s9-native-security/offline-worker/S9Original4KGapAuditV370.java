@@ -199,19 +199,6 @@ public final class S9Original4KGapAuditV370 {
     } finally {
       if(frame!=null)frame.recycle();
     }
-    need(System.nanoTime()<deadline,"bounded_phone_decode_deadline");
-      OrtEnvironment env=OrtEnvironment.getEnvironment("s9-source-4k-v370");
-      try(OrtSession.SessionOptions options=new OrtSession.SessionOptions()) {
-        options.setIntraOpNumThreads(1);
-        options.setInterOpNumThreads(1);
-        try(OrtSession session=env.createSession(MODEL,options)) {
-          candidates=detect(env,session,frame,deadline);
-        }
-      }
-    } finally {
-      if(frame!=null)frame.recycle();
-      video.release();
-    }
     need(System.nanoTime()<deadline,"bounded_phone_inference_deadline");
     // Source recheck is mandatory. Host must ALSO recheck live catalog,
     // priority, queue, 4K health, thermals and writer model before publishing.
