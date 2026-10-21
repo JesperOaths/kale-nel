@@ -32,7 +32,7 @@ class AutoPersonReviewTests(unittest.TestCase):
   entries=[]
   for pos,id in enumerate(self.reference_ids):
    entries.append({"id":id,"folder":FOLDER,"source_name":self.reference_names[pos],
-      "original_sha256":SHA,"human_decision_sha256":"f"*64,
+      "original_sha256":chr(ord("a")+pos)*64,"human_decision_sha256":"f"*64,
       "model_sha256":model,"human_approved":True,
       "aligned_face":True,"quality_passed":True,"active":id not in revoked})
   mod.REFERENCES.write_text(json.dumps({
@@ -123,6 +123,29 @@ class AutoPersonReviewTests(unittest.TestCase):
   mod.REFERENCES.write_text(json.dumps(registry))
   self.assertEqual(mod.report(self.sd,self.links)["items"],[])
   self.assertEqual(mod.proposals(self.links)[1],"ready")
+
+ def test_same_original_bytes_under_two_filenames_cannot_count_twice(self):
+  self.write()
+  self.assertEqual(len(mod.report(self.sd,self.links)["items"]),1)
+  registry=json.loads(mod.REFERENCES.read_text())
+  self.assertNotEqual(registry["references"][0]["original_sha256"],
+                      registry["references"][1]["original_sha256"])
+  registry["references"][1]["original_sha256"]=registry["references"][0]["original_sha256"]
+  mod.REFERENCES.write_text(json.dumps(registry))
+  self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+  self.assertEqual(mod.proposals(self.links)[1],"ready")
+  self.assertFalse(mod.REJECTED.exists())
+
+ def test_target_clip_cannot_act_as_its_own_identity_reference(self):
+  self.write()
+  registry=json.loads(mod.REFERENCES.read_text())
+  registry["references"][0]["source_name"]=CLIP
+  mod.REFERENCES.write_text(json.dumps(registry))
+  self.links["sd:"+CLIP]={"folder":FOLDER,"folders":[FOLDER],"review_status":"assigned"}
+  rows,status=mod.proposals(self.links)
+  self.assertEqual(status,"ready")
+  self.assertEqual(rows,[])
+  self.assertFalse(mod.REJECTED.exists())
 
  def test_latest_manual_skip_or_group_revokes_source_reference(self):
   self.write()
