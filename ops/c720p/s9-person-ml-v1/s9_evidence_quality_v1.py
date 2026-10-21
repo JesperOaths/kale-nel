@@ -341,6 +341,117 @@ def priority_rescan_feedback():
     except (OSError, ValueError, TypeError, KeyError):
         return dict(empty, state='queue_unavailable')
 
+
+# The archive source can change while derivative reports remain on disk.
+# NEVER serve a previous source-revision's anonymous face observation merely
+# because an MP4 with the same filename still appears in the live index.
+PRIORITY_CATALOG = ROOT / 'state/s9-standalone-archive-catalog-v1.json'
+GAP_ANALYSIS = 's9_original4k_independent_gap_benchmark_v1'
+
+
+def source_current_gap_report(gap, current):
+    """Fail-closed admission/consumption/revocation of SECONDARY evidence.
+
+    Called only by the authenticated evidence reader. The authoritative
+    stand-alone microSD catalogue binds each row to original media bytes
+    and revision; the private durable queue controls lifecycle. A processing
+    row remains readable so the worker can confirm downstream consumption
+    BEFORE transitioning its queue entry to completed. Pending, revoked,
+    rejected, blocked and dead-letter results cannot be consumed.
+    No identity association or change to the phone/native catalogue occurs.
+    """
+    if not isinstance(gap, dict) or gap.get('analysis_version') != GAP_ANALYSIS:
+        raise ValueError('untrusted_original_gap_analysis')
+    if gap.get('detector_model_sha256') != MODEL_SHA:
+        raise ValueError('untrusted_original_gap_detector_model')
+    if not isinstance(gap.get('recordings'), list) or len(gap['recordings']) > 300:
+        raise ValueError('untrusted_original_gap_rows')
+    if not isinstance(current, dict):
+        raise ValueError('live_catalogue_not_available')
+    for path, limit in ((PRIORITY_CATALOG, 8000000), (PRIORITY_QUEUE, 4000000)):
+        if (not path.is_file() or path.is_symlink() or
+                not 20 < path.stat().st_size < limit):
+            raise ValueError('source_attestation_file_unavailable')
+    catalog = json.loads(PRIORITY_CATALOG.read_text())
+    queue = json.loads(PRIORITY_QUEUE.read_text())
+    if (catalog.get('schema_version') != 's9_native_archive_catalog_v1' or
+        not DIGEST.fullmatch(str(catalog.get('snapshot_id', ''))) or
+        not isinstance(catalog.get('records'), dict) or
+        queue.get('schema') != 's9_priority_rescan_feedback_v304' or
+        type(queue.get('revision')) is not int or queue['revision'] < 0 or
+        not isinstance(queue.get('rows'), list) or len(queue['rows']) > 340):
+        raise ValueError('source_attestation_schema_unavailable')
+    by_clip = {}
+    for row in queue['rows']:
+        if not isinstance(row, dict):
+            raise ValueError('untrusted_queue_row')
+        if row.get('status') not in ('processing', 'completed'):
+            continue
+        if (row.get('model_sha256') != MODEL_SHA or
+            row.get('required_analysis') != GAP_ANALYSIS or
+            not isinstance(row.get('clip_no'), str) or
+            not CLIP.fullmatch(row['clip_no']) or
+            not DIGEST.fullmatch(str(row.get('source_sha256', ''))) or
+            not DIGEST.fullmatch(str(row.get('media_revision', ''))) or
+            not integer(row.get('source_bytes'), 100001, 799999999)):
+            raise ValueError('untrusted_active_queue_source')
+        if row['status'] == 'completed' and (
+                not isinstance(row.get('outcome'), dict) or
+                row['outcome'].get('verified_secondary_report') is not True or
+                row['outcome'].get('consumer_visibility_confirmed') is not True or
+                row['outcome'].get('model_sha256') != MODEL_SHA):
+            continue
+        by_clip.setdefault(row['clip_no'], []).append(row)
+    visible = []
+    seen = set()
+    for item in gap['recordings']:
+        if not isinstance(item, dict):
+            continue
+        name = item.get('clip_no')
+        if not isinstance(name, str) or not CLIP.fullmatch(name) or name in seen:
+            continue
+        seen.add(name)
+        if name not in current:
+            continue
+        record = catalog['records'].get(name)
+        meta = record.get('manifest') if isinstance(record, dict) else None
+        if not isinstance(meta, dict):
+            continue
+        sha = item.get('source_sha256')
+        version = item.get('source_revision')
+        bytes_count = item.get('source_bytes')
+        if (not isinstance(sha, str) or not DIGEST.fullmatch(sha) or
+            not isinstance(version, str) or not DIGEST.fullmatch(version) or
+            not integer(bytes_count, 100001, 799999999) or
+            item.get('model_sha256') != MODEL_SHA or
+            item.get('analysis_version') != GAP_ANALYSIS or
+            meta.get('name') != name or meta.get('sha256') != sha or
+            meta.get('bytes') != bytes_count or
+            meta.get('width') != 3840 or meta.get('height') != 2160 or
+            record.get('bytes') != bytes_count or
+            record.get('version') != version):
+            continue
+        samples = item.get('samples')
+        if (not isinstance(samples, list) or len(samples) != 3 or
+            any(not isinstance(sample, dict) or
+                sample.get('state') != 'decoded' or
+                sample.get('original_resolution') != [3840, 2160] or
+                not isinstance(sample.get('face_candidates'), list)
+                for sample in samples)):
+            continue
+        if not any(row.get('source_sha256') == sha and
+                   row.get('media_revision') == version and
+                   row.get('source_bytes') == bytes_count
+                   for row in by_clip.get(name, ())):
+            continue
+        visible.append(item)
+    return dict(gap, recordings=visible, source_bound_records_visible=len(visible),
+                source_bound_records_not_current=len(gap['recordings'])-len(visible),
+                source_binding_status='source_qualified_active_queue_only',
+                original_recordings_modified=False,
+                identity_inference_performed=False)
+
+
 def install(handler_class, phone_rows):
     previous = handler_class.go
 
@@ -384,10 +495,12 @@ def install(handler_class, phone_rows):
                 or current_images != represented_images)
             gap_path = STATE/'original-gap-benchmark.json'
             if gap_path.is_file() and not gap_path.is_symlink() and gap_path.stat().st_size < 1000000:
-                gap = json.loads(gap_path.read_text())
-                if gap.get('detector_model_sha256') == MODEL_SHA:
-                    report['original_gap_benchmark'] = dict(gap, recordings=[
-                        row for row in gap.get('recordings', []) if row.get('clip_no') in current])
+                try:
+                    gap = json.loads(gap_path.read_text())
+                    report['original_gap_benchmark'] = source_current_gap_report(gap, current)
+                except (OSError, ValueError, TypeError, KeyError):
+                    # Never fall back to a filename-only secondary report.
+                    report['original_gap_benchmark_state'] = 'source_attestation_unavailable'
             report['priority_rescan_feedback'] = priority_rescan_feedback()
             handler.js(200, dict(report, ok=True))
         except (OSError, ValueError, TypeError, KeyError):
