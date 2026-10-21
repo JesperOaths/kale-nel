@@ -19,6 +19,8 @@ class Test(unittest.TestCase):
    self.assertFalse(out["rclone_config_file_exists"])
    self.assertEqual(out["original_bytes_read"],0)
    self.assertEqual(out["manual_decisions_modified"],0)
+   self.assertIn("binary_root_owned",out)
+   self.assertIn("binary_named_usr_local_bin",out)
    self.assertNotIn("trusted123",str(out))
  def test_bad_remote_and_binary_do_not_leak(self):
   with tempfile.TemporaryDirectory() as td:
