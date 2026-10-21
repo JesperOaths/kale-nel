@@ -21,6 +21,8 @@ GET_ROUTE = "/new/api/folder-suggestions"
 POST_ROUTE = "/new/api/folder-suggestions/review"
 INTENT = "human-folder-suggestions-v1"
 ORIGINS = frozenset({
+    "https://kalenel.nl", "https://www.kalenel.nl",
+    "http://127.0.0.1", "http://localhost",
     "http://127.0.0.1:8123", "http://localhost:8123",
     "http://127.0.0.1:8795", "http://localhost:8795",
 })
