@@ -512,6 +512,13 @@ def qualified_reader_preflight():
         check(isinstance(doc,dict) and doc.get("ok") is True and
               doc.get("gap_reader_contract")==READER_HTTP_CONTRACT,
               "qualified_evidence_reader_unavailable_before_scan")
+        # The genuine v369 handler advertises capability even in its honest
+        # unavailable fallback. Do not mistake that fallback for a ready live
+        # reader and repeatedly decode originals during a phone/source outage.
+        check(doc.get("state")!="not_yet_available" and
+              isinstance(doc.get("recordings"),list) and
+              len(doc["recordings"])>=1,
+              "qualified_evidence_reader_not_ready_before_scan")
         return True
     except Refusal:
         raise
