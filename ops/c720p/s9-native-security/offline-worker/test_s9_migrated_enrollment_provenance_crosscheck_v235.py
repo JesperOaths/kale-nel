@@ -64,6 +64,7 @@ class Crosscheck(unittest.TestCase):
    "S9MigratedLedgerTrustedCheckpointV196.java",
    "S9MigratedDualStoreCommitV197.java",
    "S9MigratedVerifiedSourceV198.java",
+   "S9MigratedSealedSourceManifestV216.java",
    "S9MigratedApprovedSixDigestV230.java",
    "S9MigratedCrosscheckParityTestV235.java",
   ]
