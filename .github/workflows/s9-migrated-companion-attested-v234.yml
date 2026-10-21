@@ -44,6 +44,7 @@ jobs:
           python3 "$P/test_companion_v233.py"
           python3 "$P/test_attested_unsigned_v234.py"
           python3 "$P/test_enrollment_review_v235.py"
+          python3 "$P/test_signed_release_v236.py"
           python3 "$T/test-action-wire-v231.py"
           python3 "$T/test-s9-signed-action-v198.py"
           python3 "$T/test-s9-migrated-postcommit-v232.py"
@@ -68,6 +69,7 @@ jobs:
           P=build/ops/c720p/s9-native-security/migrated-companion-v233
           python3 "$P/build_unsigned.py"
           python3 "$P/test_attested_unsigned_v234.py"
+          python3 "$P/test_signed_release_v236.py"
           python3 "$P/prepare_enrollment_review_v235.py" --out "$S9_COMPANION_STAGING_DIR/enrollment-review-INCOMPLETE.json"
           sha256sum "$S9_COMPANION_STAGING_DIR"/*.apk
       - name: Retain unsigned APK and verification receipt only (not approved for deployment)
