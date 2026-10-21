@@ -91,6 +91,13 @@ class QueueTest(unittest.TestCase):
   with patch.object(v.urllib.request,"urlopen",
        return_value=Reply({"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
                            "state":"not_yet_available"})):
+   with self.assertRaisesRegex(v.Refusal,
+                               "qualified_evidence_reader_not_ready_before_scan"):
+    ACTUAL_READER_PREFLIGHT()
+  with patch.object(v.urllib.request,"urlopen",
+       return_value=Reply({"ok":True,"gap_reader_contract":v.READER_HTTP_CONTRACT,
+                           "analysis_version":"s9_evidence_quality_v1",
+                           "recordings":[{"clip_no":"motion_1792000000000.mp4"}]})):
    self.assertTrue(ACTUAL_READER_PREFLIGHT())
 
  def test_missing_or_symlinked_v361_backend_refuses_before_4k_or_lease(self):
