@@ -67,6 +67,7 @@
         snapshot.status !== 'human_review_only' ||
         snapshot.automatic_assignments !== 0 ||
         snapshot.identity_probabilities !== false ||
+        snapshot.historic_review_index_verified !== true ||
         !Array.isArray(snapshot.matches) || !Array.isArray(snapshot.provisional_clusters)) {
       host.append(element('p', 'Verified provisional suggestions unavailable.'));
       return {visible: 0};
