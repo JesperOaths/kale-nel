@@ -32,7 +32,22 @@ def inspect(path=CONFIG):
     remote=doc.get("remote")
     binary=doc.get("rclone")
     conf=doc.get("rclone_config")
+    resolved=os.path.realpath(binary) if isinstance(binary,str) else ""
+    try:
+        bst=os.stat(binary,follow_symlinks=False) if isinstance(binary,str) else None
+        bparent=os.stat(os.path.dirname(binary)) if isinstance(binary,str) else None
+    except (OSError,ValueError,TypeError):
+        bst=None;bparent=None
     flags={
+        "binary_absolute":isinstance(binary,str) and os.path.isabs(binary),
+        "binary_named_usr_bin":resolved=="/usr/bin/rclone",
+        "binary_named_usr_local_bin":resolved=="/usr/local/bin/rclone",
+        "binary_regular":bst is not None and stat.S_ISREG(bst.st_mode),
+        "binary_root_owned":bst is not None and bst.st_uid==0,
+        "binary_not_group_writable":bst is not None and not bst.st_mode&0o022,
+        "binary_executable":bst is not None and bool(bst.st_mode&0o111),
+        "binary_parent_root_owned":bparent is not None and bparent.st_uid==0,
+        "binary_parent_not_group_writable":bparent is not None and not bparent.st_mode&0o022,
         "folder_new_present":isinstance(new,dict),
         "folder_id_valid":isinstance(fid,str) and 6<=len(fid)<=200,
         "remote_valid":isinstance(remote,str) and bool(re.fullmatch(r"[A-Za-z0-9_-]{1,80}",remote)),
