@@ -54,6 +54,13 @@ class Tests(unittest.TestCase):
        docs["drive"] if p==m.DRIVE else docs["cfg"]):
    with self.assertRaisesRegex(RuntimeError,"source_qualified_review_sample_missing"):
     m.collect()
+ def test_role_specific_refusal_has_no_private_path(self):
+  with patch.object(m,"read_json",side_effect=RuntimeError(
+      "private_schema_mode_or_size")):
+   with self.assertRaisesRegex(RuntimeError,
+       "rclone_config_private_schema_mode_or_size") as raised:
+    m.read_role(m.CFG,100000,True,"rclone_config")
+   self.assertNotIn(str(m.CFG),str(raised.exception))
  def test_never_streams_or_writes_video(self):
   s=SRC.read_text()
   for forbidden in ("rclone cat","exec-out cat","Files.delete",
