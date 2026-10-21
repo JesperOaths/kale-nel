@@ -119,7 +119,7 @@ def main():
                      "unsigned_apk_bytes":output.stat().st_size,
                      "signature_verified":False,
                      "installed":False,"enrolled":False,"contains_android_service":False}
-        canonical=json.dumps(attestation,sort_keys=True,indent=2)+"\\n"
+        canonical=json.dumps(attestation,sort_keys=True,indent=2)+"\n"
         if receipt.exists():
             require(receipt.read_text()==canonical,
                     "unsigned_build_receipt_mismatch")
