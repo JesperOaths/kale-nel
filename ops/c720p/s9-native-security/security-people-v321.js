@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-/* People & Faces V321: versioned optional signed-folder review UI; existing v40 API preserved.
+/* People & Faces V45: task-first independent UI, authenticated existing v40 API.
    No recording is changed or assigned automatically. */
 const $=id=>document.getElementById(id);
 const elt=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e};
@@ -1354,60 +1354,59 @@ function renderClothing(){
   body.append(actions);card.append(media,body);host.append(card);
  }
 }
-// Forward-only optional V320 bridge. Never show ranked review controls without
-// a signed original-open attestor installed by the authenticated player.
-// Does not modify existing Save/Delete or global Reject behavior.
-function renderVerifiedFolderSuggestions(){
+// Optional source-level bridge to media-bound model suggestions. A missing
+// signed original-open attestor leaves Approve/Reject disabled; legacy manual
+// filing and the live camera are never modified by displaying these cards.
+function renderFolderRankedButton(){
  const host=$('folderRankedCards');
  if(!host)return;
- const signed=window.S9SignedOriginalReview;
- const available=state.pane==='folder'&&state.tab==='suggestions'&&
-  typeof signed?.openAndAttest==='function'&&
-  typeof window.FolderSuggestionCards?.connect==='function';
- host.hidden=!available;
+ host.hidden=state.pane!=='folder'||state.tab!=='suggestions';
  host.replaceChildren();
- if(!available)return;
- const personId=state.folder;
- const view=control('Load verified appearance suggestions',async()=>{
-  if(!window.S9SignedOriginalReview?.openAndAttest){
-   alertText('Original playback attestor unavailable; existing manual review is unchanged.');
-   return;
+ if(host.hidden)return;
+ const folderId=state.folder;
+ const launch=control('Load verified ranked suggestions',async()=>{
+  if(!window.FolderSuggestionCards?.connect){
+   alertText('Verified folder suggestion viewer is not installed.');return;
   }
-  host.replaceChildren(elt('p','Loading verified, human-review-only suggestions…'));
+  host.replaceChildren(elt('p','Loading verified provisional suggestions…'));
   try{
    await window.FolderSuggestionCards.connect(host,{
-    relay:relay(),folderId:personId,showProvisional:true,
+    relay:relay(),folderId,showProvisional:true,
     onOpen:async row=>{
-     const clip=state.archiveEntries.find(x=>assignmentKey(x)===row.source_qualified_clip_id);
-     if(!clip)return {verified:false};
-     const hook=window.S9SignedOriginalReview;
-     if(typeof hook?.openAndAttest!=='function')return {verified:false};
-     // Only authenticated original playback can mint a session-bound ticket.
-     return hook.openAndAttest(row,()=>startVideo(clip));
+     // Never attest a screenshot, filename, old digest, or unchecked replay.
+     // This hook must issue proof from the *authenticated original player*.
+     const clip=state.archiveEntries.find(x=>assignmentKey(x)===
+      row.source_qualified_clip_id);
+     const signed=window.S9SignedOriginalReview;
+     if(!clip||typeof signed?.openAndAttest!=='function'){
+      if(clip)startVideo(clip);
+      return {verified:false};
+     }
+     return signed.openAndAttest(row,()=>startVideo(clip));
     },
     onClusterOpen:async (group,key)=>{
-     const clip=state.archiveEntries.find(x=>assignmentKey(x)===key);
-     if(clip)startVideo(clip);
+     const first=state.archiveEntries.find(row=>assignmentKey(row)===key);
+     if(first)startVideo(first);
      else openReview('inbox');
     },
     onClusterName:async group=>{
-     // Naming is human-driven; no candidate recordings are auto-assigned.
+     // Naming opens the existing human-managed New person form. The label is
+     // entered by a human; clips are NOT automatically attached to that person.
      openFolderEditor('create');
-     const notes=$('folderNotes');
-     if(notes)notes.value=('Provisional appearance review. Review each original before filing: '+
-      (group.source_qualified_clips||[]).slice(0,7).join(', ')).slice(0,1900);
+     $('folderNotes').value=('Provisional appearance group; inspect each original '+
+      'before filing any clip. Candidate recordings: '+
+      (group.source_qualified_clips||[]).slice(0,7).join(', ')).slice(0,2000);
     },
-    onSaved:()=>{if(state.pane==='folder'&&state.folder===personId)loadView();}
+    onSaved:()=>{if(state.pane==='folder'&&state.folder===folderId)loadView();}
    });
   }catch(_){
    host.replaceChildren(elt('p',
-     'Verified review currently unavailable. Existing manual review is unchanged.'));
+    'Verified folder suggestions unavailable; use the existing manual review queue.'));
   }
  },'secondary');
- host.append(view,elt('p',
-  'Appearance similarity only; no identity probability or automatic filing. Inspect the original to unlock each decision.'));
+ host.append(launch,elt('p',
+  'Model resemblance only · original playback attestation required before decisions.'));
 }
-
 function renderFolder(){
  const f=actualFolder();
  if(!f){alertText('This person is no longer available');return}
@@ -1421,7 +1420,6 @@ function renderFolder(){
  $('folderRecheckOnly').checked=state.recheckOnly;
  $('folderMode').value=state.tab;
  const suggestions=state.tab==='suggestions';
- renderVerifiedFolderSuggestions();
  for(const id of ['distanceLabel','weakLabel','routeLabel'])$(id).hidden=!suggestions;
  const context=$('folderContext');context.hidden=!f.automatic_appearance_group;
  $('folderContextText').textContent='Provisional clothing match. These recordings must be reviewed separately; this folder is NOT an automatically identified person.';
@@ -1472,6 +1470,7 @@ function renderFolder(){
   set.setAttribute('aria-pressed',String(selected));
   cell.append(button,set);faceGrid.append(cell);
  }
+ renderFolderRankedButton();
  paginate($('folderPage'),num(state.doc?.total),n=>{state.offset=n;loadView()});
  const ref=$('references'),list=$('referenceList');list.replaceChildren();
  const references=state.doc?.reference_examples||[];

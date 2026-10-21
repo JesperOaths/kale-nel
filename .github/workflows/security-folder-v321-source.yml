@@ -1,0 +1,36 @@
+name: Security folder suggestions V321 source-only acceptance
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v321.js'
+      - 'ops/c720p/s9-native-security/security-people-v51.html'
+      - 'ops/c720p/s9-native-security/test-folder-suggestion-v321-source.py'
+      - '.github/workflows/security-folder-v321-source.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v321.js'
+      - 'ops/c720p/s9-native-security/security-people-v51.html'
+      - 'ops/c720p/s9-native-security/test-folder-suggestion-v321-source.py'
+permissions:
+  contents: read
+jobs:
+  source-safe-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - name: Assert current V50/V320 assets are untouched and bridge is review-only
+        run: python ops/c720p/s9-native-security/test-folder-suggestion-v321-source.py
+      - name: Parse both JS generations and run review interaction regression
+        run: |
+          node --check ops/c720p/s9-native-security/security-people-v320.js
+          node --check ops/c720p/s9-native-security/security-people-v321.js
+          node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
+          node ops/c720p/s9-native-security/test-folder-suggestion-cards.js
