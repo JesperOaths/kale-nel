@@ -22,7 +22,7 @@ def approved():
             "approval_record":"task9-source-only-synthetic-fixture",
             "phone_frame_jar_sha256":H,
             "coordinator_sha256":H,"runner_sha256":H,
-            "min_phone_mem_available_kib":200000,
+            "min_phone_mem_available_kib":1536*1024,
             "min_phone_sd_free_bytes":20*1024**3,
             "source_reader":"s9_source_current_priority_reader_v369",
             "consumer":"s9_anonymous_quality_consumption_v361"}
@@ -38,6 +38,12 @@ class RunnerTests(unittest.TestCase):
         self.file.chmod(0o600)
     def test_release_absent_refuses(self):
         with self.assertRaises(m.frames.Deferred):m.policy(self.file)
+    def test_unsafe_arbitrary_phone_floor_rejected(self):
+        p=approved()
+        p["min_phone_mem_available_kib"]=200000
+        self.write(p)
+        with self.assertRaises(m.frames.Deferred):
+            m.policy(self.file)
     def test_release_unapproved_refuses(self):
         p=approved();p["authorization_basis"]="unverified_external_authorization"
         self.write(p)
@@ -51,7 +57,7 @@ class RunnerTests(unittest.TestCase):
         with self.assertRaises(m.frames.Deferred):m.policy(self.file)
     def test_private_source_pinned_release_parse_only(self):
         self.write()
-        self.assertEqual(m.policy(self.file)["min_phone_mem_available_kib"],200000)
+        self.assertEqual(m.policy(self.file)["min_phone_mem_available_kib"],1536*1024)
     def test_phone_low_memory_blocks_before_inference(self):
         def fake(*args,**kwargs):
             self.calls.append(args)
@@ -74,7 +80,7 @@ class RunnerTests(unittest.TestCase):
         def fake(*args,**kwargs):
             if args==("get-state",):return "device"
             if args[1].startswith("pidof"):return "1234"
-            if args[1]=="cat /proc/meminfo":return "MemAvailable: 500000 kB\n"
+            if args[1]=="cat /proc/meminfo":return "MemAvailable: 2250000 kB\n"
             if args[1].startswith("df -k"):return "Filesystem Size Used Available Use%\nfoo 1000 300 400 70%\n"
             raise AssertionError("unexpected staged phone command")
         with patch.object(m,"adb",fake),self.assertRaises(m.frames.Deferred):
@@ -83,7 +89,7 @@ class RunnerTests(unittest.TestCase):
         def fake(*args,**kwargs):
             if args==("get-state",):return "device"
             if args[1].startswith("pidof"):return "1234"
-            if args[1]=="cat /proc/meminfo":return "MemAvailable: 500000 kB\n"
+            if args[1]=="cat /proc/meminfo":return "MemAvailable: 2250000 kB\n"
             if args[1].startswith("df -k"):return "Filesystem Size Used Available Use%\nfoo 90000000 4000 60000000 4%\n"
             if args[1].startswith("ps -A"):return "PID ARGS\n1234 /system/bin/nl.kalenel.s9security\n"
             if args[1].startswith("sha256sum"):return H+"  /data/local/tmp/s9_worker/s9_gap_v371.dex.jar"
@@ -95,7 +101,7 @@ class RunnerTests(unittest.TestCase):
         def fake(*args,**kwargs):
             if args==("get-state",):return "device"
             if args[1].startswith("pidof"):return "1234"
-            if args[1]=="cat /proc/meminfo":return "MemAvailable: 500000 kB\n"
+            if args[1]=="cat /proc/meminfo":return "MemAvailable: 2250000 kB\n"
             if args[1].startswith("df -k"):return "Filesystem Size Used Available Use%\nfoo 90000000 4000 60000000 4%\n"
             if args[1].startswith("ps -A"):
                 return "PID ARGS\n4321 app_process -Djava.library.path=/data/local/tmp/s9_worker/lib /system/bin nl.kalenel.s9offline.S9Original4KGapAuditV370\n"
