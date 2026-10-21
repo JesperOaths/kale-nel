@@ -148,12 +148,21 @@ class Consumer(unittest.TestCase):
   self.doc["original_gap_benchmark"]["source_bound_records_visible"]=7
   self.assertEqual(self.run_case()[0],503)
 
- def test_mutating_queue_changes_revision_no_auto_approved_decisions(self):
+ def test_only_pertinent_source_changes_revocation_revision(self):
   _,start=self.run_case()
   self.jobs["revision"]+=1
-  _,end=self.run_case()
+  _,unrelated=self.run_case()
+  # Queue-wide administrative updates do not invalidate another clip's proof.
+  self.assertEqual(start["evidence_revision_sha256"],
+                   unrelated["evidence_revision_sha256"])
+  self.task["outcome"]["sampled_frames"]=2
+  self.assertEqual(self.run_case()[0],410)
+  self.task["outcome"]["sampled_frames"]=3
+  self.task["outcome"]["consumer_visibility_confirmed"]=True
+  self.task["last_reason"]="verified_source_consumption_reaffirmed"
+  _,pertinent=self.run_case()
   self.assertNotEqual(start["evidence_revision_sha256"],
-                      end["evidence_revision_sha256"])
+                      pertinent["evidence_revision_sha256"])
   self.item["samples"][0]["face_candidates"]=[{"box":[12,20,40,50]}]
   _,observed=self.run_case()
   self.assertEqual(observed["observation"],"unreviewed_detector_candidates_present")
@@ -193,13 +202,32 @@ class Consumer(unittest.TestCase):
   self.assertEqual(m.consume(self.doc,self.current,self.name)[0],503)
   self.assertEqual(self.run_case()[0],200)
 
- def test_priority_snapshot_is_a_revision_source_even_without_original_drift(self):
+ def test_unrelated_report_refresh_and_clip_do_not_revoke_receipt(self):
   status,first=self.run_case()
   self.assertEqual(status,200)
   self.priority["generated_at"]="2026-10-21T03:25:00+00:00"
   status,second=self.run_case()
   self.assertEqual(status,200)
-  self.assertNotEqual(first["evidence_revision_sha256"],second["evidence_revision_sha256"])
+  self.assertEqual(first["evidence_revision_sha256"],
+                   second["evidence_revision_sha256"])
+  other="motion_1792200000001.mp4"
+  self.priority["recordings"].append({
+      "clip_no":other,"native_face_pass_complete":True,
+      "targeted_rescan_priority":False,
+      "extraction_status":"supported_face_evidence_available"})
+  self.priority["original_recordings"]=2
+  self.cat["records"][other]={"manifest":{"name":other,"bytes":2200000,
+      "sha256":"f"*64,"width":3840,"height":2160},
+      "bytes":2200000,"version":"e"*64}
+  self.jobs["rows"].append({"clip_no":other,"status":"blocked"})
+  status,third=self.run_case()
+  self.assertEqual(status,200)
+  self.assertEqual(first["evidence_revision_sha256"],
+                   third["evidence_revision_sha256"])
+  # Changing this clip's own quality authorization, even without an MP4
+  # change, must still revoke immediately.
+  self.priority["recordings"][0]["targeted_rescan_priority"]=False
+  self.assertEqual(self.run_case()[0],410)
 
  def test_provisional_v3_cannot_become_person_reference(self):
   bad=dict(self.appearance,person_reference_eligible=True)
