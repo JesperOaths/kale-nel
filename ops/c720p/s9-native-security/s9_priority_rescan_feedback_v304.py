@@ -52,6 +52,10 @@ HEX=re.compile(r"[a-f0-9]{64}\Z")
 MAX_ATTEMPTS=3
 MAX_TRANSIENT_DEFERRALS=8
 LIMIT=340
+# Private immutable per-ID history is bounded. On exhaustion, defer admission
+# instead of silently dropping audit provenance or overwriting originals.
+MAX_RETIRED_ROWS=4096
+MAX_RETIRED_BYTES=16*1024*1024
 LABEL="S9_PRIORITY_RESCAN_V304 "
 
 class Refusal(Exception):pass
@@ -141,6 +145,54 @@ def aggregate(rows):
     tally={x:0 for x in ("pending","processing","completed","rejected","blocked","dead_letter")}
     for item in rows:tally[item["status"]]=tally.get(item["status"],0)+1
     return tally
+def retirement_budget(rows):
+    """Preflight immutable provenance growth; fail closed on unsafe private state."""
+    if not rows:
+        return True
+    root=retired_dir()
+    check(not root.is_symlink(),"unsafe_retired_directory")
+    count=total=0
+    known=set()
+    if root.exists():
+        directory=root.stat()
+        check(stat.S_ISDIR(directory.st_mode) and
+              directory.st_uid==os.getuid() and not directory.st_mode&0o077,
+              "retired_provenance_directory_not_private")
+        for leaf in root.iterdir():
+            check(not leaf.is_symlink(),"retired_provenance_symlink_refused")
+            metadata=leaf.stat()
+            check(stat.S_ISREG(metadata.st_mode) and
+                  metadata.st_uid==os.getuid() and
+                  metadata.st_nlink==1 and not metadata.st_mode&0o077,
+                  "retired_provenance_file_not_private")
+            total+=metadata.st_size
+            if HEX.fullmatch(leaf.stem) and leaf.suffix==".json":
+                check(20<metadata.st_size<20000,
+                      "retired_provenance_file_unbounded")
+                count+=1
+                known.add(leaf.stem)
+            else:
+                # Crash-leftover atomic temporary files can have 0 bytes.
+                # Account for them without deleting provenance on restart.
+                check(leaf.name.startswith(".rescan-v304-"),
+                      "unexpected_private_retirement_entry")
+    future=set()
+    for row in rows:
+        key=row.get("id")
+        check(isinstance(key,str) and HEX.fullmatch(key),
+              "invalid_archived_task_identifier")
+        if key in known or key in future:
+            continue
+        future.add(key)
+        payload={"schema":"s9_priority_retired_provenance_v1",
+                 "id":key,"final":row,"retired_at":now()}
+        size=len(json.dumps(payload,separators=(",",":"),sort_keys=True,
+                            allow_nan=False).encode())
+        check(20<size<20000,"retired_provenance_row_unbounded")
+        total+=size
+        count+=1
+    return count<=MAX_RETIRED_ROWS and total<=MAX_RETIRED_BYTES
+
 def retire_obsolete(rows, relevant, pressure_ids=frozenset()):
     """Durably archive obsolete terminal IDs before freeing live queue slots.
 
@@ -149,6 +201,12 @@ def retire_obsolete(rows, relevant, pressure_ids=frozenset()):
     admission pressure. They remain immutable private 0600 audit records;
     unrelated terminal rows are archived only when obsolete.
     """
+    rows=list(rows)
+    candidates=[row for row in rows if not (
+        (row["id"] in relevant and row["id"] not in pressure_ids) or
+        row["status"] not in ("rejected","completed","blocked","dead_letter"))]
+    check(retirement_budget(candidates),
+          "retired_provenance_capacity_deferred")
     retained=[];count=0
     for row in rows:
         if (row["id"] in relevant and row["id"] not in pressure_ids) or row["status"] not in (
@@ -251,7 +309,20 @@ def produce():
     fresh=[item for item in approved if item["id"] not in byid
            and not retired_proof(item)]
     pressure=park_same_model_blockers(byid,relevant,fresh)
-    retained,retired=retire_obsolete(byid.values(),relevant,pressure)
+    try:
+        retained,retired=retire_obsolete(byid.values(),relevant,pressure)
+    except Refusal as exc:
+        if str(exc)!="retired_provenance_capacity_deferred":
+            raise
+        # Capacity exhaustion must not mutate the durable queue, discard
+        # historical provenance, or repeatedly admit work it cannot store.
+        durable=items()
+        return {"status":"retired_provenance_capacity_deferred",
+                "revision":durable["revision"],"new_admissions":0,
+                "invalidated":0,"retired_with_provenance":0,
+                "parked_same_model_blocked":0,
+                "capacity_deferred":len(fresh),
+                "tally":aggregate(durable["rows"])}
     byid={x["id"]:x for x in retained}
     added=0;deferred=0
     # Prioritize runnable work. The same immutable original/model/source ID

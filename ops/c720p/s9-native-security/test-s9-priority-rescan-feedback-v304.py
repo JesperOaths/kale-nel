@@ -109,6 +109,54 @@ class QueueTest(unittest.TestCase):
   with self.assertRaisesRegex(v.Refusal,"retired_provenance_symlink_refused"):
    v.retire_obsolete([old],set())
 
+
+ def test_retirement_budget_refuses_growth_without_mutating_queue_or_audit(self):
+  # This protects the immutable audit when storage is saturated. The
+  # authorized source change is retained for a later backed capacity review.
+  v.produce()
+  before=v.QUEUE.read_bytes()
+  old=v.items()["rows"][0]
+  name=old["clip_no"]
+  self.orig[name]["version"]="f"*64
+  self.store()
+  with patch.object(v,"MAX_RETIRED_ROWS",0):
+   result=v.produce()
+   self.assertEqual(result["status"],"retired_provenance_capacity_deferred")
+   self.assertEqual(result["new_admissions"],0)
+   self.assertEqual(v.QUEUE.read_bytes(),before)
+   self.assertEqual(len(list(v.retired_dir().glob("*.json"))),0)
+  with patch.object(v,"MAX_RETIRED_BYTES",100):
+   result=v.produce()
+   self.assertEqual(result["status"],"retired_provenance_capacity_deferred")
+   self.assertEqual(v.QUEUE.read_bytes(),before)
+  after=v.produce()
+  self.assertEqual(after["retired_with_provenance"],1)
+  self.assertEqual(after["new_admissions"],1)
+  self.assertEqual(v.produce()["retired_with_provenance"],0)
+
+ def test_budget_counts_preexisting_private_bytes_and_rejects_unknown_entries(self):
+  v.produce()
+  old=dict(v.items()["rows"][0],status="rejected")
+  v.retire_obsolete([old],set())
+  entry=v.retired_dir()/(old["id"]+".json")
+  self.assertGreater(entry.stat().st_size,100)
+  with patch.object(v,"MAX_RETIRED_ROWS",1):
+   self.assertTrue(v.retirement_budget([old]))
+  new=dict(old,id="e"*64)
+  with patch.object(v,"MAX_RETIRED_ROWS",1):
+   self.assertFalse(v.retirement_budget([new]))
+  with patch.object(v,"MAX_RETIRED_BYTES",entry.stat().st_size):
+   self.assertFalse(v.retirement_budget([new]))
+   self.assertTrue(v.retirement_budget([old]))
+  extra=v.retired_dir()/"unexpected.txt"
+  extra.write_text("x"*42)
+  extra.chmod(0o600)
+  try:
+   with self.assertRaisesRegex(v.Refusal,"unexpected_private_retirement_entry"):
+    v.retirement_budget([new])
+  finally:
+   extra.unlink()
+
  def test_finite_capacity_defers_new_admission_without_losing_existing_work(self):
   v.produce()
   original=v.items()
