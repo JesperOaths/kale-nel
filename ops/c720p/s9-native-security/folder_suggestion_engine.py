@@ -298,12 +298,22 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     refs: dict[str, list[ClipFeatures]] = {folder: [] for folder in folder_ids}
     rejected: dict[str, list[ClipFeatures]] = {folder: [] for folder in folder_ids}
     globally_approved = set()
+    historically_approved_keys = set()
     reviewed_keys = set()
     legacy_or_unbound = 0
     for (folder, key), row in review.items():
         clip = indexed.get(key)
         if folder not in refs or clip is None:
             continue
+        # Historical manual decisions must NOT become references without
+        # original-byte binding, but an already reviewed clip must also not
+        # be falsely presented as a brand-new, unreviewed recording.
+        if (row.get("human_confirmed") is True
+                and row.get("status") in ("approved", "rejected")
+                and row.get("revoked") is not True):
+            reviewed_keys.add(key)
+            if row["status"] == "approved":
+                historically_approved_keys.add(key)
         if not bound_decision(row, clip):
             legacy_or_unbound += 1
             continue
@@ -316,14 +326,17 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     matches = []
     unmatched = []
     for clip in sorted(indexed.values(), key=lambda r: r.key):
-        if clip.key in globally_approved:
+        if clip.key in globally_approved or clip.key in historically_approved_keys:
             continue
         top = -math.inf
         for folder in folder_ids:
             current_decision = review.get((folder, clip.key))
             # Exact rejected clips go into that folder's exclusion list.
-            if (current_decision and bound_decision(current_decision, clip)
-                    and current_decision["status"] == "rejected"):
+            if (current_decision and current_decision.get("human_confirmed") is True
+                    and current_decision.get("revoked") is not True
+                    and current_decision.get("status") == "rejected"):
+                # Exact human exclusions survive legacy unbound metadata;
+                # only new verified binding can seed negative exemplar vectors.
                 continue
             possible = [(r, pair_score(clip, r)) for r in refs[folder]]
             possible = [(r, p) for r, p in possible if p is not None]
