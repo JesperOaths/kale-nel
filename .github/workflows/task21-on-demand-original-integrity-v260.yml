@@ -1,0 +1,31 @@
+name: Task21 bounded on-demand original byte integrity V260
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_manual_original_integrity_v260.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-manual-original-integrity-v260.py'
+      - '.github/workflows/task21-on-demand-original-integrity-v260.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-person-ml-v1/s9_manual_original_integrity_v260.py'
+      - 'ops/c720p/s9-person-ml-v1/test-s9-manual-original-integrity-v260.py'
+      - '.github/workflows/task21-on-demand-original-integrity-v260.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: On-demand SHA divergence, revision changes, non-mutating historical statuses
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=ops/c720p/s9-person-ml-v1
+          python3 -m py_compile "$d/s9_manual_original_integrity_v260.py"
+          python3 "$d/test-s9-manual-original-integrity-v260.py"
+          python3 "$d/test-s9-manual-media-digest-binding-v1.py"
+          python3 "$d/test-s9-manual-original-byte-attestor-v252.py"
+          echo TASK21_INTEGRITY_V260_SOURCE_ONLY_NO_HISTORICAL_REWRITE
