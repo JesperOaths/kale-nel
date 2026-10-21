@@ -66,6 +66,9 @@ class Tickets:
   with self.lock:self.tokens.pop(token,None)
  def consumed(self,token):
   with self.lock:
-   self.prune(self.clock());row=self.tokens.get(token)
+   # The registry write may have completed after the reservation deadline.
+   # Do not convert an independently verified DURABLE commit into a false
+   # failure merely because the clock crossed expiry during final fsync.
+   row=self.tokens.get(token)
    if not row or not row['reserved']:raise Rejected('ticket_invalid_before_commit')
    self.tokens.pop(token,None)
