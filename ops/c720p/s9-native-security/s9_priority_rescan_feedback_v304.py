@@ -492,8 +492,8 @@ def publish(record,doc):
        "review_decisions_modified":False}
     atomic(SECONDARY,new)
     return new
-def qualified_reader_preflight():
-    """Refuse BEFORE 4K decode if the running HTTP handler is outdated.
+def qualified_reader_preflight(candidate):
+    """Refuse BEFORE 4K decode if the running HTTP handler/clip is outdated.
 
     An updated disk module alone is insufficient: the existing 8795 process
     may still hold the old, filename-only evidence handler in memory.
@@ -519,6 +519,17 @@ def qualified_reader_preflight():
               isinstance(doc.get("recordings"),list) and
               len(doc["recordings"])>=1,
               "qualified_evidence_reader_not_ready_before_scan")
+        # The specific queued original must remain in the *running* reader
+        # and must still be an approved native no-crop priority. A healthy
+        # handler with only unrelated clips cannot authorize a decode.
+        matching=[item for item in doc["recordings"]
+            if isinstance(item,dict)
+            and item.get("clip_no")==candidate["clip_no"]]
+        check(len(matching)==1 and
+              matching[0].get("targeted_rescan_priority") is True and
+              matching[0].get("native_face_pass_complete") is True and
+              matching[0].get("extraction_status")==candidate["priority_reason"],
+              "qualified_evidence_reader_target_not_ready_before_scan")
         return True
     except Refusal:
         raise
@@ -642,7 +653,7 @@ def work():
            "leases_recovered":recovered,"tally":aggregate(doc["rows"])}
     # A running older HTTP handler is a permanent dependency mismatch for this
     # tick. Never decode the same original 4K repeatedly just to rediscover it.
-    qualified_reader_preflight()
+    qualified_reader_preflight(candidate)
     # Acquire source/camera locks BEFORE taking a lease.
     check(CROSS_LOCK.is_file() and not CROSS_LOCK.is_symlink(),
           "s9_shared_backfill_lock_unavailable")
