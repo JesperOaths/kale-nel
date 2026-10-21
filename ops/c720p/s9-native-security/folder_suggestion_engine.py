@@ -184,7 +184,11 @@ def centroid_score(candidate: ClipFeatures,
     if visual_mean is None:
         return None
     visual = cosine(candidate.visual, visual_mean)
-    color = math.fsum(c for _, c in usable) / len(usable)
+    # Reference color is an aggregate *histogram*, not a fabricated
+    # per-clip pair score. Compute Bhattacharyya affinity to the aggregate.
+    mean_hsv = tuple(math.fsum(r.hsv[i] for r, _ in usable) / len(usable)
+                     for i in range(len(candidate.hsv)))
+    color = color_affinity(candidate.hsv, mean_hsv)
     return {"score": 0.75 * visual + 0.25 * color,
             "method": "visual_75_color_25",
             "upper_crop_score": None, "visual_score": visual,
@@ -287,6 +291,7 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     refs: dict[str, list[ClipFeatures]] = {folder: [] for folder in folder_ids}
     rejected: dict[str, list[ClipFeatures]] = {folder: [] for folder in folder_ids}
     globally_approved = set()
+    reviewed_keys = set()
     legacy_or_unbound = 0
     for (folder, key), row in review.items():
         clip = indexed.get(key)
@@ -295,6 +300,7 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
         if not bound_decision(row, clip):
             legacy_or_unbound += 1
             continue
+        reviewed_keys.add(key)
         if row["status"] == "approved":
             refs[folder].append(clip)
             globally_approved.add(key)
@@ -325,6 +331,8 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
             penalty = NEGATIVE_PENALTY if neg_max > NEGATIVE_THRESHOLD else 0.0
             score = raw - penalty
             top = max(top, score)
+            if score < match_threshold:
+                continue  # below-threshold recordings belong only to Awaiting Review
             matches.append({
                 "folder_id": folder, "source": clip.source, "clip_id": clip.clip_id,
                 "source_qualified_clip_id": clip.key, "media_sha256": clip.media_sha256,
@@ -347,7 +355,7 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                 "confidence_is_identity_probability": False})
         # Only unassigned records that are BELOW threshold in every folder
         # form new tentative groups. Existing positive human reviews never do.
-        if top < match_threshold:
+        if top < match_threshold and clip.key not in reviewed_keys:
             unmatched.append(clip)
     matches.sort(key=lambda m: (-m["score"], m["folder_id"],
                                 m["source_qualified_clip_id"]))
