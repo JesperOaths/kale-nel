@@ -1,0 +1,44 @@
+name: S9 folder suggestion review safeguards
+
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/folder_suggestion_engine.py'
+      - 'ops/c720p/s9-native-security/folder_suggestion_api.py'
+      - 'ops/c720p/s9-native-security/folder-suggestion-cards-v1.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.html'
+      - 'ops/c720p/s9-native-security/test-folder-suggestion-*.py'
+      - '.github/workflows/s9-folder-suggestion-engine.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/folder_suggestion_engine.py'
+      - 'ops/c720p/s9-native-security/folder_suggestion_api.py'
+      - 'ops/c720p/s9-native-security/folder-suggestion-cards-v1.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.js'
+      - 'ops/c720p/s9-native-security/security-people-v45.html'
+      - 'ops/c720p/s9-native-security/test-folder-suggestion-*.py'
+
+jobs:
+  synthetic-review-invariants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Python modules and executable behavior
+        run: |
+          cd ops/c720p/s9-native-security
+          python -m py_compile folder_suggestion_engine.py folder_suggestion_api.py
+          python test-folder-suggestion-engine.py
+          python test-folder-suggestion-api.py
+      - name: Syntax-check the optional UI bridge and original People UI
+        run: |
+          node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
+          node --check ops/c720p/s9-native-security/security-people-v45.js
