@@ -485,9 +485,6 @@ def install_local_sd(H):
  # Preserve the independent S9 multivector appearance API already deployed.
  import s9_multivector_appearance_api
  s9_multivector_appearance_api.install(H)
- # Preserve the installed private anonymous V3 appearance contract.
- import s9_multivector_appearance_api_v3
- s9_multivector_appearance_api_v3.install(H)
  # Preserve already installed anonymous multivector V3 route.
  import s9_multivector_appearance_api_v3
  s9_multivector_appearance_api_v3.install(H)
@@ -498,9 +495,6 @@ def install_local_sd(H):
  # verified original 4K and manual person classification.
  import s9_c720p_imported_media_api_v1
  s9_c720p_imported_media_api_v1.install(H,play_sd)
- # Preserve installed migrated JPEG bridge; do not classify as original footage.
- import s9_c720p_snapshots_v163
- s9_c720p_snapshots_v163.install(H)
  # Preserve already installed migrated original snapshot route.
  import s9_c720p_snapshots_v163
  s9_c720p_snapshots_v163.install(H)
