@@ -93,6 +93,9 @@ class QueueTest(unittest.TestCase):
   from unittest.mock import Mock
   good={"ok":True,"original_gap_benchmark":{
     "analysis_version":v.ANALYSIS,"detector_model_sha256":v.MODEL_SHA,
+    "source_binding_status":"source_qualified_active_queue_only",
+    "source_bound_records_visible":1,"source_bound_records_not_current":0,
+    "original_recordings_modified":False,"identity_inference_performed":False,
     "recordings":[record]}}
   class Reply:
    status=200
@@ -114,6 +117,24 @@ class QueueTest(unittest.TestCase):
   with patch.object(v.urllib.request,"urlopen",
       return_value=Reply(bad_hash)):
    with self.assertRaises(v.Refusal):v.consumer_visible(record)
+  for defect in ("no_attestation","zero_attested","forged_frames",
+                 "claims_identity","inconsistent_revocation_count"):
+   with self.subTest(defect=defect):
+    invalid=json.loads(json.dumps(good))
+    gap=invalid["original_gap_benchmark"]
+    if defect=="no_attestation":
+     del gap["source_binding_status"]
+    elif defect=="zero_attested":
+     gap["source_bound_records_visible"]=0
+    elif defect=="forged_frames":
+     gap["recordings"][0]["samples"][0]["time_ms"]=7777
+    elif defect=="claims_identity":
+     gap["identity_inference_performed"]=True
+    else:
+     gap["source_bound_records_not_current"]=-1
+    with patch.object(v.urllib.request,"urlopen",
+         return_value=Reply(invalid)):
+     with self.assertRaises(v.Refusal):v.consumer_visible(record)
   with patch.object(v,"camera_guard",return_value={"ok":True}),\
        patch.object(v,"evaluate_one",return_value=record),\
        patch.object(v,"consumer_visible",
@@ -128,6 +149,21 @@ class QueueTest(unittest.TestCase):
   self.assertFalse(saved["source_sha256_verified_before_processing"])
   self.assertTrue(saved["source_sha256_bound_to_private_catalog_before_processing"])
   self.assertTrue(saved["human_review_required"])
+
+ def test_live_consumer_without_attestation_defers_without_burning_retry(self):
+  v.produce()
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",return_value={
+        "clip_no":v.items()["rows"][0]["clip_no"],"samples":[]}),\
+       patch.object(v,"consumer_visible",
+            side_effect=v.Refusal("secondary_consumer_source_attestation_unavailable")):
+   out=v.work()
+  self.assertEqual(out["status"],"pending")
+  self.assertEqual(out["attempts"],0)
+  task=v.items()["rows"][0]
+  self.assertEqual(task["deferrals"],1)
+  self.assertEqual(task["last_reason"],"secondary_consumer_source_attestation_unavailable")
+  self.assertIsNone(task["outcome"])
 
  def test_temporary_relay_outage_does_not_burn_retries(self):
   import urllib.error
