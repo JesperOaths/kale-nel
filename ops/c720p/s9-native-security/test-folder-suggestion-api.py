@@ -140,5 +140,34 @@ class ApiTest(unittest.TestCase):
             api.install(Fake, self.provider, self.journal)
         self.assertEqual(Fake.go.__name__,"go")
 
+    def test_cold_start_provisional_member_can_seed_first_approved_reference(self):
+        # Historical media lacks decision-time digest binding; a new signed
+        # original-open review must be able to bootstrap a named folder.
+        cold = eng.ReviewJournal(Path(self.temp.name)/"cold-start.json")
+        snap = api.snapshot(self.provider, cold)
+        self.assertEqual(snap["approved_reference_counts"]["P1"], 0)
+        members = [member for group in snap["provisional_clusters"]
+                   for member in group["members"]]
+        self.assertTrue(any(m["clip_id"] == "candidate.mp4" for m in members))
+        body = self.body()
+        body["journal_revision"] = 0
+        status, result = api.review(body, self.provider, cold,
+                                    lambda *args: True, self.commit)
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "approved")
+        self.assertEqual(cold.read()["decisions"][0]["status"], "approved")
+        self.assertEqual(api.snapshot(self.provider,cold)
+                         ["approved_reference_counts"]["P1"], 1)
+        self.assertEqual(len(self.calls), 1)
+
+    def test_cold_start_still_requires_genuine_open_ticket(self):
+        cold = eng.ReviewJournal(Path(self.temp.name)/"cold-reject.json")
+        body = self.body("reject", folder="P2")
+        body["journal_revision"] = 0
+        outcome = api.review(body,self.provider,cold,
+                             lambda *args: False,self.commit)
+        self.assertEqual(outcome[0],409)
+        self.assertEqual(cold.read()["revision"],0)
+
 if __name__=="__main__":
     unittest.main(verbosity=2)
