@@ -65,7 +65,11 @@ def build(output_dir,aar,android_jar,d8):
         source_classes=sorted(classes.rglob("*.class"))
         require(len(source_classes)>=4,"missing_compiled_probe_classes")
         target=root/"dex";target.mkdir()
-        run([str(d8),"--min-api","29","--output",str(target),
+        # The standalone app_process has NO external ONNX Java classpath.
+        # Dex the verified official ONNX Java classes WITH our own worker
+        # classes, as the already-tested one-snapshot S9 packager does.
+        run([str(d8),"--min-api","29","--lib",str(android_jar),
+             "--output",str(target),str(jar),
              *(str(p) for p in source_classes)])
         dex=target/"classes.dex"
         require(dex.is_file() and 100<dex.stat().st_size<300000,
@@ -73,13 +77,14 @@ def build(output_dir,aar,android_jar,d8):
         archive=root/"s9_gap_v371.dex.jar"
         with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_STORED) as z:
             z.write(dex,"classes.dex")
-        require(100<archive.stat().st_size<300000,
+        require(2000<archive.stat().st_size<2*1024*1024,
                 "bounded_phone_artifact_invalid")
         receipt={"schema":"task9_offline_phone_jar_build_v371",
             "build_only":True,"camera_apk_modified":False,
             "phone_connected":False,"model_inference_performed":False,
             "originals_modified":False,"automatic_person_assignments":0,
             "onnx_android_aar_sha256":AAR_SHA,
+            "official_onnx_java_classes_dexed":True,
             "android_platform_sha256":sha(Path(android_jar)),
             "d8_sha256":sha(Path(d8)),
             "source_sha256":{p.name:sha(p) for p in java},
