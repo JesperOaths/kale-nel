@@ -53,8 +53,15 @@ def main():
             url=("https://raw.githubusercontent.com/JesperOaths/kale-nel/"
                  +PINS["revision"]+"/ops/c720p/s9-native-security/offline-worker/"
                  +name+".java")
-            with urllib.request.urlopen(url,timeout=20) as r:
-                raw=r.read(200001)
+            local=os.environ.get("S9_COMPANION_PINNED_SOURCE_DIR")
+            if local:
+                candidate=Path(local)/(name+".java")
+                require(candidate.is_file() and not candidate.is_symlink(),
+                        "untrusted_local_source_path")
+                raw=candidate.read_bytes()
+            else:
+                with urllib.request.urlopen(url,timeout=20) as r:
+                    raw=r.read(200001)
             require(len(raw)==row["bytes"] and len(raw)<=200000
                     and hashlib.sha256(raw).hexdigest()==row["sha256"]
                     and raw.startswith(b"package nl.kalenel.s9offline;"),
