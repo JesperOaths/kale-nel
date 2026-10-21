@@ -81,6 +81,63 @@ class QueueTest(unittest.TestCase):
   self.assertTrue(all("model_sha256" in x and "source_sha256" in x
       and "media_revision" in x for x in v.items()["rows"]))
 
+
+ def test_blocked_same_model_can_become_runnable_once_at_same_original_revision(self):
+  v.produce()
+  name=self.rows[2]["clip_no"]
+  first=next(r for r in v.items()["rows"] if r["clip_no"]==name)
+  self.assertEqual(first["status"],"blocked")
+  self.rows[2]["extraction_status"]="no_indexed_image"
+  self.store()
+  moved=v.produce()
+  self.assertEqual(moved["new_admissions"],1)
+  self.assertEqual(moved["retired_with_provenance"],1)
+  current=next(r for r in v.items()["rows"] if r["clip_no"]==name)
+  self.assertEqual(current["status"],"pending")
+  self.assertEqual(current["priority_reason"],"no_indexed_image")
+  self.assertNotEqual(current["id"],first["id"])
+  self.assertEqual(current["legacy_source_key"],first["id"])
+  self.assertEqual(current["source_sha256"],first["source_sha256"])
+  self.assertEqual(current["media_revision"],first["media_revision"])
+  past=json.loads((v.retired_dir()/(first["id"]+".json")).read_text())
+  self.assertEqual(past["final"]["status"],"blocked")
+  self.assertEqual(past["final"]["priority_reason"],
+                   "secondary_detector_has_no_supported_face")
+  self.assertEqual(v.produce()["new_admissions"],0)
+  self.assertEqual(len([r for r in v.items()["rows"] if r["clip_no"]==name]),1)
+  # The original reason can return without repeating the permanently
+  # unsupported detector pass, and its provenance is never overwritten.
+  self.rows[2]["extraction_status"]="secondary_detector_has_no_supported_face"
+  self.store()
+  out=v.produce()
+  self.assertEqual(out["new_admissions"],0)
+  self.assertEqual(out["retired_with_provenance"],1)
+  self.assertFalse(any(r["clip_no"]==name for r in v.items()["rows"]))
+  self.assertEqual(json.loads((v.retired_dir()/(first["id"]+".json")).read_text()),
+                   past)
+  self.rows[2]["extraction_status"]="no_indexed_image"
+  self.store()
+  self.assertEqual(v.produce()["new_admissions"],0)
+
+ def test_live_runnable_reclassified_unsupported_is_not_reprocessed(self):
+  v.produce()
+  name=self.rows[0]["clip_no"]
+  legacy=next(r for r in v.items()["rows"] if r["clip_no"]==name)
+  self.rows[0]["extraction_status"]="secondary_detector_has_no_supported_face"
+  self.store()
+  out=v.produce()
+  self.assertEqual(out["retired_with_provenance"],1)
+  blocked=next(r for r in v.items()["rows"] if r["clip_no"]==name)
+  self.assertEqual(blocked["status"],"blocked")
+  self.assertNotEqual(blocked["id"],legacy["id"])
+  self.assertEqual(blocked["source_sha256"],legacy["source_sha256"])
+  self.assertEqual(blocked["media_revision"],legacy["media_revision"])
+  self.assertEqual(v.produce()["new_admissions"],0)
+  archive=json.loads((v.retired_dir()/(legacy["id"]+".json")).read_text())
+  self.assertEqual(archive["final"]["status"],"rejected")
+  self.assertEqual(archive["final"]["last_reason"],
+                   "source_revision_or_priority_no_longer_current")
+
  def test_terminal_revision_retirement_and_immutable_private_audit(self):
   v.produce()
   before=v.items()
