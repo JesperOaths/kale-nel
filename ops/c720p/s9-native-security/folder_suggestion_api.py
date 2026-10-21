@@ -38,7 +38,9 @@ def snapshot(provider, journal: ReviewJournal) -> dict:
     data = provider()
     if (not isinstance(data, dict) or data.get("features_verified") is not True
             or not isinstance(data.get("clips"), list)
-            or not isinstance(data.get("folders"), list)):
+            or not isinstance(data.get("folders"), list)
+            or not isinstance(data.get("revision"), str)
+            or not data["revision"]):
         raise ValueError("No verified original/feature snapshot")
     state = journal.read()
     # Only decisions written by the media-bound journal become references.
@@ -62,7 +64,7 @@ def review(payload, provider, journal: ReviewJournal,
         return 400, {"ok": False, "error": "invalid_fields"}
     keys = {"action", "source", "clip_id", "folder_id", "media_sha256",
             "media_revision", "journal_revision", "opened_ticket",
-            "human_confirmed"}
+            "human_confirmed", "feature_snapshot_revision"}
     if set(payload) != keys:
         return 400, {"ok": False, "error": "invalid_fields"}
     action = payload["action"]
@@ -77,6 +79,8 @@ def review(payload, provider, journal: ReviewJournal,
             or not SHA.fullmatch(payload["media_sha256"])
             or not isinstance(payload["media_revision"], str)
             or not payload["media_revision"]
+            or not isinstance(payload["feature_snapshot_revision"], str)
+            or not payload["feature_snapshot_revision"]
             or not isinstance(payload["opened_ticket"], str)
             or not 10 <= len(payload["opened_ticket"]) <= 8192):
         return 400, {"ok": False, "error": "human_review_and_provenance_required"}
@@ -85,6 +89,8 @@ def review(payload, provider, journal: ReviewJournal,
             data = provider()
             if data.get("features_verified") is not True:
                 raise ValueError("Unverified features")
+            if payload["feature_snapshot_revision"] != data.get("revision"):
+                return 409, {"ok": False, "error": "feature_snapshot_changed"}
             clips = [ClipFeatures.from_dict(raw) for raw in data["clips"]]
             matched = next((c for c in clips if c.source == source and c.clip_id == name), None)
             folders = [str(f.get("id")) for f in data["folders"]]
@@ -103,6 +109,16 @@ def review(payload, provider, journal: ReviewJournal,
                                         matched.media_sha256, matched.media_revision)
             if attested is not True:
                 return 409, {"ok": False, "error": "opened_original_not_attested"}
+            # A signed playback ticket may take time to attest. Revalidate
+            # the provider AFTER it finishes, before any authoritative write.
+            fresh = provider()
+            if (fresh.get("features_verified") is not True or
+                    fresh.get("revision") != data["revision"] or
+                    not any(raw.get("source") == source and raw.get("clip_id") == name
+                            and raw.get("media_sha256") == matched.media_sha256
+                            and raw.get("media_revision") == matched.media_revision
+                            for raw in fresh.get("clips", []))):
+                return 409, {"ok": False, "error": "original_changed_during_review"}
             # Actual authoritative review commit is supplied by the caller.
             # Reject MUST be folder-specific: never translate it to global
             # Skip/Reject in the existing manual-link store.
