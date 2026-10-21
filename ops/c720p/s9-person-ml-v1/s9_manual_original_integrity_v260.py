@@ -92,7 +92,10 @@ def status(key,entry,attestor,now=None):
       not hmac.compare_digest(checked["sha256"],binding["sha256"])):
    return "digest_mismatch"
   return "bound_current_bytes"
- except (OSError,RuntimeError,ValueError,TypeError,Refused):
+ except Exception:
+  # The original may disappear or its independently signed source worker
+  # may fail mid-read. Never infer a healthy binding from an exception,
+  # and never leak private worker exception strings to the browser.
   return "source_unavailable"
 
 def public_result(key,entry,attestor,now=None):
