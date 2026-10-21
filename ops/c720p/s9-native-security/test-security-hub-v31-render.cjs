@@ -29,6 +29,7 @@ function render(data){
 function fixture(){
  const unknown=null;
  return {
+  aggregate_stale:false,aggregate_age_seconds:7,
   infrastructure:{status:'current',age_seconds:7,root_available_bytes:0,
    root_total_bytes:21*1073741824,ntp_synchronized:unknown,
    external_clock_minus_hub_seconds:unknown,original_digest_matches:unknown,
@@ -66,4 +67,22 @@ const absent=render(null);
 assert.equal(absent.summary,'System reports unavailable');
 assert.match(absent.fields.Reports,/Unavailable/);
 assert(!('Storage' in absent.fields),'No invented storage measurement');
-console.log('V31_RENDERED_PRIVATE_STATUS_CONTRACTS_PASS 15');
+
+// A stale aggregate cannot certify even formerly verified S3 motion or digest binding.
+const old=fixture();
+old.aggregate_stale=true;
+old.aggregate_age_seconds=650;
+old.infrastructure.status='stale';
+old.pipeline_summary={
+ rescan:{state:'current',tracked:10,pending:1,processing:0,completed:9,blocked:0,rejected:0,dead_letter:0,
+  worker_activity_verified:true,results_current_source_verified:true},
+ s3:{motion_health_verified:true,healthy:true,motion_analysis_active:true},
+ manual_binding:{decisions:48,without_reported_binding:48,current_source_binding_verified:true,live_write_binding_verified:true}
+};
+const olderUI=render(old);
+assert.match(olderUI.summary,/aggregate report is stale/i);
+assert.match(olderUI.fields['Rescan queue'],/Last reported/);
+assert.match(olderUI.fields['Bedroom S3 motion'],/UNKNOWN/);
+assert.match(olderUI.fields['Manual review media binding'],/Unknown \(stale report\)/);
+
+console.log('V31_RENDERED_PRIVATE_STATUS_CONTRACTS_PASS 19');
