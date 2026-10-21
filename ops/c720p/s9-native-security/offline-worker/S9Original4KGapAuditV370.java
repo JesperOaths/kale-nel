@@ -123,30 +123,14 @@ public final class S9Original4KGapAuditV370 {
       if(crop!=frame)crop.recycle();
     }
     need(heads.size()==12,"yunet_model_head_mismatch");
-    // The existing strict five-landmark decoder sees a padded 640x640 input;
-    // no face alignment or identity vectors are created by this worker.
-    List<PhoneYuNetLandmarkDecoder.Face> faces=
-        PhoneYuNetLandmarkDecoder.decode(heads,NET,NET);
+    // Decode first, THEN apply the quality geometry to ORIGINAL frame pixels.
+    // The strict face-alignment gate is for native snapshot pixels; applying
+    // it prematurely to a downscaled/padded image would discard real faces.
+    List<S9YuNetNativeQualityDecoderV370.Face> faces=
+        S9YuNetNativeQualityDecoderV370.decode(heads,tile,ww,hh,px,py);
     List<Detection> result=new ArrayList<>();
-    for(PhoneYuNetLandmarkDecoder.Face face:faces) {
-      if(face.confidence<.90)continue;
-      double[] b=face.nativeBox;
-      double sx=(double)w/ww,sy=(double)h/hh;
-      double left=x0+(b[0]-px)*sx,top=y0+(b[1]-py)*sy;
-      double right=x0+(b[0]+b[2]-px)*sx;
-      double bottom=y0+(b[1]+b[3]-py)*sy;
-      left=Math.max(0,Math.min(FRAME_W,left));
-      top=Math.max(0,Math.min(FRAME_H,top));
-      right=Math.max(left,Math.min(FRAME_W,right));
-      bottom=Math.max(top,Math.min(FRAME_H,bottom));
-      double width=right-left,height=bottom-top;
-      double[] lm=face.nativeLandmarks;
-      double eye=Math.hypot((lm[0]-lm[2])*sx,(lm[1]-lm[3])*sy);
-      if(width>=18&&height>=18&&eye>=8&&Double.isFinite(eye)
-          &&Double.isFinite(face.confidence))
-        result.add(new Detection(new double[]{left,top,width,height},
-                                 face.confidence,eye));
-    }
+    for(S9YuNetNativeQualityDecoderV370.Face face:faces)
+      result.add(new Detection(face.nativeBox,face.confidence,face.nativeEyeSpan));
     return result;
   }
   static JSONArray detect(OrtEnvironment env,OrtSession model,
