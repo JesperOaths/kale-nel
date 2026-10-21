@@ -6,7 +6,7 @@
 
 `s9_anonymous_evidence_consumer_v361.consume(document, current, clip, appearance=None)` returns a tuple `(http_status:int, body:dict)`. The caller is an **already authenticated internal reader**, never an anonymous/public service. `document` is the live `GET /new/api/evidence-quality` payload, `current` the **fresh validated native phone rows** from the existing authenticated inner relay (not a caller-supplied query), `clip` a canonical `motion_<13 digit milliseconds>.mp4`. `appearance` optionally holds the read-only V3 appearance result for that same clip; it is *never merged into a person identity or eligibility decision*.
 
-The method independently revalidates the entire admitted gap report against the current private catalog and durable queue, by invoking `s9_evidence_quality_v1.source_current_gap_report`. It hashes snapshots of both authoritative metadata sources immediately before and after revalidation. A race, missing file, tampered reader assertion, mismatched original SHA/byte length/media revision, changed detector/native pass/crop or queue revocation prevents consumption. This is an additional downstream guard, not a replacement for the reader's own checks.
+The method independently revalidates the entire admitted gap report against the current private catalog and durable queue, by invoking `s9_evidence_quality_v1.source_current_gap_report`. It hashes snapshots of the three authoritative metadata sources (original catalog, durable queue, **latest Evidence Quality priority report**) immediately before and after revalidation. A race, missing file, tampered reader assertion, mismatched original SHA/byte length/media revision, changed detector/native pass/crop or queue revocation prevents consumption. This is an additional downstream guard, not a replacement for the reader's own checks.
 
 ## Response schema `s9_anonymous_quality_consumption_v361`
 
@@ -34,3 +34,36 @@ The SHA values above are **format examples, not actual source attestations**.
 CI runs the fixture twice under independent hash seeds. Test real shape vs fabricated source SHA, changed revision, changed original bytes, changed native pass, new indexed face crop, revoked queue status, unsupported model, replayed cached response, source-race and V3 auto-identity flag. These are synthetic unit tests without MP4 reads, UI, Camera2, authentication changes or private media.
 
 Physical production acceptance requires already-authorized access, root headroom >=850 MiB without lowering the guard, original Camera2 4K idle/zero dropped frames/thermal, legitimate reader #1107/#1117 bytes installed and Playback ownership coordination. Demonstrate at least one **new** actual 4K rescan -> qualified Evidence Quality GET -> V361 consumed 200, then safe stale-source/revision revocation to 410 without touching an original or user review. Record installed SHA/real job ID before claiming live. Historical blocked same-YuNet work remains unsupported. As of 21 Oct 2026 previous receipts #12344/#12345 proved an old reader and 5 current/16 unqualified historical derivatives; root <850 MiB, private SSH OAuth `tag:ci` permission unresolved.
+
+## V365 current-priority reader-time revocation (PR #1135)
+
+This is a **source-only addendum, not a deployed API claim**. The independently
+generated Evidence Quality `state/s9-evidence-quality-v1/report.json` now
+participates in each actual evidence reader admission and V361 downstream
+revision. Even an exact SHA/bytes/revision/model-matched **completed** queue
+row is no longer eligible if the latest quality report withdraws
+`targeted_rescan_priority`, changes `extraction_status` away from the
+queue's `priority_reason`, or loses
+`native_face_pass_complete:true`. Missing, oversized, wrong-model,
+invalid/duplicate current priority rows cause source admission to fail closed.
+
+**Consumer-visible behavior remains the V361 schema:** 200 means currently
+source-revalidated anonymous quality for human review, 410 means a previously
+served clip has become ineligible/revoked (not negative person evidence), 503
+means any attestation source/reader is unavailable or malformed, 400 invalid
+clip. The `evidence_revision_sha256` now changes when the quality report
+changes, even when original MP4 and queue revision do not. It is a fresh
+readback token **not** an authorization to reuse cached evidence after a
+subsequent change. Timestamps in the existing API remain UTC for generated
+metadata and milliseconds **relative to the start of original video** for
+sample offsets. This change adds **no** public route and does not authorize
+the Playback owner to infer identity, pose/gait or auto-file a person.
+
+**Required deployment ordering:** with camera, thermal, worker locks and
+>=850 MiB root reserve verified, install source-qualified reader #1107/#1117
+**plus V365** before any V356/V304 rescan consumer-acknowledgment upgrade.
+Install the matching V361 consumer module only through an owner-approved
+authenticated private route; request fresh GET and retain sanitized revision
+receipts. The Playback owner alone registers shared UI/relay integration.
+Existing historical unqualified gap rows stay historical and ineligible.
+Synthetic CI does not prove a physical deployment.

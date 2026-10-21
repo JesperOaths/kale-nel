@@ -368,12 +368,34 @@ def source_current_gap_report(gap, current):
         raise ValueError('untrusted_original_gap_rows')
     if not isinstance(current, dict):
         raise ValueError('live_catalogue_not_available')
-    for path, limit in ((PRIORITY_CATALOG, 8000000), (PRIORITY_QUEUE, 4000000)):
+    # Queue completion is not a permanent source entitlement. The producer
+    # can withdraw a priority before its next periodic queue update; require
+    # the current independently generated quality report on EVERY read.
+    for path, limit in ((PRIORITY_CATALOG, 8000000), (PRIORITY_QUEUE, 4000000),
+                        (REPORT, 6000000)):
         if (not path.is_file() or path.is_symlink() or
                 not 20 < path.stat().st_size < limit):
             raise ValueError('source_attestation_file_unavailable')
     catalog = json.loads(PRIORITY_CATALOG.read_text())
     queue = json.loads(PRIORITY_QUEUE.read_text())
+    latest_quality = json.loads(REPORT.read_text())
+    priorities = latest_quality.get('recordings')
+    if (latest_quality.get('analysis_version') != VERSION or
+        latest_quality.get('detector_model_sha256') != MODEL_SHA or
+        not isinstance(priorities, list) or not 1 <= len(priorities) <= 2000 or
+        latest_quality.get('original_recordings') != len(priorities)):
+        raise ValueError('current_priority_report_not_trusted')
+    priority_by_clip = {}
+    for item in priorities:
+        if not isinstance(item, dict):
+            raise ValueError('current_priority_row_not_trusted')
+        name = item.get('clip_no')
+        if (not isinstance(name, str) or not CLIP.fullmatch(name) or
+            name in priority_by_clip or
+            type(item.get('targeted_rescan_priority')) is not bool or
+            type(item.get('native_face_pass_complete')) is not bool):
+            raise ValueError('current_priority_row_not_trusted')
+        priority_by_clip[name] = item
     if (catalog.get('schema_version') != 's9_native_archive_catalog_v1' or
         not DIGEST.fullmatch(str(catalog.get('snapshot_id', ''))) or
         not isinstance(catalog.get('records'), dict) or
@@ -434,7 +456,12 @@ def source_current_gap_report(gap, current):
             continue
         seen.add(name)
         source = current.get(name)
-        if not isinstance(source, dict):
+        current_priority = priority_by_clip.get(name)
+        if (not isinstance(source, dict) or not isinstance(current_priority, dict) or
+            current_priority.get('native_face_pass_complete') is not True or
+            current_priority.get('targeted_rescan_priority') is not True or
+            current_priority.get('extraction_status') not in (
+                'no_indexed_image', 'secondary_detector_has_no_supported_face')):
             continue
         # A newer native face pass or an indexed crop supersedes the old
         # zero-crop gap observation without changing the original 4K bytes.
@@ -470,7 +497,8 @@ def source_current_gap_report(gap, current):
             continue
         if not any(row.get('source_sha256') == sha and
                    row.get('media_revision') == version and
-                   row.get('source_bytes') == bytes_count
+                   row.get('source_bytes') == bytes_count and
+                   row.get('priority_reason') == current_priority['extraction_status']
                    for row in by_clip.get(name, ())):
             continue
         visible.append(item)

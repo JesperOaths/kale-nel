@@ -17,8 +17,9 @@ class CurrentGap(unittest.TestCase):
   self.temp=tempfile.TemporaryDirectory(prefix="s9-gap-revocation-v355-")
   self.addCleanup(self.temp.cleanup)
   root=Path(self.temp.name)
-  self.cat=root/"catalog.json";self.queue=root/"queue.json"
-  for key,path in (("PRIORITY_CATALOG",self.cat),("PRIORITY_QUEUE",self.queue)):
+  self.cat=root/"catalog.json";self.queue=root/"queue.json";self.quality=root/"quality.json"
+  for key,path in (("PRIORITY_CATALOG",self.cat),("PRIORITY_QUEUE",self.queue),
+                   ("REPORT",self.quality)):
    change=patch.object(m,key,path);change.start();self.addCleanup(change.stop)
   clock=patch.object(m.time,"time",return_value=1700000000)
   clock.start();self.addCleanup(clock.stop)
@@ -33,9 +34,16 @@ class CurrentGap(unittest.TestCase):
   self.row={"id":"d"*64,"clip_no":self.name,"status":"processing",
             "attempts":1,"lease_until":1700000240,"source_sha256":self.sha,
             "source_bytes":self.size,"media_revision":self.version,
-            "model_sha256":m.MODEL_SHA,"required_analysis":m.GAP_ANALYSIS}
+            "model_sha256":m.MODEL_SHA,"required_analysis":m.GAP_ANALYSIS,
+            "priority_reason":"no_indexed_image"}
   self.job={"schema":"s9_priority_rescan_feedback_v304",
             "revision":3,"rows":[self.row]}
+  self.priority={"analysis_version":m.VERSION,
+                 "detector_model_sha256":m.MODEL_SHA,
+                 "original_recordings":1,
+                 "recordings":[{"clip_no":self.name,"native_face_pass_complete":True,
+                                "targeted_rescan_priority":True,
+                                "extraction_status":"no_indexed_image"}]}
   self.record={"clip_no":self.name,"source_sha256":self.sha,
                "source_revision":self.version,"source_bytes":self.size,
                "model_sha256":m.MODEL_SHA,"analysis_version":m.GAP_ANALYSIS,
@@ -52,6 +60,7 @@ class CurrentGap(unittest.TestCase):
  def save(self):
   self.cat.write_text(json.dumps(self.catalog))
   self.queue.write_text(json.dumps(self.job))
+  self.quality.write_text(json.dumps(self.priority))
  def read(self):
   self.save()
   return m.source_current_gap_report(self.gap,self.current)
@@ -152,6 +161,37 @@ class CurrentGap(unittest.TestCase):
   with self.assertRaisesRegex(ValueError,"source_attestation_schema_unavailable"):
    m.source_current_gap_report(self.gap,self.current)
   self.save()
+
+ def test_latest_priority_withdrawn_or_reclassified_revokes_without_queue_refresh(self):
+  self.assertEqual(len(self.read()["recordings"]),1)
+  self.priority["recordings"][0]["targeted_rescan_priority"]=False
+  self.assertEqual(self.read()["recordings"],[])
+  self.priority["recordings"][0]["targeted_rescan_priority"]=True
+  self.priority["recordings"][0]["extraction_status"]="secondary_detector_has_no_supported_face"
+  self.assertEqual(self.read()["recordings"],[])
+  self.priority["recordings"][0]["extraction_status"]="no_indexed_image"
+  self.priority["recordings"][0]["native_face_pass_complete"]=False
+  self.assertEqual(self.read()["recordings"],[])
+  self.priority["recordings"][0]["native_face_pass_complete"]=True
+  self.assertEqual(len(self.read()["recordings"]),1)
+
+ def test_invalid_duplicate_priority_and_missing_producer_report_fail_closed(self):
+  self.priority["recordings"].append(dict(self.priority["recordings"][0]))
+  self.priority["original_recordings"]=2
+  with self.assertRaisesRegex(ValueError,"current_priority_row_not_trusted"):
+   self.read()
+  self.priority["recordings"].pop()
+  self.priority["original_recordings"]=1
+  self.priority["detector_model_sha256"]="f"*64
+  with self.assertRaisesRegex(ValueError,"current_priority_report_not_trusted"):
+   self.read()
+  self.priority["detector_model_sha256"]=m.MODEL_SHA
+  self.save()
+  self.quality.unlink()
+  with self.assertRaisesRegex(ValueError,"source_attestation_file_unavailable"):
+   m.source_current_gap_report(self.gap,self.current)
+  self.assertEqual(len(self.read()["recordings"]),1)
+
  def test_cross_clip_duplicate_or_invalid_rows_are_never_promoted(self):
   self.gap["recordings"]=[self.record,dict(self.record)]
   r=self.read()
