@@ -23,6 +23,7 @@ assert.match(storageAlert({...base,root_available_bytes:4*1073741824,status:'sta
 assert.match(candidate,/if\(i\.ntp_synchronized===null\)warnings\.push\('Clock synchronization unknown'\)/);
 assert.match(candidate,/i\.original_digest_mismatches===null\)warnings\.push\('Original integrity evidence unavailable'\)/);
 assert.match(candidate,/Last reported/);
+assert.ok(candidate.includes("(data.aggregate_stale?'Last reported: ':'')+m.without_reported_binding"));
 assert.match(candidate,/const api=\(\)=>window\.C720PSecureRelay/);
 assert.match(candidate,/Per-record blocked reasons\/revocations unavailable/);
 assert.doesNotMatch(candidate,/document\.cookie\s*=/);
