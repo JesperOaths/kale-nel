@@ -72,7 +72,7 @@ def build(output_dir,aar,android_jar,d8):
              "--output",str(target),str(jar),
              *(str(p) for p in source_classes)])
         dex=target/"classes.dex"
-        require(dex.is_file() and 100<dex.stat().st_size<300000,
+        require(dex.is_file() and 2000<dex.stat().st_size<2*1024*1024,
                 "bounded_dex_missing")
         archive=root/"s9_gap_v371.dex.jar"
         with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_STORED) as z:
