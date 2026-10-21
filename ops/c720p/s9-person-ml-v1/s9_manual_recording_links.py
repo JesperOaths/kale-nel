@@ -87,10 +87,37 @@ def source_known(source,name,sd_names):
   return bool(REMOTE.fullmatch(name) and ".." not in name and drive_verified(name))
  return False
 
-def report():
+def report(attestor=None):
+ # Public authenticated review readers need status, group folders and latest
+ # manual authority, NOT original SHA, immutable media ID, revision or any
+ # private byte-attestor details. Historical unbound stays authoritative.
  data=current()
- return {"ok":True,"revision":data["revision"],"items":data["items"],
-   "manual_links_only":True,"automatic_identity_matching":False}
+ categories=("bound","historically_unbound","source_unavailable",
+             "revision_mismatch")
+ counts={name:0 for name in categories}
+ items={}
+ protocol=None
+ for key,stored in data["items"].items():
+  if not isinstance(stored,dict):raise RuntimeError("manual_entry_invalid")
+  binding=stored.get("media_binding")
+  if not isinstance(binding,dict) or binding.get("status")!="bound_at_decision":
+   status="historically_unbound"
+  elif attestor is None:
+   status="source_unavailable"
+  else:
+   if protocol is None:protocol=binding_protocol()
+   status=protocol.display_status(stored,attestor)
+  if status not in counts:raise RuntimeError("untrusted_binding_state")
+  counts[status]+=1
+  # Keep all existing manual fields except private original-byte evidence.
+  public={field:value for field,value in stored.items() if field!="media_binding"}
+  public["media_binding_status"]=status
+  items[key]=public
+ return {"ok":True,"revision":data["revision"],"items":items,
+   "manual_links_only":True,"automatic_identity_matching":False,
+   "manual_digest_status":{"schema_version":"manual_digest_status_v1",
+     "counts":counts,"historical_authority_preserved":True,
+     "digest_backfill_performed":False,"reviews_reopened":False}}
 
 def mutate(body,sd_names,attestor=None,require_binding=False):
  if not isinstance(body,dict):
@@ -190,7 +217,7 @@ def install(H,sd_names,attestor=None,require_binding=False):
   if route.path!=ROUTE or route.query:
    return previous_get(self)
   if self.command=="HEAD":return self.js(200,{"ok":True})
-  try:self.js(200,report())
+  try:self.js(200,report(attestor=attestor))
   except (OSError,ValueError,RuntimeError,TypeError):
    self.js(503,{"ok":False,"error":"manual_link_registry_unavailable"})
  def post(self):
