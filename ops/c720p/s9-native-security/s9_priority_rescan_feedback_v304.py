@@ -283,15 +283,22 @@ def consumer_visible(record):
           and gap.get("analysis_version")==ANALYSIS
           and gap.get("detector_model_sha256")==MODEL_SHA,
           "secondary_consumer_not_reading_current_report")
+    # A matching filename/revision in an unqualified reader is just an echo.
+    # The live consumer must prove it applied its original-catalog/queue
+    # attestation and revocation gate before a queue task can be completed.
+    check(gap.get("source_binding_status")=="source_qualified_active_queue_only"
+          and type(gap.get("source_bound_records_visible")) is int
+          and gap["source_bound_records_visible"]>=1
+          and type(gap.get("source_bound_records_not_current")) is int
+          and gap["source_bound_records_not_current"]>=0
+          and gap.get("original_recordings_modified") is False
+          and gap.get("identity_inference_performed") is False,
+          "secondary_consumer_source_attestation_unavailable")
     records=gap.get("recordings")
+    # Exact equality also rejects swapped/missing frame evidence under a
+    # valid original SHA; merely matching the source revision is insufficient.
     check(isinstance(records,list) and any(
-          item.get("clip_no")==record["clip_no"]
-          and item.get("source_sha256")==record["source_sha256"]
-          and item.get("source_revision")==record["source_revision"]
-          and item.get("model_sha256")==record["model_sha256"]
-          and isinstance(item.get("samples"),list)
-          and len(item["samples"])==3
-          for item in records if isinstance(item,dict)),
+          item==record for item in records if isinstance(item,dict)),
           "source_bound_secondary_result_not_visible")
     return True
 
@@ -363,7 +370,8 @@ def work():
             if cause in ("original_no_longer_eligible","source_changed_during_rescan",
                 "source_revision_changed_after_analysis","model_version_changed_since_admission"):
                 candidate["status"]="rejected"
-            elif (cause=="camera_battery_thermal_recording_or_worker_exclusion"
+            elif (cause in ("camera_battery_thermal_recording_or_worker_exclusion",
+                            "secondary_consumer_source_attestation_unavailable")
                   or isinstance(err,(urllib.error.URLError,TimeoutError,ConnectionError))):
                 candidate["status"]="pending";candidate["attempts"]-=1
                 candidate["deferrals"]=candidate.get("deferrals",0)+1
