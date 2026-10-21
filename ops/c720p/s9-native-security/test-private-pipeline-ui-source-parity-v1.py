@@ -17,8 +17,8 @@ RUNTIME=THIS.parent/"security-runtime/s9_security_component_health_v1.py"
 BLOBS={
  RUNTIME:"3a6065f790e1946c19ac0be47c3d02e201a76356",
  THIS/"security-hub-v30.js":"e5687004d39c72e0e1de9c9160f560d3dd721155",
- THIS/"security-hub-v30.html":"9317a839381ad897c25c39eba674e039d2e71a8b",
- THIS/"c720p-surveillance.html":"4a97b8be34c983df4f76ed24e3837bdbdb5c3563",
+ THIS/"security-hub-v30.html.snapshot.txt":"9317a839381ad897c25c39eba674e039d2e71a8b",
+ THIS/"c720p-surveillance.html.snapshot.txt":"4a97b8be34c983df4f76ed24e3837bdbdb5c3563",
 }
 def blob(raw):
  return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
@@ -48,8 +48,8 @@ class SecurityPrivateUI(unittest.TestCase):
    self.assertEqual(blob(f.read_bytes()),expected,str(f))
  def test_precise_versioned_shells_and_private_only_reader(self):
   expected="security-hub-v30.js?v=private-pipeline-source-status-v1-20261021"
-  self.assertIn(expected,(THIS/"c720p-surveillance.html").read_text())
-  self.assertIn(expected,(THIS/"security-hub-v30.html").read_text())
+  self.assertIn(expected,(THIS/"c720p-surveillance.html.snapshot.txt").read_text())
+  self.assertIn(expected,(THIS/"security-hub-v30.html.snapshot.txt").read_text())
   script=(THIS/"security-hub-v30.js").read_text()
   for phrase in ("security-component-health","pipeline_summary",
     "security_ui_pipeline_summary_v1",
