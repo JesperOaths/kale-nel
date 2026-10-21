@@ -60,6 +60,22 @@ def inspect(path=CONFIG):
     flags["schema_refuses"]=not all(flags[k] for k in (
         "folder_id_valid","remote_valid","rclone_binary_valid",
         "rclone_config_field_string"))
+    # Independently inspect only two immutable system executable candidates.
+    # The configured agent-owned alternative remains UNTRUSTED; this does
+    # not authorize source attestation or mutate the uploader configuration.
+    for fixed,label in (("/usr/bin/rclone","usr_bin"),
+                        ("/usr/local/bin/rclone","usr_local_bin")):
+        candidate=Path(fixed)
+        try:
+            cs=candidate.lstat()
+            ps=candidate.parent.stat()
+            accepted=(not candidate.is_symlink() and
+                stat.S_ISREG(cs.st_mode) and cs.st_uid==0 and
+                not cs.st_mode&0o022 and bool(cs.st_mode&0o111) and
+                ps.st_uid==0 and not ps.st_mode&0o022)
+        except OSError:
+            accepted=False
+        flags[label+"_independent_system_binary_trusted_metadata"]=accepted
     flags["read_only"]=True
     flags["original_bytes_read"]=0
     flags["manual_decisions_modified"]=0
