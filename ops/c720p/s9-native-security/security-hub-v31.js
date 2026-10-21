@@ -121,6 +121,11 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
       tri(m.current_source_binding_verified)&&tri(m.live_write_binding_verified);
     if(valid)result.pipeline_summary=p;
   }
+  // Contradictory disk telemetry is not evidence of healthy headroom.
+  const disk=result.infrastructure;
+  if(disk.root_available_bytes!==null&&disk.root_total_bytes!==null&&
+     (disk.root_total_bytes===0||disk.root_available_bytes>disk.root_total_bytes))
+   return null;
   return result;
  }
  const known=x=>x===null?'Not reported':String(x);
@@ -129,7 +134,7 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
  const report=row=>({current:'Current',stale:'Stale',unavailable:'Unavailable'})[row.status]+' · '+age(row.age_seconds);
  const bytes=x=>x===null?'Not reported':x<1073741824?(x/1048576).toFixed(0)+' MiB':(x/1073741824).toFixed(1)+' GiB';
  function storageAlert(i){
-  if(i.root_available_bytes===null||i.root_total_bytes===null||i.root_total_bytes<=0)
+  if(i.root_available_bytes===null||i.root_total_bytes===null||i.root_total_bytes<=0||i.root_available_bytes>i.root_total_bytes)
    return 'Storage capacity unavailable; capture headroom not verified';
   if(i.root_available_bytes===0)
    return i.status==='current'
