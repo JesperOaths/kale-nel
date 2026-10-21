@@ -96,6 +96,29 @@ Install by passing those three trusted callbacks plus a private
 opened_attestor, authoritative_commit)` inside the **authenticated** Security
 Hub relay. This must not be mounted on an unauthenticated server.
 
+## Cold-start first-reference workflow
+
+The existing manual-link index contains no original-byte digests independently
+bound at the time of those historic reviews. Existing decisions remain visible
+in the established UI, but **cannot** silently become verified model references
+or reappear as newly unreviewed originals.
+
+Each `Awaiting Review` group now carries its members' source-qualified clip
+IDs, exact original SHA and revision. A user can select a **named folder**,
+inspect a specific original through authenticated playback, then explicitly
+Approve or Reject. The first approved recording seeds the folder's verified
+reference pool; subsequent suggestions use 40% centroid and 60% exemplar.
+Rejection excludes only that folder, not the recording or other folders.
+A user can create a new folder in the existing editor before reviewing it.
+
+The server enforces actual original-open attestation, revision consistency,
+the current feature snapshot and authoritative persistence. The client cannot
+turn a fake or stale playback ticket into a reference. The activation audit
+permits the legitimate **zero-reference cold start**, but requires real media
+digest binding, feature provider, signed player integration, authenticated
+review endpoint and reconciled live UI. Passing isolated unit tests does not
+establish that these production hooks exist.
+
 ## Current deployment gate (21 October 2026)
 
 Read-only live inspection on the C720P found **48** native manual-link
