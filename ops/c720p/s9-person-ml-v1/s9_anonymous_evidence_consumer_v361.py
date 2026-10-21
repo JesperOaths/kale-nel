@@ -90,8 +90,14 @@ def consume(document,current,clip,appearance=None):
             type(gap.get("source_bound_records_not_current")) is not int or
             gap["source_bound_records_not_current"]<0 or
             gap.get("identity_inference_performed") is not False or
-            gap.get("original_recordings_modified") is not False or
-            rows!=admitted["recordings"]):
+            gap.get("original_recordings_modified") is not False):
+            raise Unavailable("source_qualified_reader_claim_not_reproduced")
+        if rows!=admitted["recordings"]:
+            # Distinguish revoked source evidence from an untrustworthy reader.
+            # Neither outcome is a negative claim about any person.
+            if any(row.get("clip_no")==clip for row in rows) and not any(
+                    row.get("clip_no")==clip for row in admitted["recordings"]):
+                raise NotCurrent("source_revision_or_evidence_revoked")
             raise Unavailable("source_qualified_reader_claim_not_reproduced")
         selected=[row for row in rows if row.get("clip_no")==clip]
         if not selected:
