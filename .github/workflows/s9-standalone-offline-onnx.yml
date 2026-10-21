@@ -74,6 +74,7 @@ jobs:
           set -euo pipefail
           area='ops/c720p/s9-native-security/offline-worker'
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/test-s9-phone-gap-coordinator-v371.py" -q
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/test-s9-phone-gap-runner-v371.py" -q
           PYTHONDONTWRITEBYTECODE=1 python3 ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py -q
           python3 -m py_compile "$area/s9_phone_gap_coordinator_v371.py" "$area/s9_phone_gap_runner_v371.py" ops/c720p/s9-native-security/s9_priority_rescan_feedback_v304.py
           echo 'S9_PHONE_GAP_SOURCE_ONLY_SYNTHETIC_PASS'
