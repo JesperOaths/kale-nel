@@ -399,8 +399,8 @@ class QueueTest(unittest.TestCase):
      "analysis_version":v.ANALYSIS,"samples":[
         {"time_ms":t,"state":"decoded","original_resolution":[3840,2160],
          "face_candidates":[]} for t in (3000,9000,15000)]}
-  with patch.object(v,"camera_guard",return_value={"ok":True}),\\
-       patch.object(v,"evaluate_one",return_value=evidence),\\
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",return_value=evidence),\
        patch.object(v,"consumer_visible",
          side_effect=v.Refusal("anonymous_consumer_source_or_priority_revoked")):
    result=v.work()
@@ -420,8 +420,8 @@ class QueueTest(unittest.TestCase):
      "analysis_version":v.ANALYSIS,"samples":[
         {"time_ms":t,"state":"decoded","original_resolution":[3840,2160],
          "face_candidates":[]} for t in (3000,9000,15000)]}
-  with patch.object(v,"camera_guard",return_value={"ok":True}),\\
-       patch.object(v,"evaluate_one",return_value=evidence),\\
+  with patch.object(v,"camera_guard",return_value={"ok":True}),\
+       patch.object(v,"evaluate_one",return_value=evidence),\
        patch.object(v,"consumer_visible",
          side_effect=v.Refusal("anonymous_consumer_revalidation_unavailable")):
    result=v.work()
