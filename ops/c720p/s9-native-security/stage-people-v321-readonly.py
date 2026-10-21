@@ -19,7 +19,8 @@ import urllib.request
 REPO="JesperOaths/kale-nel"
 PREFIX="ops/c720p/s9-native-security/"
 WWW=Path("/opt/homeassistant/config/www/frontyard-security-new")
-BASE=Path("http://127.0.0.1:8123/local/frontyard-security-new")
+# HTTP origin must remain a URL string: pathlib.Path collapses "http://".
+BASE="http://127.0.0.1:8123/local/frontyard-security-new"
 PROTECTED={
     "security-people-v50.html": "002decab2e21774cae7352bd7f87b10d78c0dbc3c7b469a2b139e2e805c64aa1",
     "security-people-v320.js": "7ed25925a7785cf4267b0f0ff8234b3b5ce40b21f07d899d9e9057b8baf8e1b7",
