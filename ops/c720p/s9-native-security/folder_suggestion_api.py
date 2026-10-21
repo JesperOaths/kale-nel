@@ -51,6 +51,7 @@ def snapshot(provider, journal: ReviewJournal) -> dict:
     result["journal_revision"] = state["revision"]
     result["feature_snapshot_revision"] = data.get("revision")
     result["verified_media_evidence"] = True
+    result["historic_review_index_verified"] = True
     result["raw_embeddings_exposed"] = False
     return result
 
