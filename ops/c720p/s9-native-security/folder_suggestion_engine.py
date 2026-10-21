@@ -272,6 +272,15 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
         groups.append({"id": "awaiting-review-" + digest,
                        "label": "Awaiting Review", "state": "pending_review",
                        "source_qualified_clips": keys,
+                       # Per-clip original proof is needed to review a group
+                       # without relying on a guessed filename or stale media.
+                       "members": [{"source": c.source, "clip_id": c.clip_id,
+                                    "source_qualified_clip_id": c.key,
+                                    "media_sha256": c.media_sha256,
+                                    "media_revision": c.media_revision,
+                                    "state": "pending_review",
+                                    "human_review_required": True}
+                                   for c in cluster],
                        "member_count": len(keys), "human_review_required": True,
                        "automatically_assigned": False})
     return sorted(groups, key=lambda row: (-row["member_count"], row["id"]))
@@ -382,6 +391,8 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     return {"schema": SCHEMA, "status": "human_review_only", "match_threshold": match_threshold,
             "cluster_threshold": cluster_threshold, "matches": matches,
             "provisional_clusters": agglomerate(unmatched, cluster_threshold),
+            "folder_options": [{"id": str(f["id"]), "label": str(f.get("label") or f["id"])}
+                               for f in folders],
             "approved_reference_counts": {key: len(refs[key]) for key in folder_ids},
             "excluded_unbound_or_legacy_decisions": legacy_or_unbound,
             "automatic_assignments": 0, "identity_probabilities": False}
