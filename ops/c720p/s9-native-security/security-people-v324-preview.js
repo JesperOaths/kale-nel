@@ -1270,7 +1270,7 @@ const autoId=/^[a-f0-9]{64}$/;
 async function fetchAutomatic(){
  // The maintained clothing groups already contain automatic sorting proposals.
  // No face recognition, identity guesses or automatic approvals are needed.
- state.automaticStatus='ready';renderAutomatic();
+ state.automaticStatus='anonymous_outfit_groups_only_face_index_unavailable';renderAutomatic();
 }
 async function denyAutomatic(row){
  if(state.automaticBusy||!autoId.test(String(row?.id||'')))return;
@@ -1309,7 +1309,7 @@ function renderAutomatic(){
  const groups=tentativeFolders();
  $('automaticTabCount').textContent=groups.length?' · '+groups.length:'';
  $('automaticStatus').textContent=groups.length+
-  ' automatic clothing groups ready to sort · review each recording before filing under a person';
+  ' provisional anonymous outfit groups · appearance is not identity; human review required before filing';
  if(!groups.length){
   host.append(elt('p','No supported clothing groups are available yet. Original recordings remain in Review recordings.','empty'));
   return;
