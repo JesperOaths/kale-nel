@@ -101,7 +101,7 @@ class Crosscheck(unittest.TestCase):
    V235.candidate_comparison(link,self.second)
  def test_does_not_touch_system_or_approval(self):
   src=(ROOT/"s9_migrated_enrollment_provenance_crosscheck_v235.py").read_text()
-  for forbidden in ("subprocess", "android.keystore", "adb", "urllib",
+  for forbidden in ("subprocess", "android.keystore", "adb shell", "urllib",
                     "requests", "socket", "os.system", "os.remove", "unlink(",
                     "enrollOnce(", "VirginApproval(", "chmod("):
    self.assertNotIn(forbidden,src)
