@@ -1370,7 +1370,20 @@ function renderFolderRankedButton(){
      }
      return signed.openAndAttest(row,()=>startVideo(clip));
     },
-    onClusterOpen:async()=>openReview('inbox'),
+    onClusterOpen:async group=>{
+     const first=(group.source_qualified_clips||[]).map(key=>
+      state.archiveEntries.find(row=>assignmentKey(row)===key)).find(Boolean);
+     if(first)startVideo(first);
+     else openReview('inbox');
+    },
+    onClusterName:async group=>{
+     // Naming opens the existing human-managed New person form. The label is
+     // entered by a human; clips are NOT automatically attached to that person.
+     openFolderEditor('create');
+     $('folderNotes').value=('Provisional appearance group; inspect each original '+
+      'before filing any clip. Candidate recordings: '+
+      (group.source_qualified_clips||[]).slice(0,7).join(', ')).slice(0,2000);
+    },
     onSaved:()=>{if(state.pane==='folder'&&state.folder===folderId)loadView();}
    });
   }catch(_){
