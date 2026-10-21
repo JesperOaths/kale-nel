@@ -13,7 +13,7 @@ const funcs=candidate.match(/ function storageAlert\(i\)\{[\s\S]*?\n \}/g)||[];
 assert.equal(funcs.length,1,'Only one storage alert handler');
 const storageAlert=vm.runInNewContext('('+funcs[0].trim()+')');
 const base={root_available_bytes:900*1048576,root_total_bytes:21*1073741824,status:'current'};
-assert.equal(storageAlert({...base,root_available_bytes:0}),old);
+assert.match(storageAlert({...base,root_available_bytes:0}),/^CRITICAL: Root filesystem full \(0 MiB available\); media work must be deferred$/);
 assert.match(storageAlert({...base,root_available_bytes:0,status:'stale'}),/Last report.*current status unverified/);
 assert.match(storageAlert({...base,root_available_bytes:null}),/unavailable/);
 assert.match(storageAlert({...base,root_total_bytes:null}),/unavailable/);
