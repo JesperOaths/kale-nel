@@ -78,6 +78,37 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.produce()["retired_with_provenance"],0)
   self.assertEqual(len(v.items()["rows"]),len(before["rows"]))
 
+ def test_retired_archive_directory_must_remain_private(self):
+  v.produce()
+  old=v.items()["rows"][0].copy()
+  v.retired_dir().mkdir(mode=0o700)
+  v.retired_dir().chmod(0o755)
+  try:
+   with self.assertRaisesRegex(v.Refusal,"retired_provenance_directory_not_private"):
+    v.retire_obsolete([dict(old,status="rejected")],set())
+  finally:
+   v.retired_dir().chmod(0o700)
+  self.assertFalse((v.retired_dir()/(old["id"]+".json")).exists())
+
+ def test_retired_archive_symlink_and_hardlink_are_refused(self):
+  v.produce()
+  old=dict(v.items()["rows"][0],status="rejected")
+  v.retire_obsolete([old],set())
+  dest=v.retired_dir()/(old["id"]+".json")
+  other=v.retired_dir()/"alternate-record.json"
+  dest.chmod(0o644)
+  with self.assertRaisesRegex(v.Refusal,"retired_provenance_file_not_private"):
+   v.retire_obsolete([old],set())
+  dest.chmod(0o600)
+  os.link(dest,other)
+  with self.assertRaisesRegex(v.Refusal,"retired_provenance_file_not_private"):
+   v.retire_obsolete([old],set())
+  other.unlink()
+  dest.unlink()
+  dest.symlink_to(other)
+  with self.assertRaisesRegex(v.Refusal,"retired_provenance_symlink_refused"):
+   v.retire_obsolete([old],set())
+
  def test_finite_capacity_defers_new_admission_without_losing_existing_work(self):
   v.produce()
   original=v.items()
