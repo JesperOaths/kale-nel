@@ -67,3 +67,33 @@ jobs:
             ops/c720p/s9-native-security/offline-worker/S9OnnxRuntimeWorker.java
           test -f "$folder/classes/nl/kalenel/s9offline/S9OnnxRuntimeWorker.class"
           echo 'S9_OFFLINE_ONNX_JAVA_API_COMPILE_PASS'
+
+      - name: Compile source-only phone-first original-4K probe (never run Android/inference)
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/s9-ort-validate"
+          sdk="\${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          android_jar="$(find "$sdk/platforms" -mindepth 2 -maxdepth 2 -name android.jar | sort -V | tail -n 1)"
+          test -f "$android_jar"
+          test -f "$folder/ort.jar"
+          area='ops/c720p/s9-native-security/offline-worker'
+          javac -source 8 -target 8 -cp "$folder/ort.jar:$android_jar" \
+            -d "$folder/classes" \
+            "$area/PhoneFaceLandmarkGate.java" \
+            "$area/PhoneYuNetLandmarkDecoder.java" \
+            "$area/S9Original4KGapAuditV370.java"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KGapAuditV370.java').read_text()
+          for marker in ('MAX_RUN_NS','MAX_SOURCE_BYTES','MediaMetadataRetriever.OPTION_CLOSEST',
+                         'MODEL_SHA','source_revision_changed_after_phone_inference',
+                         'eligible_to_publish",false','host_attestation_required",true',
+                         'one_frame_only",true','automatic_person_assignments",0'):
+              assert marker in source,marker
+          for forbidden in ('pm install','am force-stop','CameraService.java',
+                            'requestPermissions','--bulk','System.loadLibrary("camera'):
+              assert forbidden not in source,forbidden
+          print('S9_PHONE_4K_V370_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
+          PY
