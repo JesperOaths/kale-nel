@@ -1,0 +1,69 @@
+name: Task21 Drive attestor config metadata shape V255
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-drive-config-shape-v255.py'
+      - 'ops/c720p/security-runtime/test-audit-task21-drive-config-shape-v255.py'
+      - '.github/workflows/task21-drive-config-shape-v255.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-drive-config-shape-v255.py'
+      - 'ops/c720p/security-runtime/test-audit-task21-drive-config-shape-v255.py'
+      - '.github/workflows/task21-drive-config-shape-v255.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test static policy-preserving Drive config field flags
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/security-runtime/test-audit-task21-drive-config-shape-v255.py
+  physical:
+    needs: synthetic
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: SHA-pinned non-mutating agent config shape inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          src=ops/c720p/security-runtime/audit-task21-drive-config-shape-v255.py
+          sha="$(sha256sum "$src" | cut -d' ' -f1)"
+          stage="/tmp/task21-drive-config-v255-${GITHUB_SHA:0:12}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+          cmd="umask 077 && curl -fsSL --max-time 35 '$url' -o '$stage' && printf '%s  %s\n' '$sha' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage'"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          idem="task21-config-v255-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task21-drive-shape-v255','diagnostic',:'cmd',100,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "TASK21_CONFIG_V255_JOB=$job"
+          for attempt in $(seq 1 35); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 2800)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'TASK21_DRIVE_CONFIG_SHAPE_V255' <<< "$output"
+              grep -q '"original_bytes_read": 0' <<< "$output"
+              grep -q '"manual_decisions_modified": 0' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Read-only config inspection not verified";exit 1
