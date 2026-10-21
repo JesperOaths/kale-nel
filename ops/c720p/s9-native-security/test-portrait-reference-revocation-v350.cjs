@@ -44,4 +44,4 @@ state.extraLinks.items['sd:'+clip]={review_status:'assigned',folders:['personB']
 assert.equal(picked('personA'),null,'reassignment revokes A');
 assert.equal(picked('personB')?.clip,clip,'reassignment enables current B');
 state.assignedReady=false;assert.equal(picked('personB'),null,'incomplete manual inventory fails closed');
-console.log('S9_PORTRAIT_REFERENCE_REVOCATION_V350 12 real function behavior checks passed');
+console.log('S9_PORTRAIT_REFERENCE_REVOCATION_V350 current-review revocation cases passed');
