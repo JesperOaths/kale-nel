@@ -1,0 +1,29 @@
+name: S9 migrated V235 original-provenance crosscheck
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/*v235.py'
+      - 'ops/c720p/s9-native-security/offline-worker/*V235.java'
+      - '.github/workflows/s9-migrated-source-crosscheck-v235.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/*v235.py'
+      - 'ops/c720p/s9-native-security/offline-worker/*V235.java'
+      - '.github/workflows/s9-migrated-source-crosscheck-v235.yml'
+permissions:
+  contents: read
+jobs:
+  independent_reports_host_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Strict canonical SHA preimage and never-approved synthetic inventories
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/offline-worker/test_s9_migrated_enrollment_provenance_crosscheck_v235.py
