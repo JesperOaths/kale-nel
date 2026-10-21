@@ -189,7 +189,7 @@ public final class S9MigratedAndroidOwnerWriteGatewayV236 {
                     keys.internalCheckpoint,keys.microSdJournal)) {
             S9MigratedDualStoreCommitV197.TrustedSnapshot before=
                 journal.currentDecisions(
-                    java.util.Collections.<String>emptyList());
+                    new java.util.ArrayList<String>(sources.sourceRows.keySet()));
             require(before.trustedSequence==boot.trustedLedgerSequence &&
                     before.trustedHeadSha256.equals(boot.trustedLedgerHeadSha256),
                     "write_gateway_boot_head_changed");
