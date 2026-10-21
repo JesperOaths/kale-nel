@@ -49,7 +49,9 @@ def install(H,*,sessions,original_delegate,verified_source):
    if not isinstance(nonce,str) or not NONCE.fullmatch(nonce):raise Refused('invalid_nonce')
    result=sessions.confirm_player_loaded(nonce,source,name,body['observed_open_nonce'])
    return self.js(200,dict(ok=True,**result))
-  except (ValueError,TypeError,KeyError,OSError,RuntimeError):
+  except Exception:
+   # The authoritative binder raises Refused(Exception); never leak a
+   # traceback or mint a ticket when attestation refuses admission.
    return self.js(409,dict(ok=False,error='original_not_delivered_or_source_changed'))
  def go(self):
   path=urlsplit(self.path);m=MEDIA.fullmatch(path.path)
