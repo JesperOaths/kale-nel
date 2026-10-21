@@ -17,8 +17,9 @@ RUNTIME=THIS.parent/"security-runtime/s9_security_component_health_v1.py"
 BLOBS={
  RUNTIME:"3a6065f790e1946c19ac0be47c3d02e201a76356",
  THIS/"security-hub-v30.js":"e5687004d39c72e0e1de9c9160f560d3dd721155",
- THIS/"security-hub-v30.html.snapshot.txt":"9317a839381ad897c25c39eba674e039d2e71a8b",
- THIS/"c720p-surveillance.html.snapshot.txt":"4a97b8be34c983df4f76ed24e3837bdbdb5c3563",
+ THIS/"security-hub-v31.js":"e694fd75c3db526f39be8fc2544b69c589b9c4ae",
+ THIS/"security-hub-v30.html.snapshot.txt":"0155c15e5d16f414965fa6ca64320bdaf5cc54e9",
+ THIS/"c720p-surveillance.html.snapshot.txt":"c1b05255ceb0ca8c82bc5ab0d8965ee1cbdaa540",
 }
 def blob(raw):
  return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
@@ -47,15 +48,17 @@ class SecurityPrivateUI(unittest.TestCase):
   for f,expected in BLOBS.items():
    self.assertEqual(blob(f.read_bytes()),expected,str(f))
  def test_precise_versioned_shells_and_private_only_reader(self):
-  expected="security-hub-v30.js?v=private-pipeline-source-status-v1-20261021"
+  expected="security-hub-v31.js?v=private-pipeline-safe-status-v31-20261021"
   self.assertIn(expected,(THIS/"c720p-surveillance.html.snapshot.txt").read_text())
   self.assertIn(expected,(THIS/"security-hub-v30.html.snapshot.txt").read_text())
-  script=(THIS/"security-hub-v30.js").read_text()
+  script=(THIS/"security-hub-v31.js").read_text()
   for phrase in ("security-component-health","pipeline_summary",
     "security_ui_pipeline_summary_v1",
     "historical/unbound", "UNKNOWN · private motion/heartbeat",
     "Per-record blocked reasons/revocations unavailable",
     "document.hidden","visibilitychange"):
+   self.assertIn(phrase,script)
+  for phrase in ("storageAlert", "aggregate_stale", "report_transport_error", "historical/unbound"):
    self.assertIn(phrase,script)
   self.assertNotIn("verified_same_person:true",script)
  def test_typed_private_payload_and_missing_data_fail_closed(self):
@@ -85,7 +88,7 @@ class SecurityPrivateUI(unittest.TestCase):
   self.assertIn("read_report(STATE,'c720p-cloud-health-report.json',65536)",s)
   self.assertNotIn("from s9_pipeline_cloud_health_v1 import build",s)
   ast.parse(s)
-  script=(THIS/"security-hub-v30.js").read_text()
+  script=(THIS/"security-hub-v31.js").read_text()
   self.assertIn("manual_binding",script)
   self.assertIn("Not verified",script)
   self.assertIn("UNKNOWN",script)
