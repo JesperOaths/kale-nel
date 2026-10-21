@@ -60,9 +60,16 @@ class CurrentGap(unittest.TestCase):
   self.row["status"]="completed"
   self.assertEqual(self.read()["recordings"],[])
   self.row["outcome"]={"verified_secondary_report":True,
-       "consumer_visibility_confirmed":True,"model_sha256":m.MODEL_SHA}
+       "consumer_visibility_confirmed":True,"model_sha256":m.MODEL_SHA,
+       "source_revision":self.version,"sampled_frames":3}
   self.assertEqual(len(self.read()["recordings"]),1)
   self.row["outcome"]["consumer_visibility_confirmed"]=False
+  self.assertEqual(self.read()["recordings"],[])
+  # Earlier physically admitted V304 rows have all qualified proofs but no
+  # V314 acknowledgement field. The actual reader provides new attestation.
+  del self.row["outcome"]["consumer_visibility_confirmed"]
+  self.assertEqual(len(self.read()["recordings"]),1)
+  self.row["outcome"]["sampled_frames"]=2
   self.assertEqual(self.read()["recordings"],[])
  def test_latest_queue_finality_revokes_old_visible_result(self):
   for state in ("pending","rejected","blocked","dead_letter"):
