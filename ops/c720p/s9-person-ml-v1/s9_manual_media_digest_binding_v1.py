@@ -80,10 +80,13 @@ def bind_new_decision(source,name,attestor,now=None):
  if attestor is None or not callable(getattr(attestor,"verify_bytes",None)) or (
      not callable(getattr(attestor,"current_revision",None))):
   raise Refused("original_byte_attestor_not_installed")
- now=now or dt.datetime.now(dt.timezone.utc)
- if now.tzinfo is None:raise Refused("trusted_server_time_required")
+ # Full original-byte hashing can take many seconds. Snapshot server time
+ # AFTER the independent SHA worker finishes, not before it starts.
+ if now is not None and now.tzinfo is None:
+  raise Refused("trusted_server_time_required")
  proof=attestor.verify_bytes(source,name)
- binding=_validated(proof,source,name,now.astimezone(dt.timezone.utc))
+ observed_at=now if now is not None else dt.datetime.now(dt.timezone.utc)
+ binding=_validated(proof,source,name,observed_at.astimezone(dt.timezone.utc))
  current=attestor.current_revision(source,name)
  if not isinstance(current,dict) or set(current)!={"source_identity","source_revision"}:
   raise Refused("original_source_revision_unavailable")
