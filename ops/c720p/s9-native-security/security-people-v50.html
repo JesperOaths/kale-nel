@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="/gejast-auth-gate.js?v817"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-store">
+<script>const GEJAST_PAGE_VERSION="v817";</script>
+<title>People &amp; Faces · Review workspace V45</title>
+<style id="s9-people-v45-style">
+:root{color-scheme:dark;--bg:#0e1720;--panel:#152430;--panel2:#1b2e3a;--border:#304958;--text:#eff8fa;--muted:#a4bec9;--mint:#81daca;--warn:#f2c98f;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+*{box-sizing:border-box}
+body{margin:0;padding:19px 24px 40px;min-width:0}
+button,input,select,textarea{font:inherit;color:inherit;border:1px solid #426071;border-radius:8px;background:#1a3040;min-height:37px;padding:8px 12px}
+button{cursor:pointer}button:hover{background:#244456}button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+h1,h2,h3,p{margin:0}h1{font-size:23px;line-height:1.25}h2{font-size:19px;line-height:1.3}h3{font-size:14px}
+small,.muted{font-size:12px;color:var(--muted)}
+[hidden]{display:none!important}
+html.security-embedded body>.top{display:none}
+html.security-embedded body{padding-top:16px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:17px}
+.kicker{display:block;color:var(--mint);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.top p{font-size:13px;color:var(--muted);margin-top:3px}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.secondary{background:#162733;border-color:#344f5c}
+.primary{background:#286452;border-color:#72ceaf;color:#f3fffb}
+.danger{background:#513038;border-color:#935b65}
+.tabs{display:flex;gap:5px;flex-wrap:wrap;padding:4px;background:#111f2a;border:1px solid #294352;border-radius:11px;margin-bottom:17px}
+.tabs button{border-color:transparent;background:transparent;color:#a9c3cb;min-height:40px;font-weight:650;padding:8px 17px}
+.tabs button[aria-selected=true]{background:#254b49;border-color:#4b998a;color:#edfff9}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:19px}
+.metric{background:#14242f;border:1px solid var(--border);border-radius:10px;padding:12px 15px;min-height:77px}
+.metric[data-go]{cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
+.metric[data-go]:hover,.metric[data-go]:focus-visible{border-color:var(--mint);background:#1d363b}
+.metric strong{display:block;font-size:23px;line-height:1.16;font-variant-numeric:tabular-nums}
+.metric span{font-size:11px;color:var(--muted)}
+.section-head{display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-bottom:13px}
+.section-head p{font-size:12px;color:var(--muted);margin-top:4px}
+.section-head button{min-height:34px;font-size:12px}
+.overview-layout{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(270px,.95fr);gap:17px;align-items:start}
+.surface{border:1px solid var(--border);background:#121f29;border-radius:13px;padding:16px;min-width:0}
+.side-column{display:grid;gap:15px}
+.overview-feed{display:grid;gap:9px}
+.archive-source-status{display:grid;gap:7px;font-size:13px}
+.archive-source-status>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #35515e;border-radius:9px;background:#18313b}
+.archive-source-status strong{font-variant-numeric:tabular-nums}
+.archive-source-status .unavailable{color:#f3bfaa;border-color:#845c52}
+#reviewPreview .status{margin:0 0 8px}
+.review-row{display:grid;grid-template-columns:128px minmax(0,1fr);gap:13px;align-items:center;padding:9px;background:#1a2a35;border:1px solid #344d5b;border-radius:10px;min-width:0}
+.review-row .media{height:112px;width:128px;border-radius:7px;overflow:hidden}
+.recheck-alerts{display:grid;gap:8px;margin-bottom:12px}
+.recheck-row{border:1px solid #8c7044;background:#302c21;border-radius:9px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.recheck-row strong{display:block;font-size:12px;color:#ffdfa2}
+.recheck-row small{display:block;margin-top:4px;line-height:1.4}
+.recheck-row button{min-height:34px;white-space:nowrap;font-size:12px}
+.recheck-actions{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 14px}
+.recheck-actions button{border-color:#ad8551;background:#302a22;color:#ffe3b6}
+.recheck-filter{display:flex;align-items:center;gap:10px;margin:10px 0 15px;font-size:13px;color:#ffe0ac}
+.recheck-filter input{width:18px;height:18px;accent-color:#d5a765}
+.folder-recheck{color:#ffe1ae;border-left:3px solid #d6ad65;background:#30291e;border-radius:7px;padding:12px;margin-bottom:12px;font-size:12px}
+.media{background:linear-gradient(145deg,#223d48,#0b1a24);position:relative;display:flex;align-items:center;justify-content:center;color:#bed2d9;font-size:11px}
+.media img{width:100%;height:100%;display:block;object-fit:contain;background:#0a1720}
+.scene-media{background:#0d1d27!important}
+.scene-media img{object-fit:contain!important;object-position:center center}
+.review-row .media,.evidence>.media{background:#0b1721}
+.evidence>.media{height:235px}
+#reviewGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+#savedList .profile .avatar img{object-fit:contain;background:#0c1b23}
+#savedList .profile .avatar{background:#0c1b23}
+#savedList .profile .avatar .media{width:100%;height:100%;overflow:hidden}
+#savedList .profile .avatar .media img{object-fit:contain}
+.face-image-loading{color:#b4d4de;font-size:11px;padding:9px;text-align:center}
+.media .corner{position:absolute;left:7px;top:7px;background:#071620da;border:1px solid #335866;padding:2px 6px;border-radius:5px;color:#e2f1f5;font-size:10px;font-weight:700}
+.row-info{min-width:0}
+.row-info strong{font-size:13px;display:block;overflow-wrap:anywhere}
+.row-info p{font-size:12px;color:var(--muted);margin:4px 0 7px}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.actions button{font-size:12px;min-height:33px;padding:6px 10px}
+.people-review-notice{display:flex;align-items:center;justify-content:space-between;gap:16px;background:#18312f;border:1px solid #3f8375;border-radius:12px;padding:14px 18px;margin:2px 0 23px}
+.people-review-notice strong{display:block;font-size:14px}
+.people-review-notice span{display:block;font-size:12px;color:#bad6d1;margin-top:3px}
+.people-review-notice button{white-space:nowrap}
+#people>.details{margin-top:30px;max-width:100%!important;background:transparent}
+#people>.details>summary{max-width:440px}
+.folder-faces{margin:12px 0 20px;border:1px solid #31525a;border-radius:12px;background:#132630;padding:15px}
+.folder-faces .section-head{margin-bottom:12px}
+.folder-face-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:9px}
+.folder-face-grid>button{padding:0;overflow:hidden;border:1px solid #45616a;border-radius:9px;background:#172e38;min-height:0;text-align:left}
+.folder-face-grid .media{height:98px;border-radius:0}
+.folder-face-grid .media img{object-fit:contain}
+.folder-face-grid>button>small{display:block;padding:7px 8px;font-size:11px}
+.folder-face-grid>button:hover{border-color:#81daca}
+.profile-list{display:grid;gap:10px}
+#savedList{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+#savedList .profile{grid-template-columns:84px minmax(0,1fr);grid-template-rows:auto auto;min-height:148px;padding:13px;border-color:#426776;background:linear-gradient(145deg,#1c3641,#142732)}
+#savedList .profile:hover,#savedList .profile:focus-visible{border-color:#81daca;background:#20424a}
+#savedList .profile .avatar{width:84px;height:110px;border-radius:10px;grid-row:1/3}
+#savedList .profile strong{font-size:16px}
+#savedList .profile small{font-size:12px;line-height:1.45}
+#savedList .profile .arrow{font-size:12px;font-weight:700;grid-column:2;justify-self:start;color:#9de9d7}
+#people>.details{margin-top:25px;max-width:850px}
+#people .section-head{margin:10px 0 20px}
+#people .section-head h2{font-size:23px}
+.profile{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;width:100%;background:#1b2b35;border:1px solid #375563;padding:9px;border-radius:10px}
+.profile .avatar{height:50px;width:50px;display:flex;align-items:center;justify-content:center;background:#31504d;border-radius:8px;color:#bdffeb;font-size:23px;font-weight:800;overflow:hidden}
+.profile .avatar img{height:100%;width:100%;object-fit:cover}
+.profile strong{display:block;font-size:13px}.profile small{display:block;font-size:11px;margin-top:3px}
+.profile .arrow{font-size:19px;color:#8db3b5}
+.details{margin-top:15px;border:1px solid #334a58;border-radius:10px;background:#13232d;overflow:hidden}
+.details>summary{cursor:pointer;padding:12px 14px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+.details>summary::marker{color:#80d7c4}
+.details>p{padding:0 14px 10px;font-size:12px;color:var(--muted)}
+.details .group-list{padding:0 10px 10px;display:grid;gap:5px}
+.group-list button{background:#1c2d39;text-align:left;border-color:#345162;display:flex;justify-content:space-between;gap:10px;font-size:12px}
+.subnotice{font-size:12px;color:#b2c9d1;margin-top:9px}
+.pf-scan-status{display:grid;gap:7px;margin-top:9px}
+.pf-scan-line{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}
+.pf-scan-line strong{font-weight:600;color:#e3f5f2}
+.pf-scan-line span{font-variant-numeric:tabular-nums;color:#a9c6d0}
+.pf-scan-status progress{appearance:none;width:100%;height:6px;border:0;border-radius:30px;overflow:hidden;background:#324955}
+.pf-scan-status progress::-webkit-progress-bar{background:#324955;border-radius:30px}
+.pf-scan-status progress::-webkit-progress-value{background:#68cdb7;border-radius:30px}
+.pf-scan-status progress::-moz-progress-bar{background:#68cdb7;border-radius:30px}
+.callout{display:flex;align-items:start;gap:10px;background:#1b302e;border-left:3px solid #7bd8c0;border-radius:7px;padding:12px;margin-bottom:13px}
+.callout p{font-size:12px;color:#d3e4df}
+.filters{display:flex;gap:9px;flex-wrap:wrap;align-items:end;margin:0 0 13px}
+.filters label{font-size:12px;display:flex;gap:6px;flex-direction:column;color:#afc7d1}
+.filters select,.filters input{min-width:160px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px}
+.evidence{border:1px solid #385360;border-radius:10px;background:var(--panel);overflow:hidden;display:flex;flex-direction:column}
+.evidence>.media{height:190px;width:100%}
+.evidence .body{padding:12px;display:flex;flex-direction:column;gap:7px;flex:1}
+.evidence strong{font-size:13px}.evidence p{font-size:12px;color:var(--muted)}
+.evidence .actions{margin-top:auto}
+.evidence .actions button{flex:1}
+.folder-layout{display:grid;grid-template-columns: minmax(0,1fr) 225px;gap:15px}
+.folder-aside{position:sticky;top:13px;align-self:start;background:#173029;border:1px solid #427360;border-radius:12px;padding:12px}
+.folder-aside .reference-list{display:grid;gap:8px;margin-top:10px;max-height:390px;overflow:auto}
+.folder-aside button{display:grid;gap:5px;background:#193d30;text-align:left;padding:6px;min-height:0}
+.folder-aside img{width:100%;height:115px;object-fit:contain}
+.folder-aside small{font-size:10px}
+.pagebar{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0}
+.pagebar span{font-size:12px;color:var(--muted)}
+.back{padding:7px 0;margin:2px 0 15px;background:none;border:0;color:var(--mint)}
+.empty{padding:23px 14px;border:1px dashed #466371;border-radius:9px;color:#a6bfca;font-size:13px;text-align:center}
+.status{font-size:12px;color:var(--muted);margin:9px 0}
+.status[role=alert]{border:1px solid #946a69;border-radius:8px;padding:11px;background:#3d2830;color:#ffe5e5}
+.notice{font-size:12px;color:#c4f0cf;border:1px solid #4e8b69;border-radius:8px;padding:9px 11px;margin:9px 0;background:#183526}
+.notice button{min-height:30px;padding:4px 10px;margin-left:9px}
+.dialog{width:min(720px,94vw);max-height:88dvh;overflow:auto;background:#142733;color:var(--text);border:1px solid #598497;border-radius:12px;padding:17px}
+.dialog::backdrop{background:#03080ee0}
+/* V56: Keep confirmation is intentionally image-free. No nested crop can cover the form. */
+#approvalDialog{box-sizing:border-box;width:min(490px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 28px);padding:0;overflow:hidden;border-radius:14px}
+#approvalDialog form{display:flex;flex-direction:column;gap:0;min-height:0;max-height:calc(100dvh - 28px);overflow:hidden}
+#approvalDialog .head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;margin:0;flex:none;border-bottom:1px solid #35505e}
+#approvalDialog .head h2{font-size:19px;line-height:1.3;margin:0}
+#approvalDialog .approval-main{display:flex;flex-direction:column;gap:14px;padding:18px 20px;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+#approvalDialog .approval-main>p{margin:0}
+#approvalDialog .approval-reference{font-size:13px;font-weight:700;color:#e0edf2;overflow-wrap:anywhere}
+#approvalDialog .approval-note{font-size:12px;line-height:1.5;color:#abc5cf}
+#approvalDialog .approval-video{display:flex;justify-content:flex-start}
+#approvalDialog .approval-video button{min-height:36px;font-size:12px}
+#approvalDialog .approval-confirm{display:flex;align-items:start;gap:11px;line-height:1.45;padding:12px;background:#1a303e;border:1px solid #486271;border-radius:9px}
+#approvalDialog .approval-confirm input{width:18px;min-width:18px;height:18px;min-height:18px;flex:none;margin:2px 0 0}
+#approvalDialog .approval-footer{display:flex;flex:none;justify-content:flex-end;flex-wrap:wrap;gap:10px;border-top:1px solid #35505e;padding:13px 20px;background:#142733}
+#approvalDialog .approval-footer button{min-width:120px;min-height:38px}
+@media(max-width:480px){#approvalDialog .head{padding:12px}#approvalDialog .approval-main{padding:14px 12px}#approvalDialog .approval-footer{padding:11px 12px}#approvalDialog .approval-footer button{flex:1;min-width:0}}
+.dialog .head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.dialog form{display:grid;gap:12px}
+.dialog label{display:grid;gap:5px;font-size:12px}
+.dialog input,.dialog textarea,.dialog select{width:100%}
+.dialog video{width:100%;display:block;max-height:57vh;background:#000}
+.compare-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.compare-columns img{height:260px;width:100%;object-fit:contain;background:#0b1922}
+.snapshot-stage{width:100%;height:min(65vh,630px);min-height:225px;display:flex;align-items:center;justify-content:center;background:#09151d;border-radius:9px;overflow:hidden}
+.snapshot-stage img{display:block;width:100%;height:100%;object-fit:contain}
+.snapshot-nav{display:flex;align-items:center;justify-content:space-between;gap:9px;margin:10px 0 6px;flex-wrap:wrap}
+.snapshot-nav span{color:#bfd0da;font-size:12px;font-variant-numeric:tabular-nums}
+.snapshot-nav button{min-width:120px}
+@media(max-width:490px){.snapshot-nav button{min-width:0;flex:1}.snapshot-nav span{order:-1;text-align:center;width:100%}}
+#snapshotViewer{width:min(850px,96vw)}
+details summary{user-select:none}
+footer{font-size:10px;color:#879fa8;text-align:right;margin-top:20px}
+@media(max-width:1000px){.overview-layout{grid-template-columns:1fr}.side-column{grid-template-columns:1fr 1fr}.folder-layout{grid-template-columns:1fr}.folder-aside{position:static}}
+@media(max-width:650px){.people-review-notice{align-items:stretch;flex-direction:column}.people-review-notice button{width:100%}#savedList{grid-template-columns:1fr}body{padding:12px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.side-column{grid-template-columns:1fr}.top{align-items:start}.tabs button{flex:1;padding:7px;font-size:12px}.review-row{grid-template-columns:105px minmax(0,1fr)}.review-row .media{width:105px;height:120px}.review-row .actions button{flex:1}.compare-columns{grid-template-columns:1fr}}
+.step3-evidence{margin-top:12px;border-top:1px solid #38566a;padding-top:10px;display:grid;gap:8px}
+.step3-evidence>summary{font-size:12px;letter-spacing:.02em;color:var(--mint);cursor:pointer;font-weight:700;padding:4px 0}
+.step3-evidence[open]{padding-bottom:6px}
+.step3-evidence-lines{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.step3-evidence-lines span{display:block}
+.step3-face-links{display:flex;gap:7px;flex-wrap:wrap}
+.step3-face-links button{min-height:33px;font-size:12px;padding:5px 9px}
+
+/* V57: person-first, single-confirmation review queue. */
+#clothingList{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:13px}
+#clothingList .candidate-folder{min-width:0}
+#review .evidence{border-color:#456977}
+#review .evidence .body>.actions{display:flex;gap:8px;flex-wrap:wrap}
+#review .evidence .body>.actions .primary{flex:2;min-width:150px}
+.review-face-evidence{display:grid;gap:7px;margin:7px 0;padding:10px;border:1px solid #355564;background:#172b37;border-radius:9px}
+.review-face-evidence>small{font-size:11px}
+.review-face-strip{display:flex;gap:8px;flex-wrap:wrap}
+.review-face-button{width:82px;min-height:0;padding:0;overflow:hidden;border:1px solid #537482;border-radius:8px;background:#102431;text-align:center}
+.review-face-button .media{height:74px}
+.review-face-button img{object-fit:contain}
+.review-face-button>small{display:block;padding:3px}
+#openClothing{margin-top:12px;width:100%;min-height:42px}
+#approvalDialog .approval-footer>.primary{min-width:220px;flex:1}
+@media(max-width:600px){#review .evidence .body>.actions .primary{flex:1}}
+.auto-person-folders{display:grid;gap:18px;margin-top:15px}
+.auto-person-group{padding:16px;border:1px solid #42616d;border-radius:12px;background:#11232e}
+.auto-person-group>.section-head{margin-bottom:13px}
+.auto-person-group h3{margin:0;font-size:19px}
+.auto-person-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr));gap:12px}
+.auto-person-cards article{min-width:0}
+.auto-person-cards>.media{height:180px;overflow:hidden;border-radius:8px}
+.auto-person-cards>.media img{height:100%;object-fit:contain}
+.auto-person-group>.primary{margin-top:12px}
+.auto-person-cards .actions button{flex:1;min-width:96px}
+.auto-person-folders .empty{padding:22px;border:1px dashed #436575;border-radius:12px}
+
+.approval-more-people{display:grid;gap:9px;margin-top:8px}
+.approval-extra-row{display:flex;gap:8px;align-items:center}
+.approval-extra-row select{min-width:0;flex:1;max-width:100%}
+.approval-extra-row button{flex:none}
+#approvalAddPerson{width:100%;text-align:left;margin-top:8px;min-height:38px}
+</style>
+<script defer src="/local/frontyard-security-new/security-people-v320.js?v=people-faces-sorting-v320c-20261021"></script>
+<script defer src="/local/frontyard-security-new/security-embedded-shell-v37.js?v=40"></script>
+<script>if(window.parent!==window)document.documentElement.classList.add('security-embedded');</script>
+</head>
+<body>
+<header class="top">
+ <div><span class="kicker">S9+ · People evidence</span><h1>People &amp; faces</h1></div>
+ <div class="top-actions"><button id="newFolder" type="button" class="secondary">+ New person</button><button id="refresh" type="button" class="secondary">↻ Refresh</button></div>
+</header>
+<nav class="tabs" aria-label="People and faces workspace">
+ <button type="button" data-pane="people" aria-selected="true">People</button>
+ <button type="button" data-pane="review" aria-selected="false">Review recordings <span id="reviewTabCount"></span></button>
+ <button type="button" data-pane="automatic" aria-selected="false">Automatic Person <span id="automaticTabCount"></span></button>
+ <button type="button" data-pane="clothing" aria-selected="false">Outfit comparisons <span id="clothingTabCount"></span></button>
+ <button type="button" data-pane="overview" aria-selected="false">Processing coverage</button>
+</nav>
+
+<p id="message" class="status" role="alert" hidden></p>
+<div id="notice" class="notice" role="status" hidden></div>
+<section id="overview" hidden aria-label="Evidence overview">
+ <section class="metrics" aria-label="Security evidence totals">
+ <button class="metric" type="button" data-go="review"><strong id="queueCount">—</strong><span>Recording decisions pending</span></button>
+ <button class="metric" type="button" data-go="people"><strong id="personCount">—</strong><span>Saved people</span></button>
+ <button class="metric" type="button" data-go="people"><strong id="approvalCount">—</strong><span>Saved clip links</span></button>
+ <button class="metric" type="button" data-go="review"><strong id="archiveCount">—</strong><span>Original recordings</span></button>
+</section>
+ <div class="overview-layout">
+  <section class="surface" aria-label="Analysis requiring attention">
+   <div class="section-head"><div><h2>What needs attention</h2></div><button id="openReview" type="button" class="secondary">Review queue →</button></div>
+   <div id="reviewAlerts" class="recheck-alerts" aria-live="polite" hidden></div>
+   <div id="reviewPreview" class="overview-feed" role="status">Checking analysis coverage…</div>
+  </section>
+  <div class="side-column">
+   <section class="surface" aria-label="Available archive sources">
+    <div class="section-head"><div><h2>Archive source coverage</h2></div><button id="openPeople" class="secondary" type="button">People →</button></div>
+    <div id="savedPreview" class="archive-source-status" role="status"></div>
+   </section>
+   <section class="surface" aria-label="Analysis notes">
+    <div class="section-head"><div><span class="kicker">SCAN PROGRESS</span><h2>Evidence quality</h2></div></div>
+    <div class="pf-scan-status">
+      <div class="pf-scan-line"><strong>Person detection</strong><span id="personScanLabel">Loading…</span></div>
+      <progress id="personScanProgress" max="100" value="0"></progress>
+      <div class="pf-scan-line"><strong>Original-4K face review</strong><span id="faceScanLabel">Loading…</span></div>
+      <progress id="faceScanProgress" max="100" value="0"></progress>
+      <p id="facePhotoStatus" class="subnotice"></p>
+    </div>
+    <p id="scanStatus" class="status"></p>
+    
+    <button id="openClothing" class="secondary" type="button">View outfit comparisons →</button>
+   </section>
+  </div>
+ </div>
+</section>
+<section id="review" hidden aria-label="Recording review queue">
+ <div class="section-head"><div><h2>Review recordings</h2></div><span id="reviewTotal" class="status"></span></div>
+ <div class="filters"><label>Show<select id="reviewMode"><option value="all" selected>Unassigned recordings</option><option value="inbox">Needs review</option><option value="skipped">Skipped</option><option value="rejected">Rejected</option></select></label>
+<label>Source<select id="reviewSource"><option value="all" selected>All sources</option><option value="sd">S9+ microSD</option><option value="drive">Google Drive</option></select></label>
+<label>Per page<select id="pageSize"><option value="100" selected>100</option><option value="150">150</option><option value="200">200</option></select></label></div>
+ <div id="reviewGrid" class="grid"></div><div id="reviewPage" class="pagebar"></div>
+</section>
+<section id="automatic" hidden aria-label="Automatic person proposals">
+ <div class="section-head"><div><h2>Automatic Person</h2><p>Automatic clothing groups suggest recordings to sort together. Review each clip and choose a person before filing.</p></div><button id="refreshAutomatic" type="button" class="secondary">↻ Refresh suggestions</button></div>
+ <p id="automaticStatus" class="status" role="status">Loading automatic clothing groups…</p>
+ <div id="automaticFolders" class="auto-person-folders" aria-live="polite"></div>
+</section>
+<section id="people" aria-label="Saved people">
+ <div class="people-review-notice" id="peopleReviewNotice" hidden><strong id="peopleReviewSummary"></strong><button id="peopleReviewNow" type="button" class="primary">Review →</button></div>
+ <div class="people-review-notice" id="peopleRecheckNotice" hidden><strong id="peopleRecheckSummary">Person evidence needs rechecking</strong><button id="peopleRecheckNow" type="button" class="primary">Recheck evidence →</button></div>
+ <div class="section-head"><div><h2>People A–Z</h2></div><button id="newFolderInline" type="button">+ Add person</button></div>
+ <div id="peopleRecheckActions" class="recheck-actions" aria-label="Recheck previously filed person evidence" hidden></div>
+ <section class="folder-faces" aria-label="Detected face images">
+ <div class="section-head"><div><h3>Detected faces <span id="detectedFaceCount">0</span></h3>
+ <p id="detectedFaceStatus" class="status" role="status">Loading face screening…</p></div></div>
+ <div id="detectedFaces" class="folder-face-grid"></div>
+ </section>
+ <div id="savedList" class="profile-list" aria-live="polite"></div>
+</section>
+<section id="clothing" hidden aria-label="Possible clothing matches">
+ <div class="section-head"><div><h2>Outfit comparisons <span id="groupCount">—</span></h2><p>Clothing groups and comparisons with reviewed reference recordings. Similar clothing does not establish identity.</p></div>
+ <button type="button" id="refreshClothing" class="secondary">↻ Refresh matches</button></div>
+ <p id="clothingTotal" class="status" role="status">Waiting for reviewed reference recordings…</p>
+ <div id="clothingList" class="group-list"></div>
+</section>
+<section id="folderView" hidden aria-label="Selected person">
+ <button id="backFolders" class="back" type="button">← Back to People</button>
+ <div class="section-head"><div><h2 id="folderTitle">Person</h2><p id="folderDescription"></p></div><button id="editFolder" type="button">Edit person</button></div>
+ <div id="folderRecheck" class="folder-recheck" role="status" hidden></div>
+ <label id="folderRecheckFilter" class="recheck-filter" hidden><input id="folderRecheckOnly" type="checkbox"> Show only recordings requiring person-evidence recheck</label>
+ <div class="filters"><label>Show<select id="folderMode"><option value="approved">Approved recordings</option><option value="suggestions">Suggested appearances</option><option value="assign">Add from queue</option><option value="rejected">Rejected</option></select></label>
+ <label id="distanceLabel">Colour distance<select id="distance"><option value="0.15">Close</option><option value="0.35" selected>Similar</option><option value="0.65">Broad</option><option value="1">Any colour</option></select></label>
+ <label id="weakLabel">Low-confidence detections<select id="weak"><option value="0" selected>Exclude</option><option value="1">Include</option></select></label>
+ <label id="routeLabel">Route<select id="route"><option value="0">Any</option><option value="1">Same</option></select></label></div>
+ <section id="folderFaces" class="folder-faces" hidden aria-label="Usable face candidates for this person"><div class="section-head"><div><h3>Usable face candidates</h3></div></div><div id="folderFaceGrid" class="folder-face-grid"></div></section>
+ <div id="folderContext" class="callout" hidden><p id="folderContextText"></p></div>
+ <div class="folder-layout"><div><div id="folderGrid" class="grid"></div><div id="folderPage" class="pagebar"></div></div><aside id="references" class="folder-aside" hidden><h3>Approved reference clips</h3><p class="status">Human-reviewed examples for visual comparison only.</p><div id="referenceList" class="reference-list"></div></aside></div>
+</section>
+<dialog id="approvalDialog" class="dialog" aria-labelledby="approvalTitle"><form id="approvalForm">
+ <div class="head"><h2 id="approvalTitle">Choose person</h2><button id="cancelApproval" type="button" aria-label="Close without saving">✕</button></div>
+ <div class="approval-main">
+  <p id="approvalStatus" class="status" role="alert"></p>
+  <p id="approvalClip" class="approval-reference"></p>
+  
+  <div class="approval-video"><button id="approvalPlay" type="button" class="secondary">▶ Play original recording</button></div>
+  <label>Person<select id="approvalFolder"></select></label>
+  <label id="newLabel">New person name<input id="approvalLabel" maxlength="100" placeholder="e.g. Regular visitor" /></label>
+<div id="approvalMorePeople" class="approval-more-people" aria-label="Additional people in this recording"></div>
+<button id="approvalAddPerson" class="secondary" type="button">+ Add another person</button>
+  
+ </div>
+ <div class="approval-footer"><button id="approvalCancelFooter" type="button">Cancel</button><button class="primary" type="submit">Confirm &amp; keep · next recording</button></div>
+ </form></dialog>
+<dialog id="folderDialog" class="dialog"><form id="folderForm"><div class="head"><h2 id="folderDialogTitle">New person</h2><button id="cancelFolder" type="button">✕</button></div>
+ <label>Person name<input id="folderLabel" maxlength="100" required></label><label>Notes<textarea id="folderNotes" maxlength="2000" rows="3"></textarea></label>
+ <div class="actions"><button class="primary" type="submit">Save person</button></div></form></dialog>
+<dialog id="snapshotViewer" class="dialog" aria-label="Original face snapshot inspection">
+  <div class="head"><h2 id="snapshotTitle">Captured face image</h2><button id="closeSnapshot" type="button">Close</button></div>
+  <div class="snapshot-stage"><img id="snapshotImage" alt="Saved face crop for manual inspection" loading="eager" /></div>
+ <div class="snapshot-nav">
+ <button id="snapshotPrev" type="button" class="secondary">← Previous image</button>
+ <span id="snapshotPosition" role="status">Image 1 of 1 in this recording</span>
+ <button id="snapshotNext" type="button" class="secondary">Next image →</button>
+ </div>
+  <p id="snapshotDescription" class="subnotice"></p>
+  <p id="snapshotStatus" class="status" role="status"></p>
+  <div class="actions"><button id="snapshotPlay" type="button" class="primary">▶ Play original 4K at this moment</button></div>
+</dialog>
+<dialog id="viewer" class="dialog"><div class="head"><h2 id="videoTitle">Original video</h2><button id="closeVideo" type="button">Close</button></div><video id="video" controls playsinline preload="metadata"></video><p id="videoStatus" class="status"></p><div class="actions" aria-label="File this recording"><button id="viewerFile" type="button" class="primary" hidden>File under person…</button><button id="viewerReturn" type="button" class="secondary" hidden>Return to review queue</button></div></dialog>
+<dialog id="compareDialog" class="dialog"><div class="head"><h2>Compare original evidence</h2><button id="closeCompare" type="button">Close</button></div><div id="compareGrid" class="compare-columns"></div><p class="subnotice">Appearance comparison never establishes the identity of a person.</p></dialog>
+<footer><span class="version-watermark">v817 - Made by Bruis</span></footer>
+</body>
+</html>
