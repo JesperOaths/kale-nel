@@ -97,7 +97,10 @@ def collect() -> dict:
     required = [
         "engine_installed", "adapter_installed", "cards_installed",
         "media_digest_binder_installed", "manual_registry_readable",
-        "bound_future_approvals_exist", "live_people_page_references_ranker",
+        # Zero forward-bound approvals is a legitimate cold start: the first
+        # verified provisional review must be able to bootstrap a reference.
+        # Never require historical decisions to be retroactively reapproved.
+        "live_people_page_references_ranker",
         "live_original_open_attestor_wired", "live_authenticated_rank_route",
         "live_verified_feature_snapshot",
     ]
@@ -107,6 +110,7 @@ def collect() -> dict:
         "checks": checks,
         "manual_index_status": status,
         "forward_bound_decisions": media_binding_count,
+        "needs_first_attested_reference": media_binding_count == 0,
         "historically_unbound_decisions": historical_unbound,
         "original_clips_read": 0,
         "original_clips_changed": 0,
