@@ -87,7 +87,8 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
   const ageSeconds=(Date.now()-Date.parse(data.observed_at_utc))/1000;
   if(!Number.isFinite(ageSeconds)||ageSeconds < -180)return null;
   const aggregateStale=ageSeconds>300;
-  const result={aggregate_age_seconds:Math.max(0,Math.floor(ageSeconds)),aggregate_stale:aggregateStale};
+  const result={aggregate_age_seconds:Math.max(0,Math.floor(ageSeconds)),aggregate_stale:aggregateStale,
+   aggregate_observed_at_ms:Date.parse(data.observed_at_utc)};
   for(const [key,types]of Object.entries(fields)){
    const raw=data.components[key];if(!object(raw)||!['current','stale','unavailable'].includes(raw.status)||!(raw.age_seconds===null||nonnegative(raw.age_seconds)))return null;
    const row={status:aggregateStale&&raw.status==='current'?'stale':raw.status,
@@ -188,9 +189,14 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
  }
  function degradedSnapshot(last){
   if(!last)return null;
-  const downgrade=row=>({...row,status:row.status==='current'?'stale':row.status});
+  const nowAge=Number.isFinite(last.aggregate_observed_at_ms)
+   ?Math.max(0,Math.floor((Date.now()-last.aggregate_observed_at_ms)/1000))
+   :last.aggregate_age_seconds||0;
+  const elapsed=Math.max(0,nowAge-(last.aggregate_age_seconds||0));
+  const downgrade=row=>({...row,status:row.status==='current'?'stale':row.status,
+   age_seconds:row.age_seconds===null?null:row.age_seconds+elapsed});
   return {...last,aggregate_stale:true,report_transport_error:true,
-   aggregate_age_seconds:Math.max(301,last.aggregate_age_seconds||0),
+   aggregate_age_seconds:Math.max(301,nowAge),
    infrastructure:downgrade(last.infrastructure),
    evidence:downgrade(last.evidence),
    saved_timing:downgrade(last.saved_timing)};
