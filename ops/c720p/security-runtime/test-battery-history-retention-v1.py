@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-src = Path('/home/jespern/c720p-home-hub/reports/infra-20261021/c720p-battery-history-retention-v1.py')
+src = Path(__file__).with_name('battery-history-retention-v1.py')
 spec = importlib.util.spec_from_file_location('retention', src)
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
