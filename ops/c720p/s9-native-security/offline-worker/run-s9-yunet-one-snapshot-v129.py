@@ -53,6 +53,26 @@ def call(argv,seconds=90):
       and (p.returncode in (137,-9)
            or re.search(r"\bkilled\b",(p.stderr or "")+" "+(p.stdout or ""),re.I))):
    raise RuntimeError("android_app_process_terminated_without_face_evidence")
+  # Never disclose private filenames, image bytes, stack traces, or model
+  # tensors. Map ONLY a few well-known Android/runtime failure families.
+  if (len(argv)>=5 and argv[0]=="adb" and argv[3]=="shell"
+      and isinstance(argv[4],str)
+      and re.search(r"(?:^|[; ])app_process(?:\\s|$)",argv[4])):
+   detail=((p.stderr or "")+"\\n"+(p.stdout or ""))[:12000]
+   categories=(
+     ("missing_java_class",r"(?:ClassNotFoundException|NoClassDefFoundError|Could not find class)"),
+     ("native_library_unavailable",r"(?:UnsatisfiedLinkError|dlopen failed|no onnxruntime in java.library.path)"),
+     ("android_storage_denied",r"(?:Permission denied|SecurityException|EACCES)"),
+     ("bitmap_decoder_unavailable",r"(?:bitmap_decode_dimensions_drift|BitmapFactory|not_native_square_face_snapshot)"),
+     ("model_runtime_exception",r"(?:OrtException|ai[.]onnxruntime|onnxruntime)"),
+     ("landmark_geometry_contract",r"(?:missing_yunet_head|unexpected_yunet_head|untrusted_yunet_source_geometry)"),
+     ("source_integrity_rejected",r"(?:phone_snapshot_sha256_drift|untrusted_phone_readonly_file|outside_readonly_snapshot_or_model_folder)"),
+     ("java_uncategorized_exception",r"(?:Exception in thread|java[.]lang[.]|Caused by:|Error:)"),
+   )
+   for reason,pattern in categories:
+    if re.search(pattern,detail,re.I):
+     raise RuntimeError("face_app_process_"+reason+"_unverified") from None
+   raise RuntimeError("face_app_process_nonzero_unclassified_unverified") from None
   raise RuntimeError("separate_phone_operation_failed")
  return p.stdout.strip()
 def adb(*cmd,timeout=26):
