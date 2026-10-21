@@ -109,6 +109,11 @@ class QueueTest(unittest.TestCase):
   with patch.object(v.urllib.request,"urlopen",
       return_value=Reply(bad)):
    with self.assertRaises(v.Refusal):v.consumer_visible(record)
+  bad_hash=json.loads(json.dumps(good))
+  bad_hash["original_gap_benchmark"]["recordings"][0]["source_sha256"]="0"*64
+  with patch.object(v.urllib.request,"urlopen",
+      return_value=Reply(bad_hash)):
+   with self.assertRaises(v.Refusal):v.consumer_visible(record)
   with patch.object(v,"camera_guard",return_value={"ok":True}),\
        patch.object(v,"evaluate_one",return_value=record),\
        patch.object(v,"consumer_visible",
