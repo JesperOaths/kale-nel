@@ -222,15 +222,25 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
     if not -1 <= threshold <= 1:
         raise ValueError("Invalid clustering threshold")
     entries = sorted(unmatched, key=lambda r: r.key)
+    if len(entries) > 400:
+        raise ValueError("Too many unreviewed clips for bounded clustering")
+    # Compute each expensive 512-D similarity ONCE. Subsequent complete-linkage
+    # merges refer only to this immutable pairwise matrix, not raw vectors.
+    similarity = {}
+    for i, a in enumerate(entries):
+        for b in entries[i + 1:]:
+            pair = pair_score(a, b)
+            similarity[(a.key, b.key)] = pair["score"] if pair else None
     clusters = [[r] for r in entries]
     while True:
         best = None
         for i in range(len(clusters)):
             for j in range(i + 1, len(clusters)):
-                comparisons = [pair_score(a, b) for a in clusters[i] for b in clusters[j]]
-                if not comparisons or any(p is None for p in comparisons):
+                comparisons = [similarity.get(tuple(sorted((a.key, b.key))))
+                               for a in clusters[i] for b in clusters[j]]
+                if not comparisons or any(value is None for value in comparisons):
                     continue
-                minimum = min(p["score"] for p in comparisons)
+                minimum = min(comparisons)
                 if minimum < threshold:
                     continue
                 # Tie-break deterministically to preserve stable provisional IDs.
@@ -375,6 +385,29 @@ class ReviewJournal:
     def record(self, *, clip: ClipFeatures, folder_id: str, action: str,
                expected_revision: int, opened_sha256: str, opened_revision: str,
                authoritative_persisted: bool, human_confirmed: bool) -> dict[str, Any]:
+        # Readers see atomic snapshots; writers acquire an interprocess lock.
+        # The caller's successful authoritative review transaction is required.
+        import fcntl
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        lock_path = self.path.with_name(self.path.name + ".lock")
+        lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        try:
+            with os.fdopen(lock_fd, "a+") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                return self._record_locked(
+                    clip=clip, folder_id=folder_id, action=action,
+                    expected_revision=expected_revision,
+                    opened_sha256=opened_sha256, opened_revision=opened_revision,
+                    authoritative_persisted=authoritative_persisted,
+                    human_confirmed=human_confirmed)
+        finally:
+            # fdopen() closes the descriptor. Keep lockfile for reuse.
+            pass
+
+    def _record_locked(self, *, clip: ClipFeatures, folder_id: str, action: str,
+                       expected_revision: int, opened_sha256: str,
+                       opened_revision: str, authoritative_persisted: bool,
+                       human_confirmed: bool) -> dict[str, Any]:
         if (action not in ("approve", "reject") or not folder_id
                 or not human_confirmed or not authoritative_persisted
                 or opened_sha256 != clip.media_sha256
