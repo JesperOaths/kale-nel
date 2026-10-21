@@ -45,6 +45,61 @@ def snapshot_state():
         snapshots.append(hashlib.sha256(raw).hexdigest())
     return tuple(snapshots)
 
+def clip_binding_for_receipt(clip, evidence):
+    """Capture only this clip's immutable and current authoritative evidence.
+
+    The three global file hashes are separately checked before/after this
+    read. Never make one clip's reusable evidence revision depend on unrelated
+    recording admissions, queue completions or report refreshes.
+    """
+    docs = []
+    for path, limit in zip((quality.PRIORITY_CATALOG, quality.PRIORITY_QUEUE,
+                            quality.REPORT), MAX_SOURCE):
+        path = Path(path)
+        if path.is_symlink() or not path.is_file():
+            raise Unavailable("attestation_source_unavailable")
+        size = path.stat().st_size
+        if not 20 < size < limit:
+            raise Unavailable("attestation_source_bounds")
+        raw = path.read_bytes()
+        if len(raw) != size:
+            raise Unavailable("attestation_source_changed")
+        docs.append(json.loads(raw))
+    catalog, queue, quality_report = docs
+    catalog_row = catalog.get("records", {}).get(clip)
+    priorities = quality_report.get("recordings")
+    queued = queue.get("rows")
+    if (not isinstance(catalog_row, dict) or
+        not isinstance(priorities, list) or not isinstance(queued, list)):
+        raise Unavailable("clip_provenance_not_current")
+    priority_rows = [p for p in priorities
+                     if isinstance(p, dict) and p.get("clip_no") == clip]
+    matching_queue = [item for item in queued
+        if isinstance(item, dict) and item.get("clip_no") == clip
+        and item.get("source_sha256") == evidence["source_sha256"]
+        and item.get("source_bytes") == evidence["source_bytes"]
+        and item.get("media_revision") == evidence["source_revision"]
+        and item.get("model_sha256") == evidence["model_sha256"]
+        and item.get("required_analysis") == evidence["analysis_version"]
+        and item.get("status") in ("processing", "completed")]
+    if len(priority_rows) != 1 or len(matching_queue) != 1:
+        raise Unavailable("clip_provenance_ambiguous")
+    priority, task = priority_rows[0], matching_queue[0]
+    manifest = catalog_row.get("manifest")
+    if (not isinstance(manifest, dict) or
+        manifest.get("sha256") != evidence["source_sha256"] or
+        manifest.get("bytes") != evidence["source_bytes"] or
+        catalog_row.get("bytes") != evidence["source_bytes"] or
+        catalog_row.get("version") != evidence["source_revision"] or
+        priority.get("targeted_rescan_priority") is not True or
+        priority.get("native_face_pass_complete") is not True or
+        task.get("priority_reason") != priority.get("extraction_status")):
+        raise Unavailable("clip_provenance_not_current")
+    # Hash private metadata only; never return its images, person data or paths.
+    return {"source_catalog_row": catalog_row, "quality_priority_row": priority,
+            "rescan_queue_row": task}
+
+
 def v3_status(appearance):
     if appearance is None:
         return "unavailable"
@@ -118,10 +173,14 @@ def consume(document,current,clip,appearance=None):
         hits=sum(len(s["face_candidates"]) for s in samples)
         if hits>96:
             raise Unavailable("unsupported_sample_volume")
-        # The revision changes if model, evidence, original, private queue,
-        # catalog, native-pass eligibility or sampled observations change.
+        # Global hashes prevent races; the reusable revision is scoped to
+        # this clip, so processing an unrelated clip cannot spuriously revoke
+        # an unchanged human-review-quality observation.
+        binding=clip_binding_for_receipt(clip,row)
+        if snapshot_state()!=before:
+            raise Unavailable("source_revision_changed_during_receipt")
         receipt=hashlib.sha256(canonical({
-          "domain":SCHEMA,"source_snapshot_sha256":before,
+          "domain":SCHEMA,"per_clip_authoritative_binding":binding,
           "source_sha256":row["source_sha256"],
           "source_bytes":row["source_bytes"],
           "media_revision":row["source_revision"],
@@ -132,6 +191,7 @@ def consume(document,current,clip,appearance=None):
           "ok":True,"schema_version":SCHEMA,
           "clip_no":clip,
           "evidence_revision_sha256":receipt,
+          "evidence_revision_scope":"clip_current_catalog_priority_queue_and_samples_v367",
           "source_sha256":row["source_sha256"],
           "source_bytes":row["source_bytes"],
           "source_revision":row["source_revision"],
