@@ -1,0 +1,35 @@
+name: S9 versioned V321 human folder suggestion UI
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v321.js'
+      - 'ops/c720p/s9-native-security/security-people-v51.html'
+      - 'ops/c720p/s9-native-security/test-folder-suggestion-v320-bridge.js'
+      - '.github/workflows/s9-folder-v321-staged-ui.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/security-people-v321.js'
+      - 'ops/c720p/s9-native-security/security-people-v51.html'
+      - 'ops/c720p/s9-native-security/test-folder-suggestion-v320-bridge.js'
+      - '.github/workflows/s9-folder-v321-staged-ui.yml'
+permissions:
+  contents: read
+jobs:
+  versioned-guarded-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - name: Syntax and guarded optional bridge
+        run: |
+          set -euo pipefail
+          node --check ops/c720p/s9-native-security/security-people-v321.js
+          node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
+          node ops/c720p/s9-native-security/test-folder-suggestion-v320-bridge.js
+      - name: Keep UI release opt-in and source parity intact
+        run: |
+          python3 ops/c720p/s9-native-security/test-live-people-v320-parity.py
