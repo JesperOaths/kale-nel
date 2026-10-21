@@ -64,7 +64,11 @@ def histogram(values: Any) -> tuple[float, ...] | None:
 
 
 def cosine(a: tuple[float, ...], b: tuple[float, ...]) -> float:
-    # CPython 3.12+ computes exact float products in optimized C, avoiding\n    # expensive Python generator loops on the low-power C720P.\n    dot = math.sumprod(a, b) if hasattr(math, "sumprod") else math.fsum(\n        x * y for x, y in zip(a, b))\n    return max(-1.0, min(1.0, dot))
+    # CPython 3.12+ computes float dot products in optimized C, avoiding
+    # expensive Python generator loops on the low-power C720P.
+    dot = math.sumprod(a, b) if hasattr(math, "sumprod") else math.fsum(
+        x * y for x, y in zip(a, b))
+    return max(-1.0, min(1.0, dot))
 
 
 def color_affinity(a: tuple[float, ...] | None,
