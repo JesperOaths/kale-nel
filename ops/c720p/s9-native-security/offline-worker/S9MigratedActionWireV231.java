@@ -28,6 +28,10 @@ public final class S9MigratedActionWireV231 {
     private static long exactUnsigned(String raw,String label)throws IOException {
         if(raw==null || raw.length()<1 || raw.length()>18)
             throw new IOException("wire_number_untrusted_"+label);
+        // Reject aliases such as 000123: V198 MACs the parsed integer, not
+        // the raw wire representation. One signed tuple has ONE encoding.
+        if(raw.length()>1 && raw.charAt(0)=='0')
+            throw new IOException("wire_decimal_leading_zero_"+label);
         for(int i=0;i<raw.length();i++)
             if(raw.charAt(i)<'0' || raw.charAt(i)>'9')
                 throw new IOException("wire_number_untrusted_"+label);
