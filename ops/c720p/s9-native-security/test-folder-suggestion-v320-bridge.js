@@ -36,7 +36,7 @@ assert(js.includes('Review each original before filing'));
 assert(!js.includes("FolderSuggestionCards.connect(host,{\n    relay:relay(),folderId:personId,showProvisional:true,\n    onOpen:async row=>{\n     const clip=state.archiveEntries.find(x=>assignmentKey(x)===row.source_qualified_clip_id);\n     if(!clip)return {verified:true}"),
   'missing clip must not be marked verified');
 assert(!/S9SignedOriginalReview\s*=/.test(js),'no synthetic signed attestor');
-assert(js.includes("human_approved===false") && js.includes("savedFolders()"),
+assert(js.includes("async function fetchAutomatic()") && js.includes("state.automaticRows=") && js.includes("savedFolders()"),
   'preserve existing automatic person gating');
 assert(js.includes("function startVideo(item)"),
   'keep existing authenticated original player');
