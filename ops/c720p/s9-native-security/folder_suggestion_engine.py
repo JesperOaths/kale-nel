@@ -268,13 +268,31 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
                 heapq.heappush(candidates, (-score, lo, hi))
         clusters[k] = merged
     groups = []
+    # The original pairwise scores remain in distances with IDs < len(entries).
+    # Reuse them for review quality: no additional model inference or O(n²)
+    # feature dot products after agglomeration.
+    original_ids = {entry.key: i for i, entry in enumerate(entries)}
     for cluster in clusters.values():
         keys = [c.key for c in cluster]
+        within = []
+        for i, first in enumerate(keys):
+            for second in keys[i+1:]:
+                a, b = sorted((original_ids[first], original_ids[second]))
+                score = distances.get((a, b))
+                if score is None:
+                    raise ValueError("Provisional group has incomparable members")
+                within.append(score)
+        minimum = round(min(within), 6) if within else None
+        average = round(math.fsum(within) / len(within), 6) if within else None
         digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()[:16]
         groups.append({"id": "awaiting-review-" + digest,
                        "label": "Awaiting Review", "state": "pending_review",
                        "source_qualified_clips": keys,
-                       "member_count": len(keys), "human_review_required": True,
+                       "member_count": len(keys),
+                       "min_within_group_similarity": minimum,
+                       "mean_within_group_similarity": average,
+                       "evidence_pair_count": len(within),
+                       "human_review_required": True,
                        "automatically_assigned": False})
     return sorted(groups, key=lambda row: (-row["member_count"], row["id"]))
 
