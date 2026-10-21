@@ -185,5 +185,30 @@ class FolderSuggestionsTest(unittest.TestCase):
                     authoritative_persisted=True,human_confirmed=True)
             self.assertEqual(len(journal.read()["decisions"]),1)
 
+    def test_legacy_review_not_resurfaced(self):
+        approved = feature("historic.mp4", upper=axis(0))
+        rejected = feature("rejected.mp4", upper=axis(0))
+        live_ref = feature("live-ref.mp4", upper=axis(0))
+        fresh = feature("fresh.mp4", upper=axis(0))
+        old_approved = decision(approved)
+        old_rejected = decision(rejected)
+        old_approved.pop("media_revision")
+        old_rejected.pop("media_revision")
+        got = eng.rank_folders([approved,rejected,live_ref,fresh],
+                               folders("P1", "P2"),
+                               [old_approved,old_rejected,decision(live_ref)])
+        self.assertEqual(got["approved_reference_counts"]["P1"], 1)
+        self.assertEqual(got["excluded_unbound_or_legacy_decisions"], 2)
+        self.assertFalse(any(m["clip_id"] == "historic.mp4" for m in got["matches"]))
+        self.assertFalse(any(m["clip_id"] == "rejected.mp4" and m["folder_id"] == "P1"
+                             for m in got["matches"]))
+        self.assertTrue(any(m["clip_id"] == "rejected.mp4" and m["folder_id"] == "P2"
+                            for m in got["matches"]))
+        self.assertTrue(any(m["clip_id"] == "fresh.mp4" for m in got["matches"]))
+        grouped = [key for group in got["provisional_clusters"]
+                   for key in group["source_qualified_clips"]]
+        self.assertNotIn("sd:historic.mp4", grouped)
+        self.assertNotIn("sd:rejected.mp4", grouped)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
