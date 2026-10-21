@@ -222,11 +222,13 @@ def latest_decisions(rows: Sequence[Mapping[str, Any]]
 
 def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_THRESHOLD
                 ) -> list[dict[str, Any]]:
-    """Complete-linkage agglomerative clusters, quadratic feature comparison.
+    """Deterministic exact complete-linkage agglomeration.
 
-    A cluster may merge only if *every* cross-member score passes threshold.
-    The minimum pair score is incrementally cached, avoiding repeated vector
-    comparisons and cubic-or-worse rescans of entire clusters.
+    Every merged cluster has all cross-pairs at or above threshold. A heap
+    avoids rescanning every cluster pair after each merge (cubic behavior).
+    Original 512-D pair scores are computed once; subsequent cluster
+    similarities are their complete-linkage minima. A missing/incompatible
+    pair is NOT allowed to bridge clusters.
     """
     import heapq
     if not -1 <= threshold <= 1:
@@ -234,56 +236,65 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
     entries = sorted(unmatched, key=lambda r: r.key)
     if len(entries) > 400:
         raise ValueError("Too many unreviewed clips for bounded clustering")
-    clusters = {i: [entry] for i, entry in enumerate(entries)}
-    distances = {}
-    candidates = []
-    for i, a in enumerate(entries):
-        for j in range(i + 1, len(entries)):
-            pair = pair_score(a, entries[j])
-            if pair is None:
+
+    # Cluster IDs are never reused, making stale heap entries harmless.
+    # No source/media bytes are copied or changed.
+    count = len(entries)
+    active = {i: [i] for i in range(count)}
+    distance: dict[tuple[int, int], float] = {}
+    heap: list[tuple[float, int, int]] = []
+    for i in range(count):
+        for j in range(i + 1, count):
+            pair = pair_score(entries[i], entries[j])
+            if pair is None or pair["score"] < threshold:
                 continue
-            score = pair["score"]
-            distances[(i, j)] = score
-            if score >= threshold:
-                heapq.heappush(candidates, (-score, i, j))
-    next_id = len(entries)
-    while candidates:
-        negative, i, j = heapq.heappop(candidates)
-        if i not in clusters or j not in clusters:
-            continue  # stale priority queue entry after an earlier merge
-        merged = sorted(clusters.pop(i) + clusters.pop(j), key=lambda r: r.key)
-        k = next_id
+            sim = pair["score"]
+            distance[(i, j)] = sim
+            heapq.heappush(heap, (-sim, i, j))
+
+    def ordered(a: int, b: int) -> tuple[int, int]:
+        return (a, b) if a < b else (b, a)
+
+    next_id = count
+    while heap:
+        negative, i, j = heapq.heappop(heap)
+        if i not in active or j not in active:
+            continue
+        saved = distance.get(ordered(i, j))
+        if saved is None or saved < threshold:
+            continue
+        # Exactly the best complete-link score; tie order is deterministic.
+        if abs(saved + negative) > 1e-12:
+            continue
+        members = active.pop(i) + active.pop(j)
+        distance.pop(ordered(i, j), None)
+        # New cluster is compared with each still-active cluster using
+        # min(sim(k,i), sim(k,j)) -- never average/single-link linkage.
+        for k in list(active):
+            left = distance.pop(ordered(k, i), None)
+            right = distance.pop(ordered(k, j), None)
+            if left is None or right is None:
+                continue
+            sim = min(left, right)
+            if sim < threshold:
+                continue
+            pair_key = ordered(k, next_id)
+            distance[pair_key] = sim
+            heapq.heappush(heap, (-sim, *pair_key))
+        active[next_id] = members
         next_id += 1
-        for other in list(clusters):
-            first = distances.get(tuple(sorted((i, other))))
-            second = distances.get(tuple(sorted((j, other))))
-            if first is None or second is None:
-                continue
-            score = min(first, second)
-            distances[tuple(sorted((k, other)))] = score
-            if score >= threshold:
-                lo, hi = sorted((k, other))
-                heapq.heappush(candidates, (-score, lo, hi))
-        clusters[k] = merged
+
     groups = []
-    for cluster in clusters.values():
-        keys = [c.key for c in cluster]
-        digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()[:16]
-        groups.append({"id": "awaiting-review-" + digest,
+    for members in active.values():
+        keys = sorted(entries[i].key for i in members)
+        key_digest = hashlib.sha256("\\n".join(keys).encode("utf-8")).hexdigest()[:16]
+        groups.append({"id": "awaiting-review-" + key_digest,
                        "label": "Awaiting Review", "state": "pending_review",
                        "source_qualified_clips": keys,
-                       # Per-clip original proof is needed to review a group
-                       # without relying on a guessed filename or stale media.
-                       "members": [{"source": c.source, "clip_id": c.clip_id,
-                                    "source_qualified_clip_id": c.key,
-                                    "media_sha256": c.media_sha256,
-                                    "media_revision": c.media_revision,
-                                    "state": "pending_review",
-                                    "human_review_required": True}
-                                   for c in cluster],
                        "member_count": len(keys), "human_review_required": True,
                        "automatically_assigned": False})
     return sorted(groups, key=lambda row: (-row["member_count"], row["id"]))
+
 
 def rank_folders(clips: Sequence[Mapping[str, Any]],
                  folders: Sequence[Mapping[str, Any]],
