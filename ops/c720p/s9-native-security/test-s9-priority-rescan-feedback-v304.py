@@ -203,8 +203,12 @@ class QueueTest(unittest.TestCase):
        "targeted_rescan_priority":True,"extraction_status":"no_indexed_image"})
   self.store()
   v.produce()
-  # The two originally blocked rows still occupy slots; no current blocked
-  # can be evicted simply because another runnable original exists.
+  queue=v.items()
+  for item in queue["rows"]:
+   item["status"]="pending"
+  v.atomic(v.QUEUE,queue)
+  # Only status=blocked same-detector negatives can be archived for capacity.
+  # A full queue of pending tasks must preserve every pending original.
   fresh="motion_1794888888888.mp4"
   self.orig[fresh]={"name":fresh,"bytes":1030404,"version":"d"*64,
     "manifest":{"name":fresh,"bytes":1030404,"sha256":"e"*64,
@@ -213,9 +217,10 @@ class QueueTest(unittest.TestCase):
       "targeted_rescan_priority":True,"extraction_status":"no_indexed_image"})
   self.store()
   result=v.produce()
-  self.assertEqual(result["new_admissions"],1)
-  self.assertEqual(result["archived_unsupported_at_capacity"],1)
-  self.assertEqual(result["capacity_deferred"],0)
+  self.assertEqual(result["new_admissions"],0)
+  self.assertEqual(result["archived_unsupported_at_capacity"],0)
+  self.assertEqual(result["capacity_deferred"],1)
+  self.assertEqual(len(v.items()["rows"]),v.LIMIT)
 
  def test_current_blocked_and_completed_are_never_retired(self):
   v.produce()
