@@ -48,6 +48,7 @@ MODEL_SHA="8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
 NATIVE="s9_onphone_36_samples_overlapping_tiles_v5"
 ANALYSIS="s9_original4k_independent_gap_benchmark_v1"
 SCHEMA="s9_priority_rescan_feedback_v304"
+READER_HTTP_CONTRACT="s9_source_current_priority_reader_v369"
 NAME=re.compile(r"motion_[0-9]{13}\.mp4\Z")
 HEX=re.compile(r"[a-f0-9]{64}\Z")
 MAX_ATTEMPTS=3
@@ -491,6 +492,32 @@ def publish(record,doc):
        "review_decisions_modified":False}
     atomic(SECONDARY,new)
     return new
+def qualified_reader_preflight():
+    """Refuse BEFORE 4K decode if the running HTTP handler is outdated.
+
+    An updated disk module alone is insufficient: the existing 8795 process
+    may still hold the old, filename-only evidence handler in memory.
+    This bounded GET is metadata-only and cannot spend a processing attempt.
+    """
+    try:
+        with urllib.request.urlopen(
+                "http://127.0.0.1:8795/new/api/evidence-quality",
+                timeout=12) as response:
+            check(response.status==200,
+                  "qualified_evidence_reader_unavailable_before_scan")
+            data=response.read(6000001)
+        check(len(data)<=6000000,
+              "qualified_evidence_reader_unavailable_before_scan")
+        doc=json.loads(data)
+        check(isinstance(doc,dict) and doc.get("ok") is True and
+              doc.get("gap_reader_contract")==READER_HTTP_CONTRACT,
+              "qualified_evidence_reader_unavailable_before_scan")
+        return True
+    except Refusal:
+        raise
+    except (OSError,ValueError,TypeError,KeyError,TimeoutError):
+        raise Refusal("qualified_evidence_reader_unavailable_before_scan") from None
+
 def consumer_visible(record):
     """Verify this exact revision is served by the ACTUAL Evidence Quality API.
 
@@ -511,7 +538,8 @@ def consumer_visible(record):
     # A matching filename/revision in an unqualified reader is just an echo.
     # The live consumer must prove it applied its original-catalog/queue
     # attestation and revocation gate before a queue task can be completed.
-    check(gap.get("source_binding_status")=="source_qualified_active_queue_only"
+    check(doc.get("gap_reader_contract")==READER_HTTP_CONTRACT
+          and gap.get("source_binding_status")=="source_qualified_active_queue_only"
           and type(gap.get("source_bound_records_visible")) is int
           and gap["source_bound_records_visible"]>=1
           and type(gap.get("source_bound_records_not_current")) is int
@@ -605,6 +633,9 @@ def work():
     if candidate is None:
         return {"status":"no_runnable_originals","revision":doc["revision"],
            "leases_recovered":recovered,"tally":aggregate(doc["rows"])}
+    # A running older HTTP handler is a permanent dependency mismatch for this
+    # tick. Never decode the same original 4K repeatedly just to rediscover it.
+    qualified_reader_preflight()
     # Acquire source/camera locks BEFORE taking a lease.
     check(CROSS_LOCK.is_file() and not CROSS_LOCK.is_symlink(),
           "s9_shared_backfill_lock_unavailable")
