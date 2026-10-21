@@ -41,3 +41,10 @@ Chat 2: phone-first V371 processing, anonymous evidence, V369 producer and sourc
 Chat 1: authoritative migrated Save/Delete owner + signed persistence, replay/outage and fallback receipts. No original may be retired until verified lifecycle acceptance.
 
 No other owners' files, camera models, reviewed original clips or rollback guards changed. No duplicate timers or leftover Chromium targets are intended. Recheck current main and installed hashes before deployment/merge.
+
+## Later rendered/browser and safety continuation
+
+- 21 Oct evening: inactive V324 preview rendered in a disposable background Chromium target; navigation reached security-people-v324-preview.html with document complete, a video element and both intended JS scripts. Target closed. This is static rendered preview, not authenticated review action acceptance.
+- Protected active V31 Security hub rendered in disposable background Chromium; its People V50 iframe and Archive V7 iframe loaded. Archive produced 104 lazy image nodes. Initial background view decoded zero; one explicitly eager image subsequently reported naturalWidth=1200 after its short decode() promise deadline. No media controls or review actions clicked. No full grid, hidden polling or player acceptance claimed.
+- Attempted bounded single-instance >60s hidden-pane measurement was rejected by connected tool safety checks with exact response: `This tool call was blocked by OpenAI's safety checks. Please double check what you are sending.` No alternate executor or attempt used. A subsequent read-only check found no test script, no receipt, no running intended job; this physical cadence is blocked, not passed.
+- PR head e49d6ad302dec56c2b2b68b1297eef15c8302630 had 17 reported successful CI workflows, zero failures at inspection. Protected physical services and review registry remain as above.
