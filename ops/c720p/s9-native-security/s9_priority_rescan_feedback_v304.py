@@ -371,7 +371,8 @@ def work():
                 "source_revision_changed_after_analysis","model_version_changed_since_admission"):
                 candidate["status"]="rejected"
             elif (cause in ("camera_battery_thermal_recording_or_worker_exclusion",
-                            "secondary_consumer_source_attestation_unavailable")
+                            "secondary_consumer_source_attestation_unavailable",
+                            "secondary_consumer_not_reading_current_report")
                   or isinstance(err,(urllib.error.URLError,TimeoutError,ConnectionError))):
                 candidate["status"]="pending";candidate["attempts"]-=1
                 candidate["deferrals"]=candidate.get("deferrals",0)+1
