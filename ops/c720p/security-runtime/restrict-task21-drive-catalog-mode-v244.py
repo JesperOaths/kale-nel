@@ -34,7 +34,7 @@ def snapshot(fd,root):
  require((st.st_mode&0o002)==0 and bool(st.st_mode&stat.S_IRUSR)
          and (st.st_mode&0o700)==0o600,
          "catalog_owner_or_world_permission_drift")
- require((st.st_mode&0o177)==0o064,
+ require(stat.S_IMODE(st.st_mode) in (0o664,0o644),
          "catalog_unexpected_extra_permissions")
  require((st.st_mode&stat.S_IWGRP)!=0,
          "catalog_already_or_unexpectedly_fixed")
