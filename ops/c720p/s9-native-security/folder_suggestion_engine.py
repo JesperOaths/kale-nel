@@ -222,52 +222,59 @@ def latest_decisions(rows: Sequence[Mapping[str, Any]]
 
 def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_THRESHOLD
                 ) -> list[dict[str, Any]]:
-    """Complete-linkage: EVERY cross-member pair must reach the threshold."""
+    """Complete-linkage agglomerative clusters, quadratic feature comparison.
+
+    A cluster may merge only if *every* cross-member score passes threshold.
+    The minimum pair score is incrementally cached, avoiding repeated vector
+    comparisons and cubic-or-worse rescans of entire clusters.
+    """
+    import heapq
     if not -1 <= threshold <= 1:
         raise ValueError("Invalid clustering threshold")
     entries = sorted(unmatched, key=lambda r: r.key)
     if len(entries) > 400:
         raise ValueError("Too many unreviewed clips for bounded clustering")
-    # Compute each expensive 512-D similarity ONCE. Subsequent complete-linkage
-    # merges refer only to this immutable pairwise matrix, not raw vectors.
-    similarity = {}
+    clusters = {i: [entry] for i, entry in enumerate(entries)}
+    distances = {}
+    candidates = []
     for i, a in enumerate(entries):
-        for b in entries[i + 1:]:
-            pair = pair_score(a, b)
-            similarity[(a.key, b.key)] = pair["score"] if pair else None
-    clusters = [[r] for r in entries]
-    while True:
-        best = None
-        for i in range(len(clusters)):
-            for j in range(i + 1, len(clusters)):
-                comparisons = [similarity.get(tuple(sorted((a.key, b.key))))
-                               for a in clusters[i] for b in clusters[j]]
-                if not comparisons or any(value is None for value in comparisons):
-                    continue
-                minimum = min(comparisons)
-                if minimum < threshold:
-                    continue
-                # Tie-break deterministically to preserve stable provisional IDs.
-                proposed = (minimum, i, j)
-                if best is None or proposed[0] > best[0] + 1e-12:
-                    best = proposed
-        if best is None:
-            break
-        _, i, j = best
-        clusters[i] += clusters[j]
-        clusters[i].sort(key=lambda r: r.key)
-        clusters.pop(j)
+        for j in range(i + 1, len(entries)):
+            pair = pair_score(a, entries[j])
+            if pair is None:
+                continue
+            score = pair["score"]
+            distances[(i, j)] = score
+            if score >= threshold:
+                heapq.heappush(candidates, (-score, i, j))
+    next_id = len(entries)
+    while candidates:
+        negative, i, j = heapq.heappop(candidates)
+        if i not in clusters or j not in clusters:
+            continue  # stale priority queue entry after an earlier merge
+        merged = sorted(clusters.pop(i) + clusters.pop(j), key=lambda r: r.key)
+        k = next_id
+        next_id += 1
+        for other in list(clusters):
+            first = distances.get(tuple(sorted((i, other))))
+            second = distances.get(tuple(sorted((j, other))))
+            if first is None or second is None:
+                continue
+            score = min(first, second)
+            distances[tuple(sorted((k, other))] = score
+            if score >= threshold:
+                lo, hi = sorted((k, other))
+                heapq.heappush(candidates, (-score, lo, hi))
+        clusters[k] = merged
     groups = []
-    for cluster in clusters:
+    for cluster in clusters.values():
         keys = [c.key for c in cluster]
-        key_digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()[:16]
-        groups.append({"id": "awaiting-review-" + key_digest,
+        digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()[:16]
+        groups.append({"id": "awaiting-review-" + digest,
                        "label": "Awaiting Review", "state": "pending_review",
                        "source_qualified_clips": keys,
                        "member_count": len(keys), "human_review_required": True,
                        "automatically_assigned": False})
     return sorted(groups, key=lambda row: (-row["member_count"], row["id"]))
-
 
 def rank_folders(clips: Sequence[Mapping[str, Any]],
                  folders: Sequence[Mapping[str, Any]],
