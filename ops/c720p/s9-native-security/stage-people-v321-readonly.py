@@ -71,7 +71,7 @@ def atom_new(path,body):
         if path.is_file() and not path.is_symlink() and path.read_bytes()==body:
             return False
         raise RuntimeError("versioned_preview_path_already_occupied_"+path.name)
-    fd,temp=tempfile.mkstemp(dir=WWW,prefix=".versioned-people-")
+    fd,temp=tempfile.mkstemp(dir=path.parent,prefix=".versioned-people-")
     try:
         with os.fdopen(fd,"wb") as handle:
             handle.write(body);handle.flush();os.fsync(handle.fileno())
