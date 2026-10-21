@@ -452,7 +452,9 @@ def evaluate_one(row):
               "phone_first_runtime_not_installed")
         runner=load_module(PHONE_RUNNER,"s9_phone_gap_runner_v371")
         try:
-            return runner.run(row,target,worker=__import__(__name__),quality=q,
+            return runner.run(row,target,worker=__import__('types').SimpleNamespace(
+                       camera_guard=camera_guard,source=source,
+                       NATIVE=NATIVE,MODEL_SHA=MODEL_SHA),quality=q,
                               release_path=PHONE_RELEASE)
         except runner.frames.Revoked:
             raise Refusal("original_no_longer_eligible") from None
