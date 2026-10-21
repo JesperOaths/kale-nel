@@ -72,6 +72,20 @@ Below-threshold unmatched clips are grouped using **complete-linkage**
 agglomerative similarity >=0.45, so no cluster is merged via a weak bridge.
 The 400-unmatched-record ceiling is deliberate to protect the small C720P.
 
+### Historical review suppression (mandatory provider contract)
+
+The verified provider must include
+`historic_review_index_verified: true` together with the complete
+`historic_reviewed_keys` array of source-qualified clip IDs (for example,
+`sd:motion_1790000000000.mp4`) from the existing approved/rejected/manual
+review registries. That list is **exclusion-only**: it prevents re-review
+prompts, does not supply positive references or rejected-lookalike exemplars,
+and does not rewrite any historical human decision. The API must fail closed
+if the historical index has not been completely verified or if it changes
+during a review transaction. The response exposes
+`historic_review_index_verified` so the UI and activation gate can refuse
+unprotected review cards.
+
 ## Secure activation contract
 
 The server must provide:
