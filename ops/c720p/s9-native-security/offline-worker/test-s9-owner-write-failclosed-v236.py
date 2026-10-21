@@ -65,7 +65,10 @@ class S9MigratedManifestKeyCustodyV227 {
  }
 }
 class S9MigratedSealedSourceManifestV216 {
- static final class Verified {}
+ static final class Verified {
+  public java.util.Map<String,Object> sourceRows=new java.util.LinkedHashMap<String,Object>();
+  Verified(){for(int i=0;i<6;i++)sourceRows.put("synthetic_"+i+".mp4",new Object());}
+ }
 }
 class S9MigratedApprovedSixDigestV230 {
  static void requireSealedManifestEqualsEnrollment(
