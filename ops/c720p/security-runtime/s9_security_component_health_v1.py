@@ -146,6 +146,61 @@ def saved_timing(report):
 PROJECTORS = {'infrastructure': infrastructure, 'evidence': evidence, 'saved_timing': saved_timing}
 
 
+def ui_pipeline_summary():
+    """Privacy-safe aggregate only. No person/recording ids, URLs or vectors."""
+    empty={'schema_version':'security_ui_pipeline_summary_v1',
+           'state':'unavailable','rescan':None,'s3':None,'manual_binding':None}
+    try:
+        # Read existing persisted PRIVATE cloud-health projection; never
+        # call s9_pipeline_cloud_health_v1.build() (it invokes this build).
+        envelope=read_report(STATE,'c720p-cloud-health-report.json',65536)
+        if envelope.get('schema_version')!=2:
+            return empty
+        observed=timestamp(envelope.get('observed_at'))
+        age=(dt.datetime.now(dt.timezone.utc)-observed).total_seconds()
+        if age < -180 or age > 1800:
+            return empty
+        d=envelope.get('security_pipeline')
+        if not isinstance(d,dict) or d.get('schema_version')!='security_pipeline_cloud_health_v1':
+            return empty
+        r,s,m=d.get('rescan'),d.get('s3'),d.get('manual_binding')
+        if not all(isinstance(x,dict) for x in (r,s,m)):
+            return empty
+        states={'reported','current','stale','unavailable'}
+        if any(x.get('state') not in states for x in (r,s,m)):
+            return empty
+        def integer(x):
+            if type(x) is not int or x<0 or x>1000000:
+                raise InvalidReport('invalid_private_aggregate')
+            return x
+        def tri(x):
+            if x is None or type(x) is bool:return x
+            raise InvalidReport('invalid_private_boolean')
+        rescan={k:integer(r.get(k)) for k in (
+            'revision','tracked','pending','processing','completed','blocked',
+            'rejected','dead_letter')}
+        rescan.update(state=r['state'],
+           worker_activity_verified=tri(r.get('worker_activity_verified')),
+           results_current_source_verified=tri(r.get('results_current_source_verified')))
+        if rescan['pending']+rescan['processing']+rescan['completed']+rescan['blocked']+rescan['rejected']+rescan['dead_letter']>rescan['tracked']:
+            raise InvalidReport('invalid_rescan_counts')
+        s3={'state':s['state'],'healthy':tri(s.get('healthy')),
+            'motion_analysis_active':tri(s.get('motion_analysis_active')),
+            'motion_health_verified':tri(s.get('motion_health_verified')),
+            'privacy_adb_port_closed_recently':tri(s.get('privacy_adb_port_closed_recently'))}
+        s3['age_seconds']=integer(s['age_seconds']) if s.get('age_seconds') is not None else None
+        manual={k:integer(m.get(k)) for k in (
+            'revision','decisions','reported_bound_at_decision','without_reported_binding')}
+        manual['state']=m['state']
+        manual['current_source_binding_verified']=tri(m.get('current_source_binding_verified'))
+        manual['live_write_binding_verified']=tri(m.get('live_write_binding_verified'))
+        if manual['reported_bound_at_decision']+manual['without_reported_binding']>manual['decisions']:
+            raise InvalidReport('invalid_binding_counts')
+        return {'schema_version':'security_ui_pipeline_summary_v1',
+                'state':'reported','rescan':rescan,'s3':s3,'manual_binding':manual}
+    except (OSError,ValueError,TypeError,ImportError,AttributeError,KeyError):
+        return empty
+
 def build(root=STATE, now=None):
     now = now or dt.datetime.now(dt.timezone.utc)
     if now.tzinfo is None or now.utcoffset() is None:
@@ -172,6 +227,7 @@ def build(root=STATE, now=None):
             pass
         components[key] = item
     return {'ok': True, 'schema_version': VERSION, 'observed_at_utc': now.isoformat(),
+        'pipeline_summary':ui_pipeline_summary(),
         'components': components, 'read_only': True, 'media_read': False,
         'manual_reviews_modified': False, 'workers_started': False,
         'rendered_playback_verified': False}
