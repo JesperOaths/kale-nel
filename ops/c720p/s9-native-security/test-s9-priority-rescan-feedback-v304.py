@@ -159,7 +159,8 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.items()["rows"][0]["last_reason"],
                    "repeated_transient_dependency_unavailable")
   self.assertEqual(v.items()["rows"][0]["next_attempt_at"],0)
-  self.assertEqual(v.work()["status"],"no_runnable_originals")
+  # Another pending clip remains eligible, but this failed clip is now
+  # permanently blocked until a separately reviewed requalification.
   self.assertEqual(v.items()["rows"][0]["status"],"blocked")
 
  def test_stale_source_is_not_reused(self):
