@@ -1,0 +1,29 @@
+name: Security Hub V31 status semantics (validation only)
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-hub-v31.js'
+      - 'ops/c720p/s9-native-security/test-security-hub-v31-status.cjs'
+      - '.github/workflows/security-hub-v31-status-test.yml'
+permissions:
+  contents: read
+jobs:
+  test-status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify read-only status candidate is valid JS
+        run: node --check ops/c720p/s9-native-security/security-hub-v31.js
+      - name: Verify critical, stale and unsupported health states
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-status.cjs
+      - name: Refuse direct V31 auto activation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('.github/workflows/security-hub-v31-status-test.yml').read_text()
+          assert 'workflow_dispatch:' not in source
+          assert 'systemctl' not in source
+          assert 'deploy-v31' not in source
+          print('V31_STATUS_CHECK_ONLY')
+          PY
