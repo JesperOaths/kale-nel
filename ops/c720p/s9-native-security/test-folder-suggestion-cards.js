@@ -60,6 +60,9 @@ const doc={
     media_sha256:'a'.repeat(64),media_revision:'r1',
     state:'pending_review',human_review_required:true
   })),
+  min_within_group_similarity:.47,
+  mean_within_group_similarity:.59,
+  evidence_pair_count:1,
   state:'pending_review',human_review_required:true,automatically_assigned:false
  }],
  folder_options:[{id:'F1',label:'Person one'},{id:'F2',label:'Person two'}]
@@ -79,6 +82,8 @@ const doc={
  });
  assert.equal(first.visible,1);
  assert.equal(first.provisional_groups,1);
+ assert(host.textContent.includes('Minimum within-group appearance similarity: 0.470'),
+   'Reviewer needs visible complete-linkage evidence before naming groups');
  const card=host.children.find(c=>c.tagName==='article');
  const buttons=card.findButtons();
  assert.equal(buttons.length,3);
