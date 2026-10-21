@@ -191,6 +191,7 @@ def consume(document,current,clip,appearance=None):
           "ok":True,"schema_version":SCHEMA,
           "clip_no":clip,
           "evidence_revision_sha256":receipt,
+          "evidence_revision_scope":"clip_current_catalog_priority_queue_and_samples_v367",
           "source_sha256":row["source_sha256"],
           "source_bytes":row["source_bytes"],
           "source_revision":row["source_revision"],
