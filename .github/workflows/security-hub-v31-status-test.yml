@@ -19,6 +19,8 @@ jobs:
         run: node ops/c720p/s9-native-security/test-security-hub-v31-status.cjs
       - name: Verify actual read-only status renderer warnings
         run: node ops/c720p/s9-native-security/test-security-hub-v31-render.cjs
+      - name: Downgrade expired and future-dated private health reports
+        run: node ops/c720p/s9-native-security/test-security-hub-v31-freshness.cjs
       - name: Refuse direct V31 auto activation
         run: |
           python3 - <<'PY'
