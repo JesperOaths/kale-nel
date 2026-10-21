@@ -10,3 +10,12 @@ This is a source-only checkpoint, not production activation.
 - The 48 historical manual reviews remain unbound; no writer or Save/Delete activation was performed.
 
 Follow-up: reconcile current active writes and source/deployed hashes; restore >1 GiB root reserve safely; then validate actual V323 on real authenticated non-loopback expiry/frozen live/reconnect, and a source-preserving 4K-compatible verified derivative before considering activation. Do not downgrade production or weaken storage, thermal or worker guards.
+
+## Subsequent read-only incident verification
+
+- The private infrastructure command application stopped responding, so no destructive cleanup, restarts or further deployments were attempted.
+- Independent private health readback remained fresh (approximately two minutes of publisher delay) and reported `disk.free_mb=0` and `used_percent=99.9` at 08:48 UTC (10:48 CEST). This corroborates the zero-free-space SSH measurement; no recovery can be claimed.
+- Aggregate health reported 32 failed user units. The legacy camera's health route reported `camera_ok=true`, `recording=false`, `disk_free_mb=0` at the same snapshot. S3 was unavailable. These are status observations, not confirmation of S9+ recording failure.
+- Private remote camera probe was failing with HTTP 530 around 08:40 UTC; the exposed health projection is not browser playback acceptance.
+- Local retention diagnostic reported `emergency_active=true`, zero eligible candidates and no deletions. Do not treat protected originals as disposable or lower reserve thresholds.
+- The inactive V323 preview remains blocked from activation; live production V50/V320 has not been changed by this incident response.
