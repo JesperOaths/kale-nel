@@ -14,10 +14,10 @@ import ssl
 import subprocess
 
 EXPECTED_TOTAL=214181934
-NAME=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,139}\\.mp4$")
+NAME=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,139}\.mp4$")
 HEX=re.compile(r"^[0-9a-f]{64}$")
 RECEIPT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/#-]{5,255}$")
-HEADER="S9-MIGRATED-MANIFEST-V216|1|6\\n"
+HEADER="S9-MIGRATED-MANIFEST-V216|1|6\n"
 
 def check(flag,message):
     if not flag:raise ValueError(message)
@@ -60,7 +60,7 @@ def canonical(preimages):
           "two_sources_report_equal_sha_size":True,
           "actual_media_bytes_verified_by_this_tool":False})
     check(total==EXPECTED_TOTAL,"historical_six_total_bytes_mismatch")
-    body=HEADER+"".join("FILE|%s|%s|%d|1\\n"%(n,s,b)
+    body=HEADER+"".join("FILE|%s|%s|%d|1\n"%(n,s,b)
        for n,s,b in sorted(entries))
     return {"generation":1,"rows":[{"name":n,"sha256":s,"bytes":b}
       for n,s,b in sorted(entries)],"total_bytes":total,
@@ -124,7 +124,7 @@ def main():
     args=p.parse_args()
     payload=json.loads(args.sources.read_text()) if args.sources else None
     result=review(payload,args.unsigned_apk,args.public_signer_cert)
-    content=json.dumps(result,indent=2,sort_keys=True)+"\\n"
+    content=json.dumps(result,indent=2,sort_keys=True)+"\n"
     args.out.parent.mkdir(parents=True,exist_ok=True)
     with args.out.open("x") as f:
         f.write(content)
