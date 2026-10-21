@@ -53,7 +53,7 @@ class SecurityPrivateUI(unittest.TestCase):
   script=(THIS/"security-hub-v30.js").read_text()
   for phrase in ("security-component-health","pipeline_summary",
     "security_ui_pipeline_summary_v1",
-    "48 historical/unbound"[:3], "UNKNOWN · private motion/heartbeat",
+    "historical/unbound", "UNKNOWN · private motion/heartbeat",
     "Per-record blocked reasons/revocations unavailable",
     "document.hidden","visibilitychange"):
    self.assertIn(phrase,script)
