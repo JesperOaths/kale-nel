@@ -1,0 +1,24 @@
+name: S9 historical joiner continuity
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/*historical-joiner*'
+      - '.github/workflows/s9-historical-joiner-continuity-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/*historical-joiner*'
+      - '.github/workflows/s9-historical-joiner-continuity-v1.yml'
+permissions:
+  contents: read
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Capture admission, real flock exclusion and guarded rollback
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-s9-historical-joiner-health-v1.py
+          python3 ops/c720p/s9-native-security/test-deploy-historical-joiner-continuity-v1.py
