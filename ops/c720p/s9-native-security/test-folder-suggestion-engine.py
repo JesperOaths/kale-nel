@@ -89,7 +89,7 @@ class FolderSuggestionsTest(unittest.TestCase):
         self.assertFalse(got["matches"])
         self.assertEqual(got["excluded_unbound_or_legacy_decisions"], 1)
 
-    def test_source_qualified_same_filename_cannot_cross():
+    def test_source_qualified_same_filename_cannot_cross(self):
         a = feature("same.mp4",source="sd",upper=axis(0))
         b = feature("same.mp4",source="drive",upper=axis(1),media_sha="b"*64)
         got = eng.rank_folders([a,b],folders("P1"),[decision(a)])
