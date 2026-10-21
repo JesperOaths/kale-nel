@@ -1,0 +1,28 @@
+name: S9 migrated V235 owner denial host regressions
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-owner-read-failclosed-v235.py'
+      - '.github/workflows/s9-migrated-v235-owner-denials.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-owner-read-failclosed-v235.py'
+      - '.github/workflows/s9-migrated-v235-owner-denials.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic_android_caller_and_owner_denials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Fake Android UID, separate owner and source anchor, readback head denial
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/offline-worker/test-s9-owner-read-failclosed-v235.py
+          python3 ops/c720p/s9-native-security/offline-worker/test-s9-migrated-owner-read-v235.py
