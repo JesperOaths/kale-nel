@@ -67,6 +67,44 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(v.QUEUE.read_bytes(),old)
   self.assertEqual(v.items()["rows"][0]["attempts"],0)
 
+
+ def test_target_preflight_defers_fairly_then_blocks_without_any_4k_attempt(self):
+  v.produce()
+  pending=[r for r in v.items()["rows"] if r["status"]=="pending"]
+  self.assertEqual(len(pending),2)
+  reason="qualified_evidence_reader_target_not_ready_before_scan"
+  with patch.object(v,"qualified_reader_preflight",
+                    side_effect=v.Refusal(reason)) as preflight,\
+       patch.object(v,"camera_guard") as camera,\
+       patch.object(v,"evaluate_one") as decode:
+   first=v.work()
+   self.assertEqual(first["status"],"pending")
+   first_clip=preflight.call_args.args[0]["clip_no"]
+   row=next(r for r in v.items()["rows"] if r["clip_no"]==first_clip)
+   self.assertEqual(row["attempts"],0)
+   self.assertEqual(row["deferrals"],1)
+   self.assertGreater(row["next_attempt_at"],0)
+   second=v.work()
+   self.assertEqual(second["status"],"pending")
+   self.assertNotEqual(preflight.call_args.args[0]["clip_no"],first_clip)
+   # Exercise all remaining failures of the first clip without artificial
+   # scanning. The second clip's future backoff remains independent.
+   for count in range(2,v.MAX_TRANSIENT_DEFERRALS+1):
+    doc=v.items()
+    row=next(r for r in doc["rows"] if r["clip_no"]==first_clip)
+    row["next_attempt_at"]=0
+    v.atomic(v.QUEUE,doc)
+    result=v.work()
+    self.assertEqual(result["status"],"blocked" if
+                     count==v.MAX_TRANSIENT_DEFERRALS else "pending")
+   last=next(r for r in v.items()["rows"] if r["clip_no"]==first_clip)
+   self.assertEqual(last["status"],"blocked")
+   self.assertEqual(last["last_reason"],"repeated_target_priority_unavailable")
+   self.assertEqual(last["attempts"],0)
+   self.assertEqual(last["deferrals"],v.MAX_TRANSIENT_DEFERRALS)
+   camera.assert_not_called()
+   decode.assert_not_called()
+
  def test_actual_http_reader_capability_rejects_old_echo_and_transport(self):
   candidate={"clip_no":"motion_1792000000000.mp4",
              "priority_reason":"no_indexed_image"}
