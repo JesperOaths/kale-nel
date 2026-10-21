@@ -137,8 +137,9 @@ def install(approved_blob):
     if sha(exact_file(tmp,150000))!=APPROVED_SHA:
      raise RuntimeError("staged_bytes_mismatch")
     os.replace(tmp,TARGET)
-    with os.fdopen(os.open(str(TARGET.parent),os.O_RDONLY),"rb") as directory:
-     os.fsync(directory.fileno())
+    dir_fd=os.open(str(TARGET.parent),os.O_RDONLY)
+    try:os.fsync(dir_fd)
+    finally:os.close(dir_fd)
     if sha(exact_file(TARGET,150000))!=APPROVED_SHA:
      raise RuntimeError("installed_producer_readback_invalid")
     changed=True
