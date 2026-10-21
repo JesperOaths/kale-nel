@@ -1,0 +1,73 @@
+name: Task21 fixed-path metadata-only admission diagnostic V241
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-input-metadata-v241.py'
+      - 'ops/c720p/security-runtime/test-audit-task21-input-metadata-v241.py'
+      - '.github/workflows/task21-input-metadata-v241.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-input-metadata-v241.py'
+      - 'ops/c720p/security-runtime/test-audit-task21-input-metadata-v241.py'
+      - '.github/workflows/task21-input-metadata-v241.yml'
+permissions:
+  contents: read
+concurrency:
+  group: task21-input-metadata-v241
+  cancel-in-progress: false
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          d=ops/c720p/security-runtime
+          python3 -m py_compile "$d/audit-task21-input-metadata-v241.py"
+          python3 "$d/test-audit-task21-input-metadata-v241.py"
+  physical:
+    needs: safety
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Read only lstat four fixed private and catalog files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          src=ops/c720p/security-runtime/audit-task21-input-metadata-v241.py
+          sha="$(sha256sum "$src" | cut -d' ' -f1)"
+          target="/tmp/task21-input-meta-v241-${GITHUB_SHA:0:12}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$src"
+          cmd="umask 077 && curl -fsSL --max-time 35 '$url' -o '$target' && printf '%s  %s\\n' '$sha' '$target' | sha256sum -c - >/dev/null && /usr/bin/python3 '$target' --run"
+          idem="task21-meta-v241-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task21-metadata-v241','diagnostic',:'cmd',145,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "TASK21_INPUT_METADATA_V241_JOB=$job"
+          for n in $(seq 1 60); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 5500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'TASK21_INPUT_METADATA_V241' <<< "$output"
+              grep -q '"original_bytes_read": 0' <<< "$output"
+              grep -q '"manual_review_state_changed": false' <<< "$output"
+              grep -q '"media_modified": false' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
