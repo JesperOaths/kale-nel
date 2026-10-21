@@ -33,7 +33,7 @@ jobs:
           python-version: '3.13'
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Validate Python modules and executable behavior
         run: |
           cd ops/c720p/s9-native-security
