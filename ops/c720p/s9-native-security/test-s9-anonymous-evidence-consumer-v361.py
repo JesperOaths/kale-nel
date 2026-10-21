@@ -89,6 +89,8 @@ class Consumer(unittest.TestCase):
   status,body=self.run_case(self.appearance)
   self.assertEqual(status,200)
   self.assertEqual(body["schema_version"],m.SCHEMA)
+  self.assertEqual(body["evidence_revision_scope"],
+                   "clip_current_catalog_priority_queue_and_samples_v367")
   self.assertEqual(body["source_revision"],self.version)
   self.assertEqual(body["source_binding_status"],
                    "revalidated_original_and_queue_at_consumption")
@@ -143,6 +145,11 @@ class Consumer(unittest.TestCase):
 
  def test_cached_reader_must_revalidate_and_detect_interrupted_state(self):
   with patch.object(m,"snapshot_state",side_effect=[("a","b"),("a","c")]):
+   self.assertEqual(m.consume(self.doc,self.current,self.name)[0],503)
+  # Even a race after the separately revalidated reader and during the
+  # narrow per-clip binding must invalidate the attempted receipt.
+  with patch.object(m,"snapshot_state",
+                    side_effect=[("a","b"),("a","b"),("a","c")]):
    self.assertEqual(m.consume(self.doc,self.current,self.name)[0],503)
   self.assertEqual(m.consume(self.doc,self.current,"invalid.mp4")[0],400)
   self.doc["original_gap_benchmark"]["source_bound_records_visible"]=7
