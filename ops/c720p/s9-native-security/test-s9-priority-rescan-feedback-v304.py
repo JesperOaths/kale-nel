@@ -100,7 +100,11 @@ class QueueTest(unittest.TestCase):
   self.assertEqual(current["source_sha256"],first["source_sha256"])
   self.assertEqual(current["media_revision"],first["media_revision"])
   past=json.loads((v.retired_dir()/(first["id"]+".json")).read_text())
-  self.assertEqual(past["final"]["status"],"blocked")
+  # Source priority withdrawal durably supersedes the old blocked state;
+  # its immutable priority reason and specific terminal explanation remain.
+  self.assertEqual(past["final"]["status"],"rejected")
+  self.assertEqual(past["final"]["last_reason"],
+                   "source_revision_or_priority_no_longer_current")
   self.assertEqual(past["final"]["priority_reason"],
                    "secondary_detector_has_no_supported_face")
   self.assertEqual(v.produce()["new_admissions"],0)
