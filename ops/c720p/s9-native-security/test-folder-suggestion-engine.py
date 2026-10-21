@@ -55,6 +55,11 @@ class FolderSuggestionsTest(unittest.TestCase):
         b["color_histogram"] = None
         self.assertIsNone(eng.pair_score(eng.ClipFeatures.from_dict(a), eng.ClipFeatures.from_dict(b)))
 
+    def test_reject_mixed_legacy_48_bin_color_schema(self):
+        a = feature("legacy",aligned=False,hsv=[1]+[0]*47)
+        with self.assertRaisesRegex(ValueError, "32-bin"):
+            eng.ClipFeatures.from_dict(a)
+
     def test_cannot_score_incompatible_visual_models_or_struct_without_alignment(self):
         a = feature("one", upper=axis(0), hsv=[1]+[0]*31)
         b = feature("two", upper=axis(0), hsv=[1]+[0]*31, model="different")
