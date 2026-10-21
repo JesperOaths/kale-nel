@@ -90,7 +90,8 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
   const result={aggregate_age_seconds:Math.max(0,Math.floor(ageSeconds)),aggregate_stale:aggregateStale};
   for(const [key,types]of Object.entries(fields)){
    const raw=data.components[key];if(!object(raw)||!['current','stale','unavailable'].includes(raw.status)||!(raw.age_seconds===null||nonnegative(raw.age_seconds)))return null;
-   const row={status:aggregateStale&&raw.status==='current'?'stale':raw.status,age_seconds:raw.age_seconds};
+   const row={status:aggregateStale&&raw.status==='current'?'stale':raw.status,
+    age_seconds:raw.age_seconds===null?null:raw.age_seconds+Math.max(0,ageSeconds)};
    for(const [kind,names]of Object.entries(types))for(const name of names){
     const value=raw[name],parsed=kind==='counts'?count(value):kind==='numbers'?number(value):boolean(value);
     if(value!==undefined&&value!==null&&parsed===null)return null;
