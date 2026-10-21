@@ -121,9 +121,16 @@
         const evidence = await hooks.onOpen(row);
         const sameMedia = evidence && evidence.verified === true &&
           evidence.media_sha256 === row.media_sha256 &&
-          evidence.media_revision === row.media_revision;
+          evidence.media_revision === row.media_revision &&
+          typeof evidence.opened_ticket === 'string' &&
+          evidence.opened_ticket.length >= 10 &&
+          evidence.opened_ticket.length <= 8192;
         if (!sameMedia) {
           message.textContent = 'Original review could not be attested. Approval remains locked.';
+          return;
+        }
+        if (approve.__persistentlyDisabled || reject.__persistentlyDisabled) {
+          message.textContent = 'Decision already saved. Refresh suggestions to continue.';
           return;
         }
         message.textContent = 'Original media attested for this review. Make a human decision.';
