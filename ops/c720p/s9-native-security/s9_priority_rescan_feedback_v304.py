@@ -32,6 +32,7 @@ STATE=HOME/"state/s9-priority-rescan-v304"
 QUEUE=STATE/"queue.json"
 LOCK=STATE/"queue.lock"
 AUDIT=STATE/"transitions.jsonl"
+def retired_dir():return STATE/"retired"
 REPORT=HOME/"state/s9-evidence-quality-v1/report.json"
 SECONDARY=HOME/"state/s9-evidence-quality-v1/original-gap-benchmark.json"
 ARCHIVE=HOME/"state/s9-standalone-archive-catalog-v1.json"
@@ -139,32 +140,79 @@ def aggregate(rows):
     tally={x:0 for x in ("pending","processing","completed","rejected","blocked","dead_letter")}
     for item in rows:tally[item["status"]]=tally.get(item["status"],0)+1
     return tally
+def retire_obsolete(rows, relevant):
+    """Durably archive obsolete terminal IDs before freeing live queue slots.
+
+    A current blocked/completed entry is NEVER retired: the actual reader may
+    require its source and queue provenance. Old revisions remain queryable by
+    exact immutable ID in private 0600 files; no media or review bytes change.
+    """
+    retained=[];count=0
+    for row in rows:
+        if row["id"] in relevant or row["status"] not in (
+                "rejected","completed","blocked","dead_letter"):
+            retained.append(row);continue
+        key=row["id"]
+        check(isinstance(key,str) and HEX.fullmatch(key),
+              "invalid_archived_task_identifier")
+        retired_dir().mkdir(mode=0o700,parents=True,exist_ok=True)
+        check(not retired_dir().is_symlink(),"unsafe_retired_directory")
+        dest=retired_dir()/(key+".json")
+        payload={"schema":"s9_priority_retired_provenance_v1",
+                 "id":key,"final":row,"retired_at":now()}
+        if dest.exists():
+            old=safe_doc(dest,20000)
+            check(old.get("schema")==payload["schema"] and
+                  old.get("id")==key and old.get("final")==row,
+                  "retired_provenance_conflict")
+        else:
+            atomic(dest,payload)
+        count+=1
+    return retained,count
+
 def produce():
     report,priorities,cat=source()
     doc=items()
-    byid={x["id"]:x for x in doc["rows"]}
     relevant=set()
-    added=0;changed=0
-    for row in priorities:
-        if row.get("targeted_rescan_priority") is not True:continue
-        name=row.get("clip_no")
-        approved=validate_priority(row,cat["records"].get(name))
-        key=approved["id"];relevant.add(key)
-        if key not in byid:
-            check(len(byid)<LIMIT,"producer_queue_capacity_exceeded")
-            byid[key]=approved;added+=1
-    # A source/model change must not resurrect an old "completed" result.
+    approved=[]
+    for item in priorities:
+        if item.get("targeted_rescan_priority") is not True:continue
+        name=item.get("clip_no")
+        row=validate_priority(item,cat["records"].get(name))
+        relevant.add(row["id"])
+        approved.append(row)
+    byid={x["id"]:x for x in doc["rows"]}
+    check(len(byid)==len(doc["rows"]),"duplicate_existing_task_ids")
+    changed=0
     for key,row in byid.items():
         if key not in relevant and row["status"] in ("pending","processing","blocked"):
             row["status"]="rejected"
             row["last_reason"]="source_revision_or_priority_no_longer_current"
-            row["lease_until"]=0;changed+=1
-    if added or changed:
+            row["lease_until"]=0
+            changed+=1
+    retained,retired=retire_obsolete(byid.values(),relevant)
+    byid={x["id"]:x for x in retained}
+    added=0;deferred=0
+    # Prioritize runnable work. The same immutable original/model/source ID
+    # never receives a second admission; unsupported model misses stay blocked.
+    for row in sorted(approved,key=lambda x:(
+           x["priority_reason"]!="no_indexed_image",x["id"])):
+        key=row["id"]
+        if key in byid:continue
+        if len(byid)>=LIMIT:
+            deferred+=1
+            continue
+        byid[key]=row;added+=1
+    if added or changed or retired:
         doc["revision"]+=1
-        doc["rows"]=sorted(byid.values(),key=lambda x:(x["priority_reason"]!="no_indexed_image",x["id"]))
-        atomic(QUEUE,doc);journal("producer_persisted","qualified_originals_from_private_catalog")
+        doc["rows"]=sorted(byid.values(),key=lambda x:(
+            x["priority_reason"]!="no_indexed_image",x["id"]))
+        atomic(QUEUE,doc)
+        journal("producer_persisted","qualified_originals_from_private_catalog")
     return {"status":"qualified_priority_produced","revision":doc["revision"],
-            "new_admissions":added,"invalidated":changed,"tally":aggregate(doc["rows"])}
+            "new_admissions":added,"invalidated":changed,
+            "retired_with_provenance":retired,"capacity_deferred":deferred,
+            "tally":aggregate(doc["rows"])}
 def camera_guard():
     with urllib.request.urlopen(CAMERA,timeout=7) as response:
         doc=json.loads(response.read(65536))

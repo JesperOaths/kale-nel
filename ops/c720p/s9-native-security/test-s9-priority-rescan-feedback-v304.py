@@ -58,6 +58,63 @@ class QueueTest(unittest.TestCase):
   self.assertTrue(all("model_sha256" in x and "source_sha256" in x
       and "media_revision" in x for x in v.items()["rows"]))
 
+ def test_terminal_revision_retirement_and_immutable_private_audit(self):
+  v.produce()
+  before=v.items()
+  old=before["rows"][0].copy()
+  name=old["clip_no"]
+  self.orig[name]["version"]="f"*64
+  self.store()
+  result=v.produce()
+  self.assertEqual(result["retired_with_provenance"],1)
+  self.assertEqual(result["new_admissions"],1)
+  archived=v.retired_dir()/(old["id"]+".json")
+  self.assertTrue(archived.is_file())
+  self.assertEqual(archived.stat().st_mode & 0o077,0)
+  saved=json.loads(archived.read_text())
+  self.assertEqual(saved["final"]["source_sha256"],old["source_sha256"])
+  self.assertEqual(saved["final"]["media_revision"],old["media_revision"])
+  self.assertEqual(saved["final"]["status"],"rejected")
+  self.assertEqual(v.produce()["retired_with_provenance"],0)
+  self.assertEqual(len(v.items()["rows"]),len(before["rows"]))
+
+ def test_finite_capacity_defers_new_admission_without_losing_existing_work(self):
+  v.produce()
+  original=v.items()
+  live=original["rows"][0]
+  many=[]
+  for i in range(v.LIMIT-4):
+   x=original["rows"][2].copy()
+   x["id"]=format(i+500,"064x")
+   x["priority_reason"]="secondary_detector_has_no_supported_face"
+   x["status"]="blocked"
+   many.append(x)
+  original["rows"].extend(many)
+  v.atomic(v.QUEUE,original)
+  fresh="motion_1792333333333.mp4"
+  self.orig[fresh]={"name":fresh,"bytes":1000000,
+   "version":"a"*64,"manifest":{"name":fresh,"bytes":1000000,
+   "width":3840,"height":2160,"sha256":"b"*64}}
+  self.rows.append({"clip_no":fresh,"native_face_pass_complete":True,
+      "targeted_rescan_priority":True,"extraction_status":"no_indexed_image"})
+  self.store()
+  out=v.produce()
+  self.assertEqual(out["capacity_deferred"],0)
+  self.assertGreater(out["retired_with_provenance"],0)
+  self.assertIn(live["id"],{r["id"] for r in v.items()["rows"]})
+  self.assertEqual(len({r["id"] for r in v.items()["rows"]}),len(v.items()["rows"]))
+
+ def test_current_blocked_and_completed_are_never_retired(self):
+  v.produce()
+  d=v.items()
+  d["rows"][0]["status"]="completed"
+  d["rows"][0]["outcome"]={"verified_secondary_report":True}
+  v.atomic(v.QUEUE,d)
+  x=v.produce()
+  self.assertEqual(x["retired_with_provenance"],0)
+  self.assertEqual(v.items()["rows"][0]["status"],"completed")
+  self.assertEqual(v.items()["rows"][2]["status"],"blocked")
+
  def test_processing_persists_real_secondary_feedback(self):
   v.produce()
   original=v.items()["rows"][0]
@@ -213,7 +270,8 @@ class QueueTest(unittest.TestCase):
   result=v.produce()
   self.assertEqual(result["new_admissions"],1)
   states={row["id"]:row["status"] for row in v.items()["rows"]}
-  self.assertEqual(states[original["id"]],"rejected")
+  self.assertNotIn(original["id"],states)
+  self.assertEqual(json.loads((v.retired_dir()/(original["id"]+".json")).read_text())["final"]["status"],"rejected")
  def test_denied_unbounded_or_missing_catalog(self):
   v.produce()
   self.catalog.unlink()
