@@ -23,13 +23,15 @@ class AutoPersonReviewTests(unittest.TestCase):
    p=Path(self.tmp.name)/filename if filename else Path(self.tmp.name)
    patcher=patch.object(mod,name,p);patcher.start();self.addCleanup(patcher.stop)
   self.sd={CLIP:{"sd_verified":True}}
-  self.links={}
+  self.reference_names=["motion_1792200100000.mp4","motion_1792200200000.mp4"]
+  self.links={"sd:"+name:{"folder":FOLDER,"folders":[FOLDER],
+    "review_status":"assigned"} for name in self.reference_names}
   self.reference_ids=["1"*64,"2"*64]
   self.write_reference_index()
  def write_reference_index(self,model=MODEL,revoked=(),generation=1):
   entries=[]
-  for id in self.reference_ids:
-   entries.append({"id":id,"folder":FOLDER,"source_name":CLIP,
+  for pos,id in enumerate(self.reference_ids):
+   entries.append({"id":id,"folder":FOLDER,"source_name":self.reference_names[pos],
       "original_sha256":SHA,"human_decision_sha256":"f"*64,
       "model_sha256":model,"human_approved":True,
       "aligned_face":True,"quality_passed":True,"active":id not in revoked})
@@ -100,7 +102,7 @@ class AutoPersonReviewTests(unittest.TestCase):
   doc["suggestions"][0]["snapshot_sha256"]="d"*64
   mod.SOURCE.write_text(json.dumps(doc))
   self.write_reference_index(model="c"*64)
-  refreshed,status=mod.proposals()
+  refreshed,status=mod.proposals(self.links)
   self.assertEqual(status,"ready")
   self.assertNotEqual(refreshed[0]["id"],first["id"])
   self.assertEqual(mod.report(self.sd,self.links)["items"],[])
@@ -114,6 +116,31 @@ class AutoPersonReviewTests(unittest.TestCase):
   self.assertFalse(mod.REJECTED.exists())
   self.write_reference_index(generation=2)
   with self.assertRaises(ValueError):mod.proposals()
+ def test_two_distinct_face_ids_from_one_original_do_not_qualify(self):
+  self.write()
+  registry=json.loads(mod.REFERENCES.read_text())
+  registry["references"][1]["source_name"]=registry["references"][0]["source_name"]
+  mod.REFERENCES.write_text(json.dumps(registry))
+  self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+  self.assertEqual(mod.proposals(self.links)[1],"ready")
+
+ def test_latest_manual_skip_or_group_revokes_source_reference(self):
+  self.write()
+  self.assertEqual(len(mod.report(self.sd,self.links)["items"]),1)
+  src="sd:"+self.reference_names[0]
+  self.links[src]={"folder":None,"folders":[],"review_status":"skipped"}
+  self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+  self.links[src]={"folder":FOLDER,"folders":[FOLDER,"G999"],
+                   "review_status":"assigned"}
+  self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+  self.links[src]={"folder":"G999","folders":["G999"],
+                   "review_status":"assigned"}
+  self.assertEqual(mod.report(self.sd,self.links)["items"],[])
+  self.assertFalse(mod.REJECTED.exists())
+  self.links[src]={"folder":FOLDER,"folders":[FOLDER],
+                   "review_status":"assigned"}
+  self.assertEqual(len(mod.report(self.sd,self.links)["items"]),1)
+
  def test_missing_reference_index_denies_all_proposals(self):
   self.write()
   mod.REFERENCES.unlink()
