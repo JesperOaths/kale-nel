@@ -37,10 +37,12 @@ function report(ageSeconds){
 const recent=contract(report(30));
 assert.equal(recent.aggregate_stale,false);
 assert.equal(recent.infrastructure.status,'current');
+assert(recent.infrastructure.age_seconds>=40,'component age includes report transit');
 assert.equal(recent.pipeline_summary.s3.motion_health_verified,true);
 const expired=contract(report(360));
 assert.equal(expired.aggregate_stale,true);
 assert.equal(expired.infrastructure.status,'stale');
+assert(expired.infrastructure.age_seconds>=370,'stale component age cannot stay frozen at old reported 15 seconds');
 assert.equal(expired.evidence.status,'stale');
 assert.equal(expired.saved_timing.status,'stale');
 assert.equal(expired.pipeline_summary.manual_binding.without_reported_binding,48);
@@ -52,4 +54,4 @@ assert.equal(contract(malformed),null);
 const missing=report(15);
 delete missing.components.saved_timing;
 assert.equal(contract(missing),null);
-console.log('V31_AGGREGATE_FRESHNESS_CONTRACTS_PASS 11');
+console.log('V31_AGGREGATE_FRESHNESS_CONTRACTS_PASS 13');
