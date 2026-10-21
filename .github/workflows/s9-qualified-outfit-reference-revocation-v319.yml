@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - name: Parse JS and guard group/latest review authority
         run: |
           node --check ops/c720p/s9-native-security/security-people-v45.js
