@@ -656,7 +656,7 @@ const movementLabels=Object.freeze({
 const colourLabels=new Set(['black','white','grey','gray','blue','red','green','yellow',
  'orange','purple','pink','brown','tan','beige','multicolour','multicolor']);
 function step3ClipEvidence(item){
- const clip=String(item?.clip||'');
+ const clip=item?.source==='drive'?'':String(item?.clip||'');
  const record=clipName.test(clip)?state.clipEvidence.get(clip):null;
  const root=elt('details','','step3-evidence');
  const heading=elt('summary','Face and movement evidence · Expand details');
@@ -691,6 +691,8 @@ function step3ClipEvidence(item){
  return root;
 }
 function reviewFacesForClip(item){
+ // Never display S9+ face evidence beside a same-basename Drive original.
+ if(item?.source==='drive')return null;
  const faces=reliableFaces(item.clip).slice(0,3);
  if(!faces.length)return null;
  const host=elt('div','','review-face-evidence');
@@ -755,8 +757,7 @@ function chosenPortrait(f){
   try{saved=JSON.parse(localStorage.getItem(portraitKey(id))||'null')}catch(_){}
  }
  if(!saved||!faceName.test(String(saved.name||''))||!clipName.test(String(saved.clip||'')))return null;
- // An explicit cover-photo selection may use an unverified crop from a
- // human-filed recording; never conflate that with model-confirmed identity.
+ if(!folderApprovedSDClips(id).has(saved.clip))return null;
  if(!assignedRecordingKeys(id).has('sd:'+saved.clip))return null;
  return state.faceList.find(x=>x.clip===saved.clip&&x.face.snapshot_name===saved.name&&
   x.face.snapshot_on_s9!==false)||null;
@@ -784,22 +785,14 @@ function approvedPreviewClip(preview){
  return '';
 }
 function automaticPortrait(f){
- if(!f||!num(f.approved_clips))return null;
- const approved=new Set((Array.isArray(f.previews)?f.previews:[])
-  .map(approvedPreviewClip).filter(Boolean));
- if(state.folder===f.id){
-  for(const item of state.doc?.items||[])if(item.decision==='approved'&&clipName.test(String(item.clip||'')))
-   approved.add(item.clip);
- }
+ if(!f||!folderAssignmentCount(f)||!state.assignedReady)return null;
+ const approved=folderApprovedSDClips(f.id);
  if(!approved.size)return null;
  // Never recycle the same face between people or guess from group footage.
  const proposed=new Map();
  const reserved=new Set();
  for(const folder of savedFolders().slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
-  const source=new Set((Array.isArray(folder.previews)?folder.previews:[])
-   .map(approvedPreviewClip).filter(Boolean));
-  if(state.folder===folder.id)for(const x of state.doc?.items||[])
-   if(x.decision==='approved'&&clipName.test(String(x.clip||'')))source.add(x.clip);
+  const source=folderApprovedSDClips(folder.id);
   const options=[];
   for(const clip of source){
    const faces=reliableFaces(clip);
@@ -1010,6 +1003,7 @@ function renderPeople(){
  if(!saved.children.length)saved.append(elt('p','No saved people. Add a person or file a reviewed recording to get started.','empty'));
  // Clothing suggestions are not mixed into the saved-people list.
 }
+
 // SECURITY_OUTFIT_REVIEW_FINALITY_V1
 // QUALIFIED_OUTFIT_REFERENCE_REVOCATION_V319
 // Source-qualified latest manual assignments override V40 history.
@@ -1033,6 +1027,67 @@ function outfitReviewEligible(clip){
  }
  return !assignedFolders(item).length&&reviewDecision(item)==='inbox';
 }
+
+ // S9_REVIEWED_OSNET_HSV_SUGGESTIONS_V1. Suggestion evidence, not an ID.
+ async function addReviewedOsnetMatches(ref,person,matches){
+  if(!clipName.test(String(ref?.clip||'')))return 0;
+  let response;
+  try{
+   const res=await relay().fetch('/new/api/appearance-multivector?'+
+    new URLSearchParams({clip:ref.clip}).toString(),{cache:'no-store'});
+   if(!res.ok)return 0;
+   response=await res.json();
+  }catch(_){return 0}
+  if(response?.ok!==true||response?.appearance_only!==true||
+    response?.verified_same_person!==false||
+    response?.identity_probability!==false||
+    response?.human_review_required!==true||
+    response?.automatic_person_assignments!==0||
+    response?.reference_source!=='s9_sd'||
+    response?.reference_clip!==ref.clip||
+    response?.model_sha256!=='ee5717ad7a90cf0c915afa1fb6a5399b966562c5d42aa6f4a0c6c84a5349e47d'||
+    !Array.isArray(response.results)||response.results.length>5)return 0;
+  let accepted=0;
+  for(const hit of response.results){
+   const clip=String(hit?.clip_name||'');
+   if(!clipName.test(clip)||clip===ref.clip||
+     hit.source!=='s9_sd'||hit.appearance_only!==true||
+     hit.verified_same_person!==false||hit.auto_assignment!==false||
+     hit.human_review_required!==true||
+     !['visual_75_color_25','structural_70_visual_30'].includes(hit.method)||
+     typeof hit.similarity_percent!=='number'||
+     !Number.isFinite(hit.similarity_percent)||
+     hit.similarity_percent<80||hit.similarity_percent>100||
+     typeof hit.similarity!=='number'||!Number.isFinite(hit.similarity)||
+     Math.abs(hit.similarity*100-hit.similarity_percent)>.02)continue;
+   const recorded_ms=Number(clip.slice(7,20));
+   if(!Number.isFinite(recorded_ms)||
+     Math.abs(recorded_ms-ref.recorded_ms)>72*60*60*1000)continue;
+   if(!outfitReviewEligible(clip))continue;
+   const evidence=state.clipEvidence.get(clip);
+   if(!evidence||num(evidence.person_count)!==1||
+     num(evidence.frames_with_distinct_multiple_person_boxes)>0)continue;
+   const score=hit.similarity;
+   // Do not merge HSV-only scores with model-backed scores or count one
+   // reference twice. Each method remains clearly labelled.
+   const key=person.id+':'+clip+':model';
+   const prior=matches.get(key);
+   if(prior){
+    if(prior.references.includes(ref.clip))continue;
+    prior.references.push(ref.clip);
+    prior.bestScore=Math.max(prior.bestScore,score);
+    prior.sumScore+=score;
+    if(score>prior.score){prior.score=score;prior.reference=ref.clip}
+   }else{
+    matches.set(key,{clip,person,reference:ref.clip,references:[ref.clip],
+      score,bestScore:score,sumScore:score,scoreSource:'osnet_hsv',
+      recorded_ms,source:'sd',name:clip,
+      video_path:'/new/saved/clip/'+encodeURIComponent(clip)});
+   }
+   accepted++;
+  }
+  return accepted;
+ }
 
 async function searchClothingMatches(force=false){
  if(state.clothingBusy||!state.assignedReady||!state.extraLinks)return;
@@ -1067,6 +1122,10 @@ async function searchClothingMatches(force=false){
  for(const {ref,person} of references){
   if(token!==state.clothingToken)break;
   try{
+   // Model-backed evidence exists only for verified detector crops.
+   // Keep existing two-piece HSV comparison for other references.
+   const modelCount=await addReviewedOsnetMatches(ref,person,matches);
+   if(modelCount>0){checked++;continue}
    const make=category=>'/new/api/appearance-search?'+new URLSearchParams({
     clip:ref.clip,category,method:'bhattacharyya',limit:'50'}).toString();
    // Serial calls keep comparison work bounded on the camera phone.
@@ -1096,7 +1155,7 @@ async function searchClothingMatches(force=false){
     if(!observed||num(observed.person_count)!==1||
        num(observed.frames_with_distinct_multiple_person_boxes)>0)continue;
     // A match describes the same clothing colours across two videos only.
-    const score=.62*u+.38*l,key=person.id+':'+clip,prior=matches.get(key);
+    const score=.62*u+.38*l,key=person.id+':'+clip+':hsv',prior=matches.get(key);
     if(prior){
      // Independent confirmed reference agreements strengthen *outfit*
      // evidence but do not establish a person identity.
@@ -1107,7 +1166,7 @@ async function searchClothingMatches(force=false){
      if(score>prior.score){prior.score=score;prior.reference=ref.clip;
       prior.upper=u;prior.lower=l;}
     }else matches.set(key,{clip,person,reference:ref.clip,references:[ref.clip],
-      upper:u,lower:l,score,bestScore:score,sumScore:score,
+      upper:u,lower:l,score,bestScore:score,sumScore:score,scoreSource:'hsv_two_piece',
       recorded_ms:Number(clip.slice(7,20)),source:'sd',name:clip,
       video_path:'/new/saved/clip/'+encodeURIComponent(clip)});
    }
@@ -1122,7 +1181,7 @@ async function searchClothingMatches(force=false){
   // conflicting outfit labels explicitly rather than ranking one as an ID.
   for(const match of allMatches){
    const competitors=allMatches.filter(other=>other.clip===match.clip&&
-    other.person.id!==match.person.id&&
+    other.scoreSource===match.scoreSource&&other.person.id!==match.person.id&&
     other.meanSimilarity>=match.meanSimilarity-.035&&
     other.referenceSupport>=match.referenceSupport-1);
    match.ambiguousPeople=competitors.map(other=>other.person.label).slice(0,3);
@@ -1251,12 +1310,12 @@ function renderClothing(){
  $('groupCount').textContent=state.clothingMatches?String(matches.length):'—';
  $('clothingTabCount').textContent=matches.length?' · '+matches.length:'';
  $('clothingTotal').textContent=state.clothingBusy?'Comparing approved reference recordings on S9+…':
-  state.clothingError||matches.length+' two-piece outfit comparisons within 72 hours · human review required; not identity matches';
+  state.clothingError||matches.length+' provisional appearance comparisons within 72 hours · human review required; not identity matches';
  if(!state.clothingMatches){
   host.append(elt('p',state.clothingBusy?'Checking upper and lower clothing against confirmed reference clips…':
    'Select Refresh matches to compare approved single-person recordings.','empty'));return;
  }
- if(!matches.length){host.append(elt('p','No credible two-piece clothing matches in the indexed videos. Matching outfits do not establish identities.','empty'));return}
+ if(!matches.length){host.append(elt('p','No eligible appearance matches in the indexed videos. Visual resemblance does not establish identity.','empty'));return}
  for(const match of matches){
   const card=elt('article','','evidence');
   const media=sceneFor(match);
@@ -1264,8 +1323,11 @@ function renderClothing(){
   const ambiguous=match.ambiguousPeople.length>0;
   body.append(elt('strong',ambiguous?'Common outfit · resembles several saved people':
    'Possible outfit resemblance to '+match.person.label),
-   elt('p',date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+
-    Math.round(match.lower*100)+'%'),
+   elt('p',match.scoreSource==='osnet_hsv'
+     ?date(match)+' · OSNet 75% + clothing HSV 25% · appearance similarity '+
+      Math.round(match.score*100)+'%'
+     :date(match)+' · upper '+Math.round(match.upper*100)+'% · lower '+
+      Math.round(match.lower*100)+'%'),
    elt('p','Matched '+match.referenceSupport+' approved example'+
     (match.referenceSupport===1?'':'s')+' · average outfit similarity '+
     Math.round(match.meanSimilarity*100)+'%'),
