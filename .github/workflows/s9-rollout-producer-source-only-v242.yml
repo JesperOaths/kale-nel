@@ -1,0 +1,86 @@
+name: Task14 source-only Camera2 rollout producer schema cutover V242
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/deploy-task14-rollout-producer-v242.py'
+      - 'ops/c720p/security-runtime/test-deploy-task14-rollout-producer-v242.py'
+      - '.github/workflows/s9-rollout-producer-source-only-v242.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/deploy-task14-rollout-producer-v242.py'
+      - 'ops/c720p/security-runtime/test-deploy-task14-rollout-producer-v242.py'
+      - '.github/workflows/s9-rollout-producer-source-only-v242.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s9-rollout-producer-source-only-v242
+  cancel-in-progress: false
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+      - name: Prove observed live old SHA was the exact previously approved source
+        run: |
+          set -euo pipefail
+          old="$(git show 254774f887e480e8df4d5640875db8fbeb53c75d:ops/c720p/s9-native-security/s9_7s_cool_rollout_v1.py | sha256sum | cut -d' ' -f1)"
+          test "$old" = c785b78a30603d88a9e2dddb40843f85b191c88b6ea966b6b71906720eabcaf1
+          test "$(sha256sum ops/c720p/s9-native-security/s9_7s_cool_rollout_v1.py | cut -d' ' -f1)" = fcf789bb5b5129c1fc125e653fa8735d9063ba635d20e564f6b06a285bfe517e
+          python3 ops/c720p/security-runtime/test-deploy-task14-rollout-producer-v242.py
+          python3 ops/c720p/s9-native-security/test-s9-7s-cool-rollout-v1.py
+  physical:
+    needs: safety
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Replace ONLY no-longer-running rollout Python source, never Camera2 APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          stage="/tmp/task14-rollout-python-v242-${GITHUB_SHA:0:12}"
+          cmd="umask 077 && install -d -m 700 '$stage'"
+          for file in \
+            ops/c720p/security-runtime/deploy-task14-rollout-producer-v242.py \
+            ops/c720p/s9-native-security/s9_7s_cool_rollout_v1.py; do
+            sha="$(sha256sum "$file" | cut -d' ' -f1)"
+            name="$(basename "$file")"
+            url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+            cmd="$cmd && curl -fsSL --max-time 35 '$url' -o '$stage/$name' && printf '%s  %s\\n' '$sha' '$stage/$name' | sha256sum -c - >/dev/null"
+          done
+          cmd="$cmd && /usr/bin/python3 '$stage/deploy-task14-rollout-producer-v242.py' --apply --source '$stage/s9_7s_cool_rollout_v1.py'"
+          idem="task14-rollout-source-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task14-rollout-python-v242','deployment',:'cmd',210,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "S9_TASK14_PYTHON_V242_PHYSICAL_JOB=$job"
+          for n in $(seq 1 65); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job" | head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job" | head -c 3200)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'S9_TASK14_ROLLOUT_SOURCE_ONLY_V242_INSTALLED' <<< "$output"
+              grep -q '"producer_sha256": "fcf789bb5b5129c1fc125e653fa8735d9063ba635d20e564f6b06a285bfe517e"' <<< "$output"
+              grep -q '"no_camera_reinstall_or_restart": true' <<< "$output"
+              grep -q '"terminal_provenance_not_modified": true' <<< "$output"
+              grep -q '"videos_or_reviews_modified": false' <<< "$output"
+              grep -q '"camera_dropped_frames_after": 0' <<< "$output"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Source-only production code cutover not verified";exit 1
