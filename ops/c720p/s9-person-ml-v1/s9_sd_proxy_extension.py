@@ -488,6 +488,14 @@ def install_local_sd(H):
  except ModuleNotFoundError as error:
   if error.name!='s9_evidence_quality_v1':raise
  else:s9_evidence_quality_v1.install(H,rows)
+ # Chat 3: V361 remains current-source-only. Never fall back to class-only
+ # evidence qualification or silently convert revocation to a valid sample.
+ # Private 8795 is a threaded server; relay authentication is still owned by
+ # the separate signed 8794 transport.
+ import s9_anonymous_quality_http_adapter_v1 as v361_route
+ import s9_v361_http_reader_v1 as v369_transport
+ import s9_anonymous_evidence_consumer_v361 as v361_consumer
+ v361_route.install(H,rows,v361_consumer,v369_transport.fetch_live_http)
 def play_sd(handler,name,record,*,root_override=None):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:
