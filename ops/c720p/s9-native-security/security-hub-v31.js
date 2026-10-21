@@ -175,7 +175,7 @@ show('live');refreshHealth();setInterval(refreshHealth,15000);setInterval(()=>{i
       summary+=' · Some processing evidence unavailable';
     }
   }
-  for(const panel of panels){panel.summary.textContent=summary;panel.rows.replaceChildren();for(const [label,value]of rows)panel.rows.append(create('dt',label),create('dd',value));}
+  for(const panel of panels){panel.summary.textContent=summary;panel.rows.replaceChildren();for(const [label,value]of rows)panel.rows.append(create('dt','',label),create('dd','',value));}
  }
  let busy=false,ended=false,lastAttempt=null;
  const visible=()=>!ended&&!document.hidden&&(!live.hidden||!controls.hidden);
