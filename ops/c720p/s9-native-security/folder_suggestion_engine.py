@@ -295,6 +295,17 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
         groups.append({"id": "awaiting-review-" + key_digest,
                        "label": "Awaiting Review", "state": "pending_review",
                        "source_qualified_clips": keys,
+                       "members": [
+                           {"source": entries[i].source,
+                            "clip_id": entries[i].clip_id,
+                            "source_qualified_clip_id": entries[i].key,
+                            "media_sha256": entries[i].media_sha256,
+                            "media_revision": entries[i].media_revision,
+                            "state": "pending_review",
+                            "human_review_required": True,
+                            "verified_same_person": False}
+                           for i in sorted(members, key=lambda index: entries[index].key)
+                       ],
                        "member_count": len(keys), "human_review_required": True,
                        "automatically_assigned": False})
     return sorted(groups, key=lambda row: (-row["member_count"], row["id"]))
