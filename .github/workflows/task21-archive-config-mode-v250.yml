@@ -1,0 +1,64 @@
+name: Task21 archive config metadata admission V250
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-archive-config-mode-v250.py'
+      - '.github/workflows/task21-archive-config-mode-v250.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/audit-task21-archive-config-mode-v250.py'
+      - '.github/workflows/task21-archive-config-mode-v250.yml'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/security-runtime/audit-task21-archive-config-mode-v250.py
+          ! grep -Eq '(read_text|read_bytes|write_text|write_bytes|chmod|unlink|open\()' ops/c720p/security-runtime/audit-task21-archive-config-mode-v250.py
+  physical:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
+          file=ops/c720p/security-runtime/audit-task21-archive-config-mode-v250.py
+          digest="$(sha256sum "$file"|cut -d' ' -f1)"
+          stage="/tmp/task21-config-mode-v250-${GITHUB_SHA:0:12}.py"
+          url="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/$file"
+          cmd="umask 077 && curl -fsSL --max-time 35 '$url' -o '$stage' && printf '%s  %s\\n' '$digest' '$stage' | sha256sum -c - >/dev/null && /usr/bin/python3 '$stage'"
+          idem="task21-config-v250-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          job="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-task21-config-v250','diagnostic',:'cmd',80,:'idem');
+          SQL
+          )"
+          [[ "$job" =~ ^[0-9]+$ ]]
+          echo "TASK21_CONFIG_V250_JOB=$job"
+          for i in $(seq 1 38); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=$job"|head -n1)"
+            if [[ "$state" == done* || "$state" == error* || "$state" == failed* ]]; then
+              output="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=$job"|head -c 3500)"
+              echo "$output"
+              [[ "$state" == 'done|0' ]] || exit 1
+              grep -q 'TASK21_DRIVE_CONFIG_METADATA_V250' <<< "$output"
+              grep -q '"content_read": false' <<< "$output"
+              grep -q '"changed": false' <<< "$output"
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
