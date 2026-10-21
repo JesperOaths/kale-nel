@@ -142,11 +142,14 @@ def aggregate(rows):
     for item in rows:tally[item["status"]]=tally.get(item["status"],0)+1
     return tally
 def retire_obsolete(rows, relevant):
-    """Durably archive obsolete terminal IDs before freeing live queue slots.
+    """Durably archive terminal IDs before freeing live queue slots.
 
-    A current blocked/completed entry is NEVER retired: the actual reader may
-    require its source and queue provenance. Old revisions remain queryable by
-    exact immutable ID in private 0600 files; no media or review bytes change.
+    Normally the caller selects only obsolete terminal revisions. Under full
+    capacity, it may select an explicitly same-model unsupported blocked row,
+    whose evidence cannot be consumed. Current completed, pending and
+    processing tasks must never be evicted for capacity. Full source/model
+    provenance remains queryable by immutable ID in private 0600 files.
+    No original media, identity, review or image bytes change.
     """
     retained=[];count=0
     for row in rows:
