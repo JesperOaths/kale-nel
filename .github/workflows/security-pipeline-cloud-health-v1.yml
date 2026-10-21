@@ -1,0 +1,25 @@
+name: Security private pipeline health
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/security-runtime/*pipeline-cloud-health*'
+      - '.github/workflows/security-pipeline-cloud-health-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/security-runtime/*pipeline-cloud-health*'
+      - '.github/workflows/security-pipeline-cloud-health-v1.yml'
+permissions:
+  contents: read
+jobs:
+  privacy-and-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          python3 ops/c720p/security-runtime/test-pipeline-cloud-health-v1.py
+          python3 ops/c720p/security-runtime/test-deploy-pipeline-cloud-health-v1.py
+          python3 ops/c720p/security-runtime/test-security-component-health-v1.py
+          python3 -m py_compile ops/c720p/security-runtime/deploy-pipeline-cloud-health-v1.py
