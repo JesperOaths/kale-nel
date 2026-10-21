@@ -4,12 +4,14 @@ on:
     paths:
       - 'ops/c720p/s9-person-ml-v1/s9_evidence_quality_v1.py'
       - 'ops/c720p/s9-native-security/test-s9-priority-feedback-api-v318.py'
+      - 'ops/c720p/s9-native-security/test-s9-source-verified-gap-revocation-v355.py'
       - '.github/workflows/s9-priority-feedback-api-v318.yml'
   push:
     branches: [main]
     paths:
       - 'ops/c720p/s9-person-ml-v1/s9_evidence_quality_v1.py'
       - 'ops/c720p/s9-native-security/test-s9-priority-feedback-api-v318.py'
+      - 'ops/c720p/s9-native-security/test-s9-source-verified-gap-revocation-v355.py'
       - '.github/workflows/s9-priority-feedback-api-v318.yml'
 permissions:
   contents: read
@@ -24,5 +26,6 @@ jobs:
           set -euo pipefail
           python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_evidence_quality_v1.py
           python3 ops/c720p/s9-native-security/test-s9-priority-feedback-api-v318.py
+          python3 ops/c720p/s9-native-security/test-s9-source-verified-gap-revocation-v355.py
           python3 ops/c720p/s9-native-security/test-evidence-quality-v1.py
           echo S9_RESCAN_FEEDBACK_API_V318_NO_PHONE_ORIGINALS_OR_APPROVAL_MUTATION
