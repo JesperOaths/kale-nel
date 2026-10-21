@@ -144,7 +144,13 @@
         const section = element('section', undefined, 'folder-provisional-group');
         section.append(element('h4', 'Awaiting Review · ' + group.member_count +
           ' clip' + (group.member_count === 1 ? '' : 's')),
-          element('p', group.source_qualified_clips.join(' · ')));
+          element('p', group.source_qualified_clips.join(' · ')),
+          element('p', 'Minimum within-group similarity: ' +
+            formatScore(group.min_within_group_similarity) +
+            ' · Average: ' + formatScore(group.mean_within_group_similarity) +
+            ' · ' + (Number.isSafeInteger(group.evidence_pair_count) ?
+              group.evidence_pair_count : 0) +
+            ' appearance comparisons (not an identity probability)'));
         if (typeof hooks.onClusterOpen === 'function')
           for (const key of group.source_qualified_clips.slice(0, 24)) {
             if (typeof key === 'string' && key.length <= 240)
