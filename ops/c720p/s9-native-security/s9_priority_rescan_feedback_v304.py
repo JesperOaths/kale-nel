@@ -653,7 +653,34 @@ def work():
            "leases_recovered":recovered,"tally":aggregate(doc["rows"])}
     # A running older HTTP handler is a permanent dependency mismatch for this
     # tick. Never decode the same original 4K repeatedly just to rediscover it.
-    qualified_reader_preflight(candidate)
+    try:
+        qualified_reader_preflight(candidate)
+    except Refusal as err:
+        if str(err)!="qualified_evidence_reader_target_not_ready_before_scan":
+            # Global stale/unavailable HTTP authority affects all candidates.
+            # Keep their task states intact until backend deployment/health.
+            raise
+        # Clip-specific mismatch must not starve unrelated runnable originals
+        # at the head of the fair work queue. Defer without decoding or
+        # spending a processing attempt, with an eventual explicit block.
+        count=candidate.get("deferrals",0)
+        check(type(count) is int and 0<=count<=MAX_TRANSIENT_DEFERRALS,
+              "target_preflight_deferral_count_untrusted")
+        candidate["deferrals"]=min(MAX_TRANSIENT_DEFERRALS,count+1)
+        candidate["next_attempt_at"]=now()+min(
+            6*3600,60*2**min(7,candidate["deferrals"]-1))
+        candidate["status"]=("blocked" if
+             candidate["deferrals"]>=MAX_TRANSIENT_DEFERRALS else "pending")
+        candidate["last_reason"]=(
+            "repeated_target_priority_unavailable" if
+            candidate["status"]=="blocked"
+            else "qualified_evidence_reader_target_not_ready_before_scan")
+        doc["revision"]+=1
+        atomic(QUEUE,doc)
+        journal(candidate["status"],candidate["last_reason"])
+        return {"status":candidate["status"],"revision":doc["revision"],
+                "reason":candidate["last_reason"],
+                "leases_recovered":recovered,"tally":aggregate(doc["rows"])}
     # Acquire source/camera locks BEFORE taking a lease.
     check(CROSS_LOCK.is_file() and not CROSS_LOCK.is_symlink(),
           "s9_shared_backfill_lock_unavailable")
