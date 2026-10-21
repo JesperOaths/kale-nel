@@ -242,8 +242,8 @@ def retire_obsolete(rows, relevant, pressure_ids=frozenset()):
         count+=1
     return retained,count
 
-def retired_proof(approved):
-    """Do not re-enqueue a permanently archived source/model/analysis ID."""
+def retired_proof(approved, allow_priority_reclassification=False):
+    """Validate immutable past provenance; detect bounded reason reclassification."""
     key=approved["id"]
     check(isinstance(key,str) and HEX.fullmatch(key),"invalid_retired_source_id")
     root=retired_dir()
@@ -269,13 +269,55 @@ def retired_proof(approved):
           and all(past.get(field)==approved.get(field)
                   for field in ("clip_no","source_sha256","source_bytes",
                                 "media_revision","native_pass","model_sha256",
-                                "required_analysis","priority_reason")),
+                                "required_analysis")),
           "retired_provenance_changed_or_untrusted")
+    if past.get("priority_reason") != approved.get("priority_reason"):
+        check(past.get("priority_reason") in
+              ("no_indexed_image","secondary_detector_has_no_supported_face"),
+              "retired_provenance_changed_or_untrusted")
+        if allow_priority_reclassification:
+            return "priority_reason_changed"
+        raise Refusal("retired_provenance_changed_or_untrusted")
     return True
+
+def qualify_reason_transition(row, byid):
+    """Reclassify a stable original once per reason, never reuse an audit ID.
+
+    Legacy task IDs predate a priority-reason component. Keep their existing
+    IDs valid unless the *same* immutable source/model switches between the
+    two supported reasons; then derive a stable one-time reason-specific ID.
+    This prevents a securely retired same-YuNet blocker from suppressing a
+    later genuinely runnable no-crop priority at identical MP4 revision.
+    """
+    original_key=row["id"]
+    current=byid.get(original_key)
+    if current is not None:
+        check(all(current.get(field)==row.get(field) for field in
+              ("clip_no","source_sha256","source_bytes","media_revision",
+               "native_pass","model_sha256","required_analysis")),
+              "queue_source_provenance_conflict")
+        if current.get("priority_reason")==row["priority_reason"]:
+            return row
+        check(current.get("priority_reason") in
+              ("no_indexed_image","secondary_detector_has_no_supported_face"),
+              "queue_priority_reason_untrusted")
+    elif retired_proof(row,allow_priority_reclassification=True) != "priority_reason_changed":
+        return row
+    result=dict(row)
+    result["id"]=hashlib.sha256((
+        "reclassified_priority_v1|"+original_key+"|"+row["priority_reason"]
+    ).encode()).hexdigest()
+    result["legacy_source_key"]=original_key
+    return result
 
 def park_same_model_blockers(byid,relevant,fresh):
     """Never let a full permanently-blocked queue starve a runnable original."""
-    available=LIMIT-len(byid)
+    # Obsolete terminal rows will already retire in this same atomic update;
+    # do not park additional current blockers unnecessarily.
+    retiring=sum(row["id"] not in relevant and row.get("status") in
+                 ("rejected","completed","blocked","dead_letter")
+                 for row in byid.values())
+    available=LIMIT-len(byid)+retiring
     runnable=sum(row["priority_reason"]=="no_indexed_image" for row in fresh)
     needed=max(0,runnable-available)
     if not needed:return frozenset()
@@ -290,16 +332,17 @@ def park_same_model_blockers(byid,relevant,fresh):
 def produce():
     report,priorities,cat=source()
     doc=items()
+    byid={x["id"]:x for x in doc["rows"]}
+    check(len(byid)==len(doc["rows"]),"duplicate_existing_task_ids")
     relevant=set()
     approved=[]
     for item in priorities:
         if item.get("targeted_rescan_priority") is not True:continue
         name=item.get("clip_no")
-        row=validate_priority(item,cat["records"].get(name))
+        row=qualify_reason_transition(
+            validate_priority(item,cat["records"].get(name)),byid)
         relevant.add(row["id"])
         approved.append(row)
-    byid={x["id"]:x for x in doc["rows"]}
-    check(len(byid)==len(doc["rows"]),"duplicate_existing_task_ids")
     changed=0
     for key,row in byid.items():
         if key not in relevant and row["status"] in ("pending","processing","blocked"):
