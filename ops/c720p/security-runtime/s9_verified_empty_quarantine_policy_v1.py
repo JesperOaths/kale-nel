@@ -108,6 +108,9 @@ def atomic_json(path,data):
             json.dump(data,f,sort_keys=True,indent=2)
             f.write("\n");f.flush();os.fsync(f.fileno())
         os.replace(tmp,path)
+        # A file fsync alone is insufficient: the renamed journal directory
+        # entry must be durable BEFORE any recording is moved.
+        fsync_directory(path.parent)
     finally:
         if os.path.exists(tmp):os.unlink(tmp)
 
@@ -133,13 +136,19 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
         raise Protected("invalid_name")
     live=root/"Security4K"/name
     qdir=root/"private-quarantine"
+    if qdir.is_symlink():
+        raise Protected("quarantine_directory_symlink")
     qdir.mkdir(mode=0o700,exist_ok=True)
+    if qdir.is_symlink():
+        raise Protected("quarantine_directory_symlink")
     os.chmod(qdir,0o700)
     if os.stat(live.parent).st_dev != os.stat(qdir).st_dev:
         raise Protected("quarantine_must_use_same_filesystem")
     if type(max_items) is not int or not 1<=max_items<=25 or type(max_bytes) is not int or not 1<=max_bytes<=512*1024*1024:
         raise Protected("quarantine_bounds_not_valid")
     lock=root/".archive-lifecycle.lock"
+    if lock.is_symlink():
+        raise Protected("lifecycle_lock_symlink")
     with lock.open("a+") as l:
         fcntl.flock(l,fcntl.LOCK_EX)
         state,source,evidence,protection=read_state()
@@ -158,7 +167,8 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
             raise Protected("original_changed_at_commit")
         target=qdir/name
         journal=qdir/(name+".quarantine.json")
-        if target.exists() or journal.exists():
+        # Path.exists() ignores dangling symlinks. Refuse all occupied names.
+        if os.path.lexists(target) or os.path.lexists(journal):
             raise Protected("existing_quarantine_or_journal")
         present=[p for p in qdir.iterdir() if p.is_file() and NAME.fullmatch(p.name)]
         if len(present)>=max_items or live.stat().st_size+sum(p.stat().st_size for p in present)>max_bytes:
@@ -189,20 +199,27 @@ def fixture_restore(root,name):
     qdir=root/"private-quarantine"
     live=root/"Security4K"/name
     journal=qdir/(name+".quarantine.json")
-    with (root/".archive-lifecycle.lock").open("a+") as lock:
+    lockfile=root/".archive-lifecycle.lock"
+    if (qdir.is_symlink() or journal.is_symlink() or lockfile.is_symlink()
+        or not journal.is_file()):
+        raise Protected("restore_unsafe_symlink_or_missing_journal")
+    with lockfile.open("a+") as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
         ticket=json.loads(journal.read_text())
         if (ticket.get("name")!=name or ticket.get("quarantine")!=str(qdir/name)
             or ticket.get("original")!=str(live) or ticket.get("permanently_deleted") is not False):
             raise Protected("restore_ticket_invalid")
         target=qdir/name
-        if target.is_file() and not live.exists():
+        if (target.is_symlink() or live.is_symlink()
+            or (os.path.lexists(live) and not live.is_file())):
+            raise Protected("restore_unsafe_media_path")
+        if target.is_file() and not os.path.lexists(live):
             if sha_file(target)!=ticket.get("digest"):
                 raise Protected("quarantine_bytes_corrupt")
             os.replace(target,live)
             fsync_directory(live.parent)
             fsync_directory(qdir)
-        elif not live.is_file() or target.exists() or sha_file(live)!=ticket.get("digest"):
+        elif not live.is_file() or os.path.lexists(target) or sha_file(live)!=ticket.get("digest"):
             raise Protected("ambiguous_restore_state")
         ticket["state"]="restored"
         ticket.setdefault("history",[]).append({"action":"restored","at_unix_seconds":time.time()})
