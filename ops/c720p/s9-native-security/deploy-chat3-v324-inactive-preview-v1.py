@@ -17,7 +17,7 @@ HTML_PREVIEW='security-people-v324-preview.html'
 HTML_SHA='b796e555e51651286a4ae99da5d27cb5ae03c2be'
 JS_OLD_SHA='d9cf5fb73db2ff7ce11da24fb3b2a28bfeac23bb'
 PREVIEW_SHA='527226b66f1a17252abec1fa202150b53f2539e4'
-BROWSER_SHA='c9a4981d61196f4aa1336913b263be73a392d89e'
+BROWSER_SHA='4f4d2bfaaf04f1e73cf068e2df9c8c217869bdeb'
 REF='security-people-v320.js?v=people-faces-sorting-v320c-20261021'
 SCRIPTS=(
  '<script defer src="/local/frontyard-security-new/s9_review_original_browser_v1.js?v=chat3-review-v2-20261024"></script>\n'
