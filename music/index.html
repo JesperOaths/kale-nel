@@ -7,9 +7,9 @@
 <meta name="robots" content="noindex">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=1">
+<link rel="stylesheet" href="./style.css?v=2">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=1" defer></script>
+<script src="./app.js?v=2" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -31,7 +31,25 @@
  <div class="room-key"><div><span class="kicker">ROOM CODE</span><strong id="room-code">------</strong></div><button id="copy-invite" class="outline">Copy invite link</button></div>
  <section id="lobby" class="room-layout">
   <article class="panel"><div class="kicker">PLAYERS</div><h2>Waiting room</h2><div id="lobby-players" class="players"></div>
-   <div id="host-settings"><div class="kicker settings-title">MUSIC GENRES</div>
+   <div id="host-settings">
+    <div class="kicker settings-title">AUDIO SOURCE</div>
+    <div class="source-select" id="source-select">
+      <label><input type="radio" name="music-source" value="demo" checked><span><strong>Demo melodies</strong><small>5 synthesized public-domain songs, automatic clues</small></span></label>
+      <label><input type="radio" name="music-source" value="youtube"><span><strong>YouTube Music link</strong><small>Official visible YouTube video on the host device</small></span></label>
+    </div>
+    <div id="youtube-setup" hidden>
+      <p class="youtube-info">Paste a link such as <code>music.youtube.com/watch?v=...</code>. The video is shown on the game master's screen using YouTube's official player. It cannot be hidden or used as an audio-only stream. Some tracks cannot be embedded; advertisements and buffering can interrupt clues.</p>
+      <label for="youtube-link">YouTube Music / YouTube video link</label>
+      <input id="youtube-link" type="url" inputmode="url" placeholder="https://music.youtube.com/watch?v=..." autocomplete="off">
+      <label for="youtube-song">Correct song title (host only)</label>
+      <input id="youtube-song" maxlength="100" placeholder="Song title" autocomplete="off">
+      <label for="youtube-artist">Correct artist (host only)</label>
+      <input id="youtube-artist" maxlength="100" placeholder="Artist name" autocomplete="off">
+      <label for="youtube-cue">Clue starts at (seconds)</label>
+      <input id="youtube-cue" type="number" min="0" max="600" step="1" value="0">
+      <p class="small-note">The host enters the correct answer privately. Players only see clues and score. YouTube login is handled by YouTube, not by Tune Rush.</p>
+    </div>
+    <div id="demo-settings"><div class="kicker settings-title">MUSIC GENRES</div>
     <div id="genre-options" class="genres">
      <label><input type="checkbox" value="demo" checked> Demo melodies</label>
      <label><input type="checkbox" value="pop"> Pop</label>
@@ -42,7 +60,7 @@
      <label><input type="checkbox" value="dutch"> Dutch</label>
      <label><input type="checkbox" value="80s"> 80s</label>
      <label><input type="checkbox" value="90s"> 90s</label>
-    </div><p class="small-note">Only Demo has tracks initially. Other genres become playable when properly licensed recordings are added.</p>
+    </div><p class="small-note">Only Demo has tracks initially. Other genres become playable when properly licensed recordings are added.</p></div>
     <button id="start" class="primary">Start game <span aria-hidden="true">♫</span></button>
    </div><p id="guest-wait" class="waiting" hidden>Waiting for the host to start…</p>
   </article>
@@ -61,7 +79,20 @@
     <div class="clip-timeline" id="clip-timeline" aria-label="Progress through song hints"></div>
     <h2 id="stage-status">Get ready</h2><p id="stage-subtitle">Listen carefully…</p>
     <div id="answer-reveal" class="reveal" hidden><strong id="revealed-title"></strong><span id="revealed-artist"></span></div>
-    <div id="host-controls" hidden><button id="enable-sound" class="outline">Enable tablet audio</button><button id="continue-hints" class="primary" hidden>Continue hints ▶</button><button id="next-round" class="primary" hidden>Next round →</button><button id="skip-round" class="outline" hidden>Reveal &amp; skip</button></div>
+    <section id="youtube-host" class="youtube-host" hidden aria-label="YouTube official video player">
+      <div class="youtube-heading"><strong>▶ YOUTUBE · HOST PLAYER</strong><span>Video remains visible to comply with YouTube playback rules</span></div>
+      <div id="youtube-player" class="youtube-frame"><p>Preparing official YouTube player…</p></div>
+      <p class="small-note">Players should not view this video: YouTube may show the song title or artist. Keep the video and its controls unobstructed.</p>
+    </section>
+    <div id="host-controls" hidden><button id="youtube-play-hint" class="primary" hidden>▶ Play next YouTube clue</button><button id="enable-sound" class="outline">Enable tablet audio</button><button id="continue-hints" class="primary" hidden>Continue hints ▶</button><button id="next-round" class="primary" hidden>Next round →</button>
+    <form id="youtube-next-form" class="youtube-next-form" hidden>
+      <h3>Choose the next YouTube song</h3>
+      <label for="next-youtube-link">YouTube Music / video URL</label><input id="next-youtube-link" type="url" placeholder="https://music.youtube.com/watch?v=...">
+      <label for="next-youtube-song">Song title</label><input id="next-youtube-song" maxlength="100" autocomplete="off">
+      <label for="next-youtube-artist">Artist</label><input id="next-youtube-artist" maxlength="100" autocomplete="off">
+      <label for="next-youtube-cue">Start time (seconds)</label><input id="next-youtube-cue" type="number" min="0" max="600" step="1" value="0">
+      <button class="primary" type="submit">Load next song →</button>
+    </form><button id="skip-round" class="outline" hidden>Reveal &amp; skip</button></div>
     <div id="player-controls" hidden>
      <button id="buzz" class="buzzer" type="button">BUZZ!<small>FIRST PRESS WINS</small></button>
      <button id="steal" class="steal-button" type="button" hidden>⚡ STEAL THE ANSWER <small>+0.5 per correct · −1 per wrong</small></button>
