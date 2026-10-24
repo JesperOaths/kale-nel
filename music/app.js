@@ -12,7 +12,7 @@ const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
  game_already_started:"This game already started.",no_players:"Wait for at least one player.",
- no_licensed_songs_for_genres:"There are no playable licensed songs in those genres yet. Select Demo melodies.",
+ no_licensed_songs_for_genres:"There are no playable licensed songs in those genres yet. Select Demo melodies.",room_capacity_reached:"Too many open rooms. Please try later.",
  buzz_closed:"Someone has already buzzed, or buzzing is not open.",
  already_tried_this_clip:"You've already guessed during this snippet. Wait for the next one.",
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
@@ -225,7 +225,7 @@ function render(){
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
-   const blocked=lastBlockKey===guessKey;
+   const blocked=lastBlockKey===guessKey||room.myBlockedStep===room.step;
    $("buzz").disabled=!((phase==="playing"||phase==="paused")&&room.step>=0&&!blocked);
    show("buzz",!iAmAnswering);
    show("answer-form",iAmAnswering);
