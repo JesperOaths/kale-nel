@@ -5,6 +5,8 @@ import importlib.util
 import pathlib
 import types
 import unittest
+import tempfile
+import json
 from unittest import mock
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -86,6 +88,30 @@ class TransportTests(unittest.TestCase):
             and x.func.attr == "replace"
         ]
         self.assertFalse(writes_on_failure)
+
+    def test_partial_preview_refresh_preserves_prior_file(self):
+        m = load_catalog()
+        with tempfile.TemporaryDirectory(prefix="s9-catalog-inert-") as td:
+            root = pathlib.Path(td)
+            m.ROOT = root
+            m.PRIVATE_FALLBACK = root / "private_fallback.json"
+            m.phone_catalog = None
+            m.PRIVATE_FALLBACK.write_bytes(b"KNOWN_GOOD_PREVIEW_INDEX\\n")
+            name = "preview_motion_1791643920305.jpg"
+            def remote_read(*args):
+                if args[:2] == ("shell", "ls"):
+                    return (name + "\\n").encode()
+                raise OSError("phone_adb_transport_unavailable")
+            m.adb = remote_read
+            with mock.patch.object(m.subprocess, "run",
+                    return_value=completed(0, stdout=b"device")):
+                m.build_catalog()
+            self.assertEqual(m.PRIVATE_FALLBACK.read_bytes(),
+                             b"KNOWN_GOOD_PREVIEW_INDEX\\n")
+            output = json.loads((root / "s9-phone-events.json").read_text())
+            self.assertEqual(output["total_phone_files"], 0)
+            self.assertIn("preview_refresh_incomplete_preserved_prior:1",
+                          output["errors"])
 
 if __name__ == "__main__":
     unittest.main()
