@@ -38,6 +38,17 @@ Playback/Save/review UI: Chat 3. Preserve the installed camera and original medi
    then reconnects **over wireless**; it is not a retained wired session.
    Do not overwrite this owner-managed override to deploy repo source.
 
+**Concurrent owner implementation update:** at 19:15 CEST 24 Oct the *installed*
+`recover-authorized-s9-adb-from-usb-v1.py` was independently changed to
+SHA256 `82c018098a65f3d11f78c75509a0b3d5f317f66dd1c08a068802da3992827960`.
+It now validates the exact S9 serial `27bb603837047ece` and model on the
+direct wireless link and USB fallback, and requires the actual `18808->8808`
+forward to be listed before a setup-success receipt. Source parsed correctly.
+This is an **owner-installed improvement**, not work applied by this PR;
+a successful natural invocation remains a *setup proof*, never a sustained
+control lease or Camera2/4K health proof. Do not revert this newer override.
+
+
 The bridge `Type=oneshot` becomes inactive/dead after setup; the separate
 ADB server retains the listener. `OnUnitInactiveSec=75s`,
 `RandomizedDelaySec=10s`, `AccuracySec=1min` are repair intervals,
