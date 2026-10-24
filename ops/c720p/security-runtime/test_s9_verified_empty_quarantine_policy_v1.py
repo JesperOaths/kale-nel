@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""Isolated fixture regressions: no Android/HA or real recordings are touched."""
+import copy
+import hashlib
+import importlib.util
+from pathlib import Path
+import tempfile
+import unittest
+from unittest import mock
+
+PATH=Path(__file__).with_name("s9_verified_empty_quarantine_policy_v1.py")
+def module():
+    spec=importlib.util.spec_from_file_location("empty_fixture_policy",PATH)
+    m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
+
+class FixtureTests(unittest.TestCase):
+    def setUp(self):
+        self.m=module()
+        self.tmp=tempfile.TemporaryDirectory(prefix="s9-empty-fixture-")
+        self.addCleanup(self.tmp.cleanup)
+        self.root=Path(self.tmp.name)
+        (self.root/self.m.FIXTURE_MARKER).touch()
+        (self.root/"Security4K").mkdir()
+        self.name="motion_1791643920305.mp4"
+        self.data=b"fake video data for deterministic fixture; no actual media"
+        (self.root/"Security4K"/self.name).write_bytes(self.data)
+        self.digest=hashlib.sha256(self.data).hexdigest()
+        self.state={"scope":"S9_native_microSD","name":self.name,"evidence_revision":"EV1"}
+        self.source={"name":self.name,"scope":"S9_native_microSD",
+                     "sha256":self.digest,"revision":"REV1","duration_ms":10000,
+                     "fully_finalized":True,"separate_preroll_tail_assets":False}
+        self.evidence={"state":"verified_empty","source_sha256":self.digest,
+             "source_revision":"REV1","evidence_revision":"EV1",
+             "model_id":"owner-approved-fixture-model",
+             "complete_video_decode":True,"every_decoded_frame_evaluated":True,
+             "preroll_and_tail_covered":True,"no_processing_errors":True,
+             "visibility_sufficient_everywhere":True,"all_temporal_windows_resolved":True,
+             "any_confirmed_person":False,"any_credible_person":False,
+             "any_possible_person":False,"decoded_frame_count":300,
+             "analyzed_frame_count":300,
+             "coverage_windows":[{"start_ms":0,"end_ms":10000,
+                                  "person_absent_confidently":True}]}
+        self.protection={k:False for k in self.m.REQUIRED_PROTECTION}
+    def read(self):
+        return self.state,self.source,self.evidence,self.protection
+    def trust(self,e,s):
+        return e.get("source_revision")==s.get("revision")
+    def accept(self,**kw):
+        return self.m.fixture_quarantine(self.root,self.name,self.read,
+                  trusted_attestation=self.trust,
+                  allowed_models={"owner-approved-fixture-model"},
+                  shared_lock_contract=True,**kw)
+    def rejected(self,reason=None):
+        with self.assertRaises(self.m.Protected) as e:self.accept()
+        if reason:self.assertIn(reason,str(e.exception))
+        self.assertEqual((self.root/"Security4K"/self.name).read_bytes(),self.data)
+
+    def test_verified_empty_fixture_can_quarantine_and_restore_exact_bytes(self):
+        ticket=self.accept()
+        self.assertEqual(ticket["state"],"quarantined")
+        self.assertFalse((self.root/"Security4K"/self.name).exists())
+        self.assertEqual((self.root/"private-quarantine"/self.name).read_bytes(),self.data)
+        self.assertFalse(ticket["permanently_deleted"])
+        r=self.m.fixture_restore(self.root,self.name)
+        self.assertEqual(r["state"],"restored")
+        self.assertEqual((self.root/"Security4K"/self.name).read_bytes(),self.data)
+
+    def test_confirmed_person_anywhere_is_never_quarantined(self):
+        self.evidence["any_confirmed_person"]=True
+        self.rejected("person_evidence")
+
+    def test_credible_or_possible_person_protects(self):
+        self.evidence["any_possible_person"]=True
+        self.rejected("person_evidence")
+        self.evidence["any_possible_person"]=False
+        self.evidence["any_credible_person"]=True
+        self.rejected("person_evidence")
+
+    def test_uncertain_failed_and_unprocessed_never_quarantine(self):
+        for status in ("person_present","uncertain_unprocessed","analysis_failed"):
+            self.evidence["state"]=status
+            self.rejected("uncertain")
+        self.evidence["state"]="verified_empty"
+        self.evidence["no_processing_errors"]=False
+        self.rejected("full_coverage")
+
+    def test_three_sampled_frames_never_prove_whole_recording_empty(self):
+        self.evidence["decoded_frame_count"]=300
+        self.evidence["analyzed_frame_count"]=3
+        self.rejected("frames_incomplete")
+
+    def test_preroll_tail_coverage_and_decode_gaps_block(self):
+        self.evidence["coverage_windows"]=[{"start_ms":0,"end_ms":9000,"person_absent_confidently":True}]
+        self.rejected("tail_not")
+        self.evidence["coverage_windows"]=[
+            {"start_ms":0,"end_ms":4500,"person_absent_confidently":True},
+            {"start_ms":4600,"end_ms":10000,"person_absent_confidently":True},
+        ]
+        self.rejected("gap")
+        self.evidence["preroll_and_tail_covered"]=False
+        self.rejected("full_coverage")
+
+    def test_low_visibility_blocks(self):
+        self.evidence["visibility_sufficient_everywhere"]=False
+        self.rejected("full_coverage")
+
+    def test_stale_digest_or_source_replacement_blocks(self):
+        self.evidence["source_revision"]="OLD"
+        self.rejected("stale")
+        self.evidence["source_revision"]="REV1"
+        (self.root/"Security4K"/self.name).write_bytes(b"source replaced")
+        with self.assertRaisesRegex(self.m.Protected,"original_bytes_changed"):self.accept()
+
+    def test_human_save_group_review_or_hold_block(self):
+        for field in ("saved","human_person_assignment","group_filed","protected",
+                      "pending_review","active_review","evidence_retention",
+                      "conflicting_analysis","unresolved_processing"):
+            self.protection[field]=True
+            self.rejected("protection")
+            self.protection[field]=False
+
+    def test_concurrent_save_wins_recheck(self):
+        def save():self.protection["saved"]=True
+        with self.assertRaisesRegex(self.m.Protected,"protection"):
+            self.accept(precommit_hook=save)
+        self.assertFalse((self.root/"private-quarantine"/(self.name+".quarantine.json")).exists())
+        self.assertEqual((self.root/"Security4K"/self.name).read_bytes(),self.data)
+
+    def test_recovery_after_interrupted_quarantine_rename(self):
+        real=self.m.atomic_json
+        n=[0]
+        def write(path,data):
+            n[0]+=1
+            if n[0]==2:raise RuntimeError("simulated_crash_after_atomic_media_move")
+            return real(path,data)
+        with mock.patch.object(self.m,"atomic_json",side_effect=write):
+            with self.assertRaisesRegex(RuntimeError,"simulated_crash"):
+                self.accept()
+        self.assertFalse((self.root/"Security4K"/self.name).exists())
+        self.assertEqual((self.root/"private-quarantine"/self.name).read_bytes(),self.data)
+        restored=self.m.fixture_restore(self.root,self.name)
+        self.assertEqual(restored["state"],"restored")
+        self.assertEqual((self.root/"Security4K"/self.name).read_bytes(),self.data)
+
+    def test_unknown_model_attestation_or_lock_protects(self):
+        with self.assertRaisesRegex(self.m.Protected,"lock_not_integrated"):
+            self.m.fixture_quarantine(self.root,self.name,self.read,
+                 trusted_attestation=self.trust,allowed_models={"owner-approved-fixture-model"},
+                 shared_lock_contract=False)
+        with self.assertRaisesRegex(self.m.Protected,"model_not_owner_approved"):
+            self.m.fixture_quarantine(self.root,self.name,self.read,
+                 trusted_attestation=self.trust,allowed_models={"some-other-model"},
+                 shared_lock_contract=True)
+        with self.assertRaisesRegex(self.m.Protected,"attestation_unverified"):
+            self.m.fixture_quarantine(self.root,self.name,self.read,
+                 trusted_attestation=lambda e,s:False,
+                 allowed_models={"owner-approved-fixture-model"},shared_lock_contract=True)
+
+    def test_real_world_paths_are_not_permitted_without_fixture_marker(self):
+        (self.root/self.m.FIXTURE_MARKER).unlink()
+        with self.assertRaisesRegex(self.m.Protected,"fixture_marker_required"):
+            self.accept()
+
+    def test_separate_preroll_or_unfinished_source_is_preserved(self):
+        self.source["separate_preroll_tail_assets"]=True
+        self.rejected("companions")
+        self.source["separate_preroll_tail_assets"]=False
+        self.source["fully_finalized"]=False
+        self.rejected("finalization")
+
+if __name__=="__main__":
+    unittest.main(verbosity=2)
