@@ -32,3 +32,17 @@ The SQL was deployed as two additive migrations: `sql/musicquiz-v1.sql` and then
 - The public RPC has capacity limits of 150 active rooms and 24 players per room, with eight-hour expiry. These are not full abuse prevention or IP rate limiting; add gateway throttling before broad promotion.
 - All direct table access is revoked from anon/authenticated, and all private tables have RLS.
 - No Spotify credentials, secrets or music player tokens are stored or transmitted.
+
+## YouTube Music host video mode (25 October 2026)
+This uses YouTube's **official, visible IFrame video player** and accepts a `https://music.youtube.com/watch?v=VIDEO_ID` URL (or normal `youtube.com/watch?v=...`, `youtu.be/...`). It **does not integrate YouTube Music Premium, request Google login, download streams, strip video, hide/cover the player, or suppress ads**. Your existing YouTube Music sign-in is not a programmable third-party playback session.
+
+1. On the **host tablet or host phone** open `https://kalenel.nl/music/`, create a room and select **YouTube Music link**.
+2. Open the track in YouTube Music, choose Share > Copy link and paste into **YouTube Music / YouTube video link**. Host privately enters the correct **song title**, **artist** and optional starting second (default 0). Keep video and metadata on host screen only, out of the players' view.
+3. Players join using six-character room code. After host starts, a standard YouTube embedded player appears, including its title, controls, YouTube branding and advertisements.
+4. On the host, keep **at least half of the player visible** and tap **Play next clue** near the video. The official player seeks to the selected start second and plays. The game pauses playback as hints end or a phone buzzes. If the host switches apps/tabs, video stops to prevent background playback.
+5. The host supplies another YouTube Music URL/song/artist when the previous track is solved. Previous scores, normal +0.5/−0.5 and steal +0.5/−1 scoring remain unchanged.
+6. The five local public-domain demo melodies are still available by choosing Demo melodies.
+
+**Limitations:** Because YouTube video streams can buffer, insert ads, disallow embedding, or require user interaction, sub-second clues and automatic sound initiation **are best-effort, not guaranteed**. No claim of YouTube Music playback API support or guaranteed availability for a song. The official iframe should not be modified or obscured; if songs show their titles in video, keep the host screen private. Embedded viewing terms do not remove the need for any applicable public-performance rights for the venue. YouTube's policies: https://developers.google.com/youtube/terms/developer-policies and https://developers.google.com/youtube/terms/required-minimum-functionality
+
+The opt-in database change is `sql/musicquiz-youtube-host-video-v2.sql`, an additive migration to private `musicquiz.rooms` fields and the existing token-authorized `public.musicquiz_v1` routine. The browser only gets YouTube song ID when authenticated as the room host. Players receive the mode but **no title, artist, or YouTube ID** until the normal quiz reveals these. Live integration regression tests: `scripts/tune-rush-smoke.mjs` and `scripts/tune-rush-youtube-smoke.mjs`.

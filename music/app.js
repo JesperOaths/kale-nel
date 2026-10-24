@@ -16,6 +16,7 @@ let access=null,room=null,loading=false,pollBusy=false,toastTimer=null;
 let clipTimer=null,nextTimer=null,voices=[],ctx=null,startedClip=false;
 let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
+let ytPlayer=null,ytPlayerVideoId='',ytReadyPromise=null,ytPlayingResolve=null,ytPlayingReject=null,ytPlayingTimer=null;
 const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
@@ -25,7 +26,7 @@ const ERROR_TEXT={
  already_tried_this_clip:"You've already guessed during this snippet. Wait for the next one.",
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
  all_hints_used:"All snippets have played. The host can skip the song.",
- temporary_failure:"Connection problem. Retrying…",request_failed:"The request could not be completed."
+ temporary_failure:"Connection problem. Retrying…",request_failed:"The request could not be completed.",invalid_music_source:"Choose Demo or YouTube.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds."
 };
 function message(s) {
  const el=$("toast");el.textContent=ERROR_TEXT[s]||String(s||"");el.hidden=false;
@@ -42,7 +43,10 @@ async function rpc(action,extra={},attempt=0) {
   name:String(extra.name||"").slice(0,20),
   song:String(extra.song||"").slice(0,100),
   artist:String(extra.artist||"").slice(0,100),
-  genres:Array.isArray(extra.genres)?extra.genres.slice(0,12):[]
+  genres:Array.isArray(extra.genres)?extra.genres.slice(0,12):[],
+  mode:String(extra.mode||"demo"),
+  videoId:String(extra.videoId||""),
+  cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0
  };
  const body={p_action:action,p_code:code,p_hash:await capabilityHash(token),p_data};
  let res;
@@ -64,10 +68,109 @@ async function rpc(action,extra={},attempt=0) {
  return {state:data,...((creating||joining)?{token}:{})};
 }
 
+
+function chosenSource(){return document.querySelector('input[name="music-source"]:checked')?.value||"demo"}
+function updateAudioChoice(){
+ const yt=chosenSource()==="youtube";
+ show("youtube-setup",yt);show("demo-settings",!yt);
+}
+function parseYoutubeVideo(link){
+ const u=new URL(String(link||"").trim());
+ if(u.protocol!=="https:")throw Error("invalid_youtube_video");
+ let id="";
+ if(["music.youtube.com","www.youtube.com","youtube.com","m.youtube.com"].includes(u.hostname)){
+  if(u.pathname==="/watch")id=u.searchParams.get("v")||"";
+  else if(u.pathname.startsWith("/shorts/"))id=u.pathname.split("/")[2]||"";
+ }else if(u.hostname==="youtu.be")id=u.pathname.split("/")[1]||"";
+ if(!/^[A-Za-z0-9_-]{11}$/.test(id))throw Error("invalid_youtube_video");
+ return id;
+}
+function youtubeRound(prefix){
+ let id;
+ try{id=parseYoutubeVideo($(prefix+"-link").value)}catch{throw Error("invalid_youtube_video")}
+ const song=$(prefix+"-song").value.trim(),artist=$(prefix+"-artist").value.trim();
+ const raw=$(prefix+"-cue").value.trim(),sec=Number(raw);
+ if(!song||!artist)throw Error("provide_song_and_artist");
+ if(!/^\d{1,3}$/.test(raw)||sec>600)throw Error("invalid_cue");
+ return {mode:"youtube",videoId:id,song,artist,cueMs:sec*1000};
+}
+function youtubeWaitCancelled(reason="YouTube playback was interrupted"){
+ if(ytPlayingTimer)clearTimeout(ytPlayingTimer);
+ ytPlayingTimer=null;
+ if(ytPlayingReject){
+  const fail=ytPlayingReject;ytPlayingReject=null;ytPlayingResolve=null;
+  fail(Error(reason));
+ }
+}
+async function ensureYoutubePlayer(id,cueMs=0){
+ if(!isHost()||!/^[A-Za-z0-9_-]{11}$/.test(id))throw Error("invalid_youtube_video");
+ if(!ytReadyPromise){
+  ytReadyPromise=new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>{ytReadyPromise=null;reject(Error("YouTube player did not load"))},15000);
+   const fail=msg=>{clearTimeout(timer);ytReadyPromise=null;reject(Error(msg))};
+   const create=()=>{
+    if(!window.YT?.Player){fail("YouTube player unavailable");return}
+    ytPlayer=new YT.Player("youtube-player",{
+     width:"560",height:"315",videoId:id,
+     playerVars:{playsinline:1,controls:1,origin:location.origin},
+     events:{
+      onReady:()=>{clearTimeout(timer);resolve()},
+      onStateChange:e=>{
+       if(e.data===window.YT.PlayerState.PLAYING&&ytPlayingResolve){
+        const done=ytPlayingResolve;clearTimeout(ytPlayingTimer);
+        ytPlayingTimer=null;ytPlayingResolve=null;ytPlayingReject=null;done();
+       }
+      },
+      onError:e=>{
+       const reason="YouTube cannot embed this video (error "+e.data+"). Choose another track.";
+       youtubeWaitCancelled(reason);message(reason);
+      }
+     }
+    });
+    ytPlayerVideoId=id;
+   };
+   if(window.YT?.Player){create();return}
+   window.onYouTubeIframeAPIReady=create;
+   const script=document.createElement("script");
+   script.src="https://www.youtube.com/iframe_api";script.async=true;
+   script.onerror=()=>fail("YouTube player failed to load");
+   document.head.append(script);
+  });
+ }
+ await ytReadyPromise;
+ if(ytPlayerVideoId!==id){
+  ytPlayer.cueVideoById({videoId:id,startSeconds:cueMs/1000});
+  ytPlayerVideoId=id;
+ }
+}
+function youtubeVideoIsVisible(){
+ const player=$("youtube-player");
+ if(!player||player.closest("[hidden]")||document.hidden)return false;
+ const el=player.querySelector("iframe")||player;
+ const r=el.getBoundingClientRect();
+ if(r.height<200||r.width<200)return false;
+ const visible=Math.max(0,Math.min(r.bottom,window.innerHeight)-Math.max(r.top,0));
+ return visible>=r.height*0.5;
+}
+async function playYoutubeHint(info){
+ await ensureYoutubePlayer(info.source.slice(8),info.cueMs||0);
+ if(!room||!isHost()||room.phase!=="playing")throw Error("YouTube clue cancelled");
+ if(!youtubeVideoIsVisible())throw Error("Scroll to the official YouTube player; more than half of it must be visible before starting a clue.");
+ await new Promise((resolve,reject)=>{
+  ytPlayingResolve=resolve;ytPlayingReject=reject;
+  ytPlayingTimer=setTimeout(()=>youtubeWaitCancelled("Tap Play on the YouTube player and try this clue again."),10000);
+  try{ytPlayer.seekTo((info.cueMs||0)/1000,true);ytPlayer.playVideo()}
+  catch{youtubeWaitCancelled("YouTube could not start this video")}
+ });
+ if(!room||room.phase!=="playing")throw Error("Clue interrupted");
+}
+
 function clearAudio(){
  clearTimeout(clipTimer);clipTimer=null;
  voices.forEach(o=>{try{o.stop()}catch{}});
  voices=[];playerAudio.pause();
+ youtubeWaitCancelled();
+ try{ytPlayer?.pauseVideo()}catch{}
  startedClip=false;
 }
 function cancelNext(){clearTimeout(nextTimer);nextTimer=null}
@@ -106,7 +209,9 @@ function freq(note){
 }
 async function startAudio(info,ms) {
  if(!info?.source)throw Error("No recording assigned");
- if(info.source.startsWith("demo:")){
+ if(info.source.startsWith("youtube:")){
+  await playYoutubeHint(info);
+ } else if(info.source.startsWith("demo:")){
   await soundResumeSilently();
   const sequence=notesFor(info.source);
   const step=0.33, t0=ctx.currentTime+0.03,duration=ms/1000;
@@ -153,7 +258,7 @@ async function soundResumeSilently(){
  if(ctx.state!=="running")throw Error("Please tap Enable tablet audio");
 }
 function scheduleNext(delay){
- if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer)return;
+ if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube")return;
  const round=room.round,step=room.step;
  nextTimer=setTimeout(async()=>{
   nextTimer=null;
@@ -179,7 +284,10 @@ async function startClip(){
     if(room.phase==="paused")scheduleNext(1000);
    }catch(e){message(e.message)}
   },room.clipMs);
- }catch(e){clearAudio();message(e.message||"Playback failed");}
+ }catch(e){
+  clearAudio();message(e.message||"Playback failed");
+  if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
+ }
  finally{loading=false}
 }
 function applyState(s){
@@ -220,6 +328,7 @@ function render(){
  setText("room-code",room.code);
  show("lobby",phase==="lobby");show("playing",phase!=="lobby");
  show("host-settings",host);show("guest-wait",!host);
+ if(host&&phase==="lobby")updateAudioChoice();
  $("lobby-players").replaceChildren(...room.players.map(x=>makePlayer(x.name)));
  if(phase==="lobby"&&!genresDirty){
   document.querySelectorAll("#genre-options input").forEach(input=>{
@@ -253,8 +362,16 @@ function render(){
   setText("revealed-title",room.titleDone||phase==="solved"||phase==="finished"?room.title:"Song title: ???");
   setText("revealed-artist",room.artistDone||phase==="solved"||phase==="finished"?room.artist:"Artist: ???");
   show("host-controls",host);show("player-controls",!host);
-  show("next-round",host&&phase==="solved");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&room.step===6&&(phase==="paused"||phase==="playing"||phase==="holding"));
-  show("enable-sound",host&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
+  const youtubeMode=room.mode==="youtube";
+  show("youtube-host",host&&youtubeMode);
+  if(host&&youtubeMode&&room.audio?.source?.startsWith("youtube:")){
+   ensureYoutubePlayer(room.audio.source.slice(8),room.audio.cueMs||0).catch(e=>message(e.message));
+  }
+  show("youtube-play-hint",host&&youtubeMode&&phase==="paused"&&room.step<6);
+  show("youtube-next-form",host&&youtubeMode&&phase==="solved");
+
+  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&room.step===6&&(phase==="paused"||phase==="playing"||phase==="holding"));
+  show("enable-sound",host&&room.mode!=="youtube"&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
@@ -379,7 +496,21 @@ $("join-form").addEventListener("submit",join);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
 $("enable-sound").addEventListener("click",soundUnlock);
-$("start").addEventListener("click",async()=>{await soundUnlock();try{await call("start")}catch{}});
+$("source-select").addEventListener("change",updateAudioChoice);
+$("start").addEventListener("click",async()=>{
+ try{
+  const mode=chosenSource();
+  const data=mode==="youtube"?youtubeRound("youtube"):{mode:"demo"};
+  if(mode==="demo")await soundUnlock();
+  await call("start",data);
+ }catch(e){message(e.message)}
+});
+$("youtube-play-hint").addEventListener("click",()=>startClip());
+$("youtube-next-form").addEventListener("submit",async e=>{
+ e.preventDefault();
+ try{const data=youtubeRound("next-youtube");await call("next",data)}
+ catch(e){message(e.message)}
+});
 $("next-round").addEventListener("click",async()=>{try{await call("next")}catch{}});
 $("continue-hints").addEventListener("click",async()=>{try{await call("resume")}catch{}});
 $("skip-round").addEventListener("click",async()=>{try{await call("skip")}catch{}});
@@ -390,7 +521,13 @@ $("answer-form").addEventListener("submit",submitGuess);
 $("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
- if(document.hidden&&isHost())cancelNext();
+ if(document.hidden&&isHost()){
+  cancelNext();
+  if(room?.mode==="youtube"){
+   clearAudio();
+   if(room?.phase==="playing")rpc("pause").then(b=>applyState(b.state)).catch(()=>{});
+  }
+ }
  if(!document.hidden&&isHost()&&room?.phase==="paused")scheduleNext(500);
 });
 window.addEventListener("pagehide",()=>{clearAudio();cancelNext()});

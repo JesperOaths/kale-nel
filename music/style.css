@@ -45,3 +45,29 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .reveal{border-color:#e4ba71;box-shadow:0 5px 30px #e1a55d18}
 @media(min-width:940px){.game-grid{grid-template-columns:minmax(0,1.35fr) minmax(310px,.65fr)}.stage{min-height:640px}.score-panel .score-list{gap:12px}}
 @media(max-width:760px){.host-ticker{padding:10px 12px;gap:8px;flex-wrap:wrap}.host-ticker #master-message{font-size:11px}.live-crown{font-size:9px}.stage{min-height:unset}.stage::before{width:200px;height:200px;top:105px}.disc{height:190px;width:190px}.clip-timeline{gap:4px}.clip-timeline span{font-size:10px}.score-panel{margin-bottom:18px}.score-list{grid-template-columns:repeat(2,minmax(0,1fr))}.answer-form{margin:auto}.answer-form .button-row{gap:7px}.answer-form .button-row button{padding:12px 10px;font-size:14px}}
+
+/* Optional official YouTube video source. Embedded player intentionally unobscured. */
+[hidden]{display:none!important}
+.source-select{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 18px}
+.source-select label{display:flex;align-items:flex-start;gap:11px;padding:17px;border:1px solid #536078;border-radius:16px;margin:0;background:#101725;cursor:pointer}
+.source-select label:has(input:checked){border-color:var(--gold);background:linear-gradient(120deg,#473925,#1b2436);box-shadow:0 0 0 1px #f0c97933}
+.source-select input{accent-color:var(--gold);margin-top:4px}
+.source-select strong{display:block;color:var(--text);font-size:14px;margin:0 0 8px}
+.source-select small{color:var(--muted);display:block;font-size:12px;line-height:1.5}
+.youtube-info{border-left:3px solid var(--gold);padding:12px 16px;background:#f0c97911;border-radius:5px;font-size:13px;color:var(--text)!important}
+#youtube-setup{padding:12px 16px 16px;background:#111826;border:1px solid var(--line);border-radius:18px;margin-bottom:12px}
+#youtube-setup label{color:#c1ccda}
+.youtube-host{width:100%;margin:14px auto 24px;padding:12px;background:#0d1521;border:1px solid #d5af6266;border-radius:19px}
+.youtube-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0 14px}
+.youtube-heading strong{font-size:12px;color:var(--gold);letter-spacing:.08em}
+.youtube-heading span{font-size:11px;color:#b5bfca;text-align:right}
+.youtube-frame{aspect-ratio:16/9;width:100%;min-height:220px;min-width:200px;position:relative;display:flex;align-items:center;justify-content:center;background:#080a10;border-radius:9px;overflow:hidden}
+.youtube-frame iframe{width:100%;height:100%;position:absolute;inset:0;border:0;min-width:200px;min-height:200px}
+.youtube-host .small-note{font-size:11px;margin:13px 3px 4px;text-align:left}
+#youtube-play-hint{background:linear-gradient(110deg,#ffda8d,#ffb656);margin:0 0 0 auto;width:auto;min-width:170px;padding:12px 15px;font-size:13px;box-shadow:0 7px 29px #d2965541}
+.youtube-next-form{text-align:left;margin:15px 0;padding:20px;background:#101927;border:1px solid #d4b26d80;border-radius:17px}
+.youtube-next-form h3{font-size:18px;margin:0 0 12px}
+.youtube-next-form button{margin-top:17px;width:100%}
+@media(max-width:650px){.source-select{grid-template-columns:1fr}.youtube-heading{flex-direction:column;align-items:flex-start}.youtube-heading span{text-align:left}.youtube-frame{min-height:210px}}
+
+@media(max-width:650px){#youtube-play-hint{margin:8px 0;width:100%}.youtube-heading{align-items:stretch}}
