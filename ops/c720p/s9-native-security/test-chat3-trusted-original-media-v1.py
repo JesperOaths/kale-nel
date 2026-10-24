@@ -279,6 +279,29 @@ function loaded(){return {ok:true,source:'sd',name:CLIP,review_ticket:TICKET}}
 """
         result=subprocess.run(['node','-e',script,str(browser)],capture_output=True,text=True,timeout=20)
         self.assertEqual(result.returncode,0,result.stdout+'\n'+result.stderr)
+    def test_inactive_preview_requires_live_camera_but_not_continuous_4k(self):
+        script=pathlib.Path(__file__).with_name('deploy-chat3-v324-inactive-preview-v1.py')
+        spec=importlib.util.spec_from_file_location('preview_module',script)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        fallback={'ok':True,'mode':'watching','temperature_c':30.0,
+            'last_frame_age_ms':40,'capture_segment_continuation_pending':False,
+            'continuous_4k_ready':False,'continuous_4k_dropped_output_frames':0,
+            'preroll_ready':True,'preroll_buffered_ms':6900,
+            'preroll_dropped_frames':0,'garden_person_gate_ready':True}
+        self.assertTrue(module.camera_safe_for_inactive_preview(fallback))
+        for wrong,value in [('mode','recording'),('temperature_c',40),
+           ('last_frame_age_ms',1800),('capture_segment_continuation_pending',True),
+           ('preroll_ready',False),('preroll_buffered_ms',1),
+           ('preroll_dropped_frames',1),('garden_person_gate_ready',False)]:
+            other=dict(fallback);other[wrong]=value
+            self.assertFalse(module.camera_safe_for_inactive_preview(other),wrong)
+        no_camera=dict(fallback);no_camera['ok']=False
+        self.assertFalse(module.camera_safe_for_inactive_preview(no_camera))
+        full=dict(fallback,continuous_4k_ready=True,preroll_ready=False)
+        self.assertTrue(module.camera_safe_for_inactive_preview(full))
+        # Preview eligibility alone is never proof of a usable 4K recorder,
+        # a human viewing consent or a signed review route.
+        self.assertFalse(fallback['continuous_4k_ready'])
     def test_bounded_metadata_and_seek(self):
         self.assertEqual(bridge.requested_range('bytes=0-',15_000_000),(0,bridge.LIMIT-1))
         self.assertEqual(bridge.requested_range('bytes=900-1023',12000),(900,1023))
