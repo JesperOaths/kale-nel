@@ -9,6 +9,7 @@ SD=re.compile(r'motion_[0-9]{13}[.]mp4$')
 DRIVE=re.compile(r'[A-Za-z0-9._-]{1,180}[.]mp4$')
 HEX=re.compile(r'[0-9a-f]{64}$')
 class Refused(ValueError):pass
+class DeliveryPending(Refused):pass  # Bounded Range still in flight; not an approval or source mismatch.
 
 class OpenSessions:
  def __init__(self,tickets,binder,attestor,clock=time.monotonic,max_active=32,lifetime=480):
@@ -71,8 +72,10 @@ class OpenSessions:
  def confirm_player_loaded(self,nonce,source,name,observed_playback_nonce):
   with self.lock:
    row=self.get(nonce,source,name)
-   if not row['delivered'] or observed_playback_nonce!=nonce:
-    raise Refused('loaded_metadata_not_bound_to_delivered_original')
+   if observed_playback_nonce!=nonce:
+    raise Refused('loaded_metadata_nonce_mismatch')
+   if not row['delivered']:
+    raise DeliveryPending('original_range_delivery_pending')
    current=self.attestor.current_revision(source,name)
    if current.get('source_identity')!=row['identity'] or current.get('source_revision')!=row['revision']:
     raise Refused('original_replaced_after_open')
