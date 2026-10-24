@@ -81,7 +81,7 @@ class Safety(unittest.TestCase):
    def send(*args,**kw):
     order.append(args)
     return 0,"Activity started",""
-   with a[0],a[1],a[2],a[3],a[4],a[5],a[6],mock.patch.object(m,"service",side_effect=lambda:services.pop(0)),mock.patch.object(m,"adb",side_effect=send):
+   with a[0],a[1],a[2],a[3],a[4],a[5],a[6],mock.patch.object(m,"service",side_effect=lambda:services.pop(0)),mock.patch.object(m,"service_record",side_effect=["old","old","",""]),mock.patch.object(m,"adb",side_effect=send):
     m.run(j)
    self.assertTrue(j.data["stop_confirmed"])
    self.assertTrue(j.data["start_confirmed"])
@@ -96,7 +96,7 @@ class Safety(unittest.TestCase):
    commands=[]
    def send(*args,**kw):
     commands.append(args);return 1,"","ADB failed"
-   with patches[0],patches[1],patches[2],patches[3],patches[4],patches[5],patches[6],mock.patch.object(m,"service",return_value=True),mock.patch.object(m,"adb",side_effect=send):
+   with patches[0],patches[1],patches[2],patches[3],patches[4],patches[5],patches[6],mock.patch.object(m,"service",return_value=True),mock.patch.object(m,"service_record",return_value="old"),mock.patch.object(m,"adb",side_effect=send):
     with self.assertRaisesRegex(m.Refuse,"stop_delivery_uncertain"):
      m.run(j)
    self.assertTrue(j.data["stop_attempted"])
@@ -112,12 +112,37 @@ class Safety(unittest.TestCase):
     counter[0]+=1
     if counter[0]==4:raise m.Refuse("wireless_link_lost")
     return True
-   with mock.patch.object(m,"identity",side_effect=identity),patches[1],patches[2],patches[3],patches[4],patches[5],patches[6],mock.patch.object(m,"service",return_value=True),mock.patch.object(m,"bridge_recover_once",return_value=False),mock.patch.object(m,"adb",side_effect=lambda *a,**k:(calls.append(a) or (0,"",""))):
+   with mock.patch.object(m,"identity",side_effect=identity),patches[1],patches[2],patches[3],patches[4],patches[5],patches[6],mock.patch.object(m,"service",return_value=True),mock.patch.object(m,"service_record",return_value="old"),mock.patch.object(m,"bridge_recover_once",return_value=False),mock.patch.object(m,"adb",side_effect=lambda *a,**k:(calls.append(a) or (0,"",""))):
     with self.assertRaisesRegex(m.Refuse,"transport_lost_after_stop"):
      m.run(j)
    self.assertEqual(len(calls),1)
    self.assertTrue(j.data["stop_attempted"])
    self.assertFalse(j.data["start_attempted"])
+ def test_new_service_generation_suppresses_operator_start(self):
+  m=load()
+  with tempfile.TemporaryDirectory() as tmp:
+   j=m.Journal(Path(tmp)/"once.json")
+   patches=self.setup_transaction(m,[state(10),state(20),state(30)])
+   commands=[]
+   def send(*args,**kw):
+    commands.append(args)
+    return 0,"",""
+   with patches[0],patches[1],patches[2],patches[3],patches[4],patches[5],patches[6],mock.patch.object(m,"service",return_value=True),mock.patch.object(m,"service_record",side_effect=["old","old","new"]),mock.patch.object(m,"adb",side_effect=send):
+    m.run(j)
+   self.assertTrue(j.data["stop_attempted"])
+   self.assertTrue(j.data["stop_confirmed"])
+   self.assertFalse(j.data["start_attempted"])
+   self.assertTrue(j.data["operator_start_suppressed"])
+   self.assertEqual(len(commands),1)
+
+ def test_service_record_parsing_is_pid_independent(self):
+  m=load()
+  body="* ServiceRecord{95e5b7c u0 nl.kalenel.s9security/.CameraService} app=ProcessRecord{same_pid}"
+  with mock.patch.object(m,"adb",return_value=(0,body,"")):
+   self.assertEqual(m.service_record(),"95e5b7c")
+  with mock.patch.object(m,"adb",return_value=(0,"No services","")):
+   self.assertEqual(m.service_record(),"")
+
  def test_bridge_connection_recovery_max_once(self):
   m=load()
   with tempfile.TemporaryDirectory() as tmp:
