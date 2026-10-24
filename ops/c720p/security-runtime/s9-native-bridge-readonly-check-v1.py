@@ -51,6 +51,34 @@ def camera_status():
         raise NotReady("native_camera_frames_not_current")
     return result
 
+def distinguish_status_failure(reason):
+    """Classify *post-failure* connectivity; no reconnect or control action.
+
+    A listed forward only proves local ADB configuration. It does not prove
+    that the phone's app is still listening on TCP/8808.
+    """
+    if reason not in ("bridge_http_not_200","bridge_status_unavailable"):
+        raise NotReady(reason)
+    try:
+        state=adb("-s",DEVICE,"get-state")
+    except NotReady as exc:
+        raise NotReady("adb_state_unknown_after_recorder_api_failure") from exc
+    if state!="device":
+        raise NotReady("adb_transport_unavailable_after_recorder_api_failure")
+    try:
+        forward=adb("forward","--list").splitlines()
+    except NotReady as exc:
+        raise NotReady("forward_state_unknown_after_recorder_api_failure") from exc
+    if not any(line.strip()==DEVICE+" "+FORWARD for line in forward):
+        raise NotReady("adb_forward_missing_after_recorder_api_failure")
+    raise NotReady("recorder_api_unavailable_but_adb_and_forward_listed")
+
+def status_with_transport_attribution():
+    try:
+        return camera_status()
+    except NotReady as exc:
+        distinguish_status_failure(str(exc))
+
 def check(*,interval_seconds=2):
     if adb("-s",DEVICE,"get-state") != "device":
         raise NotReady("s9_adb_transport_not_device")
@@ -59,7 +87,7 @@ def check(*,interval_seconds=2):
     entries=adb("forward","--list").splitlines()
     if not any(line.strip()==DEVICE+" "+FORWARD for line in entries):
         raise NotReady("native_bridge_forward_missing_or_misdirected")
-    first=camera_status()
+    first=status_with_transport_attribution()
     time.sleep(interval_seconds)
     # Recheck the same device and forward after the interval. A successful first
     # HTTP200 is not sufficient if the mapping disappeared in the meantime.
@@ -68,7 +96,7 @@ def check(*,interval_seconds=2):
     if not any(line.strip()==DEVICE+" "+FORWARD
                for line in adb("forward","--list").splitlines()):
         raise NotReady("native_bridge_forward_lost")
-    second=camera_status()
+    second=status_with_transport_attribution()
     if second["frames"] <= first["frames"]:
         raise NotReady("native_camera_status_stale_or_frames_stalled")
     return {
