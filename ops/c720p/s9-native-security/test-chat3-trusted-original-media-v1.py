@@ -49,7 +49,7 @@ class H:
         # The real C720P installed Git blob has been independently checked
         # against BASE_BLOB. Synthetic fixture substitutes its own known blob.
         raw=template.encode()
-        blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\\0'+raw).hexdigest()
+        blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
         with patch.object(module,'BASE_BLOB',blob):
             updated=module.patch(template)
             self.assertEqual(module.patch(updated),updated)
