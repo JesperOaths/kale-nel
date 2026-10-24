@@ -123,6 +123,12 @@ class FutureWriter:
     revalidate()
     key=source+':'+name
     previous=old['items'].get(key)
+    # Historical decisions are immutable: require a distinct, previously
+    # unreviewed source-qualified original for forward binding. Never turn an
+    # old decision into a new attestation merely by revisiting its filename.
+    if previous is not None and (not isinstance(previous,dict) or
+        previous.get('media_binding',{}).get('status')!='bound_at_decision'):
+     raise Conflict('historical_manual_decision_must_remain_unbound')
     state='assigned' if chosen else {'return_to_queue':'inbox','skip':'skipped','reject':'rejected'}[action]
     entry=dict(source=source,name=name,folder=chosen[0] if chosen else None,
        folders=list(chosen),review_status=state,media_binding=binding)
