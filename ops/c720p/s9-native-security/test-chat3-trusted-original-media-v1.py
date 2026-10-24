@@ -160,7 +160,7 @@ class Video {
 const sleep=n=>new Promise(resolve=>setTimeout(resolve,n));
 function build(handler,now=Date){
  const window={};
- vm.runInNewContext(source,{window,setTimeout,clearTimeout,Date:now,Error,Promise});
+ vm.runInNewContext(source,{window,setTimeout,clearTimeout,Date:now,Error,Promise,AbortController});
  const video=new Video();
  const relay={url:async path=>'http://signed.invalid'+path,
    fetch:async(path,opts)=>{
