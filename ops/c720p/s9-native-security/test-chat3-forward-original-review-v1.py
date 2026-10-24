@@ -125,6 +125,30 @@ class Tests(unittest.TestCase):
   self.assertEqual(writes,[])
   self.assertFalse(self.legacy.AUDIT.exists())
   self.assertEqual(self.legacy.current()['revision'],50)
+ def test_canonical_consumer_only_accepts_exact_revision_and_digest(self):
+  token=self.open()
+  status,result=self.writer.mutate(self.decision(token),[CLIP])
+  self.assertEqual(status,200)
+  bound=self.legacy.current()['items']['sd:'+CLIP]['media_binding']
+  status,snapshot=self.writer.consume('sd',CLIP,51,bound['source_revision'],bound['sha256'])
+  self.assertEqual(status,200)
+  self.assertEqual(snapshot['registry_revision'],51)
+  self.assertTrue(snapshot['source_must_be_revalidated_at_use'])
+  self.assertEqual(self.writer.consume('sd',CLIP,50,bound['source_revision'],bound['sha256'])[0],409)
+  self.assertEqual(self.writer.consume('sd',CLIP,51,bound['source_revision'],'b'*64)[0],409)
+  self.attestor.rev='rev2'
+  self.assertEqual(self.writer.consume('sd',CLIP,51,bound['source_revision'],bound['sha256'])[0],409)
+ def test_canonical_consumer_never_promotes_historical_or_writes(self):
+  writes=[]
+  def forbidden_atomic(*args,**kwargs):
+   writes.append(1);raise AssertionError('intermediate registry write during consumption')
+  self.legacy.atomic=forbidden_atomic
+  before=self.legacy.current()
+  code,_=self.writer.consume('sd','historical-0',50,'rev1','a'*64)
+  self.assertEqual(code,409)
+  self.assertEqual(writes,[])
+  self.assertFalse(self.legacy.AUDIT.exists())
+  self.assertEqual(self.legacy.current(),before)
  def test_report_historical_truth(self):
   report=self.writer.report()
   self.assertEqual(report['binding_counts']['historically_unbound'],48)
