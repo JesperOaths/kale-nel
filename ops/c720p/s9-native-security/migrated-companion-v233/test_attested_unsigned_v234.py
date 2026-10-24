@@ -48,6 +48,11 @@ class Tests(unittest.TestCase):
    dex=z.read("classes.dex")
    self.assertIn(b"wire_decimal_leading_zero_",dex)
    self.assertEqual(hashlib.sha256(dex).hexdigest(),report["dex_sha256"])
+   self.assertEqual(hashlib.sha256(z.read("AndroidManifest.xml")).hexdigest(),
+                    report["packaged_manifest_sha256"])
+  self.assertEqual(report["manifest_sha256_scope"],"source_xml_pre_aapt")
+  self.assertEqual(hashlib.sha256((HERE/"AndroidManifest.xml").read_bytes()).hexdigest(),
+                   report["manifest_sha256"])
   for f in ("AndroidManifest.xml","source-pins.json",PREVIEW):
    self.assertTrue((HERE/f).is_file())
   raw=subprocess.run(["apksigner","verify","--min-sdk-version","29",str(apk)],
