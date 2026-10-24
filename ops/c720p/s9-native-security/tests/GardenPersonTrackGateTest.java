@@ -102,6 +102,16 @@ public final class GardenPersonTrackGateTest{
     "non-finite transport confidence cannot veto a person");
   check(!GardenPersonTrackGate.transportDominates(walker,.50f,walker,.95f,"dog"),
     "animal class cannot be a transport veto");
+  gate.reset();
+  eq(gate.offer(25000,24950,.61f,falsePersonInsideCar,2),
+    GardenPersonTrackGate.Decision.FIRST,
+    "a single car part mislabeled person can propose but never start");
+  gate.rejectCompetingTransport();
+  eq(gate.offer(26000,25950,.61f,falsePersonInsideCar,2),
+    GardenPersonTrackGate.Decision.FIRST,
+    "vehicle veto must clear stale person evidence rather than pair with it");
+  check(gate.transportInterrupted==1,
+    "explicit transport rejection is recorded and track reset");
   check(!GardenPersonTrackGate.valid(new float[]{.2f,Float.NaN,.7f,.9f}),"NaN never valid");
   System.out.println("S9_SPATIOTEMPORAL_PEDESTRIAN_V9_PASS "+assertions);
  }
