@@ -72,7 +72,7 @@ Deno.serve(async req=>{
     "room_not_found","room_expired","unauthorized","invalid_token","invalid_code",
     "game_already_started","invalid_name","room_full","name_taken","host_lobby_only",
     "select_a_genre","host_only","not_in_lobby","round_not_solved","no_players",
-    "no_licensed_songs_for_genres","not_ready_for_clip","all_hints_used",
+    "no_licensed_songs_for_genres","room_capacity_reached","not_ready_for_clip","all_hints_used",
     "buzz_closed","already_tried_this_clip","not_your_turn","skip_unavailable","unknown_action"
    ];
    return response({error:known.includes(msg)?msg:"request_failed"},known.includes(msg)?409:500,origin);
