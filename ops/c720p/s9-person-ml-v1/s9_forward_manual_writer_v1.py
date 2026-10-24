@@ -9,6 +9,7 @@ from urllib.parse import urlsplit,parse_qs
 from s9_forward_review_commit_v1 import prepare_then_commit
 
 class Conflict(RuntimeError):pass
+class HistoricalRereviewUnsupported(Conflict):pass
 class FutureWriter:
  def __init__(self,legacy,attestor,binder,tickets):
   self.legacy,self.attestor,self.binder,self.tickets=legacy,attestor,binder,tickets
@@ -28,7 +29,9 @@ class FutureWriter:
       forward_binding_schema='manual_original_digest_binding_v1',
       historical_authority_preserved=True,digest_backfill_performed=False,
       new_actions_require_trusted_media_receipt=True,
-      automatic_identity_matching=False)
+      automatic_identity_matching=False,
+      historical_re_review_supported=False,
+      historical_unbound_decisions_mutable=False)
  def consume(self,source,name,expected_registry_revision,expected_source_revision,expected_sha256):
   """Read-only, revision-qualified canonical consumer acceptance.
 
@@ -126,9 +129,10 @@ class FutureWriter:
     # Historical decisions are immutable: require a distinct, previously
     # unreviewed source-qualified original for forward binding. Never turn an
     # old decision into a new attestation merely by revisiting its filename.
-    if previous is not None and (not isinstance(previous,dict) or
-        previous.get('media_binding',{}).get('status')!='bound_at_decision'):
-     raise Conflict('historical_manual_decision_must_remain_unbound')
+    previous_binding=previous.get('media_binding') if isinstance(previous,dict) else None
+    if previous is not None and (not isinstance(previous_binding,dict) or
+        previous_binding.get('status')!='bound_at_decision'):
+     raise HistoricalRereviewUnsupported('historical_unbound_decision_immutable_this_release')
     state='assigned' if chosen else {'return_to_queue':'inbox','skip':'skipped','reject':'rejected'}[action]
     entry=dict(source=source,name=name,folder=chosen[0] if chosen else None,
        folders=list(chosen),review_status=state,media_binding=binding)
@@ -158,6 +162,7 @@ class FutureWriter:
      expected_revision=expected_revision,tickets=self.tickets,
      attestor=self.attestor,binding_protocol=self.binder,locked_write=locked_write)
    return 200,result
+  except HistoricalRereviewUnsupported:return 409,dict(ok=False,error='historical_re_review_not_supported_this_release',existing_decision_preserved=True)
   except Conflict:return 409,dict(ok=False,error='review_revision_changed')
   except ValueError:return 409,dict(ok=False,error='reviewed_original_ticket_or_source_stale')
   except (OSError,RuntimeError,TypeError,Exception):
