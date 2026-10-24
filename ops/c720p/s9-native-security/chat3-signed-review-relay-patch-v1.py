@@ -15,6 +15,7 @@ GO_ANCHOR="  # S9_MANUAL_LINKS_LAN_ROUTE_V2 read-only, guarded after authorized(
 QUERY_ANCHOR="  if subpath=='/api/anonymous-quality-consumption':"
 MANUAL_ANCHOR="    if not isinstance(obj,dict) or (set(obj)!={'action','source','name','folder','revision','human_confirmed'} and not (obj.get('action')=='assign_many' and set(obj)=={'action','source','name','folder','folders','revision','human_confirmed'})):return self.empty(400)"
 INTENT_HEADER='X-S9-Original-Review-Intent'
+ARCHIVE_TIMEOUT_ANCHOR='  try:r=urllib.request.urlopen(req,timeout=8)'
 
 POST = """  # Chat3: explicitly signed original open / loaded observation.
   # This is below the existing authorized() boundary. No raw token is returned.
@@ -95,6 +96,10 @@ def patch(source):
   if source.count(anchor)!=1:raise ValueError('installed_relay_source_drift')
  if source.count("X-S9-Automatic-Person-Intent')")!=1:
   raise ValueError('CORS_header_anchor_changed')
+ if source.count(ARCHIVE_TIMEOUT_ANCHOR)!=1:
+  raise ValueError('source_pinned_archive_timeout_anchor_changed')
+ source=source.replace(ARCHIVE_TIMEOUT_ANCHOR,
+  "  try:r=urllib.request.urlopen(req,timeout=24 if subpath.startswith('/review-original/') else 8)")
  source=source.replace("X-S9-Automatic-Person-Intent')","X-S9-Automatic-Person-Intent,X-S9-Original-Review-Intent')")
  source=source.replace(POST_ANCHOR,POST+POST_ANCHOR)
  source=source.replace(GO_ANCHOR,GO+GO_ANCHOR)
