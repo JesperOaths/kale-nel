@@ -133,6 +133,31 @@ class Tests(unittest.TestCase):
   for key,old in self.legacy.items.items():self.assertEqual(stored['items'][key],old)
   self.assertEqual(stored['items']['sd:'+CLIP]['media_binding']['status'],'bound_at_decision')
   self.assertEqual(len(self.legacy.AUDIT.read_text().splitlines()),1)
+ def test_ranges_continue_after_loaded_without_ticket_replay(self):
+  # Browser metadata can arrive before playback/seek requests finish.
+  nonce=self.sessions.begin_original('sd',CLIP,'original:sd:one')
+  pin=self.sessions.require_current_stream(nonce,'sd',CLIP)
+  receipt=dict(status=206,transferred_bytes=128,
+    response_original_sha256=pin['original_sha256'],
+    source_revision=pin['source_revision'],
+    source_identity=pin['source_identity'])
+  self.sessions.report_delivery(nonce,'sd',CLIP,receipt)
+  ticket=self.sessions.confirm_player_loaded(nonce,'sd',CLIP,nonce)['review_ticket']
+  self.assertEqual(self.sessions.require_current_stream(nonce,'sd',CLIP),pin)
+  self.sessions.report_delivery(nonce,'sd',CLIP,receipt)
+  with self.assertRaisesRegex(Refused,'already_confirmed'):
+   self.sessions.confirm_player_loaded(nonce,'sd',CLIP,nonce)
+  self.assertEqual(len(self.tokens.tokens),1)
+  self.attestor.rev='rev2'
+  with self.assertRaises(Refused):
+   self.sessions.require_current_stream(nonce,'sd',CLIP)
+  self.attestor.rev='rev1'
+  self.assertTrue(self.sessions.discard(nonce,'sd',CLIP)['original_review_cancelled'])
+  self.assertNotIn(ticket,self.tokens.tokens)
+  with self.assertRaises(Refused):
+   self.sessions.require_current_stream(nonce,'sd',CLIP)
+  self.assertEqual(self.legacy.current()['revision'],50)
+  self.assertFalse(self.legacy.AUDIT.exists())
  def test_ticket_replay_refused(self):
   ticket=self.open()
   self.assertEqual(self.writer.mutate(self.decision(ticket),[CLIP])[0],200)
