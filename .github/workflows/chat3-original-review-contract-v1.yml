@@ -42,12 +42,23 @@ jobs:
           from pathlib import Path
           p=Path('ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py').read_text()
           for x in ('s9_multivector_appearance_api_v3.install(H)', 's9_c720p_snapshots_v163.install(H)', 'v361_route.install(H,rows,v361_consumer,v369_transport.fetch_live_http)', "C720P_SIGNED_ORIGINAL_REVIEW_V1"):
-              if x not in p:
-                  raise SystemExit('Missing protected source hook: '+x)
+              if p.count(x)!=1:
+                  raise SystemExit('Protected source hook must register exactly once: '+x)
+          activation=Path('ops/c720p/s9-person-ml-v1/s9_review_activation_v1.py').read_text()
+          if 'binder=binding_protocol' not in activation or 'registry.binding_protocol()' in activation:
+              raise SystemExit('Activation binder import/call regression')
+          if "if _chat3_os.environ.get('C720P_SIGNED_ORIGINAL_REVIEW_V1')=='verified':" not in p:
+              raise SystemExit('Forward activation must remain default-off')
+          relay=Path('ops/c720p/s9-native-security/chat3-signed-review-relay-patch-v1.py').read_text()
+          if "path=='/new/api/review-original-open'" not in relay or "path=='/new/api/review-original-loaded'" not in relay or "path.endswith('/open')" in relay:
+              raise SystemExit('Signed review relay route selector regressed')
           ui=Path('ops/c720p/s9-native-security/security-people-v324-preview.js').read_text()
           for phrase in ('review_ticket','anonymous outfit','verified original reviewer'):
               if phrase not in ui.lower():
                   raise SystemExit('Missing browser eligibility label: '+phrase)
+          if 'revalidateOutfitReference(ref)' not in ui or
+             'state.verifiedOutfitReferences' not in ui:
+              raise SystemExit('Current canonical consumer not connected to outfit evidence')
           PY
       - name: Browser JavaScript syntax
         run: |
