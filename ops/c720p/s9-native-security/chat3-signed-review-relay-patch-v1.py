@@ -34,7 +34,9 @@ POST = """  # Chat3: explicitly signed original open / loaded observation.
     if obj['source']=='sd':
      if not re.fullmatch(r'motion_[0-9]{13}[.]mp4',obj['name']):return self.empty(400)
     elif not re.fullmatch(r'[A-Za-z0-9._-]{1,180}[.]mp4',obj['name']) or '..' in obj['name']:return self.empty(400)
-    if path!=' /new/api/review-original-open'.strip() and any(not isinstance(obj[k],str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,128}',obj[k]) for k in (('open_nonce','observed_open_nonce') if path.endswith('-loaded') else ('open_nonce',))):return self.empty(400)
+    if path!='/new/api/review-original-open':
+     nonce_fields=('open_nonce','observed_open_nonce') if path=='/new/api/review-original-loaded' else ('open_nonce',)
+     if any(not isinstance(obj[k],str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,128}',obj[k]) for k in nonce_fields):return self.empty(400)
     request=urllib.request.Request('http://127.0.0.1:8795'+path,data=body,
       headers={'Content-Type':'application/json','X-S9-Original-Review-Intent':'explicit-original-open-v1','Origin':'http://127.0.0.1'},method='POST')
     try:reply=urllib.request.urlopen(request,timeout=170 if path=='/new/api/review-original-open' else 12)
