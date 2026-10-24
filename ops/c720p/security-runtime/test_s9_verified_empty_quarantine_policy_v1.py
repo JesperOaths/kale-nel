@@ -170,11 +170,11 @@ class FixtureTests(unittest.TestCase):
                          {"source_scope":"Google_Drive"},
                          {"evidence_revision":None}):
             fake=dict(original,**override)
-            journal.write_text(json.dumps(fake)+"\\n")
+            journal.write_text(json.dumps(fake)+"\n")
             with self.assertRaisesRegex(self.m.Protected,"restore_ticket_invalid"):
                 self.m.fixture_restore(self.root,self.name)
             self.assertFalse((self.root/"Security4K"/self.name).exists())
-        journal.write_text(json.dumps(original)+"\\n")
+        journal.write_text(json.dumps(original)+"\n")
         self.assertEqual(self.m.fixture_restore(self.root,self.name)["state"],"restored")
 
     def test_restore_is_idempotent_without_duplicate_history(self):
