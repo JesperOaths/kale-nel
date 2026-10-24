@@ -69,7 +69,7 @@ def service_record():
     """Exact registered service generation; unchanged application PID is irrelevant."""
     rc,out,err=adb("shell","dumpsys","activity","services","nl.kalenel.s9security")
     if rc:return None
-    match=re.search(r"ServiceRecord\\{([0-9a-f]+) u[0-9]+ nl\\.kalenel\\.s9security/\\.CameraService\\}",out)
+    match=re.search(r"ServiceRecord[{]([0-9a-f]+) u[0-9]+ nl[.]kalenel[.]s9security/[.]CameraService[}]",out)
     return match.group(1) if match else ""
 
 def identity():
