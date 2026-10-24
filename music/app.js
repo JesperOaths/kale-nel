@@ -12,7 +12,7 @@ const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
  game_already_started:"This game already started.",no_players:"Wait for at least one player.",
- no_licensed_songs_for_genres:"There are no playable licensed songs in those genres yet. Select Demo melodies.",room_capacity_reached:"Too many open rooms. Please try later.",
+ no_licensed_songs_for_genres:"There are no playable licensed songs in those genres yet. Select Demo melodies.",resume_unavailable:"Waiting for another answer, or there are no clues left.",room_capacity_reached:"Too many open rooms. Please try later.",
  buzz_closed:"Someone has already buzzed, or buzzing is not open.",
  already_tried_this_clip:"You've already guessed during this snippet. Wait for the next one.",
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
@@ -161,10 +161,9 @@ function applyState(s){
  const newRound=s.round;
  if(oldRound!==newRound){lastBlockKey="";answeredFocusKey="";cancelNext();clearAudio();}
  if(isHost()){
-  if(s.phase==="answering"||s.phase==="solved"||s.phase==="finished"){clearAudio();cancelNext();}
+  if(s.phase==="answering"||s.phase==="holding"||s.phase==="solved"||s.phase==="finished"){clearAudio();cancelNext();}
   if(s.phase==="paused"){
-   if(oldPhase==="answering")scheduleNext(5000);
-   else if(oldPhase==="lobby"||oldPhase==="solved"||!oldPhase)scheduleNext(850);
+   if(oldPhase==="lobby"||oldPhase==="solved"||!oldPhase)scheduleNext(850);
    else if(oldPhase==="playing"){clearAudio();scheduleNext(1000);}
   }
  }else{cancelNext();clearAudio()}
@@ -207,6 +206,7 @@ function render(){
   const buzzerOwner=room.players.find(p=>p.id===room.lockedPlayer);
   const statuses={
    paused:["Music paused","Buzz now, or wait for the next hint."],
+   holding:["Music paused","Other players can buzz. Host can continue the clues."],
    playing:["Listen carefully","Buzz as soon as you know it!"],
    answering:["Buzz locked!",buzzerOwner?buzzerOwner.name+" is answering.":"Waiting for an answer."],
    solved:["Song identified!","Host can move to the next round."],
@@ -220,13 +220,13 @@ function render(){
   setText("revealed-title",room.titleDone||phase==="solved"||phase==="finished"?room.title:"Song title: ???");
   setText("revealed-artist",room.artistDone||phase==="solved"||phase==="finished"?room.artist:"Artist: ???");
   show("host-controls",host);show("player-controls",!host);
-  show("next-round",host&&phase==="solved");show("skip-round",host&&room.step===6&&(phase==="paused"||phase==="playing"));
+  show("next-round",host&&phase==="solved");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&room.step===6&&(phase==="paused"||phase==="playing"||phase==="holding"));
   show("enable-sound",host&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
    const blocked=lastBlockKey===guessKey||room.myBlockedStep===room.step;
-   $("buzz").disabled=!((phase==="playing"||phase==="paused")&&room.step>=0&&!blocked);
+   $("buzz").disabled=!((phase==="playing"||phase==="paused"||phase==="holding")&&room.step>=0&&!blocked);
    show("buzz",!iAmAnswering);
    show("answer-form",iAmAnswering);
    $("song-guess").disabled=room.titleDone;
@@ -327,6 +327,7 @@ $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this dev
 $("enable-sound").addEventListener("click",soundUnlock);
 $("start").addEventListener("click",async()=>{await soundUnlock();try{await call("start")}catch{}});
 $("next-round").addEventListener("click",async()=>{try{await call("next")}catch{}});
+$("continue-hints").addEventListener("click",async()=>{try{await call("resume")}catch{}});
 $("skip-round").addEventListener("click",async()=>{try{await call("skip")}catch{}});
 $("buzz").addEventListener("click",requestBuzz);
 $("pass").addEventListener("click",()=>submitGuess());
