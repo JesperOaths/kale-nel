@@ -110,6 +110,8 @@ public final class CameraService extends Service {
  // Fail CLOSED if a live encoder provides no usable pre-event buffer.
  // Never starts a new trial or alters the existing three-attempt limit.
  private final RingReadinessWatchdog continuous4KReadiness=new RingReadinessWatchdog();
+ // Finish any active 4K event before failback; prevent auto-continuation.
+ private String continuous4KHealthFallbackPending="";
  static final class RingReadinessWatchdog {
   static final long MAX_UNREADY_MS=45000L;
   private long since=-1;
@@ -482,6 +484,7 @@ public final class CameraService extends Service {
   }
  }
  private void restoreLegacy4K(String reason){
+  continuous4KHealthFallbackPending="";
   record4KFallbackEvidence(reason);
   continuous4KReadiness.reset();
   continuous4KLastResult="fallback_"+reason;
@@ -803,6 +806,10 @@ public final class CameraService extends Service {
    diagnosticPrerollActive=false;
    eventChain.reset();
    Log.i(TAG,"CONTINUOUS_4K_TEST_MP4 "+clip.getName());
+   if(!continuous4KHealthFallbackPending.isEmpty()){
+    String afterFinalize=continuous4KHealthFallbackPending;
+    restoreLegacy4K(afterFinalize);
+   }
    return;
   }
   completed++;
@@ -815,6 +822,13 @@ public final class CameraService extends Service {
   final String evidenceReason="continuous_native_4k_"+captureTier;
   writeCaptureEvidenceAsync(clip,segment);
   reviewer.submit(()->review(clip,evidenceReason,motionAtSave,segment));
+  // Only after original MP4 finalization and downstream review scheduling
+  // may this health failure release its encoder and restore old preroll.
+  if(!continuous4KHealthFallbackPending.isEmpty()){
+   String afterFinalize=continuous4KHealthFallbackPending;
+   restoreLegacy4K(afterFinalize);
+   return;
+  }
   // If motion continues at a safety cap, the same encoder's rolling
   // full-4K ring supplies the next segment (overlap, not missing footage).
   if(segment.autoResumeArmed)cameraHandler.postDelayed(()->{
@@ -1396,8 +1410,14 @@ public final class CameraService extends Service {
     failure("continuous_4k_trial_failed_health_guard",null);
     String reason=codecBad?"codec_health_guard":"thermal_guard";
     if("watching".equals(mode))restoreLegacy4K(reason);
-    else if("recording".equals(mode))stopRecording("trial_health_guard");
-    else if("stopping".equals(mode))restoreLegacy4K(reason+"_stopping");
+    else if("recording".equals(mode)){
+     continuous4KHealthFallbackPending=reason+"_after_finalization";
+     stopRecording("trial_health_guard");
+    }else if("stopping".equals(mode)){
+     // Do not destroy MediaMuxer while its original is finalizing.
+     if(continuous4KHealthFallbackPending.isEmpty())
+      continuous4KHealthFallbackPending=reason+"_after_finalization";
+    }
    }else if(continuous4KReadiness.observe(n,"watching".equals(mode),
                           continuous4K.readyForEvent())){
     // A silent/unready encoder must not displace verified legacy preroll.
