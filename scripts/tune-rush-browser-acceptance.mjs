@@ -93,7 +93,8 @@ try {
  await wait(bob,()=>room?.phase==="answering"&&room.stealTurn);
  await bob.locator("#artist-guess").fill("Incorrect Steal");
  await bob.locator("#answer-form button[type=submit]").click();
- await wait(host,()=>room?.phase==="holding");
+ await wait(bob,()=>room?.phase==="holding"&&Number(room.players.find(p=>p.name==="QBob")?.score)===0);
+ await wait(host,()=>room?.phase==="holding"&&Number(room.players.find(p=>p.name==="QBob")?.score)===0);
  assert.equal(playerScore(await state(host),"QBob"),0,"steal wrong artist reduces 1 point, floor zero");
  await host.locator("#continue-hints").click();
  await wait(host,()=>room?.step>=1&&room?.phase!=="holding",7500);
