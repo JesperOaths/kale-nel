@@ -49,6 +49,7 @@ async function waitBuzz(p){
  await wait(p,()=>{const b=document.querySelector("#buzz");return b&&!b.hidden&&!b.disabled},22000);
 }
 try {
+ if(process.env.TUNE_RUSH_YOUTUBE_ONLY!=="1"){
  const host=await page(pad,"demo-host"),alice=await page(phone1,"demo-alice"),bob=await page(phone2,"demo-bob");
  const initial=await createGame(host);
  await Promise.all([join(alice,initial.code,"QAlice"),join(bob,initial.code,"QBob")]);
@@ -100,11 +101,15 @@ try {
  await wait(host,()=>room?.step>=1&&room?.phase!=="holding",7500);
  console.log("BROWSER_DEMO_ROUND2_CONTINUE_PASS",JSON.stringify({aliceScore:0.5,bobScore:0,step:(await state(host)).step}));
 
+ }
  // Separate YouTube mode host + two independent phone-browser sessions.
  const yHostCtx=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
  const yAContext=await browser.newContext({...devices["iPhone 13"]});
  const yBContext=await browser.newContext({...devices["Pixel 7"]});
  const yh=await page(yHostCtx,"youtube-host"),ya=await page(yAContext,"youtube-a"),yb=await page(yBContext,"youtube-b");
+ const ytRequestsFailed=[],ytConsoleErrors=[];
+ yh.on("requestfailed",req=>{if(/youtube|googlevideo|ytimg|gstatic/i.test(req.url()))ytRequestsFailed.push([req.url().slice(0,170),req.failure()?.errorText])});
+ yh.on("console",msg=>{if(msg.type()==="error")ytConsoleErrors.push(msg.text().slice(0,200))});
  const youtube=await createGame(yh);
  await Promise.all([join(ya,youtube.code,"YouA"),join(yb,youtube.code,"YouB")]);
  await yh.locator('input[name="music-source"][value="youtube"]').check();
@@ -117,7 +122,21 @@ try {
  await wait(yh,()=>room?.round===1&&room.mode==="youtube");
  assert.equal((await state(ya)).audio,null,"player cannot see host YouTube URL");
  await yh.locator("#youtube-host").waitFor({state:"visible"});
- await wait(yh,()=>!!document.querySelector("#youtube-player iframe"),24000);
+ try {
+  await wait(yh,()=>!!document.querySelector("#youtube-player iframe"),24000);
+ } catch(e) {
+  const diagnostics=await yh.evaluate(()=>({
+   iframeCount:document.querySelectorAll("#youtube-player iframe").length,
+   ytType:typeof window.YT,playerType:typeof window.YT?.Player,
+   apiReadyCallback:typeof window.onYouTubeIframeAPIReady,
+   ytScripts:[...document.scripts].filter(x=>/youtube/i.test(x.src)).map(x=>x.src),
+   playerHost:document.getElementById("youtube-player")?.outerHTML.slice(0,800),
+   toast:document.getElementById("toast")?.textContent,
+   iframeError:typeof ytReadyPromise==="object"
+  }));
+  console.error("BROWSER_YOUTUBE_EMBED_DIAGNOSTIC",JSON.stringify({...diagnostics,ytRequestsFailed:ytRequestsFailed.slice(0,10),ytConsoleErrors:ytConsoleErrors.slice(0,10)}));
+  throw e;
+ }
  const frame=await yh.locator("#youtube-player iframe").getAttribute("src");
  assert.ok(frame?.includes("youtube.com/embed/"),"official YouTube iframe visible");
  assert.ok((await yh.locator("#youtube-host").isVisible()),"host frame must remain visible");
