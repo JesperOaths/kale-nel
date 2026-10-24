@@ -65,6 +65,13 @@ def service():
     if rc:return None
     return "ServiceRecord" in out and "CameraService" in out
 
+def service_record():
+    """Exact registered service generation; unchanged application PID is irrelevant."""
+    rc,out,err=adb("shell","dumpsys","activity","services","nl.kalenel.s9security")
+    if rc:return None
+    match=re.search(r"ServiceRecord\\{([0-9a-f]+) u[0-9]+ nl\\.kalenel\\.s9security/\\.CameraService\\}",out)
+    return match.group(1) if match else ""
+
 def identity():
     if okadb("get-state")!="device":raise Refuse("adb_not_device")
     if okadb("shell","getprop","ro.product.model")!=MODEL:raise Refuse("model_mismatch")
@@ -166,6 +173,8 @@ def run(j):
     first=status()
     exclusion_check()
     if service() is not True:raise Refuse("foreground_camera_service_not_registered")
+    first_service_record=service_record()
+    if not first_service_record:raise Refuse("old_service_generation_unavailable")
     apk_path=okadb("shell","pm","path","nl.kalenel.s9security").splitlines()[0].removeprefix("package:")
     if okadb("shell","sha256sum",apk_path).split()[0]!=APK:
         raise Refuse("installed_APK_digest_mismatch")
@@ -182,9 +191,11 @@ def run(j):
     runchecks(second,latest)
     exclusion_check()
     if service() is not True:raise Refuse("camera_service_missing_before_stop")
+    if service_record()!=first_service_record:raise Refuse("service_changed_before_stop")
     if latest.get("recorded")!=first.get("recorded"):
         raise Refuse("new_motion_event")
-    j.write("all_guards_passed",apk_sha256=APK,recordings_before=before,
+    j.write("all_guards_passed",old_service_generation=first_service_record,
+            apk_sha256=APK,recordings_before=before,
             before_mode=latest.get("mode"),before_temp_c=latest.get("temperature_c"),
             before_frames=latest.get("frames"),before_ring_ms=latest.get("continuous_4k_buffered_ms"),
             stop_control_xy=button)
@@ -200,11 +211,18 @@ def run(j):
             identity()
         except Refuse:
             if not bridge_recover_once(j):raise Refuse("transport_lost_after_stop")
-        state=service()
-        if state is None:raise Refuse("service_state_unavailable_after_stop")
-        if state is False:
+        current=service_record()
+        if current is None:raise Refuse("service_state_unavailable_after_stop")
+        if current and current!=first_service_record:
+            # Android/the owner's other controller rearmed a NEW service
+            # between polls. Never send a second START on top of it.
+            j.write("service_generation_replaced_without_operator_start",
+                    stop_confirmed=True,old_service_generation=first_service_record,
+                    new_service_generation=current,operator_start_suppressed=True)
+            return
+        if current=="":
             time.sleep(1)
-            if service() is False:
+            if service_record()=="":
                 confirmed=True
                 break
         time.sleep(1)
