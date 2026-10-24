@@ -14,6 +14,7 @@ import time
 import urllib.request
 
 MODEL="SM-G965F"
+EXPECTED_SERIAL="27bb603837047ece"
 PORT="tcp:18809"
 REMOTE="tcp:8808"
 STATUS="http://127.0.0.1:18809/status"
@@ -46,9 +47,10 @@ def pinned_usb():
             continue
         try:
             model=cmd("-s",serial,"shell","getprop","ro.product.model")
+            device_serial=cmd("-s",serial,"shell","getprop","ro.serialno")
         except NotReady:
             continue
-        if model==MODEL:
+        if model==MODEL and device_serial==EXPECTED_SERIAL:
             usb.append(serial)
     if len(usb)!=1:
         raise NotReady("exactly_one_authorized_s9_usb_required")
