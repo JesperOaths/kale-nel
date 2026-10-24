@@ -92,6 +92,10 @@ def main():
         with zipfile.ZipFile(aligned) as z:
             require(set(z.namelist())=={"AndroidManifest.xml","classes.dex"},
                     "unexpected_apk_payload")
+            packaged_manifest_sha=hashlib.sha256(z.read("AndroidManifest.xml")).hexdigest()
+            require(hashlib.sha256(z.read("classes.dex")).digest()
+                    ==hashlib.sha256(compiled_dex).digest(),
+                    "packaged_dex_mismatch")
         # Intentionally no signing identity exists here. It MUST remain unsigned.
         verify=subprocess.run(["apksigner","verify","--min-sdk-version","29",
                     str(aligned)],capture_output=True,timeout=20)
@@ -114,7 +118,11 @@ def main():
                      "parser_sha256":next(r["sha256"] for r in PINS["files"]
                                          if r["name"]=="S9MigratedActionWireV231"),
                      "dex_sha256":hashlib.sha256(compiled_dex).hexdigest(),
+                     # The original source XML is transformed into binary XML by aapt.
+                     # Both byte domains must be independently verifiable.
                      "manifest_sha256":hashlib.sha256(MANIFEST.read_bytes()).hexdigest(),
+                     "manifest_sha256_scope":"source_xml_pre_aapt",
+                     "packaged_manifest_sha256":packaged_manifest_sha,
                      "unsigned_apk_sha256":digest,
                      "unsigned_apk_bytes":output.stat().st_size,
                      "signature_verified":False,
