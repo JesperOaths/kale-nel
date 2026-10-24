@@ -5,6 +5,7 @@ Apply to the actual installed private 8794 relay ONLY after manual original
 Everything remains below the existing self.authorized() gate.
 """
 import ast
+import hashlib
 
 BASE_BLOB='fc4bc0d1ee8f56a3a5085444cd8cbc6eb733ddab'
 ALLOWED_HEAD='X-S9-Original-Review-Intent'
@@ -25,15 +26,15 @@ POST = """  # Chat3: explicitly signed original open / loaded observation.
     if not 20<=n<=400 or 'application/json' not in self.headers.get('Content-Type','').lower():return self.empty(415)
     body=self.rfile.read(n);obj=json.loads(body)
     if not isinstance(obj,dict):return self.empty(400)
-    keys={'source','name'} if path.endswith('/open') else {'source','name','open_nonce','observed_open_nonce'}
+    keys={'source','name'} if path=='/new/api/review-original-open' else {'source','name','open_nonce','observed_open_nonce'}
     if set(obj)!=keys or obj.get('source') not in ('sd','drive') or not isinstance(obj.get('name'),str):return self.empty(400)
     if obj['source']=='sd':
      if not re.fullmatch(r'motion_[0-9]{13}[.]mp4',obj['name']):return self.empty(400)
     elif not re.fullmatch(r'[A-Za-z0-9._-]{1,180}[.]mp4',obj['name']) or '..' in obj['name']:return self.empty(400)
-    if path.endswith('/loaded') and any(not isinstance(obj[k],str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,128}',obj[k]) for k in ('open_nonce','observed_open_nonce')):return self.empty(400)
+    if path=='/new/api/review-original-loaded' and any(not isinstance(obj[k],str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,128}',obj[k]) for k in ('open_nonce','observed_open_nonce')):return self.empty(400)
     request=urllib.request.Request('http://127.0.0.1:8795'+path,data=body,
       headers={'Content-Type':'application/json','X-S9-Original-Review-Intent':'explicit-original-open-v1','Origin':'http://127.0.0.1'},method='POST')
-    try:reply=urllib.request.urlopen(request,timeout=170 if path.endswith('/open') else 12)
+    try:reply=urllib.request.urlopen(request,timeout=170 if path=='/new/api/review-original-open' else 12)
     except urllib.error.HTTPError as error:reply=error
     with reply:
      data=reply.read(8192);self.send_response(reply.status);self.cors()
@@ -85,6 +86,11 @@ MANUAL = """    if not isinstance(obj,dict):return self.empty(400)
 def patch(source):
  if not isinstance(source,str):raise ValueError('wrong_source')
  if 'Chat3: session-scoped original media' in source:return source
+ # Exact installed Git blob is proven by 'git hash-object', not sha1sum.
+ # Refuse a future relay revision even if all four textual anchors survive.
+ raw=source.encode('utf-8')
+ actual=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\\0'+raw).hexdigest()
+ if actual!=BASE_BLOB:raise ValueError('installed_relay_blob_changed')
  for anchor in (POST_ANCHOR,GO_ANCHOR,QUERY_ANCHOR,MANUAL_ANCHOR):
   if source.count(anchor)!=1:raise ValueError('installed_relay_source_drift')
  if source.count("X-S9-Automatic-Person-Intent')")!=1:
