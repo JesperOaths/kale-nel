@@ -78,6 +78,69 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual([e["action"] for e in restored["history"]],
                          ["intent","quarantined","restored"])
 
+    def test_intent_directory_fsync_precedes_original_media_rename(self):
+        events=[]
+        original_replace=self.m.os.replace
+        original_fsync=self.m.fsync_directory
+        def replacement(old,new):
+            events.append(("rename",str(new)))
+            return original_replace(old,new)
+        def sync(path):
+            events.append(("fsync",str(path)))
+            return original_fsync(path)
+        with mock.patch.object(self.m.os,"replace",side_effect=replacement),\
+             mock.patch.object(self.m,"fsync_directory",side_effect=sync):
+            self.accept()
+        qdir=self.root/"private-quarantine"
+        journal=str(qdir/(self.name+".quarantine.json"))
+        media=str(qdir/self.name)
+        intent_index=events.index(("rename",journal))
+        media_index=events.index(("rename",media))
+        self.assertLess(intent_index,media_index)
+        self.assertIn(("fsync",str(qdir)),events[intent_index+1:media_index])
+        self.assertEqual((qdir/self.name).read_bytes(),self.data)
+
+    def test_dangling_quarantine_target_does_not_get_overwritten(self):
+        qdir=self.root/"private-quarantine"
+        qdir.mkdir()
+        target=qdir/self.name
+        target.symlink_to(self.root/"nonexistent-elsewhere")
+        self.rejected("existing_quarantine_or_journal")
+        self.assertTrue(target.is_symlink())
+
+    def test_quarantine_directory_symlink_is_refused(self):
+        other=self.root/"other-fixture-directory"
+        other.mkdir()
+        (self.root/"private-quarantine").symlink_to(other,target_is_directory=True)
+        self.rejected("quarantine_directory_symlink")
+        self.assertEqual(list(other.iterdir()),[])
+
+    def test_restoration_rejects_symlink_media_even_if_bytes_match(self):
+        self.accept()
+        qdir=self.root/"private-quarantine"
+        target=qdir/self.name
+        other=self.root/"unrelated-synthetic-media"
+        other.write_bytes(self.data)
+        target.unlink()
+        target.symlink_to(other)
+        with self.assertRaisesRegex(self.m.Protected,"restore_unsafe_media_path"):
+            self.m.fixture_restore(self.root,self.name)
+        self.assertFalse((self.root/"Security4K"/self.name).exists())
+        self.assertEqual(other.read_bytes(),self.data)
+
+    def test_restoration_rejects_symlinked_journal(self):
+        self.accept()
+        qdir=self.root/"private-quarantine"
+        journal=qdir/(self.name+".quarantine.json")
+        other=self.root/"synthetic-untrusted-ticket"
+        other.write_bytes(journal.read_bytes())
+        journal.unlink()
+        journal.symlink_to(other)
+        with self.assertRaisesRegex(self.m.Protected,"restore_unsafe_symlink"):
+            self.m.fixture_restore(self.root,self.name)
+        self.assertFalse((self.root/"Security4K"/self.name).exists())
+        self.assertEqual((qdir/self.name).read_bytes(),self.data)
+
     def test_confirmed_person_anywhere_is_never_quarantined(self):
         self.evidence["any_confirmed_person"]=True
         self.rejected("person_evidence")
