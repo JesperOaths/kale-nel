@@ -19,7 +19,7 @@ create table if not exists musicquiz.rooms (
  id uuid primary key default gen_random_uuid(),
  code text not null unique check (code ~ '^[A-HJ-NP-Z2-9]{6}$'),
  host_hash text not null,
- phase text not null default 'lobby' check (phase in ('lobby','paused','playing','answering','solved','finished')),
+ phase text not null default 'lobby' check (phase in ('lobby','paused','playing','holding','answering','solved','finished')),
  genres text[] not null default array['demo'],
  current_track uuid references musicquiz.tracks(id),
  used_tracks uuid[] not null default '{}',
@@ -173,8 +173,11 @@ begin
  elsif p_action='pause' then
   if not is_host then raise exception 'host_only'; end if;
   if r.phase='playing' then update musicquiz.rooms set phase='paused' where id=r.id; end if;
+ elsif p_action='resume' then
+  if not is_host or r.phase<>'holding' or r.step>=6 then raise exception 'resume_unavailable'; end if;
+  update musicquiz.rooms set phase='paused' where id=r.id;
  elsif p_action='buzz' then
-  if is_host or r.phase not in ('playing','paused') or r.step<0 then
+  if is_host or r.phase not in ('playing','paused','holding') or r.step<0 then
    raise exception 'buzz_closed';
   end if;
   if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
@@ -204,10 +207,10 @@ begin
   update musicquiz.rooms set
    title_done=done_title,artist_done=done_artist,locked_player=null,
    phase=case when delta>=20 then 'finished'
-        when done_title and done_artist then 'solved' else 'paused' end,
+        when done_title and done_artist then 'solved' else 'holding' end,
    winner=case when delta>=20 then p.id else winner end where id=r.id;
  elsif p_action='skip' then
-  if not is_host or r.phase not in ('paused','playing') or r.step<6 then
+  if not is_host or r.phase not in ('paused','playing','holding') or r.step<6 then
    raise exception 'skip_unavailable';
   end if;
   update musicquiz.rooms set phase='solved',title_done=true,artist_done=true,
