@@ -56,7 +56,9 @@ class OpenSessions:
  def get(self,nonce,source,name):
   self.prune(self.clock())
   row=self.sessions.get(nonce)
-  if not row or row['source']!=source or row['name']!=name or row['finalized']:
+  # A completed review ticket does not end the browser's pinned byte-range
+  # stream. The media element may seek or fetch more ranges after metadata.
+  if not row or row['source']!=source or row['name']!=name:
    raise Refused('unknown_or_expired_original_session')
   return row
  def require_current_stream(self,nonce,source,name):
@@ -87,6 +89,9 @@ class OpenSessions:
  def confirm_player_loaded(self,nonce,source,name,observed_playback_nonce):
   with self.lock:
    row=self.get(nonce,source,name)
+   # Exactly one ticket per original-open. Streaming can continue, but the
+   # metadata confirmation cannot mint an additional review ticket.
+   if row['finalized']:raise Refused('original_review_already_confirmed')
    if observed_playback_nonce!=nonce:
     raise Refused('loaded_metadata_nonce_mismatch')
    if not row['delivered']:
