@@ -16,6 +16,7 @@ let access=null,room=null,loading=false,pollBusy=false,toastTimer=null;
 let clipTimer=null,nextTimer=null,voices=[],ctx=null,startedClip=false;
 let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
+let ytPlayer=null,ytPlayerVideoId='',ytReadyPromise=null,ytPlayingResolve=null,ytPlayingReject=null,ytPlayingTimer=null;
 const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
@@ -25,7 +26,7 @@ const ERROR_TEXT={
  already_tried_this_clip:"You've already guessed during this snippet. Wait for the next one.",
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
  all_hints_used:"All snippets have played. The host can skip the song.",
- temporary_failure:"Connection problem. Retrying…",request_failed:"The request could not be completed."
+ temporary_failure:"Connection problem. Retrying…",request_failed:"The request could not be completed.",invalid_music_source:"Choose Demo or YouTube.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds."
 };
 function message(s) {
  const el=$("toast");el.textContent=ERROR_TEXT[s]||String(s||"");el.hidden=false;
@@ -42,7 +43,10 @@ async function rpc(action,extra={},attempt=0) {
   name:String(extra.name||"").slice(0,20),
   song:String(extra.song||"").slice(0,100),
   artist:String(extra.artist||"").slice(0,100),
-  genres:Array.isArray(extra.genres)?extra.genres.slice(0,12):[]
+  genres:Array.isArray(extra.genres)?extra.genres.slice(0,12):[],
+  mode:String(extra.mode||"demo"),
+  videoId:String(extra.videoId||""),
+  cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0
  };
  const body={p_action:action,p_code:code,p_hash:await capabilityHash(token),p_data};
  let res;
@@ -62,6 +66,93 @@ async function rpc(action,extra={},attempt=0) {
  }
  if(!data?.role||data?.code!==code)throw Error("request_failed");
  return {state:data,...((creating||joining)?{token}:{})};
+}
+
+
+function chosenSource(){return document.querySelector('input[name="music-source"]:checked')?.value||"demo"}
+function updateAudioChoice(){
+ const yt=chosenSource()==="youtube";
+ show("youtube-setup",yt);show("demo-settings",!yt);
+}
+function parseYoutubeVideo(link){
+ const u=new URL(String(link||"").trim());
+ if(u.protocol!=="https:")throw Error("invalid_youtube_video");
+ let id="";
+ if(["music.youtube.com","www.youtube.com","youtube.com","m.youtube.com"].includes(u.hostname)){
+  if(u.pathname==="/watch")id=u.searchParams.get("v")||"";
+  else if(u.pathname.startsWith("/shorts/"))id=u.pathname.split("/")[2]||"";
+ }else if(u.hostname==="youtu.be")id=u.pathname.split("/")[1]||"";
+ if(!/^[A-Za-z0-9_-]{11}$/.test(id))throw Error("invalid_youtube_video");
+ return id;
+}
+function youtubeRound(prefix){
+ let id;
+ try{id=parseYoutubeVideo($(prefix+"-link").value)}catch{throw Error("invalid_youtube_video")}
+ const song=$(prefix+"-song").value.trim(),artist=$(prefix+"-artist").value.trim();
+ const raw=$(prefix+"-cue").value.trim(),sec=Number(raw);
+ if(!song||!artist)throw Error("provide_song_and_artist");
+ if(!/^\d{1,3}$/.test(raw)||sec>600)throw Error("invalid_cue");
+ return {mode:"youtube",videoId:id,song,artist,cueMs:sec*1000};
+}
+function youtubeWaitCancelled(reason="YouTube playback was interrupted"){
+ if(ytPlayingTimer)clearTimeout(ytPlayingTimer);
+ ytPlayingTimer=null;
+ if(ytPlayingReject){
+  const fail=ytPlayingReject;ytPlayingReject=null;ytPlayingResolve=null;
+  fail(Error(reason));
+ }
+}
+async function ensureYoutubePlayer(id,cueMs=0){
+ if(!isHost()||!/^[A-Za-z0-9_-]{11}$/.test(id))throw Error("invalid_youtube_video");
+ if(!ytReadyPromise){
+  ytReadyPromise=new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>{ytReadyPromise=null;reject(Error("YouTube player did not load"))},15000);
+   const fail=msg=>{clearTimeout(timer);ytReadyPromise=null;reject(Error(msg))};
+   const create=()=>{
+    if(!window.YT?.Player){fail("YouTube player unavailable");return}
+    ytPlayer=new YT.Player("youtube-player",{
+     width:"560",height:"315",videoId:id,
+     playerVars:{playsinline:1,controls:1,origin:location.origin},
+     events:{
+      onReady:()=>{clearTimeout(timer);resolve()},
+      onStateChange:e=>{
+       if(e.data===window.YT.PlayerState.PLAYING&&ytPlayingResolve){
+        const done=ytPlayingResolve;clearTimeout(ytPlayingTimer);
+        ytPlayingTimer=null;ytPlayingResolve=null;ytPlayingReject=null;done();
+       }
+      },
+      onError:e=>{
+       const reason="YouTube cannot embed this video (error "+e.data+"). Choose another track.";
+       youtubeWaitCancelled(reason);message(reason);
+      }
+     }
+    });
+    ytPlayerVideoId=id;
+   };
+   if(window.YT?.Player){create();return}
+   window.onYouTubeIframeAPIReady=create;
+   const script=document.createElement("script");
+   script.src="https://www.youtube.com/iframe_api";script.async=true;
+   script.onerror=()=>fail("YouTube player failed to load");
+   document.head.append(script);
+  });
+ }
+ await ytReadyPromise;
+ if(ytPlayerVideoId!==id){
+  ytPlayer.cueVideoById({videoId:id,startSeconds:cueMs/1000});
+  ytPlayerVideoId=id;
+ }
+}
+async function playYoutubeHint(info){
+ await ensureYoutubePlayer(info.source.slice(8),info.cueMs||0);
+ if(!room||!isHost()||room.phase!=="playing")throw Error("YouTube clue cancelled");
+ await new Promise((resolve,reject)=>{
+  ytPlayingResolve=resolve;ytPlayingReject=reject;
+  ytPlayingTimer=setTimeout(()=>youtubeWaitCancelled("Tap Play on the YouTube player and try this clue again."),10000);
+  try{ytPlayer.seekTo((info.cueMs||0)/1000,true);ytPlayer.playVideo()}
+  catch{youtubeWaitCancelled("YouTube could not start this video")}
+ });
+ if(!room||room.phase!=="playing")throw Error("Clue interrupted");
 }
 
 function clearAudio(){
