@@ -65,6 +65,78 @@ class H:
             self.assertLess(updated.index('if not self.authorized()'),updated.index("if path in ('/new/api/review-original-open'"))
             with self.assertRaisesRegex(ValueError,'installed_relay_blob_changed'):
                 module.patch(template+'\\n# unauthorized newer source')
+    def test_signed_relay_synthetic_authorization_and_http_status(self):
+        # No network or physical browser: exercise emitted handler using the
+        # deterministic patch fixture established by the source test above.
+        import json,urllib.request
+        script=pathlib.Path(__file__).with_name('chat3-signed-review-relay-patch-v1.py')
+        spec=importlib.util.spec_from_file_location('chat3_signed_relay_patch',script)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        template="""import re,json,urllib.parse,urllib.request,urllib.error
+class H:
+ def authorized(self):return True
+ def origin_ok(self):return True
+ def empty(self,n):return n
+ def do_POST(self):
+  path=urllib.parse.urlsplit(self.path).path
+  if not self.authorized():return self.empty(401)
+  if path=='/new/api/verified-people/review':return self.empty(418)
+  if path=='/new/api/s9-manual-recording-links':
+   obj={}
+   if True:
+    if not isinstance(obj,dict) or (set(obj)!={'action','source','name','folder','revision','human_confirmed'} and not (obj.get('action')=='assign_many' and set(obj)=={'action','source','name','folder','folders','revision','human_confirmed'})):return self.empty(400)
+ def go(self,head=False):
+  path=urllib.parse.urlsplit(self.path).path
+  if not self.authorized():return self.empty(401)
+  # S9_MANUAL_LINKS_LAN_ROUTE_V2 read-only, guarded after authorized()
+ def archive(self,cam,subpath,head=False):
+  q=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+  try:r=urllib.request.urlopen(req,timeout=8)
+  except Exception:return self.empty(502)
+  if subpath=='/api/anonymous-quality-consumption':
+   return self.empty(400)
+ def cors(self):
+  self.send_header('Access-Control-Allow-Headers','X-S9-Automatic-Person-Intent')
+"""
+        raw=template.encode()
+        blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
+        with patch.object(module,'BASE_BLOB',blob):
+            src=module.patch(template)
+        scope={}
+        exec(compile(src,'<isolated-signed-relay-fixture>','exec'),scope)
+        H=scope['H']
+        class Upstream:
+            def __init__(self,status):self.status=status
+            def __enter__(self):return self
+            def __exit__(self,*a):return False
+            def read(self,n):return b'{"ok":true}'
+        calls=[]
+        def run(path,payload,*,signed=True,authorized=True,upstream_status=200):
+            h=H();h.path=path;h.authorized=lambda:authorized
+            data=json.dumps(payload).encode()
+            h.headers={'Content-Type':'application/json','Content-Length':str(len(data)),
+                       'X-S9-Original-Review-Intent':'explicit-original-open-v1' if signed else ''}
+            h.rfile=io.BytesIO(data);h.wfile=io.BytesIO();h.reply=None
+            h.send_response=lambda code:setattr(h,'reply',code)
+            h.send_header=lambda *args:None;h.end_headers=lambda:None
+            def fake(req,timeout):
+                calls.append((req.full_url,timeout,json.loads(req.data)))
+                return Upstream(upstream_status)
+            with patch.object(urllib.request,'urlopen',fake):
+                direct=h.do_POST()
+            return direct if direct is not None else h.reply
+        original={'source':'sd','name':'motion_1000000000000.mp4'}
+        self.assertEqual(run('/new/api/review-original-open',original,authorized=False),401)
+        self.assertEqual(run('/new/api/review-original-open',original,signed=False),403)
+        self.assertEqual(calls,[])
+        self.assertEqual(run('/new/api/review-original-open',original),200)
+        self.assertEqual(calls[-1][1],170)
+        self.assertEqual(calls[-1][2],original)
+        loaded=dict(original,open_nonce='x'*32,observed_open_nonce='x'*32)
+        self.assertEqual(run('/new/api/review-original-loaded',loaded,upstream_status=425),425)
+        self.assertEqual(calls[-1][1],12)
+        self.assertEqual(run('/new/api/review-original-loaded',loaded,upstream_status=409),409)
+        self.assertEqual(run('/new/api/review-original-loaded',original),400)
     def test_bounded_metadata_and_seek(self):
         self.assertEqual(bridge.requested_range('bytes=0-',15_000_000),(0,bridge.LIMIT-1))
         self.assertEqual(bridge.requested_range('bytes=900-1023',12000),(900,1023))
