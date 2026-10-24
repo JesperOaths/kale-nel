@@ -141,6 +141,73 @@ class FixtureTests(unittest.TestCase):
         self.assertFalse((self.root/"Security4K"/self.name).exists())
         self.assertEqual((qdir/self.name).read_bytes(),self.data)
 
+    def test_missing_matching_evidence_revision_must_not_pass(self):
+        self.state.pop("evidence_revision")
+        self.evidence.pop("evidence_revision")
+        self.rejected("evidence_revision")
+        self.state["evidence_revision"]="EV1"
+        self.rejected("evidence_revision")
+        self.evidence["evidence_revision"]="EV1"
+        self.assertTrue(self.m.check(self.state,self.source,self.evidence,self.protection,
+                       trusted_attestation=self.trust,
+                       allowed_models={"owner-approved-fixture-model"}))
+
+    def test_missing_model_id_must_not_pass_even_if_allowlist_has_none(self):
+        self.evidence.pop("model_id")
+        with self.assertRaisesRegex(self.m.Protected,"model_not_owner_approved"):
+            self.m.fixture_quarantine(self.root,self.name,self.read,
+                trusted_attestation=self.trust,allowed_models={None},
+                shared_lock_contract=True)
+        self.assertEqual((self.root/"Security4K"/self.name).read_bytes(),self.data)
+
+    def test_restore_rejects_forged_state_and_schema(self):
+        self.accept()
+        journal=self.root/"private-quarantine"/(self.name+".quarantine.json")
+        import json
+        original=json.loads(journal.read_text())
+        for override in ({"state":"permanently_deleted"},
+                         {"schema":"unknown_archive_ticket"},
+                         {"source_scope":"Google_Drive"},
+                         {"evidence_revision":None}):
+            fake=dict(original,**override)
+            journal.write_text(json.dumps(fake)+"\\n")
+            with self.assertRaisesRegex(self.m.Protected,"restore_ticket_invalid"):
+                self.m.fixture_restore(self.root,self.name)
+            self.assertFalse((self.root/"Security4K"/self.name).exists())
+        journal.write_text(json.dumps(original)+"\\n")
+        self.assertEqual(self.m.fixture_restore(self.root,self.name)["state"],"restored")
+
+    def test_restore_is_idempotent_without_duplicate_history(self):
+        self.accept()
+        first=self.m.fixture_restore(self.root,self.name)
+        second=self.m.fixture_restore(self.root,self.name)
+        self.assertEqual(first["history"],second["history"])
+        self.assertEqual([h["action"] for h in second["history"]],
+                         ["intent","quarantined","restored"])
+        self.assertEqual((self.root/"Security4K"/self.name).read_bytes(),self.data)
+
+    def test_hardlinked_source_preserved(self):
+        twin=self.root/"second-link-to-synthetic-original"
+        import os
+        os.link(self.root/"Security4K"/self.name,twin)
+        self.rejected("original_missing_or_unsafe")
+        self.assertEqual(twin.read_bytes(),self.data)
+
+    def test_marker_symlink_and_live_directory_symlink_rejected(self):
+        marker=self.root/self.m.FIXTURE_MARKER
+        marker.unlink()
+        real=self.root/"synthetic-marker-original"
+        real.write_text("synthetic")
+        marker.symlink_to(real)
+        self.rejected("fixture_marker_required")
+        marker.unlink()
+        marker.touch()
+        original=self.root/"Security4K"
+        moved=self.root/"synthetic-live-dir"
+        original.rename(moved)
+        original.symlink_to(moved,target_is_directory=True)
+        self.rejected("live_directory_not_a_real_directory")
+
     def test_confirmed_person_anywhere_is_never_quarantined(self):
         self.evidence["any_confirmed_person"]=True
         self.rejected("person_evidence")
