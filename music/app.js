@@ -143,9 +143,19 @@ async function ensureYoutubePlayer(id,cueMs=0){
   ytPlayerVideoId=id;
  }
 }
+function youtubeVideoIsVisible(){
+ const player=$("youtube-player");
+ if(!player||player.closest("[hidden]")||document.hidden)return false;
+ const el=player.querySelector("iframe")||player;
+ const r=el.getBoundingClientRect();
+ if(r.height<200||r.width<200)return false;
+ const visible=Math.max(0,Math.min(r.bottom,window.innerHeight)-Math.max(r.top,0));
+ return visible>=r.height*0.5;
+}
 async function playYoutubeHint(info){
  await ensureYoutubePlayer(info.source.slice(8),info.cueMs||0);
  if(!room||!isHost()||room.phase!=="playing")throw Error("YouTube clue cancelled");
+ if(!youtubeVideoIsVisible())throw Error("Scroll to the official YouTube player; more than half of it must be visible before starting a clue.");
  await new Promise((resolve,reject)=>{
   ytPlayingResolve=resolve;ytPlayingReject=reject;
   ytPlayingTimer=setTimeout(()=>youtubeWaitCancelled("Tap Play on the YouTube player and try this clue again."),10000);
@@ -511,7 +521,13 @@ $("answer-form").addEventListener("submit",submitGuess);
 $("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
- if(document.hidden&&isHost())cancelNext();
+ if(document.hidden&&isHost()){
+  cancelNext();
+  if(room?.mode==="youtube"){
+   clearAudio();
+   if(room?.phase==="playing")rpc("pause").then(b=>applyState(b.state)).catch(()=>{});
+  }
+ }
  if(!document.hidden&&isHost()&&room?.phase==="paused")scheduleNext(500);
 });
 window.addEventListener("pagehide",()=>{clearAudio();cancelNext()});
