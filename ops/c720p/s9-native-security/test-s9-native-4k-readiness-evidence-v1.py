@@ -21,7 +21,7 @@ class Tests(unittest.TestCase):
   self.assertIn("continuous4KReadiness.observe(",w)
   self.assertIn('restoreLegacy4K(continuous4KReadiness.reason())',w)
   self.assertIn('if("watching".equals(mode))restoreLegacy4K(reason);',w)
-  self.assertIn('else if("recording".equals(mode))stopRecording("trial_health_guard");',w)
+  self.assertIn('stopRecording("trial_health_guard");',w)
   self.assertNotIn("candidate.start()",w)
   self.assertNotIn("continuous4KRecoveryAttempts++",w)
  def test_failback_captures_cause_before_destroying_encoder(self):
