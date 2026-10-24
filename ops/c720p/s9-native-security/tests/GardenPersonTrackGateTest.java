@@ -75,6 +75,31 @@ public final class GardenPersonTrackGateTest{
     "weak competing car class cannot veto genuine pedestrian");
   check(!GardenPersonTrackGate.transportDominates(walker,.55f,other,.94f,"truck"),
     "nearby truck must not hide independent walker");
+  final float[] falsePersonInsideCar={.48f,.38f,.70f,.51f};
+  final float[] largerMovingCar={.43f,.10f,.73f,.80f};
+  check(GardenPersonTrackGate.plausiblePersonShape(falsePersonInsideCar),
+    "nested misclassified car part is person-shaped and requires transport veto");
+  check(GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,.92f,"car"),
+    "nested false person in high-confidence moving car vetoed despite low IoU");
+  check(GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,.92f,"truck"),
+    "nested high-confidence truck also vetoes false pedestrian");
+  check(!GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,.72f,"car"),
+    "uncertain vehicle label must not override person");
+  check(!GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.78f,
+        largerMovingCar,.92f,"car"),
+    "modest score difference must not suppress a separate person");
+  check(!GardenPersonTrackGate.transportDominates(walker,.53f,
+        largerMovingCar,.92f,"car"),
+    "pedestrian only partly overlapping car must remain detectable");
+  check(!GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,.92f,"dog"),
+    "animals never become transport vetoes");
+  check(!GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,Float.NaN,"car"),
+    "non-finite transport confidence cannot veto a person");
   check(!GardenPersonTrackGate.transportDominates(walker,.50f,walker,.95f,"dog"),
     "animal class cannot be a transport veto");
   check(!GardenPersonTrackGate.valid(new float[]{.2f,Float.NaN,.7f,.9f}),"NaN never valid");
