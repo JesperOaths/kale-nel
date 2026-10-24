@@ -25,8 +25,10 @@ class BridgeDiagnosticTests(unittest.TestCase):
         responses=[
             "device",
             "SM-G965F" if model else "unknown-device",
+            m.EXPECTED_SERIAL,
             m.DEVICE+" "+m.FORWARD if forward else "other tcp:18808 tcp:8808",
             "device" if after else "offline",
+            m.EXPECTED_SERIAL,
             m.DEVICE+" "+m.FORWARD,
         ]
         status=[frame(first),frame(second)]
@@ -77,6 +79,7 @@ class BridgeDiagnosticTests(unittest.TestCase):
         m=load()
         def observed(*args):
             if args==("-s",m.DEVICE,"get-state"):return "device"
+            if args==("-s",m.DEVICE,"shell","getprop","ro.serialno"):return m.EXPECTED_SERIAL
             if args==("forward","--list"):return m.DEVICE+" "+m.FORWARD
             raise AssertionError(args)
         with mock.patch.object(m,"adb",side_effect=observed), \
@@ -95,6 +98,7 @@ class BridgeDiagnosticTests(unittest.TestCase):
         m=load()
         def observed(*args):
             if args==("-s",m.DEVICE,"get-state"):return "device"
+            if args==("-s",m.DEVICE,"shell","getprop","ro.serialno"):return m.EXPECTED_SERIAL
             if args==("forward","--list"):return ""
             raise AssertionError(args)
         with mock.patch.object(m,"adb",side_effect=observed), \
@@ -107,6 +111,36 @@ class BridgeDiagnosticTests(unittest.TestCase):
         with mock.patch.object(m,"adb",side_effect=AssertionError("no ADB needed")), \
              mock.patch.object(m,"camera_status",side_effect=m.NotReady("native_camera_not_watching")):
             with self.assertRaisesRegex(m.NotReady,"native_camera_not_watching"):
+                m.status_with_transport_attribution()
+
+    def test_initial_serial_mismatch_blocks_even_if_model_matches(self):
+        m=load()
+        responses=["device",m.EXPECTED_MODEL,"wrong-serial"]
+        with mock.patch.object(m,"adb",side_effect=lambda *a:responses.pop(0)):
+            with self.assertRaisesRegex(m.NotReady,"s9_serial_mismatch"):
+                m.check(interval_seconds=0)
+
+    def test_serial_changes_between_samples_blocks(self):
+        m=load()
+        responses=[
+            "device",m.EXPECTED_MODEL,m.EXPECTED_SERIAL,
+            m.DEVICE+" "+m.FORWARD,"device","changed-serial"
+        ]
+        with mock.patch.object(m,"adb",side_effect=lambda *a:responses.pop(0)), \
+             mock.patch.object(m,"camera_status",side_effect=[frame(100),frame(200)]), \
+             mock.patch.object(m.time,"sleep",return_value=None):
+            with self.assertRaisesRegex(m.NotReady,"serial_changed"):
+                m.check(interval_seconds=0)
+
+    def test_api_refusal_with_wrong_serial_is_not_api_only(self):
+        m=load()
+        def observed(*args):
+            if args==("-s",m.DEVICE,"get-state"):return "device"
+            if args==("-s",m.DEVICE,"shell","getprop","ro.serialno"):return "wrong-serial"
+            raise AssertionError(args)
+        with mock.patch.object(m,"adb",side_effect=observed), \
+             mock.patch.object(m,"camera_status",side_effect=m.NotReady("bridge_status_unavailable")):
+            with self.assertRaisesRegex(m.NotReady,"serial_mismatch_after"):
                 m.status_with_transport_attribution()
 
     def test_no_side_effecting_control_path(self):
