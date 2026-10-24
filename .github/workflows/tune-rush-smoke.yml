@@ -1,0 +1,23 @@
+name: Tune Rush live three-client smoke
+on:
+  pull_request:
+    paths:
+      - 'music/**'
+      - 'sql/musicquiz*.sql'
+      - 'supabase/functions/music-game-v1/**'
+      - 'scripts/tune-rush-smoke.mjs'
+      - '.github/workflows/tune-rush-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - name: Live three-session anonymous guest acceptance
+        run: node scripts/tune-rush-smoke.mjs
