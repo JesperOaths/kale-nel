@@ -7,11 +7,13 @@ create table if not exists musicquiz.tracks (
  title text not null,
  artist text not null,
  genre text not null,
- source text not null,
+ source text not null check (source like 'demo:%' or source like '/music/audio/%'),
+ license_note text not null default '',
  cue_ms integer not null default 0 check (cue_ms >= 0),
  title_aliases text[] not null default '{}',
  artist_aliases text[] not null default '{}',
- enabled boolean not null default true
+ enabled boolean not null default true,
+ constraint musicquiz_audio_license_provenance check (source like 'demo:%' or length(trim(license_note)) >= 20)
 );
 create table if not exists musicquiz.rooms (
  id uuid primary key default gen_random_uuid(),
@@ -75,7 +77,8 @@ begin
  from musicquiz.players x where x.room_id=r.id;
  return jsonb_build_object(
   'code',r.code,'role',case when host then 'host' else 'player' end,
-  'me',case when host then null else p.id end,'players',people,
+  'me',case when host then null else p.id end,
+  'myBlockedStep',case when host then null else p.blocked_step end,'players',people,
   'phase',r.phase,'genres',to_jsonb(r.genres),'round',r.round_number,
   'step',r.step,'clipMs',case r.step when 0 then 500 when 1 then 1500 when 2 then 3000
     when 3 then 5000 when 4 then 8000 when 5 then 12000 when 6 then 20000 else 0 end,
@@ -102,7 +105,9 @@ begin
  if p_hash is null or p_hash !~ '^[a-f0-9]{64}$' then raise exception 'invalid_token'; end if;
  if p_code is null or upper(trim(p_code)) !~ '^[A-HJ-NP-Z2-9]{6}$' then raise exception 'invalid_code'; end if;
  if p_action='create' then
+  perform pg_advisory_xact_lock(711940092);
   delete from musicquiz.rooms where expires_at < now();
+  if (select count(*) from musicquiz.rooms)>=150 then raise exception 'room_capacity_reached'; end if;
   insert into musicquiz.rooms(code,host_hash) values(upper(trim(p_code)),p_hash)
    returning * into r;
   return musicquiz.visible_state(r.id,p_hash);
