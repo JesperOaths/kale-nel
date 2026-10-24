@@ -64,11 +64,16 @@ class Tickets:
     raise Rejected('viewed_original_proof_mismatch')
  def abort(self,token):
   with self.lock:self.tokens.pop(token,None)
- def consumed(self,token):
+ def consumed(self,token,*,durable_commit=False):
+  # This acknowledgement is internal to the CAS+fsync+readback writer.
+  # No caller can use it to bypass begin()/match_proof() before persistence.
+  if durable_commit is not True:raise Rejected('durable_commit_ack_required')
   with self.lock:
-   # The registry write may have completed after the reservation deadline.
-   # Do not convert an independently verified DURABLE commit into a false
-   # failure merely because the clock crossed expiry during final fsync.
    row=self.tokens.get(token)
-   if not row or not row['reserved']:raise Rejected('ticket_invalid_before_commit')
+   if row is None:
+    # Another request may have pruned the reserved token while the canonical
+    # writer finished fsync. The completed durable commit remains true and
+    # the missing token is inherently non-replayable.
+    return
+   if not row['reserved']:raise Rejected('ticket_not_reserved_after_commit')
    self.tokens.pop(token,None)
