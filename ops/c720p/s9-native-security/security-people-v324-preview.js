@@ -8,6 +8,7 @@ const state={pane:'people',folder:'',tab:'inbox',offset:0,limit:100,reviewSource
  busy:false,loading:false,serial:0,faceList:[],faceLoaded:false,facePage:0,folderPortraits:new Map(),
  approvalItem:null,editMode:'create',playSerial:0,playTime:0,compareItem:null,
  faceSummary:null,faceFetchError:false,clipEvidence:new Map(),clothingMatches:null,clothingBusy:false,clothingToken:0,clothingError:'',faceFetchToken:0,snapshotRequest:0,snapshotSelected:null,lastFolder:'',folderReturnPane:'people',archiveClips:null,archiveEntries:[],driveStatus:'loading',extraLinks:null,legacyAssigned:new Map(),legacySkipped:new Map(),assignedReady:false,linksRevision:0,archiveToken:0,automaticRows:[],automaticRevision:0,automaticStatus:'loading',automaticToken:0,automaticBusy:false};
+state.verifiedOutfitReferences=new Map(); // source/revision qualified, never historic
 state.faceQuality=new Map();state.faceQualityStatus='loading';
 const clipName=/^motion_[0-9]{13}[.]mp4$/;
 const faceName=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
@@ -126,6 +127,8 @@ async function fetchExtraLinks(){
   throw Error('Manual recording links unavailable');
  if(!Number.isSafeInteger(data.revision)||data.revision<state.linksRevision)
   throw Error('Assignment refresh is older than the saved review');
+ state.verifiedOutfitReferences.clear();
+ state.clothingMatches=null;
  state.extraLinks=data;state.linksRevision=data.revision;
  if(state.doc)render();
 }
@@ -224,7 +227,9 @@ async function manualLink(item,folder,reviewAction=null){
      (data.action==='reject'&&outcome.review_status!=='rejected'))
    throw Error('Save was not confirmed for this recording and person. Refresh and check before retrying.');
   const key=data.source+':'+data.name;
-  state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder,
+  state.verifiedOutfitReferences.clear();
+   state.clothingMatches=null;
+   state.extraLinks.items[key]={source:data.source,name:data.name,folder:outcome.folder,
    folders:outcome.folders||selected.slice(),
    review_status:outcome.review_status|| (selected.length?'assigned':'inbox')};
   state.extraLinks.revision=outcome.revision;
@@ -1081,10 +1086,43 @@ function qualifiedOutfitReference(item,personId=null){
  if(item?.source!=='sd'||!state.assignedReady||!state.extraLinks)return false;
  const people=assignedFolders(item);
  if(people.length!==1||(personId!==null&&people[0]!==personId))return false;
- const key=assignmentKey(item),explicit=state.extraLinks.items[key];
- if(explicit!==undefined)
-  return !!explicit&&typeof explicit==='object'&&explicit.review_status==='assigned';
- return state.legacyAssigned.get(key)===people[0];
+ const key=assignmentKey(item),entry=state.extraLinks.items[key];
+ const binding=entry?.media_binding,receipt=state.verifiedOutfitReferences.get(key);
+ // Historical reviews remain visible but never become verified exemplars.
+ return !!(entry?.review_status==='assigned'&&binding?.status==='bound_at_decision'&&
+   receipt&&receipt.registry_revision===state.linksRevision&&
+   receipt.source_revision===binding.source_revision&&
+   receipt.original_sha256===binding.sha256&&receipt.folder===people[0]);
+}
+async function revalidateOutfitReference(item){
+ const key=assignmentKey(item),entry=state.extraLinks?.items?.[key];
+ const binding=entry?.media_binding,people=assignedFolders(item);
+ if(item?.source!=='sd'||people.length!==1||entry?.review_status!=='assigned'||
+    binding?.status!=='bound_at_decision'||typeof binding.sha256!=='string'||
+    typeof binding.source_revision!=='string'){
+  state.verifiedOutfitReferences.delete(key);return false;
+ }
+ const revision=state.linksRevision;
+ const params=new URLSearchParams({source:'sd',name:String(item.name||item.clip),
+    revision:String(revision),source_revision:binding.source_revision,sha256:binding.sha256});
+ try{
+  const response=await relay().fetch('/new/api/s9-manual-recording-links/consumption?'+params,
+      {cache:'no-store'});
+  if(!response.ok){state.verifiedOutfitReferences.delete(key);return false}
+  const receipt=await response.json();
+  if(receipt.ok!==true||receipt.registry_revision!==revision||
+     receipt.source!=='sd'||receipt.name!==String(item.name||item.clip)||
+     receipt.source_revision!==binding.source_revision||
+     receipt.original_sha256!==binding.sha256||
+     receipt.folder!==people[0]||receipt.review_status!=='assigned'||
+     receipt.human_decision_recorded!==true||
+     receipt.source_must_be_revalidated_at_use!==true||
+     state.linksRevision!==revision||state.extraLinks?.items?.[key]!==entry){
+   state.verifiedOutfitReferences.delete(key);return false;
+  }
+  state.verifiedOutfitReferences.set(key,receipt);
+  return true;
+ }catch(_){state.verifiedOutfitReferences.delete(key);return false}
 }
 function outfitReviewEligible(clip){
  const item={source:'sd',name:clip,clip},key=assignmentKey(item);
@@ -1163,9 +1201,17 @@ async function searchClothingMatches(force=false){
  if(state.clothingMatches&&!force)return;
  const token=++state.clothingToken;
  state.clothingBusy=true;state.clothingError='';state.clothingMatches=null;renderClothing();
- const sources=state.archiveEntries.filter(x=>qualifiedOutfitReference(x)&&
+ // Reject historic/unbound exemplars. Revalidate each fresh canonical receipt.
+ state.verifiedOutfitReferences.clear();
+ const candidates=state.archiveEntries.filter(x=>x.source==='sd'&&
+    state.extraLinks.items[assignmentKey(x)]?.media_binding?.status==='bound_at_decision'&&
     state.clipEvidence.has(x.clip)&&num(state.clipEvidence.get(x.clip).person_count)===1&&
-    num(state.clipEvidence.get(x.clip).frames_with_distinct_multiple_person_boxes)===0);
+    num(state.clipEvidence.get(x.clip).frames_with_distinct_multiple_person_boxes)===0).slice(0,32);
+ const sources=[];
+ for(const candidate of candidates){
+  if(token!==state.clothingToken)break;
+  if(await revalidateOutfitReference(candidate))sources.push(candidate);
+ }
  // Reviewed single-person clips act as labelled examples, not biometric
  // training data. Use up to three distinct time-separated references per
  // person, rather than one outfit/photo being treated as their identity.
@@ -1190,6 +1236,8 @@ async function searchClothingMatches(force=false){
  const matches=new Map();let failures=0,checked=0;
  for(const {ref,person} of references){
   if(token!==state.clothingToken)break;
+  // Current original and decision rechecked at the actual evidence request.
+  if(!await revalidateOutfitReference(ref))continue;
   try{
    // Model-backed evidence exists only for verified detector crops.
    // Keep existing two-piece HSV comparison for other references.
