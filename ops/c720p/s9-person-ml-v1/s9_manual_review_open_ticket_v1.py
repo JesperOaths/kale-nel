@@ -62,6 +62,13 @@ class Tickets:
    if not row or not row['reserved']:raise Rejected('ticket_not_reserved')
    if not isinstance(proof,dict) or any(proof.get(k)!=row[k] for k in ('source','name','source_identity','source_revision')) or proof.get('sha256')!=row['original_sha256']:
     raise Rejected('viewed_original_proof_mismatch')
+ def revoke_if_unreserved(self,token):
+  """Viewer cancellation cannot interrupt a canonical commit in progress."""
+  with self.lock:
+   row=self.tokens.get(token)
+   if row is not None and row['reserved']:return False
+   self.tokens.pop(token,None)
+   return True
  def abort(self,token):
   with self.lock:self.tokens.pop(token,None)
  def consumed(self,token,*,durable_commit=False):
