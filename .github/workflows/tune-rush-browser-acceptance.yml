@@ -22,9 +22,16 @@ jobs:
         run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1
       - name: Verify browser source syntax
         run: node --check scripts/tune-rush-browser-acceptance.mjs
-      - name: Run three-device-browser acceptance against public site
+      - name: Run six-browser acceptance against actual PR page and live game database
         run: |
           set -euo pipefail
           echo "Using browser binary:"
           command -v google-chrome || command -v chromium || command -v chromium-browser
-          node scripts/tune-rush-browser-acceptance.mjs
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory . >/tmp/tune-rush-test-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for try in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/music/ >/dev/null; then break; fi
+            sleep 0.2
+          done
+          TUNE_RUSH_BASE="http://127.0.0.1:8080/music/?qa=candidate" node scripts/tune-rush-browser-acceptance.mjs
