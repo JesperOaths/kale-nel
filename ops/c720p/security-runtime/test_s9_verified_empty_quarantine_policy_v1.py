@@ -65,6 +65,19 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(r["state"],"restored")
         self.assertEqual((self.root/"Security4K"/self.name).read_bytes(),self.data)
 
+    def test_bounded_private_quarantine_and_audit_transition_history(self):
+        with self.assertRaisesRegex(self.m.Protected,"quarantine_capacity"):
+            self.accept(max_bytes=5)
+        self.assertTrue((self.root/"Security4K"/self.name).exists())
+        ticket=self.accept(max_items=1,max_bytes=1024)
+        self.assertEqual([e["action"] for e in ticket["history"]],
+                         ["intent","quarantined"])
+        qdir=self.root/"private-quarantine"
+        self.assertEqual(qdir.stat().st_mode & 0o777,0o700)
+        restored=self.m.fixture_restore(self.root,self.name)
+        self.assertEqual([e["action"] for e in restored["history"]],
+                         ["intent","quarantined","restored"])
+
     def test_confirmed_person_anywhere_is_never_quarantined(self):
         self.evidence["any_confirmed_person"]=True
         self.rejected("person_evidence")
