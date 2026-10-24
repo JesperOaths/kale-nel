@@ -28,6 +28,7 @@ create table if not exists musicquiz.rooms (
  first_answered boolean not null default false,
  is_steal boolean not null default false,
  locked_player uuid,
+ answer_until timestamptz,
  title_done boolean not null default false,
  artist_done boolean not null default false,
  winner uuid,
@@ -116,7 +117,7 @@ begin
   'phase',r.phase,'genres',to_jsonb(r.genres),'round',r.round_number,
   'step',r.step,'firstAnswered',r.first_answered,'stealTurn',r.is_steal,'clipMs',case r.step when 0 then 500 when 1 then 1500 when 2 then 3000
     when 3 then 5000 when 4 then 8000 when 5 then 12000 when 6 then 20000 else 0 end,
-  'lockedPlayer',r.locked_player,'titleDone',r.title_done,'artistDone',r.artist_done,
+  'lockedPlayer',r.locked_player,'answerExpiresAt',r.answer_until,'titleDone',r.title_done,'artistDone',r.artist_done,
   'title',case when r.title_done or r.phase in ('solved','finished') then t.title else null end,
   'artist',case when r.artist_done or r.phase in ('solved','finished') then t.artist else null end,
   'audio',case when host and r.current_track is not null then
@@ -195,7 +196,7 @@ begin
   update musicquiz.rooms set current_track=picked,
    used_tracks=array_append(r.used_tracks,picked),
    phase='paused',step=-1,round_number=r.round_number+1,
-   locked_player=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
+   locked_player=null,answer_until=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
    where id=r.id;
   update musicquiz.players set blocked_step=-99 where room_id=r.id;
  elsif p_action='play' then
@@ -215,12 +216,27 @@ begin
    raise exception 'buzz_closed';
   end if;
   if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
-  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=false where id=r.id;
+  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=false,answer_until=now()+interval '25 seconds' where id=r.id;
  elsif p_action='steal' then
   if is_host or r.phase<>'holding' or not r.first_answered then raise exception 'steal_closed'; end if;
   if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
-  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=true where id=r.id;
+  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=true,answer_until=now()+interval '25 seconds' where id=r.id;
+ elsif p_action='expire' then
+  if r.phase<>'answering' or r.answer_until is null or now()<r.answer_until then
+   raise exception 'answer_still_open';
+  end if;
+  update musicquiz.players set blocked_step=r.step where id=r.locked_player;
+  update musicquiz.rooms set phase='holding',locked_player=null,
+    first_answered=true,is_steal=false,answer_until=null where id=r.id;
+ elsif p_action='forfeit' then
+  if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
+   raise exception 'not_your_turn';
+  end if;
+  update musicquiz.players set blocked_step=r.step where id=p.id;
+  update musicquiz.rooms set phase='holding',locked_player=null,
+    first_answered=true,is_steal=false,answer_until=null where id=r.id;
  elsif p_action='answer' then
+  if r.answer_until is not null and now()>r.answer_until then raise exception 'answer_time_expired'; end if;
   if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
    raise exception 'not_your_turn';
   end if;
@@ -244,7 +260,7 @@ begin
   update musicquiz.players set score=greatest(0,score+delta),blocked_step=r.step where id=p.id
     returning score into delta;
   update musicquiz.rooms set
-   title_done=done_title,artist_done=done_artist,locked_player=null,
+   title_done=done_title,artist_done=done_artist,locked_player=null,answer_until=null,
    first_answered=true,is_steal=false,
    phase=case when delta>=20 then 'finished'
         when done_title and done_artist then 'solved' else 'holding' end,
