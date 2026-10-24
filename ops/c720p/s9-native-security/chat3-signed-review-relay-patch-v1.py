@@ -19,7 +19,7 @@ ARCHIVE_TIMEOUT_ANCHOR='  try:r=urllib.request.urlopen(req,timeout=8)'
 
 POST = """  # Chat3: explicitly signed original open / loaded observation.
   # This is below the existing authorized() boundary. No raw token is returned.
-  if path in ('/new/api/review-original-open','/new/api/review-original-loaded'):
+  if path in ('/new/api/review-original-open','/new/api/review-original-loaded','/new/api/review-original-cancel'):
    if not self.origin_ok() or self.headers.get('X-S9-Original-Review-Intent')!='explicit-original-open-v1':return self.empty(403)
    if self.headers.get('Sec-Fetch-Site','') not in ('','same-origin','same-site','none'):return self.empty(403)
    try:
@@ -27,12 +27,14 @@ POST = """  # Chat3: explicitly signed original open / loaded observation.
     if not 20<=n<=400 or 'application/json' not in self.headers.get('Content-Type','').lower():return self.empty(415)
     body=self.rfile.read(n);obj=json.loads(body)
     if not isinstance(obj,dict):return self.empty(400)
-    keys={'source','name'} if path=='/new/api/review-original-open' else {'source','name','open_nonce','observed_open_nonce'}
+    keys=({'source','name'} if path=='/new/api/review-original-open' else
+          {'source','name','open_nonce'} if path=='/new/api/review-original-cancel' else
+          {'source','name','open_nonce','observed_open_nonce'})
     if set(obj)!=keys or obj.get('source') not in ('sd','drive') or not isinstance(obj.get('name'),str):return self.empty(400)
     if obj['source']=='sd':
      if not re.fullmatch(r'motion_[0-9]{13}[.]mp4',obj['name']):return self.empty(400)
     elif not re.fullmatch(r'[A-Za-z0-9._-]{1,180}[.]mp4',obj['name']) or '..' in obj['name']:return self.empty(400)
-    if path=='/new/api/review-original-loaded' and any(not isinstance(obj[k],str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,128}',obj[k]) for k in ('open_nonce','observed_open_nonce')):return self.empty(400)
+    if path!=' /new/api/review-original-open'.strip() and any(not isinstance(obj[k],str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,128}',obj[k]) for k in (('open_nonce','observed_open_nonce') if path.endswith('-loaded') else ('open_nonce',))):return self.empty(400)
     request=urllib.request.Request('http://127.0.0.1:8795'+path,data=body,
       headers={'Content-Type':'application/json','X-S9-Original-Review-Intent':'explicit-original-open-v1','Origin':'http://127.0.0.1'},method='POST')
     try:reply=urllib.request.urlopen(request,timeout=170 if path=='/new/api/review-original-open' else 12)
