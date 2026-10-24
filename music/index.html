@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d101a">
+<meta name="robots" content="noindex">
+<title>Tune Rush • Kalenel</title>
+<link rel="stylesheet" href="./style.css?v=1">
+<script src="./app.js?v=1" defer></script>
+</head>
+<body>
+<header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v001 · Made by Bruis</span></header>
+<main class="shell">
+<section id="welcome" class="welcome">
+ <div class="hero"><div class="eyebrow">MULTIPLAYER MUSIC QUIZ</div><h1>Know the song.<br><em>Hit the buzzer.</em></h1>
+ <p>Hear increasingly longer snippets, be the first to buzz, and race to 20 points.</p></div>
+ <div class="welcome-grid">
+  <article class="panel"><div class="kicker">01 / TABLET</div><h2>Host a game</h2><p>Your tablet plays the music and controls the next round. The host never competes.</p><button id="create" class="primary">Create lobby <span aria-hidden="true">→</span></button></article>
+  <article class="panel"><div class="kicker">02 / PHONE</div><h2>Join a lobby</h2><p>Enter a room code and a nickname. No account or login required.</p>
+  <form id="join-form"><label for="join-code">Room code</label><input id="join-code" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="ABC234" required>
+  <label for="nickname">Your nickname</label><input id="nickname" maxlength="20" autocomplete="nickname" placeholder="Your name" required><button class="secondary" type="submit">Join game <span aria-hidden="true">→</span></button></form></article>
+ </div>
+ <p class="small-note">Demo pack: original synthesizer performances of public-domain melodies. Add licensed audio for modern songs. Spotify is unavailable for trivia under its developer policy.</p>
+</section>
+<section id="room" hidden>
+ <div class="room-head"><div><div class="eyebrow" id="role-indicator">HOST</div><h1 id="room-title">Game lobby</h1></div>
+ <button id="leave" class="quiet">Leave</button></div>
+ <div class="room-key"><div><span class="kicker">ROOM CODE</span><strong id="room-code">------</strong></div><button id="copy-invite" class="outline">Copy invite link</button></div>
+ <section id="lobby" class="room-layout">
+  <article class="panel"><div class="kicker">PLAYERS</div><h2>Waiting room</h2><div id="lobby-players" class="players"></div>
+   <div id="host-settings"><div class="kicker settings-title">MUSIC GENRES</div>
+    <div id="genre-options" class="genres">
+     <label><input type="checkbox" value="demo" checked> Demo melodies</label>
+     <label><input type="checkbox" value="pop"> Pop</label>
+     <label><input type="checkbox" value="rock"> Rock</label>
+     <label><input type="checkbox" value="hiphop"> Hip-hop</label>
+     <label><input type="checkbox" value="electronic"> Electronic</label>
+     <label><input type="checkbox" value="indie"> Indie</label>
+     <label><input type="checkbox" value="dutch"> Dutch</label>
+     <label><input type="checkbox" value="80s"> 80s</label>
+     <label><input type="checkbox" value="90s"> 90s</label>
+    </div><p class="small-note">Only Demo has tracks initially. Other genres become playable when properly licensed recordings are added.</p>
+    <button id="start" class="primary">Start game <span aria-hidden="true">♫</span></button>
+   </div><p id="guest-wait" class="waiting" hidden>Waiting for the host to start…</p>
+  </article>
+  <article class="panel rules"><div class="kicker">HOW IT WORKS</div><h2>First to 20 wins.</h2>
+   <p>Clips build from 0.5 to 1.5, 3, 5, 8, 12 and 20 seconds, with a pause between clips.</p>
+   <div class="rule"><span>+0.5</span> Correct song title</div><div class="rule"><span>+0.5</span> Correct artist</div>
+   <div class="rule"><span>−0.5</span> For each wrong part</div><div class="rule"><span>0</span> Leave a field empty or pass</div>
+   <p>Answers are first-come, server-locked. If the guess is incomplete, others can buzz while the track stays paused.</p>
+  </article>
+ </section>
+ <section id="playing" hidden>
+  <div class="game-grid">
+   <article class="stage panel"><div class="stage-label"><span id="round-label">ROUND 1</span><span id="hint-label">0.5 S</span></div>
+    <div class="disc" aria-hidden="true"><div class="disc-inner">♫</div></div>
+    <h2 id="stage-status">Get ready</h2><p id="stage-subtitle">Listen carefully…</p>
+    <div id="answer-reveal" class="reveal" hidden><strong id="revealed-title"></strong><span id="revealed-artist"></span></div>
+    <div id="host-controls" hidden><button id="enable-sound" class="outline">Enable tablet audio</button><button id="next-round" class="primary" hidden>Next round →</button><button id="skip-round" class="outline" hidden>Reveal &amp; skip</button></div>
+    <div id="player-controls" hidden>
+     <button id="buzz" class="buzzer" type="button">BUZZ!<small>FIRST PRESS WINS</small></button>
+     <form id="answer-form" class="answer-form" hidden><div class="kicker">YOU BUZZED FIRST!</div><label for="song-guess">Song title (+0.5 / −0.5)</label><input id="song-guess" maxlength="100" autocomplete="off" placeholder="Enter title">
+      <label for="artist-guess">Artist (+0.5 / −0.5)</label><input id="artist-guess" maxlength="100" autocomplete="off" placeholder="Enter artist">
+      <div class="button-row"><button type="submit" class="primary">Submit answer</button><button id="pass" type="button" class="outline">Pass</button></div>
+     </form>
+    </div>
+   </article>
+   <aside class="panel score-panel"><div class="kicker">LIVE LEADERBOARD</div><h2>Race to 20</h2><div id="scores" class="score-list"></div><div id="my-score" class="my-score" hidden>YOUR SCORE <strong>0</strong></div></aside>
+  </div>
+ </section>
+ <section id="finish" class="finish panel" hidden><div class="kicker">GAME OVER</div><h1>We have a winner!</h1><p id="winner-name"></p><div id="final-scores"></div></section>
+</section>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</main>
+<footer class="foot">KALENEL TUNE RUSH · v001 · Made by Bruis</footer>
+<audio id="licensed-player" preload="auto"></audio>
+</body>
+</html>
