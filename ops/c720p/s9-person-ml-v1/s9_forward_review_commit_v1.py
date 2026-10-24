@@ -22,7 +22,7 @@ def prepare_then_commit(*,source,name,review_ticket,expected_revision,tickets,
   result=locked_write(expected_revision,binding,revalidate)
   if not isinstance(result,dict) or result.get('persisted') is not True or result.get('revision')!=expected_revision+1:
    raise Denied('durable_readback_unverified')
-  tickets.consumed(review_ticket)
+  tickets.consumed(review_ticket,durable_commit=True)
   return result
  except BaseException:
   tickets.abort(review_ticket)
