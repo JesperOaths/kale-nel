@@ -52,10 +52,16 @@ def check(state,source,evidence,protection,*,trusted_attestation,allowed_models)
         raise Protected("person_present_or_uncertain")
     if evidence.get("source_sha256")!=digest or evidence.get("source_revision")!=rev:
         raise Protected("analysis_source_revision_stale")
-    if evidence.get("evidence_revision")!=state.get("evidence_revision"):
-        raise Protected("evidence_revision_changed")
-    if (not isinstance(allowed_models,(tuple,list,set,frozenset))
-        or evidence.get("model_id") not in allowed_models):
+    state_revision=state.get("evidence_revision")
+    evidence_revision=evidence.get("evidence_revision")
+    if (not isinstance(state_revision,str) or not state_revision.strip()
+        or not isinstance(evidence_revision,str) or not evidence_revision.strip()
+        or evidence_revision!=state_revision):
+        raise Protected("missing_or_changed_evidence_revision")
+    model_id=evidence.get("model_id")
+    if (not isinstance(model_id,str) or not model_id.strip()
+        or not isinstance(allowed_models,(tuple,list,set,frozenset))
+        or model_id not in allowed_models):
         raise Protected("model_not_owner_approved")
     if not callable(trusted_attestation) or trusted_attestation(evidence,source) is not True:
         raise Protected("evidence_attestation_unverified")
@@ -128,13 +134,16 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
     person assignment use THE SAME lock. Do not enable a timer with this.
     """
     root=Path(root).resolve(strict=True)
-    if not (root/FIXTURE_MARKER).is_file():
+    marker=root/FIXTURE_MARKER
+    if marker.is_symlink() or not marker.is_file():
         raise Protected("fixture_marker_required_no_production_operations")
     if shared_lock_contract is not True:
         raise Protected("save_delete_shared_lock_not_integrated")
     if not NAME.fullmatch(name):
         raise Protected("invalid_name")
     live=root/"Security4K"/name
+    if live.parent.is_symlink() or not live.parent.is_dir():
+        raise Protected("live_directory_not_a_real_directory")
     qdir=root/"private-quarantine"
     if qdir.is_symlink():
         raise Protected("quarantine_directory_symlink")
@@ -154,7 +163,7 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
         state,source,evidence,protection=read_state()
         check(state,source,evidence,protection,
               trusted_attestation=trusted_attestation,allowed_models=allowed_models)
-        if not live.is_file() or live.is_symlink():
+        if not live.is_file() or live.is_symlink() or live.stat().st_nlink!=1:
             raise Protected("original_missing_or_unsafe")
         if sha_file(live)!=source["sha256"]:
             raise Protected("original_bytes_changed")
@@ -163,6 +172,8 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
         state,source,evidence,protection=read_state()
         check(state,source,evidence,protection,
               trusted_attestation=trusted_attestation,allowed_models=allowed_models)
+        if not live.is_file() or live.is_symlink() or live.stat().st_nlink!=1:
+            raise Protected("original_replaced_or_unsafe_at_commit")
         if sha_file(live)!=source["sha256"]:
             raise Protected("original_changed_at_commit")
         target=qdir/name
@@ -194,10 +205,13 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
 
 def fixture_restore(root,name):
     root=Path(root).resolve(strict=True)
-    if not (root/FIXTURE_MARKER).is_file() or not NAME.fullmatch(name):
+    marker=root/FIXTURE_MARKER
+    if marker.is_symlink() or not marker.is_file() or not NAME.fullmatch(name):
         raise Protected("restore_fixture_only")
     qdir=root/"private-quarantine"
     live=root/"Security4K"/name
+    if live.parent.is_symlink() or not live.parent.is_dir():
+        raise Protected("restore_live_directory_unsafe")
     journal=qdir/(name+".quarantine.json")
     lockfile=root/".archive-lifecycle.lock"
     if (qdir.is_symlink() or journal.is_symlink() or lockfile.is_symlink()
@@ -206,10 +220,24 @@ def fixture_restore(root,name):
     with lockfile.open("a+") as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
         ticket=json.loads(journal.read_text())
-        if (ticket.get("name")!=name or ticket.get("quarantine")!=str(qdir/name)
-            or ticket.get("original")!=str(live) or ticket.get("permanently_deleted") is not False):
+        if (ticket.get("schema")!="s9_empty_clip_fixture_quarantine_v1"
+            or ticket.get("source_scope")!="S9_native_microSD"
+            or ticket.get("name")!=name or ticket.get("quarantine")!=str(qdir/name)
+            or ticket.get("original")!=str(live) or ticket.get("permanently_deleted") is not False
+            or not isinstance(ticket.get("digest"),str)
+            or not re.fullmatch(r"[0-9a-f]{64}",ticket["digest"])
+            or not isinstance(ticket.get("source_revision"),str)
+            or not ticket["source_revision"].strip()
+            or not isinstance(ticket.get("evidence_revision"),str)
+            or not ticket["evidence_revision"].strip()
+            or ticket.get("state") not in ("intent","quarantined","restored")):
             raise Protected("restore_ticket_invalid")
         target=qdir/name
+        if ticket["state"]=="restored":
+            if (os.path.lexists(target) or not live.is_file() or live.is_symlink()
+                or sha_file(live)!=ticket["digest"]):
+                raise Protected("already_restored_state_inconsistent")
+            return ticket  # idempotent restore: no duplicate audit history
         if (target.is_symlink() or live.is_symlink()
             or (os.path.lexists(live) and not live.is_file())):
             raise Protected("restore_unsafe_media_path")
