@@ -526,9 +526,12 @@ public final class CameraService extends Service {
     final long gateStarted=SystemClock.elapsedRealtime();
     ClipClassifier.GardenPersonEvidence evidence=null;
     float wholeFrameScore=0;boolean failed=false;
+    boolean transportVetoOnly=false;
     try{
      evidence=gardenGateClassifier.personEvidenceInGarden(jpg,top,margin,selectedZone);
      wholeFrameScore=gardenGateClassifier.lastPersonScoreAnywhere();
+     // This is a stronger contradiction than a temporary detector dropout.
+     transportVetoOnly=evidence==null&&gardenGateClassifier.lastGardenVehicleVetoes()>0;
     }
     catch(Throwable issue){
      failed=true;
@@ -538,6 +541,7 @@ public final class CameraService extends Service {
     final float[] personBox=evidence==null?null:evidence.box;
     final float anyScore=wholeFrameScore;
     final boolean error=failed;
+    final boolean rejectedByTransport=transportVetoOnly;
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
      gardenPersonGateBusy=false;
@@ -556,9 +560,10 @@ public final class CameraService extends Service {
      // A weak model prediction cannot form half of a valid two-frame track.
      if(score<GardenPersonTrackGate.MIN_SCORE){
       gardenPersonGateRejects++;
-      // Brief model dropout: keep last tracked positive within MAX_PAIR_MS
-      // but still require a later independent, associated detection.
-      personTrackGate.offer(now,jpegAt,score,null,0);
+      // An explicit transport conflict must cancel the stale positive
+      // rather than count as a recoverable missing detector observation.
+      if(rejectedByTransport)personTrackGate.rejectCompetingTransport();
+      else personTrackGate.offer(now,jpegAt,score,null,0);
       return;
      }
      gardenPersonGateMatches++;
