@@ -35,6 +35,28 @@ def build_preview(source):
  if result.count('s9_review_original_browser_v1.js')!=1 or result.count('security-people-v324-preview.js')!=1:
   raise RuntimeError('duplicate_preview_script')
  return result
+def camera_safe_for_inactive_preview(health):
+ # A read-only V324 preview does not consume the native 4K encoder. Working
+ # real-time fallback+preroll is sufficient; this MUST NOT downgrade native
+ # 4K capture acceptance or authorize forward binding.
+ if not isinstance(health,dict) or health.get('ok') is not True or health.get('mode')!='watching':
+  return False
+ if type(health.get('temperature_c')) not in (int,float) or health['temperature_c']>=39:
+  return False
+ if type(health.get('last_frame_age_ms')) is not int or not 0<=health['last_frame_age_ms']<1500:
+  return False
+ if health.get('capture_segment_continuation_pending') is not False:return False
+ full4k=(health.get('continuous_4k_ready') is True and
+         health.get('continuous_4k_dropped_output_frames')==0 and
+         not health.get('continuous_4k_error'))
+ fallback=(health.get('preroll_ready') is True and
+           type(health.get('preroll_buffered_ms')) is int and
+           health['preroll_buffered_ms']>=4400 and
+           health.get('preroll_dropped_frames')==0 and
+           health.get('garden_person_gate_ready') is True)
+ return full4k or fallback
+
+
 def apply(asset_directory):
  asset_directory=pathlib.Path(asset_directory)
  for name,expected in ((ASSET_PREVIEW,PREVIEW_SHA),(ASSET_BROWSER,BROWSER_SHA)):
@@ -51,8 +73,7 @@ def apply(asset_directory):
   raise RuntimeError('resource_guard_deferred')
  with urllib.request.urlopen('http://127.0.0.1:18808/status',timeout=4) as r:
   health=json.load(r)
- if not (health.get('mode')=='watching' and health.get('continuous_4k_ready') is True and
-         health.get('continuous_4k_dropped_output_frames')==0 and health.get('temperature_c',100)<39):
+ if not camera_safe_for_inactive_preview(health):
   raise RuntimeError('camera_guard_deferred')
  html=build_preview((WEB/ORIGINAL).read_text())
  timestamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
