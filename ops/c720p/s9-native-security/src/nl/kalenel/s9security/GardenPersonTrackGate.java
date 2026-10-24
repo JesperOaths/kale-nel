@@ -20,7 +20,10 @@ public final class GardenPersonTrackGate {
  private long firstAt=-1,firstJpegAt=-1;
  private boolean firstMotion;
  public long rejectedWeak=0,duplicateFrames=0,unrelatedBoxes=0,noLocalMotion=0,confirmed=0,unlikePersonShape=0;
+ public long transportInterrupted=0;
  public void reset(){firstBox=null;firstAt=-1;firstJpegAt=-1;firstScore=0;firstMotion=false;}
+ /** Explicit transport contradiction ends a pending two-frame person track. */
+ public void rejectCompetingTransport(){transportInterrupted++;reset();}
  public Decision offer(long now,long jpegAt,float score,float[] box,int recentMotionCells){
   if(now<1||jpegAt<1||jpegAt>now+200||!Float.isFinite(score)||
      score<MIN_SCORE||!valid(box)){
