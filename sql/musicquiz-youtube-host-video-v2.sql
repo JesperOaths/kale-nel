@@ -1,13 +1,9 @@
--- Tune Rush: explicitly visible host-side official YouTube video player, no audio extraction.
--- Additive and isolated; uses YouTube video IDs from host-provided music.youtube.com/watch links.
-alter table musicquiz.rooms add column if not exists source_mode text not null default 'demo'
- check(source_mode in ('demo','youtube'));
-alter table musicquiz.rooms add column if not exists youtube_video_id text
- check (youtube_video_id is null or youtube_video_id ~ '^[A-Za-z0-9_-]{11}$');
+-- Official visible YouTube embed, host-only music video ID and privately stored answers.
+alter table musicquiz.rooms add column if not exists source_mode text not null default 'demo' check (source_mode in ('demo','youtube'));
+alter table musicquiz.rooms add column if not exists youtube_video_id text check (youtube_video_id is null or youtube_video_id ~ '^[A-Za-z0-9_-]{11}$');
 alter table musicquiz.rooms add column if not exists youtube_title text;
 alter table musicquiz.rooms add column if not exists youtube_artist text;
-alter table musicquiz.rooms add column if not exists youtube_cue_ms integer not null default 0
- check(youtube_cue_ms between 0 and 600000);
+alter table musicquiz.rooms add column if not exists youtube_cue_ms integer not null default 0 check (youtube_cue_ms between 0 and 600000);
 create or replace function musicquiz.visible_state(p_id uuid,p_hash text) returns jsonb
 language plpgsql security invoker set search_path = pg_catalog, musicquiz as $f$
 declare r musicquiz.rooms%rowtype; t musicquiz.tracks%rowtype; p musicquiz.players%rowtype;
@@ -35,11 +31,10 @@ begin
   'title',case when r.title_done or r.phase in ('solved','finished') then case when r.source_mode='youtube' then r.youtube_title else t.title end else null end,
   'artist',case when r.artist_done or r.phase in ('solved','finished') then case when r.source_mode='youtube' then r.youtube_artist else t.artist end else null end,
   'audio',case when not host then null
-    when r.source_mode='youtube' and r.youtube_video_id is not null then
-      jsonb_build_object('source','youtube:'||r.youtube_video_id,'cueMs',r.youtube_cue_ms)
-    when r.current_track is not null then
-      jsonb_build_object('source',t.source,'cueMs',t.cue_ms)
-    else null end,
+      when r.source_mode='youtube' and r.youtube_video_id is not null then
+       jsonb_build_object('source','youtube:'||r.youtube_video_id,'cueMs',r.youtube_cue_ms)
+      when r.current_track is not null then jsonb_build_object('source',t.source,'cueMs',t.cue_ms)
+      else null end,
   'winner',r.winner,'expiresAt',r.expires_at);
 end
 $f$;
@@ -106,10 +101,36 @@ begin
   desired_mode:=case when p_action='start' then coalesce(p_data->>'mode','demo') else r.source_mode end;
   if desired_mode not in ('demo','youtube') then raise exception 'invalid_music_source'; end if;
   if desired_mode='youtube' then
-    video_id:=trim(coalesce(p_data->>'videoId',''));
-    song:=left(trim(coalesce(p_data->>'song','')),100);
-    artist:=left(trim(coalesce(p_data->>'artist','')),100);
-    if video_id !~ '^[A-Za-z0-9_-]{11}
+   video_id:=trim(coalesce(p_data->>'videoId',''));
+   song:=left(trim(coalesce(p_data->>'song','')),100);
+   artist:=left(trim(coalesce(p_data->>'artist','')),100);
+   if video_id !~ '^[A-Za-z0-9_-]{11}$' then raise exception 'invalid_youtube_video'; end if;
+   if length(song)<1 or length(artist)<1 then raise exception 'provide_song_and_artist'; end if;
+   if coalesce(p_data->>'cueMs','') !~ '^[0-9]{1,6}$' then raise exception 'invalid_cue'; end if;
+   cue:=(p_data->>'cueMs')::integer;
+   if cue>600000 then raise exception 'invalid_cue'; end if;
+   update musicquiz.rooms set current_track=null,source_mode='youtube',
+    youtube_video_id=video_id,youtube_title=song,youtube_artist=artist,youtube_cue_ms=cue,
+    phase='paused',step=-1,round_number=r.round_number+1,
+    locked_player=null,answer_until=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
+    where id=r.id;
+  else
+   select x.id into picked from musicquiz.tracks x
+    where x.enabled and x.genre=any(r.genres) and not(x.id=any(r.used_tracks))
+    order by random() limit 1;
+   if picked is null then
+    select x.id into picked from musicquiz.tracks x
+     where x.enabled and x.genre=any(r.genres) order by random() limit 1;
+    if picked is null then raise exception 'no_licensed_songs_for_genres'; end if;
+    r.used_tracks:='{}';
+   end if;
+   update musicquiz.rooms set current_track=picked,source_mode='demo',
+    youtube_video_id=null,youtube_title=null,youtube_artist=null,youtube_cue_ms=0,
+    used_tracks=array_append(r.used_tracks,picked),
+    phase='paused',step=-1,round_number=r.round_number+1,
+    locked_player=null,answer_until=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
+    where id=r.id;
+  end if;
   update musicquiz.players set blocked_step=-99 where room_id=r.id;
  elsif p_action='play' then
   if not is_host or r.phase<>'paused' or r.locked_player is not null then
@@ -161,201 +182,15 @@ begin
   end if;
   if song<>'' and not done_title then
    title_ok := musicquiz.accepted_guess(song,
-     case when r.source_mode='youtube' then r.youtube_title else t.title end,
-     case when r.source_mode='youtube' then '{}'::text[] else t.title_aliases end);
+    case when r.source_mode='youtube' then r.youtube_title else t.title end,
+    case when r.source_mode='youtube' then '{}'::text[] else t.title_aliases end);
    delta:=delta+case when title_ok then 0.5 when r.is_steal then -1 else -0.5 end;
    done_title:=title_ok;
   end if;
   if artist<>'' and not done_artist then
    artist_ok := musicquiz.accepted_guess(artist,
-     case when r.source_mode='youtube' then r.youtube_artist else t.artist end,
-     case when r.source_mode='youtube' then '{}'::text[] else t.artist_aliases end);
-   delta:=delta+case when artist_ok then 0.5 when r.is_steal then -1 else -0.5 end;
-   done_artist:=artist_ok;
-  end if;
-  update musicquiz.players set score=greatest(0,score+delta),blocked_step=r.step where id=p.id
-    returning score into delta;
-  update musicquiz.rooms set
-   title_done=done_title,artist_done=done_artist,locked_player=null,answer_until=null,
-   first_answered=true,is_steal=false,
-   phase=case when delta>=20 then 'finished'
-        when done_title and done_artist then 'solved' else 'holding' end,
-   winner=case when delta>=20 then p.id else winner end where id=r.id;
- elsif p_action='skip' then
-  if not is_host or r.phase not in ('paused','playing','holding') or r.step<6 then
-   raise exception 'skip_unavailable';
-  end if;
-  update musicquiz.rooms set phase='solved',title_done=true,artist_done=true,
-    locked_player=null where id=r.id;
- elsif p_action<>'state' then
-  raise exception 'unknown_action';
- end if;
- return musicquiz.visible_state(r.id,p_hash);
-end
-$f$;
- then raise exception 'invalid_youtube_video'; end if;
-    if length(song)<1 or length(artist)<1 then raise exception 'provide_song_and_artist'; end if;
-    if coalesce(p_data->>'cueMs','') !~ '^[0-9]{1,6}
-  update musicquiz.players set blocked_step=-99 where room_id=r.id;
- elsif p_action='play' then
-  if not is_host or r.phase<>'paused' or r.locked_player is not null then
-   raise exception 'not_ready_for_clip';
-  end if;
-  if r.step>=6 then raise exception 'all_hints_used'; end if;
-  update musicquiz.rooms set step=step+1,phase='playing',first_answered=false,is_steal=false where id=r.id;
- elsif p_action='pause' then
-  if not is_host then raise exception 'host_only'; end if;
-  if r.phase='playing' then update musicquiz.rooms set phase='paused' where id=r.id; end if;
- elsif p_action='resume' then
-  if not is_host or r.phase<>'holding' or r.step>=6 then raise exception 'resume_unavailable'; end if;
-  update musicquiz.rooms set phase='paused' where id=r.id;
- elsif p_action='buzz' then
-  if is_host or r.phase not in ('playing','paused') or r.step<0 or r.first_answered then
-   raise exception 'buzz_closed';
-  end if;
-  if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
-  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=false,answer_until=now()+interval '25 seconds' where id=r.id;
- elsif p_action='steal' then
-  if is_host or r.phase<>'holding' or not r.first_answered then raise exception 'steal_closed'; end if;
-  if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
-  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=true,answer_until=now()+interval '25 seconds' where id=r.id;
- elsif p_action='expire' then
-  if r.phase<>'answering' or r.answer_until is null or now()<r.answer_until then
-   raise exception 'answer_still_open';
-  end if;
-  update musicquiz.players set blocked_step=r.step where id=r.locked_player;
-  update musicquiz.rooms set phase='holding',locked_player=null,
-    first_answered=true,is_steal=false,answer_until=null where id=r.id;
- elsif p_action='forfeit' then
-  if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
-   raise exception 'not_your_turn';
-  end if;
-  update musicquiz.players set blocked_step=r.step where id=p.id;
-  update musicquiz.rooms set phase='holding',locked_player=null,
-    first_answered=true,is_steal=false,answer_until=null where id=r.id;
- elsif p_action='answer' then
-  if r.answer_until is not null and now()>r.answer_until then raise exception 'answer_time_expired'; end if;
-  if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
-   raise exception 'not_your_turn';
-  end if;
-  select * into t from musicquiz.tracks where id=r.current_track;
-  song:=left(trim(coalesce(p_data->>'song','')),100);
-  artist:=left(trim(coalesce(p_data->>'artist','')),100);
-  done_title:=r.title_done; done_artist:=r.artist_done;
-  if r.is_steal and ((not done_title and song='') or (not done_artist and artist='')) then
-    raise exception 'steal_requires_remaining_answers';
-  end if;
-  if song<>'' and not done_title then
-   title_ok := musicquiz.accepted_guess(song,t.title,t.title_aliases);
-   delta:=delta+case when title_ok then 0.5 when r.is_steal then -1 else -0.5 end;
-   done_title:=title_ok;
-  end if;
-  if artist<>'' and not done_artist then
-   artist_ok := musicquiz.accepted_guess(artist,t.artist,t.artist_aliases);
-   delta:=delta+case when artist_ok then 0.5 when r.is_steal then -1 else -0.5 end;
-   done_artist:=artist_ok;
-  end if;
-  update musicquiz.players set score=greatest(0,score+delta),blocked_step=r.step where id=p.id
-    returning score into delta;
-  update musicquiz.rooms set
-   title_done=done_title,artist_done=done_artist,locked_player=null,answer_until=null,
-   first_answered=true,is_steal=false,
-   phase=case when delta>=20 then 'finished'
-        when done_title and done_artist then 'solved' else 'holding' end,
-   winner=case when delta>=20 then p.id else winner end where id=r.id;
- elsif p_action='skip' then
-  if not is_host or r.phase not in ('paused','playing','holding') or r.step<6 then
-   raise exception 'skip_unavailable';
-  end if;
-  update musicquiz.rooms set phase='solved',title_done=true,artist_done=true,
-    locked_player=null where id=r.id;
- elsif p_action<>'state' then
-  raise exception 'unknown_action';
- end if;
- return musicquiz.visible_state(r.id,p_hash);
-end
-$f$;
- then raise exception 'invalid_cue'; end if;
-    cue:=(p_data->>'cueMs')::integer;
-    if cue > 600000 then raise exception 'invalid_cue'; end if;
-    update musicquiz.rooms set current_track=null,source_mode='youtube',
-      youtube_video_id=video_id,youtube_title=song,youtube_artist=artist,youtube_cue_ms=cue,
-      phase='paused',step=-1,round_number=r.round_number+1,
-      locked_player=null,answer_until=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
-      where id=r.id;
-  else
-    select x.id into picked from musicquiz.tracks x
-     where x.enabled and x.genre=any(r.genres) and not(x.id=any(r.used_tracks))
-     order by random() limit 1;
-    if picked is null then
-     select x.id into picked from musicquiz.tracks x
-      where x.enabled and x.genre=any(r.genres) order by random() limit 1;
-     if picked is null then raise exception 'no_licensed_songs_for_genres'; end if;
-     r.used_tracks:='{}';
-    end if;
-    update musicquiz.rooms set current_track=picked,source_mode='demo',
-      youtube_video_id=null,youtube_title=null,youtube_artist=null,youtube_cue_ms=0,
-      used_tracks=array_append(r.used_tracks,picked),
-      phase='paused',step=-1,round_number=r.round_number+1,
-      locked_player=null,answer_until=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
-      where id=r.id;
-  end if;
-  update musicquiz.players set blocked_step=-99 where room_id=r.id;
- elsif p_action='play' then
-  if not is_host or r.phase<>'paused' or r.locked_player is not null then
-   raise exception 'not_ready_for_clip';
-  end if;
-  if r.step>=6 then raise exception 'all_hints_used'; end if;
-  update musicquiz.rooms set step=step+1,phase='playing',first_answered=false,is_steal=false where id=r.id;
- elsif p_action='pause' then
-  if not is_host then raise exception 'host_only'; end if;
-  if r.phase='playing' then update musicquiz.rooms set phase='paused' where id=r.id; end if;
- elsif p_action='resume' then
-  if not is_host or r.phase<>'holding' or r.step>=6 then raise exception 'resume_unavailable'; end if;
-  update musicquiz.rooms set phase='paused' where id=r.id;
- elsif p_action='buzz' then
-  if is_host or r.phase not in ('playing','paused') or r.step<0 or r.first_answered then
-   raise exception 'buzz_closed';
-  end if;
-  if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
-  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=false,answer_until=now()+interval '25 seconds' where id=r.id;
- elsif p_action='steal' then
-  if is_host or r.phase<>'holding' or not r.first_answered then raise exception 'steal_closed'; end if;
-  if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
-  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=true,answer_until=now()+interval '25 seconds' where id=r.id;
- elsif p_action='expire' then
-  if r.phase<>'answering' or r.answer_until is null or now()<r.answer_until then
-   raise exception 'answer_still_open';
-  end if;
-  update musicquiz.players set blocked_step=r.step where id=r.locked_player;
-  update musicquiz.rooms set phase='holding',locked_player=null,
-    first_answered=true,is_steal=false,answer_until=null where id=r.id;
- elsif p_action='forfeit' then
-  if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
-   raise exception 'not_your_turn';
-  end if;
-  update musicquiz.players set blocked_step=r.step where id=p.id;
-  update musicquiz.rooms set phase='holding',locked_player=null,
-    first_answered=true,is_steal=false,answer_until=null where id=r.id;
- elsif p_action='answer' then
-  if r.answer_until is not null and now()>r.answer_until then raise exception 'answer_time_expired'; end if;
-  if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
-   raise exception 'not_your_turn';
-  end if;
-  select * into t from musicquiz.tracks where id=r.current_track;
-  song:=left(trim(coalesce(p_data->>'song','')),100);
-  artist:=left(trim(coalesce(p_data->>'artist','')),100);
-  done_title:=r.title_done; done_artist:=r.artist_done;
-  if r.is_steal and ((not done_title and song='') or (not done_artist and artist='')) then
-    raise exception 'steal_requires_remaining_answers';
-  end if;
-  if song<>'' and not done_title then
-   title_ok := musicquiz.accepted_guess(song,t.title,t.title_aliases);
-   delta:=delta+case when title_ok then 0.5 when r.is_steal then -1 else -0.5 end;
-   done_title:=title_ok;
-  end if;
-  if artist<>'' and not done_artist then
-   artist_ok := musicquiz.accepted_guess(artist,t.artist,t.artist_aliases);
+    case when r.source_mode='youtube' then r.youtube_artist else t.artist end,
+    case when r.source_mode='youtube' then '{}'::text[] else t.artist_aliases end);
    delta:=delta+case when artist_ok then 0.5 when r.is_steal then -1 else -0.5 end;
    done_artist:=artist_ok;
   end if;
