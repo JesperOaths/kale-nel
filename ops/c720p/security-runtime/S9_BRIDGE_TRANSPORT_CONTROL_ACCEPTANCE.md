@@ -52,7 +52,9 @@ intermittent phone Wi-Fi/adbd loss is not proven by host NIC counters.
 `python3 ops/c720p/security-runtime/s9-native-bridge-readonly-check-v1.py`
 
 It uses two bounded samples of the existing **direct wireless** ADB device,
-exact model, exact 18808 forward and camera-frame advancement. A status
+exact SM-G965F model **and owner-pinned device serial 27bb603837047ece**,
+exact 18808 forward and camera-frame advancement; both device identity and
+forward mapping are rechecked after the interval. A status
 failure triggers a *read-only after-failure discrimination*:
 - ADB `get-state` not device -> transport loss.
 - ADB alive, the mapping gone -> missing forward.
@@ -63,8 +65,9 @@ failure triggers a *read-only after-failure discrimination*:
 - All checks pass -> bounded liveness only; never an exclusive lease,
   permission to STOP, or Task9 admission.
 
-`test_s9_native_bridge_readonly_check_v1.py`: **10/10 offline fixture
-tests pass**, including API-only refusal, forward loss and ADB transport loss.
+`test_s9_native_bridge_readonly_check_v1.py`: **13/13 offline fixture
+tests pass**, including API-only refusal, forward loss, ADB transport loss,
+initial wrong serial and changed serial between observations.
 No live phone call is required for these tests. The code must not be wired
 directly to `ExecStartPost` for all modes: it presently expects `watching`,
 whereas a healthy service can legitimately be `recording`.
@@ -72,7 +75,7 @@ whereas a healthy service can legitimately be `recording`.
 The separate `s9-direct-usb-transport-preflight-v1.py` is *optional*
 and source-only. Its preflight does not convert USB to Wi-Fi; `--prepare`
 only installs a dedicated non-rebinding forward when explicitly authorized.
-It cannot reserve a management transaction. All six USB offline tests passed,
+It cannot reserve a management transaction. All seven USB offline tests passed,
 but no physical S9 USB acceptance has been established.
 
 **Do not reroute any previously rejected phone-inspection operation.**
