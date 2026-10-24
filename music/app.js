@@ -1,6 +1,14 @@
 "use strict";
 // Kalenel Tune Rush v001. Public page, guest-only rooms; no Spotify use.
-const ENDPOINT="https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/music-game-v1";
+const ENDPOINT="https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/musicquiz_v1";
+const PUBLISHABLE_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+const ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function randomSecret(){const a=new Uint8Array(32);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
+function randomRoom(){const a=new Uint8Array(6);crypto.getRandomValues(a);return [...a].map(x=>ROOM_ALPHABET[x%ROOM_ALPHABET.length]).join("")}
+async function capabilityHash(token){
+ const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token));
+ return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
 const STORE="kalenel_tunerush_room_v001";
 const $=id=>document.getElementById(id);
 const playerAudio=$("licensed-player");
@@ -26,17 +34,36 @@ function message(s) {
 function setText(id,value){$(id).textContent=String(value??"")}
 function safeStore(){try{if(access)localStorage.setItem(STORE,JSON.stringify(access));else localStorage.removeItem(STORE)}catch{}}
 async function rpc(action,extra={}) {
- const payload={action,code:access?.code,token:access?.token,...extra};
+ const creating=action==="create",joining=action==="join";
+ const token=creating||joining?randomSecret():access?.token;
+ const code=creating?randomRoom():String(extra.code||access?.code||"").toUpperCase();
+ if(!token||!/^[A-HJ-NP-Z2-9]{6}$/.test(code))throw Error("invalid_code");
+ const p_data={
+  name:String(extra.name||"").slice(0,20),
+  song:String(extra.song||"").slice(0,100),
+  artist:String(extra.artist||"").slice(0,100),
+  genres:Array.isArray(extra.genres)?extra.genres.slice(0,12):[]
+ };
+ const body={p_action:action,p_code:code,p_hash:await capabilityHash(token),p_data};
  let res;
  try {
-  res=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},
-    cache:"no-store",body:JSON.stringify(payload)});
+  res=await fetch(ENDPOINT,{
+   method:"POST",
+   headers:{"Content-Type":"application/json","apikey":PUBLISHABLE_KEY},
+   cache:"no-store",body:JSON.stringify(body)
+  });
  }catch{throw Error("temporary_failure")}
- let body;
- try{body=await res.json()}catch{throw Error("temporary_failure")}
- if(!res.ok||!body?.state)throw Error(body?.error||"request_failed");
- return body;
+ let data;
+ try{data=await res.json()}catch{throw Error("temporary_failure")}
+ if(!res.ok){
+  const known=String(data?.message||"").split("\\n")[0];
+  if(data?.code==="23505"&&creating)return rpc(action,extra);
+  throw Error(known||"request_failed");
+ }
+ if(!data?.role||data?.code!==code)throw Error("request_failed");
+ return {state:data,...((creating||joining)?{token}:{})};
 }
+
 function clearAudio(){
  clearTimeout(clipTimer);clipTimer=null;
  voices.forEach(o=>{try{o.stop()}catch{}});
