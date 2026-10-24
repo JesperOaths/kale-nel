@@ -64,8 +64,10 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .youtube-frame{aspect-ratio:16/9;width:100%;min-height:220px;min-width:200px;position:relative;display:flex;align-items:center;justify-content:center;background:#080a10;border-radius:9px;overflow:hidden}
 .youtube-frame iframe{width:100%;height:100%;position:absolute;inset:0;border:0;min-width:200px;min-height:200px}
 .youtube-host .small-note{font-size:11px;margin:13px 3px 4px;text-align:left}
-#youtube-play-hint{background:linear-gradient(110deg,#ffda8d,#ffb656);margin:10px 0;width:100%;padding:19px 14px;box-shadow:0 7px 29px #d2965541}
+#youtube-play-hint{background:linear-gradient(110deg,#ffda8d,#ffb656);margin:0 0 0 auto;width:auto;min-width:170px;padding:12px 15px;font-size:13px;box-shadow:0 7px 29px #d2965541}
 .youtube-next-form{text-align:left;margin:15px 0;padding:20px;background:#101927;border:1px solid #d4b26d80;border-radius:17px}
 .youtube-next-form h3{font-size:18px;margin:0 0 12px}
 .youtube-next-form button{margin-top:17px;width:100%}
 @media(max-width:650px){.source-select{grid-template-columns:1fr}.youtube-heading{flex-direction:column;align-items:flex-start}.youtube-heading span{text-align:left}.youtube-frame{min-height:210px}}
+
+@media(max-width:650px){#youtube-play-hint{margin:8px 0;width:100%}.youtube-heading{align-items:stretch}}
