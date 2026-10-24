@@ -90,10 +90,10 @@ quarantine + restore demonstrator. The demonstrator has no production caller
 and explicitly refuses ordinary archive paths. It must be ported inside the
 native lifecycle after owner agreement, not scheduled on C720P.
 
-`test_s9_verified_empty_quarantine_policy_v1.py` has 15 isolated tests
+`test_s9_verified_empty_quarantine_policy_v1.py` has 20 isolated tests
 covering person protection, uncertainty, 3-frame refusal, complete preroll/tail,
 low visibility, source replacement, all human protections, concurrent Save,
-interruption after the atomic move and restore. All passed on 2026-10-24. Fixture moves are bounded to at most 25 clips and 512 MiB, with intent/quarantine/restore transitions retained, and parent directory fsync.
+interruption after the atomic move and restore. All 20 passed in a pinned offline host run on 2026-10-24. Fixture moves are bounded to at most 25 clips and 512 MiB. The intent ticket's **directory entry** is fsynced before the original is moved; subsequent rename and restore also fsync both parent directories, preserving intent/quarantine/restore transitions. Symlinked quarantine directories, journals, targets and locks and dangling target names fail closed. These are isolated fixture checks, not proof of a production Android atomic lock.
 
 ## Release acceptance sequence (not completed)
 
@@ -111,9 +111,13 @@ interruption after the atomic move and restore. All passed on 2026-10-24. Fixtur
    number of actually moved bytes and their source scope; report **zero disk
    space recovered** until real storage is reclaimed independently.
 
-Status 24 October: **source and 15 tests prepared; no production enrollment,
+Status 24 October: **source and 20 tests prepared; no production enrollment,
 no actual clips quarantined or classified, no storage recovered by hiding.**
 
 ## Legacy move interlock in this draft
 
 This PR also inserts a fail-closed native source-only gate immediately before the existing `GardenArchiveTriage` rename. `hasTrustedFullVideoEmptyAttestation` returns **false** until the signed Chat2 coverage and shared Chat3 Save/review transaction verifier are implemented; no JSON flag or sampled-negative result can bypass it. Two additional source-only tests verify the gate occurs before the rename. This source protection is **not deployed to the currently installed Camera2 APK**, and does not establish that the live preexisting native triage has stopped. Do not install/restart Camera2 under this PR.
+
+## Additional crash-safety hardening (2026-10-24)
+
+Journal `atomic_json` now fsyncs its parent directory after the atomic temporary-file rename; fsyncing only the ticket bytes did not make the ticket *name* durable. This fsync completes before moving any source media. The fixture also refuses symlinked or dangling targets and source/restore journal redirection. Five new tests verify the ordering and those fail-closed cases: **20/20 isolated fixture tests passed** on the C720P using pinned commit `e555b048d86a99eb29ae573b180d963d76fac7eb`. Policy SHA-256 `9bea9164cc5ceaab1b06ad551eeafb4905c49f06ca9e9e03b5aadb42dd60bbac`; test SHA-256 `2441dba904b78fe053d39669edae9c473e594321fde32851fc8049617a051d5c`. No production rollout, real media, signed human decision or live Android camera was accessed by these tests.
