@@ -1,5 +1,5 @@
 """No media I/O: isolated byte-range delegate tests."""
-import io,pathlib,sys,unittest
+import io,pathlib,sys,unittest,hashlib,importlib.util
 from unittest.mock import patch
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]/'s9-person-ml-v1'))
 import s9_trusted_original_media_bridge_v1 as bridge
@@ -16,6 +16,51 @@ class Handler:
     def send_header(self,key,value):self.fields[key]=value
     def end_headers(self):pass
 class Tests(unittest.TestCase):
+    def test_signed_relay_patch_routes_open_and_loaded_with_pinned_source(self):
+        # A synthetic relay template: tests pure source transformation only,
+        # never starts 8794, opens a media file or performs physical acceptance.
+        script=pathlib.Path(__file__).with_name('chat3-signed-review-relay-patch-v1.py')
+        spec=importlib.util.spec_from_file_location('chat3_signed_relay_patch',script)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        template="""import re,json,urllib.parse,urllib.request,urllib.error
+class H:
+ def authorized(self):return True
+ def origin_ok(self):return True
+ def empty(self,n):return n
+ def do_POST(self):
+  path=urllib.parse.urlsplit(self.path).path
+  if not self.authorized():return self.empty(401)
+  if path=='/new/api/verified-people/review':return self.empty(418)
+  if path=='/new/api/s9-manual-recording-links':
+   obj={}
+    if not isinstance(obj,dict) or (set(obj)!={'action','source','name','folder','revision','human_confirmed'} and not (obj.get('action')=='assign_many' and set(obj)=={'action','source','name','folder','folders','revision','human_confirmed'})):return self.empty(400)
+ def go(self,head=False):
+  path=urllib.parse.urlsplit(self.path).path
+  if not self.authorized():return self.empty(401)
+  # S9_MANUAL_LINKS_LAN_ROUTE_V2 read-only, guarded after authorized()
+ def archive(self,cam,subpath,head=False):
+  q=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+  if subpath=='/api/anonymous-quality-consumption':
+   return self.empty(400)
+ def cors(self):
+  self.send_header('Access-Control-Allow-Headers','X-S9-Automatic-Person-Intent')
+"""
+        # The real C720P installed Git blob has been independently checked
+        # against BASE_BLOB. Synthetic fixture substitutes its own known blob.
+        raw=template.encode()
+        blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\\0'+raw).hexdigest()
+        with patch.object(module,'BASE_BLOB',blob):
+            updated=module.patch(template)
+            self.assertEqual(module.patch(updated),updated)
+            self.assertIn("path=='/new/api/review-original-open'",updated)
+            self.assertIn("path=='/new/api/review-original-loaded'",updated)
+            self.assertNotIn("path.endswith('/open')",updated)
+            self.assertNotIn("path.endswith('/loaded')",updated)
+            self.assertIn('self.send_response(reply.status)',updated)
+            self.assertIn("status",updated)
+            self.assertLess(updated.index('if not self.authorized()'),updated.index("if path in ('/new/api/review-original-open'"))
+            with self.assertRaisesRegex(ValueError,'installed_relay_blob_changed'):
+                module.patch(template+'\\n# unauthorized newer source')
     def test_bounded_metadata_and_seek(self):
         self.assertEqual(bridge.requested_range('bytes=0-',15_000_000),(0,bridge.LIMIT-1))
         self.assertEqual(bridge.requested_range('bytes=900-1023',12000),(900,1023))
