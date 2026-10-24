@@ -159,6 +159,8 @@ function clearAudio(){
  clearTimeout(clipTimer);clipTimer=null;
  voices.forEach(o=>{try{o.stop()}catch{}});
  voices=[];playerAudio.pause();
+ youtubeWaitCancelled();
+ try{ytPlayer?.pauseVideo()}catch{}
  startedClip=false;
 }
 function cancelNext(){clearTimeout(nextTimer);nextTimer=null}
@@ -197,7 +199,9 @@ function freq(note){
 }
 async function startAudio(info,ms) {
  if(!info?.source)throw Error("No recording assigned");
- if(info.source.startsWith("demo:")){
+ if(info.source.startsWith("youtube:")){
+  await playYoutubeHint(info);
+ } else if(info.source.startsWith("demo:")){
   await soundResumeSilently();
   const sequence=notesFor(info.source);
   const step=0.33, t0=ctx.currentTime+0.03,duration=ms/1000;
@@ -244,7 +248,7 @@ async function soundResumeSilently(){
  if(ctx.state!=="running")throw Error("Please tap Enable tablet audio");
 }
 function scheduleNext(delay){
- if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer)return;
+ if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube")return;
  const round=room.round,step=room.step;
  nextTimer=setTimeout(async()=>{
   nextTimer=null;
@@ -270,7 +274,10 @@ async function startClip(){
     if(room.phase==="paused")scheduleNext(1000);
    }catch(e){message(e.message)}
   },room.clipMs);
- }catch(e){clearAudio();message(e.message||"Playback failed");}
+ }catch(e){
+  clearAudio();message(e.message||"Playback failed");
+  if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
+ }
  finally{loading=false}
 }
 function applyState(s){
@@ -311,6 +318,7 @@ function render(){
  setText("room-code",room.code);
  show("lobby",phase==="lobby");show("playing",phase!=="lobby");
  show("host-settings",host);show("guest-wait",!host);
+ if(host&&phase==="lobby")updateAudioChoice();
  $("lobby-players").replaceChildren(...room.players.map(x=>makePlayer(x.name)));
  if(phase==="lobby"&&!genresDirty){
   document.querySelectorAll("#genre-options input").forEach(input=>{
@@ -344,8 +352,16 @@ function render(){
   setText("revealed-title",room.titleDone||phase==="solved"||phase==="finished"?room.title:"Song title: ???");
   setText("revealed-artist",room.artistDone||phase==="solved"||phase==="finished"?room.artist:"Artist: ???");
   show("host-controls",host);show("player-controls",!host);
-  show("next-round",host&&phase==="solved");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&room.step===6&&(phase==="paused"||phase==="playing"||phase==="holding"));
-  show("enable-sound",host&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
+  const youtubeMode=room.mode==="youtube";
+  show("youtube-host",host&&youtubeMode);
+  if(host&&youtubeMode&&room.audio?.source?.startsWith("youtube:")){
+   ensureYoutubePlayer(room.audio.source.slice(8),room.audio.cueMs||0).catch(e=>message(e.message));
+  }
+  show("youtube-play-hint",host&&youtubeMode&&phase==="paused"&&room.step<6);
+  show("youtube-next-form",host&&youtubeMode&&phase==="solved");
+
+  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&room.step===6&&(phase==="paused"||phase==="playing"||phase==="holding"));
+  show("enable-sound",host&&room.mode!=="youtube"&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
@@ -470,7 +486,21 @@ $("join-form").addEventListener("submit",join);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
 $("enable-sound").addEventListener("click",soundUnlock);
-$("start").addEventListener("click",async()=>{await soundUnlock();try{await call("start")}catch{}});
+$("source-select").addEventListener("change",updateAudioChoice);
+$("start").addEventListener("click",async()=>{
+ try{
+  const mode=chosenSource();
+  const data=mode==="youtube"?youtubeRound("youtube"):{mode:"demo"};
+  if(mode==="demo")await soundUnlock();
+  await call("start",data);
+ }catch(e){message(e.message)}
+});
+$("youtube-play-hint").addEventListener("click",()=>startClip());
+$("youtube-next-form").addEventListener("submit",async e=>{
+ e.preventDefault();
+ try{const data=youtubeRound("next-youtube");await call("next",data)}
+ catch(e){message(e.message)}
+});
 $("next-round").addEventListener("click",async()=>{try{await call("next")}catch{}});
 $("continue-hints").addEventListener("click",async()=>{try{await call("resume")}catch{}});
 $("skip-round").addEventListener("click",async()=>{try{await call("skip")}catch{}});
