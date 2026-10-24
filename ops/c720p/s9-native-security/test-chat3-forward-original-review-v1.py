@@ -138,6 +138,21 @@ class Tests(unittest.TestCase):
   self.assertEqual(self.writer.consume('sd',CLIP,51,bound['source_revision'],'b'*64)[0],409)
   self.attestor.rev='rev2'
   self.assertEqual(self.writer.consume('sd',CLIP,51,bound['source_revision'],bound['sha256'])[0],409)
+ def test_canonical_consumer_revalidates_replacement_between_checks(self):
+  ticket=self.open()
+  self.assertEqual(self.writer.mutate(self.decision(ticket),[CLIP])[0],200)
+  binding=self.legacy.current()['items']['sd:'+CLIP]['media_binding']
+  old=self.attestor.current_revision
+  count=[0]
+  def flip_between_checks(source,name):
+   count[0]+=1
+   if count[0]>=2:return dict(source_identity='original:sd:one',source_revision='rev2')
+   return old(source,name)
+  self.attestor.current_revision=flip_between_checks
+  status,result=self.writer.consume('sd',CLIP,51,binding['source_revision'],binding['sha256'])
+  self.assertEqual(status,409)
+  self.assertEqual(result['error'],'consumer_original_not_current')
+  self.assertEqual(self.legacy.current()['revision'],51)
  def test_canonical_consumer_never_promotes_historical_or_writes(self):
   writes=[]
   def forbidden_atomic(*args,**kwargs):
