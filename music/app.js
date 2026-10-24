@@ -298,7 +298,7 @@ function applyState(s){
  if(isHost()){
   if(s.phase==="answering"||s.phase==="holding"||s.phase==="solved"||s.phase==="finished"){clearAudio();cancelNext();}
   if(s.phase==="paused"){
-   if(oldPhase==="lobby"||oldPhase==="solved"||!oldPhase)scheduleNext(850);
+   if(oldPhase==="lobby"||oldPhase==="solved"||oldPhase==="holding"||!oldPhase)scheduleNext(850);
    else if(oldPhase==="playing"){clearAudio();scheduleNext(1000);}
   }
  }else{cancelNext();clearAudio()}
