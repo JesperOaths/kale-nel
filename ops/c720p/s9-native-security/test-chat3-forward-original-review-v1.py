@@ -188,6 +188,23 @@ class Tests(unittest.TestCase):
   h.command='HEAD';h.path=self.legacy.ROUTE+'/consumption?'+q
   self.assertEqual(h.go()[0],405)
   self.assertEqual(self.legacy.current()['revision'],51)
+ def test_post_fsync_token_prune_cannot_mask_durable_commit(self):
+  ticket=self.open()
+  original_ack=self.tokens.consumed
+  def emulate_concurrent_expiry(token,*,durable_commit=False):
+   with self.tokens.lock:self.tokens.tokens.pop(token,None)
+   return original_ack(token,durable_commit=durable_commit)
+  self.tokens.consumed=emulate_concurrent_expiry
+  status,outcome=self.writer.mutate(self.decision(ticket),[CLIP])
+  self.assertEqual(status,200)
+  self.assertTrue(outcome['persisted'])
+  self.assertEqual(self.legacy.current()['revision'],51)
+  self.assertEqual(len(self.legacy.AUDIT.read_text().splitlines()),1)
+  with self.assertRaises(Rejected):self.tokens.begin(ticket,'sd',CLIP)
+ def test_ticket_post_commit_ack_requires_internal_durable_gate(self):
+  ticket=self.open()
+  with self.assertRaises(Rejected):self.tokens.consumed(ticket)
+  self.assertIn(ticket,self.tokens.tokens)
  def test_report_historical_truth(self):
   report=self.writer.report()
   self.assertEqual(report['binding_counts']['historically_unbound'],48)
