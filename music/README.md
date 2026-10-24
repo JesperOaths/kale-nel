@@ -1,40 +1,34 @@
-# Kalenel Tune Rush — public multiplayer music quiz (v1)
+# Tune Rush — Kalenel music quiz
 
-## Current delivery boundary
-This feature branch adds the public website at `/music/`, the browser/controller, the isolated PostgreSQL data plane, and a Supabase Edge gateway. It is **not live** until all three are deployed and real-tablet/phone acceptance has passed. It deliberately does not integrate Spotify.
+## Production status (24 October 2026)
+- **Database live:** `musicquiz` schema, five original synthetic demo tunes, private tables (RLS), and server-authoritative buzzer/score function.
+- **Guest data plane live:** public `/rest/v1/rpc/musicquiz_v1` using a **publishable** API key and browser-minted 256-bit capability tokens represented as SHA-256 digests. The database RPC is a narrowly scoped `SECURITY DEFINER` function. The tables stay inaccessible to anonymous browsers.
+- **Reason for direct RPC:** Supabase refused an additional Edge Function deployment (project maximum reached). `supabase/functions/music-game-v1` is staged reference code only, **not deployed**. Do not present it as operational.
+- **Site:** `music/` staged in PR #1185 until merge and GitHub Pages activation.
+- **Network smoke:** GitHub Actions `scripts/tune-rush-smoke.mjs` creates a disposable room with one host/two independent guests and tests simultaneous buzz attempts, answer privacy, real REST/CORS, wrong answer score floor, stealing, typo acceptance and advancing the round. Room records expire after eight hours.
+- **Physical acceptance still required:** iPad Safari audio activation/playback, iPhone/Android focus/keyboard behavior and latency on actual devices. Browser network simulations are not physical device tests.
 
-### Why no Spotify button?
-Spotify's Developer Policy, section III, explicitly prohibits building a game (including trivia quizzes), and its compliance guidance specifically calls out "name that tune" games. Seeking, pausing, or using the Web Playback SDK does not change this. Spotify may only be considered if Spotify gives written approval. Do not use audio scraping, cached previews, or Spotify embeds to work around that prohibition.
+## Audio restrictions
+Spotify's Developer Policy explicitly prohibits using Spotify APIs/content/player/embeds in any game, including `name that tune`. Spotify login and interactive playback may only be added after **written Spotify approval**. This project does not access Spotify and does not scrape Spotify. The included five demo melodies are synthesized directly in Web Audio from public-domain compositions. For modern music, source recordings you have rights to store, transmit and play in this specific quiz. Add files in `/music/audio/` and private catalog rows with `license_note` (>=20 chars) and `cue_ms` at a suitable passage. The source path is limited to same-site recordings.
 
-## Host workflow (iPad or tablet)
-Open `https://kalenel.nl/music/`, tap **Create lobby**, select one or more genres, share the room code or invite URL. Wait for phones to join. The host is never a player. Tap **Start game** and authorize tablet sound. A randomly selected track plays for 0.5s, pauses for 1s, then replays from the same configured cue for 1.5s, 3s, 5s, 8s, 12s, 20s, with 1s between snippets if nobody buzzes. When a player submits a guess that leaves a part unanswered, the tablet remains paused indefinitely so another player can buzz. The host can manually tap **Continue hints** to resume progressive playback. When both song and artist have been identified, only the host may tap **Next round**. After the last hint, the host may **Reveal & skip**.
+## Game rules
+- The host opens `https://kalenel.nl/music/` on a tablet or host phone. It displays all scores but cannot participate.
+- Players enter a 6-character room code and nickname, no Kalenel account.
+- The host chooses genres, starts and enables browser audio. Audio begins with 0.5 seconds and then 1.5, 3, 5, 8, 12, 20 seconds, each from the same cue, with 1-second pauses when nobody buzzes.
+- First phone to reach the database row lock on **BUZZ** receives a 25-second exclusive answer window. Song and artist use distinct text fields. Small spelling mistakes are accepted (edit distance: 1 for 5–9 characters, 2 for 10+ characters; short names must match exactly after diacritic and punctuation removal).
+- Ordinary answer: +0.5 for correct title, +0.5 for correct artist; -0.5 for each incorrect attempted field; blanks have no effect. Score is floored at zero.
+- If the first answer does not complete both parts, playback stays paused in a **STEAL WINDOW**. Other eligible players can press **STEAL**. The earliest accepted steal gets a 25-second exclusive answer window. Stealers must enter every still-unknown field: +0.5 for each correct, **-1 for each wrong**. Any score reductions stop at zero. A player gets at most one answer attempt per snippet.
+- If a player passes or lets the answer window expire, their claim is released and they cannot try again on that same snippet. The host can resume hints after any unsuccessful answer, or reveal/skip after the last hint.
+- When both components are solved, the host taps **Next round**. First player to 20 points wins; ongoing round changes are disabled after a winner.
 
-For non-demo audio: use recordings you own or have the rights to use, install them under `/music/audio/`, then insert catalog rows. Choose `cue_ms` manually to avoid clips in which a vocalist names the title. The source filename should not disclose the answer. External hosted music URLs are intentionally rejected by the browser. Never serve protected recordings without documented permission.
+## Deployment/rollback
+The site is published with GitHub Pages from `main:/` using `music/index.html`, `style.css` and `app.js`. The public auth-gate test in `check-v798-forced-login-gate.mjs` explicitly exempts the new route, while requiring the isolated guest capability backend.
 
-## Phone workflow
-Open the same public URL (or invite URL), enter a nickname and six-character code. No Kalenel login is needed. Buzz whenever the current snippet or pause is open. The first request that obtains the database row lock wins; this is fair by **server arrival order**, not an impossible guarantee of equal network latency. Type title and/or artist: each attempted correct part scores +0.5; each attempted wrong part −0.5; blank/unattempted fields score 0. You can pass with no penalty. A player may only attempt one answer per snippet, allowing others a chance. If the song is partly identified, the known part is revealed and locked. The first player to reach at least 20 points wins.
+The SQL was deployed as two additive migrations: `sql/musicquiz-v1.sql` and then `sql/musicquiz-direct-public-v1.sql`. **Migration order matters**; reapplying the first file alone resets the function to invoker mode. Existing tables are not modified by the site PR. To disable the feature immediately, revert only the `music/` site files; the now-unused database schema can remain private until separately reviewed cleanup. Do not touch other games, shop or shared auth.
 
-## Backend deployment
-1. Review and apply `sql/musicquiz-v1.sql` as a single additive migration on the existing Supabase project `uiqntazgnrxwliaidkmy`. The schema is `musicquiz`, with RLS and private table grants; the only public-schema RPC is executable by `service_role` only.
-2. Deploy `supabase/functions/music-game-v1/index.ts` as function `music-game-v1` with `verify_jwt=false`, because guests have no login. **The Edge Function itself authenticates room actions using SHA-256-hashed 256-bit room/player secrets**, with the service-role API key only in the Supabase server environment. Never expose that key in frontend code. CORS is restricted to kalenel.nl and local development origins, but CORS is not considered authentication.
-3. Publish `music/index.html`, `music/style.css` and `music/app.js` through the existing GitHub Pages main branch. The site has a v817 footer and intentionally omits shared GEJAST login scripts, matching the public shop's authentication model.
-4. Verify live with at least one physical tablet and two phones on different networks, using only the demo pack, before loading any third-party songs.
-5. Add recordings with independently documented reproduction, streaming/public-performance and other applicable permissions. Retain the license note and cue point in the track metadata. Spotify is not a valid catalog source without written permission.
-
-## Verification already performed
-- SQL schema and functions compiled against the production PostgreSQL v17 server in `BEGIN … ROLLBACK` (no persistent database changes).
-- Transactional demo cases: room create; two guest joins; host start; no guest audio/title leakage; first buzz accepted and second rejected; wrong two-part answer −1; separate guests earn +0.5 each for title and artist; successful next round; winner at 20.
-- `SET LOCAL ROLE service_role` confirmed that the intended invoker privileges can create a room, join and get a privacy-filtered state. Again all rolled back.
-- Browser JavaScript was parsed in V8 without a syntax error.
-
-## Remaining acceptance / release gates
-- Browser DOM, Safari/iPad, Android, real multi-device and network race tests have **not** been executed yet.
-- The Edge Function has **not** been deployed or exercised through a real external HTTP request.
-- Production schema has **not** been migrated; frontend has **not** been merged or published.
-- Anonymous spam controls are limited to an automatic eight-hour room expiry, 150-room capacity, and 24 players per room. Before broad public promotion, add edge-level request throttling, bot protection, and monitoring.
-- Poll-based UI updates may be slower than a WebSocket/Realtime broadcast. The first-buzz decision itself is database-serialized. For large gatherings, upgrade to a room-scoped realtime channel and measure tablet pause latency.
-- iOS Safari may require explicit **Enable tablet audio** interaction, especially after tab/background suspension. If real audio fails to autoplay, retain the host activation button rather than bypassing browser audio policies.
-- Resume/rollback test should also confirm that host reload during an active clip does not incorrectly skip or duplicate a snippet. This is an initial MVP, not a production-verified game.
-
-## Rollback
-Front-end: revert the isolated music-route PR without modifying shop or existing games. Edge: delete/disable `music-game-v1`. Database: retain unused additive schema until rooms expire; only remove `musicquiz` in a separately reviewed cleanup after verifying no other consumer depends on it. Never drop shared public/Supabase objects as part of this feature rollback.
+## Security and limitations
+- Guest tokens are cryptographically random and stored in browser localStorage; only SHA-256 digests are sent to the RPC. Room codes alone do not grant host or player authority.
+- PostgreSQL row locking arbitrates first-arrival requests in deterministic server order, not equalized network latency.
+- The public RPC has capacity limits of 150 active rooms and 24 players per room, with eight-hour expiry. These are not full abuse prevention or IP rate limiting; add gateway throttling before broad promotion.
+- All direct table access is revoked from anon/authenticated, and all private tables have RLS.
+- No Spotify credentials, secrets or music player tokens are stored or transmitted.
