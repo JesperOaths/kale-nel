@@ -15,7 +15,11 @@ function build(relay,video){
  async function post(path,obj){
   const r=await relay.fetch(path,{method:'POST',headers,body:JSON.stringify(obj),cache:'no-store'});
   const data=await r.json();
-  if(!r.ok||data.ok!==true)throw Error(data.error||'Original review unavailable');
+  if(!r.ok||data.ok!==true){
+   const error=Error(data.error||'Original review unavailable');
+   error.status=r.status;
+   throw error;
+  }
   return data;
  }
  async function open(source,name){
@@ -43,8 +47,24 @@ function build(relay,video){
   if(turn!==generation||video.readyState<1||video.videoWidth<1||video.videoHeight<1||
       !video.currentSrc.includes(encodeURIComponent(start.open_nonce)))
     throw Error('Loaded player URL does not match original review nonce');
-  const done=await post('/new/api/review-original-loaded',{source,name,
-      open_nonce:start.open_nonce,observed_open_nonce:start.open_nonce});
+  // loadedmetadata can fire before a 4 MiB/Drive Range finishes streaming.
+  // Only HTTP 425 means the verified original is still in flight. Never retry
+  // a stale/revoked 409 or authentication failure, and never self-approve.
+  const loadedPayload={source,name,open_nonce:start.open_nonce,
+      observed_open_nonce:start.open_nonce};
+  const deadline=Date.now()+12000;
+  let done,attempt=0;
+  while(turn===generation){
+   if(video.readyState<1||!video.currentSrc.includes(encodeURIComponent(start.open_nonce)))
+    throw Error('Original player source changed during delivery');
+   try{
+    done=await post('/new/api/review-original-loaded',loadedPayload);
+    break;
+   }catch(error){
+    if(error.status!==425||Date.now()>=deadline)throw error;
+    await new Promise(resolve=>setTimeout(resolve,Math.min(1000,200+150*attempt++)));
+   }
+  }
   if(turn!==generation)return;
   if(!token.test(done.review_ticket)||done.source!==source||done.name!==name)
     throw Error('Media receipt did not match');
