@@ -90,10 +90,10 @@ quarantine + restore demonstrator. The demonstrator has no production caller
 and explicitly refuses ordinary archive paths. It must be ported inside the
 native lifecycle after owner agreement, not scheduled on C720P.
 
-`test_s9_verified_empty_quarantine_policy_v1.py` has 14 isolated tests
+`test_s9_verified_empty_quarantine_policy_v1.py` has 15 isolated tests
 covering person protection, uncertainty, 3-frame refusal, complete preroll/tail,
 low visibility, source replacement, all human protections, concurrent Save,
-interruption after the atomic move and restore. All passed on 2026-10-24.
+interruption after the atomic move and restore. All passed on 2026-10-24. Fixture moves are bounded to at most 25 clips and 512 MiB, with intent/quarantine/restore transitions retained, and parent directory fsync.
 
 ## Release acceptance sequence (not completed)
 
@@ -111,5 +111,9 @@ interruption after the atomic move and restore. All passed on 2026-10-24.
    number of actually moved bytes and their source scope; report **zero disk
    space recovered** until real storage is reclaimed independently.
 
-Status 24 October: **source and 14 tests prepared; no production enrollment,
+Status 24 October: **source and 15 tests prepared; no production enrollment,
 no actual clips quarantined or classified, no storage recovered by hiding.**
+
+## Legacy move interlock in this draft
+
+This PR also inserts a fail-closed native source-only gate immediately before the existing `GardenArchiveTriage` rename. `hasTrustedFullVideoEmptyAttestation` returns **false** until the signed Chat2 coverage and shared Chat3 Save/review transaction verifier are implemented; no JSON flag or sampled-negative result can bypass it. Two additional source-only tests verify the gate occurs before the rename. This source protection is **not deployed to the currently installed Camera2 APK**, and does not establish that the live preexisting native triage has stopped. Do not install/restart Camera2 under this PR.
