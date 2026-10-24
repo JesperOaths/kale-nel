@@ -123,6 +123,15 @@ public final class GardenPersonTrackGate {
   float p=(person[2]-person[0])*(person[3]-person[1]);
   float v=(vehicle[2]-vehicle[0])*(vehicle[3]-vehicle[1]);
   float iou=common/(p+v-common);
-  return iou>=.42f&&vehicleScore>=personScore+.10f;
+  // The ordinary same-box veto is retained. IoU alone misses a common
+  // false positive: a small person-shaped label entirely inside a larger,
+  // high-confidence car/bus/truck box, where union area makes IoU tiny.
+  if(iou>=.42f&&vehicleScore>=personScore+.10f)return true;
+  // Only veto that contained-box case on overwhelming transport evidence.
+  // Partial overlap (e.g. a pedestrian walking beside a car) must survive.
+  float personCovered=common/p;
+  float sizeRatio=p/v;
+  return personCovered>=.90f&&sizeRatio<=.40f&&
+      vehicleScore>=.82f&&vehicleScore>=personScore+.20f;
  }
 }
