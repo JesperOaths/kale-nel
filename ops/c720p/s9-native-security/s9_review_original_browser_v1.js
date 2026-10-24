@@ -77,9 +77,14 @@ function build(relay,video){
    if(turn!==generation)return;
    reset();throw error;
   }
-  if(turn!==generation||video.readyState<1||video.videoWidth<1||video.videoHeight<1||
-      !video.currentSrc.includes(encodeURIComponent(start.open_nonce)))
+  if(turn!==generation)return;
+  if(video.readyState<1||video.videoWidth<1||video.videoHeight<1||
+      !video.currentSrc.includes(encodeURIComponent(start.open_nonce))){
+    // A malformed/redirected player URL must invalidate the pending session,
+    // not merely throw while its nonce can still be replayed.
+    reset();
     throw Error('Loaded player URL does not match original review nonce');
+  }
   // loadedmetadata can fire before a 4 MiB/Drive Range finishes streaming.
   // Only HTTP 425 means the verified original is still in flight. Never retry
   // a stale/revoked 409 or authentication failure, and never self-approve.
@@ -116,8 +121,19 @@ function build(relay,video){
   return current&&current.source===source&&current.name===name&&current.turn===generation
       ?current.ticket:null;
  }
- video.addEventListener('emptied',()=>{current=null});
- video.addEventListener('error',()=>{current=null});
+ function invalidateCommittedReceipt(){
+  // A post-loaded playback error or external source removal invalidates the
+  // review ticket and revokes any issued-but-unreserved server token.
+  const issued=active;
+  const hadReceipt=!!current;
+  current=null;
+  if(hadReceipt&&issued){
+   active=null;generation++;
+   cancelOpen(issued);
+  }
+ }
+ video.addEventListener('emptied',invalidateCommittedReceipt);
+ video.addEventListener('error',invalidateCommittedReceipt);
  return Object.freeze({open,reset,receipt});
 }
 window.C720POriginalReviewClient=Object.freeze({build});
