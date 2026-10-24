@@ -29,6 +29,7 @@ class TestUSB(unittest.TestCase):
             if args[:2]==("devices","-l"):
                 return "List of devices attached\nS5SERIAL device\n"
             if args[-2:]==("getprop","ro.product.model"):return "SM-G900F"
+            if args[-2:]==("getprop","ro.serialno"):return "S5-serial"
             raise AssertionError(args)
         with mock.patch.object(x,"cmd",side_effect=fake):
             with self.assertRaisesRegex(x.NotReady,"authorized_s9_usb_required"):
@@ -38,10 +39,29 @@ class TestUSB(unittest.TestCase):
         x=load()
         def fake(*args,**kw):
             if args[:2]==("devices","-l"):return "List of devices attached\nSERIAL1 device\nSERIAL2 device"
-            return "SM-G965F"
+            if args[-2:]==("getprop","ro.product.model"):return x.MODEL
+            if args[-2:]==("getprop","ro.serialno"):return x.EXPECTED_SERIAL
+            raise AssertionError(args)
         with mock.patch.object(x,"cmd",side_effect=fake):
             with self.assertRaisesRegex(x.NotReady,"authorized_s9_usb_required"):
                 x.pinned_usb()
+
+    def test_correct_model_wrong_serial_fails_closed(self):
+        x=load()
+        calls=[]
+        def fake(*args,**kw):
+            calls.append(args)
+            if args[:2]==("devices","-l"):
+                return "List of devices attached\nOTHER_PHONE_USB device"
+            if args[-2:]==("getprop","ro.product.model"):
+                return x.MODEL
+            if args[-2:]==("getprop","ro.serialno"):
+                return "not-the-authorized-S9"
+            raise AssertionError(args)
+        with mock.patch.object(x,"cmd",side_effect=fake):
+            with self.assertRaisesRegex(x.NotReady,"authorized_s9_usb_required"):
+                x.pinned_usb()
+        self.assertTrue(any(args[-2:]==("getprop","ro.serialno") for args in calls))
 
     def test_forward_prepare_never_rebinds_other_owner(self):
         x=load();calls=[]
