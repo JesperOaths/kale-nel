@@ -14,7 +14,10 @@ do
   printf '[Unit]\n# Prepare native phone status forwarding before the owned metadata/recovery job.\nRequires=%s\nAfter=%s\n' "${BRIDGE}" "${BRIDGE}" > "${tmp}"
   chmod 0644 "${tmp}"
   if test -e "${target}"; then
-    if ! cmp -s "${tmp}" "${target}"; then
+    # Existing on-host comments are allowed; preserve a semantically identical
+    # installed guard rather than changing or overwriting its operator notes.
+    if ! grep -Fxq "Requires=${BRIDGE}" "${target}" ||
+       ! grep -Fxq "After=${BRIDGE}" "${target}"; then
       rm -f "${tmp}"
       echo "different_existing_dropin_refuse:${target}" >&2
       exit 3
