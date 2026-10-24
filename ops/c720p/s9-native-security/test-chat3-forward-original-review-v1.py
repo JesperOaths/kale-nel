@@ -2,7 +2,7 @@
 import datetime as dt,json,os,pathlib,re,sys,tempfile,threading,time,unittest
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]/'s9-person-ml-v1'))
 from s9_manual_review_open_ticket_v1 import Tickets,Rejected
-from s9_reviewed_media_session_v1 import OpenSessions,Refused
+from s9_reviewed_media_session_v1 import OpenSessions,Refused,DeliveryPending
 from s9_forward_manual_writer_v1 import FutureWriter
 import s9_manual_media_digest_binding_v1 as binder
 CLIP='motion_1000000000000.mp4'
@@ -98,6 +98,33 @@ class Tests(unittest.TestCase):
   ticket=self.open()
   status,_=self.writer.mutate(self.decision(ticket),[CLIP])
   self.assertEqual(status,200)
+ def test_loaded_metadata_before_completed_delivery_does_not_mint_ticket(self):
+  nonce=self.sessions.begin_original('sd',CLIP,'original:sd:one')
+  with self.assertRaises(DeliveryPending):
+   self.sessions.confirm_player_loaded(nonce,'sd',CLIP,nonce)
+  self.assertEqual(len(self.tokens.tokens),0)
+  self.assertEqual(self.legacy.current()['revision'],50)
+  self.assertFalse(self.legacy.AUDIT.exists())
+  revision=self.sessions.require_current_stream(nonce,'sd',CLIP)
+  self.sessions.report_delivery(nonce,'sd',CLIP,dict(status=206,
+    transferred_bytes=128,response_original_sha256=revision['original_sha256'],
+    source_revision=revision['source_revision'],source_identity=revision['source_identity']))
+  ticket=self.sessions.confirm_player_loaded(nonce,'sd',CLIP,nonce)['review_ticket']
+  self.assertIsInstance(ticket,str)
+  self.assertEqual(self.legacy.current()['revision'],50)
+ def test_failed_binding_and_report_never_call_atomic_not_even_temporarily(self):
+  writes=[]
+  def forbidden_atomic(*args,**kwargs):
+   writes.append('atomic_called');raise AssertionError('intermediate_registry_write')
+  self.legacy.atomic=forbidden_atomic
+  report=self.writer.report()
+  self.assertEqual(report['revision'],50)
+  ticket=self.open()
+  self.attestor.rev='rev2'
+  self.assertNotEqual(self.writer.mutate(self.decision(ticket),[CLIP])[0],200)
+  self.assertEqual(writes,[])
+  self.assertFalse(self.legacy.AUDIT.exists())
+  self.assertEqual(self.legacy.current()['revision'],50)
  def test_report_historical_truth(self):
   report=self.writer.report()
   self.assertEqual(report['binding_counts']['historically_unbound'],48)
