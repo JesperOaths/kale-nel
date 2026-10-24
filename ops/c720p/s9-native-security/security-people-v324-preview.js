@@ -690,8 +690,11 @@ async function playVideo(path,title,seconds,originItem=null){
   if(eligible){
    await activeOriginalReview().open(source,filename);
    if(ticket!==state.playSerial)return;
-   $('videoStatus').textContent='Original source verified · Manual review only';
+   $('videoStatus').textContent='Verified original loaded · Your explicit review is still required';
   }else{
+   // Switching away from a verified original revokes its unused review
+   // ticket; anonymous playback must never inherit a review nonce.
+   if(signedOriginalReview)signedOriginalReview.reset();
    const url=await relay().url(path);
    if(ticket!==state.playSerial)return;
    $('video').src=url;$('video').load();
