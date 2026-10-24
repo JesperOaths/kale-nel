@@ -14,6 +14,7 @@ import urllib.request
 
 DEVICE="192.168.178.250:5555"
 EXPECTED_MODEL="SM-G965F"
+EXPECTED_SERIAL="27bb603837047ece"
 FORWARD="tcp:18808 tcp:8808"
 STATUS_URL="http://127.0.0.1:18808/status"
 
@@ -66,6 +67,11 @@ def distinguish_status_failure(reason):
     if state!="device":
         raise NotReady("adb_transport_unavailable_after_recorder_api_failure")
     try:
+        if adb("-s",DEVICE,"shell","getprop","ro.serialno") != EXPECTED_SERIAL:
+            raise NotReady("s9_serial_mismatch_after_recorder_api_failure")
+    except NotReady as exc:
+        raise NotReady("s9_identity_unknown_after_recorder_api_failure") from exc
+    try:
         forward=adb("forward","--list").splitlines()
     except NotReady as exc:
         raise NotReady("forward_state_unknown_after_recorder_api_failure") from exc
@@ -84,6 +90,8 @@ def check(*,interval_seconds=2):
         raise NotReady("s9_adb_transport_not_device")
     if adb("-s",DEVICE,"shell","getprop","ro.product.model") != EXPECTED_MODEL:
         raise NotReady("s9_model_mismatch")
+    if adb("-s",DEVICE,"shell","getprop","ro.serialno") != EXPECTED_SERIAL:
+        raise NotReady("s9_serial_mismatch")
     entries=adb("forward","--list").splitlines()
     if not any(line.strip()==DEVICE+" "+FORWARD for line in entries):
         raise NotReady("native_bridge_forward_missing_or_misdirected")
@@ -93,6 +101,8 @@ def check(*,interval_seconds=2):
     # HTTP200 is not sufficient if the mapping disappeared in the meantime.
     if adb("-s",DEVICE,"get-state") != "device":
         raise NotReady("s9_adb_transport_lost")
+    if adb("-s",DEVICE,"shell","getprop","ro.serialno") != EXPECTED_SERIAL:
+        raise NotReady("s9_serial_changed_between_checks")
     if not any(line.strip()==DEVICE+" "+FORWARD
                for line in adb("forward","--list").splitlines()):
         raise NotReady("native_bridge_forward_lost")
