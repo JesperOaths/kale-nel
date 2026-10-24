@@ -123,7 +123,7 @@ try {
  assert.equal((await state(ya)).audio,null,"player cannot see host YouTube URL");
  await yh.locator("#youtube-host").waitFor({state:"visible"});
  try {
-  await wait(yh,()=>!!document.querySelector("#youtube-player iframe"),24000);
+  await wait(yh,()=>document.querySelector("iframe#youtube-player, #youtube-player iframe")!==null,24000);
  } catch(e) {
   const diagnostics=await yh.evaluate(()=>({
    iframeCount:document.querySelectorAll("#youtube-player iframe").length,
@@ -137,7 +137,7 @@ try {
   console.error("BROWSER_YOUTUBE_EMBED_DIAGNOSTIC",JSON.stringify({...diagnostics,ytRequestsFailed:ytRequestsFailed.slice(0,10),ytConsoleErrors:ytConsoleErrors.slice(0,10)}));
   throw e;
  }
- const frame=await yh.locator("#youtube-player iframe").getAttribute("src");
+ const frame=await yh.locator("iframe#youtube-player, #youtube-player iframe").first().getAttribute("src");
  assert.ok(frame?.includes("youtube.com/embed/"),"official YouTube iframe visible");
  assert.ok((await yh.locator("#youtube-host").isVisible()),"host frame must remain visible");
  assert.ok(!(await ya.locator("#youtube-host").isVisible()),"player must not see host player");
