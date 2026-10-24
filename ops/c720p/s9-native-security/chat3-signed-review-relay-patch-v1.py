@@ -44,6 +44,9 @@ POST = """  # Chat3: explicitly signed original open / loaded observation.
 """
 GO = """  # Chat3: session-scoped original media, never general SD/Drive access.
   m=re.fullmatch(r'/new/review-original/(sd|drive)/([A-Za-z0-9._-]{1,180}[.]mp4)',path)
+  if path=='/new/api/s9-manual-recording-links/consumption':
+   if head:return self.empty(405)
+   return self.archive('new','/api/s9-manual-recording-links/consumption',False)
   if m:
    if head or '..' in m.group(2):return self.empty(405 if head else 400)
    if m.group(1)=='sd' and not re.fullmatch(r'motion_[0-9]{13}[.]mp4',m.group(2)):return self.empty(400)
@@ -55,6 +58,21 @@ QUERY = """  # Only a single, server-issued review nonce is forwarded; the optio
    nonce=q.get('open') or []
    if not set(q).issubset({'open','auth'}) or len(nonce)!=1 or not re.fullmatch(r'[A-Za-z0-9_-]{20,128}',nonce[0]):return self.empty(400)
    suffix='?open='+urllib.parse.quote(nonce[0])
+  elif subpath=='/api/s9-manual-recording-links/consumption':
+   # Signed relay strips its auth credential. Forward only five pinned fields;
+   # this private read endpoint never creates a decision or stores a digest.
+   expected={'source','name','revision','source_revision','sha256'}
+   if not set(q).issubset(expected|{'auth'}) or not expected.issubset(q) or any(len(q[k])!=1 for k in expected):
+    return self.empty(400)
+   source,name=q['source'][0],q['name'][0]
+   if source not in ('sd','drive') or not isinstance(name,str):return self.empty(400)
+   if source=='sd':
+    if not re.fullmatch(r'motion_[0-9]{13}[.]mp4',name):return self.empty(400)
+   elif not re.fullmatch(r'[A-Za-z0-9._-]{1,180}[.]mp4',name) or '..' in name:return self.empty(400)
+   if (not re.fullmatch(r'[0-9]{1,12}',q['revision'][0]) or
+       not re.fullmatch(r'[A-Za-z0-9._:-]{1,180}',q['source_revision'][0]) or
+       not re.fullmatch(r'[a-f0-9]{64}',q['sha256'][0])):return self.empty(400)
+   suffix='?'+urllib.parse.urlencode([(k,q[k][0]) for k in ('source','name','revision','source_revision','sha256')])
   elif subpath=='/api/anonymous-quality-consumption':"""
 MANUAL = """    if not isinstance(obj,dict):return self.empty(400)
     validated=set(obj)
