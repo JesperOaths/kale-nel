@@ -83,8 +83,19 @@ class OpenSessions:
      source_revision=row['revision'],original_sha256=row['sha256'],
      http_status=206,bytes_delivered=1,original_media_delivered=True))
    row['finalized']=True
+   row['review_ticket']=ticket
    return dict(review_ticket=ticket,source=source,name=name,
       reviewed_media_receipt='server_pinned_original_plus_browser_loadedmetadata',
       human_reviewed_content_not_cryptographically_proven=True)
- def discard(self,nonce):
-  with self.lock:self.sessions.pop(nonce,None)
+ def discard(self,nonce,source,name):
+  """Cancel exactly this opened source. Never forge consent or abort a commit."""
+  with self.lock:
+   row=self.sessions.get(nonce)
+   if not row or row['source']!=source or row['name']!=name:
+    raise Refused('unknown_or_source_mismatched_review_cancel')
+   issued=row.get('review_ticket')
+   if issued and not self.tickets.revoke_if_unreserved(issued):
+    raise Refused('review_commit_in_progress')
+   self.sessions.pop(nonce,None)
+   return dict(ok=True,original_review_cancelled=True,
+               canonical_registry_untouched=True)
