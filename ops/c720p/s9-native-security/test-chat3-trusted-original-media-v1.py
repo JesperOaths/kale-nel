@@ -191,6 +191,41 @@ function loaded(){return {ok:true,source:'sd',name:CLIP,review_ticket:TICKET}}
  assert.equal(cancels,1,'closing cancels opened ticket');
  assert.equal(happy.client.receipt('sd',CLIP),null);
 
+ // An already-issued, unreserved review ticket must also disappear if the
+ // video later empties or errors without the user pressing the close button.
+ let lostCancels=0;
+ const lost=build(async(path)=>{
+  if(path.endsWith('-open'))return [200,open];
+  if(path.endsWith('-loaded'))return [200,loaded()];
+  if(path.endsWith('-cancel')){lostCancels++;return [200,{ok:true}]}
+  throw Error('unexpected source loss request');
+ });
+ await lost.client.open('sd',CLIP);
+ assert.equal(lost.client.receipt('sd',CLIP),TICKET);
+ lost.video.emit('emptied');await sleep(0);
+ assert.equal(lost.client.receipt('sd',CLIP),null);
+ lost.video.emit('error');await sleep(0);
+ assert.equal(lostCancels,1,'one failed player invalidates exactly once');
+
+ // Wrong loaded player URI used to throw without revoking the opened nonce.
+ let wrongCancels=0;
+ const wrong=build(async(path)=>{
+  if(path.endsWith('-open'))return [200,open];
+  if(path.endsWith('-cancel')){wrongCancels++;return [200,{ok:true}]}
+  if(path.endsWith('-loaded'))throw Error('wrong URI cannot be loaded');
+  throw Error('unrecognized signed URL request');
+ });
+ wrong.video.load=function(){
+  this.currentSrc=this.src?'http://signed.invalid/redirected-original':'';
+  this.readyState=this.src?2:0;
+  if(this.src)setTimeout(()=>this.emit('loadedmetadata'),0);
+  else this.emit('emptied');
+ };
+ await assert.rejects(wrong.client.open('sd',CLIP),/Loaded player URL/);
+ await sleep(0);
+ assert.equal(wrongCancels,1,'nonce mismatch revokes opened session');
+ assert.equal(wrong.client.receipt('sd',CLIP),null);
+
  let staleLoads=0,staleCancel=0;
  const stale=build(async(path)=>{
    if(path.endsWith('-open'))return [200,open];
