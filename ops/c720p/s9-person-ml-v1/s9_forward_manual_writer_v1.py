@@ -4,8 +4,8 @@ Opt-in activation only with live signed review endpoints. Uses the existing
 s9-manual-recording-links-v1.json, lock, append-only audit and revision CAS.
 Historical/unbound entries are NEVER converted to bound.
 """
-import datetime as dt,fcntl,json,os
-from urllib.parse import urlsplit
+import datetime as dt,fcntl,json,os,re
+from urllib.parse import urlsplit,parse_qs
 from s9_forward_review_commit_v1 import prepare_then_commit
 
 class Conflict(RuntimeError):pass
@@ -29,6 +29,52 @@ class FutureWriter:
       historical_authority_preserved=True,digest_backfill_performed=False,
       new_actions_require_trusted_media_receipt=True,
       automatic_identity_matching=False)
+ def consume(self,source,name,expected_registry_revision,expected_source_revision,expected_sha256):
+  """Read-only, revision-qualified canonical consumer acceptance.
+
+  A successful response is a current snapshot, NOT durable permission to use
+  media forever. Consumers must revalidate the original revision at use-time.
+  Never promotes historically unbound reviews or creates an approval.
+  """
+  if (source not in ('sd','drive') or not isinstance(name,str) or
+      not isinstance(expected_source_revision,str) or
+      not re.fullmatch(r'[A-Za-z0-9._:-]{1,180}',expected_source_revision) or
+      not isinstance(expected_sha256,str) or
+      not re.fullmatch(r'[0-9a-f]{64}',expected_sha256) or
+      type(expected_registry_revision) is not int or expected_registry_revision<0):
+   return 400,dict(ok=False,error='invalid_consumer_revision_request')
+  if (not self.legacy.LOCK.is_file() or self.legacy.LOCK.is_symlink() or
+      self.legacy.STORE.is_symlink()):
+   return 503,dict(ok=False,error='canonical_registry_lock_unavailable')
+  try:
+   with self.legacy.LOCK.open('r') as lock:
+    fcntl.flock(lock,fcntl.LOCK_SH)
+    state=self.legacy.current()
+    if state['revision']!=expected_registry_revision:
+     return 409,dict(ok=False,error='canonical_registry_revision_stale')
+    key=source+':'+name
+    entry=state['items'].get(key)
+    if not isinstance(entry,dict):return 404,dict(ok=False,error='canonical_manual_decision_missing')
+    binding=entry.get('media_binding')
+    if (not isinstance(binding,dict) or
+        binding.get('status')!='bound_at_decision'):
+     return 409,dict(ok=False,error='historical_or_unbound_not_eligible')
+    if (binding.get('source')!=source or binding.get('name')!=name or
+        binding.get('source_revision')!=expected_source_revision or
+        binding.get('sha256')!=expected_sha256):
+     return 409,dict(ok=False,error='consumer_original_binding_mismatch')
+    if self.binder.display_status(entry,self.attestor)!='bound':
+     return 409,dict(ok=False,error='consumer_original_not_current')
+    self.binder.require_unchanged(binding,self.attestor)
+    return 200,dict(ok=True,schema_version='manual_original_consumer_snapshot_v1',
+      registry_revision=state['revision'],source=source,name=name,
+      source_identity=binding['source_identity'],
+      source_revision=binding['source_revision'],original_sha256=binding['sha256'],
+      folder=entry.get('folder'),folders=entry.get('folders',[]),
+      review_status=entry.get('review_status'),human_decision_recorded=True,
+      human_review_not_proven_by_playback=True,source_must_be_revalidated_at_use=True)
+  except (OSError,TypeError,ValueError,KeyError,RuntimeError) as exc:
+   return 503,dict(ok=False,error='canonical_consumer_unavailable')
  def mutate(self,body,sd_names):
   if not isinstance(body,dict):return 400,dict(ok=False,error='wrong_fields')
   action=body.get('action')
@@ -114,6 +160,19 @@ def install(H,legacy,sd_names,attestor,binder,tickets):
  previous_get,previous_post=H.go,H.do_POST
  def get(self):
   path=urlsplit(self.path)
+  if path.path==legacy.ROUTE+'/consumption':
+   if self.command!='GET':return self.js(405,dict(ok=False,error='get_only'))
+   try:
+    q=parse_qs(path.query,strict_parsing=True,max_num_fields=5)
+    if set(q)!={'source','name','revision','source_revision','sha256'} or any(len(v)!=1 for v in q.values()):
+     return self.js(400,dict(ok=False,error='consumer_fields_required'))
+    revision=q['revision'][0]
+    if not re.fullmatch(r'[0-9]{1,12}',revision):raise ValueError('bad_revision')
+    status,reply=future.consume(q['source'][0],q['name'][0],int(revision),
+      q['source_revision'][0],q['sha256'][0])
+    return self.js(status,reply)
+   except (ValueError,TypeError):
+    return self.js(400,dict(ok=False,error='consumer_revision_invalid'))
   if path.path!=legacy.ROUTE or path.query:return previous_get(self)
   if self.command=='HEAD':return self.js(200,dict(ok=True))
   try:return self.js(200,future.report())
