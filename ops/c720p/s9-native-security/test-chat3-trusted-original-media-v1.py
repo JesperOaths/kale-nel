@@ -1,5 +1,5 @@
 """No media I/O: isolated byte-range delegate tests."""
-import io,pathlib,sys,unittest,hashlib,importlib.util
+import io,pathlib,sys,unittest,hashlib,importlib.util,subprocess,shutil
 from unittest.mock import patch
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]/'s9-person-ml-v1'))
 import s9_trusted_original_media_bridge_v1 as bridge
@@ -137,6 +137,113 @@ class H:
         self.assertEqual(calls[-1][1],12)
         self.assertEqual(run('/new/api/review-original-loaded',loaded,upstream_status=409),409)
         self.assertEqual(run('/new/api/review-original-loaded',original),400)
+    @unittest.skipUnless(shutil.which('node'),'Node required for original player contract smoke')
+    def test_real_browser_client_mocked_signed_range_receipt_and_cancel(self):
+        # Actual checked-in browser source runs in Node's VM with an inert video
+        # stub. Never contacts 8794/8795 and never touches canonical state.
+        browser=pathlib.Path(__file__).with_name('s9_review_original_browser_v1.js')
+        script=r"""
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync(process.argv[1],'utf8');
+class Video {
+ constructor(){this.src='';this.currentSrc='';this.readyState=0;this.videoWidth=640;this.videoHeight=480;this.listeners=new Map()}
+ addEventListener(type,fn){if(!this.listeners.has(type))this.listeners.set(type,new Set());this.listeners.get(type).add(fn)}
+ removeEventListener(type,fn){this.listeners.get(type)?.delete(fn)}
+ emit(type){for(const fn of [...(this.listeners.get(type)||[])])fn()}
+ pause(){}
+ removeAttribute(k){if(k==='src')this.src=''}
+ load(){this.currentSrc=this.src;this.readyState=this.src?2:0;
+   if(this.src)setTimeout(()=>this.emit('loadedmetadata'),0);
+   else this.emit('emptied')
+ }
+}
+const sleep=n=>new Promise(resolve=>setTimeout(resolve,n));
+function build(handler,now=Date){
+ const window={};
+ vm.runInNewContext(source,{window,setTimeout,clearTimeout,Date:now,Error,Promise});
+ const video=new Video();
+ const relay={url:async path=>'http://signed.invalid'+path,
+   fetch:async(path,opts)=>{
+     const request=JSON.parse(opts.body);
+     const [status,data]=await handler(path,request);
+     return {ok:status>=200&&status<300,status,json:async()=>data};
+   }};
+ return {client:window.C720POriginalReviewClient.build(relay,video),video};
+}
+const CLIP='motion_1000000000000.mp4', NONCE='n'.repeat(32), TICKET='t'.repeat(32);
+const open={ok:true,source:'sd',name:CLIP,open_nonce:NONCE,
+ playback_path:'/new/review-original/sd/'+CLIP+'?open='+NONCE};
+function loaded(){return {ok:true,source:'sd',name:CLIP,review_ticket:TICKET}}
+(async()=>{
+ let opens=0,loads=0,cancels=0;
+ const happy=build(async(path,p)=>{
+   if(path.endsWith('-open')){opens++;return [200,open]}
+   if(path.endsWith('-cancel')){cancels++;assert.equal(p.open_nonce,NONCE);return [200,{ok:true}]}
+   if(path.endsWith('-loaded')){loads++;return loads<=2?
+     [425,{ok:false,error:'original_delivery_pending'}]:[200,loaded()]}
+   throw Error('bad route '+path)
+ });
+ await happy.client.open('sd',CLIP);
+ assert.equal(opens,1,'retry must never repeat original-open');
+ assert.equal(loads,3,'only pending 425 is retried');
+ assert.equal(happy.client.receipt('sd',CLIP),TICKET);
+ happy.client.reset();await sleep(0);
+ assert.equal(cancels,1,'closing cancels opened ticket');
+ assert.equal(happy.client.receipt('sd',CLIP),null);
+
+ let staleLoads=0,staleCancel=0;
+ const stale=build(async(path)=>{
+   if(path.endsWith('-open'))return [200,open];
+   if(path.endsWith('-loaded')){staleLoads++;return [409,{ok:false,error:'source_revision_changed'}]}
+   if(path.endsWith('-cancel')){staleCancel++;return [200,{ok:true}]}
+   throw Error('bad stale route')
+ });
+ await assert.rejects(stale.client.open('sd',CLIP));
+ assert.equal(staleLoads,1,'409 is terminal: no retry');
+ assert.equal(staleCancel,1,'stale session cleaned up');
+ assert.equal(stale.client.receipt('sd',CLIP),null);
+
+ let deniedRequests=0;
+ const unauthorized=build(async(path)=>{
+  deniedRequests++;assert(path.endsWith('-open'));
+  return [401,{ok:false,error:'unauthorized'}]
+ });
+ await assert.rejects(unauthorized.client.open('sd',CLIP));
+ assert.equal(deniedRequests,1);
+ assert.equal(unauthorized.client.receipt('sd',CLIP),null);
+
+ let supersedeOpen=0,supersedeLoad=0,supersedeCancel=0;
+ const interrupted=build(async(path)=>{
+   if(path.endsWith('-open')){supersedeOpen++;return [200,open]}
+   if(path.endsWith('-loaded')){supersedeLoad++;return [425,{ok:false,error:'pending'}]}
+   if(path.endsWith('-cancel')){supersedeCancel++;return [200,{ok:true}]}
+   throw Error('unrecognized route')
+ });
+ const opening=interrupted.client.open('sd',CLIP);
+ await sleep(25);interrupted.client.reset();
+ await opening;
+ assert.equal(supersedeOpen,1);
+ assert.equal(supersedeLoad,1,'cancel must stop pending retries');
+ assert.equal(supersedeCancel,1);
+ assert.equal(interrupted.client.receipt('sd',CLIP),null);
+
+ let t=0,expiredOpen=0,expiredLoads=0,expiredCancel=0;
+ const fakeDate={now:()=>t};
+ const expired=build(async(path)=>{
+   if(path.endsWith('-open')){expiredOpen++;return [200,open]}
+   if(path.endsWith('-loaded')){expiredLoads++;t=27000;return [425,{ok:false,error:'pending'}]}
+   if(path.endsWith('-cancel')){expiredCancel++;return [200,{ok:true}]}
+   throw Error('unexpected route')
+ },fakeDate);
+ await assert.rejects(expired.client.open('sd',CLIP));
+ assert.equal(expiredOpen,1);
+ assert.equal(expiredLoads,1,'deadline must stop all retry loops');
+ assert.equal(expiredCancel,1);
+ console.log('browser-original-contract: 425 retry,401/409 terminal,cancel,deadline PASS')
+})().catch(e=>{console.error(e.stack||e);process.exitCode=1});
+"""
+        result=subprocess.run(['node','-e',script,str(browser)],capture_output=True,text=True,timeout=20)
+        self.assertEqual(result.returncode,0,result.stdout+'\n'+result.stderr)
     def test_bounded_metadata_and_seek(self):
         self.assertEqual(bridge.requested_range('bytes=0-',15_000_000),(0,bridge.LIMIT-1))
         self.assertEqual(bridge.requested_range('bytes=900-1023',12000),(900,1023))
