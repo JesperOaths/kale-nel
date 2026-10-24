@@ -67,10 +67,11 @@ def distinguish_status_failure(reason):
     if state!="device":
         raise NotReady("adb_transport_unavailable_after_recorder_api_failure")
     try:
-        if adb("-s",DEVICE,"shell","getprop","ro.serialno") != EXPECTED_SERIAL:
-            raise NotReady("s9_serial_mismatch_after_recorder_api_failure")
+        actual_serial=adb("-s",DEVICE,"shell","getprop","ro.serialno")
     except NotReady as exc:
         raise NotReady("s9_identity_unknown_after_recorder_api_failure") from exc
+    if actual_serial!=EXPECTED_SERIAL:
+        raise NotReady("s9_serial_mismatch_after_recorder_api_failure")
     try:
         forward=adb("forward","--list").splitlines()
     except NotReady as exc:
