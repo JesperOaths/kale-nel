@@ -91,8 +91,11 @@ def exclusion_check():
     jobs=cmd(["systemctl","--user","list-jobs","--no-pager"],timeout=5)[1]
     if any(x in jobs for x in BLOCKED_JOB_WORDS):raise Refuse("competing_systemd_job")
     for unit in BLOCKED_UNITS:
-        if cmd(["systemctl","--user","is-active",unit],timeout=3)[1]=="active":
-            raise Refuse("competing_worker:"+unit)
+        state=cmd(["systemctl","--user","is-active",unit],timeout=3)[1]
+        # Historical failed oneshots are not active workers, but activating
+        # oneshots (is-active may exit nonzero) MUST block camera maintenance.
+        if state not in ("inactive","failed"):
+            raise Refuse("competing_worker:"+unit+":"+state)
     # The S9 go2rtc relay is passive; it stays running.
     return True
 
