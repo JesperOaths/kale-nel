@@ -48,7 +48,7 @@ const musicBody=fs.readFileSync(musicIndex,'utf8');
 const musicApp=fs.readFileSync('music/app.js','utf8');
 assert(!musicBody.includes('/gejast-auth-gate.js?')&&!musicBody.includes('/gejast-home-gate.js?'),'public music quiz must not inherit the private player-session gate');
 assert(!/service[_-]?role/i.test(musicBody+musicApp),'public music client must never contain server-only secrets');
-assert(musicApp.includes('/functions/v1/music-game-v1'),'public music game must use its isolated guest-token backend');
+assert(musicApp.includes('/rest/v1/rpc/musicquiz_v1') && musicApp.includes('capabilityHash') && musicApp.includes('PUBLISHABLE_KEY'),'public music game must use its isolated SHA-256 guest-token RPC backend');
 const leagueIndex='league/index.html';
 assert.ok(fs.existsSync(leagueIndex),'public League surface missing');
 const leagueBody=fs.readFileSync(leagueIndex,'utf8');
