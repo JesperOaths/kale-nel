@@ -12,7 +12,7 @@ const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
  game_already_started:"This game already started.",no_players:"Wait for at least one player.",
- no_licensed_songs_for_genres:"There are no playable licensed songs in those genres yet. Select Demo melodies.",resume_unavailable:"Waiting for another answer, or there are no clues left.",room_capacity_reached:"Too many open rooms. Please try later.",
+ no_licensed_songs_for_genres:"There are no playable licensed songs in those genres yet. Select Demo melodies.",steal_closed:"Steal time is not open yet.",steal_requires_remaining_answers:"Complete every unknown field to submit a steal.",answer_time_expired:"Your answer window expired.",resume_unavailable:"Waiting for another answer, or there are no clues left.",room_capacity_reached:"Too many open rooms. Please try later.",
  buzz_closed:"Someone has already buzzed, or buzzing is not open.",
  already_tried_this_clip:"You've already guessed during this snippet. Wait for the next one.",
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
@@ -206,13 +206,19 @@ function render(){
   const buzzerOwner=room.players.find(p=>p.id===room.lockedPlayer);
   const statuses={
    paused:["Music paused","Buzz now, or wait for the next hint."],
-   holding:["Music paused","Other players can buzz. Host can continue the clues."],
+   holding:["STEAL WINDOW OPEN","Another player can risk points for the answer, or the host can continue."],
    playing:["Listen carefully","Buzz as soon as you know it!"],
-   answering:["Buzz locked!",buzzerOwner?buzzerOwner.name+" is answering.":"Waiting for an answer."],
+   answering:[room.stealTurn?"STEAL IN PROGRESS":"BUZZER CLAIMED",buzzerOwner?buzzerOwner.name+(room.stealTurn?" is stealing!":" is answering."):"Waiting for an answer."],
    solved:["Song identified!","Host can move to the next round."],
    finished:["We have a winner!","First player to 20 points wins."]
   };
   const status=statuses[phase]||["Get ready","The host is preparing audio."];
+  setText("master-message",phase==="holding"?"HIGH-STAKES STEAL ROUND":phase==="answering"?(buzzerOwner?.name||"A player")+" is locked in":phase==="solved"?"TRACK IDENTIFIED — ADVANCE WHEN READY":phase==="playing"?"LISTEN NOW":phase==="finished"?"WINNER DECLARED":"WAITING FOR A BUZZ");
+  show("host-ticker",host);
+  const clips=[0.5,1.5,3,5,8,12,20],timeline=$("clip-timeline");
+  timeline.replaceChildren(...clips.map((seconds,i)=>{
+   const mark=document.createElement("span");mark.textContent=seconds+"s";mark.className=i<room.step?"heard":i===room.step?"now":"upcoming";return mark;
+  }));
   setText("stage-status",status[0]);setText("stage-subtitle",status[1]);
   $("playing").querySelector(".stage").classList.toggle("is-playing",phase==="playing");
   $("playing").querySelector(".stage").classList.toggle("is-answering",phase==="answering");
@@ -226,9 +232,24 @@ function render(){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
    const blocked=lastBlockKey===guessKey||room.myBlockedStep===room.step;
-   $("buzz").disabled=!((phase==="playing"||phase==="paused"||phase==="holding")&&room.step>=0&&!blocked);
-   show("buzz",!iAmAnswering);
-   show("answer-form",iAmAnswering);
+   const allowRegular=(phase==="playing"||phase==="paused")&&!room.firstAnswered&&room.step>=0&&!blocked;
+   const allowSteal=phase==="holding"&&room.firstAnswered&&room.step>=0&&!blocked;
+   $("buzz").disabled=!allowRegular;
+   $("steal").disabled=!allowSteal;
+   show("buzz",!iAmAnswering&&phase!=="holding");
+   show("steal",!iAmAnswering&&phase==="holding");
+   show("answer-overlay",iAmAnswering);
+   if(iAmAnswering){
+    setText("answer-kicker",room.stealTurn?"⚡ STEAL CHALLENGE":"🎤 YOUR BUZZ WON");
+    setText("answer-title",room.stealTurn?"Risk it for the steal":"Name that tune");
+    setText("answer-mode-text",room.stealTurn?"+0.5 for each correct field, −1 for each wrong field. Complete both unknown fields. Your score cannot go below zero.":"Earn +0.5 for each correct field or lose 0.5 for each wrong field. Leave unknown fields blank. Minor typos are accepted.");
+    setText("song-guess-label",room.stealTurn?"Song title (+0.5 / −1)":"Song title (+0.5 / −0.5)");
+    setText("artist-guess-label",room.stealTurn?"Artist (+0.5 / −1)":"Artist (+0.5 / −0.5)");
+    const left=Math.max(0,Math.ceil((new Date(room.answerExpiresAt).getTime()-Date.now())/1000));
+    setText("answer-countdown",left+"s to answer");
+    $("song-guess").required=room.stealTurn&&!room.titleDone;
+    $("artist-guess").required=room.stealTurn&&!room.artistDone;
+   }
    $("song-guess").disabled=room.titleDone;
    $("artist-guess").disabled=room.artistDone;
    $("song-guess").placeholder=room.titleDone?"Already identified":"Enter title";
@@ -260,7 +281,13 @@ async function call(action,extra={},quiet=false){
 async function refresh(){
  if(!access||pollBusy||loading)return;
  pollBusy=true;
- try{const b=await rpc("state");applyState(b.state)}
+ try{
+  const b=await rpc("state");
+  if(b.state.phase==="answering"&&b.state.answerExpiresAt&&Date.now()>=new Date(b.state.answerExpiresAt).getTime()){
+   try{const expired=await rpc("expire");applyState(expired.state);return;}catch{}
+  }
+  applyState(b.state);
+ }
  catch(e){if(e.message==="unauthorized"||e.message==="room_expired"){reset();message(e.message)}}
  finally{pollBusy=false}
 }
@@ -330,7 +357,8 @@ $("next-round").addEventListener("click",async()=>{try{await call("next")}catch{
 $("continue-hints").addEventListener("click",async()=>{try{await call("resume")}catch{}});
 $("skip-round").addEventListener("click",async()=>{try{await call("skip")}catch{}});
 $("buzz").addEventListener("click",requestBuzz);
-$("pass").addEventListener("click",()=>submitGuess());
+$("steal").addEventListener("click",async()=>{try{await call("steal")}catch{}});
+$("pass").addEventListener("click",async()=>{try{await call("forfeit")}catch{}});
 $("answer-form").addEventListener("submit",submitGuess);
 $("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
 document.addEventListener("visibilitychange",()=>{
