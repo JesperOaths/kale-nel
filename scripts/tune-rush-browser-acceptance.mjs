@@ -114,9 +114,9 @@ try {
  await Promise.all([join(ya,youtube.code,"YouA"),join(yb,youtube.code,"YouB")]);
  await yh.locator('input[name="music-source"][value="youtube"]').check();
  await yh.locator("#youtube-setup").waitFor({state:"visible"});
- await yh.locator("#youtube-link").fill("https://music.youtube.com/watch?v=M7lc1UVf-VE");
- await yh.locator("#youtube-song").fill("YouTube Developers");
- await yh.locator("#youtube-artist").fill("Google");
+ await yh.locator("#youtube-link").fill("https://music.youtube.com/watch?v=dQw4w9WgXcQ");
+ await yh.locator("#youtube-song").fill("Never Gonna Give You Up");
+ await yh.locator("#youtube-artist").fill("Rick Astley");
  await yh.locator("#youtube-cue").fill("0");
  await yh.locator("#start").click();
  await wait(yh,()=>room?.round===1&&room.mode==="youtube");
