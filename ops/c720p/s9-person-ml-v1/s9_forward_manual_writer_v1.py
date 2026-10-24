@@ -73,7 +73,11 @@ class FutureWriter:
       folder=entry.get('folder'),folders=entry.get('folders',[]),
       review_status=entry.get('review_status'),human_decision_recorded=True,
       human_review_not_proven_by_playback=True,source_must_be_revalidated_at_use=True)
-  except (OSError,TypeError,ValueError,KeyError,RuntimeError) as exc:
+  except self.binder.Refused:
+   # A source can disappear between display_status and the final check.
+   # Its previously bound decision remains, but consumption is ineligible.
+   return 409,dict(ok=False,error='consumer_original_not_current')
+  except (OSError,TypeError,ValueError,KeyError,RuntimeError):
    return 503,dict(ok=False,error='canonical_consumer_unavailable')
  def mutate(self,body,sd_names):
   if not isinstance(body,dict):return 400,dict(ok=False,error='wrong_fields')
