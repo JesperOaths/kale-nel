@@ -33,6 +33,7 @@ class H:
   if path=='/new/api/verified-people/review':return self.empty(418)
   if path=='/new/api/s9-manual-recording-links':
    obj={}
+   if True:
     if not isinstance(obj,dict) or (set(obj)!={'action','source','name','folder','revision','human_confirmed'} and not (obj.get('action')=='assign_many' and set(obj)=={'action','source','name','folder','folders','revision','human_confirmed'})):return self.empty(400)
  def go(self,head=False):
   path=urllib.parse.urlsplit(self.path).path
