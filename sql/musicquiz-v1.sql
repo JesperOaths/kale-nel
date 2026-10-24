@@ -25,6 +25,8 @@ create table if not exists musicquiz.rooms (
  used_tracks uuid[] not null default '{}',
  step integer not null default -1 check (step between -1 and 6),
  round_number integer not null default 0,
+ first_answered boolean not null default false,
+ is_steal boolean not null default false,
  locked_player uuid,
  title_done boolean not null default false,
  artist_done boolean not null default false,
@@ -37,7 +39,7 @@ create table if not exists musicquiz.players (
  room_id uuid not null references musicquiz.rooms(id) on delete cascade,
  secret_hash text not null unique,
  name text not null,
- score numeric(7,1) not null default 0,
+ score numeric(7,1) not null default 0 check (score >= 0),
  blocked_step integer not null default -99,
  joined_at timestamptz not null default now(),
  unique(room_id,name)
@@ -57,6 +59,38 @@ language sql immutable strict set search_path = pg_catalog as $f$
  select regexp_replace(translate(lower(trim(s)),
  'áàâäãåéèêëíìîïóòôöõúùûüñçýÿ',
  'aaaaaaeeeeiiiiooooouuuuncyy'), '[^a-z0-9]+', '', 'g')
+$f$;
+
+-- Fuzzy title/artist matching: punctuation/diacritics ignored, with conservative
+-- bounded edit distance. Short names require exact spelling to prevent false awards.
+create or replace function musicquiz.close_match(guess text, expected text)
+returns boolean language plpgsql immutable strict set search_path=pg_catalog,musicquiz as $f$
+declare a text:=musicquiz.normalized(guess); b text:=musicquiz.normalized(expected);
+ n integer; m integer; lim integer; i integer; j integer; penalty integer;
+ previous integer[]; current integer[];
+begin
+ n:=length(a);m:=length(b);
+ if a=b and n>0 then return true; end if;
+ if n<5 or m<5 or n>100 or m>100 then return false; end if;
+ lim:=case when greatest(n,m)>=10 then 2 else 1 end;
+ if abs(n-m)>lim then return false; end if;
+ select array_agg(x order by x) into previous from generate_series(0,m) x;
+ for i in 1..n loop
+  current:=array_fill(0,array[m+1]);current[1]:=i;
+  for j in 1..m loop
+   penalty:=case when substr(a,i,1)=substr(b,j,1) then 0 else 1 end;
+   current[j+1]:=least(previous[j+1]+1,current[j]+1,previous[j]+penalty);
+  end loop;
+  previous:=current;
+ end loop;
+ return previous[m+1]<=lim;
+end
+$f$;
+create or replace function musicquiz.accepted_guess(guess text, expected text, aliases text[])
+returns boolean language sql immutable set search_path=pg_catalog,musicquiz as $f$
+ select musicquiz.close_match(guess,expected)
+  or exists(select 1 from unnest(coalesce(aliases,'{}'::text[])) a
+     where musicquiz.close_match(guess,a))
 $f$;
 
 create or replace function musicquiz.visible_state(p_id uuid,p_hash text) returns jsonb
@@ -80,7 +114,7 @@ begin
   'me',case when host then null else p.id end,
   'myBlockedStep',case when host then null else p.blocked_step end,'players',people,
   'phase',r.phase,'genres',to_jsonb(r.genres),'round',r.round_number,
-  'step',r.step,'clipMs',case r.step when 0 then 500 when 1 then 1500 when 2 then 3000
+  'step',r.step,'firstAnswered',r.first_answered,'stealTurn',r.is_steal,'clipMs',case r.step when 0 then 500 when 1 then 1500 when 2 then 3000
     when 3 then 5000 when 4 then 8000 when 5 then 12000 when 6 then 20000 else 0 end,
   'lockedPlayer',r.locked_player,'titleDone',r.title_done,'artistDone',r.artist_done,
   'title',case when r.title_done or r.phase in ('solved','finished') then t.title else null end,
@@ -161,7 +195,7 @@ begin
   update musicquiz.rooms set current_track=picked,
    used_tracks=array_append(r.used_tracks,picked),
    phase='paused',step=-1,round_number=r.round_number+1,
-   locked_player=null,title_done=false,artist_done=false
+   locked_player=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
    where id=r.id;
   update musicquiz.players set blocked_step=-99 where room_id=r.id;
  elsif p_action='play' then
@@ -169,7 +203,7 @@ begin
    raise exception 'not_ready_for_clip';
   end if;
   if r.step>=6 then raise exception 'all_hints_used'; end if;
-  update musicquiz.rooms set step=step+1,phase='playing' where id=r.id;
+  update musicquiz.rooms set step=step+1,phase='playing',first_answered=false,is_steal=false where id=r.id;
  elsif p_action='pause' then
   if not is_host then raise exception 'host_only'; end if;
   if r.phase='playing' then update musicquiz.rooms set phase='paused' where id=r.id; end if;
@@ -177,11 +211,15 @@ begin
   if not is_host or r.phase<>'holding' or r.step>=6 then raise exception 'resume_unavailable'; end if;
   update musicquiz.rooms set phase='paused' where id=r.id;
  elsif p_action='buzz' then
-  if is_host or r.phase not in ('playing','paused','holding') or r.step<0 then
+  if is_host or r.phase not in ('playing','paused') or r.step<0 or r.first_answered then
    raise exception 'buzz_closed';
   end if;
   if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
-  update musicquiz.rooms set phase='answering',locked_player=p.id where id=r.id;
+  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=false where id=r.id;
+ elsif p_action='steal' then
+  if is_host or r.phase<>'holding' or not r.first_answered then raise exception 'steal_closed'; end if;
+  if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
+  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=true where id=r.id;
  elsif p_action='answer' then
   if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
    raise exception 'not_your_turn';
@@ -190,22 +228,24 @@ begin
   song:=left(trim(coalesce(p_data->>'song','')),100);
   artist:=left(trim(coalesce(p_data->>'artist','')),100);
   done_title:=r.title_done; done_artist:=r.artist_done;
+  if r.is_steal and ((not done_title and song='') or (not done_artist and artist='')) then
+    raise exception 'steal_requires_remaining_answers';
+  end if;
   if song<>'' and not done_title then
-   title_ok := musicquiz.normalized(song)=musicquiz.normalized(t.title)
-     or exists(select 1 from unnest(t.title_aliases) a where musicquiz.normalized(a)=musicquiz.normalized(song));
-   delta:=delta+case when title_ok then 0.5 else -0.5 end;
+   title_ok := musicquiz.accepted_guess(song,t.title,t.title_aliases);
+   delta:=delta+case when title_ok then 0.5 when r.is_steal then -1 else -0.5 end;
    done_title:=title_ok;
   end if;
   if artist<>'' and not done_artist then
-   artist_ok := musicquiz.normalized(artist)=musicquiz.normalized(t.artist)
-     or exists(select 1 from unnest(t.artist_aliases) a where musicquiz.normalized(a)=musicquiz.normalized(artist));
-   delta:=delta+case when artist_ok then 0.5 else -0.5 end;
+   artist_ok := musicquiz.accepted_guess(artist,t.artist,t.artist_aliases);
+   delta:=delta+case when artist_ok then 0.5 when r.is_steal then -1 else -0.5 end;
    done_artist:=artist_ok;
   end if;
-  update musicquiz.players set score=score+delta,blocked_step=r.step where id=p.id
+  update musicquiz.players set score=greatest(0,score+delta),blocked_step=r.step where id=p.id
     returning score into delta;
   update musicquiz.rooms set
    title_done=done_title,artist_done=done_artist,locked_player=null,
+   first_answered=true,is_steal=false,
    phase=case when delta>=20 then 'finished'
         when done_title and done_artist then 'solved' else 'holding' end,
    winner=case when delta>=20 then p.id else winner end where id=r.id;
@@ -226,7 +266,9 @@ revoke all on function public.musicquiz_v1(text,text,text,jsonb) from public,ano
 grant execute on function public.musicquiz_v1(text,text,text,jsonb) to service_role;
 revoke all on function musicquiz.visible_state(uuid,text) from public,anon,authenticated;
 revoke all on function musicquiz.normalized(text) from public,anon,authenticated;
-grant execute on function musicquiz.visible_state(uuid,text), musicquiz.normalized(text) to service_role;
+revoke all on function musicquiz.close_match(text,text) from public,anon,authenticated;
+revoke all on function musicquiz.accepted_guess(text,text,text[]) from public,anon,authenticated;
+grant execute on function musicquiz.visible_state(uuid,text), musicquiz.normalized(text),musicquiz.close_match(text,text),musicquiz.accepted_guess(text,text,text[]) to service_role;
 
 -- Demo-only synthesized performances of public-domain melodies.
 -- Real tracks require independently verified recording/performance rights.
