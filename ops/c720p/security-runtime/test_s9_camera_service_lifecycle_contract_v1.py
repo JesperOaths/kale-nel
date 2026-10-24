@@ -38,7 +38,7 @@ class ServiceContract(unittest.TestCase):
         self.assertIn("USB is OPTIONAL",s)
         self.assertIn("USB is not established as necessary",s)
         self.assertIn("app-PID disappearance",s)
-        self.assertIn("recorder API unavailable while the mapping is listed",s)
+        self.assertIn("API unavailable while the mapping is listed",s)
         self.assertIn("before issuing STOP",s) if "before issuing STOP" in s else self.assertIn("before STOP",s)
 
 if __name__=="__main__":
