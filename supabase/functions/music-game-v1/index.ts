@@ -5,7 +5,7 @@ const ALLOW = new Set(["https://kalenel.nl","https://www.kalenel.nl","http://loc
 const BASE = Deno.env.get("SUPABASE_URL") || "";
 const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const db = BASE && KEY ? createClient(BASE,KEY,{auth:{persistSession:false,autoRefreshToken:false}}):null;
-const actions = new Set(["create","join","state","settings","start","next","play","pause","resume","buzz","steal","answer","skip"]);
+const actions = new Set(["create","join","state","settings","start","next","play","pause","resume","buzz","steal","answer","forfeit","expire","skip"]);
 const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function randomHex(length=32) {
  const a=new Uint8Array(length);crypto.getRandomValues(a);
@@ -73,7 +73,7 @@ Deno.serve(async req=>{
     "game_already_started","invalid_name","room_full","name_taken","host_lobby_only",
     "select_a_genre","host_only","not_in_lobby","round_not_solved","no_players",
     "no_licensed_songs_for_genres","room_capacity_reached","not_ready_for_clip","resume_unavailable","all_hints_used",
-    "buzz_closed","steal_closed","steal_requires_remaining_answers","already_tried_this_clip","not_your_turn","skip_unavailable","unknown_action"
+    "buzz_closed","steal_closed","steal_requires_remaining_answers","answer_still_open","answer_time_expired","already_tried_this_clip","not_your_turn","skip_unavailable","unknown_action"
    ];
    return response({error:known.includes(msg)?msg:"request_failed"},known.includes(msg)?409:500,origin);
   }
