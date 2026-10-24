@@ -41,6 +41,8 @@ class H:
   # S9_MANUAL_LINKS_LAN_ROUTE_V2 read-only, guarded after authorized()
  def archive(self,cam,subpath,head=False):
   q=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+  try:r=urllib.request.urlopen(req,timeout=8)
+  except Exception:return self.empty(502)
   if subpath=='/api/anonymous-quality-consumption':
    return self.empty(400)
  def cors(self):
@@ -58,6 +60,7 @@ class H:
             self.assertNotIn("path.endswith('/open')",updated)
             self.assertNotIn("path.endswith('/loaded')",updated)
             self.assertIn('self.send_response(reply.status)',updated)
+            self.assertIn("timeout=24 if subpath.startswith('/review-original/') else 8",updated)
             self.assertIn("status",updated)
             self.assertLess(updated.index('if not self.authorized()'),updated.index("if path in ('/new/api/review-original-open'"))
             with self.assertRaisesRegex(ValueError,'installed_relay_blob_changed'):
