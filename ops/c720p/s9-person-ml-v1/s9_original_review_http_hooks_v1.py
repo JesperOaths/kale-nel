@@ -7,6 +7,7 @@ claimed a SHA. The player loadedmetadata claim is non-cryptographic.
 """
 import json,re
 from urllib.parse import urlsplit,parse_qs,quote
+from s9_reviewed_media_session_v1 import DeliveryPending
 
 OPEN='/new/api/review-original-open'
 LOADED='/new/api/review-original-loaded'
@@ -49,6 +50,10 @@ def install(H,*,sessions,original_delegate,verified_source):
    if not isinstance(nonce,str) or not NONCE.fullmatch(nonce):raise Refused('invalid_nonce')
    result=sessions.confirm_player_loaded(nonce,source,name,body['observed_open_nonce'])
    return self.js(200,dict(ok=True,**result))
+  except DeliveryPending:
+   # The browser parsed metadata while the server was still streaming the
+   # pinned original. No ticket exists yet. Retry the observation only.
+   return self.js(425,dict(ok=False,error='original_delivery_pending'))
   except Exception:
    # The authoritative binder raises Refused(Exception); never leak a
    # traceback or mint a ticket when attestation refuses admission.
