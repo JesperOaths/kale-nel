@@ -165,7 +165,7 @@ function build(handler,now=Date){
  const relay={url:async path=>'http://signed.invalid'+path,
    fetch:async(path,opts)=>{
      const request=JSON.parse(opts.body);
-     const [status,data]=await handler(path,request);
+     const [status,data]=await handler(path,request,opts);
      return {ok:status>=200&&status<300,status,json:async()=>data};
    }};
  return {client:window.C720POriginalReviewClient.build(relay,video),video};
@@ -225,6 +225,21 @@ function loaded(){return {ok:true,source:'sd',name:CLIP,review_ticket:TICKET}}
  await sleep(0);
  assert.equal(wrongCancels,1,'nonce mismatch revokes opened session');
  assert.equal(wrong.client.receipt('sd',CLIP),null);
+
+ let openingAbortSeen=false;
+ const hashing=build(async(path,p,opts)=>{
+  assert(path.endsWith('-open'));
+  return await new Promise((resolve,reject)=>{
+   assert(opts.signal,'must pass AbortController signal to signed relay fetch');
+   opts.signal.addEventListener('abort',()=>{openingAbortSeen=true;reject(Error('open aborted'))},{once:true});
+  });
+ });
+ const pendingHash=hashing.client.open('sd',CLIP);
+ await sleep(10);
+ hashing.client.reset();
+ await pendingHash;
+ assert.equal(openingAbortSeen,true,'reset must abort pending SHA network request');
+ assert.equal(hashing.client.receipt('sd',CLIP),null);
 
  let staleLoads=0,staleCancel=0;
  const stale=build(async(path)=>{
