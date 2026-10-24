@@ -190,6 +190,13 @@ async function manualLink(item,folder,reviewAction=null){
  const data={action:reviewAction||(selected.length>1?'assign_many':selected.length?'assign':'return_to_queue'),
    source:item.source==='drive'?'drive':'sd',name:String(item.name||item.clip),
    folder:selected[0]||null,revision:state.linksRevision,human_confirmed:true};
+ // This release deliberately does not support re-review of old unbound
+ // entries: show their historic decision, never overwrite or backfill it.
+ const historical=state.extraLinks.items?.[data.source+':'+data.name];
+ if(historical&&historical.media_binding?.status!=='bound_at_decision'){
+  alertText('This recording has an earlier unbound review. Re-review is not supported in this release; its historical decision is preserved.');
+  return false;
+ }
  if(data.action==='assign_many')data.folders=selected;
  // This opaque ticket comes only from the verified original loaded in this
  // video element. It never proves subjective viewing or a person's identity.
@@ -206,6 +213,9 @@ async function manualLink(item,folder,reviewAction=null){
     'X-S9-Manual-Link-Intent':'manual-original-review-links-v1'},
    body:JSON.stringify(data)});
   const outcome=await response.json();
+  if(response.status===409&&outcome.error==='historical_re_review_not_supported_this_release'){
+   throw Error('This recording has an earlier unbound decision; the current release cannot re-review it. Nothing was changed.');
+  }
   if(response.status===409){
    let refreshed=false;
    try{await fetchExtraLinks();refreshed=true}catch(_){}
