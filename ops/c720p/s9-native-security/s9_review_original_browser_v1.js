@@ -56,16 +56,17 @@ function build(relay,video){
   // 24s only for this media route. Metadata+425 retries share ONE deadline.
   const mediaDeadline=Date.now()+DELIVERY_BUDGET_MS;
   const loaded=new Promise((resolve,reject)=>{
-   let timer;
-   pendingLoadedReject=reject;
+   let timer,cancelPending;
    const cleanup=()=>{
     clearTimeout(timer);
-    if(pendingLoadedReject===reject)pendingLoadedReject=null;
+    if(pendingLoadedReject===cancelPending)pendingLoadedReject=null;
     video.removeEventListener('loadedmetadata',ok);
     video.removeEventListener('error',bad);
    };
    const ok=()=>{cleanup();resolve()};
    const bad=()=>{cleanup();reject(Error('Original video failed to load'))};
+   cancelPending=()=>{cleanup();reject(Error('Original player cancelled'))};
+   pendingLoadedReject=cancelPending;
    video.addEventListener('loadedmetadata',ok,{once:true});
    video.addEventListener('error',bad,{once:true});
    timer=setTimeout(()=>{cleanup();reject(Error('Original metadata timeout'))},
@@ -87,20 +88,28 @@ function build(relay,video){
   // Never start a second open/session when only delivery receipt is pending.
   let done,attempt=0;
   while(turn===generation){
-   if(video.readyState<1||!video.currentSrc.includes(encodeURIComponent(start.open_nonce)))
-    throw Error('Original player source changed during delivery');
+   if(Date.now()>=mediaDeadline){
+    reset();throw Error('Original delivery exceeded bounded media deadline');
+   }
+   if(video.readyState<1||!video.currentSrc.includes(encodeURIComponent(start.open_nonce))){
+    reset();throw Error('Original player source changed during delivery');
+   }
    try{
     done=await post('/new/api/review-original-loaded',loadedPayload);
     break;
    }catch(error){
-    if(error.status!==425||Date.now()>=mediaDeadline)throw error;
+    if(turn!==generation)return;
+    if(error.status!==425||Date.now()>=mediaDeadline){
+     reset();throw error;
+    }
     const remaining=mediaDeadline-Date.now();
     await new Promise(resolve=>setTimeout(resolve,Math.min(remaining,1000,200+150*attempt++)));
    }
   }
   if(turn!==generation)return;
-  if(!token.test(done.review_ticket)||done.source!==source||done.name!==name)
-    throw Error('Media receipt did not match');
+  if(Date.now()>mediaDeadline||!token.test(done.review_ticket)||done.source!==source||done.name!==name){
+   reset();throw Error('Media receipt did not match the bounded original');
+  }
   current={source,name,ticket:done.review_ticket,turn};
  }
  function receipt(source,name){
