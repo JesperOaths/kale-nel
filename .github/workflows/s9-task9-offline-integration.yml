@@ -2,42 +2,172 @@ name: Task9 offline integration
 on:
   pull_request:
     paths:
-      - 'ops/c720p/s9-native-security/offline-worker/s9_phone_*.py'
-      - 'ops/c720p/s9-native-security/offline-worker/test-s9-phone-*.py'
+      - 'ops/c720p/s9-native-security/offline-worker/**'
       - 'ops/c720p/s9-native-security/s9_priority_rescan_feedback_v304.py'
       - 'ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py'
+      - 'ops/c720p/s9-native-security/test-s9-anonymous-evidence-consumer-v361.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_anonymous_evidence_consumer_v361.py'
+      - 'ops/c720p/s9-person-ml-v1/s9_evidence_quality_v1.py'
+      - 'test_task9_remaining_boundaries.py'
       - '.github/workflows/s9-task9-offline-integration.yml'
 permissions:
   contents: read
 jobs:
   task9-offline:
     name: Task9 ${{ matrix.suite }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
         include:
-          - suite: observer-v373
+          - suite: observer_v373
             test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-first-peak-observer-v373.py
-          - suite: runner-v371
+            expected_tests: 18
+            source_root_argument: '0'
+          - suite: runner_v371
             test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-gap-runner-v371.py
-          - suite: coordinator-v371
+            expected_tests: 14
+            source_root_argument: '0'
+          - suite: coordinator_v371
             test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-gap-coordinator-v371.py
-          - suite: memory-v372
+            expected_tests: 12
+            source_root_argument: '0'
+          - suite: memory_qualification_v372
             test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-memory-qualification-v372.py
-          - suite: durable-v304
+            expected_tests: 11
+            source_root_argument: '0'
+          - suite: durable_queue_v304
             test_file: ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py
+            expected_tests: 30
+            source_root_argument: '0'
+          - suite: source_qualified_consumer_v361
+            test_file: ops/c720p/s9-native-security/test-s9-anonymous-evidence-consumer-v361.py
+            expected_tests: 9
+            source_root_argument: '0'
+          - suite: protected_runtime_loader
+            test_file: ops/c720p/s9-native-security/offline-worker/test-task9-protected-runtime-loader-v374.py
+            expected_tests: 22
+            source_root_argument: '0'
+          - suite: deadline_boundaries
+            test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-deadline-boundaries-v374.py
+            expected_tests: 10
+            source_root_argument: '0'
+          - suite: real_runner_coordinator_observer
+            test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-full-integration-v374.py
+            expected_tests: 6
+            source_root_argument: '0'
+          - suite: durable_failure_fence
+            test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-queue-fence-v374.py
+            expected_tests: 8
+            source_root_argument: '0'
+          - suite: self_watchdog_java_and_jni
+            test_file: ops/c720p/s9-native-security/offline-worker/test-s9-self-deadline-v374.py
+            expected_tests: 7
+            source_root_argument: '0'
+          - suite: original_seven_regressions
+            test_file: test_task9_remaining_boundaries.py
+            expected_tests: 7
+            source_root_argument: '1'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
-      - name: Run offline regression suite
+      - name: Run required offline regression suite
         env:
           PYTHONDONTWRITEBYTECODE: '1'
           TEST_FILE: ${{ matrix.test_file }}
+          EXPECTED_TESTS: ${{ matrix.expected_tests }}
+          SOURCE_ROOT_ARGUMENT: ${{ matrix.source_root_argument }}
         shell: bash
         run: |
           set -euo pipefail
-          test -f "$TEST_FILE"
-          timeout 90s python3 "$TEST_FILE" -v
+          python3 - <<'PY'
+          import os, pathlib, re, subprocess, sys
+          test = pathlib.Path(os.environ['TEST_FILE'])
+          if not test.is_file():
+              sys.exit('Required candidate regression suite missing: '+str(test))
+          argv = [sys.executable, str(test)]
+          if os.environ['SOURCE_ROOT_ARGUMENT'] == '1':
+              argv.append(str(pathlib.Path.cwd()))
+          result = subprocess.run(argv+['-v'], capture_output=True, text=True, timeout=90)
+          output = result.stdout+result.stderr
+          print(output, end='')
+          count = re.search(r'Ran ([0-9]+) tests?', output)
+          passed = (result.returncode == 0 and count is not None
+                    and int(count.group(1)) == int(os.environ['EXPECTED_TESTS'])
+                    and re.search(r'\bskipped\b', output, re.I) is None)
+          sys.exit(0 if passed else 'Required count, zero-failure and zero-skip checks failed')
+          PY
+  android-build:
+    name: Task9 Android artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Require corrected standalone worker
+        shell: bash
+        run: test -f ops/c720p/s9-native-security/offline-worker/S9StandaloneDeadlineV374.java
+      - name: Build and inspect standalone Android DEX
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          worker=ops/c720p/s9-native-security/offline-worker
+          sdk_root="${ANDROID_SDK_ROOT:?Android SDK missing}"
+          "$sdk_root/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
+          aar="$RUNNER_TEMP/onnxruntime-android-1.22.0.aar"
+          curl --fail --silent --show-error --location --retry 2 --max-time 90 \
+            'https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar' --output "$aar"
+          echo "04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  $aar" | sha256sum --check --strict
+          python3 "$worker/build-s9-4k-phone-jar-v371.py" \
+            --output-dir "$RUNNER_TEMP/task9-android-build" --onnx-aar "$aar" \
+            --android-jar "$sdk_root/platforms/android-36/android.jar" \
+            --d8 "$sdk_root/build-tools/36.0.0/d8"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, struct, zipfile
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])/'task9-android-build'
+          jar = root/'s9_gap_v371.dex.jar'
+          with zipfile.ZipFile(jar) as archive:
+              raw = archive.read('classes.dex')
+          def u32(offset):
+              return struct.unpack_from('<I', raw, offset)[0]
+          def string(index):
+              offset = u32(u32(60)+index*4)
+              while raw[offset] & 128:
+                  offset += 1
+              offset += 1
+              return raw[offset:raw.index(0, offset)].decode('utf-8')
+          descriptors = {string(u32(u32(68)+4*u32(u32(100)+32*i))) for i in range(u32(96))}
+          required = {'Lnl/kalenel/s9offline/S9StandaloneDeadlineV374;',
+                      'Lnl/kalenel/s9offline/S9StandaloneDeadlineV374$1;',
+                      'Lnl/kalenel/s9offline/S9Original4KGapAuditV370;',
+                      'Lnl/kalenel/s9offline/S9Original4KTimedDecoderV371;',
+                      'Lnl/kalenel/s9offline/S9YuNetNativeQualityDecoderV370;',
+                      'Lai/onnxruntime/OrtSession;'}
+          if not required.issubset(descriptors):
+              raise SystemExit('Required watchdog/worker/ONNX DEX class definition missing')
+          receipt = json.loads((root/'build-receipt.json').read_text())
+          if receipt['phone_frame_jar_sha256'] != hashlib.sha256(jar.read_bytes()).hexdigest():
+              raise SystemExit('Build receipt JAR digest differs')
+          inspection = dict(required_class_definitions=sorted(required),
+                            dex_class_count=len(descriptors),
+                            dex_sha256=hashlib.sha256(raw).hexdigest(),
+                            required_classes_verified=True, phone_access=False,
+                            deployment=False, source_commit=os.environ['GITHUB_SHA'])
+          (root/'dex-inspection.json').write_text(json.dumps(inspection, indent=2)+'\n')
+          print(json.dumps(receipt, indent=2))
+          print(json.dumps(inspection, indent=2))
+          PY
+          sha256sum "$sdk_root/platforms/android-36/android.jar" \
+            "$sdk_root/build-tools/36.0.0/d8" "$sdk_root/build-tools/36.0.0/lib/d8.jar" \
+            > "$RUNNER_TEMP/task9-android-build/toolchain-sha256.txt"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: task9-android-review-${{ github.sha }}
+          path: ${{ runner.temp }}/task9-android-build/
+          if-no-files-found: error
+          retention-days: 14
