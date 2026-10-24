@@ -9,7 +9,7 @@ function build(relay,video){
  if(!relay||typeof relay.fetch!=='function'||typeof relay.url!=='function'||!video)
   throw Error('Signed original review unavailable');
  const DELIVERY_BUDGET_MS=26000; // only after original open+auth finishes
- let current=null,generation=0,active=null,pendingLoadedReject=null;
+ let current=null,generation=0,active=null,pendingLoadedReject=null,pendingOpenAbort=null;
  function cancelOpen(opened){
   if(!opened)return;
   // Signed, nonce-specific best-effort cleanup; failure never creates consent.
@@ -18,13 +18,17 @@ function build(relay,video){
  }
  function reset(){
   generation++;current=null;
+  // Abort the browser HTTP request while a synchronous full-original SHA is
+  // pending. The broker cancels its server-side operation on disconnect; a
+  // later hash result must be discarded rather than publishing a nonce.
+  if(pendingOpenAbort){pendingOpenAbort.abort();pendingOpenAbort=null;}
   const previous=active;active=null;
   if(pendingLoadedReject)pendingLoadedReject(Error('Original player cancelled'));
   video.pause();video.removeAttribute('src');video.load();
   cancelOpen(previous);
  }
- async function post(path,obj){
-  const r=await relay.fetch(path,{method:'POST',headers,body:JSON.stringify(obj),cache:'no-store'});
+ async function post(path,obj,signal){
+  const r=await relay.fetch(path,{method:'POST',headers,body:JSON.stringify(obj),cache:'no-store',signal});
   const data=await r.json();
   if(!r.ok||data.ok!==true){
    const error=Error(data.error||'Original review unavailable');
@@ -39,7 +43,12 @@ function build(relay,video){
    throw Error('Unsafe original name');
   reset();
   const turn=generation;
-  const start=await post('/new/api/review-original-open',{source,name});
+  const openingAbort=new AbortController();
+  pendingOpenAbort=openingAbort;
+  let start;
+  try{start=await post('/new/api/review-original-open',{source,name},openingAbort.signal)}
+  catch(error){if(turn!==generation)return;reset();throw error}
+  finally{if(pendingOpenAbort===openingAbort)pendingOpenAbort=null}
   if(turn!==generation){
    if(token.test(start.open_nonce))cancelOpen({source,name,nonce:start.open_nonce});
    return;
