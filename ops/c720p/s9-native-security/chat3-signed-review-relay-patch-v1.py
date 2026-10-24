@@ -89,7 +89,7 @@ def patch(source):
  # Exact installed Git blob is proven by 'git hash-object', not sha1sum.
  # Refuse a future relay revision even if all four textual anchors survive.
  raw=source.encode('utf-8')
- actual=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\\0'+raw).hexdigest()
+ actual=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
  if actual!=BASE_BLOB:raise ValueError('installed_relay_blob_changed')
  for anchor in (POST_ANCHOR,GO_ANCHOR,QUERY_ANCHOR,MANUAL_ANCHOR):
   if source.count(anchor)!=1:raise ValueError('installed_relay_source_drift')
