@@ -59,6 +59,25 @@ class Tests(unittest.TestCase):
  def decision(self,ticket,name=CLIP,revision=50):
   return dict(action='assign',source='sd',name=name,folder='person-a',
       revision=revision,human_confirmed=True,review_ticket=ticket)
+ def test_existing_historical_decision_is_never_rewritten_or_temporarily_bound(self):
+  # An independently reviewed ORIGINAL can share a basename with a historical
+  # decision; refusing that transaction must preserve all previous authority.
+  old=self.legacy.current()
+  historical=old['items'].pop('sd:historical-0')
+  old['items']['sd:'+CLIP]=dict(historical,source='sd',name=CLIP)
+  self.legacy.atomic(old)
+  ticket=self.open()
+  before=self.legacy.current()
+  attempts=[]
+  def forbid_atomic(*args,**kwargs):
+   attempts.append(1)
+   raise AssertionError('historical_entry_write_attempted')
+  self.legacy.atomic=forbid_atomic
+  status,result=self.writer.mutate(self.decision(ticket),[CLIP])
+  self.assertEqual(status,409)
+  self.assertEqual(attempts,[])
+  self.assertEqual(self.legacy.current(),before)
+  self.assertFalse(self.legacy.AUDIT.exists())
  def test_persist_and_historical_unchanged(self):
   ticket=self.open()
   status,result=self.writer.mutate(self.decision(ticket),[CLIP])
