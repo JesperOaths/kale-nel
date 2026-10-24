@@ -38,6 +38,14 @@ final class GardenArchiveTriage {
   if(!quarantine.getCanonicalFile().getParentFile().equals(this.live.getParentFile().getCanonicalFile()))
    throw new IOException("invalid_quarantine_location");
  }
+ // Source-only release interlock; this deliberately refuses all model-only
+ // quarantine. Do not replace with a JSON boolean or a filename presence
+ // check: it must become a trusted attestation verifier plus the *same*
+ // atomic protection lock used by every native Save/review/person writer.
+ private boolean hasTrustedFullVideoEmptyAttestation(
+     File original, File verifiedManifest, JSONObject sampledEvidence) {
+  return false;
+ }
  // Return code: 1 quarantined, 2 retained as uncertain/person, 0 no work.
  int processOne()throws Exception {
   File[] all=live.listFiles((dir,name)->name.matches(MP4_PATTERN));
@@ -91,6 +99,11 @@ final class GardenArchiveTriage {
    // Only move an already manifest-reviewed clip after another 24-frame
    // S9+ pass had >=20 readable frames and no person in the actual garden.
    if(evidence.optInt("valid_frames",0)<20)continue;
+   // Legacy sampled-negative evidence is *not* a verified-empty complete
+   // recording attestation. Until Chat 2's signed full-frame coverage and
+   // Chat 3/Save/Delete's shared protection lock are bound in the native
+   // retention transaction, this move is deliberately fail-closed.
+   if(!hasTrustedFullVideoEmptyAttestation(movie,verified,evidence))continue;
    File target=new File(quarantine,name);
    if(target.exists())continue;
    if(!movie.renameTo(target))throw new IOException("quarantine_video_move_failed");
