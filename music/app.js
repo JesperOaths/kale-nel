@@ -33,7 +33,7 @@ function message(s) {
 }
 function setText(id,value){$(id).textContent=String(value??"")}
 function safeStore(){try{if(access)localStorage.setItem(STORE,JSON.stringify(access));else localStorage.removeItem(STORE)}catch{}}
-async function rpc(action,extra={}) {
+async function rpc(action,extra={},attempt=0) {
  const creating=action==="create",joining=action==="join";
  const token=creating||joining?randomSecret():access?.token;
  const code=creating?randomRoom():String(extra.code||access?.code||"").toUpperCase();
@@ -57,7 +57,7 @@ async function rpc(action,extra={}) {
  try{data=await res.json()}catch{throw Error("temporary_failure")}
  if(!res.ok){
   const known=String(data?.message||"").split("\\n")[0];
-  if(data?.code==="23505"&&creating)return rpc(action,extra);
+  if(data?.code==="23505"&&creating&&attempt<3)return rpc(action,extra,attempt+1);
   throw Error(known||"request_failed");
  }
  if(!data?.role||data?.code!==code)throw Error("request_failed");
