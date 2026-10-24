@@ -31,7 +31,7 @@ function response(data,status,origin="") {
   "Access-Control-Allow-Methods":"POST, OPTIONS",
   "Access-Control-Allow-Headers":"Content-Type"
  });
- return new Response(JSON.stringify(data),{status,headers});
+ return new Response(status===204?null:JSON.stringify(data),{status,headers});
 }
 Deno.serve(async req=>{
  const origin=req.headers.get("origin")||"";
