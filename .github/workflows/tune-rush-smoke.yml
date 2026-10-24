@@ -6,6 +6,7 @@ on:
       - 'sql/musicquiz*.sql'
       - 'supabase/functions/music-game-v1/**'
       - 'scripts/tune-rush-smoke.mjs'
+      - 'scripts/tune-rush-youtube-smoke.mjs'
       - '.github/workflows/tune-rush-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -21,3 +22,5 @@ jobs:
           node-version: '24'
       - name: Live three-session anonymous guest acceptance
         run: node scripts/tune-rush-smoke.mjs
+      - name: Live host video-source acceptance
+        run: node scripts/tune-rush-youtube-smoke.mjs
