@@ -111,8 +111,14 @@ def atomic_json(path,data):
     finally:
         if os.path.exists(tmp):os.unlink(tmp)
 
+def fsync_directory(path):
+    fd=os.open(str(path),os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(fd)
+    finally:os.close(fd)
+
 def fixture_quarantine(root,name,read_state,*,trusted_attestation,
-                       allowed_models,shared_lock_contract,precommit_hook=None):
+                       allowed_models,shared_lock_contract,precommit_hook=None,
+                       max_items=25,max_bytes=512*1024*1024):
     """No real camera paths: must explicitly be an isolated test root.
 
     The lifecycle lock is insufficient unless actual Save, review, writer and
@@ -131,6 +137,8 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
     os.chmod(qdir,0o700)
     if os.stat(live.parent).st_dev != os.stat(qdir).st_dev:
         raise Protected("quarantine_must_use_same_filesystem")
+    if type(max_items) is not int or not 1<=max_items<=25 or type(max_bytes) is not int or not 1<=max_bytes<=512*1024*1024:
+        raise Protected("quarantine_bounds_not_valid")
     lock=root/".archive-lifecycle.lock"
     with lock.open("a+") as l:
         fcntl.flock(l,fcntl.LOCK_EX)
@@ -152,6 +160,9 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
         journal=qdir/(name+".quarantine.json")
         if target.exists() or journal.exists():
             raise Protected("existing_quarantine_or_journal")
+        present=[p for p in qdir.iterdir() if p.is_file() and NAME.fullmatch(p.name)]
+        if len(present)>=max_items or live.stat().st_size+sum(p.stat().st_size for p in present)>max_bytes:
+            raise Protected("quarantine_capacity_bound_reached")
         ticket={"schema":"s9_empty_clip_fixture_quarantine_v1",
                 "source_scope":"S9_native_microSD",
                 "name":name,"digest":source["sha256"],
@@ -159,10 +170,14 @@ def fixture_quarantine(root,name,read_state,*,trusted_attestation,
                 "evidence_revision":evidence["evidence_revision"],
                 "original":str(live),"quarantine":str(target),
                 "state":"intent","at_unix_seconds":time.time(),
+                "history":[{"action":"intent","at_unix_seconds":time.time()}],
                 "permanently_deleted":False}
         atomic_json(journal,ticket)  # crash intent before renaming
         os.replace(live,target)  # single same-filesystem atomic move
+        fsync_directory(qdir)
+        fsync_directory(live.parent)
         ticket["state"]="quarantined"
+        ticket["history"].append({"action":"quarantined","at_unix_seconds":time.time()})
         atomic_json(journal,ticket)
         fcntl.flock(l,fcntl.LOCK_UN)
         return ticket
@@ -185,8 +200,11 @@ def fixture_restore(root,name):
             if sha_file(target)!=ticket.get("digest"):
                 raise Protected("quarantine_bytes_corrupt")
             os.replace(target,live)
+            fsync_directory(live.parent)
+            fsync_directory(qdir)
         elif not live.is_file() or target.exists() or sha_file(live)!=ticket.get("digest"):
             raise Protected("ambiguous_restore_state")
         ticket["state"]="restored"
+        ticket.setdefault("history",[]).append({"action":"restored","at_unix_seconds":time.time()})
         atomic_json(journal,ticket)
         return ticket
