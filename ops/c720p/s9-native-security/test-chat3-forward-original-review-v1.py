@@ -59,6 +59,49 @@ class Tests(unittest.TestCase):
  def decision(self,ticket,name=CLIP,revision=50):
   return dict(action='assign',source='sd',name=name,folder='person-a',
       revision=revision,human_confirmed=True,review_ticket=ticket)
+ def test_pre_nonce_original_hash_has_a_hard_concurrency_limit(self):
+  # Hashing happens before open returns a nonce; admission must not depend
+  # exclusively on counting sessions already opened.
+  tokens=Tickets()
+  sessions=OpenSessions(tokens,binder,self.attestor,max_active=1)
+  entered=threading.Event();release=threading.Event();finished=[]
+  original=self.attestor.verify_bytes
+  calls=[]
+  def blocked(source,name):
+   calls.append((source,name))
+   entered.set()
+   if not release.wait(4):raise RuntimeError('fixture_wait_timeout')
+   return original(source,name)
+  self.attestor.verify_bytes=blocked
+  def worker():
+   try:finished.append(sessions.begin_original('sd',CLIP,'original:sd:one'))
+   except BaseException as exc:finished.append(exc)
+  runner=threading.Thread(target=worker,daemon=True);runner.start()
+  self.assertTrue(entered.wait(2),'first hash never started')
+  with self.assertRaisesRegex(Refused,'too_many_inflight_original_verifications'):
+   sessions.begin_original('sd',SECOND,'original:sd:one')
+  self.assertEqual(len(calls),1,'second full-original digest was started')
+  self.assertEqual(sessions.sessions,{},'no nonce before first verifier returns')
+  release.set();runner.join(3)
+  self.assertFalse(runner.is_alive())
+  self.assertEqual(len(finished),1)
+  self.assertIsInstance(finished[0],str)
+  sessions.discard(finished[0],'sd',CLIP)
+  self.assertIsInstance(sessions.begin_original('sd',SECOND,'original:sd:one'),str)
+  self.assertEqual(self.legacy.current()['revision'],50)
+  self.assertFalse(self.legacy.AUDIT.exists())
+ def test_failed_pre_nonce_hash_releases_its_concurrency_slot(self):
+  sessions=OpenSessions(Tickets(),binder,self.attestor,max_active=1)
+  original=self.attestor.verify_bytes
+  def denied(*args):raise RuntimeError('fixture_hash_failure')
+  self.attestor.verify_bytes=denied
+  with self.assertRaises(RuntimeError):
+   sessions.begin_original('sd',CLIP,'original:sd:one')
+  self.assertEqual(sessions.sessions,{})
+  self.attestor.verify_bytes=original
+  nonce=sessions.begin_original('sd',CLIP,'original:sd:one')
+  self.assertTrue(nonce)
+  self.assertFalse(self.legacy.AUDIT.exists())
  def test_existing_historical_decision_is_never_rewritten_or_temporarily_bound(self):
   # An independently reviewed ORIGINAL can share a basename with a historical
   # decision; refusing that transaction must preserve all previous authority.
