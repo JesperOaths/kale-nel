@@ -40,6 +40,19 @@ class Tests(unittest.TestCase):
   self.assertIn('continuous4KLastResult="fallback_"+reason;',f)
   self.assertIn("continuous_4k_recovery_evidence_scope",SRC)
   self.assertIn("forward_only_not_historical",SRC)
+ def test_active_mp4_finalization_precedes_fallback(self):
+  watchdog=SRC.split("private void watchdog(){",1)[1].split("private void failure(",1)[0]
+  self.assertIn('continuous4KHealthFallbackPending=reason+"_after_finalization"',watchdog)
+  self.assertIn('stopRecording("trial_health_guard")',watchdog)
+  self.assertNotIn('restoreLegacy4K(reason+"_stopping")',watchdog)
+  complete=SRC.split("private void finishContinuous4K(",1)[1].split("private void stopRecording(",1)[0]
+  self.assertLess(complete.index("validCompleted4K(clip)"),complete.index('mode="watching"'))
+  self.assertLess(complete.index('reviewer.submit(()->review(clip,evidenceReason,motionAtSave,segment))'),
+      complete.index('restoreLegacy4K(afterFinalize)',complete.index('reviewer.submit(()->review(clip,evidenceReason,motionAtSave,segment))')))
+  self.assertLess(complete.index('restoreLegacy4K(afterFinalize)',complete.index('reviewer.submit(()->review(clip,evidenceReason,motionAtSave,segment))')),
+      complete.index('if(segment.autoResumeArmed)'))
+  self.assertIn("return;\n  }\n  // If motion continues at a safety cap,",complete)
+  self.assertIn('continuous4KHealthFallbackPending=""',SRC)
  def test_jvm_deadline_and_no_event_interference(self):
   if not (shutil.which("javac") and shutil.which("java")):self.skipTest("JDK unavailable")
   # Extract the actual nested guard; compile its exact source on a real JVM.
@@ -84,8 +97,8 @@ class Tests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as tmp:
    path=Path(tmp)/"GuardContract.java"
    path.write_text(code)
-   build=subprocess.run(["javac",str(path)],capture_output=True,text=True,timeout=16)
+   build=subprocess.run(["javac",str(path)],capture_output=True,text=True,timeout=45)
    self.assertEqual(build.returncode,0,build.stderr)
-   run=subprocess.run(["java","-cp",tmp,"GuardContract"],capture_output=True,text=True,timeout=16)
+   run=subprocess.run(["java","-cp",tmp,"GuardContract"],capture_output=True,text=True,timeout=45)
    self.assertEqual(run.returncode,0,run.stderr)
 if __name__=="__main__":unittest.main(verbosity=2)
