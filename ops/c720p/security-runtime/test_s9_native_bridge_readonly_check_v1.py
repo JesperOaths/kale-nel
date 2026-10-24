@@ -73,6 +73,42 @@ class BridgeDiagnosticTests(unittest.TestCase):
             with self.assertRaisesRegex(m.NotReady,"model_mismatch"):
                 m.check()
 
+    def test_api_refused_but_adb_and_forward_present_is_not_transport_loss(self):
+        m=load()
+        def observed(*args):
+            if args==("-s",m.DEVICE,"get-state"):return "device"
+            if args==("forward","--list"):return m.DEVICE+" "+m.FORWARD
+            raise AssertionError(args)
+        with mock.patch.object(m,"adb",side_effect=observed), \
+             mock.patch.object(m,"camera_status",side_effect=m.NotReady("bridge_status_unavailable")):
+            with self.assertRaisesRegex(m.NotReady,"recorder_api_unavailable_but_adb_and_forward_listed"):
+                m.status_with_transport_attribution()
+
+    def test_api_refused_and_phone_transport_lost_are_distinct(self):
+        m=load()
+        with mock.patch.object(m,"adb",return_value="offline"), \
+             mock.patch.object(m,"camera_status",side_effect=m.NotReady("bridge_status_unavailable")):
+            with self.assertRaisesRegex(m.NotReady,"adb_transport_unavailable_after_recorder_api_failure"):
+                m.status_with_transport_attribution()
+
+    def test_api_refused_and_forward_disappeared_are_distinct(self):
+        m=load()
+        def observed(*args):
+            if args==("-s",m.DEVICE,"get-state"):return "device"
+            if args==("forward","--list"):return ""
+            raise AssertionError(args)
+        with mock.patch.object(m,"adb",side_effect=observed), \
+             mock.patch.object(m,"camera_status",side_effect=m.NotReady("bridge_status_unavailable")):
+            with self.assertRaisesRegex(m.NotReady,"adb_forward_missing_after_recorder_api_failure"):
+                m.status_with_transport_attribution()
+
+    def test_nontransport_camera_mode_failure_not_mislabeled(self):
+        m=load()
+        with mock.patch.object(m,"adb",side_effect=AssertionError("no ADB needed")), \
+             mock.patch.object(m,"camera_status",side_effect=m.NotReady("native_camera_not_watching")):
+            with self.assertRaisesRegex(m.NotReady,"native_camera_not_watching"):
+                m.status_with_transport_attribution()
+
     def test_no_side_effecting_control_path(self):
         source=PATH.read_text()
         self.assertNotIn("am force-stop",source)
