@@ -17,6 +17,10 @@ class OpenSessions:
   self.tickets,self.binder,self.attestor=tickets,binder,attestor
   self.clock,self.limit,self.lifetime=clock,max_active,lifetime
   self.lock=threading.RLock();self.sessions={}
+  # Full-original V252 SHA happens BEFORE a nonce exists. Bound this phase
+  # independently so unauthenticated-by-session hashing cannot create
+  # unlimited concurrent SD/Drive reads ahead of max_active admission.
+  self.hash_slots=threading.BoundedSemaphore(max_active)
  def prune(self,now):
   for key,row in list(self.sessions.items()):
    if row['expires']<=now:self.sessions.pop(key,None)
@@ -24,20 +28,31 @@ class OpenSessions:
   if source not in ('sd','drive') or not isinstance(name,str) or not (
      SD.fullmatch(name) if source=='sd' else DRIVE.fullmatch(name) and '..' not in name):
    raise Refused('invalid_original_name')
-  # Physical V252 verifier produces original SHA after actual hashing.
-  proof=self.binder.bind_new_decision(source,name,self.attestor)
-  if proof.get('source_identity')!=verified_source_identity or not isinstance(proof.get('sha256'),str) or not HEX.fullmatch(proof['sha256']):
-   raise Refused('source_identity_or_digest_untrusted')
-  self.binder.require_unchanged(proof,self.attestor)
-  now=self.clock()
-  with self.lock:
-   self.prune(now)
-   if len(self.sessions)>=self.limit:raise Refused('too_many_open_reviews')
-   nonce=secrets.token_urlsafe(32)
-   self.sessions[nonce]=dict(source=source,name=name,identity=verified_source_identity,
-      revision=proof['source_revision'],sha256=proof['sha256'],size=proof['size_bytes'],
-      expires=now+self.lifetime,delivered=False,finalized=False)
-   return nonce
+  # Fail closed before any full-original I/O if the pending hash quota is
+  # exhausted. Always return the permit after errors or cancellation.
+  if not self.hash_slots.acquire(blocking=False):
+   raise Refused('too_many_inflight_original_verifications')
+  try:
+   with self.lock:
+    self.prune(self.clock())
+    if len(self.sessions)>=self.limit:raise Refused('too_many_open_reviews')
+   # Physical V252 verifier produces original SHA after actual hashing. No
+   # browser-controlled hash or unbounded identity lookup is accepted.
+   proof=self.binder.bind_new_decision(source,name,self.attestor)
+   if proof.get('source_identity')!=verified_source_identity or not isinstance(proof.get('sha256'),str) or not HEX.fullmatch(proof['sha256']):
+    raise Refused('source_identity_or_digest_untrusted')
+   self.binder.require_unchanged(proof,self.attestor)
+   now=self.clock()
+   with self.lock:
+    self.prune(now)
+    if len(self.sessions)>=self.limit:raise Refused('too_many_open_reviews')
+    nonce=secrets.token_urlsafe(32)
+    self.sessions[nonce]=dict(source=source,name=name,identity=verified_source_identity,
+       revision=proof['source_revision'],sha256=proof['sha256'],size=proof['size_bytes'],
+       expires=now+self.lifetime,delivered=False,finalized=False)
+    return nonce
+  finally:
+   self.hash_slots.release()
  def get(self,nonce,source,name):
   self.prune(self.clock())
   row=self.sessions.get(nonce)
