@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {existsSync} from "node:fs";
 import {chromium,devices} from "playwright-core";
 
-const BASE="https://kalenel.nl/music/?browser_qa=20261025";
+const BASE=process.env.TUNE_RUSH_BASE||"https://kalenel.nl/music/?browser_qa=20261025";
 const demos={
  "demo:twinkle":["Twinkle Twinkle Little Star","Traditional"],
  "demo:ode":["Ode to Joy","Ludwig van Beethoven"],
