@@ -29,7 +29,7 @@ async function page(ctx,label){
 }
 const wait=(page,fn,timeout=17000)=>page.waitForFunction(fn,null,{timeout});
 const state=page=>page.evaluate(()=>({
- phase:room?.phase,step:room?.step,round:room?.round,mode:room?.mode,
+ code:room?.code,phase:room?.phase,step:room?.step,round:room?.round,mode:room?.mode,
  players:room?.players,audio:room?.audio, title:room?.title, artist:room?.artist,
  role:room?.role,me:room?.me,blocked:room?.myBlockedStep
 }));
