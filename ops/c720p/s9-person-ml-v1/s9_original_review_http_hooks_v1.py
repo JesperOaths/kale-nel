@@ -11,6 +11,7 @@ from s9_reviewed_media_session_v1 import DeliveryPending
 
 OPEN='/new/api/review-original-open'
 LOADED='/new/api/review-original-loaded'
+CANCEL='/new/api/review-original-cancel'
 INTENT='explicit-original-open-v1'
 MEDIA=re.compile(r'/new/review-original/(sd|drive)/([A-Za-z0-9._-]{1,180}[.]mp4)$')
 NONCE=re.compile(r'[A-Za-z0-9_-]{20,128}$')
@@ -22,7 +23,7 @@ def install(H,*,sessions,original_delegate,verified_source):
  old_post,old_go=H.do_POST,H.go
  def post(self):
   p=urlsplit(self.path)
-  if p.path not in (OPEN,LOADED):return old_post(self)
+  if p.path not in (OPEN,LOADED,CANCEL):return old_post(self)
   if p.query or self.headers.get('X-S9-Original-Review-Intent')!=INTENT:
    return self.js(403,dict(ok=False,error='explicit_review_intent_required'))
   if 'application/json' not in self.headers.get('Content-Type','').lower():
@@ -44,6 +45,12 @@ def install(H,*,sessions,original_delegate,verified_source):
     return self.js(200,dict(ok=True,source=source,name=name,
      open_nonce=nonce,playback_path='/new/review-original/'+source+'/'+quote(name)+'?open='+nonce,
      server_original_revision_anchored=True))
+   if p.path==CANCEL:
+    if set(body)!={'source','name','open_nonce'}:raise Refused('unexpected_cancel_fields')
+    nonce=body['open_nonce']
+    if not isinstance(nonce,str) or not NONCE.fullmatch(nonce):raise Refused('invalid_nonce')
+    result=sessions.discard(nonce,source,name)
+    return self.js(200,result)
    if set(body)!={'source','name','open_nonce','observed_open_nonce'}:
     raise Refused('unexpected_loaded_fields')
    nonce=body['open_nonce']
