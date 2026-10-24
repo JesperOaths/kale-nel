@@ -1,0 +1,43 @@
+name: Task9 offline integration
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/s9_phone_*.py'
+      - 'ops/c720p/s9-native-security/offline-worker/test-s9-phone-*.py'
+      - 'ops/c720p/s9-native-security/s9_priority_rescan_feedback_v304.py'
+      - 'ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py'
+      - '.github/workflows/s9-task9-offline-integration.yml'
+permissions:
+  contents: read
+jobs:
+  task9-offline:
+    name: Task9 ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: observer-v373
+            test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-first-peak-observer-v373.py
+          - suite: runner-v371
+            test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-gap-runner-v371.py
+          - suite: coordinator-v371
+            test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-gap-coordinator-v371.py
+          - suite: memory-v372
+            test_file: ops/c720p/s9-native-security/offline-worker/test-s9-phone-memory-qualification-v372.py
+          - suite: durable-v304
+            test_file: ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Run offline regression suite
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          TEST_FILE: ${{ matrix.test_file }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$TEST_FILE"
+          timeout 90s python3 "$TEST_FILE" -v
