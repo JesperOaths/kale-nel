@@ -164,6 +164,30 @@ class Tests(unittest.TestCase):
   self.assertEqual(writes,[])
   self.assertFalse(self.legacy.AUDIT.exists())
   self.assertEqual(self.legacy.current(),before)
+ def test_registered_private_consumer_get_pins_query_and_revision(self):
+  import urllib.parse
+  token=self.open()
+  self.assertEqual(self.writer.mutate(self.decision(token),[CLIP])[0],200)
+  binding=self.legacy.current()['items']['sd:'+CLIP]['media_binding']
+  class H:
+   command='GET'
+   def go(self):raise AssertionError('wrong route')
+   def do_POST(self):raise AssertionError('no writes through GET')
+   def js(self,status,payload):return status,payload
+  from s9_forward_manual_writer_v1 import install
+  future=install(H,self.legacy,lambda:[CLIP],self.attestor,binder,self.tokens)
+  h=H()
+  q=urllib.parse.urlencode(dict(source='sd',name=CLIP,revision=51,
+      source_revision=binding['source_revision'],sha256=binding['sha256']))
+  h.path=self.legacy.ROUTE+'/consumption?'+q
+  status,body=h.go()
+  self.assertEqual(status,200)
+  self.assertTrue(body['source_must_be_revalidated_at_use'])
+  h.path+='&unexpected=value'
+  self.assertEqual(h.go()[0],400)
+  h.command='HEAD';h.path=self.legacy.ROUTE+'/consumption?'+q
+  self.assertEqual(h.go()[0],405)
+  self.assertEqual(self.legacy.current()['revision'],51)
  def test_report_historical_truth(self):
   report=self.writer.report()
   self.assertEqual(report['binding_counts']['historically_unbound'],48)
