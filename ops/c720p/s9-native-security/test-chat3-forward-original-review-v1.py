@@ -75,6 +75,8 @@ class Tests(unittest.TestCase):
   self.legacy.atomic=forbid_atomic
   status,result=self.writer.mutate(self.decision(ticket),[CLIP])
   self.assertEqual(status,409)
+  self.assertEqual(result['error'],'historical_re_review_not_supported_this_release')
+  self.assertTrue(result['existing_decision_preserved'])
   self.assertEqual(attempts,[])
   self.assertEqual(self.legacy.current(),before)
   self.assertFalse(self.legacy.AUDIT.exists())
@@ -224,9 +226,42 @@ class Tests(unittest.TestCase):
   ticket=self.open()
   with self.assertRaises(Rejected):self.tokens.consumed(ticket)
   self.assertIn(ticket,self.tokens.tokens)
+ def test_cancel_unloaded_original_revokes_session_before_ticket(self):
+  nonce=self.sessions.begin_original('sd',CLIP,'original:sd:one')
+  result=self.sessions.discard(nonce,'sd',CLIP)
+  self.assertTrue(result['canonical_registry_untouched'])
+  self.assertEqual(self.tokens.tokens,{})
+  with self.assertRaises(Refused):
+   self.sessions.require_current_stream(nonce,'sd',CLIP)
+  self.assertEqual(self.legacy.current()['revision'],50)
+  self.assertFalse(self.legacy.AUDIT.exists())
+ def test_cancel_post_loaded_revokes_unreserved_ticket(self):
+  nonce=self.sessions.begin_original('sd',CLIP,'original:sd:one')
+  revision=self.sessions.require_current_stream(nonce,'sd',CLIP)
+  self.sessions.report_delivery(nonce,'sd',CLIP,dict(status=206,
+     transferred_bytes=128,response_original_sha256=revision['original_sha256'],
+     source_revision=revision['source_revision'],source_identity=revision['source_identity']))
+  token=self.sessions.confirm_player_loaded(nonce,'sd',CLIP,nonce)['review_ticket']
+  self.assertIn(token,self.tokens.tokens)
+  self.assertTrue(self.sessions.discard(nonce,'sd',CLIP)['original_review_cancelled'])
+  self.assertNotIn(token,self.tokens.tokens)
+  self.assertNotEqual(self.writer.mutate(self.decision(token),[CLIP])[0],200)
+  self.assertEqual(self.legacy.current()['revision'],50)
+ def test_cancel_cannot_interrupt_reserved_commit(self):
+  nonce=self.sessions.begin_original('sd',CLIP,'original:sd:one')
+  rev=self.sessions.require_current_stream(nonce,'sd',CLIP)
+  self.sessions.report_delivery(nonce,'sd',CLIP,dict(status=206,
+     transferred_bytes=128,response_original_sha256=rev['original_sha256'],
+     source_revision=rev['source_revision'],source_identity=rev['source_identity']))
+  ticket=self.sessions.confirm_player_loaded(nonce,'sd',CLIP,nonce)['review_ticket']
+  self.tokens.begin(ticket,'sd',CLIP)
+  with self.assertRaises(Refused):self.sessions.discard(nonce,'sd',CLIP)
+  self.assertIn(ticket,self.tokens.tokens)
+  self.assertEqual(self.legacy.current()['revision'],50)
  def test_report_historical_truth(self):
   report=self.writer.report()
   self.assertEqual(report['binding_counts']['historically_unbound'],48)
   self.assertEqual(report['binding_counts']['bound'],0)
   self.assertEqual(report['revision'],50)
+  self.assertIs(report['historical_re_review_supported'],False)
 if __name__=='__main__':unittest.main()
