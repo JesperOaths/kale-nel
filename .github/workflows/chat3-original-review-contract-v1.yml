@@ -56,8 +56,8 @@ jobs:
           for phrase in ('review_ticket','anonymous outfit','verified original reviewer'):
               if phrase not in ui.lower():
                   raise SystemExit('Missing browser eligibility label: '+phrase)
-          if 'revalidateOutfitReference(ref)' not in ui or
-             'state.verifiedOutfitReferences' not in ui:
+          if ('revalidateOutfitReference(ref)' not in ui or
+              'state.verifiedOutfitReferences' not in ui):
               raise SystemExit('Current canonical consumer not connected to outfit evidence')
           PY
       - name: Browser JavaScript syntax
