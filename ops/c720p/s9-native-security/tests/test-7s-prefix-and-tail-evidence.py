@@ -24,8 +24,20 @@ class Contracts(unittest.TestCase):
  def test_10sec_quiet_end_logic_remains(self):
   self.assertIn("QUIET_MS=10000",CAPTURE)
   self.assertIn('lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end")',CAPTURE)
-  self.assertIn('lastMovementAt=lastFrameAt;',CAPTURE)
-  self.assertIn('eventChain.evidence(lastFrameAt);',CAPTURE)
+  # A car-only frame may vote motion but must never refresh the tail
+  # or arm a max-duration continuation without person corroboration.
+  raw=CAPTURE[CAPTURE.index('if(change && lastFrameAt>=cameraControlSettleUntil)'):
+              CAPTURE.index('if("recording".equals(mode)&&lastFrameAt-lastStart>2500)')]
+  self.assertNotIn('lastMovementAt=lastFrameAt;',raw)
+  self.assertNotIn('eventChain.evidence(',raw)
+  self.assertIn('boolean recordingCheck=recording&&temperature()<405&&',raw)
+  confirmed=CAPTURE[CAPTURE.index('private void evaluateGardenPersonAsync('):
+                    CAPTURE.index('private boolean rateAllowed(')]
+  self.assertIn('if("recording".equals(mode)){',confirmed)
+  self.assertIn('personTrackGate.offer(now,jpegAt,score,personBox,localCells)',confirmed)
+  self.assertIn('lastMovementAt=SystemClock.elapsedRealtime();',confirmed)
+  self.assertIn('eventChain.evidence(lastMovementAt);',confirmed)
+  self.assertIn('gardenPersonTailVerifiedRefreshes++;',confirmed)
  def test_saved_evidence_surfaces_actual_age(self):
   self.assertIn('evidence.put("last_accepted_motion_age_at_stop_ms",',CAPTURE)
   self.assertIn('j.put("capture_segment_last_accepted_motion_age_at_stop_ms",',CAPTURE)
