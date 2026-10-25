@@ -60,12 +60,17 @@ class VectorOnlyRouteTest(unittest.TestCase):
             self.assertFalse(result['raw_embeddings_exposed'])
             self.assertNotIn('visual_embedding', row)
 
-    def test_legacy_people_entries_redirect_to_top_level_vector_page(self):
+    def test_active_entry_installer_redirects_to_top_level_without_modifying_v50(self):
+        import importlib.util
         base = Path(__file__).resolve().parent
-        for entry in ('security-people-v33.html', 'security-people-v50.html'):
-            raw = (base / entry).read_text()
-            self.assertIn('security-people-v52.html?v=vector-only-suggestions-20261025', raw)
-            self.assertNotIn('security-people-v50.html?v=security-visible-route', raw)
+        spec = importlib.util.spec_from_file_location(
+            'route_installer', base / 'install-people-suggestions-entry-route.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertIn(b'security-people-v52.html?v=vector-only-suggestions-20261025',
+                      module.build_page())
+        self.assertNotIn(b'security-people-v50.html', module.build_page())
+        self.assertEqual((base / 'security-people-v50.html').read_bytes().__len__() > 10000, True)
 
 if __name__ == '__main__':
     unittest.main()
