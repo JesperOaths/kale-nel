@@ -52,11 +52,26 @@ try {
  if(process.env.TUNE_RUSH_YOUTUBE_ONLY!=="1"){
  const host=await page(pad,"demo-host"),alice=await page(phone1,"demo-alice"),bob=await page(phone2,"demo-bob");
  const initial=await createGame(host);
+ assert.ok(await host.locator("#room").evaluate(el=>el.classList.contains("host-mode")),"tablet host uses immersive studio theme");
+ await host.locator(".lobby-caption").waitFor({state:"visible"});
+ assert.ok(await host.locator("#host-fullscreen").isVisible(),"tablet host has working fullscreen control");
+ assert.equal(await host.locator(".source-select label").count(),3,"all source cards still available");
+ assert.ok(!(await alice.locator(".host-stage-hero").isVisible()),"welcome phone never shows host stage");
  await Promise.all([join(alice,initial.code,"QAlice"),join(bob,initial.code,"QBob")]);
  await wait(host,()=>room?.players.length===2);
  assert.ok((await host.locator("#lobby-players").innerText()).includes("QBob"));
  await host.locator("#start").click();
  await wait(host,()=>room?.round===1&&room?.phase!=="lobby");
+ await host.locator(".host-stage-hero").waitFor({state:"visible"});
+ assert.ok(await host.locator(".disc-core").isVisible(),"mystery cover on tablet");
+ assert.equal(await host.locator(".sound-bars i").count(),21,"21 decorative waveform bars");
+ assert.ok(await host.locator("#host-track-context").isVisible(),"host audio source context readable");
+ assert.ok(await host.locator(".score-panel").isVisible(),"host scoreboard visible");
+ assert.ok(await alice.locator(".mobile-disc-icon").isVisible(),"old player phone disc preserved");
+ assert.ok(!(await alice.locator(".disc-art-top").isVisible()),"mystery studio graphics not shown on phone");
+ const geometry=await host.evaluate(()=>({vw:innerWidth,scroll:document.documentElement.scrollWidth,track:document.getElementById("host-track-context")?.textContent||""}));
+ assert.ok(geometry.scroll<=geometry.vw+2,"tablet page must not overflow horizontally: "+JSON.stringify(geometry));
+ console.log("BROWSER_HOST_STUDIO_LAYOUT_PASS",JSON.stringify({viewport:geometry.vw,waveBars:21,scoreboard:"visible",playerTheme:"preserved"}));
  await waitBuzz(alice);
  await alice.locator("#buzz").click();
  await wait(alice,()=>room?.phase==="answering"&&room.lockedPlayer===room.me);
@@ -110,6 +125,8 @@ try {
  await join(catalogGuest,cr.code,"CatalogPlayer");
  await catalogHost.locator('input[name="music-source"][value="catalog"]').check();
  await catalogHost.locator("#catalog-settings").waitFor({state:"visible"});
+ assert.ok((await catalogHost.locator(".lobby-caption").isVisible()),"catalog host setup uses tablet studio");
+ assert.ok(!(await catalogGuest.locator(".lobby-caption").isVisible()),"player never sees host studio setup");
  await catalogHost.locator("#genre-options input[value=rock]").uncheck();
  await catalogHost.locator("#decade-options input[value='1970']").check();
  await catalogHost.locator("#start").click();
