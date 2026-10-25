@@ -140,12 +140,131 @@ async function rpc(action,extra={},attempt=0) {
 }
 
 
+
+/** Full-length local music: browser File handles stay on the host; no audio uploads. */
+let localTracks=[],localPlayed=new Set(),localSourceCache=new Set(),localCurrentIndex=null;
+let localAudioUrl=null,localReviewShown=60,localImporting=false,localModulePromise=null;
+function localLib(){return localModulePromise||(localModulePromise=import("./local-tracks.js"))}
+function localStatus(note){setText("local-playback-status",note)}
+function localReadyCount(){
+ const filters=chosenFilters();
+ return localTracks.filter(t=>t.artist&&t.title&&t.year&&t.genres.some(g=>filters.genres.includes(g))&&
+  (!filters.decades.length||filters.decades.includes(String(Math.floor(t.year/10)*10)))).length;
+}
+function renderLocalTracks(){
+ const root=$("local-track-list"),search=$("local-music-search").value.toLowerCase().trim();
+ const subset=localTracks.filter(t=>!search||(t.title+" "+t.artist+" "+t.file.name).toLowerCase().includes(search));
+ root.replaceChildren();
+ for(const t of subset.slice(0,localReviewShown)){
+  const row=document.createElement("div");row.className="local-track-row"+(t.needsReview?" needs-review":"");
+  for(const [name,label,value] of [["title","Song title",t.title],["artist","Artist",t.artist],
+   ["genres","Genres",t.genres.join(", ")],["year","Year",t.year||""]]){
+   const l=document.createElement("label");l.textContent=label;
+   const inp=document.createElement("input");inp.value=String(value);inp.maxLength=name==="year"?4:100;
+   inp.setAttribute("aria-label",label+" for "+t.file.name);
+   if(name==="year")inp.inputMode="numeric";
+   inp.addEventListener("change",()=>{
+    if(name==="year"){const num=Number(inp.value);t.year=Number.isInteger(num)&&num>=1950&&num<=2100?num:null;}
+    else if(name==="genres"){t.genres=[...new Set(inp.value.toLowerCase().split(/[,;]/)
+     .map(x=>x.trim()).filter(x=>["pop","rock","hiphop","electronic","indie","dutch","disco","rnb","metal","dance"].includes(x)))];}
+    else t[name]=inp.value.slice(0,100).trim();
+    t.needsReview=!t.title||!t.artist||!t.year||!t.genres.length;
+    updateLocalCounts();row.classList.toggle("needs-review",t.needsReview);
+   });
+   l.append(inp);row.append(l);
+  }
+  root.append(row);
+ }
+ show("local-review",localTracks.length>0);
+ setText("local-tracks-shown",subset.length?"Showing "+Math.min(subset.length,localReviewShown)+" of "+subset.length+" matches":"No matching songs");
+ show("local-show-more",subset.length>localReviewShown);
+ setText("local-review-count",localTracks.length+" imported");
+}
+function updateLocalCounts(){
+ const complete=localTracks.filter(t=>!t.needsReview).length;
+ const eligible=localReadyCount();
+ setText("local-music-count",localImporting?"Reading local song metadata…":
+  localTracks.length+" audio files selected · "+complete+" fully tagged · "+eligible+" match the current genre/decade filters.");
+}
+async function importLocalFiles(list){
+ if(room?.phase!=="lobby"||!isHost()||localImporting)return;
+ localImporting=true;updateLocalCounts();
+ try{
+  const lib=await localLib();
+  const files=[...list].filter(f=>f.size>0),added=[];
+  for(const file of files){
+   const key=file.name+"::"+file.size+"::"+file.lastModified;
+   if(localSourceCache.has(key))continue;
+   const track=await lib.inspectLocalTrack(file,localTracks.length+added.length);
+   if(track){added.push(track);localSourceCache.add(key)}
+   if(added.length%20===0)await new Promise(resolve=>setTimeout(resolve,0));
+  }
+  localTracks.push(...added);
+  if(!added.length)message("No new playable audio files found. Try MP3, M4A or another supported audio file.");
+  else message(added.length+" music files added locally. No audio uploaded.");
+ }catch(e){message("Could not read the selected music: "+e.message)}
+ finally{localImporting=false;updateLocalCounts();renderLocalTracks();}
+}
+function discardLocalAudio(){
+ try{playerAudio.pause();playerAudio.removeAttribute("src");playerAudio.load()}catch{}
+ if(localAudioUrl){URL.revokeObjectURL(localAudioUrl);localAudioUrl=null}
+ localCurrentIndex=null;
+}
+async function getLocalDuration(file){
+ const url=URL.createObjectURL(file),probe=new Audio();
+ try{
+  probe.preload="metadata";
+  const duration=await new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>{cleanup();reject(Error("Audio metadata timed out"))},9000);
+   const cleanup=()=>{clearTimeout(timer);probe.onloadedmetadata=null;probe.onerror=null};
+   probe.onloadedmetadata=()=>{cleanup();resolve(probe.duration)};
+   probe.onerror=()=>{cleanup();reject(Error("This audio format is not supported by the browser"))};
+   probe.src=url;probe.load();
+  });
+  if(!Number.isFinite(duration)||duration<30||duration>7200)throw Error("Song length is not supported");
+  return duration;
+ }finally{probe.removeAttribute("src");probe.load();URL.revokeObjectURL(url)}
+}
+async function selectLocalRound(){
+ if(localImporting)throw Error("Music is still importing.");
+ const lib=await localLib(),f=chosenFilters();
+ if(!f.genres.length)throw Error("Select at least one genre.");
+ const attempted=new Set(localPlayed),max=localTracks.length;
+ for(let tries=0;tries<max;tries++){
+  const track=lib.chooseNextLocalTrack(localTracks,f.genres,f.decades,attempted);
+  attempted.add(track.index);
+  let duration;
+  try{duration=await getLocalDuration(track.file)}catch{continue}
+  const cueMs=lib.chooseFullTrackCue(duration);
+  const url=URL.createObjectURL(track.file);
+  discardLocalAudio();
+  localAudioUrl=url;localCurrentIndex=track.index;
+  playerAudio.preload="auto";playerAudio.src=url;playerAudio.load();
+  localStatus("Track ready. Tap Play next clue to hear the recording.");
+  return {mode:"local",song:track.title,artist:track.artist,
+   fileIndex:track.index,cueMs,durationMs:Math.floor(duration*1000)};
+ }
+ throw Error("No matching playable recordings. Check file formats and song metadata.");
+}
+async function playLocalHint(info){
+ const index=Number(String(info.source||"").slice(6));
+ if(!Number.isInteger(index)||index!==localCurrentIndex||!localAudioUrl)
+  throw Error("The host audio file is not loaded. Reopen the song collection on this tablet.");
+ const cue=(info.cueMs||0)/1000;
+ if(playerAudio.readyState===0)throw Error("The selected file could not load. Try a supported MP3.");
+ playerAudio.currentTime=cue;
+ try{await playerAudio.play()}catch(e){throw Error("Your browser blocked audio. Tap the Play clue button again: "+String(e.message||e))}
+ localStatus("Playing clue from "+Math.round(cue)+" seconds into the song.");
+}
+
 function chosenSource(){return document.querySelector('input[name="music-source"]:checked')?.value||"demo"}
 function updateAudioChoice(){
  const mode=chosenSource();
  show("youtube-setup",mode==="youtube");
  show("demo-settings",mode==="demo");
- show("catalog-settings",mode==="catalog"||mode==="deezer");
+ show("catalog-settings",mode==="catalog"||mode==="deezer"||mode==="local");
+ show("local-settings",mode==="local");
+ if(mode==="local")updateLocalCounts();
 }
 function parseYoutubeVideo(link){
  const u=new URL(String(link||"").trim());
