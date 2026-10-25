@@ -163,6 +163,8 @@ public final class CameraService extends Service {
  private final GardenPersonTrackGate personTrackGate=new GardenPersonTrackGate();
  private volatile int gardenPersonLastLocalMotionCells=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
+ private volatile long gardenPersonTailVerifiedRefreshes=0;
+ private volatile long gardenRawMotionTailIgnored=0;
  private volatile long deepFaceScanned=0,deepFaceErrors=0;
  private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
@@ -176,7 +178,7 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- // End 10 seconds after the most recent accepted motion; continue capped events.
+ // End 10 seconds after the last corroborated person, not unverified motion.
  private static final long QUIET_MS=10000,MAX_MS=120000,COOLDOWN_MS=0;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
@@ -347,6 +349,7 @@ public final class CameraService extends Service {
      }
      if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
+      if("recording".equals(mode))gardenRawMotionTailIgnored++;
       // Pixel motion only proposes a person check. Never refresh the recording
       // quiet tail or event lineage from vehicles, leaves or lighting changes.
       // Those may only be renewed by verified person tracking below.
@@ -598,6 +601,7 @@ public final class CameraService extends Service {
       if(temperature()<405&&!temporaryTest&&!diagnosticPrerollActive){
        lastMovementAt=SystemClock.elapsedRealtime();
        eventChain.evidence(lastMovementAt);
+       gardenPersonTailVerifiedRefreshes++;
       }
       return;
      }
@@ -1521,6 +1525,9 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_matches",gardenPersonGateMatches);
    d.put("garden_person_gate_required_positive_frames",2);
    d.put("garden_person_gate_confirmed_starts",gardenPersonGateConfirmedStarts);
+   d.put("garden_person_tail_verified_refreshes",gardenPersonTailVerifiedRefreshes);
+   d.put("garden_raw_motion_tail_ignored",gardenRawMotionTailIgnored);
+   d.put("garden_person_tail_requires_verified_person",true);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
