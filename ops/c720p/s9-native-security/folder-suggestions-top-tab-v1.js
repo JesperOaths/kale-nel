@@ -4,6 +4,7 @@
   // decisions remain routed through the verified authenticated review API.
   const endpoint = '/new/api/folder-suggestions';
   const intent = 'human-folder-suggestions-v1';
+  const VECTOR_MODE = 'visual_embedding_cosine_v1';
   const pane = document.getElementById('suggestions');
   const cardsHost = document.getElementById('liveFolderSuggestionCards');
   const badge = document.getElementById('suggestionsTabCount');
@@ -56,6 +57,7 @@
         data.raw_embeddings_exposed !== false ||
         data.automatic_assignments !== 0 || data.probabilities !== false ||
         data.identity_probabilities === true ||
+        data.scoring_mode !== VECTOR_MODE ||
         !Array.isArray(data.matches)) throw Error('Unverified suggestion snapshot');
     return data.matches.filter(renderer.safeMatch).length;
   }
@@ -160,6 +162,7 @@
       try {
         await renderer.connect(cardsHost, {
           relay, onOpen, onPreview, showProvisional: true,
+          requiredMode: VECTOR_MODE,
           onSnapshot: snapshot => { setBadge(verifySnapshot(snapshot)); },
           onSaved: () => { setBadge(null); }
         });
