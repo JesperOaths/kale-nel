@@ -67,6 +67,34 @@ def histogram(values: Any) -> tuple[float, ...] | None:
     return tuple(v / total for v in nums)
 
 
+
+def calculate_matrix_distance(candidate_vector, reference_matrix) -> tuple[float, ...]:
+    """Cosine distances against each 512-D reference row (0 same, 2 opposite).
+
+    Uses the verified, normalized feature contract and Python stdlib only:
+    NumPy is not installed on the live C720P runtime. Never mutates inputs.
+    A zero-row reference matrix returns an empty tuple.
+    """
+    def as_rows(value):
+        return value.tolist() if hasattr(value, "tolist") else value
+
+    candidate = unit(as_rows(candidate_vector))
+    if candidate is None:
+        raise ValueError("Candidate vector required")
+    rows = as_rows(reference_matrix)
+    if not isinstance(rows, (list, tuple)):
+        raise ValueError("Expected reference matrix of shape (N, 512)")
+    distances = []
+    for row in rows:
+        reference = unit(as_rows(row))
+        if reference is None:
+            raise ValueError("Reference vector required")
+        dot = math.sumprod(candidate, reference) if hasattr(math, "sumprod") else math.fsum(
+            x * y for x, y in zip(candidate, reference))
+        distances.append(1.0 - max(-1.0, min(1.0, dot)))
+    return tuple(distances)
+
+
 def cosine(a: tuple[float, ...], b: tuple[float, ...]) -> float:
     dot = math.sumprod(a, b) if hasattr(math, "sumprod") else math.fsum(
         x * y for x, y in zip(a, b))
@@ -143,7 +171,7 @@ def pair_score(a: ClipFeatures, b: ClipFeatures, *,
         raise ValueError("Unsupported appearance similarity method")
     if a.key == b.key or a.visual_model_id != b.visual_model_id:
         return None
-    visual_score = cosine(a.visual, b.visual)
+    visual_score = 1.0 - calculate_matrix_distance(a.visual, (b.visual,))[0]
     if scoring_mode == VECTOR_ONLY:
         return {"score": visual_score, "method": VECTOR_ONLY,
                 "upper_crop_score": None, "visual_score": visual_score,
@@ -178,7 +206,7 @@ def centroid_score(candidate: ClipFeatures,
         mean = normalized_centroid([r.visual for r in compatible])
         if mean is None:
             return None
-        score = cosine(candidate.visual, mean)
+        score = 1.0 - calculate_matrix_distance(candidate.visual, (mean,))[0]
         return {"score": score, "method": VECTOR_ONLY, "visual_score": score,
                 "upper_crop_score": None, "color_score": None}
     structural = [r for r in compatible if candidate.structural_aligned_verified
@@ -190,7 +218,7 @@ def centroid_score(candidate: ClipFeatures,
         upper_mean = normalized_centroid([r.structural for r in structural])
         if visual_mean is not None and upper_mean is not None:
             upper = cosine(candidate.structural, upper_mean)
-            visual = cosine(candidate.visual, visual_mean)
+            visual = 1.0 - calculate_matrix_distance(candidate.visual, (visual_mean,))[0]
             return {"score": 0.70 * upper + 0.30 * visual,
                     "method": "structural_70_visual_30",
                     "upper_crop_score": upper, "visual_score": visual,
@@ -202,7 +230,7 @@ def centroid_score(candidate: ClipFeatures,
     visual_mean = normalized_centroid([r.visual for r, _ in usable])
     if visual_mean is None:
         return None
-    visual = cosine(candidate.visual, visual_mean)
+    visual = 1.0 - calculate_matrix_distance(candidate.visual, (visual_mean,))[0]
     mean_hsv = tuple(math.fsum(r.hsv[i] for r, _ in usable) / len(usable)
                      for i in range(len(candidate.hsv)))
     color = color_affinity(candidate.hsv, mean_hsv)
