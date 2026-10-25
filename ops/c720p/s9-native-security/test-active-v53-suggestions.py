@@ -33,13 +33,13 @@ class ActiveSuggestionsUI(unittest.TestCase):
   appearance=(BASE/'appearance-evidence-panel-v3.js').read_text()
   self.assertIn("node('button','Appearance comparisons')",appearance)
   self.assertNotIn("node('button','Folder Suggestions')",appearance)
- def test_v326_click_exclusively_opens_suggestions(self):
+ def test_v327_click_exclusively_opens_suggestions(self):
   controller=(BASE/'security-people-v327.js').read_text()
   self.assertIn("['overview','review','people','clothing','automatic','suggestions','folderView']",controller)
   self.assertIn("if(pane==='suggestions'){",controller)
   self.assertIn("window.dispatchEvent(new Event('people-folder-suggestions-open'))",controller)
   self.assertIn("const p=b.dataset.pane;if(p==='review')openReview('all');else openHome(p);",controller)
-  self.assertIn('window.AppearanceEvidenceV2',controller)
+  self.assertIn('representativeReviewedImage(f)',controller)
   self.assertIn("if(state.pane==='suggestions'){",controller)
  def test_active_security_hub_routes_v53_with_fresh_url(self):
   hub=(BASE/'security-hub-v32.js').read_text()
