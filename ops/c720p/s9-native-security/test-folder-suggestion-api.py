@@ -207,7 +207,10 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(result["match_threshold"],.73)
         self.assertEqual(result["matches"][0]["method"],eng.VECTOR_ONLY)
         self.assertIsNone(result["matches"][0]["color_score"])
-        self.assertNotIn("visual_embedding",str(result))
+        self.assertFalse(result["raw_embeddings_exposed"])
+        self.assertTrue(all("visual_embedding" not in row and
+                            "structural_crop_embedding" not in row
+                            for row in result["matches"]))
         self.assertEqual(result["automatic_assignments"],0)
         self.assertEqual(result["status"],"human_review_only")
 
