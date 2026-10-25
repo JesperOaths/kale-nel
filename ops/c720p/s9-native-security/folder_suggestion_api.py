@@ -139,7 +139,7 @@ def review(payload, provider, journal: ReviewJournal,
                     fresh.get("historic_reviewed_keys") != data["historic_reviewed_keys"] or
                     fresh.get("revision") != data["revision"] or
                     ranking_config(fresh) != (mode, threshold) or
-                    not any(raw.get("source") == source and raw.get("clip_id"] == name
+                    not any(raw.get("source") == source and raw.get("clip_id") == name
                             and raw.get("media_sha256") == matched.media_sha256
                             and raw.get("media_revision") == matched.media_revision
                             for raw in fresh.get("clips", []))):
