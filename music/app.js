@@ -26,7 +26,7 @@ const ERROR_TEXT={
  already_tried_this_clip:"You've already guessed during this snippet. Wait for the next one.",
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
  all_hints_used:"All snippets have played. The host can skip the song.",
- temporary_failure:"Connection problem. Retrying…",request_failed:"The request could not be completed.",invalid_music_source:"Choose Demo or YouTube.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds."
+ temporary_failure:"Connection problem. Retrying…",request_failed:"The request could not be completed.",invalid_music_source:"Choose Demo or YouTube.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds.",no_videos_for_filters:"No videos match these genres and decades. Choose more genres or remove a decade.",invalid_video_duration:"Video duration unavailable.",video_too_short_for_clues:"This video is too short for the full hints.",cue_not_available:"Random cue is only available before the first hint."
 };
 function message(s) {
  const el=$("toast");el.textContent=ERROR_TEXT[s]||String(s||"");el.hidden=false;
@@ -44,6 +44,8 @@ async function rpc(action,extra={},attempt=0) {
   song:String(extra.song||"").slice(0,100),
   artist:String(extra.artist||"").slice(0,100),
   genres:Array.isArray(extra.genres)?extra.genres.slice(0,12):[],
+  decades:Array.isArray(extra.decades)?extra.decades.slice(0,8):[],
+  durationMs:Number.isInteger(extra.durationMs)?extra.durationMs:0,
   mode:String(extra.mode||"demo"),
   videoId:String(extra.videoId||""),
   cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0
@@ -71,8 +73,10 @@ async function rpc(action,extra={},attempt=0) {
 
 function chosenSource(){return document.querySelector('input[name="music-source"]:checked')?.value||"demo"}
 function updateAudioChoice(){
- const yt=chosenSource()==="youtube";
- show("youtube-setup",yt);show("demo-settings",!yt);
+ const mode=chosenSource();
+ show("youtube-setup",mode==="youtube");
+ show("demo-settings",mode==="demo");
+ show("catalog-settings",mode==="catalog");
 }
 function parseYoutubeVideo(link){
  const u=new URL(String(link||"").trim());
@@ -330,9 +334,13 @@ function render(){
  show("host-settings",host);show("guest-wait",!host);
  if(host&&phase==="lobby")updateAudioChoice();
  $("lobby-players").replaceChildren(...room.players.map(x=>makePlayer(x.name)));
- if(phase==="lobby"&&!genresDirty){
+ if(phase==="lobby"&&!genresDirty&&room.genres.some(g=>g!=="demo")){
   document.querySelectorAll("#genre-options input").forEach(input=>{
    input.checked=room.genres.includes(input.value);
+   input.disabled=!host;
+  });
+  document.querySelectorAll("#decade-options input").forEach(input=>{
+   input.checked=(room.decades||[]).includes(input.value);
    input.disabled=!host;
   });
  }
@@ -483,12 +491,18 @@ async function submitGuess(e){
   message("Answer recorded");
  }catch{}
 }
+function chosenFilters(){
+ return {
+  genres:[...document.querySelectorAll("#genre-options input:checked")].map(x=>x.value),
+  decades:[...document.querySelectorAll("#decade-options input:checked")].map(x=>x.value)
+ };
+}
 async function saveGenres(){
- if(!room||!isHost()||room.phase!=="lobby")return;
- const genres=[...document.querySelectorAll("#genre-options input:checked")].map(x=>x.value);
- if(!genres.length){message("Select at least one genre");return}
+ if(!room||!isHost()||room.phase!=="lobby"||chosenSource()!=="catalog")return;
+ const filters=chosenFilters();
+ if(!filters.genres.length){message("Select at least one genre");return}
  genresDirty=true;
- try{await call("settings",{genres});}catch{}
+ try{await call("settings",filters)}catch{}
  finally{genresDirty=false}
 }
 $("create").addEventListener("click",create);
@@ -499,9 +513,17 @@ $("enable-sound").addEventListener("click",soundUnlock);
 $("source-select").addEventListener("change",updateAudioChoice);
 $("start").addEventListener("click",async()=>{
  try{
+  clearTimeout(genresSaveTimer);
   const mode=chosenSource();
-  const data=mode==="youtube"?youtubeRound("youtube"):{mode:"demo"};
-  if(mode==="demo")await soundUnlock();
+  if(mode==="catalog"){
+   const filters=chosenFilters();
+   if(!filters.genres.length)throw Error("Select at least one genre");
+   await call("settings",filters);
+  }else if(mode==="demo"){
+   await call("settings",{genres:["demo"],decades:[]});
+   await soundUnlock();
+  }
+  const data=mode==="youtube"?youtubeRound("youtube"):{mode};
   await call("start",data);
  }catch(e){message(e.message)}
 });
@@ -519,6 +541,7 @@ $("steal").addEventListener("click",async()=>{try{await call("steal")}catch{}});
 $("pass").addEventListener("click",async()=>{try{await call("forfeit")}catch{}});
 $("answer-form").addEventListener("submit",submitGuess);
 $("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
+$("decade-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
  if(document.hidden&&isHost()){
