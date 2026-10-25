@@ -91,6 +91,52 @@ def camera_status():
     except (OSError,TimeoutError,ValueError):
         return None
 
+def headless_camera_state(phone):
+    """Read-only S9 state. An idle scene is never permission to rearm the encoder."""
+    state=dict(camera_role="headless_remote_security_camera",
+        phone_ui_required=False,native_4k_rearm_command_sent=False,
+        physical_recovery_admitted=False,originals_or_reviews_modified=False,
+        monitoring_alive=False,legacy_fallback_healthy=False,
+        native_4k_buffer_healthy=False,native_4k_auto_recovery_locked_out=False,
+        native_4k_failure_cause="unproven",capture_state="unavailable",
+        next_action="retain_existing_camera_and_recheck")
+    if not isinstance(phone,dict):return state
+    mode=phone.get("mode")
+    live=(phone.get("ok") is True and mode in ("watching","recording")
+          and type(phone.get("last_frame_age_ms")) is int
+          and 0<=phone["last_frame_age_ms"]<1500)
+    # Preserving the 4K preference is not proof that continuous 4K is running.
+    fallback=(live and mode=="watching"
+        and phone.get("garden_person_gate_ready") is True
+        and phone.get("preroll_ready") is True
+        and type(phone.get("preroll_buffered_ms")) is int
+        and phone["preroll_buffered_ms"]>=4400
+        and phone.get("preroll_dropped_frames")==0)
+    buffer_ok=(live and phone.get("continuous_4k_trial_active") is True
+        and phone.get("continuous_4k_ready") is True
+        and type(phone.get("continuous_4k_buffered_ms")) is int
+        and phone["continuous_4k_buffered_ms"]>=6500
+        and phone.get("continuous_4k_dropped_output_frames")==0
+        and phone.get("continuous_4k_error") in ("",None))
+    exhausted=(phone.get("continuous_4k_ready") is False
+        and type(phone.get("continuous_4k_recovery_attempts")) is int
+        and phone["continuous_4k_recovery_attempts"]>=3)
+    state.update(monitoring_alive=live,legacy_fallback_healthy=fallback,
+        native_4k_buffer_healthy=buffer_ok,
+        native_4k_auto_recovery_locked_out=exhausted,
+        capture_state=("native_continuous_4k_verified" if buffer_ok
+            else "legacy_fallback_monitoring" if fallback
+            else "monitoring_but_capture_unverified" if live
+            else "camera_unavailable"),
+        next_action=("none" if buffer_ok
+            else "retain_fallback_review_native_4k_failure" if fallback and exhausted
+            else "retain_fallback_observe_native_4k" if fallback
+            else "verify_camera_transport_and_fallback"))
+    # The historical watchdog error does not prove which earlier codec or
+    # thermal condition caused 4K failure; never misattribute the root cause.
+    return state
+
+
 def evaluate(*,now,root_free_bytes,root_total_bytes,phone,catalog,activity,ledger,ntp,skew_seconds):
     if now.tzinfo is None:raise ValueError("aware_clock_required")
     issues=[]
@@ -102,6 +148,11 @@ def evaluate(*,now,root_free_bytes,root_total_bytes,phone,catalog,activity,ledge
         phone.get("continuous_4k_dropped_output_frames")==0 and \
         phone.get("mode") in ("watching","recording")
     if not camera_ok:warn("s9_capture_not_confirmed_healthy","critical")
+    headless=headless_camera_state(phone)
+    if headless["legacy_fallback_healthy"] and not camera_ok:
+        warn("s9_fallback_surveillance_operational_4k_unavailable","warning")
+    if headless["native_4k_auto_recovery_locked_out"]:
+        warn("s9_native_4k_auto_recovery_budget_exhausted","warning")
     if root_free_bytes<2*1024**3 or root_free_bytes/max(root_total_bytes,1)<0.10:
         warn("c720p_root_space_low","warning")
     if ntp is None or ntp.get("NTPSynchronized")!="yes":
@@ -144,6 +195,7 @@ def evaluate(*,now,root_free_bytes,root_total_bytes,phone,catalog,activity,ledge
     return {
       "schema_version":VERSION,"generated_at_utc":now.isoformat(),
       "overall_status":severity,
+      "headless_camera":headless,
       "checks":{"s9_native_4k_capture_healthy":camera_ok,
          "root_available_bytes":root_free_bytes,
          "root_total_bytes":root_total_bytes,

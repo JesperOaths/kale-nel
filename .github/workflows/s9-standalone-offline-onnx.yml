@@ -95,6 +95,7 @@ jobs:
             "$area/S9YuNetNativeQualityDecoderV370.java" \
             "$area/S9YuNetNativeQualityDecoderV370Test.java" \
             "$area/S9Original4KTimedDecoderV371.java" \
+            "$area/S9StandaloneDeadlineV374.java" \
             "$area/S9Original4KGapAuditV370.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test

@@ -37,6 +37,49 @@ class Tests(unittest.TestCase):
   self.assertEqual(d["issues"],[])
   self.assertFalse(d["s3_included"])
   self.assertFalse(d["clock_changed"])
+ def test_headless_fallback_distinguishes_healthy_surveillance_and_4k_lockout(self):
+  a=parameters()
+  a["phone"].update(last_frame_age_ms=30,continuous_4k_ready=False,
+      continuous_4k_trial_active=False,continuous_4k_recovery_attempts=3,
+      continuous_4k_buffered_ms=0,garden_person_gate_ready=True,
+      preroll_ready=True,preroll_buffered_ms=6900,preroll_dropped_frames=0,
+      continuous_4k_production_persisted=True)
+  report=m.evaluate(**a)
+  self.assertEqual(report["overall_status"],"critical")
+  h=report["headless_camera"]
+  self.assertEqual(h["capture_state"],"legacy_fallback_monitoring")
+  self.assertTrue(h["monitoring_alive"])
+  self.assertTrue(h["legacy_fallback_healthy"])
+  self.assertTrue(h["native_4k_auto_recovery_locked_out"])
+  self.assertEqual(h["native_4k_failure_cause"],"unproven")
+  self.assertIs(h["native_4k_rearm_command_sent"],False)
+  self.assertIs(h["physical_recovery_admitted"],False)
+  self.assertIs(h["phone_ui_required"],False)
+  codes={x["code"] for x in report["issues"]}
+  self.assertIn("s9_fallback_surveillance_operational_4k_unavailable",codes)
+  self.assertIn("s9_native_4k_auto_recovery_budget_exhausted",codes)
+ def test_fallback_is_not_claimed_when_person_gate_preroll_or_frames_stale(self):
+  a=parameters();a["phone"].update(last_frame_age_ms=20,mode="watching",
+      continuous_4k_ready=False,preroll_ready=True,preroll_buffered_ms=6900,
+      preroll_dropped_frames=0,garden_person_gate_ready=True)
+  for key,value in (("garden_person_gate_ready",False),
+      ("preroll_buffered_ms",2000),("last_frame_age_ms",2000),
+      ("preroll_dropped_frames",1),("mode","recording")):
+   copy={**a["phone"],key:value}
+   h=m.headless_camera_state(copy)
+   self.assertIs(h["legacy_fallback_healthy"],False,key)
+   self.assertIs(h["native_4k_rearm_command_sent"],False)
+ def test_native_4k_requires_actual_buffer_not_preference_or_ready_flag_alone(self):
+  a=parameters()
+  a["phone"].update(last_frame_age_ms=50,continuous_4k_trial_active=True,
+      continuous_4k_buffered_ms=7000,continuous_4k_error="")
+  self.assertTrue(m.headless_camera_state(a["phone"])["native_4k_buffer_healthy"])
+  a["phone"]["continuous_4k_buffered_ms"]=0
+  self.assertFalse(m.headless_camera_state(a["phone"])["native_4k_buffer_healthy"])
+  a["phone"]["continuous_4k_buffered_ms"]=7000
+  a["phone"]["continuous_4k_dropped_output_frames"]=1
+  self.assertFalse(m.headless_camera_state(a["phone"])["native_4k_buffer_healthy"])
+  self.assertEqual(m.headless_camera_state(None)["capture_state"],"unavailable")
  def test_clock_and_low_disk_are_alerts_not_fake_repairs(self):
   args=parameters();args["root_free_bytes"]=650*1024**2
   args["ntp"]={"NTPSynchronized":"no","CanNTP":"no"}

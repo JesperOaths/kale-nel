@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d101a">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Tune Rush • Kalenel</title>
+<meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
+<link rel="stylesheet" href="./style.css?v=5">
+<script>window.GEJAST_PAGE_VERSION='v817';</script>
+<script src="./app.js?v=5" defer></script>
+</head>
+<body>
+<header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
+<main class="shell">
+<section id="welcome" class="welcome">
+ <div class="hero"><div class="eyebrow">MULTIPLAYER MUSIC QUIZ</div><h1>Know the song.<br><em>Hit the buzzer.</em></h1>
+ <p>Hear increasingly longer snippets, be the first to buzz, and race to 20 points.</p></div>
+ <div class="welcome-grid">
+  <article class="panel"><div class="kicker">01 / TABLET</div><h2>Host a game</h2><p>Your tablet plays the music and controls the next round. The host never competes.</p><button id="create" class="primary">Create lobby <span aria-hidden="true">→</span></button></article>
+  <article class="panel"><div class="kicker">02 / PHONE</div><h2>Join a lobby</h2><p>Enter a room code and a nickname. No account or login required.</p>
+  <form id="join-form"><label for="join-code">Room code</label><input id="join-code" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="ABC234" required>
+  <label for="nickname">Your nickname</label><input id="nickname" maxlength="20" autocomplete="nickname" placeholder="Your name" required><button class="secondary" type="submit">Join game <span aria-hidden="true">→</span></button></form></article>
+ </div>
+ <p class="small-note">Demo pack: synthesized performances of public-domain melodies. Add licensed audio for modern songs. Spotify is unavailable for trivia under its developer policy.</p>
+</section>
+<section id="room" hidden>
+ <div class="room-head"><div><div class="eyebrow" id="role-indicator">HOST</div><h1 id="room-title">Game lobby</h1></div>
+ <button id="leave" class="quiet">Leave</button></div>
+ <div class="room-key"><div><span class="kicker">ROOM CODE</span><strong id="room-code">------</strong></div><button id="copy-invite" class="outline">Copy invite link</button></div>
+ <section id="lobby" class="room-layout">
+  <article class="panel"><div class="kicker">PLAYERS</div><h2>Waiting room</h2><div id="lobby-players" class="players"></div>
+   <div id="host-settings">
+    <div class="kicker settings-title">AUDIO SOURCE</div>
+    <div class="source-select" id="source-select">
+      <label><input type="radio" name="music-source" value="demo" checked><span><strong>Demo melodies</strong><small>5 synthesized public-domain songs, automatic clues</small></span></label>
+      <label><input type="radio" name="music-source" value="catalog"><span><strong>Automatic music library</strong><small>71 verified video links, randomized and filtered by genre and decade</small></span></label>
+      <label><input type="radio" name="music-source" value="youtube"><span><strong>Paste a YouTube link</strong><small>Add a song manually on the host device</small></span></label>
+    </div>
+    <div id="youtube-setup" hidden>
+      <p class="youtube-info">Paste a link such as <code>music.youtube.com/watch?v=...</code>. The video is shown on the game master's screen using YouTube's official player. It cannot be hidden or used as an audio-only stream. Some tracks cannot be embedded; advertisements and buffering can interrupt clues.</p>
+      <label for="youtube-link">YouTube Music / YouTube video link</label>
+      <input id="youtube-link" type="url" inputmode="url" placeholder="https://music.youtube.com/watch?v=..." autocomplete="off">
+      <label for="youtube-song">Correct song title (host only)</label>
+      <input id="youtube-song" maxlength="100" placeholder="Song title" autocomplete="off">
+      <label for="youtube-artist">Correct artist (host only)</label>
+      <input id="youtube-artist" maxlength="100" placeholder="Artist name" autocomplete="off">
+      <label for="youtube-cue">Clue starts at (seconds)</label>
+      <input id="youtube-cue" type="number" min="0" max="600" step="1" value="0">
+      <p class="small-note">The host enters the correct answer privately. Players only see clues and score. YouTube login is handled by YouTube, not by Tune Rush.</p>
+    </div>
+    <div id="demo-settings" class="source-explanation"><p>Play the five synthesized demo melodies. No account, internet music streaming or advertising is required.</p></div>
+    <div id="catalog-settings" hidden>
+     <div class="kicker settings-title">GENRES <small>· Choose one or more</small></div>
+     <div id="genre-options" class="genres">
+      <label><input type="checkbox" value="pop" checked> Pop</label>
+      <label><input type="checkbox" value="rock" checked> Rock</label>
+      <label><input type="checkbox" value="hiphop"> Hip-hop / Rap</label>
+      <label><input type="checkbox" value="electronic"> Electronic</label>
+      <label><input type="checkbox" value="dance"> Dance</label>
+      <label><input type="checkbox" value="disco"> Disco</label>
+      <label><input type="checkbox" value="indie"> Indie</label>
+      <label><input type="checkbox" value="rnb"> R&amp;B</label>
+      <label><input type="checkbox" value="metal"> Metal</label>
+      <label><input type="checkbox" value="dutch"> Dutch</label>
+     </div>
+     <div class="kicker settings-title">RELEASE DECADES <small>· Independent of genre</small></div>
+     <div id="decade-options" class="genres decade-grid">
+      <label><input type="checkbox" value="1960"> 1960s</label>
+      <label><input type="checkbox" value="1970"> 1970s</label>
+      <label><input type="checkbox" value="1980"> 1980s</label>
+      <label><input type="checkbox" value="1990"> 1990s</label>
+      <label><input type="checkbox" value="2000"> 2000s</label>
+      <label><input type="checkbox" value="2010"> 2010s</label>
+      <label><input type="checkbox" value="2020"> 2020s</label>
+     </div>
+     <p class="small-note">For example, Pop + 1970s draws only 1970–1979 pop tracks. Leave decades unchecked for all years. A new song is selected automatically after each solved/skipped round; tracks repeat only after the matching pool is exhausted. Some YouTube videos may block embedding or show ads.</p>
+    </div>
+    <button id="start" class="primary">Start game <span aria-hidden="true">♫</span></button>
+   </div><p id="guest-wait" class="waiting" hidden>Waiting for the host to start…</p>
+  </article>
+  <article class="panel rules"><div class="kicker">HOW IT WORKS</div><h2>First to 20 wins.</h2>
+   <p>Clips build from 0.5 to 1.5, 3, 5, 8, 12 and 20 seconds, with a pause between clips.</p>
+   <div class="rule"><span>+0.5</span> Correct song title</div><div class="rule"><span>+0.5</span> Correct artist</div>
+   <div class="rule"><span>−0.5</span> For each wrong part</div><div class="rule"><span>0</span> Leave a field empty or pass</div><div class="rule"><span>⚡</span> Steal: +0.5 correct, −1 per wrong field</div>
+   <p>Fastest server-received buzz answers first. If the first guess is incomplete, others can STEAL. Wrong steals are risky, but scores never drop below zero.</p>
+  </article>
+ </section>
+ <section id="playing" hidden>
+  <div class="host-ticker" id="host-ticker"><span class="live-pip"></span><strong>GAME MASTER</strong><span id="master-message">Get the room ready</span><span class="live-crown">★ FIRST TO 20</span></div>
+  <div class="game-grid">
+   <article class="stage panel"><div class="stage-label"><span id="round-label">ROUND 1</span><span id="hint-label">0.5 S</span></div>
+    <div class="disc-shell"><span class="disc-glow"></span><div class="disc" aria-hidden="true"><div class="disc-inner">♫</div></div></div>
+    <div class="clip-timeline" id="clip-timeline" aria-label="Progress through song hints"></div>
+    <h2 id="stage-status">Get ready</h2><p id="stage-subtitle">Listen carefully…</p>
+    <div id="answer-reveal" class="reveal" hidden><strong id="revealed-title"></strong><span id="revealed-artist"></span></div>
+    <section id="youtube-host" class="youtube-host" hidden aria-label="YouTube official video player">
+      <div class="youtube-heading"><strong>▶ YOUTUBE · HOST PLAYER</strong><span>Video stays visible</span><button id="youtube-play-hint" class="primary" hidden>▶ Play next clue</button></div>
+      <div id="youtube-player" class="youtube-frame"><p>Preparing official YouTube player…</p></div>
+      <p id="youtube-status" class="youtube-status" role="status" aria-live="polite" hidden></p>
+      <p class="small-note">Players should not view this video: YouTube may show the song title or artist. Keep the video and its controls unobstructed. If a video is unavailable, use Skip video to select another one.</p>
+    </section>
+    <div id="host-controls" hidden><button id="enable-sound" class="outline">Enable tablet audio</button><button id="continue-hints" class="primary" hidden>Continue hints ▶</button><button id="next-round" class="primary" hidden>Next song →</button>
+    <form id="youtube-next-form" class="youtube-next-form" hidden>
+      <h3>Choose the next YouTube song</h3>
+      <label for="next-youtube-link">YouTube Music / video URL</label><input id="next-youtube-link" type="url" placeholder="https://music.youtube.com/watch?v=...">
+      <label for="next-youtube-song">Song title</label><input id="next-youtube-song" maxlength="100" autocomplete="off">
+      <label for="next-youtube-artist">Artist</label><input id="next-youtube-artist" maxlength="100" autocomplete="off">
+      <label for="next-youtube-cue">Start time (seconds)</label><input id="next-youtube-cue" type="number" min="0" max="600" step="1" value="0">
+      <button class="primary" type="submit">Load next song →</button>
+    </form><button id="skip-round" class="outline" hidden>Skip / Reveal song →</button></div>
+    <div id="player-controls" hidden>
+     <button id="buzz" class="buzzer" type="button">BUZZ!<small>FIRST PRESS WINS</small></button>
+     <button id="steal" class="steal-button" type="button" hidden>⚡ STEAL THE ANSWER <small>+0.5 per correct · −1 per wrong</small></button>
+     <div id="answer-overlay" class="answer-overlay" hidden><form id="answer-form" class="answer-form" role="dialog" aria-modal="true" aria-labelledby="answer-title"><div class="kicker" id="answer-kicker">YOUR TURN</div><h2 id="answer-title">Name that tune</h2><p id="answer-mode-text" class="answer-mode-text">Enter the song title and artist separately. Small typos are accepted.</p><div id="answer-countdown" class="countdown" aria-live="off"></div><label id="song-guess-label" for="song-guess">Song title (+0.5 / −0.5)</label><input id="song-guess" maxlength="100" autocomplete="off" placeholder="Enter title">
+      <label id="artist-guess-label" for="artist-guess">Artist (+0.5 / −0.5)</label><input id="artist-guess" maxlength="100" autocomplete="off" placeholder="Enter artist">
+      <div class="button-row"><button type="submit" class="primary">Submit answer</button><button id="pass" type="button" class="outline">Pass</button></div>
+     </form></div>
+    </div>
+   </article>
+   <aside class="panel score-panel"><div class="kicker">LIVE LEADERBOARD</div><h2>Race to 20 <span class="trophy" aria-hidden="true">🏆</span></h2><p class="score-caption">Everyone sees the same live scores. The host watches all players here.</p><div id="scores" class="score-list"></div><div id="my-score" class="my-score" hidden>YOUR SCORE <strong>0</strong></div></aside>
+  </div>
+ </section>
+ <section id="finish" class="finish panel" hidden><div class="kicker">GAME OVER</div><h1>We have a winner!</h1><p id="winner-name"></p><div id="final-scores"></div></section>
+</section>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</main>
+<footer class="foot"><span class="version-watermark" data-version-watermark>v817 - Made by Bruis</span></footer>
+<audio id="licensed-player" preload="auto"></audio>
+</body>
+</html>

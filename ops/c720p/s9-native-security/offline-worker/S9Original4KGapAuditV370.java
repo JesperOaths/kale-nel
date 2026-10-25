@@ -47,7 +47,6 @@ public final class S9Original4KGapAuditV370 {
   static final Pattern DIGEST=Pattern.compile("[a-f0-9]{64}");
   static final int FRAME_W=3840, FRAME_H=2160, NET=640;
   static final long MAX_SOURCE_BYTES=800_000_000L;
-  static final long MAX_RUN_NS=65_000_000_000L;
   static final int[][] TILES={
       {0,0,3840,2160},
       {0,0,1664,1280},{1088,0,1664,1280},{2176,0,1664,1280},
@@ -56,14 +55,19 @@ public final class S9Original4KGapAuditV370 {
   static void need(boolean ok,String reason) {
     if(!ok)throw new IllegalArgumentException(reason);
   }
-  static String sha(Path path) throws Exception {
+  static String sha(Path path,long deadline) throws Exception {
+    need(System.nanoTime()<deadline,"bounded_phone_hash_deadline");
     MessageDigest m=MessageDigest.getInstance("SHA-256");
     try(InputStream in=Files.newInputStream(path)) {
       byte[] bytes=new byte[65536];int n;
-      while((n=in.read(bytes))>0)m.update(bytes,0,n);
+      while((n=in.read(bytes))>0) {
+        need(System.nanoTime()<deadline,"bounded_phone_hash_deadline");
+        m.update(bytes,0,n);
+      }
     }
     StringBuilder result=new StringBuilder(64);
     for(byte b:m.digest())result.append(String.format(Locale.US,"%02x",b&255));
+    need(System.nanoTime()<deadline,"bounded_phone_hash_deadline");
     return result.toString();
   }
   static final class Detection {
@@ -162,8 +166,8 @@ public final class S9Original4KGapAuditV370 {
     return selected;
   }
   static JSONObject scan(String clip,String sourceHash,long sourceBytes,
-                         String mediaRevision,long requestedMs)throws Exception {
-    long deadline=System.nanoTime()+MAX_RUN_NS;
+                         String mediaRevision,long requestedMs,long deadline)throws Exception {
+    need(System.nanoTime()<deadline,"bounded_phone_inference_deadline");
     need(CLIP.matcher(clip).matches()&&DIGEST.matcher(sourceHash).matches()
           &&DIGEST.matcher(mediaRevision).matches(),"untrusted_original_request");
     need(sourceBytes>100_000&&sourceBytes<MAX_SOURCE_BYTES,
@@ -175,10 +179,10 @@ public final class S9Original4KGapAuditV370 {
          root.toAbsolutePath().normalize()),"original_source_outside_micro_sd");
     need(!Files.isSymbolicLink(source)&&Files.isRegularFile(source)
          &&Files.size(source)==sourceBytes
-         &&sha(source).equals(sourceHash),"original_source_digest_changed");
+         &&sha(source,deadline).equals(sourceHash),"original_source_digest_changed");
     need(!Files.isSymbolicLink(modelFile)&&Files.isRegularFile(modelFile)
          &&Files.size(modelFile)>100_000&&Files.size(modelFile)<512_000
-         &&sha(modelFile).equals(MODEL_SHA),"yunet_model_provenance_invalid");
+         &&sha(modelFile,deadline).equals(MODEL_SHA),"yunet_model_provenance_invalid");
     S9Original4KTimedDecoderV371.Frame decoded=
         S9Original4KTimedDecoderV371.decode(source,requestedMs,deadline);
     Bitmap frame=decoded.image;
@@ -202,7 +206,7 @@ public final class S9Original4KGapAuditV370 {
     need(System.nanoTime()<deadline,"bounded_phone_inference_deadline");
     // Source recheck is mandatory. Host must ALSO recheck live catalog,
     // priority, queue, 4K health, thermals and writer model before publishing.
-    need(Files.size(source)==sourceBytes&&sha(source).equals(sourceHash),
+    need(Files.size(source)==sourceBytes&&sha(source,deadline).equals(sourceHash),
          "source_revision_changed_after_phone_inference");
     return new JSONObject()
       .put("schema","s9_original4k_phone_frame_probe_v370")
@@ -234,12 +238,16 @@ public final class S9Original4KGapAuditV370 {
   public static void main(String[] args)throws Exception {
     need(args.length==6&&"--probe-one-frame".equals(args[0]),
          "usage_probe_one_frame_only");
+    S9StandaloneDeadlineV374 deadline=S9StandaloneDeadlineV374.start(args);
     String clip=args[1],expectedSha=args[2],revision=args[4];
     long expectedBytes=Long.parseLong(args[3]);
     long offsetMs=Long.parseLong(args[5]);
-    JSONObject receipt=scan(clip,expectedSha,expectedBytes,revision,offsetMs);
+    JSONObject receipt=scan(clip,expectedSha,expectedBytes,revision,offsetMs,
+                            deadline.deadlineNanos());
+    deadline.requireCurrent();
     System.out.println("S9_ORIGINAL4K_PHONE_FRAME_V370 "+receipt.toString());
     System.out.flush();
+    deadline.complete();
     // Android 10 app_process ORT runtime may abort on JNI shutdown after
     // successful output; halt only after flushing this bounded receipt.
     Runtime.getRuntime().halt(0);

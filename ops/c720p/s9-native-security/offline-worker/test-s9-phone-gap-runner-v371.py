@@ -24,6 +24,8 @@ def approved():
             "coordinator_sha256":H,"runner_sha256":H,
             "min_phone_mem_available_kib":1536*1024,
             "min_phone_sd_free_bytes":20*1024**3,
+            "observer_sha256":H,
+            "protected_runtime_reserve_kib":512*1024,
             "source_reader":"s9_source_current_priority_reader_v369",
             "consumer":"s9_anonymous_quality_consumption_v361"}
 
@@ -57,7 +59,13 @@ class RunnerTests(unittest.TestCase):
         with self.assertRaises(m.frames.Deferred):m.policy(self.file)
     def test_private_source_pinned_release_parse_only(self):
         self.write()
-        self.assertEqual(m.policy(self.file)["min_phone_mem_available_kib"],1536*1024)
+        observer_file=pathlib.Path(self.temp.name)/"observer-v373.py"
+        observer_file.write_bytes((BASE/"s9_phone_first_peak_observer_v373.py").read_bytes())
+        p=approved()
+        p["observer_sha256"]=hashlib.sha256(observer_file.read_bytes()).hexdigest()
+        self.write(p)
+        with patch.object(m,"OBSERVER",observer_file):
+            self.assertEqual(m.policy(self.file)["min_phone_mem_available_kib"],1536*1024)
     def test_phone_low_memory_blocks_before_inference(self):
         def fake(*args,**kwargs):
             self.calls.append(args)
@@ -108,21 +116,58 @@ class RunnerTests(unittest.TestCase):
             raise AssertionError("phone probe reached unsafe step")
         with patch.object(m,"adb",fake),self.assertRaisesRegex(m.frames.Deferred,"already_running"):
             m.phone_readiness(approved())
-    def test_release_launch_matches_existing_jni_convention(self):
-        row={"clip_no":"motion_1792095266692.mp4","source":"s9_original_4k_microsd",
-             "source_bytes":48831739,"source_sha256":H,"media_revision":"b"*64,
+    def test_observer_digest_checked_before_module_execution(self):
+        marker=pathlib.Path(self.temp.name)/'imported.txt'
+        # The string below is only a deliberately mismatched test fixture.
+        untrusted=pathlib.Path(self.temp.name)/'observer-v373.py'
+        untrusted.write_text("from pathlib import Path\nPath("+repr(str(marker))+ ").write_text('executed')\n")
+        p=approved()
+        p['observer_sha256']='f'*64
+        self.write(p)
+        with patch.object(m,'OBSERVER',untrusted):
+            with self.assertRaisesRegex(m.frames.Deferred,'source_'):
+                m.policy(self.file)
+        self.assertFalse(marker.exists(),'unverified observer executed')
+
+    def test_phone_probe_invokes_monitored_worker_not_blocking_adb(self):
+        """No device: prove real phone_probe delegates to observer.supervise."""
+        row={"clip_no":"motion_1792095266692.mp4",
+             "source":"s9_original_4k_microsd","source_bytes":48831739,
+             "source_sha256":H,"media_revision":"b"*64,
              "model_sha256":m.frames.MODEL_SHA,
              "native_pass":"s9_onphone_36_samples_overlapping_tiles_v5",
              "required_analysis":m.frames.ANALYSIS,"priority_reason":"no_indexed_image"}
-        seen=[]
-        def fake(*args,**kwargs):
-            seen.append(args)
-            return m.PREFIX+'{"schema":"synthetic_only"}'
-        with patch.object(m,"adb",fake):
-            m.phone_probe(row,2000,60,approved())
-        self.assertEqual(seen[0][0],"shell")
-        self.assertIn("export LD_LIBRARY_PATH=",seen[0][1])
-        self.assertIn("export CLASSPATH=",seen[0][1])
-        self.assertIn("app_process -Djava.library.path=",seen[0][1])
-        self.assertIn("--probe-one-frame motion_1792095266692.mp4",seen[0][1])
+        checked=[]
+        report={"sample_count":1,"worker_vm_hwm_peak_kib":250000}
+        def monitor(**kw):
+            checked.append(kw)
+            return m.PREFIX+'{"schema":"synthetic_only"}',report
+        release=approved()
+        release["protected_runtime_reserve_kib"]=512*1024
+        with patch.object(m,'observer',m.importlib.import_module('s9_phone_first_peak_observer_v373')):
+            with patch.object(m.observer,'supervise',side_effect=monitor):
+                receipt=m.phone_probe(row,2000,60,release,recorder_pid="1234",
+                                      camera_guard=lambda:None)
+        self.assertEqual(receipt["schema"],"synthetic_only")
+        self.assertEqual(len(checked),1)
+        self.assertEqual(checked[0]["expected"][2],row["clip_no"])
+        self.assertEqual(checked[0]["protected_runtime_reserve_kib"],512*1024)
+        self.assertEqual(checked[0]["frame_budget_seconds"],60)
+
+    def test_phone_monitor_failure_cannot_publish_partial(self):
+        row={"clip_no":"motion_1792095266692.mp4",
+             "source":"s9_original_4k_microsd","source_bytes":48831739,
+             "source_sha256":H,"media_revision":"b"*64,
+             "model_sha256":m.frames.MODEL_SHA,
+             "native_pass":"s9_onphone_36_samples_overlapping_tiles_v5",
+             "required_analysis":m.frames.ANALYSIS,"priority_reason":"no_indexed_image"}
+        release=approved()
+        release["protected_runtime_reserve_kib"]=512*1024
+        from s9_phone_first_peak_observer_v373 import Unqualified
+        with patch.object(m,'observer',m.importlib.import_module('s9_phone_first_peak_observer_v373')):
+            with patch.object(m.observer,'supervise',side_effect=Unqualified("lost_peak")):
+                with self.assertRaisesRegex(m.frames.Deferred,"unqualified"):
+                    m.phone_probe(row,2000,60,release,recorder_pid="1234",
+                                  camera_guard=lambda:None)
+
 if __name__=="__main__":unittest.main()
