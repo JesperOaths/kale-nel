@@ -9,6 +9,12 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v320.js'
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
+      - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/security-people-v326.js'
+      - 'ops/c720p/s9-native-security/appearance-evidence-panel-v3.js'
+      - 'ops/c720p/s9-native-security/security-hub-v32.js'
+      - 'ops/c720p/s9-native-security/install-active-people-hub-loader.py'
+      - 'ops/c720p/s9-native-security/test-active-v53-suggestions.py'
       - 'ops/c720p/s9-native-security/folder-suggestions-top-tab-v1.js'
       - 'ops/c720p/s9-native-security/s9_folder_suggestion_bridge_v1.py'
       - 'ops/c720p/s9-native-security/install-people-suggestions-entry-route.py'
@@ -28,6 +34,12 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v320.js'
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
+      - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/security-people-v326.js'
+      - 'ops/c720p/s9-native-security/appearance-evidence-panel-v3.js'
+      - 'ops/c720p/s9-native-security/security-hub-v32.js'
+      - 'ops/c720p/s9-native-security/install-active-people-hub-loader.py'
+      - 'ops/c720p/s9-native-security/test-active-v53-suggestions.py'
       - 'ops/c720p/s9-native-security/folder-suggestions-top-tab-v1.js'
       - 'ops/c720p/s9-native-security/s9_folder_suggestion_bridge_v1.py'
       - 'ops/c720p/s9-native-security/install-people-suggestions-entry-route.py'
@@ -59,6 +71,8 @@ jobs:
           python test-folder-suggestion-http.py
           python -m py_compile install-people-suggestions-entry-route.py s9_folder_suggestion_bridge_v1.py
           python test-folder-suggestion-vector-routing.py
+          python -m py_compile install-active-people-hub-loader.py
+          python test-active-v53-suggestions.py
       - name: Syntax-check the optional UI bridge and original People UI
         run: |
           node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
@@ -66,5 +80,8 @@ jobs:
           node ops/c720p/s9-native-security/test-folder-suggestion-cards.js
           node --check ops/c720p/s9-native-security/security-people-v320.js
           node --check ops/c720p/s9-native-security/security-people-v325.js
+          node --check ops/c720p/s9-native-security/security-people-v326.js
+          node --check ops/c720p/s9-native-security/appearance-evidence-panel-v3.js
+          node --check ops/c720p/s9-native-security/security-hub-v32.js
           node --check ops/c720p/s9-native-security/folder-suggestions-top-tab-v1.js
           node ops/c720p/s9-native-security/test-folder-suggestions-top-tab.js
