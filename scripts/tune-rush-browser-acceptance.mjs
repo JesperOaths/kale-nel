@@ -55,7 +55,8 @@ try {
  assert.ok(await host.locator("#room").evaluate(el=>el.classList.contains("host-mode")),"tablet host uses immersive studio theme");
  await host.locator(".lobby-caption").waitFor({state:"visible"});
  assert.ok(await host.locator("#host-fullscreen").isVisible(),"tablet host has working fullscreen control");
- assert.equal(await host.locator(".source-select label").count(),3,"all source cards still available");
+ assert.equal(await host.locator(".source-select label:visible").count(),3,"only approved sources appear");
+ assert.equal(await host.locator("#deezer-source-option").isVisible(),false,"unapproved Deezer mode must fail closed");
  assert.ok(!(await alice.locator(".host-stage-hero").isVisible()),"welcome phone never shows host stage");
  await Promise.all([join(alice,initial.code,"QAlice"),join(bob,initial.code,"QBob")]);
  await wait(host,()=>room?.players.length===2);
