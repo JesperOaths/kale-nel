@@ -359,3 +359,8 @@ body:has(#room.host-mode:not([hidden])) .shell{width:min(1320px,calc(100% - 48px
  .host-mode .lobby-caption{padding:0}
 }
 @media(prefers-reduced-motion:reduce){.host-mode .source-card{transition:none}}
+
+/* Authorized Deezer status only; source still depends on the protected server flag. */
+.host-mode .provider-note.approved{background:linear-gradient(110deg,#1b3d2b,#142d26);border-color:#4da47a}
+.host-mode .provider-note.approved .provider-note-dot{background:#73f2b2;box-shadow:0 0 0 4px #50c99522}
+.host-mode .provider-note.approved strong{color:#b5fbd4}
