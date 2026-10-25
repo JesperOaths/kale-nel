@@ -347,11 +347,9 @@ public final class CameraService extends Service {
      }
      if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
-      // Every temporally voted movement extends a running clip's quiet tail.
-      // The start still requires the person gate and MAX_MS still bounds each
-      // segment: do not cut the last ten seconds after a weak, valid movement.
-      lastMovementAt=lastFrameAt;
-      eventChain.evidence(lastFrameAt);
+      // Pixel motion only proposes a person check. Never refresh the recording
+      // quiet tail or event lineage from vehicles, leaves or lighting changes.
+      // Those may only be renewed by verified person tracking below.
       if(!pilotOnly&&"watching".equals(mode)){
        // Motion merely requests on-device person inference. Vehicles on the
        // road and non-person garden motion do not start new videos.
@@ -363,12 +361,19 @@ public final class CameraService extends Service {
        }
       }
      }
-     if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&
-         lastFrameAt>=cameraControlSettleUntil){
-      boolean eventFollowup=lastFrameAt<gardenPersonCandidateUntil;
-      boolean safeSentinel=!eventFollowup&&temperature()<420&&
-           lastFrameAt-gardenPersonGateLastAt>=GARDEN_PERSON_SENTINEL_MS;
-      if(eventFollowup||safeSentinel)evaluateGardenPersonAsync(safeSentinel);
+     if(!pilotOnly&&gardenGateReady&&lastFrameAt>=cameraControlSettleUntil){
+      boolean watching="watching".equals(mode);
+      boolean recording="recording".equals(mode)&&!temporaryTest&&
+          !diagnosticPrerollActive;
+      // During 4K recording, a lower-duty, thermally guarded confirmation
+      // is required to keep the tail open; raw motion is never sufficient.
+      boolean recordingCheck=recording&&temperature()<405&&
+          lastFrameAt-gardenPersonGateLastAt>=2500L;
+      boolean eventFollowup=watching&&lastFrameAt<gardenPersonCandidateUntil;
+      boolean safeSentinel=watching&&!eventFollowup&&temperature()<420&&
+          lastFrameAt-gardenPersonGateLastAt>=GARDEN_PERSON_SENTINEL_MS;
+      if(eventFollowup||safeSentinel||recordingCheck)
+       evaluateGardenPersonAsync(safeSentinel);
      }
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500){
        if(lastFrameAt-lastStart>MAX_MS)stopRecording("max_segment");
@@ -518,6 +523,7 @@ public final class CameraService extends Service {
   final boolean sentinelObservation=sentinel;
   if(now>lastMovementAt+250)gardenPersonFollowupChecks++;
   final long jpegAt=lastJpegAt;
+  final String requestedMode=mode;
   final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
   final String selectedZone=motion.gardenZone();
@@ -567,7 +573,9 @@ public final class CameraService extends Service {
       return;
      }
      gardenPersonGateMatches++;
-     if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
+     if(!running||!requestedMode.equals(mode)||
+         (!"watching".equals(mode)&&!"recording".equals(mode))||
+         SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
       personTrackGate.reset();
@@ -584,13 +592,20 @@ public final class CameraService extends Service {
          personTrackGate.offer(now,jpegAt,score,personBox,localCells);
      gardenPersonDuplicateJpegRejects=personTrackGate.duplicateFrames;
      if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED)return;
+     // A newly corroborated person may refresh an existing event's quiet
+     // tail; this is deliberately NOT done for unverified pixel motion.
+     if("recording".equals(mode)){
+      if(temperature()<405&&!temporaryTest&&!diagnosticPrerollActive){
+       lastMovementAt=SystemClock.elapsedRealtime();
+       eventChain.evidence(lastMovementAt);
+      }
+      return;
+     }
      gardenPersonCandidateUntil=0;
-     // Also set the quiet-window anchor for periodic-only detections, where
-     // no MotionGrid vote ever updated lastMovementAt.
-     lastMovementAt=SystemClock.elapsedRealtime();
-     eventChain.evidence(lastMovementAt);
      if(temperature()<420 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024){
+      lastMovementAt=SystemClock.elapsedRealtime();
+      eventChain.evidence(lastMovementAt);
       gardenPersonGateConfirmedStarts++;
       if(sentinelObservation)gardenPersonSentinelStarts++;
       startRecording();
