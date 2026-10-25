@@ -24,11 +24,18 @@ class FollowupTests(unittest.TestCase):
   body=S.split("private void evaluateGardenPersonAsync(boolean sentinel){",1)[1].split("private boolean rateAllowed",1)[0]
   for required in ("now-gardenPersonGateLastAt<900","gardenPersonGateBusy","gardenGateExecutor.execute",
     "gardenGateClassifier.personEvidenceInGarden","gardenGateClassifier.lastPersonScoreAnywhere",
+    "gardenGateClassifier.lastGardenVetoedPersonBoxes()",
     "personTrackGate.offer(now,jpegAt,score,personBox,localCells)",
     "personTrackGate","gardenPersonCandidateUntil=0",
     "temperature()<420","folder.getUsableSpace()>15L*1024*1024*1024"):
    self.assertIn(required,body)
   self.assertLess(body.index("GardenPersonTrackGate.Decision.CONFIRMED"),body.index("startRecording()"))
+  self.assertIn("personTrackGate.rejectCompetingTransport(rejectedTransportBoxes)",body)
+  self.assertIn("garden_person_transport_track_resets",S)
+  self.assertIn("garden_unrelated_transport_vetoes_ignored",S)
+  self.assertIn("lastGardenVetoedPersonBoxes.clear();",M)
+  self.assertIn("lastGardenVetoedPersonBoxes.add(b.clone())",M)
+  self.assertIn("lastGardenVetoedPersonBoxes.get(i).clone()",M)
  def test_roi_multiscale_passes_and_diagnostics(self):
   body=M.split("public synchronized float personScoreInGarden",1)[1].split("private static String upperClothingColour",1)[0]
   self.assertEqual(body.count("for(Detection detection:detectGardenPeopleMultiscale(bitmap))"),1)
