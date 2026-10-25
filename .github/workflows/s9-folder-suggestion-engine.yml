@@ -6,6 +6,11 @@ on:
       - 'ops/c720p/s9-native-security/folder_suggestion_engine.py'
       - 'ops/c720p/s9-native-security/folder_suggestion_api.py'
       - 'ops/c720p/s9-native-security/folder-suggestion-cards-v1.js'
+      - 'ops/c720p/s9-native-security/security-people-v320.js'
+      - 'ops/c720p/s9-native-security/security-people-v325.js'
+      - 'ops/c720p/s9-native-security/security-people-v52.html'
+      - 'ops/c720p/s9-native-security/folder-suggestions-top-tab-v1.js'
+      - 'ops/c720p/s9-native-security/test-folder-suggestions-top-tab.js'
       - 'ops/c720p/s9-native-security/test-folder-suggestion-cards.js'
       - 'ops/c720p/s9-native-security/security-people-v45.js'
       - 'ops/c720p/s9-native-security/security-people-v45.html'
@@ -17,6 +22,11 @@ on:
       - 'ops/c720p/s9-native-security/folder_suggestion_engine.py'
       - 'ops/c720p/s9-native-security/folder_suggestion_api.py'
       - 'ops/c720p/s9-native-security/folder-suggestion-cards-v1.js'
+      - 'ops/c720p/s9-native-security/security-people-v320.js'
+      - 'ops/c720p/s9-native-security/security-people-v325.js'
+      - 'ops/c720p/s9-native-security/security-people-v52.html'
+      - 'ops/c720p/s9-native-security/folder-suggestions-top-tab-v1.js'
+      - 'ops/c720p/s9-native-security/test-folder-suggestions-top-tab.js'
       - 'ops/c720p/s9-native-security/test-folder-suggestion-cards.js'
       - 'ops/c720p/s9-native-security/security-people-v45.js'
       - 'ops/c720p/s9-native-security/security-people-v45.html'
@@ -46,3 +56,7 @@ jobs:
           node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
           node --check ops/c720p/s9-native-security/security-people-v45.js
           node ops/c720p/s9-native-security/test-folder-suggestion-cards.js
+          node --check ops/c720p/s9-native-security/security-people-v320.js
+          node --check ops/c720p/s9-native-security/security-people-v325.js
+          node --check ops/c720p/s9-native-security/folder-suggestions-top-tab-v1.js
+          node ops/c720p/s9-native-security/test-folder-suggestions-top-tab.js

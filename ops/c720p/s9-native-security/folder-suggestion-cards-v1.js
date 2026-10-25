@@ -361,6 +361,7 @@
         return {visible: 0};
       }
       current = snapshot;
+      if (typeof options.onSnapshot === 'function') options.onSnapshot(snapshot);
       const narrowed = Object.assign({}, snapshot, {
         matches: (snapshot.matches || []).filter(row =>
           !options.folderId || row.folder_id === options.folderId),
