@@ -20,13 +20,13 @@ class ActiveSuggestionsUI(unittest.TestCase):
   self.assertIn('id="refreshSuggestions"',html)
  def test_current_page_loads_vector_review_and_preserves_appearance_evidence(self):
   html=(BASE/'security-people-v53.html').read_text()
-  for asset in ['folder-suggestion-cards-v1.js','folder-suggestions-top-tab-v1.js','security-people-v326.js','appearance-evidence-panel-v3.js']:
+  for asset in ['folder-suggestion-cards-live-v3.js','folder-suggestions-top-tab-live-v3.js','security-people-v326.js','appearance-evidence-panel-v3.js']:
    self.assertIn(asset,html)
   self.assertNotIn('security-people-v323.js?v=',html)
   self.assertIn('width:100%;max-width:100%',html)
   self.assertIn('GEJAST_PAGE_VERSION="v817"',html)
   self.assertIn('v817 - Made by Bruis',html)
-  adapter=(BASE/'folder-suggestions-top-tab-v1.js').read_text()
+  adapter=(BASE/'folder-suggestions-top-tab-live-v3.js').read_text()
   self.assertIn("requiredMode: VECTOR_MODE",adapter)
   self.assertIn("visual_embedding_cosine_v1",adapter)
   self.assertIn("window.addEventListener('people-folder-suggestions-open', load)",adapter)
