@@ -276,6 +276,21 @@ async function startClip(){
  cancelNext();
  try{
   loading=true;
+  if(room.mode==="catalog"&&room.step===-1){
+   const id=room.audio?.source?.startsWith("youtube:")?room.audio.source.slice(8):"";
+   await ensureYoutubePlayer(id,0);
+   let durationMs=0;
+   for(let attempt=0;attempt<16;attempt++){
+    durationMs=Math.floor((ytPlayer?.getDuration?.()||0)*1000);
+    if(durationMs>=45000)break;
+    if(attempt===0){try{ytPlayer?.cueVideoById?.({videoId:id,startSeconds:0})}catch{}}
+    await new Promise(resolve=>setTimeout(resolve,300));
+   }
+   if(durationMs<45000)throw Error("YouTube did not report the full video duration. Tap the official video once, or skip this song.");
+   if(!room||room.phase!=="paused")return;
+   const cue=await rpc("random_cue",{durationMs});
+   applyState(cue.state);
+  }
   const body=await rpc("play");applyState(body.state);
   if(room.phase!=="playing")return;
   await startAudio(room.audio,room.clipMs);
@@ -370,16 +385,16 @@ function render(){
   setText("revealed-title",room.titleDone||phase==="solved"||phase==="finished"?room.title:"Song title: ???");
   setText("revealed-artist",room.artistDone||phase==="solved"||phase==="finished"?room.artist:"Artist: ???");
   show("host-controls",host);show("player-controls",!host);
-  const youtubeMode=room.mode==="youtube";
+  const youtubeMode=room.mode==="youtube"||room.mode==="catalog";
   show("youtube-host",host&&youtubeMode);
   if(host&&youtubeMode&&room.audio?.source?.startsWith("youtube:")){
    ensureYoutubePlayer(room.audio.source.slice(8),room.audio.cueMs||0).catch(e=>message(e.message));
   }
   show("youtube-play-hint",host&&youtubeMode&&phase==="paused"&&room.step<6);
-  show("youtube-next-form",host&&youtubeMode&&phase==="solved");
+  show("youtube-next-form",host&&room.mode==="youtube"&&phase==="solved");
 
-  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&room.step===6&&(phase==="paused"||phase==="playing"||phase==="holding"));
-  show("enable-sound",host&&room.mode!=="youtube"&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
+  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
+  show("enable-sound",host&&!youtubeMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
@@ -546,7 +561,7 @@ document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
  if(document.hidden&&isHost()){
   cancelNext();
-  if(room?.mode==="youtube"){
+  if(room?.mode==="youtube"||room?.mode==="catalog"){
    clearAudio();
    if(room?.phase==="playing")rpc("pause").then(b=>applyState(b.state)).catch(()=>{});
   }
