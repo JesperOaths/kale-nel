@@ -25,7 +25,7 @@ class Contract(unittest.TestCase):
         s.index('if("recording".equals(mode)&&lastFrameAt-lastStart>2500)')]
   self.assertNotIn('lastMovementAt=lastFrameAt',raw)
   self.assertNotIn('eventChain.evidence(',raw)
-  self.assertIn('boolean recordingCheck=recording&&temperature()<405&&',raw)
+  self.assertIn('boolean recordingCheck=recording&&temperature()<420&&',raw)
   self.assertIn('lastFrameAt-gardenPersonGateLastAt>=2500L',raw)
   self.assertIn('evaluateGardenPersonAsync(safeSentinel)',raw)
   confirmed=s[s.index('private void evaluateGardenPersonAsync('):
