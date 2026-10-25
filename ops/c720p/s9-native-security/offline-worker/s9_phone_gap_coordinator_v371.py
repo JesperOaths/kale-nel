@@ -107,7 +107,7 @@ def valid_receipt(raw,row,requested,duration):
             "face_candidates":sample["face_candidates"]}
 
 def coordinate(row,duration,*,guard,source_check,probe,clock=time.monotonic,
-               wall=time.time):
+               wall=time.time,guard_with_budget=None):
     """Return all-or-nothing record; never a partial report or lease mutation.
 
     guard(row) MUST check approved phone memory/SD/camera temperature/recorder
@@ -115,6 +115,9 @@ def coordinate(row,duration,*,guard,source_check,probe,clock=time.monotonic,
     HOLDS those locks and owns the sole V304 task/240s queue lease.
     probe(row,requested_ms,remaining_seconds) invokes a previously enrolled
     single-frame signed/pinned Android executable; no shell execution here.
+    The production guard_with_budget(row,remaining_seconds) callback bounds
+    its health/transport reads to the current lease and sequence deadline.
+    guard(row) remains the fallback for existing offline callback fixtures.
     """
     source_tuple(row)
     require(row.get("status")=="processing" and
@@ -124,28 +127,40 @@ def coordinate(row,duration,*,guard,source_check,probe,clock=time.monotonic,
             "phone_process_requires_current_queue_lease")
     started=clock()
     frames=[]
-    for offset in sample_times(duration):
+    def frame_budget():
         remaining=row["lease_until"]-wall()-MIN_LEASE_REMAINING
         budget=MAX_WALL_SECONDS-(clock()-started)
         require(remaining>=1 and budget>=1,
                 "phone_processing_lease_or_deadline_too_short")
-        guard(row)
+        return min(65,remaining,budget)
+    def guarded():
+        remaining=frame_budget()
+        if guard_with_budget is None:
+            guard(row)
+        else:
+            guard_with_budget(row,remaining)
+    for offset in sample_times(duration):
+        guarded()
         original_still_current(row,source_check)
+        # Guards and source reads can consume the whole remaining lease.
+        # Supply a newly measured budget, never the pre-guard snapshot.
+        remaining=frame_budget()
         try:
-            raw=probe(row,offset,min(65,remaining,budget))
+            raw=probe(row,offset,remaining)
         except (OSError,TimeoutError,ConnectionError) as exc:
             raise Deferred("phone_frame_transport_interrupted") from None
         decoded=valid_receipt(raw,row,offset,duration)
         frames.append(decoded)
-        guard(row)
+        guarded()
         original_still_current(row,source_check)
-        require(row["lease_until"]-wall()>MIN_LEASE_REMAINING,
+        require(row["lease_until"]-wall()>MIN_LEASE_REMAINING and
+                clock()-started<=MAX_WALL_SECONDS,
                 "phone_processing_lease_or_deadline_too_short")
     require(len(frames)==3 and
             len({s["time_ms"] for s in frames})==3 and
             frames[0]["time_ms"]<frames[1]["time_ms"]<frames[2]["time_ms"],
             "phone_three_independent_pts_not_verified")
-    guard(row)
+    guarded()
     original_still_current(row,source_check)
     require(clock()-started<=MAX_WALL_SECONDS and
             row["lease_until"]-wall()>MIN_LEASE_REMAINING,

@@ -19,6 +19,7 @@ AAR_SHA="04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2"
 CLASSES=(
     "S9YuNetNativeQualityDecoderV370.java",
     "S9Original4KTimedDecoderV371.java",
+    "S9StandaloneDeadlineV374.java",
     "S9Original4KGapAuditV370.java",
 )
 ROOT=Path(__file__).resolve().parent

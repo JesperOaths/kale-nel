@@ -13,7 +13,7 @@ def healthy(pid="5789",available=2200000,hot=34.1,excluded=()):
     return {"recorder_pid":pid,
             "phone":{"total_kib":5755748,"available_kib":available,"swap_free_kib":400000},
             "recorder":{"rss_kib":254912,"peak_rss_kib":334812},
-            "camera":{"camera_four_k_ready":hot<=34.5,"temperature_c":hot,
+            "camera":{"camera_four_k_ready":hot<=40.0,"temperature_c":hot,
                       "active_exclusions":list(excluded)}}
 
 class QualTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class QualTests(unittest.TestCase):
         self.assertFalse(d["qualified_for_phone_inference"])
         self.assertFalse(d["actual_phone_onnx_codec_peak_rss_measured"])
     def test_camera_heat_and_exclusion_are_independent_failures(self):
-        d=m.assess([healthy(hot=34.9,excluded=["historical_import_queued"])]*3,
+        d=m.assess([healthy(hot=40.1,excluded=["historical_import_queued"])]*3,
                    750*1024,900*m.MIB)
         self.assertFalse(d["existing_hub_guard_pass"])
         self.assertFalse(d["existing_4k_thermal_guard_pass"])

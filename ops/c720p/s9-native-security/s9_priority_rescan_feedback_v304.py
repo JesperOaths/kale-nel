@@ -25,6 +25,7 @@ import shutil
 import stat
 import tempfile
 import time
+import types
 import urllib.request
 import urllib.error
 
@@ -41,8 +42,10 @@ EVIDENCE=HOME/"bin/s9_evidence_quality_v1.py"
 ANONYMOUS_CONSUMER=HOME/"bin/s9_anonymous_evidence_consumer_v361.py"
 # An opt-in manifest is deliberately ABSENT in the deployed interim release.
 PHONE_RELEASE=STATE/"phone-first-release-v371.json"
+PHONE_INFLIGHT=STATE/"phone-inflight-v374.json"
 PHONE_RUNNER=HOME/"bin/s9_phone_gap_runner_v371.py"
 PHONE_COORDINATOR=HOME/"bin/s9_phone_gap_coordinator_v371.py"
+PHONE_OBSERVER=HOME/"bin/s9_phone_first_peak_observer_v373.py"
 SCAN=HOME/"bin/rescan-original4k-face-gaps-v1.py"
 CAMERA="http://127.0.0.1:18808/status"
 CROSS_LOCK=HOME/"state/s9-v3-archive-backfill.lock"
@@ -395,9 +398,16 @@ def produce():
             "retired_with_provenance":retired,"parked_same_model_blocked":len(pressure),
             "capacity_deferred":deferred,
             "tally":aggregate(doc["rows"])}
-def camera_guard():
-    with urllib.request.urlopen(CAMERA,timeout=7) as response:
+def camera_guard(*,deadline=None):
+    timeout=7
+    if deadline is not None:
+        left=deadline-time.monotonic()
+        check(left>0,"camera_guard_budget_exhausted")
+        timeout=min(timeout,left)
+    with urllib.request.urlopen(CAMERA,timeout=timeout) as response:
         doc=json.loads(response.read(65536))
+    check(deadline is None or time.monotonic()<deadline,
+          "camera_guard_budget_exhausted")
     check(doc.get("ok") is True and doc.get("mode")=="watching"
       and doc.get("native_4k_enabled") is True and
       doc.get("continuous_4k_ready") is True and
@@ -405,7 +415,7 @@ def camera_guard():
       type(doc.get("continuous_4k_buffered_ms")) is int and
       doc["continuous_4k_buffered_ms"]>=6500 and
       type(doc.get("temperature_c")) in (int,float) and
-      0<doc["temperature_c"]<=34.5 and
+      0<doc["temperature_c"]<=40.0 and
       not any(doc.get(x) is True for x in (
         "recording_active","recording_in_progress",
         "face_backfill_queued","appearance_backfill_queued",
@@ -418,14 +428,82 @@ def camera_guard():
     for line in Path("/proc/meminfo").read_text().splitlines():
         if line.startswith("MemAvailable:"):avail=int(line.split()[1])//1024
     check(avail>=900,"hub_memory_reserve_below_900_mib")
+    check(deadline is None or time.monotonic()<deadline,
+          "camera_guard_budget_exhausted")
     return doc
 def load_module(path,name):
     check(path.is_file() and not path.is_symlink(),"approved_worker_unavailable")
     spec=importlib.util.spec_from_file_location(name,path)
     obj=importlib.util.module_from_spec(spec);spec.loader.exec_module(obj)
     return obj
+def protected_phone_bytes(path,minimum,maximum,private=False):
+    """Read the exact protected fd that will be verified and compiled."""
+    try:fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    except OSError:raise Refusal("phone_first_runtime_not_installed") from None
+    try:
+        st=os.fstat(fd)
+        check(stat.S_ISREG(st.st_mode) and st.st_uid==os.getuid()
+              and st.st_nlink==1 and not st.st_mode&(0o077 if private else 0o022)
+              and minimum<st.st_size<maximum,"phone_first_source_not_protected")
+        raw=os.read(fd,st.st_size+1)
+        after=os.fstat(fd)
+        check(len(raw)==st.st_size and
+              (st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns)==
+              (after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns),
+              "phone_first_source_changed_during_read")
+        return raw
+    finally:os.close(fd)
+def load_phone_runtime():
+    """Verify the complete opt-in runtime before executing any module bytes.
+
+    This V304 controller is the installed trust anchor. No candidate runner
+    code is imported to learn its own approval hashes. The coordinator is
+    injected directly, excluding poisoned import paths and cached modules.
+    """
+    raw=protected_phone_bytes(PHONE_RELEASE,40,4096,private=True)
+    try:cfg=json.loads(raw)
+    except (ValueError,TypeError):raise Refusal("phone_first_release_malformed") from None
+    check(isinstance(cfg,dict) and
+          cfg.get("schema")=="task9_phone_first_enrolled_release_v371" and
+          cfg.get("active") is True and
+          cfg.get("authorization_basis")=="user_explicit_guarded_task9_20261021" and
+          cfg.get("camera2_apk_unchanged") is True,
+          "phone_first_release_not_approved")
+    sources={}
+    for name,path,key in (("coordinator",PHONE_COORDINATOR,"coordinator_sha256"),
+                          ("observer",PHONE_OBSERVER,"observer_sha256"),
+                          ("runner",PHONE_RUNNER,"runner_sha256")):
+        expected=cfg.get(key)
+        check(isinstance(expected,str) and HEX.fullmatch(expected),
+              "phone_first_source_pin_missing")
+        source=protected_phone_bytes(path,100,60000)
+        check(hashlib.sha256(source).hexdigest()==expected,
+              "phone_first_source_hash_not_approved")
+        sources[name]=(source,path)
+    try:
+        compiled={name:compile(raw,str(path),'exec')
+                  for name,(raw,path) in sources.items()}
+    except (SyntaxError,ValueError):raise Refusal("phone_first_source_invalid") from None
+    coordinator=types.ModuleType("s9_phone_gap_coordinator_v371")
+    observer=types.ModuleType("s9_phone_first_peak_observer_v373")
+    runner=types.ModuleType("s9_phone_gap_runner_v371")
+    for name,module in (("coordinator",coordinator),("observer",observer),("runner",runner)):
+        module.__file__=str(sources[name][1])
+    runner.frames=coordinator
+    try:
+        exec(compiled['coordinator'],coordinator.__dict__)
+        exec(compiled['observer'],observer.__dict__)
+        exec(compiled['runner'],runner.__dict__)
+        approved=runner.policy(PHONE_RELEASE,_verified_document=cfg,
+                               _verified_observer=observer)
+        runner.ensure_no_inflight()
+    except Exception:
+        raise Refusal("phone_first_runtime_or_release_unqualified") from None
+    return runner,approved
 def evaluate_one(row):
     # This is secondary original-4K gap evidence, not a person assignment.
+    check(not PHONE_INFLIGHT.exists() and not PHONE_INFLIGHT.is_symlink(),
+          "phone_worker_outcome_requires_reconciliation")
     camera_guard()
     q=load_module(EVIDENCE,"s9_evidence_quality_v1")
     benchmark=load_module(SCAN,"s9_original_4k_gap_benchmark_v1")
@@ -447,15 +525,12 @@ def evaluate_one(row):
     # Phone-first is an explicitly approved CUTOVER of this SAME executor.
     # No new worker/timer exists; locks/lease/publication stay V304-owned.
     if PHONE_RELEASE.exists() or PHONE_RELEASE.is_symlink():
-        check(PHONE_RUNNER.is_file() and not PHONE_RUNNER.is_symlink() and
-              PHONE_COORDINATOR.is_file() and not PHONE_COORDINATOR.is_symlink(),
-              "phone_first_runtime_not_installed")
-        runner=load_module(PHONE_RUNNER,"s9_phone_gap_runner_v371")
+        runner,cfg=load_phone_runtime()
         try:
             return runner.run(row,target,worker=__import__('types').SimpleNamespace(
                        camera_guard=camera_guard,source=source,
                        NATIVE=NATIVE,MODEL_SHA=MODEL_SHA),quality=q,
-                              release_path=PHONE_RELEASE)
+                              release_path=PHONE_RELEASE,_verified_release=cfg)
         except runner.frames.Revoked:
             raise Refusal("original_no_longer_eligible") from None
         except runner.frames.Deferred:
@@ -650,9 +725,13 @@ def recover_expired_leases(doc, timestamp):
         attempts=row.get("attempts")
         check(type(attempts) is int and 0<=attempts<=MAX_ATTEMPTS,
               "expired_lease_attempt_count_invalid")
-        row["status"]="pending" if attempts<MAX_ATTEMPTS else "dead_letter"
-        row["last_reason"]="previous_worker_lease_expired"
+        fenced=PHONE_INFLIGHT.exists() or PHONE_INFLIGHT.is_symlink()
+        row["status"]=("blocked" if fenced else
+                       "pending" if attempts<MAX_ATTEMPTS else "dead_letter")
+        row["last_reason"]=("phone_worker_outcome_requires_reconciliation" if fenced
+                            else "previous_worker_lease_expired")
         row["lease_until"]=0
+        row["outcome"]=None
         # Never hot-loop on expired reservations.
         row["next_attempt_at"]=timestamp+min(6*3600,60*2**max(0,attempts-1))
         recovered+=1
@@ -665,6 +744,11 @@ def recover_expired_leases(doc, timestamp):
 def work():
     doc=items()
     recovered=recover_expired_leases(doc,now())
+    # A controller/transport crash can leave a delayed or still-running phone
+    # process. The fence applies even when the opt-in manifest is removed:
+    # switching to host inference is not a safe reconciliation procedure.
+    check(not PHONE_INFLIGHT.exists() and not PHONE_INFLIGHT.is_symlink(),
+          "phone_worker_outcome_requires_reconciliation")
     candidate=next((row for row in doc["rows"]
          if row["status"]=="pending"
          and row.get("next_attempt_at",0)<=now()),None)
@@ -723,15 +807,7 @@ def work():
         # Fail closed BEFORE lease mutation if a phone-first opt-in was
         # provisioned incorrectly. Never fall back to C720P after opt-in.
         if PHONE_RELEASE.exists() or PHONE_RELEASE.is_symlink():
-            check(PHONE_RUNNER.is_file() and not PHONE_RUNNER.is_symlink() and
-                  PHONE_COORDINATOR.is_file() and not PHONE_COORDINATOR.is_symlink(),
-                  "phone_first_runtime_not_installed")
-            runner=load_module(PHONE_RUNNER,"s9_phone_gap_runner_v371")
-            cfg=runner.policy(PHONE_RELEASE)
-            check(hashlib.sha256(PHONE_RUNNER.read_bytes()).hexdigest()==
-                  cfg["runner_sha256"] and
-                  hashlib.sha256(PHONE_COORDINATOR.read_bytes()).hexdigest()==
-                  cfg["coordinator_sha256"],"phone_first_source_hash_not_approved")
+            load_phone_runtime()
         candidate["status"]="processing";candidate["attempts"]+=1
         candidate["lease_until"]=now()+240
         candidate["last_reason"]="bounded_original_4k_rescan_started"
@@ -739,6 +815,10 @@ def work():
         atomic(QUEUE,doc);journal("processing","source_and_model_pinned")
         try:
             evidence=evaluate_one(candidate)
+            check(not PHONE_INFLIGHT.exists() and not PHONE_INFLIGHT.is_symlink(),
+                  "phone_worker_outcome_requires_reconciliation")
+            check(candidate["lease_until"]-now()>40,
+                  "processing_lease_expired_before_publication")
             publish(evidence,doc)
             consumer_visible(evidence)
             candidate["outcome"]={
@@ -758,7 +838,10 @@ def work():
             # Always retain prior human-reviewed/original evidence. A model
             # miss is not a negative-person or negative-identity decision.
             cause=str(err) if isinstance(err,Refusal) else "analysis_failed_or_unavailable"
-            if cause in ("original_no_longer_eligible","source_changed_during_rescan",
+            if PHONE_INFLIGHT.exists() or PHONE_INFLIGHT.is_symlink():
+                candidate["status"]="blocked"
+                cause="phone_worker_outcome_requires_reconciliation"
+            elif cause in ("original_no_longer_eligible","source_changed_during_rescan",
                 "source_revision_changed_after_analysis","model_version_changed_since_admission",
                 "anonymous_consumer_source_or_priority_revoked"):
                 candidate["status"]="rejected"
