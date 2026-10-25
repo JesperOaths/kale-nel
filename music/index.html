@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0d101a">
 <meta name="robots" content="noindex">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=4">
+<link rel="stylesheet" href="./style.css?v=5">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=4" defer></script>
+<script src="./app.js?v=5" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -98,6 +99,7 @@
     <section id="youtube-host" class="youtube-host" hidden aria-label="YouTube official video player">
       <div class="youtube-heading"><strong>▶ YOUTUBE · HOST PLAYER</strong><span>Video stays visible</span><button id="youtube-play-hint" class="primary" hidden>▶ Play next clue</button></div>
       <div id="youtube-player" class="youtube-frame"><p>Preparing official YouTube player…</p></div>
+      <p id="youtube-status" class="youtube-status" role="status" aria-live="polite" hidden></p>
       <p class="small-note">Players should not view this video: YouTube may show the song title or artist. Keep the video and its controls unobstructed. If a video is unavailable, use Skip video to select another one.</p>
     </section>
     <div id="host-controls" hidden><button id="enable-sound" class="outline">Enable tablet audio</button><button id="continue-hints" class="primary" hidden>Continue hints ▶</button><button id="next-round" class="primary" hidden>Next song →</button>

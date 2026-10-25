@@ -1,5 +1,10 @@
 # Tune Rush — Kalenel music quiz
 
+## YouTube playback recovery (25 October 2026)
+Both automatic-library and manual YouTube games wait for the host to tap **Play next clue**. The player is checked for readiness, visibility and known embedding failures before the server advances a hint. A persistent message beneath the official video explains blocked videos, connection failures and browser-required taps. The host can skip blocked videos; the game never tries to bypass YouTube restrictions. The iframe stays visible and resizes to the host screen.
+
+Server buzz updates continue while the player is waiting to start. A buzz or round change cancels pending playback so late player events cannot install a clue timer over an answer window. `node scripts/test-tune-rush-playback.mjs` checks these races and failure paths. The browser acceptance separately reports `BROWSER_YOUTUBE_PLAYBACK_PASS` only when the video clock advances and the clue pauses; `BROWSER_YOUTUBE_PLAYBACK_NOT_VERIFIED` is not a playback pass. Set `TUNE_RUSH_REQUIRE_YOUTUBE_PLAYBACK=1` to make actual provider playback a mandatory test gate. Physical iPad/iPhone speakers remain a separate acceptance check.
+
 ## Production status (24 October 2026)
 - **Database live:** `musicquiz` schema, five original synthetic demo tunes, private tables (RLS), and server-authoritative buzzer/score function.
 - **Guest data plane live:** public `/rest/v1/rpc/musicquiz_v1` using a **publishable** API key and browser-minted 256-bit capability tokens represented as SHA-256 digests. The database RPC is a narrowly scoped `SECURITY DEFINER` function. The tables stay inaccessible to anonymous browsers.

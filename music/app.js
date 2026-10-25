@@ -17,6 +17,7 @@ let clipTimer=null,nextTimer=null,voices=[],ctx=null,startedClip=false;
 let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
 let ytPlayer=null,ytPlayerVideoId='',ytReadyPromise=null,ytPlayingResolve=null,ytPlayingReject=null,ytPlayingTimer=null;
+let ytError=null,ytLoadGeneration=0,clipGeneration=0,mutationVersion=0;
 const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
@@ -35,6 +36,7 @@ function message(s) {
 function setText(id,value){$(id).textContent=String(value??"")}
 function safeStore(){try{if(access)localStorage.setItem(STORE,JSON.stringify(access));else localStorage.removeItem(STORE)}catch{}}
 async function rpc(action,extra={},attempt=0) {
+ if(action!=="state")mutationVersion++;
  const creating=action==="create",joining=action==="join";
  const token=creating||joining?randomSecret():access?.token;
  const code=creating?randomRoom():String(extra.code||access?.code||"").toUpperCase();
@@ -106,29 +108,59 @@ function youtubeWaitCancelled(reason="YouTube playback was interrupted"){
   fail(Error(reason));
  }
 }
+function youtubeStatus(text){
+ const el=$("youtube-status");el.textContent=text;el.hidden=!text;
+}
+function youtubeErrorText(code){
+ if(code===101||code===150)return "This video’s owner blocks embedded playback. Use Skip / Reveal song to choose another video.";
+ if(code===100)return "This video is private or no longer available. Skip it or choose another link.";
+ if(code===153)return "YouTube could not identify this website. Open the game in Safari or Chrome and allow the player to load.";
+ if(code===2)return "This YouTube video link is invalid. Choose another link.";
+ return "YouTube could not play this video (error "+code+"). Try another video or browser.";
+}
 async function ensureYoutubePlayer(id,cueMs=0){
  if(!isHost()||!/^[A-Za-z0-9_-]{11}$/.test(id))throw Error("invalid_youtube_video");
+ if(ytError?.id===id)throw Error(ytError.message);
  if(!ytReadyPromise){
+  const loadGeneration=++ytLoadGeneration;
+  youtubeStatus("Loading the official YouTube player…");
   ytReadyPromise=new Promise((resolve,reject)=>{
-   const timer=setTimeout(()=>{ytReadyPromise=null;reject(Error("YouTube player did not load"))},15000);
-   const fail=msg=>{clearTimeout(timer);ytReadyPromise=null;reject(Error(msg))};
+   let ready=false;
+   const timer=setTimeout(()=>fail("YouTube player did not load. Check your connection and tap Play next clue to retry."),15000);
+   const fail=msg=>{if(loadGeneration!==ytLoadGeneration)return;ytLoadGeneration++;clearTimeout(timer);ytReadyPromise=null;youtubeStatus(msg);reject(Error(msg))};
    const create=()=>{
+    if(loadGeneration!==ytLoadGeneration)return;
     if(!window.YT?.Player){fail("YouTube player unavailable");return}
+    // The API replaces this element with an iframe. Restore it after a failed load.
+    if(ytPlayer){try{ytPlayer.destroy()}catch{}ytPlayer=null}
+    if(!$("youtube-player")){
+     const mount=document.createElement("div");mount.id="youtube-player";mount.className="youtube-frame";
+     $("youtube-status").before(mount);
+    }
+    ytError=null;
     ytPlayer=new YT.Player("youtube-player",{
      width:"560",height:"315",videoId:id,
      playerVars:{playsinline:1,controls:1,origin:location.origin},
      events:{
-      onReady:()=>{clearTimeout(timer);resolve()},
+      onReady:()=>{if(loadGeneration!==ytLoadGeneration)return;ready=true;clearTimeout(timer);youtubeStatus("Ready. Keep the video visible and tap Play next clue.");resolve()},
       onStateChange:e=>{
+       if(loadGeneration!==ytLoadGeneration)return;
+       if(e.data===window.YT.PlayerState.PLAYING&&(!isHost()||room?.phase!=="playing")){
+        try{ytPlayer.pauseVideo()}catch{}return;
+       }
        if(e.data===window.YT.PlayerState.PLAYING&&ytPlayingResolve){
         const done=ytPlayingResolve;clearTimeout(ytPlayingTimer);
         ytPlayingTimer=null;ytPlayingResolve=null;ytPlayingReject=null;done();
+        youtubeStatus("Playing clue…");
        }
       },
       onError:e=>{
-       const reason="YouTube cannot embed this video (error "+e.data+"). Choose another track.";
-       youtubeWaitCancelled(reason);message(reason);
-      }
+       if(loadGeneration!==ytLoadGeneration)return;
+       const reason=youtubeErrorText(e.data);
+       ytError={id:ytPlayerVideoId,message:reason};youtubeStatus(reason);
+       youtubeWaitCancelled(reason);if(!ready)fail(reason);
+      },
+      onAutoplayBlocked:()=>{if(loadGeneration===ytLoadGeneration)youtubeStatus("Your browser needs a tap on Play inside the YouTube video. Then the clue can begin.")}
      }
     });
     ytPlayerVideoId=id;
@@ -143,9 +175,11 @@ async function ensureYoutubePlayer(id,cueMs=0){
  }
  await ytReadyPromise;
  if(ytPlayerVideoId!==id){
+  ytError=null;youtubeStatus("Preparing the next video…");
   ytPlayer.cueVideoById({videoId:id,startSeconds:cueMs/1000});
   ytPlayerVideoId=id;
  }
+ if(ytError?.id===id)throw Error(ytError.message);
 }
 function youtubeVideoIsVisible(){
  const player=$("youtube-player");
@@ -160,6 +194,7 @@ async function playYoutubeHint(info){
  await ensureYoutubePlayer(info.source.slice(8),info.cueMs||0);
  if(!room||!isHost()||room.phase!=="playing")throw Error("YouTube clue cancelled");
  if(!youtubeVideoIsVisible())throw Error("Scroll to the official YouTube player; more than half of it must be visible before starting a clue.");
+ youtubeStatus("Starting clue… If asked, tap Play inside the YouTube video.");
  await new Promise((resolve,reject)=>{
   ytPlayingResolve=resolve;ytPlayingReject=reject;
   ytPlayingTimer=setTimeout(()=>youtubeWaitCancelled("Tap Play on the YouTube player and try this clue again."),10000);
@@ -170,6 +205,7 @@ async function playYoutubeHint(info){
 }
 
 function clearAudio(){
+ clipGeneration++;
  clearTimeout(clipTimer);clipTimer=null;
  voices.forEach(o=>{try{o.stop()}catch{}});
  voices=[];playerAudio.pause();
@@ -262,7 +298,7 @@ async function soundResumeSilently(){
  if(ctx.state!=="running")throw Error("Please tap Enable tablet audio");
 }
 function scheduleNext(delay){
- if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube")return;
+ if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube"||room.mode==="catalog")return;
  const round=room.round,step=room.step;
  nextTimer=setTimeout(async()=>{
   nextTimer=null;
@@ -274,37 +310,51 @@ function scheduleNext(delay){
 async function startClip(){
  if(!room||room.phase!=="paused"||!isHost()||loading)return;
  cancelNext();
+ const generation=++clipGeneration,round=room.round,initialStep=room.step;
  try{
   loading=true;
+  if(room.mode==="youtube"||room.mode==="catalog"){
+   // Fail before consuming a hint when the player is unavailable or off screen.
+   await ensureYoutubePlayer(room.audio?.source?.slice(8),room.audio?.cueMs||0);
+   if(generation!==clipGeneration)return;
+   if(!youtubeVideoIsVisible())throw Error("Scroll to the official YouTube player; more than half of it must be visible before starting a clue.");
+  }
   if(room.mode==="catalog"&&room.step===-1){
    const id=room.audio?.source?.startsWith("youtube:")?room.audio.source.slice(8):"";
    await ensureYoutubePlayer(id,0);
    let durationMs=0;
    for(let attempt=0;attempt<16;attempt++){
-    durationMs=Math.floor((ytPlayer?.getDuration?.()||0)*1000);
+    // cueVideoById is asynchronous; never use the previous song's duration.
+    let loadedId="";try{loadedId=parseYoutubeVideo(ytPlayer?.getVideoUrl?.()||"")}catch{}
+    durationMs=loadedId===id?Math.floor((ytPlayer?.getDuration?.()||0)*1000):0;
     if(durationMs>=45000)break;
     if(attempt===0){try{ytPlayer?.cueVideoById?.({videoId:id,startSeconds:0})}catch{}}
     await new Promise(resolve=>setTimeout(resolve,300));
    }
    if(durationMs<45000)throw Error("YouTube did not report the full video duration. Tap the official video once, or skip this song.");
-   if(!room||room.phase!=="paused")return;
+   if(generation!==clipGeneration||!room||room.phase!=="paused"||room.round!==round)return;
    const cue=await rpc("random_cue",{durationMs});
    applyState(cue.state);
   }
+  if(generation!==clipGeneration||!room||room.round!==round||room.step!==initialStep||room.phase!=="paused")return;
   const body=await rpc("play");applyState(body.state);
   if(room.phase!=="playing")return;
   await startAudio(room.audio,room.clipMs);
+  if(generation!==clipGeneration||!room||room.phase!=="playing")return;
   const expected=room.round,step=room.step;
   clipTimer=setTimeout(async()=>{
    if(!room||room.phase!=="playing"||room.round!==expected||room.step!==step)return;
    clearAudio();
+   if(room.mode==="youtube"||room.mode==="catalog")youtubeStatus("Clue finished. Players can buzz, or you can play the next clue.");
    try{
     const b=await rpc("pause");applyState(b.state);
     if(room.phase==="paused")scheduleNext(1000);
    }catch(e){message(e.message)}
   },room.clipMs);
  }catch(e){
+  if(generation!==clipGeneration)return;
   clearAudio();message(e.message||"Playback failed");
+  if(room?.mode==="youtube"||room?.mode==="catalog")youtubeStatus(e.message||"Playback failed. Choose another video.");
   if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
  }
  finally{loading=false}
@@ -388,7 +438,7 @@ function render(){
   const youtubeMode=room.mode==="youtube"||room.mode==="catalog";
   show("youtube-host",host&&youtubeMode);
   if(host&&youtubeMode&&room.audio?.source?.startsWith("youtube:")){
-   ensureYoutubePlayer(room.audio.source.slice(8),room.audio.cueMs||0).catch(e=>message(e.message));
+   ensureYoutubePlayer(room.audio.source.slice(8),room.audio.cueMs||0).catch(e=>youtubeStatus(e.message));
   }
   show("youtube-play-hint",host&&youtubeMode&&phase==="paused"&&room.step<6);
   show("youtube-next-form",host&&room.mode==="youtube"&&phase==="solved");
@@ -446,10 +496,12 @@ async function call(action,extra={},quiet=false){
  finally{loading=false}
 }
 async function refresh(){
- if(!access||pollBusy||loading)return;
+ if(!access||pollBusy||(loading&&!ytPlayingResolve))return;
  pollBusy=true;
+ const version=mutationVersion;
  try{
   const b=await rpc("state");
+  if(version!==mutationVersion)return;
   if(b.state.phase==="answering"&&b.state.answerExpiresAt&&Date.now()>=new Date(b.state.answerExpiresAt).getTime()){
    try{const expired=await rpc("expire");applyState(expired.state);return;}catch{}
   }

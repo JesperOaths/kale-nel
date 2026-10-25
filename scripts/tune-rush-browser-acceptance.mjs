@@ -16,7 +16,7 @@ const demos={
 const chrome=[process.env.CHROME_BIN,"/usr/bin/google-chrome","/usr/bin/google-chrome-stable","/usr/bin/chromium","/usr/bin/chromium-browser"].find(p=>p&&existsSync(p));
 if(!chrome)throw Error("No Chrome/Chromium found on the CI runner.");
 const errors=[];
-const browser=await chromium.launch({executablePath:chrome,headless:true,args:["--no-sandbox","--disable-dev-shm-usage","--use-fake-ui-for-media-stream","--autoplay-policy=no-user-gesture-required"]});
+const browser=await chromium.launch({executablePath:chrome,headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
 const pad=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834},ignoreHTTPSErrors:false});
 const phone1=await browser.newContext({...devices["iPhone 13"]});
 const phone2=await browser.newContext({...devices["Pixel 7"]});
@@ -114,6 +114,8 @@ try {
  await catalogHost.locator("#decade-options input[value='1970']").check();
  await catalogHost.locator("#start").click();
  await wait(catalogHost,()=>room?.mode==="catalog"&&room.round===1);
+ await catalogHost.waitForTimeout(1200);
+ assert.equal((await state(catalogHost)).step,-1,"catalog must wait for the host's Play tap");
  const firstVideo=(await state(catalogHost)).audio.source;
  assert.equal((await state(catalogGuest)).audio,null,"guest cannot read video ID in catalog mode");
  assert.equal((await state(catalogGuest)).title,null,"guest cannot read catalog answer");
@@ -165,17 +167,22 @@ try {
  assert.ok(!(await ya.locator("#youtube-host").isVisible()),"player must not see host player");
  console.log("BROWSER_YOUTUBE_HOST_IFRAME_PASS",JSON.stringify({code:youtube.code,iframe:frame?.split("?")[0]}));
 
- // Attempt actual YouTube playback; external ads, embed restrictions and bot checks
- // can prevent starting a video, so log precisely rather than claiming sound works.
+ // A loaded iframe is not playback proof. Verify time advancement and clue pause,
+ // and distinguish provider restrictions from an actual successful video test.
+ await yh.locator("#youtube-play-hint").scrollIntoViewIfNeeded();
  await yh.locator("#youtube-play-hint").click();
- await yh.waitForTimeout(2200);
+ await wait(yh,()=>ytError||(!loading&&room.step>=0&&room.phase==="paused"),22000);
  const yPlayback=await yh.evaluate(()=>({
   step:room.step,phase:room.phase,playerState:ytPlayer?.getPlayerState?.()??null,
-  iframe:!!document.querySelector("#youtube-player iframe"),
-  toast:document.querySelector("#toast")?.textContent||""
+  currentTime:ytPlayer?.getCurrentTime?.()??0,
+  iframe:!!document.querySelector("iframe#youtube-player, #youtube-player iframe"),
+  error:ytError?.message||null,status:document.querySelector("#youtube-status")?.textContent||""
  }));
- console.log("BROWSER_YOUTUBE_PLAYBACK_OBSERVATION",JSON.stringify(yPlayback));
- console.log("BROWSER_TEST_PASS",JSON.stringify({demo:"2 rounds",steal:"plus and minus",youtubeIframe:"loaded",browserContexts:6}));
+ const playbackPassed=!yPlayback.error&&yPlayback.currentTime>=0.1&&yPlayback.playerState===2;
+ console.log(playbackPassed?"BROWSER_YOUTUBE_PLAYBACK_PASS":"BROWSER_YOUTUBE_PLAYBACK_NOT_VERIFIED",JSON.stringify(yPlayback));
+ if(process.env.TUNE_RUSH_REQUIRE_YOUTUBE_PLAYBACK==="1")assert.ok(playbackPassed,"YouTube must advance and pause; iframe creation alone cannot pass");
+ assert.deepEqual(errors,[],"no browser JavaScript exceptions");
+ console.log("BROWSER_GAMEPLAY_PASS",JSON.stringify({demo:process.env.TUNE_RUSH_YOUTUBE_ONLY==="1"?"skipped":"2 rounds",steal:process.env.TUNE_RUSH_YOUTUBE_ONLY==="1"?"skipped":"plus and minus",youtubePlayback:playbackPassed?"passed":"NOT VERIFIED",browserContexts:8}));
 } finally {
  console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));
  await browser.close();
