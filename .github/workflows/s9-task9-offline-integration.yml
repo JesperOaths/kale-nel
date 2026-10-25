@@ -63,7 +63,7 @@ jobs:
             source_root_argument: '0'
           - suite: self_watchdog_java_and_jni
             test_file: ops/c720p/s9-native-security/offline-worker/test-s9-self-deadline-v374.py
-            expected_tests: 7
+            expected_tests: 8
             source_root_argument: '0'
           - suite: existing_40c_thermal_policy
             test_file: ops/c720p/s9-native-security/offline-worker/test-task9-thermal-policy-v374.py
