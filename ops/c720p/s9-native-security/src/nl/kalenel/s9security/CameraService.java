@@ -370,7 +370,7 @@ public final class CameraService extends Service {
           !diagnosticPrerollActive;
       // During 4K recording, a lower-duty, thermally guarded confirmation
       // is required to keep the tail open; raw motion is never sufficient.
-      boolean recordingCheck=recording&&temperature()<405&&
+      boolean recordingCheck=recording&&temperature()<420&&
           lastFrameAt-gardenPersonGateLastAt>=2500L;
       boolean eventFollowup=watching&&lastFrameAt<gardenPersonCandidateUntil;
       boolean safeSentinel=watching&&!eventFollowup&&temperature()<420&&
@@ -598,7 +598,7 @@ public final class CameraService extends Service {
      // A newly corroborated person may refresh an existing event's quiet
      // tail; this is deliberately NOT done for unverified pixel motion.
      if("recording".equals(mode)){
-      if(temperature()<405&&!temporaryTest&&!diagnosticPrerollActive){
+      if(temperature()<420&&!temporaryTest&&!diagnosticPrerollActive){
        lastMovementAt=SystemClock.elapsedRealtime();
        eventChain.evidence(lastMovementAt);
        gardenPersonTailVerifiedRefreshes++;
