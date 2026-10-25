@@ -40,7 +40,7 @@ const cards=context.window.FolderSuggestionCards;
 assert(cards && typeof cards.connect==='function');
 const doc={
  schema:'folder_suggestions_v1',status:'human_review_only',
- automatic_assignments:0,identity_probabilities:false,
+ automatic_assignments:0,identity_probabilities:false,probabilities:false,
  historic_review_index_verified:true,journal_revision:3,
  matches:[{
   state:'pending_review',human_review_required:true,verified_same_person:false,
