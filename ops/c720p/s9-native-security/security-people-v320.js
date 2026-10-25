@@ -574,17 +574,12 @@ function openFolder(id,tab,recheckOnly=false){
 }
 function openHome(pane){
  state.pane=pane;state.folder='';state.tab='inbox';state.offset=0;
- selectPane(pane);
- if(pane==='suggestions'){
-  window.dispatchEvent(new Event('people-folder-suggestions-open'));
-  return;
- }
- loadView();if(['people','clothing','review','automatic'].includes(pane))fetchFaces();
+ selectPane(pane);loadView();if(['people','clothing','review','automatic'].includes(pane))fetchFaces();
  if(pane==='automatic')fetchAutomatic();
  if(pane==='clothing'&&state.assignedReady)searchClothingMatches();
 }
 function selectPane(pane){
- for(const name of ['overview','review','people','clothing','automatic','suggestions','folderView'])
+ for(const name of ['overview','review','people','clothing','automatic','folderView'])
   $(name).hidden=(name!==(pane==='folder'?'folderView':pane));
  for(const b of document.querySelectorAll('[data-pane]')){
   const expected=pane==='folder'?state.folderReturnPane:pane;
@@ -1547,10 +1542,6 @@ $('folderRecheckOnly').addEventListener('change',()=>{
 });
 for(const id of ['distance','weak','route'])$(id).addEventListener('change',()=>{if(state.tab==='suggestions'){state.offset=0;loadView()}});
 $('refresh').addEventListener('click',()=>{
- if(state.pane==='suggestions'){
-  window.dispatchEvent(new Event('people-folder-suggestions-open'));
-  return;
- }
  state.faceLoaded=false;fetchFaceQuality();
  state.faceSummary=null;state.faceFetchError=false;
  state.clipEvidence=new Map();
