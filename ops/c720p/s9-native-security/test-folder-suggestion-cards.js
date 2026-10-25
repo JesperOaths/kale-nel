@@ -40,10 +40,11 @@ const cards=context.window.FolderSuggestionCards;
 assert(cards && typeof cards.connect==='function');
 const doc={
  schema:'folder_suggestions_v1',status:'human_review_only',
- automatic_assignments:0,identity_probabilities:false,
+ automatic_assignments:0,identity_probabilities:false,probabilities:false,
  historic_review_index_verified:true,journal_revision:3,
  matches:[{
-  state:'pending_review',human_review_required:true,verified_same_person:false,
+  state:'pending_review',human_review_required:true,verified_same_group:false,verified_same_person:false,
+  confidence_is_probability:false,
   automatically_assigned:false,confidence_is_identity_probability:false,
   folder_id:'F1',source:'sd',clip_id:'clip.mp4',
   source_qualified_clip_id:'sd:clip.mp4',
@@ -134,6 +135,30 @@ const doc={
  const wrongButtons=wrongCard.findButtons();
  await wrongButtons[0].click();
  assert.equal(wrongButtons[1].disabled,true,'Wrong original digest must block seed');
+
+ const overrideHost=new Element('section');
+ let overriddenTo=null, openedTarget=null;
+ cards.render(overrideHost,doc,{
+   onOpen:async row=>{openedTarget=row.folder_id;return{
+     verified:true,media_sha256:row.media_sha256,media_revision:row.media_revision,
+     opened_ticket:'signed-original-open-ticket-456'}},
+   onApprove:async row=>{overriddenTo=row.folder_id;return{
+     persisted:true,media_verified:true,status:'approved'}},
+   onReject:async()=>{throw Error('unexpected reject')}
+ });
+ const overrideCard=overrideHost.children.find(c=>c.tagName==='article');
+ const overrideSelector=overrideCard.children.find(c=>c.tagName==='select');
+ const overrideButtons=overrideCard.findButtons();
+ assert(overrideSelector,'ranked match must offer folder override');
+ overrideSelector.value='F2';
+ overrideSelector.handlers.get('change')();
+ assert.equal(overrideButtons[1].disabled,true,'changing folder invalidates proof');
+ await overrideButtons[1].click();
+ assert.equal(overriddenTo,null,'changing folder never auto-confirms');
+ await overrideButtons[0].click();
+ assert.equal(openedTarget,'F2');
+ await overrideButtons[1].click();
+ assert.equal(overriddenTo,'F2','human approval carries selected folder');
 
  const altered={...doc.matches[0],verified_same_person:true};
  assert.equal(cards.safeMatch(altered),false,'Identity claims must be rejected');

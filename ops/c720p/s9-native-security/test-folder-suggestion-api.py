@@ -196,5 +196,65 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(status,503)
         self.assertEqual(self.calls,[])
 
+class VectorIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        self.fx = ApiTest("test_suggestion_snapshot_returns_no_vectors")
+        self.fx.setUp()
+        self.addCleanup(self.fx.doCleanups)
+
+    def p1_only(self):
+        import json
+        fx=self.fx
+        doc=fx.journal.read()
+        doc["decisions"]=[x for x in doc["decisions"] if x["folder_id"]=="P1"]
+        doc["revision"]=1
+        fx.journal.path.write_text(json.dumps(doc))
+        self.assertEqual(api.snapshot(fx.provider, fx.journal)["approved_reference_counts"], {"P1":1,"P2":0})
+
+    def test_cosine_distance_rows(self):
+        a=[1.0]+[0.0]*511
+        b=[0.0,1.0]+[0.0]*510
+        self.assertEqual(eng.calculate_matrix_distance(a,[a,b,[-v for v in a]]),(0.0,1.0,2.0))
+        self.assertEqual(eng.calculate_matrix_distance(a,[]),())
+        with self.assertRaises(ValueError):
+            eng.calculate_matrix_distance([0.0]*512,[a])
+        with self.assertRaises(ValueError):
+            eng.calculate_matrix_distance(a,[[float("nan")]*512])
+
+    def test_confirm_reassignment_adds_target_reference_immediately(self):
+        self.p1_only()
+        fx=self.fx
+        self.assertEqual({m["folder_id"] for m in api.snapshot(fx.provider,fx.journal)["matches"]},{"P1"})
+        code,result=api.review(fx.body(folder="P2"),fx.provider,fx.journal,lambda *a:True,fx.commit)
+        self.assertEqual(code,200)
+        self.assertTrue(result["reference_updated"])
+        self.assertEqual(fx.calls[-1]["folder_id"],"P2")
+        later=api.snapshot(fx.provider,fx.journal)
+        self.assertEqual(later["approved_reference_counts"],{"P1":1,"P2":1})
+        self.assertEqual(later["matches"],[])
+
+    def test_reassigned_reject_only_suppresses_selected_folder(self):
+        self.p1_only()
+        fx=self.fx
+        code,result=api.review(fx.body("reject",folder="P2"),fx.provider,fx.journal,lambda *a:True,fx.commit)
+        self.assertEqual(code,200)
+        self.assertFalse(result["reference_updated"])
+        self.assertEqual(fx.calls[-1]["folder_id"],"P2")
+        self.assertEqual(api.snapshot(fx.provider,fx.journal)["approved_reference_counts"],{"P1":1,"P2":0})
+        self.assertTrue(any(m["folder_id"]=="P1" for m in api.snapshot(fx.provider,fx.journal)["matches"]))
+
+    def test_reassignment_requires_original_ticket(self):
+        self.p1_only()
+        fx=self.fx
+        self.assertEqual(api.review(fx.body(folder="P2"),fx.provider,fx.journal,
+                                    lambda *a:False,fx.commit)[0],409)
+        self.assertEqual(fx.calls,[])
+
+    def test_invalid_folder_does_not_call_authoritative_writer(self):
+        fx=self.fx
+        self.assertEqual(api.review(fx.body(folder="missing"),fx.provider,fx.journal,
+                                    lambda *a:True,fx.commit)[0],409)
+        self.assertEqual(fx.calls,[])
+
 if __name__=="__main__":
     unittest.main(verbosity=2)

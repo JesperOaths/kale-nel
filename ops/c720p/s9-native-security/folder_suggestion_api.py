@@ -111,9 +111,12 @@ def review(payload, provider, journal: ReviewJournal,
                                    journal.read()["decisions"],
                                    nonreference_reviewed=data["historic_reviewed_keys"],
                                    match_threshold=threshold, scoring_mode=mode)
+            # A human can override the suggested folder. Eligibility is bound
+            # to the ORIGINAL pending clip, never to its proposed destination.
+            # The selected destination still must be an existing named folder.
             nominated = any(
                 row["source"] == source and row["clip_id"] == name
-                and row["folder_id"] == folder and row["state"] == "pending_review"
+                and row["state"] == "pending_review"
                 and row["media_sha256"] == matched.media_sha256
                 and row["media_revision"] == matched.media_revision
                 for row in ranking["matches"])
@@ -136,7 +139,7 @@ def review(payload, provider, journal: ReviewJournal,
                     fresh.get("historic_reviewed_keys") != data["historic_reviewed_keys"] or
                     fresh.get("revision") != data["revision"] or
                     ranking_config(fresh) != (mode, threshold) or
-                    not any(raw.get("source") == source and raw.get("clip_id"] == name
+                    not any(raw.get("source") == source and raw.get("clip_id") == name
                             and raw.get("media_sha256") == matched.media_sha256
                             and raw.get("media_revision") == matched.media_revision
                             for raw in fresh.get("clips", []))):
@@ -156,7 +159,11 @@ def review(payload, provider, journal: ReviewJournal,
                                     opened_sha256=matched.media_sha256,
                                     opened_revision=matched.media_revision,
                                     authoritative_persisted=True, human_confirmed=True)
+            # rank_folders rebuilds reference pools directly from journal
+            # decisions and current verified vectors. Reassignment thus seeds
+            # only the selected folder and takes effect on the next snapshot.
             return 200, {"ok": True, "persisted": record["persisted"],
+                         "reference_updated": action == "approve",
                          "status": record["decision"]["status"],
                          "revision": record["revision"], "media_verified": True,
                          "folder_id": folder, "source": source, "clip_id": name,

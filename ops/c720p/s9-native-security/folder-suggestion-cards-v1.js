@@ -23,6 +23,8 @@
     return row && row.state === 'pending_review' &&
       row.human_review_required === true &&
       row.verified_same_group === false &&
+      row.verified_same_person !== true &&
+      row.confidence_is_identity_probability !== true &&
       row.automatically_assigned === false &&
       row.confidence_is_probability === false &&
       typeof row.folder_id === 'string' &&
@@ -62,6 +64,7 @@
     if (!snapshot || snapshot.schema !== SCHEMA ||
         snapshot.status !== 'human_review_only' ||
         snapshot.automatic_assignments !== 0 ||
+        snapshot.identity_probabilities === true ||
         snapshot.probabilities !== false ||
         snapshot.historic_review_index_verified !== true ||
         !Array.isArray(snapshot.matches) || !Array.isArray(snapshot.provisional_clusters)) {
@@ -95,8 +98,30 @@
       const actions = element('div', undefined, 'actions');
       const message = element('p', 'Inspect this original recording to enable review.');
       message.setAttribute('data-review-status', '');
+      // Changing the target invalidates earlier original-open attestation.
+      const choices = Array.isArray(snapshot.folder_options) ?
+        snapshot.folder_options.filter(f => f && typeof f.id === 'string' &&
+          /^[A-Za-z0-9_-]{1,100}$/.test(f.id)) : [];
+      const folderChooser = element('select');
+      folderChooser.setAttribute('aria-label', 'Assign this recording to folder');
+      for (const f of choices) {
+        const option = element('option', f.label || f.id);
+        option.value = f.id;
+        folderChooser.append(option);
+      }
+      folderChooser.value = choices.some(f => f.id === row.folder_id) ?
+        row.folder_id : '';
+      let inspectedRow = null;
+      const targetRow = () => ({...row, folder_id: folderChooser.value});
+      folderChooser.addEventListener('change', () => {
+        inspectedRow = null;
+        approve.disabled = true;
+        reject.disabled = true;
+        message.textContent = 'Folder changed: inspect the original again to continue.';
+      });
       const approve = invoke(card, vectorOnly ? 'Confirm group' : 'Approve in folder', async () => {
-        const result = await hooks.onApprove(row);
+        if (!inspectedRow) throw Error('Reinspect the original after choosing a folder.');
+        const result = await hooks.onApprove(inspectedRow);
         if (!result || result.persisted !== true || result.media_verified !== true ||
             result.status !== 'approved') {
           throw Error('Approval not verified as saved. Refresh before retrying.');
@@ -108,8 +133,9 @@
         reject.disabled = true;
         if (typeof hooks.onSaved === 'function') hooks.onSaved(result);
       }, row);
-      const reject = invoke(card, vectorOnly ? 'Deny suggestion' : 'Reject for this folder', async () => {
-        const result = await hooks.onReject(row);
+      const reject = invoke(card, 'Reject for selected folder', async () => {
+        if (!inspectedRow) throw Error('Reinspect the original after choosing a folder.');
+        const result = await hooks.onReject(inspectedRow);
         if (!result || result.persisted !== true || result.media_verified !== true ||
             result.status !== 'rejected') {
           throw Error('Folder-specific exclusion not verified as saved.');
@@ -124,14 +150,19 @@
       approve.disabled = true;
       reject.disabled = true;
       const open = invoke(card, 'Inspect original', async () => {
-        const evidence = await hooks.onOpen(row);
+        if (!folderChooser.value) throw Error('No verified target folder selected.');
+        const selected = targetRow();
+        const evidence = await hooks.onOpen(selected);
         const sameMedia = evidence && evidence.verified === true &&
           evidence.media_sha256 === row.media_sha256 &&
           evidence.media_revision === row.media_revision &&
           typeof evidence.opened_ticket === 'string' &&
           evidence.opened_ticket.length >= 10 &&
           evidence.opened_ticket.length <= 8192;
-        if (!sameMedia) {
+        if (!sameMedia || folderChooser.value !== selected.folder_id) {
+          inspectedRow = null;
+          approve.disabled = true;
+          reject.disabled = true;
           message.textContent = 'Original review could not be attested. Approval remains locked.';
           return;
         }
@@ -139,7 +170,8 @@
           message.textContent = 'Decision already saved. Refresh suggestions to continue.';
           return;
         }
-        message.textContent = 'Original media attested for this review. Make a human decision.';
+        inspectedRow = selected;
+        message.textContent = 'Original verified. Confirm or reject the selected folder.';
         approve.disabled = false;
         reject.disabled = false;
       }, row);
@@ -148,7 +180,7 @@
         const preview = hooks.onPreview(row);
         if (preview && preview.nodeType === 1) card.append(preview);
       }
-      card.append(label, detail, vectorOnly
+      card.append(label, detail, folderChooser, vectorOnly
         ? element('p','Embedding-only; no clothing colour or face score used.')
         : subs, breakdown, actions, message);
       host.append(card);
@@ -333,7 +365,9 @@
       });
       return render(host, narrowed, {
         onOpen: async row => {
-          const proof = await options.onOpen(row);
+          const proof = await options.onOpen(Object.assign({}, row, {
+            feature_snapshot_revision: current.feature_snapshot_revision
+          }));
           if (proof && proof.verified === true &&
               proof.media_sha256 === row.media_sha256 &&
               proof.media_revision === row.media_revision &&
