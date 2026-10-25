@@ -143,6 +143,105 @@ async function rpc(action,extra={},attempt=0) {
 
 
 /** Full-length local music: browser File handles stay on the host; no audio uploads. */
+
+// Keep three games of recent picks in this browser; never store audio bytes or song names.
+let rotationModule=null,rotationHistory=null,rotationLoading=null,catalogCoverageRequest=0;
+async function rotation(){
+ if(rotationModule)return rotationModule;
+ if(rotationLoading)return rotationLoading;
+ rotationLoading=import("./game-rotation.js").then(mod=>{
+  rotationModule=mod;
+  let raw=null;try{raw=localStorage.getItem(mod.STORAGE_KEY)}catch{}
+  rotationHistory=mod.readRotation(raw);
+  return mod;
+ });
+ return rotationLoading;
+}
+function saveRotation(){
+ if(!rotationModule)return;
+ try{localStorage.setItem(rotationModule.STORAGE_KEY,JSON.stringify(rotationHistory))}catch{}
+}
+async function currentCatalogExclusions(){
+ const mod=await rotation();
+ // Open this new host game in the rotation window of exactly three games.
+ if(room?.code){mod.openGame(rotationHistory,room.code);saveRotation()}
+ return [...mod.playedKeys(rotationHistory,"catalog")].slice(-1500);
+}
+async function rememberSelectedSong(state){
+ if(!state||state.role!=="host"||state.round<1||!["catalog","local"].includes(state.mode))return;
+ const mod=await rotation();
+ let kind=state.mode,key=null;
+ if(kind==="catalog"&&/^youtube:[A-Za-z0-9_-]{11}$/.test(state.audio?.source||""))
+  key=state.audio.source.slice(8);
+ if(kind==="local"&&/^local:[0-9]+$/.test(state.audio?.source||"")){
+  const t=localTracks.find(x=>x.index===Number(state.audio.source.slice(6)));
+  if(t)key=mod.songFingerprint(t);
+ }
+ if(!key)return;
+ mod.notePlayed(rotationHistory,state.code,kind,key);
+ saveRotation();
+}
+function updateCapacityPanel(id,summary,ready,empty){
+ const el=$(id);if(!el)return;
+ el.textContent=summary;
+ el.dataset.level=empty?"empty":ready?"ready":"short";
+}
+async function checkCatalogCoverage(){
+ if(!room||!isHost()||room.phase!=="lobby"||chosenSource()!=="catalog")return;
+ const serial=++catalogCoverageRequest;
+ try{
+  const mod=await rotation(), filters=chosenFilters();
+  if(room.code){mod.openGame(rotationHistory,room.code);saveRotation()}
+  const exclude=[...mod.playedKeys(rotationHistory,"catalog")].slice(-1500);
+  const response=await fetch("https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/musicquiz_catalog_coverage_v1",{
+   method:"POST",headers:{"Content-Type":"application/json","apikey":PUBLISHABLE_KEY},
+   body:JSON.stringify({p_genres:filters.genres,p_decades:filters.decades,p_excluded:exclude}),
+   cache:"no-store",signal:AbortSignal.timeout(8500)
+  });
+  if(!response.ok)throw Error("Song-count service unavailable");
+  const data=await response.json();
+  if(serial!==catalogCoverageRequest||chosenSource()!=="catalog")return;
+  const remaining=Math.max(0,Number(data.unused)||0),total=Math.max(0,Number(data.total)||0);
+  updateCapacityPanel("catalog-capacity",
+   remaining+" different music videos still available for these filters. "+total+
+   " match overall. Three typical games need around 120 songs; "+
+   (remaining>=120?"this selection meets that planning target.":
+    "short by "+(120-remaining)+". Repeats will occur if you play more rounds than available."),
+   remaining>=120,remaining===0);
+  renderCoverageMatrix(Array.isArray(data.matrix)?data.matrix:[]);
+ }catch{
+  if(serial===catalogCoverageRequest)updateCapacityPanel("catalog-capacity",
+   "Could not verify how many videos are currently available. Please retry before relying on three repeat-free games.",false,true);
+ }
+}
+function renderCoverageMatrix(data){
+ const root=$("catalog-genre-matrix");root.replaceChildren();
+ const genres=["pop","rock","hiphop","electronic","dance","disco","indie","rnb","metal","dutch"];
+ const decades=["1960","1970","1980","1990","2000","2010","2020"];
+ const count=new Map(data.map(x=>[x.genre+":"+x.decade,Number(x.total)||0]));
+ const table=document.createElement("table"),thead=document.createElement("thead"),tr=document.createElement("tr");
+ for(const val of ["GENRE",...decades.map(y=>y.slice(2)+"s")]){
+  const th=document.createElement("th");th.textContent=val;tr.append(th)
+ }
+ thead.append(tr);table.append(thead);
+ const body=document.createElement("tbody");
+ for(const genre of genres){
+  const row=document.createElement("tr"),th=document.createElement("th");th.textContent=genre.toUpperCase();row.append(th);
+  for(const decade of decades){
+   const n=count.get(genre+":"+decade)||0;
+   const td=document.createElement("td");td.textContent=String(n);
+   td.dataset.level=n>=120?"ready":n>0?"short":"empty";
+   td.setAttribute("aria-label",genre+" in the "+decade+"s: "+n+" songs");
+   row.append(td);
+  }
+  body.append(row);
+ }
+ table.append(body);root.append(table);
+ const caption=document.createElement("p");caption.className="matrix-caption";
+ caption.textContent="These are playable-source entries, not guaranteed ad-free audio. Counts are real; zero means no songs are currently available for that combination.";
+ root.append(caption);
+}
+
 let localTracks=[],localPlayed=new Set(),localSourceCache=new Set(),localCurrentIndex=null;
 let localAudioUrl=null,localReviewShown=60,localImporting=false,localModulePromise=null;
 function localLib(){return localModulePromise||(localModulePromise=import("./local-tracks.js"))}
