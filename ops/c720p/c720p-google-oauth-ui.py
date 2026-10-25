@@ -168,8 +168,21 @@ class H(BaseHTTPRequestHandler):
             self.send_json(404,{"error":"not_found"})
         except Exception as e:self.send_json(400,{"error":str(e)[:500]})
 
+
+# STEP4_20261011_LAN_OAUTH_GATE
+import ipaddress as _oauth_ipaddress
+class LanOnlyThreadingHTTPServer(ThreadingHTTPServer):
+    _permitted = tuple(_oauth_ipaddress.ip_network(x) for x in
+        ("127.0.0.0/8","192.168.178.0/24","172.17.0.0/16"))
+    def verify_request(self, request, client_address):
+        try:
+            addr = _oauth_ipaddress.ip_address(client_address[0])
+            return any(addr in network for network in self._permitted)
+        except (ValueError, TypeError, IndexError):
+            return False
+
 def serve(port):
-    ThreadingHTTPServer(("0.0.0.0",port),H).serve_forever()
+    LanOnlyThreadingHTTPServer(("0.0.0.0",port),H).serve_forever()
 
 if __name__=="__main__":
     os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT","1")
