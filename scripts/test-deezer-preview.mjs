@@ -47,5 +47,5 @@ assert.equal(await player.play(20000),true);
 player.dispose();
 assert.equal(callbacks.size,0);
 assert.equal(fakeAudio.src,"");
-assert.throws(()=>player.play(40000),/no_deezer_preview_loaded/);
+await assert.rejects(player.play(40000),/no_deezer_preview_loaded/);
 console.log("DEEZER_PREVIEW_ADAPTER_PASS",JSON.stringify({exactMatch:"yes",previewLength:30,maxClue:20,randomCueRange:"0-9s",clueTimers:"500/1500/20000ms",stalePlaybackStopped:"yes",illegalOrigins:"rejected",networkAudioRequests:0}));
