@@ -13,7 +13,7 @@ class FollowupTests(unittest.TestCase):
   self.assertIn('!"watching".equals(mode)',S)
   self.assertIn('if(!pilotOnly&&gardenGateReady&&lastFrameAt>=cameraControlSettleUntil)',cb)
   self.assertIn('boolean eventFollowup=watching&&lastFrameAt<gardenPersonCandidateUntil',cb)
-  self.assertIn('boolean recordingCheck=recording&&temperature()<405&&',cb)
+  self.assertIn('boolean recordingCheck=recording&&temperature()<420&&',cb)
   self.assertIn('lastFrameAt-gardenPersonGateLastAt>=2500L',cb)
   self.assertNotIn('eventChain.evidence(lastFrameAt)',cb)
   self.assertNotIn('lastMovementAt=lastFrameAt',cb)
