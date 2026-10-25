@@ -22,6 +22,7 @@ assert.match(nav, /people-folder-suggestions-open/);
 
 class Element {
   constructor(name) { this.name=name; this.textContent=''; this.hidden=false;this.disabled=false;
+    this.style={cssText:''};this.nodeType=1;
     this.handlers=new Map();this.children=[];this.attributes={}; }
   setAttribute(key,value) {this.attributes[key]=value;}
   addEventListener(kind,handler){this.handlers.set(kind,handler);}
