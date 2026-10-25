@@ -4,6 +4,8 @@ on:
     paths:
       - 'music/**'
       - 'scripts/test-tune-rush-playback.mjs'
+      - 'scripts/test-tune-rush-replay-db.mjs'
+      - 'supabase/migrations/*musicquiz*'
       - 'scripts/tune-rush-browser-acceptance.mjs'
       - '.github/workflows/tune-rush-browser-acceptance.yml'
   workflow_dispatch:
@@ -21,11 +23,13 @@ jobs:
         with:
           node-version: '24'
       - name: Install test-only Playwright controller
-        run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1
+        run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1 @electric-sql/pglite@0.5.11
       - name: Verify browser source syntax
         run: node --check scripts/tune-rush-browser-acceptance.mjs
       - name: Verify playback failure recovery and buzzer races
         run: node scripts/test-tune-rush-playback.mjs
+      - name: Verify replay SQL in isolated PostgreSQL
+        run: node scripts/test-tune-rush-replay-db.mjs
       - name: Run six-browser acceptance against actual PR page and live game database
         run: |
           set -euo pipefail

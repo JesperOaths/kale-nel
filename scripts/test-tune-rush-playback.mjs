@@ -7,10 +7,10 @@ const source=readFileSync(new URL('../music/app.js',import.meta.url),'utf8').spl
 function fixture(){
  const timers=new Map(),elements=new Map();let sequence=0,events;
  const element=id=>{
-  if(!elements.has(id))elements.set(id,{hidden:false,textContent:'',pause(){},querySelector(){return null},closest(){return null},getBoundingClientRect(){return {width:560,height:315,top:0,bottom:315}},before(){}});
+  if(!elements.has(id))elements.set(id,{hidden:false,textContent:'',pause(){},setAttribute(){},querySelector(){return null},closest(){return null},getBoundingClientRect(){return {width:560,height:315,top:0,bottom:315}},before(){}});
   return elements.get(id);
  };
- const sandbox={URL,TextEncoder,Uint8Array,console,location:{origin:'https://kalenel.nl'},window:{innerHeight:900},
+ const sandbox={URL,TextEncoder,Uint8Array,AbortController,console,crypto:{subtle:{digest:async()=>new Uint8Array(32).buffer}},location:{origin:'https://kalenel.nl'},window:{innerHeight:900},
   document:{hidden:false,getElementById:element,head:{append(){}},createElement(){return {}}},
   setTimeout(fn,ms){const id=++sequence;timers.set(id,{fn,ms});return id},clearTimeout(id){timers.delete(id)}};
  sandbox.window.YT={PlayerState:{PLAYING:1},Player:class{
@@ -20,7 +20,7 @@ function fixture(){
  sandbox.YT=sandbox.window.YT;
  const context=vm.createContext(sandbox);
  vm.runInContext(source+'\nrender=()=>{};room={role:"host",round:1,step:-1,phase:"paused",mode:"youtube",audio:{source:"youtube:dQw4w9WgXcQ",cueMs:0},clipMs:500};',context);
- return {run:code=>vm.runInContext(code,context),element,timers,events:()=>events};
+ return {run:code=>vm.runInContext(code,context),element,timers,events:()=>events,context};
 }
 
 {
@@ -35,6 +35,37 @@ function fixture(){
  assert.equal(f.run('actions.length'),0,'off-screen video must not consume a hint');
  assert.equal(f.run('room.step'),-1);
  assert.match(f.element('youtube-status').textContent,/Scroll/);
+}
+{
+ const f=fixture();await f.run('ensureYoutubePlayer("dQw4w9WgXcQ")');
+ const pending=f.run('room.step=6;room.clipMs=20000;let actions=[];rpc=async(action,data)=>{actions.push({action,data});return {state:{...room,phase:"playing"}}};startClip(true)');
+ for(let i=0;i<12&&!f.run('!!ytPlayingResolve');i++)await Promise.resolve();
+ assert.equal(f.element('youtube-replay-hint').disabled,true,'repeated host taps are disabled while starting');
+ f.events().onStateChange({data:1});await pending;
+ assert.equal(f.run('actions[0].action'),'replay');
+ assert.equal(f.run('actions[0].data.expectedRound'),1);assert.equal(f.run('actions[0].data.expectedStep'),6);
+ assert.equal(f.run('room.step'),6);assert.equal(f.element('youtube-replay-hint').disabled,false);
+}
+{
+ const f=fixture();await f.run('ensureYoutubePlayer("dQw4w9WgXcQ")');
+ const pending=f.run('let actions=[];rpc=async(action,data)=>{actions.push({action,data});return {state:{...room,phase:["play","replay"].includes(action)?"playing":"paused",step:action==="play"?room.step+1:room.step}}};startClip()');
+ for(let i=0;i<12&&!f.run('!!ytPlayingResolve');i++)await Promise.resolve();
+ [...f.timers.values()].find(t=>t.ms===10000).fn();await pending;
+ assert.equal(f.run('failedClue'),'1:0');assert.equal(f.run('room.phase'),'paused');
+ const retry=f.run('startClip()');
+ for(let i=0;i<12&&!f.run('!!ytPlayingResolve');i++)await Promise.resolve();
+ f.events().onStateChange({data:1});await retry;
+ assert.equal(f.run('actions.at(-1).action'),'replay','retrying a failed start must not advance the clue');
+ assert.equal(f.run('room.step'),0);assert.equal(f.run('failedClue'),'');
+}
+{
+ const f=fixture();
+ f.context.fetch=(url,{signal})=>new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(Error('aborted'))));
+ const pending=f.run('access={code:"ABCDEF",token:"a".repeat(64)};rpc("state")');
+ for(let i=0;i<12&&![...f.timers.values()].some(t=>t.ms===12000);i++)await Promise.resolve();
+ [...f.timers.values()].find(t=>t.ms===12000).fn();
+ await assert.rejects(pending,/temporary_failure/,'hung network requests must release their caller');
+ assert.equal(f.timers.size,0,'request deadline is cleaned up');
 }
 {
  const f=fixture();await f.run('ensureYoutubePlayer("dQw4w9WgXcQ")');

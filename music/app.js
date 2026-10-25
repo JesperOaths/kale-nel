@@ -18,6 +18,7 @@ let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
 let ytPlayer=null,ytPlayerVideoId='',ytReadyPromise=null,ytPlayingResolve=null,ytPlayingReject=null,ytPlayingTimer=null;
 let ytError=null,ytLoadGeneration=0,clipGeneration=0,mutationVersion=0;
+let failedClue="";
 const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
@@ -26,14 +27,21 @@ const ERROR_TEXT={
  buzz_closed:"Someone has already buzzed, or buzzing is not open.",
  already_tried_this_clip:"You've already guessed during this snippet. Wait for the next one.",
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
+ replay_unavailable:"A clue can only be replayed before anyone answers it.",stale_clue:"The round has moved on. Use the current playback controls.",
  all_hints_used:"All snippets have played. The host can skip the song.",
- temporary_failure:"Connection problem. Retrying…",request_failed:"The request could not be completed.",invalid_music_source:"Choose Demo or YouTube.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds.",no_videos_for_filters:"No videos match these genres and decades. Choose more genres or remove a decade.",invalid_video_duration:"Video duration unavailable.",video_too_short_for_clues:"This video is too short for the full hints.",cue_not_available:"Random cue is only available before the first hint."
+ temporary_failure:"Connection interrupted. Wait for the room to update, then try again.",request_failed:"The request could not be completed.",invalid_music_source:"Choose Demo or YouTube.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds.",no_videos_for_filters:"No videos match these genres and decades. Choose more genres or remove a decade.",invalid_video_duration:"Video duration unavailable.",video_too_short_for_clues:"This video is too short for the full hints.",cue_not_available:"Random cue is only available before the first hint."
 };
 function message(s) {
  const el=$("toast");el.textContent=ERROR_TEXT[s]||String(s||"");el.hidden=false;
  clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true},3300);
 }
 function setText(id,value){$(id).textContent=String(value??"")}
+function setLoading(value){
+ loading=value;
+ for(const id of ["start","youtube-play-hint","youtube-replay-hint","next-round","continue-hints","skip-round"]){$(id).disabled=value}
+ const submit=$("youtube-next-form").querySelector('button[type="submit"]');if(submit)submit.disabled=value;
+ $("room").setAttribute("aria-busy",String(value));
+}
 function safeStore(){try{if(access)localStorage.setItem(STORE,JSON.stringify(access));else localStorage.removeItem(STORE)}catch{}}
 async function rpc(action,extra={},attempt=0) {
  if(action!=="state")mutationVersion++;
@@ -50,19 +58,22 @@ async function rpc(action,extra={},attempt=0) {
   durationMs:Number.isInteger(extra.durationMs)?extra.durationMs:0,
   mode:String(extra.mode||"demo"),
   videoId:String(extra.videoId||""),
-  cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0
+  cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0,
+  expectedRound:Number.isInteger(extra.expectedRound)?extra.expectedRound:0,
+  expectedStep:Number.isInteger(extra.expectedStep)?extra.expectedStep:-1
  };
  const body={p_action:action,p_code:code,p_hash:await capabilityHash(token),p_data};
- let res;
+ let res,data;
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
  try {
   res=await fetch(ENDPOINT,{
    method:"POST",
    headers:{"Content-Type":"application/json","apikey":PUBLISHABLE_KEY},
-   cache:"no-store",body:JSON.stringify(body)
+   cache:"no-store",body:JSON.stringify(body),signal:controller.signal
   });
+  data=await res.json();
  }catch{throw Error("temporary_failure")}
- let data;
- try{data=await res.json()}catch{throw Error("temporary_failure")}
+ finally{clearTimeout(timeout)}
  if(!res.ok){
   const known=String(data?.message||"").split("\\n")[0];
   if(data?.code==="23505"&&creating&&attempt<3)return rpc(action,extra,attempt+1);
@@ -307,12 +318,14 @@ function scheduleNext(delay){
   try{await startClip()}catch(e){message(e.message); }
  },delay);
 }
-async function startClip(){
- if(!room||room.phase!=="paused"||!isHost()||loading)return;
+async function startClip(replay=false){
+ replay=replay||failedClue===room?.round+":"+room?.step;
+ if(!room||!isHost()||loading||(!replay&&room.phase!=="paused")||
+  (replay&&(!["paused","playing"].includes(room.phase)||room.step<0||room.firstAnswered)))return;
  cancelNext();
  const generation=++clipGeneration,round=room.round,initialStep=room.step;
  try{
-  loading=true;
+  setLoading(true);
   if(room.mode==="youtube"||room.mode==="catalog"){
    // Fail before consuming a hint when the player is unavailable or off screen.
    await ensureYoutubePlayer(room.audio?.source?.slice(8),room.audio?.cueMs||0);
@@ -336,11 +349,13 @@ async function startClip(){
    const cue=await rpc("random_cue",{durationMs});
    applyState(cue.state);
   }
-  if(generation!==clipGeneration||!room||room.round!==round||room.step!==initialStep||room.phase!=="paused")return;
-  const body=await rpc("play");applyState(body.state);
+  if(generation!==clipGeneration||!room||room.round!==round||room.step!==initialStep||
+   (replay?!["paused","playing"].includes(room.phase):room.phase!=="paused"))return;
+  const body=await rpc(replay?"replay":"play",replay?{expectedRound:round,expectedStep:initialStep}:{});applyState(body.state);
   if(room.phase!=="playing")return;
   await startAudio(room.audio,room.clipMs);
   if(generation!==clipGeneration||!room||room.phase!=="playing")return;
+  failedClue="";
   const expected=room.round,step=room.step;
   clipTimer=setTimeout(async()=>{
    if(!room||room.phase!=="playing"||room.round!==expected||room.step!==step)return;
@@ -353,17 +368,19 @@ async function startClip(){
   },room.clipMs);
  }catch(e){
   if(generation!==clipGeneration)return;
+  if(room?.phase==="playing")failedClue=room.round+":"+room.step;
   clearAudio();message(e.message||"Playback failed");
   if(room?.mode==="youtube"||room?.mode==="catalog")youtubeStatus(e.message||"Playback failed. Choose another video.");
   if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
  }
- finally{loading=false}
+ finally{setLoading(false)}
 }
 function applyState(s){
  const oldPhase=room?.phase||"",oldRound=room?.round||0;
  room=s;
+ if(s.firstAnswered||s.phase==="answering")failedClue="";
  const newRound=s.round;
- if(oldRound!==newRound){lastBlockKey="";answeredFocusKey="";cancelNext();clearAudio();}
+ if(oldRound!==newRound){lastBlockKey="";answeredFocusKey="";failedClue="";cancelNext();clearAudio();}
  if(isHost()){
   if(s.phase==="answering"||s.phase==="holding"||s.phase==="solved"||s.phase==="finished"){clearAudio();cancelNext();}
   if(s.phase==="paused"){
@@ -441,6 +458,9 @@ function render(){
    ensureYoutubePlayer(room.audio.source.slice(8),room.audio.cueMs||0).catch(e=>youtubeStatus(e.message));
   }
   show("youtube-play-hint",host&&youtubeMode&&phase==="paused"&&room.step<6);
+  setText("youtube-play-hint",failedClue===room.round+":"+room.step?"↻ Retry this clue":"▶ Play next clue");
+  show("youtube-replay-hint",host&&youtubeMode&&room.step>=0&&!room.firstAnswered&&
+   (phase==="paused"||(phase==="playing"&&!startedClip)));
   show("youtube-next-form",host&&room.mode==="youtube"&&phase==="solved");
 
   show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
@@ -490,10 +510,10 @@ function render(){
 }
 async function call(action,extra={},quiet=false){
  if(loading)return;
- loading=true;
+ setLoading(true);
  try{const b=await rpc(action,extra);applyState(b.state);return b;}
  catch(e){if(!quiet)message(e.message);throw e}
- finally{loading=false}
+ finally{setLoading(false)}
 }
 async function refresh(){
  if(!access||pollBusy||(loading&&!ytPlayingResolve))return;
@@ -511,26 +531,26 @@ async function refresh(){
  finally{pollBusy=false}
 }
 function reset(){
- cancelNext();clearAudio();room=null;access=null;safeStore();render();
+ cancelNext();clearAudio();failedClue="";room=null;access=null;safeStore();render();
 }
 async function create(){
  if(loading)return;
- loading=true;
+ setLoading(true);
  try{
   const b=await rpc("create"); // Create endpoint ignores the absent local room/token.
   access={code:b.state.code,token:b.token};safeStore();applyState(b.state);
- }catch(e){message(e.message)}finally{loading=false}
+ }catch(e){message(e.message)}finally{setLoading(false)}
 }
 async function join(e){
  e.preventDefault();if(loading)return;
  const code=$("join-code").value.trim().toUpperCase();
  const name=$("nickname").value.trim();
  if(!/^[A-HJ-NP-Z2-9]{6}$/.test(code)||!name){message("Enter a valid code and nickname");return}
- loading=true;
+ setLoading(true);
  try{
   const b=await rpc("join",{code,name});
   access={code:b.state.code,token:b.token};safeStore();applyState(b.state);
- }catch(e){message(e.message)}finally{loading=false}
+ }catch(e){message(e.message)}finally{setLoading(false)}
 }
 function inviteUrl(){
  const u=new URL(location.href);u.search="";u.searchParams.set("room",room?.code||"");
@@ -595,6 +615,7 @@ $("start").addEventListener("click",async()=>{
  }catch(e){message(e.message)}
 });
 $("youtube-play-hint").addEventListener("click",()=>startClip());
+$("youtube-replay-hint").addEventListener("click",()=>startClip(true));
 $("youtube-next-form").addEventListener("submit",async e=>{
  e.preventDefault();
  try{const data=youtubeRound("next-youtube");await call("next",data)}
