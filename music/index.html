@@ -8,9 +8,9 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=8">
+<link rel="stylesheet" href="./style.css?v=9">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=8" defer></script>
+<script src="./app.js?v=9" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -30,16 +30,21 @@
  <div class="room-head"><div><div class="eyebrow" id="role-indicator">HOST</div><h1 id="room-title">Game lobby</h1></div>
  <div class="room-head-actions"><button id="host-fullscreen" class="quiet host-fullscreen" type="button" hidden aria-label="Toggle fullscreen host view"><span aria-hidden="true">⛶</span> Full screen</button><button id="leave" class="quiet">Leave</button></div></div>
  <div class="room-key"><div><span class="kicker">ROOM CODE</span><strong id="room-code">------</strong></div><button id="copy-invite" class="outline">Copy invite link</button></div>
- <section id="lobby" class="room-layout"><div class="lobby-caption host-only"><span class="host-pill"><span class="host-online-dot"></span> YOUR PARTY STUDIO</span><h2>Set the vibe. Start the game.</h2><p>Choose your music, invite your friends, and take over the room.</p></div>
-  <article class="panel lobby-main"><div class="kicker">YOUR LOBBY · LIVE PLAYERS</div><h2>You're the game master.</h2><p class="lobby-intro">Friends can join with the room code above. Their buzzers connect automatically.</p><div id="lobby-players" class="players"></div>
+ <section id="lobby" class="room-layout">
+  <div class="lobby-caption host-only">
+    <div class="lobby-caption-copy"><span class="host-pill"><span class="host-online-dot"></span> TUNE RUSH / YOUR PARTY STUDIO</span><h2>Your music.<br><em>Your game.</em></h2><p>Choose the soundtrack, invite your people, and let the competition begin.</p></div>
+    <div class="lobby-progress" aria-label="Set up your party"><span><b>01</b> Choose music</span><i aria-hidden="true"></i><span><b>02</b> Invite friends</span><i aria-hidden="true"></i><span><b>03</b> Start playing</span></div>
+  </div>
+  <article class="panel lobby-main">
+   <div class="lobby-main-heading"><div class="kicker">01 / YOUR SOUNDTRACK</div><h2>What are we playing?</h2><p>Pick how the music gets to your host tablet. You can change the filters before you start.</p></div>
    <div id="host-settings">
-    <div class="kicker settings-title">01 / CHOOSE YOUR MUSIC</div>
-    <div class="source-select" id="source-select">
-      <label><input type="radio" name="music-source" value="demo" checked><span><strong>Demo melodies</strong><small>5 synthesized public-domain songs, automatic clues</small></span></label>
-      <label><input type="radio" name="music-source" value="catalog"><span><strong>Automatic music library</strong><small>71 verified video links, randomized and filtered by genre and decade</small></span></label>
-      <label id="deezer-source-option" hidden><input type="radio" name="music-source" value="deezer"><span><strong>Deezer previews</strong><small>30-second samples, automatic songs, genre + decade filters</small></span></label>
-      <label><input type="radio" name="music-source" value="youtube"><span><strong>Paste a YouTube link</strong><small>Add a song manually on the host device</small></span></label>
+    <div class="source-select" id="source-select" role="radiogroup" aria-label="Music source">
+      <label class="source-card source-demo"><input type="radio" name="music-source" value="demo" checked><span class="source-top"><span class="source-icon" aria-hidden="true">♫</span><span class="source-tag">READY</span></span><span class="source-copy"><strong>Demo melodies</strong><small>Five familiar tunes. No ads, no setup. Just hit play.</small></span><span class="source-bottom">START INSTANTLY <span aria-hidden="true">↗</span></span></label>
+      <label class="source-card source-catalog"><input type="radio" name="music-source" value="catalog"><span class="source-top"><span class="source-icon" aria-hidden="true">▤</span><span class="source-tag">71 TRACKS</span></span><span class="source-copy"><strong>Music video library</strong><small>Automatic YouTube tracks. Pick genres and decades.</small></span><span class="source-bottom">FILTER &amp; PLAY <span aria-hidden="true">↗</span></span></label>
+      <label class="source-card source-youtube"><input type="radio" name="music-source" value="youtube"><span class="source-top"><span class="source-icon" aria-hidden="true">▶</span><span class="source-tag">MANUAL</span></span><span class="source-copy"><strong>YouTube link</strong><small>Bring your own video. Choose the song and artist.</small></span><span class="source-bottom">ADD A TRACK <span aria-hidden="true">↗</span></span></label>
+      <label class="source-card source-deezer is-unavailable" id="deezer-source-option" aria-disabled="true"><input type="radio" name="music-source" value="deezer" disabled><span class="source-top"><span class="source-icon deezer-icon" aria-hidden="true">▥</span><span class="source-tag source-tag-pending" id="deezer-badge">PENDING</span></span><span class="source-copy"><strong>Deezer previews</strong><small>30-second clips. Built and tested; awaiting Deezer approval.</small></span><span class="source-bottom" id="deezer-card-foot">NOT YET AVAILABLE <span aria-hidden="true">⌁</span></span></label>
     </div>
+    <div class="provider-note" role="status" id="deezer-provider-note"><span class="provider-note-dot" aria-hidden="true"></span><p><strong id="deezer-license-status">Deezer integration ready · Playback not authorized</strong><span>We built the connection, but Deezer has not approved using previews in the public game. <a href="https://github.com/JesperOaths/kale-nel/blob/main/music/DEEZER_APPROVAL_REQUEST.md" target="_blank" rel="noopener noreferrer">View approval request</a>.</span></p></div>
     <div id="youtube-setup" hidden>
       <p class="youtube-info">Paste a link such as <code>music.youtube.com/watch?v=...</code>. The video is shown on the game master's screen using YouTube's official player. It cannot be hidden or used as an audio-only stream. Some tracks cannot be embedded; advertisements and buffering can interrupt clues.</p>
       <label for="youtube-link">YouTube Music / YouTube video link</label>
@@ -79,15 +84,14 @@
      </div>
      <p class="small-note">For example, Pop + 1970s draws only 1970–1979 pop tracks. Leave decades unchecked for all years. A new song is selected automatically after each solved/skipped round; tracks repeat only after the matching pool is exhausted. Some YouTube videos may block embedding or show ads.</p>
     </div>
-    <button id="start" class="primary host-launch">Start the party <span aria-hidden="true">↗</span></button>
+    <button id="start" class="primary host-launch">Start the game <span aria-hidden="true">↗</span></button>
    </div><p id="guest-wait" class="waiting" hidden>Waiting for the host to start…</p>
+   <div class="lobby-roster"><div class="lobby-roster-heading"><span class="kicker">THE ROOM</span><span id="lobby-player-count">0 players joined</span></div><div id="lobby-players" class="players"><span class="waiting-player">Waiting for players to join…</span></div></div>
   </article>
-  <article class="panel rules"><div class="kicker">02 / PARTY RULES</div><h2>Listen. Buzz. Win.</h2><div class="rules-hero"><span class="rules-note" aria-hidden="true">♫</span><span>7 progressively longer clues, one mystery track.</span></div><h3>First to 20 points takes the crown.</h3>
-   <p>Clips build from 0.5 to 1.5, 3, 5, 8, 12 and 20 seconds, with a pause between clips.</p>
-   <div class="rule"><span>+0.5</span> Correct song title</div><div class="rule"><span>+0.5</span> Correct artist</div>
-   <div class="rule"><span>−0.5</span> For each wrong part</div><div class="rule"><span>0</span> Leave a field empty or pass</div><div class="rule"><span>⚡</span> Steal: +0.5 correct, −1 per wrong field</div>
-   <p>Fastest server-received buzz answers first. If the first guess is incomplete, others can STEAL. Wrong steals are risky, but scores never drop below zero.</p>
-  </article>
+  <aside class="lobby-side host-only">
+   <div class="party-art" aria-hidden="true"><div class="party-art-top"><span>TUNE RUSH ORIGINAL</span><span>VOL. 01 / THE PARTY</span></div><div class="party-vinyl"><span class="party-vinyl-center">TR<span>♫</span></span></div><div class="party-art-bottom"><span>GOOD MUSIC.<br><strong>BAD GUESSES.</strong></span><span>◈ ◈ ◈</span></div></div>
+   <article class="panel rules"><div class="rules-top"><span class="kicker">QUICK RULES</span><span class="rules-winner">FIRST TO 20</span></div><h2>Listen. Buzz. Win.</h2><div class="rules-steps"><div><span>01</span><p>Hear a short clip that gets longer each round.</p></div><div><span>02</span><p>Buzz first and name the song or artist.</p></div><div><span>03</span><p>Score points or steal the answer.</p></div></div><div class="rules-points"><span><b>+0.5</b> correct part</span><span><b>−0.5</b> wrong part</span><span><b>−1</b> wrong steal</span></div><p class="rules-detail">Seven clues: 0.5, 1.5, 3, 5, 8, 12 and 20 seconds. Scores never drop below zero.</p></article>
+  </aside>
  </section>
  <section id="playing" hidden>
   <div class="host-ticker" id="host-ticker"><span class="live-pip"></span><strong>ON AIR · GAME MASTER</strong><span id="master-message">Get the room ready</span><span class="live-crown">FIRST TO 20 <span aria-hidden="true">✦</span></span></div>
