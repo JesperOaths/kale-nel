@@ -43,7 +43,8 @@ const doc={
  automatic_assignments:0,identity_probabilities:false,probabilities:false,
  historic_review_index_verified:true,journal_revision:3,
  matches:[{
-  state:'pending_review',human_review_required:true,verified_same_person:false,
+  state:'pending_review',human_review_required:true,verified_same_group:false,verified_same_person:false,
+  confidence_is_probability:false,
   automatically_assigned:false,confidence_is_identity_probability:false,
   folder_id:'F1',source:'sd',clip_id:'clip.mp4',
   source_qualified_clip_id:'sd:clip.mp4',
