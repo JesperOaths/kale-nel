@@ -8,9 +8,9 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=7">
+<link rel="stylesheet" href="./style.css?v=8">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=7" defer></script>
+<script src="./app.js?v=8" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -37,6 +37,7 @@
     <div class="source-select" id="source-select">
       <label><input type="radio" name="music-source" value="demo" checked><span><strong>Demo melodies</strong><small>5 synthesized public-domain songs, automatic clues</small></span></label>
       <label><input type="radio" name="music-source" value="catalog"><span><strong>Automatic music library</strong><small>71 verified video links, randomized and filtered by genre and decade</small></span></label>
+      <label id="deezer-source-option" hidden><input type="radio" name="music-source" value="deezer"><span><strong>Deezer previews</strong><small>30-second samples, automatic songs, genre + decade filters</small></span></label>
       <label><input type="radio" name="music-source" value="youtube"><span><strong>Paste a YouTube link</strong><small>Add a song manually on the host device</small></span></label>
     </div>
     <div id="youtube-setup" hidden>
@@ -106,6 +107,7 @@
       <button id="youtube-replay-hint" class="outline" type="button" hidden>↻ Replay current clue</button>
       <p class="small-note">Players should not view this video: YouTube may show the song title or artist. Keep the video and its controls unobstructed. If a video is unavailable, use Skip video to select another one.</p>
     </section>
+    <section id="deezer-host" class="deezer-host host-only" hidden aria-label="Deezer preview controls"><div class="deezer-heading"><strong>DEE ZER · HOST PREVIEW</strong><span>30-second preview · 7 clues</span></div><p id="deezer-status" class="deezer-status" role="status" aria-live="polite">Ready to prepare the next song preview.</p><div class="deezer-buttons"><button id="deezer-play-hint" class="primary" type="button" hidden>▶ Play next clue</button><button id="deezer-replay-hint" class="outline" type="button" hidden>↻ Replay clue</button></div><p class="small-note">Only licensed, Deezer-authorized playback is enabled. Previews are short samples, not the full recording.</p></section>
     <div id="host-controls" hidden><button id="enable-sound" class="outline">Enable tablet audio</button><button id="continue-hints" class="primary" hidden>Continue hints ▶</button><button id="next-round" class="primary" hidden>Next song →</button>
     <form id="youtube-next-form" class="youtube-next-form" hidden>
       <h3>Choose the next YouTube song</h3>
