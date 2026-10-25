@@ -172,6 +172,8 @@ public final class GardenPersonTrackGateTest{
     "background car cannot erase already verified stationary person");
   check(!gate.confirmStationaryPresence(99000,98950,.90f,other),
     "different high-confidence object must not take over confirmed person");
+  check(!gate.confirmStationaryPresence(99500,99450,.91f,other),
+    "repeated nearby static false detection cannot extend known visitor");
   check(!gate.confirmStationaryPresence(100000,99950,.55f,moving),
     "weak continuation does not refresh person");
   check(!gate.confirmStationaryPresence(100500,100450,.90f,moving),
