@@ -406,9 +406,23 @@ function renderScores(target){
  });
 }
 function render(){
- if(!room){show("welcome",true);show("room",false);return;}
+ if(!room){show("welcome",true);show("room",false);$("room").classList.remove("host-mode");return;}
  show("welcome",false);show("room",true);
  const host=isHost(),phase=room.phase,playing=phase!=="lobby";
+ $("room").classList.toggle("host-mode",host);
+ $("room").dataset.phase=phase;
+ show("host-fullscreen",host);
+ if(host){
+  const source=room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
+  const filters=room.mode==="catalog"?[
+   ...(room.genres||[]).filter(x=>x!=="demo").map(x=>({hiphop:"HIP-HOP",rnb:"R&B",dutch:"DUTCH",electronic:"ELECTRONIC"}[x]||x.toUpperCase())),
+   ...(room.decades||[]).map(x=>x+"s")
+  ]:[];
+  setText("host-track-context",source+(filters.length?"  ·  "+filters.join(" / "):"  ·  MYSTERY TRACK"));
+  setText("host-player-count",room.players.length+" PLAYER"+(room.players.length===1?"":"S")+" CONNECTED");
+  const ed=$("playing").querySelector(".disc-art-edition");
+  if(ed)ed.textContent="MYSTERY "+String(Math.max(1,room.round||1)).padStart(2,"0");
+ }
  setText("role-indicator",host?"HOST / TABLET":"PLAYER / PHONE");
  setText("room-title",playing?"Name that tune":"Game lobby");
  setText("room-code",room.code);
@@ -428,7 +442,8 @@ function render(){
  }
  if(phase!=="lobby"){
   setText("round-label","ROUND "+room.round);
-  setText("hint-label",room.step<0?"GET READY":(room.clipMs/1000)+" S");
+  setText("hint-label",room.step<0?"READY":(room.clipMs/1000)+" SEC CLUE");
+  setText("host-hint-progress",room.step<0?"7 chances to recognise it":"CLUE "+Math.min(7,room.step+1)+" / 7");
   const buzzerOwner=room.players.find(p=>p.id===room.lockedPlayer);
   const statuses={
    paused:["Music paused","Buzz now, or wait for the next hint."],
@@ -452,6 +467,7 @@ function render(){
   setText("revealed-title",room.titleDone||phase==="solved"||phase==="finished"?room.title:"Song title: ???");
   setText("revealed-artist",room.artistDone||phase==="solved"||phase==="finished"?room.artist:"Artist: ???");
   show("host-controls",host);show("player-controls",!host);
+  show("host-demo-play",host&&room.mode==="demo"&&phase==="paused"&&room.step<6);
   const youtubeMode=room.mode==="youtube"||room.mode==="catalog";
   show("youtube-host",host&&youtubeMode);
   if(host&&youtubeMode&&room.audio?.source?.startsWith("youtube:")){
@@ -597,6 +613,18 @@ $("join-form").addEventListener("submit",join);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
 $("enable-sound").addEventListener("click",soundUnlock);
+$("host-demo-play").addEventListener("click",()=>startClip());
+$("host-fullscreen").addEventListener("click",async()=>{
+ const el=$("room");
+ try {
+  if(document.fullscreenElement){await document.exitFullscreen();return;}
+  if(!el.requestFullscreen)throw Error("Your browser doesn't support fullscreen mode. Add Tune Rush to your home screen for an immersive view.");
+  await el.requestFullscreen();
+ }catch(e){message(e.message||"Fullscreen could not be enabled on this device.");}
+});
+document.addEventListener("fullscreenchange",()=>{
+ $("host-fullscreen").innerHTML=document.fullscreenElement?'<span aria-hidden="true">⛶</span> Exit full screen':'<span aria-hidden="true">⛶</span> Full screen';
+});
 $("source-select").addEventListener("change",updateAudioChoice);
 $("start").addEventListener("click",async()=>{
  try{
