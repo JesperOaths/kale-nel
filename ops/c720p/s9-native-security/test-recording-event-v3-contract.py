@@ -33,7 +33,7 @@ class Contract(unittest.TestCase):
   self.assertIn('final String requestedMode=mode;',confirmed)
   self.assertIn('if("recording".equals(mode)){',confirmed)
   self.assertIn('personTrackGate.offer(now,jpegAt,score,personBox,localCells)',confirmed)
-  self.assertIn('if(rejectedByTransport)personTrackGate.rejectCompetingTransport()',confirmed)
+  self.assertIn('if(rejectedByTransport)personTrackGate.rejectCompetingTransport(rejectedTransportBoxes)',confirmed)
   self.assertIn('gardenPersonTailVerifiedRefreshes++;',confirmed)
   self.assertIn('rejectCompetingTransport(rejectedTransportBoxes)',confirmed)
   self.assertIn('lastMovementAt=SystemClock.elapsedRealtime();',confirmed)
