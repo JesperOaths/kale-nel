@@ -53,7 +53,7 @@ async function ensureDeezerPreview(){
  if(String(track.trackId)!==room.audio.source.slice(7)||!Number.isInteger(track.cueMs)||
     track.cueMs<0||track.cueMs>9000||track.round!==room.round)
    throw Error("The preview does not match the current game round.");
- const {DeezerPreviewPlayer}=await import("./deezer-preview.mjs");
+ const {DeezerPreviewPlayer}=await import("./deezer-preview.js");
  const old=deezerPlayer;if(old)old.dispose();
  const candidate=new DeezerPreviewPlayer(playerAudio);
  candidate.prepare(track.previewUrl,30,()=>0);
