@@ -1,5 +1,14 @@
 -- Staged Deezer preview *database readiness*, not public playback approval.
 -- The gate is false by default; no anonymous or client-side override exists.
+-- Fail closed if another session modified either live game function.
+do $guard$ begin
+ if (select md5(prosrc) from pg_proc where oid='public.musicquiz_v1(text,text,text,jsonb)'::regprocedure)
+  <> 'd42f02060831d46bf420d5c39f26529d' then
+  raise exception 'musicquiz_v1_source_drift_deezer_migration_refused';end if;
+ if (select md5(prosrc) from pg_proc where oid='musicquiz.visible_state(uuid,text)'::regprocedure)
+  <> '9813e9b2d41558f5e2c75b5941dbddac' then
+  raise exception 'visible_state_source_drift_deezer_migration_refused';end if;
+end $guard$;
 create table if not exists musicquiz.deezer_approval(
  id smallint primary key check(id=1),
  approved boolean not null default false,
