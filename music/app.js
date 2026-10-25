@@ -117,7 +117,8 @@ async function rpc(action,extra={},attempt=0) {
   videoId:String(extra.videoId||""),
   cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0,
   expectedRound:Number.isInteger(extra.expectedRound)?extra.expectedRound:0,
-  expectedStep:Number.isInteger(extra.expectedStep)?extra.expectedStep:-1
+  expectedStep:Number.isInteger(extra.expectedStep)?extra.expectedStep:-1,
+  excludeVideos:Array.isArray(extra.excludeVideos)?extra.excludeVideos.slice(0,1500):[]
  };
  const body={p_action:action,p_code:code,p_hash:await capabilityHash(token),p_data};
  let res,data;
@@ -145,7 +146,7 @@ async function rpc(action,extra={},attempt=0) {
 /** Full-length local music: browser File handles stay on the host; no audio uploads. */
 
 // Keep three games of recent picks in this browser; never store audio bytes or song names.
-let rotationModule=null,rotationHistory=null,rotationLoading=null,catalogCoverageRequest=0;
+let rotationModule=null,rotationHistory=null,rotationLoading=null,catalogCoverageRequest=0,lastCatalogCoverageKey="";
 async function rotation(){
  if(rotationModule)return rotationModule;
  if(rotationLoading)return rotationLoading;
@@ -188,9 +189,13 @@ function updateCapacityPanel(id,summary,ready,empty){
 }
 async function checkCatalogCoverage(){
  if(!room||!isHost()||room.phase!=="lobby"||chosenSource()!=="catalog")return;
+ const filters=chosenFilters();
+ const coverageKey=room.code+":"+JSON.stringify(filters)+":"+JSON.stringify(rotationHistory?.games||[]);
+ if(coverageKey===lastCatalogCoverageKey)return;
+ lastCatalogCoverageKey=coverageKey;
  const serial=++catalogCoverageRequest;
  try{
-  const mod=await rotation(), filters=chosenFilters();
+  const mod=await rotation();
   if(room.code){mod.openGame(rotationHistory,room.code);saveRotation()}
   const exclude=[...mod.playedKeys(rotationHistory,"catalog")].slice(-1500);
   const response=await fetch("https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/musicquiz_catalog_coverage_v1",{
@@ -281,10 +286,24 @@ function renderLocalTracks(){
  setText("local-review-count",localTracks.length+" imported");
 }
 function updateLocalCounts(){
- const complete=localTracks.filter(t=>!t.needsReview).length;
- const eligible=localReadyCount();
+ const complete=localTracks.filter(t=>!t.needsReview).length,eligible=localReadyCount();
  setText("local-music-count",localImporting?"Reading local song metadata…":
   localTracks.length+" audio files selected · "+complete+" fully tagged · "+eligible+" match the current genre/decade filters.");
+ if(!rotationModule){
+  updateCapacityPanel("local-capacity","Calculating three-game playlist readiness…",false,false);
+  rotation().then(()=>updateLocalCounts()).catch(()=>updateCapacityPanel("local-capacity",
+   "Rotation history is unavailable in this browser. Song availability cannot be guaranteed.",false,true));
+  return;
+ }
+ const f=chosenFilters();
+ const unique=rotationModule.matchingLocalTracks(localTracks,f.genres,f.decades);
+ const report=rotationModule.readiness(unique,rotationModule.playedKeys(rotationHistory,"local"));
+ updateCapacityPanel("local-capacity",
+  report.remaining+" different unplayed songs match your current filters ("+report.total+" distinct matches in this collection). "+
+  (report.ready?"Enough for three typical 40-song games without repeating in this browser.":
+   "Aim for about 120 unique songs for three typical games. You need "+report.shortfall+
+   " more; the game will only repeat after the available matching songs have been used."),
+  report.ready,report.remaining===0);
 }
 async function importLocalFiles(list){
  if(room?.phase!=="lobby"||!isHost()||localImporting)return;
@@ -329,9 +348,16 @@ async function selectLocalRound(){
  if(localImporting)throw Error("Music is still importing.");
  const lib=await localLib(),f=chosenFilters();
  if(!f.genres.length)throw Error("Select at least one genre.");
- const attempted=new Set(localPlayed),max=localTracks.length;
+ const rotationTools=await rotation();
+ const eligible=rotationTools.matchingLocalTracks(localTracks,f.genres,f.decades);
+ if(!eligible.length)throw Error("No correctly tagged audio files match this genre and decade selection.");
+ const seen=rotationTools.playedKeys(rotationHistory,"local");
+ const unseen=eligible.filter(t=>!seen.has(rotationTools.songFingerprint(t)));
+ const candidates=unseen.length?unseen:eligible;
+ const attempted=new Set(),max=candidates.length;
+ if(!unseen.length)localStatus("All matching songs have been used in the last three games. Starting a new rotation.");
  for(let tries=0;tries<max;tries++){
-  const track=lib.chooseNextLocalTrack(localTracks,f.genres,f.decades,attempted);
+  const track=lib.chooseNextLocalTrack(candidates,f.genres,f.decades,attempted);
   attempted.add(track.index);
   let duration;
   try{duration=await getLocalDuration(track.file)}catch{continue}
@@ -365,6 +391,8 @@ function updateAudioChoice(){
  show("catalog-settings",mode==="catalog"||mode==="deezer"||mode==="local");
  show("local-settings",mode==="local");
  if(mode==="local")updateLocalCounts();
+ show("catalog-capacity",mode==="catalog");
+ if(mode==="catalog")checkCatalogCoverage();
  setText("catalog-filter-note",mode==="local"?
   "Choose genres and decades from the metadata of your local songs. Pop + 1970s only draws imported Pop songs tagged 1970–1979. Leave decades empty for all years. Tracks do not repeat until the matching collection is exhausted.":
   "For example, Pop + 1970s draws only 1970–1979 pop tracks. Leave decades unchecked for all years. Tracks only repeat once the matching pool has been exhausted. Some YouTube videos may show ads or reject embedding.");
@@ -836,7 +864,13 @@ function render(){
 async function call(action,extra={},quiet=false){
  if(loading)return;
  setLoading(true);
- try{const b=await rpc(action,extra);applyState(b.state);return b;}
+ try{
+  const b=await rpc(action,extra);applyState(b.state);
+  if((action==="start"||action==="next")&&b.state?.role==="host"){
+   try{await rememberSelectedSong(b.state)}catch(e){message("Song history could not be saved on this browser.");}
+  }
+  return b;
+ }
  catch(e){if(!quiet)message(e.message);throw e}
  finally{setLoading(false)}
 }
@@ -948,7 +982,8 @@ $("start").addEventListener("click",async()=>{
    await call("settings",{genres:["demo"],decades:[]});
    await soundUnlock();
   }
-  const data=mode==="youtube"?youtubeRound("youtube"):mode==="local"?await selectLocalRound():{mode};
+  const data=mode==="youtube"?youtubeRound("youtube"):mode==="local"?await selectLocalRound():
+   mode==="catalog"?{mode,excludeVideos:await currentCatalogExclusions()}:{mode};
   const result=await call("start",data);
   if(result&&mode==="local")localPlayed.add(data.fileIndex);
  }catch(e){message(e.message)}
@@ -973,6 +1008,8 @@ $("next-round").addEventListener("click",async()=>{
   if(room?.mode==="local"){
    const data=await selectLocalRound(),result=await call("next",data);
    if(result)localPlayed.add(data.fileIndex);
+  }else if(room?.mode==="catalog"){
+   await call("next",{excludeVideos:await currentCatalogExclusions()});
   }else await call("next");
  }catch(e){message(e.message)}
 });
@@ -982,8 +1019,11 @@ $("buzz").addEventListener("click",requestBuzz);
 $("steal").addEventListener("click",async()=>{try{await call("steal")}catch{}});
 $("pass").addEventListener("click",async()=>{try{await call("forfeit")}catch{}});
 $("answer-form").addEventListener("submit",submitGuess);
-$("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);if(chosenSource()==="local")updateLocalCounts()});
-$("decade-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
+for(const id of ["genre-options","decade-options"])$(id).addEventListener("change",()=>{
+ clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);
+ if(chosenSource()==="local")updateLocalCounts();
+ if(chosenSource()==="catalog"){lastCatalogCoverageKey="";checkCatalogCoverage()}
+});
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
  if(document.hidden&&isHost()){
