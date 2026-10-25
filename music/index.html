@@ -8,9 +8,9 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=10">
+<link rel="stylesheet" href="./style.css?v=11">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=10" defer></script>
+<script src="./app.js?v=11" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -49,6 +49,7 @@
      <div class="local-heading"><div><span class="kicker">YOUR MUSIC COLLECTION</span><h3>Bring your own soundtrack.</h3><p>Pick audio files from this device. Your recordings never leave the tablet; only song and artist names are sent to the scorekeeper.</p></div><span class="local-lock">LOCAL ONLY</span></div>
      <div class="local-inputs"><label class="local-upload">Choose audio files<input id="local-music-files" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus,.mp4,.aiff,audio/*" multiple></label><label class="local-upload local-folder">Choose a music folder<input id="local-music-folder" type="file" webkitdirectory directory multiple accept="audio/*"></label></div>
      <p class="local-summary" id="local-music-count" role="status" aria-live="polite">No songs loaded yet. MP3 ID3 tags are read automatically; other file types can be edited below.</p>
+     <div class="rotation-capacity" id="local-capacity" role="status" aria-live="polite">Select your songs and filters to see how many unique tracks you have for three complete games.</div>
      <div class="local-review" id="local-review" hidden>
       <div class="local-review-head"><strong>Review song details</strong><span id="local-review-count">0 songs</span></div>
       <p class="local-hint">Accurate title, artist, genre and release year are needed for automatic filtering and scoring. Click any field to correct it. Use genre codes such as pop, rock, hiphop, dance or dutch, separated by commas.</p>
@@ -96,6 +97,8 @@
       <label><input type="checkbox" value="2010"> 2010s</label>
       <label><input type="checkbox" value="2020"> 2020s</label>
      </div>
+     <div class="rotation-capacity" id="catalog-capacity" role="status" aria-live="polite">Checking how many songs match your genres and decades…</div>
+     <details class="catalog-availability"><summary>Show song counts for every genre and decade</summary><div id="catalog-genre-matrix" class="catalog-genre-matrix"></div></details>
      <p class="small-note" id="catalog-filter-note">For example, Pop + 1970s draws only 1970–1979 pop tracks. Leave decades unchecked for all years. A new song is selected automatically after each solved/skipped round; tracks repeat only after the matching pool is exhausted. Some YouTube videos may block embedding or show ads.</p>
     </div>
     <button id="start" class="primary host-launch">Start the game <span aria-hidden="true">↗</span></button>
