@@ -266,6 +266,9 @@ function updateAudioChoice(){
  show("catalog-settings",mode==="catalog"||mode==="deezer"||mode==="local");
  show("local-settings",mode==="local");
  if(mode==="local")updateLocalCounts();
+ setText("catalog-filter-note",mode==="local"?
+  "Choose genres and decades from the metadata of your local songs. Pop + 1970s only draws imported Pop songs tagged 1970–1979. Leave decades empty for all years. Tracks do not repeat until the matching collection is exhausted.":
+  "For example, Pop + 1970s draws only 1970–1979 pop tracks. Leave decades unchecked for all years. Tracks only repeat once the matching pool has been exhausted. Some YouTube videos may show ads or reject embedding.");
 }
 function parseYoutubeVideo(link){
  const u=new URL(String(link||"").trim());
@@ -880,7 +883,7 @@ $("buzz").addEventListener("click",requestBuzz);
 $("steal").addEventListener("click",async()=>{try{await call("steal")}catch{}});
 $("pass").addEventListener("click",async()=>{try{await call("forfeit")}catch{}});
 $("answer-form").addEventListener("submit",submitGuess);
-$("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
+$("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);if(chosenSource()==="local")updateLocalCounts()});
 $("decade-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
