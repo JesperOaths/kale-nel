@@ -19,6 +19,8 @@ alter table musicquiz.rooms drop constraint if exists rooms_source_mode_check;
 alter table musicquiz.rooms add constraint rooms_source_mode_check check(source_mode in ('demo','youtube','catalog'));
 alter table musicquiz.rooms add column if not exists decades text[] not null default '{}'::text[];
 alter table musicquiz.rooms add column if not exists used_youtube_ids text[] not null default '{}'::text[];
+alter table musicquiz.rooms drop constraint if exists rooms_youtube_cue_ms_check;
+alter table musicquiz.rooms add constraint rooms_youtube_cue_ms_check check(youtube_cue_ms between 0 and 7200000);
 create or replace function musicquiz.visible_state(p_id uuid,p_hash text) returns jsonb
 language plpgsql security invoker set search_path = pg_catalog, musicquiz as $f$
 declare r musicquiz.rooms%rowtype; t musicquiz.tracks%rowtype; p musicquiz.players%rowtype;
@@ -43,10 +45,10 @@ begin
   'step',r.step,'firstAnswered',r.first_answered,'stealTurn',r.is_steal,'clipMs',case r.step when 0 then 500 when 1 then 1500 when 2 then 3000
     when 3 then 5000 when 4 then 8000 when 5 then 12000 when 6 then 20000 else 0 end,
   'lockedPlayer',r.locked_player,'answerExpiresAt',r.answer_until,'titleDone',r.title_done,'artistDone',r.artist_done,
-  'title',case when r.title_done or r.phase in ('solved','finished') then case when r.source_mode='youtube' then r.youtube_title else t.title end else null end,
-  'artist',case when r.artist_done or r.phase in ('solved','finished') then case when r.source_mode='youtube' then r.youtube_artist else t.artist end else null end,
+  'title',case when r.title_done or r.phase in ('solved','finished') then case when r.source_mode in ('youtube','catalog') then r.youtube_title else t.title end else null end,
+  'artist',case when r.artist_done or r.phase in ('solved','finished') then case when r.source_mode in ('youtube','catalog') then r.youtube_artist else t.artist end else null end,
   'audio',case when not host then null
-      when r.source_mode='youtube' and r.youtube_video_id is not null then
+      when r.source_mode in ('youtube','catalog') and r.youtube_video_id is not null then
        jsonb_build_object('source','youtube:'||r.youtube_video_id,'cueMs',r.youtube_cue_ms)
       when r.current_track is not null then jsonb_build_object('source',t.source,'cueMs',t.cue_ms)
       else null end,
@@ -231,15 +233,15 @@ begin
   end if;
   if song<>'' and not done_title then
    title_ok := musicquiz.accepted_guess(song,
-    case when r.source_mode='youtube' then r.youtube_title else t.title end,
-    case when r.source_mode='youtube' then '{}'::text[] else t.title_aliases end);
+    case when r.source_mode in ('youtube','catalog') then r.youtube_title else t.title end,
+    case when r.source_mode in ('youtube','catalog') then '{}'::text[] else t.title_aliases end);
    delta:=delta+case when title_ok then 0.5 when r.is_steal then -1 else -0.5 end;
    done_title:=title_ok;
   end if;
   if artist<>'' and not done_artist then
    artist_ok := musicquiz.accepted_guess(artist,
-    case when r.source_mode='youtube' then r.youtube_artist else t.artist end,
-    case when r.source_mode='youtube' then '{}'::text[] else t.artist_aliases end);
+    case when r.source_mode in ('youtube','catalog') then r.youtube_artist else t.artist end,
+    case when r.source_mode in ('youtube','catalog') then '{}'::text[] else t.artist_aliases end);
    delta:=delta+case when artist_ok then 0.5 when r.is_steal then -1 else -0.5 end;
    done_artist:=artist_ok;
   end if;
