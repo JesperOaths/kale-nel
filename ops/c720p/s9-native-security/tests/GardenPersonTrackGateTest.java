@@ -112,6 +112,34 @@ public final class GardenPersonTrackGateTest{
     "vehicle veto must clear stale person evidence rather than pair with it");
   check(gate.transportInterrupted==1,
     "explicit transport rejection is recorded and track reset");
+  gate.reset();
+  eq(gate.offer(30000,29950,.64f,walker,2),GardenPersonTrackGate.Decision.FIRST,
+    "walking pedestrian begins");
+  check(!gate.rejectCompetingTransport(new float[][]{other}),
+    "distant vehicle must not reset real person");
+  eq(gate.offer(31000,30950,.63f,moving,2),
+    GardenPersonTrackGate.Decision.CONFIRMED,
+    "person still confirms alongside unrelated road car");
+  gate.reset();
+  eq(gate.offer(32000,31950,.64f,walker,2),
+    GardenPersonTrackGate.Decision.FIRST,"person before same-region vehicle");
+  check(gate.rejectCompetingTransport(new float[][]{walker}),
+    "same-region vehicle interrupts pending person");
+  eq(gate.offer(33000,32950,.63f,moving,2),
+    GardenPersonTrackGate.Decision.FIRST,
+    "same-region veto blocks two-frame false alarm");
+  check(gate.unrelatedTransportIgnored==1,
+    "distinct car veto tracked separately");
+  check(gate.transportInterrupted==2,
+    "existing and region-specific vehicle contradictions counted");
+  gate.reset();
+  eq(gate.offer(34000,33950,.64f,walker,2),
+    GardenPersonTrackGate.Decision.FIRST,"unknown veto geometry candidate");
+  check(gate.rejectCompetingTransport(new float[0][]),
+    "missing veto coordinates fail closed");
+  eq(gate.offer(35000,34950,.64f,moving,2),
+    GardenPersonTrackGate.Decision.FIRST,
+    "missing geometry cannot complete a false pair");
   check(!GardenPersonTrackGate.valid(new float[]{.2f,Float.NaN,.7f,.9f}),"NaN never valid");
   System.out.println("S9_SPATIOTEMPORAL_PEDESTRIAN_V9_PASS "+assertions);
  }
