@@ -1,9 +1,5 @@
 (function (root) {
   'use strict';
-  /* Optional renderer for the existing authenticated People/Folder UI.
-   * Does not fetch raw embeddings or persist decisions itself. The host MUST
-   * use its own signed media-open/attestor and authoritative review API.
-   */
   const SCHEMA = 'folder_suggestions_v1';
   function element(tag, text, cls) {
     const node = document.createElement(tag);
@@ -26,9 +22,9 @@
   function safeMatch(row) {
     return row && row.state === 'pending_review' &&
       row.human_review_required === true &&
-      row.verified_same_person === false &&
+      row.verified_same_group === false &&
       row.automatically_assigned === false &&
-      row.confidence_is_identity_probability === false &&
+      row.confidence_is_probability === false &&
       typeof row.folder_id === 'string' &&
       typeof row.source === 'string' && typeof row.clip_id === 'string' &&
       row.source_qualified_clip_id === row.source + ':' + row.clip_id &&
@@ -66,22 +62,31 @@
     if (!snapshot || snapshot.schema !== SCHEMA ||
         snapshot.status !== 'human_review_only' ||
         snapshot.automatic_assignments !== 0 ||
-        snapshot.identity_probabilities !== false ||
+        snapshot.probabilities !== false ||
         snapshot.historic_review_index_verified !== true ||
         !Array.isArray(snapshot.matches) || !Array.isArray(snapshot.provisional_clusters)) {
       host.append(element('p', 'Verified provisional suggestions unavailable.'));
       return {visible: 0};
     }
+
     const matches = snapshot.matches.filter(safeMatch).slice(0, 300);
+    const vectorOnly = snapshot.scoring_mode === 'visual_embedding_cosine_v1';
     const heading = element('h3', 'Pending appearance suggestions');
     host.append(heading, element('p',
-      'Scores are provisional resemblance indicators, never identity probabilities. ' +
-      'Approve or Reject only after inspecting the original clip.'));
+      vectorOnly
+        ? 'ONNX visual vector cosine similarity; resemblance indicator only. ' +
+          'Confirm or Deny only after reviewing the original recording.'
+        : 'Scores are provisional resemblance indicators. ' +
+          'Approve or Reject only after inspecting the original clip.'));
     for (const row of matches) {
       const card = element('article', undefined, 'folder-suggestion-card');
       const label = element('h4', row.folder_id + ' · ' + row.source_qualified_clip_id);
-      const detail = element('p', 'Suggestion confidence index: ' +
-        row.suggestion_confidence.toFixed(1) + '% · pending review');
+      const detail = element('p', vectorOnly
+        ? 'Visual embedding cosine: ' + formatScore(row.visual_score) +
+          ' · configurable threshold ' + formatScore(snapshot.match_threshold) +
+          ' · pending human review'
+        : 'Suggestion confidence index: ' +
+          row.suggestion_confidence.toFixed(1) + '% · pending review');
       const subs = element('p', statusLine(row));
       const breakdown = element('p', 'Centroid (40%): ' +
         formatScore(row.centroid_score) + ' · closest approved example (60%): ' +
@@ -90,7 +95,7 @@
       const actions = element('div', undefined, 'actions');
       const message = element('p', 'Inspect this original recording to enable review.');
       message.setAttribute('data-review-status', '');
-      const approve = invoke(card, 'Approve in folder', async () => {
+      const approve = invoke(card, vectorOnly ? 'Confirm group' : 'Approve in folder', async () => {
         const result = await hooks.onApprove(row);
         if (!result || result.persisted !== true || result.media_verified !== true ||
             result.status !== 'approved') {
@@ -103,7 +108,7 @@
         reject.disabled = true;
         if (typeof hooks.onSaved === 'function') hooks.onSaved(result);
       }, row);
-      const reject = invoke(card, 'Reject for this folder', async () => {
+      const reject = invoke(card, vectorOnly ? 'Deny suggestion' : 'Reject for this folder', async () => {
         const result = await hooks.onReject(row);
         if (!result || result.persisted !== true || result.media_verified !== true ||
             result.status !== 'rejected') {
@@ -139,7 +144,13 @@
         reject.disabled = false;
       }, row);
       actions.append(open, approve, reject);
-      card.append(label, detail, subs, breakdown, actions, message);
+      if (typeof hooks.onPreview === 'function') {
+        const preview = hooks.onPreview(row);
+        if (preview && preview.nodeType === 1) card.append(preview);
+      }
+      card.append(label, detail, vectorOnly
+        ? element('p','Embedding-only; no clothing colour or face score used.')
+        : subs, breakdown, actions, message);
       host.append(card);
     }
     if (!matches.length) host.append(element('p', 'No eligible named-folder matches.'));
@@ -156,7 +167,7 @@
         const section = element('section', undefined, 'folder-provisional-group');
         section.append(element('h4', 'Awaiting Review · ' + group.member_count +
           ' clip' + (group.member_count === 1 ? '' : 's')),
-          element('p', 'No existing person folder passed the match threshold. ' +
+          element('p', 'No existing folder passed the match threshold. ' +
             'Only an explicit human decision after original playback may seed a folder.'));
         if (Array.isArray(group.members)) {
           for (const member of group.members.slice(0, 24)) {
@@ -170,7 +181,7 @@
             card.append(element('strong', member.source_qualified_clip_id),
               element('p', 'Provisional group member · no verified folder confidence yet'));
             const rowChoices = element('select');
-            rowChoices.setAttribute('aria-label', 'Choose an existing person folder');
+            rowChoices.setAttribute('aria-label', 'Choose an existing folder');
             for (const f of choices) {
               const option = element('option', f.label || f.id);
               option.value = f.id;
@@ -221,7 +232,7 @@
             }
             const inspect = invoke(card, 'Inspect original', async () => {
               if (!rowChoices.value) {
-                stateNote.textContent = 'Create a named person folder first.';
+                stateNote.textContent = 'Create a named folder first.';
                 return;
               }
               const row = {...member, folder_id: rowChoices.value};
@@ -260,11 +271,6 @@
     return {visible: matches.length, provisional_groups: waiting.length};
   }
   async function connect(host, options) {
-    /* Secure bridge into the existing People review shell:
-     * - relay is the already-authenticated C720PSecureRelay
-     * - onOpen must OPEN the original and obtain a session-bound attestation
-     * - the backend independently verifies the opaque opened_ticket
-     */
     if (!options || !options.relay || typeof options.relay.fetch !== 'function' ||
         typeof options.onOpen !== 'function')
       throw Error('Authenticated relay and original-media reviewer required');
@@ -313,6 +319,11 @@
           'Verified folder rankings unavailable. Existing manual review is unaffected.'));
         return {visible: 0};
       }
+      if (options.requiredMode && snapshot.scoring_mode !== options.requiredMode) {
+        host.replaceChildren(element('p',
+          'Vector-only suggestions are not verified or enabled. Manual review is unchanged.'));
+        return {visible: 0};
+      }
       current = snapshot;
       const narrowed = Object.assign({}, snapshot, {
         matches: (snapshot.matches || []).filter(row =>
@@ -335,6 +346,7 @@
         onApprove: row => send('approve', row),
         onReject: row => send('reject', row),
         preferredFolder: options.folderId,
+        onPreview: options.onPreview,
         onClusterOpen: options.onClusterOpen,
         onClusterName: options.onClusterName,
         onSaved: result => {
