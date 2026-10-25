@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {chooseDeezerMatch,chooseCueSeconds,validateDeezerPreviewUrl,DeezerPreviewPlayer} from "../music/deezer-preview.mjs";
+import {chooseDeezerMatch,chooseCueSeconds,validateDeezerPreviewUrl,DeezerPreviewPlayer} from "../music/deezer-preview.js";
 const candidate={title:"Take on Me",artist:"a-ha",year:1985,genres:["pop"]};
 const match=chooseDeezerMatch(candidate,[
  {id:2,title:"Take on Me (Karaoke)",title_short:"Take on Me",title_version:"(Karaoke)",artist:{name:"a-ha"},preview:"https://cdnt-preview.dzcdn.net/stream/other.mp3"},
