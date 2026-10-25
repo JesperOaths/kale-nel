@@ -4,6 +4,8 @@ on:
     paths:
       - 'music/**'
       - 'scripts/test-tune-rush-playback.mjs'
+      - 'scripts/test-tune-rush-local-tracks.mjs'
+      - 'sql/musicquiz-local-host-files-v6.sql'
       - 'scripts/test-tune-rush-replay-db.mjs'
       - 'supabase/migrations/*musicquiz*'
       - 'scripts/tune-rush-browser-acceptance.mjs'
@@ -33,6 +35,8 @@ jobs:
         run: node --check scripts/tune-rush-browser-acceptance.mjs
       - name: Verify playback failure recovery and buzzer races
         run: node scripts/test-tune-rush-playback.mjs
+      - name: Verify local file metadata, repeat avoidance and random full-track cues
+        run: node scripts/test-tune-rush-local-tracks.mjs
       - name: Verify replay SQL in isolated PostgreSQL
         run: node scripts/test-tune-rush-replay-db.mjs
       - name: Run six-browser acceptance against actual PR page and live game database
