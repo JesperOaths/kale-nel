@@ -413,3 +413,23 @@ body:has(#room.host-mode:not([hidden])) .shell{width:min(1320px,calc(100% - 48px
 .host-mode .local-player-actions .primary{background:#a9eff0;color:#143037}
 @media(max-width:700px){.host-mode .local-track-row{grid-template-columns:1fr 1fr}.host-mode .local-heading{flex-direction:column}.host-mode .local-player-actions{flex-direction:column}}
 @media(max-width:620px){.host-mode .source-select .source-local{display:flex;flex-direction:column}.host-mode .source-local .source-top{align-self:start;width:100%;display:flex}.host-mode .source-local .source-top .source-tag{display:inline}.host-mode .local-inputs{flex-direction:column}.host-mode .local-upload{width:100%}}
+
+
+/* v11: transparent three-game soundtrack coverage and cross-game repeat avoidance. */
+.host-mode .rotation-capacity{margin:14px 0 10px;padding:14px 16px;border:1px solid #526958;border-radius:14px;background:#1d322b;color:#d5efe2;font-size:13px;line-height:1.5}
+.host-mode .rotation-capacity[data-level="ready"]{background:#133d2b;border-color:#50a26e;color:#d4ffe3}
+.host-mode .rotation-capacity[data-level="short"]{background:#382c1c;border-color:#9b7740;color:#ffebcc}
+.host-mode .rotation-capacity[data-level="empty"]{background:#42242a;border-color:#8e4550;color:#ffe5e5}
+.host-mode .rotation-capacity strong{color:inherit;font-weight:900}
+.host-mode .rotation-capacity .capacity-detail{font-size:11px;opacity:.86;display:block;margin-top:5px}
+.host-mode .catalog-availability{border:1px solid #36564e;border-radius:12px;margin-bottom:16px;background:#121f1b;padding:11px 12px}
+.host-mode .catalog-availability summary{cursor:pointer;color:#c7edda;font-size:12px;font-weight:850;padding:3px 0}
+.host-mode .catalog-genre-matrix{overflow-x:auto;max-width:100%;padding:10px 0 2px}
+.host-mode .catalog-genre-matrix table{border-collapse:separate;border-spacing:3px;min-width:540px;width:100%}
+.host-mode .catalog-genre-matrix th{font-size:10px;color:#a1bead;text-align:center;padding:8px 4px}
+.host-mode .catalog-genre-matrix th:first-child{text-align:left}
+.host-mode .catalog-genre-matrix td{text-align:center;background:#243c34;border-radius:7px;font-size:11px;font-variant-numeric:tabular-nums;padding:9px 3px;font-weight:750;color:#e7ffed}
+.host-mode .catalog-genre-matrix td[data-level="empty"]{background:#33272b;color:#b29ba1}
+.host-mode .catalog-genre-matrix td[data-level="short"]{background:#463827;color:#ffd9a2}
+.host-mode .catalog-genre-matrix td[data-level="ready"]{background:#225840;color:#caffdb}
+.host-mode .catalog-genre-matrix .matrix-caption{font-size:11px;color:#a9c4b7;line-height:1.55;margin:8px 0 0}
