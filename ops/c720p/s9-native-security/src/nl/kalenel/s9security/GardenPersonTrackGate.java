@@ -79,8 +79,11 @@ public final class GardenPersonTrackGate {
    rejectCompetingTransport();return true;
   }
   for(float[] veto:vetoedPersonBoxes){
-   boolean sameCandidate=firstBox!=null&&samePerson(firstBox,veto);
-   boolean sameConfirmed=confirmedBox!=null&&samePerson(confirmedBox,veto);
+   // The person-association tolerance below deliberately allows movement
+   // between frames. A car contradiction must be MORE spatially precise:
+   // adjacent, nonoverlapping detections are never the same object.
+   boolean sameCandidate=firstBox!=null&&sameRegionTransport(firstBox,veto);
+   boolean sameConfirmed=confirmedBox!=null&&sameRegionTransport(confirmedBox,veto);
    if(!sameCandidate&&!sameConfirmed)continue;
    // The car's conflict is local. Preserve an independently confirmed
    // pedestrian elsewhere when only a different proposal is rejected.
@@ -161,6 +164,19 @@ public final class GardenPersonTrackGate {
   final float dx=Math.abs((a[1]+a[3]-b[1]-b[3])*.5f);
   final float dy=Math.abs((a[0]+a[2]-b[0]-b[2])*.5f);
   return dx>=.065f||dy>=.07f;
+ }
+ /** Compare a vetoed *person-shaped detection* with an existing
+  * person region. Unlike broad moving-person association, a transport
+  * contradiction requires physical overlap, not merely nearby centers.
+  */
+ public static boolean sameRegionTransport(float[] a,float[] b){
+  if(!valid(a)||!valid(b))return false;
+  float top=Math.max(a[0],b[0]),left=Math.max(a[1],b[1]);
+  float bottom=Math.min(a[2],b[2]),right=Math.min(a[3],b[3]);
+  float common=Math.max(0f,bottom-top)*Math.max(0f,right-left);
+  float areaA=(a[2]-a[0])*(a[3]-a[1]);
+  float areaB=(b[2]-b[0])*(b[3]-b[1]);
+  return common/Math.min(areaA,areaB)>=.35f;
  }
  public static boolean samePerson(float[] a,float[] b){
   if(!valid(a)||!valid(b)||!plausiblePersonShape(a)||!plausiblePersonShape(b))return false;
