@@ -19,7 +19,26 @@ class Contract(unittest.TestCase):
   self.assertIn('eventChain.continuationReady(',s)
   self.assertIn('eventChain.started(lastStart,System.currentTimeMillis())',s)
   self.assertIn('eventChain.stopped(',s)
-  self.assertIn('eventChain.evidence(lastFrameAt)',s)
+  # Raw motion is only an inference proposal. It must not extend 4K
+  # recording or event lineage without a corroborated foreground person.
+  raw=s[s.index('if(change && lastFrameAt>=cameraControlSettleUntil)'):
+        s.index('if("recording".equals(mode)&&lastFrameAt-lastStart>2500)')]
+  self.assertNotIn('lastMovementAt=lastFrameAt',raw)
+  self.assertNotIn('eventChain.evidence(',raw)
+  self.assertIn('boolean recordingCheck=recording&&temperature()<405&&',raw)
+  self.assertIn('lastFrameAt-gardenPersonGateLastAt>=2500L',raw)
+  self.assertIn('evaluateGardenPersonAsync(safeSentinel)',raw)
+  confirmed=s[s.index('private void evaluateGardenPersonAsync('):
+              s.index('private boolean rateAllowed(')]
+  self.assertIn('final String requestedMode=mode;',confirmed)
+  self.assertIn('if("recording".equals(mode)){',confirmed)
+  self.assertIn('personTrackGate.offer(now,jpegAt,score,personBox,localCells)',confirmed)
+  self.assertIn('if(rejectedByTransport)personTrackGate.rejectCompetingTransport()',confirmed)
+  self.assertIn('gardenPersonTailVerifiedRefreshes++;',confirmed)
+  self.assertIn('lastMovementAt=SystemClock.elapsedRealtime();',confirmed)
+  self.assertIn('eventChain.evidence(lastMovementAt);',confirmed)
+  self.assertIn('d.put("garden_raw_motion_tail_ignored",gardenRawMotionTailIgnored)',s)
+  self.assertIn('d.put("garden_person_tail_verified_refreshes",gardenPersonTailVerifiedRefreshes)',s)
   self.assertIn('recording_capture_evidence_write_failed',s)
   self.assertIn('capture_segments_have_unrecorded_transition_gaps',s)
   self.assertIn('capture_segment_gap_from_previous_ms',s)
