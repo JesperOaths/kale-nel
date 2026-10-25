@@ -71,3 +71,16 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 @media(max-width:650px){.source-select{grid-template-columns:1fr}.youtube-heading{flex-direction:column;align-items:flex-start}.youtube-heading span{text-align:left}.youtube-frame{min-height:210px}}
 
 @media(max-width:650px){#youtube-play-hint{margin:8px 0;width:100%}.youtube-heading{align-items:stretch}}
+
+/* Automatic curated official-video pool: genre and decade are independent filters. */
+.source-select{grid-template-columns:repeat(3,minmax(0,1fr))}
+.source-select label{min-height:115px}
+.settings-title small{font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:#9cabbf}
+#catalog-settings{padding:16px 20px;margin:16px 0 18px;border:1px solid #54687c;background:linear-gradient(140deg,#101824,#1f2c36);border-radius:19px}
+#catalog-settings .settings-title{margin:12px 0 13px}
+#catalog-settings .decade-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+#catalog-settings .small-note{margin:16px 0 2px;line-height:1.65}
+.source-explanation{margin:14px 0;padding:12px 18px;border:1px solid #566d72;border-radius:14px;background:#73d8c40c}
+.source-explanation p{font-size:13px;margin:0}
+@media(max-width:850px){.source-select{grid-template-columns:1fr}.source-select label{min-height:0}#catalog-settings .decade-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:480px){#catalog-settings{padding:12px}#catalog-settings .genres{grid-template-columns:repeat(2,minmax(0,1fr))}#catalog-settings .decade-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
