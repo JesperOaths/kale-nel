@@ -170,6 +170,13 @@ try {
  assert.ok(!(await catalogGuest.locator(".lobby-caption").isVisible()),"player never sees host studio setup");
  await catalogHost.locator("#genre-options input[value=rock]").uncheck();
  await catalogHost.locator("#decade-options input[value='1970']").check();
+ await wait(catalogHost,()=>document.getElementById("catalog-capacity")?.textContent?.includes("match overall"),15000);
+ const coverage=await catalogHost.locator("#catalog-capacity").innerText();
+ assert.match(coverage,/120/,"three-game song count target is visible");
+ assert.match(coverage,/short by|short/,"small Pop 1970s pool must visibly warn about repeats");
+ await catalogHost.locator(".catalog-availability summary").click();
+ assert.equal(await catalogHost.locator("#catalog-genre-matrix td").count(),70,"each era and genre pair has a supply count");
+ console.log("BROWSER_THREE_GAME_COVERAGE_PASS",JSON.stringify({filters:"1970s pop",display:coverage.slice(0,160),matrixCells:70}));
  await catalogHost.locator("#start").click();
  await wait(catalogHost,()=>room?.mode==="catalog"&&room.round===1);
  await catalogHost.waitForTimeout(1200);
@@ -218,6 +225,7 @@ try {
  }
  await lh.locator("#decade-options input[value='1970']").check();
  assert.ok((await lh.locator("#local-music-count").innerText()).includes("2 match"));
+ assert.match(await lh.locator("#local-capacity").innerText(),/120/,"local music must show three-game supply gap");
  await lh.locator("#start").click();
  await wait(lh,()=>room?.mode==="local"&&room?.round===1,17000);
  const firstLocal=await state(lh);
