@@ -23,6 +23,8 @@
     return row && row.state === 'pending_review' &&
       row.human_review_required === true &&
       row.verified_same_group === false &&
+      row.verified_same_person !== true &&
+      row.confidence_is_identity_probability !== true &&
       row.automatically_assigned === false &&
       row.confidence_is_probability === false &&
       typeof row.folder_id === 'string' &&
