@@ -18,6 +18,63 @@ let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
 let ytPlayer=null,ytPlayerVideoId='',ytReadyPromise=null,ytPlayingResolve=null,ytPlayingReject=null,ytPlayingTimer=null;
 let ytError=null,ytLoadGeneration=0,clipGeneration=0,mutationVersion=0;
+let failedClue="";
+let deezerPlayer=null,deezerPreparedRound="",deezerAuthorized=false;
+const DEEZER_RESOLVER="https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/tune-rush-deezer-preview";
+async function refreshDeezerApproval(){
+ try{
+  const r=await fetch("https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/musicquiz_deezer_enabled_v1",{
+   method:"POST",headers:{"Content-Type":"application/json","apikey":PUBLISHABLE_KEY},cache:"no-store",body:"{}"
+  });
+  deezerAuthorized=r.ok&&(await r.json())===true;
+ }catch{deezerAuthorized=false}
+ const choice=$("deezer-source-option");
+ const radio=choice.querySelector('input[name="music-source"]');
+ choice.hidden=false;
+ radio.disabled=!deezerAuthorized;
+ choice.classList.toggle("is-unavailable",!deezerAuthorized);
+ $("deezer-provider-note").classList.toggle("approved",deezerAuthorized);
+ choice.setAttribute("aria-disabled",String(!deezerAuthorized));
+ setText("deezer-badge",deezerAuthorized?"AUTHORIZED":"PENDING");
+ const foot=$("deezer-card-foot");
+ foot.firstChild.textContent=deezerAuthorized?"SELECT DEEZER ":"NOT YET AVAILABLE ";
+ setText("deezer-license-status",deezerAuthorized?"Deezer preview authorization confirmed":"Deezer integration ready · Playback not authorized");
+ setText("deezer-note-detail",deezerAuthorized?
+  "The provider authorization flag is enabled. Preview playback still depends on the authorized host resolver and available tracks.":
+  "We built the connection, but Deezer has not approved using previews in the public game.");
+ if(!deezerAuthorized&&chosenSource()==="deezer"){
+  document.querySelector('input[name="music-source"][value="demo"]').checked=true;
+  updateAudioChoice();
+ }
+}
+function deezerStatus(msg){setText("deezer-status",msg)}
+async function ensureDeezerPreview(){
+ if(!deezerAuthorized||!isHost()||room?.mode!=="deezer"||!access?.token)
+  throw Error("Deezer playback has not been authorized for this game.");
+ if(!/^deezer:[1-9][0-9]*$/.test(room.audio?.source||""))
+  throw Error("The Deezer track is not available to this room.");
+ const identity=room.code+":"+room.round+":"+room.audio.source;
+ if(deezerPreparedRound===identity&&deezerPlayer)return;
+ deezerStatus("Verifying licensed Deezer preview…");
+ const hostHash=await capabilityHash(access.token);
+ const response=await fetch(DEEZER_RESOLVER,{
+  method:"POST",headers:{"Content-Type":"application/json","apikey":PUBLISHABLE_KEY},
+  cache:"no-store",body:JSON.stringify({code:room.code,hash:hostHash})
+ });
+ const track=await response.json().catch(()=>({}));
+ if(!response.ok)throw Error(track.error||"Deezer preview is unavailable.");
+ if(String(track.trackId)!==room.audio.source.slice(7)||!Number.isInteger(track.cueMs)||
+    track.cueMs<0||track.cueMs>9000||track.round!==room.round)
+   throw Error("The preview does not match the current game round.");
+ const {DeezerPreviewPlayer}=await import("./deezer-preview.js");
+ const old=deezerPlayer;if(old)old.dispose();
+ const candidate=new DeezerPreviewPlayer(playerAudio);
+ candidate.prepare(track.previewUrl,30,()=>0);
+ candidate.cue=track.cueMs/1000;
+ deezerPlayer=candidate;deezerPreparedRound=identity;
+ deezerStatus("Deezer preview ready · "+String(track.attribution||"Deezer"));
+}
+
 const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
@@ -26,14 +83,21 @@ const ERROR_TEXT={
  buzz_closed:"Someone has already buzzed, or buzzing is not open.",
  already_tried_this_clip:"You've already guessed during this snippet. Wait for the next one.",
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
+ replay_unavailable:"A clue can only be replayed before anyone answers it.",stale_clue:"The round has moved on. Use the current playback controls.",
  all_hints_used:"All snippets have played. The host can skip the song.",
- temporary_failure:"Connection problem. Retrying…",request_failed:"The request could not be completed.",invalid_music_source:"Choose Demo or YouTube.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds.",no_videos_for_filters:"No videos match these genres and decades. Choose more genres or remove a decade.",invalid_video_duration:"Video duration unavailable.",video_too_short_for_clues:"This video is too short for the full hints.",cue_not_available:"Random cue is only available before the first hint."
+ temporary_failure:"Connection interrupted. Wait for the room to update, then try again.",request_failed:"The request could not be completed.",invalid_music_source:"Choose Demo or YouTube.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds.",no_videos_for_filters:"No videos match these genres and decades. Choose more genres or remove a decade.",invalid_video_duration:"Video duration unavailable.",video_too_short_for_clues:"This video is too short for the full hints.",cue_not_available:"Random cue is only available before the first hint."
 };
 function message(s) {
  const el=$("toast");el.textContent=ERROR_TEXT[s]||String(s||"");el.hidden=false;
  clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true},3300);
 }
 function setText(id,value){$(id).textContent=String(value??"")}
+function setLoading(value){
+ loading=value;
+ for(const id of ["start","youtube-play-hint","youtube-replay-hint","next-round","continue-hints","skip-round"]){$(id).disabled=value}
+ const submit=$("youtube-next-form").querySelector('button[type="submit"]');if(submit)submit.disabled=value;
+ $("room").setAttribute("aria-busy",String(value));
+}
 function safeStore(){try{if(access)localStorage.setItem(STORE,JSON.stringify(access));else localStorage.removeItem(STORE)}catch{}}
 async function rpc(action,extra={},attempt=0) {
  if(action!=="state")mutationVersion++;
@@ -50,19 +114,22 @@ async function rpc(action,extra={},attempt=0) {
   durationMs:Number.isInteger(extra.durationMs)?extra.durationMs:0,
   mode:String(extra.mode||"demo"),
   videoId:String(extra.videoId||""),
-  cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0
+  cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0,
+  expectedRound:Number.isInteger(extra.expectedRound)?extra.expectedRound:0,
+  expectedStep:Number.isInteger(extra.expectedStep)?extra.expectedStep:-1
  };
  const body={p_action:action,p_code:code,p_hash:await capabilityHash(token),p_data};
- let res;
+ let res,data;
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
  try {
   res=await fetch(ENDPOINT,{
    method:"POST",
    headers:{"Content-Type":"application/json","apikey":PUBLISHABLE_KEY},
-   cache:"no-store",body:JSON.stringify(body)
+   cache:"no-store",body:JSON.stringify(body),signal:controller.signal
   });
+  data=await res.json();
  }catch{throw Error("temporary_failure")}
- let data;
- try{data=await res.json()}catch{throw Error("temporary_failure")}
+ finally{clearTimeout(timeout)}
  if(!res.ok){
   const known=String(data?.message||"").split("\\n")[0];
   if(data?.code==="23505"&&creating&&attempt<3)return rpc(action,extra,attempt+1);
@@ -78,7 +145,7 @@ function updateAudioChoice(){
  const mode=chosenSource();
  show("youtube-setup",mode==="youtube");
  show("demo-settings",mode==="demo");
- show("catalog-settings",mode==="catalog");
+ show("catalog-settings",mode==="catalog"||mode==="deezer");
 }
 function parseYoutubeVideo(link){
  const u=new URL(String(link||"").trim());
@@ -208,7 +275,7 @@ function clearAudio(){
  clipGeneration++;
  clearTimeout(clipTimer);clipTimer=null;
  voices.forEach(o=>{try{o.stop()}catch{}});
- voices=[];playerAudio.pause();
+ voices=[];try{deezerPlayer?.stop()}catch{}playerAudio.pause();
  youtubeWaitCancelled();
  try{ytPlayer?.pauseVideo()}catch{}
  startedClip=false;
@@ -249,7 +316,11 @@ function freq(note){
 }
 async function startAudio(info,ms) {
  if(!info?.source)throw Error("No recording assigned");
- if(info.source.startsWith("youtube:")){
+ if(info.source.startsWith("deezer:")){
+  if(!deezerPlayer||deezerPreparedRound!==room.code+":"+room.round+":"+info.source)
+   throw Error("Deezer preview has not been prepared for this track.");
+  await deezerPlayer.play(ms);
+ } else if(info.source.startsWith("youtube:")){
   await playYoutubeHint(info);
  } else if(info.source.startsWith("demo:")){
   await soundResumeSilently();
@@ -298,7 +369,7 @@ async function soundResumeSilently(){
  if(ctx.state!=="running")throw Error("Please tap Enable tablet audio");
 }
 function scheduleNext(delay){
- if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube"||room.mode==="catalog")return;
+ if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube"||room.mode==="catalog"||room.mode==="deezer")return;
  const round=room.round,step=room.step;
  nextTimer=setTimeout(async()=>{
   nextTimer=null;
@@ -307,12 +378,18 @@ function scheduleNext(delay){
   try{await startClip()}catch(e){message(e.message); }
  },delay);
 }
-async function startClip(){
- if(!room||room.phase!=="paused"||!isHost()||loading)return;
+async function startClip(replay=false){
+ replay=replay||failedClue===room?.round+":"+room?.step;
+ if(!room||!isHost()||loading||(!replay&&room.phase!=="paused")||
+  (replay&&(!["paused","playing"].includes(room.phase)||room.step<0||room.firstAnswered)))return;
  cancelNext();
  const generation=++clipGeneration,round=room.round,initialStep=room.step;
  try{
-  loading=true;
+  setLoading(true);
+  if(room.mode==="deezer"){
+   await ensureDeezerPreview();
+   if(generation!==clipGeneration)return;
+  }
   if(room.mode==="youtube"||room.mode==="catalog"){
    // Fail before consuming a hint when the player is unavailable or off screen.
    await ensureYoutubePlayer(room.audio?.source?.slice(8),room.audio?.cueMs||0);
@@ -336,11 +413,13 @@ async function startClip(){
    const cue=await rpc("random_cue",{durationMs});
    applyState(cue.state);
   }
-  if(generation!==clipGeneration||!room||room.round!==round||room.step!==initialStep||room.phase!=="paused")return;
-  const body=await rpc("play");applyState(body.state);
+  if(generation!==clipGeneration||!room||room.round!==round||room.step!==initialStep||
+   (replay?!["paused","playing"].includes(room.phase):room.phase!=="paused"))return;
+  const body=await rpc(replay?"replay":"play",replay?{expectedRound:round,expectedStep:initialStep}:{});applyState(body.state);
   if(room.phase!=="playing")return;
   await startAudio(room.audio,room.clipMs);
   if(generation!==clipGeneration||!room||room.phase!=="playing")return;
+  failedClue="";
   const expected=room.round,step=room.step;
   clipTimer=setTimeout(async()=>{
    if(!room||room.phase!=="playing"||room.round!==expected||room.step!==step)return;
@@ -353,17 +432,23 @@ async function startClip(){
   },room.clipMs);
  }catch(e){
   if(generation!==clipGeneration)return;
+  if(room?.phase==="playing")failedClue=room.round+":"+room.step;
   clearAudio();message(e.message||"Playback failed");
   if(room?.mode==="youtube"||room?.mode==="catalog")youtubeStatus(e.message||"Playback failed. Choose another video.");
+  if(room?.mode==="deezer")deezerStatus(e.message||"Deezer preview could not play; skip this track.");
   if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
  }
- finally{loading=false}
+ finally{setLoading(false)}
 }
 function applyState(s){
  const oldPhase=room?.phase||"",oldRound=room?.round||0;
  room=s;
+ if(s.firstAnswered||s.phase==="answering")failedClue="";
  const newRound=s.round;
- if(oldRound!==newRound){lastBlockKey="";answeredFocusKey="";cancelNext();clearAudio();}
+ if(oldRound!==newRound){
+  lastBlockKey="";answeredFocusKey="";failedClue="";cancelNext();clearAudio();
+  deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;
+ }
  if(isHost()){
   if(s.phase==="answering"||s.phase==="holding"||s.phase==="solved"||s.phase==="finished"){clearAudio();cancelNext();}
   if(s.phase==="paused"){
@@ -389,9 +474,23 @@ function renderScores(target){
  });
 }
 function render(){
- if(!room){show("welcome",true);show("room",false);return;}
+ if(!room){show("welcome",true);show("room",false);$("room").classList.remove("host-mode");return;}
  show("welcome",false);show("room",true);
  const host=isHost(),phase=room.phase,playing=phase!=="lobby";
+ $("room").classList.toggle("host-mode",host);
+ $("room").dataset.phase=phase;
+ show("host-fullscreen",host);
+ if(host){
+  const source=room.mode==="deezer"?"DEEZER PREVIEW":room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
+  const filters=(room.mode==="catalog"||room.mode==="deezer")?[
+   ...(room.genres||[]).filter(x=>x!=="demo").map(x=>({hiphop:"HIP-HOP",rnb:"R&B",dutch:"DUTCH",electronic:"ELECTRONIC"}[x]||x.toUpperCase())),
+   ...(room.decades||[]).map(x=>x+"s")
+  ]:[];
+  setText("host-track-context",source+(filters.length?"  ·  "+filters.join(" / "):"  ·  MYSTERY TRACK"));
+  setText("host-player-count",room.players.length+" PLAYER"+(room.players.length===1?"":"S")+" CONNECTED");
+  const ed=$("playing").querySelector(".disc-art-edition");
+  if(ed)ed.textContent="MYSTERY "+String(Math.max(1,room.round||1)).padStart(2,"0");
+ }
  setText("role-indicator",host?"HOST / TABLET":"PLAYER / PHONE");
  setText("room-title",playing?"Name that tune":"Game lobby");
  setText("room-code",room.code);
@@ -399,6 +498,7 @@ function render(){
  show("host-settings",host);show("guest-wait",!host);
  if(host&&phase==="lobby")updateAudioChoice();
  $("lobby-players").replaceChildren(...room.players.map(x=>makePlayer(x.name)));
+ setText("lobby-player-count",room.players.length+" player"+(room.players.length===1?"":"s")+" joined");
  if(phase==="lobby"&&!genresDirty&&room.genres.some(g=>g!=="demo")){
   document.querySelectorAll("#genre-options input").forEach(input=>{
    input.checked=room.genres.includes(input.value);
@@ -411,7 +511,8 @@ function render(){
  }
  if(phase!=="lobby"){
   setText("round-label","ROUND "+room.round);
-  setText("hint-label",room.step<0?"GET READY":(room.clipMs/1000)+" S");
+  setText("hint-label",room.step<0?"READY":(room.clipMs/1000)+" SEC CLUE");
+  setText("host-hint-progress",room.step<0?"7 chances to recognise it":"CLUE "+Math.min(7,room.step+1)+" / 7");
   const buzzerOwner=room.players.find(p=>p.id===room.lockedPlayer);
   const statuses={
    paused:["Music paused","Buzz now, or wait for the next hint."],
@@ -435,16 +536,25 @@ function render(){
   setText("revealed-title",room.titleDone||phase==="solved"||phase==="finished"?room.title:"Song title: ???");
   setText("revealed-artist",room.artistDone||phase==="solved"||phase==="finished"?room.artist:"Artist: ???");
   show("host-controls",host);show("player-controls",!host);
+  show("host-demo-play",host&&room.mode==="demo"&&phase==="paused"&&room.step<6);
   const youtubeMode=room.mode==="youtube"||room.mode==="catalog";
   show("youtube-host",host&&youtubeMode);
   if(host&&youtubeMode&&room.audio?.source?.startsWith("youtube:")){
    ensureYoutubePlayer(room.audio.source.slice(8),room.audio.cueMs||0).catch(e=>youtubeStatus(e.message));
   }
   show("youtube-play-hint",host&&youtubeMode&&phase==="paused"&&room.step<6);
+  setText("youtube-play-hint",failedClue===room.round+":"+room.step?"↻ Retry this clue":"▶ Play next clue");
+  show("youtube-replay-hint",host&&youtubeMode&&room.step>=0&&!room.firstAnswered&&
+   (phase==="paused"||(phase==="playing"&&!startedClip)));
   show("youtube-next-form",host&&room.mode==="youtube"&&phase==="solved");
+  const deezerMode=room.mode==="deezer";
+  show("deezer-host",host&&deezerMode);
+  show("deezer-play-hint",host&&deezerMode&&phase==="paused"&&room.step<6);
+  show("deezer-replay-hint",host&&deezerMode&&room.step>=0&&!room.firstAnswered&&
+   (phase==="paused"||(phase==="playing"&&!startedClip)));
 
-  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
-  show("enable-sound",host&&!youtubeMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
+  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode||deezerMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
+  show("enable-sound",host&&!youtubeMode&&!deezerMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
@@ -490,10 +600,10 @@ function render(){
 }
 async function call(action,extra={},quiet=false){
  if(loading)return;
- loading=true;
+ setLoading(true);
  try{const b=await rpc(action,extra);applyState(b.state);return b;}
  catch(e){if(!quiet)message(e.message);throw e}
- finally{loading=false}
+ finally{setLoading(false)}
 }
 async function refresh(){
  if(!access||pollBusy||(loading&&!ytPlayingResolve))return;
@@ -511,26 +621,26 @@ async function refresh(){
  finally{pollBusy=false}
 }
 function reset(){
- cancelNext();clearAudio();room=null;access=null;safeStore();render();
+ cancelNext();clearAudio();failedClue="";deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;room=null;access=null;safeStore();render();
 }
 async function create(){
  if(loading)return;
- loading=true;
+ setLoading(true);
  try{
   const b=await rpc("create"); // Create endpoint ignores the absent local room/token.
   access={code:b.state.code,token:b.token};safeStore();applyState(b.state);
- }catch(e){message(e.message)}finally{loading=false}
+ }catch(e){message(e.message)}finally{setLoading(false)}
 }
 async function join(e){
  e.preventDefault();if(loading)return;
  const code=$("join-code").value.trim().toUpperCase();
  const name=$("nickname").value.trim();
  if(!/^[A-HJ-NP-Z2-9]{6}$/.test(code)||!name){message("Enter a valid code and nickname");return}
- loading=true;
+ setLoading(true);
  try{
   const b=await rpc("join",{code,name});
   access={code:b.state.code,token:b.token};safeStore();applyState(b.state);
- }catch(e){message(e.message)}finally{loading=false}
+ }catch(e){message(e.message)}finally{setLoading(false)}
 }
 function inviteUrl(){
  const u=new URL(location.href);u.search="";u.searchParams.set("room",room?.code||"");
@@ -565,7 +675,7 @@ function chosenFilters(){
  };
 }
 async function saveGenres(){
- if(!room||!isHost()||room.phase!=="lobby"||chosenSource()!=="catalog")return;
+ if(!room||!isHost()||room.phase!=="lobby"||!["catalog","deezer"].includes(chosenSource()))return;
  const filters=chosenFilters();
  if(!filters.genres.length){message("Select at least one genre");return}
  genresDirty=true;
@@ -577,12 +687,25 @@ $("join-form").addEventListener("submit",join);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
 $("enable-sound").addEventListener("click",soundUnlock);
+$("host-demo-play").addEventListener("click",()=>startClip());
+$("host-fullscreen").addEventListener("click",async()=>{
+ const el=$("room");
+ try {
+  if(document.fullscreenElement){await document.exitFullscreen();return;}
+  if(!el.requestFullscreen)throw Error("Your browser doesn't support fullscreen mode. Add Tune Rush to your home screen for an immersive view.");
+  await el.requestFullscreen();
+ }catch(e){message(e.message||"Fullscreen could not be enabled on this device.");}
+});
+document.addEventListener("fullscreenchange",()=>{
+ $("host-fullscreen").innerHTML=document.fullscreenElement?'<span aria-hidden="true">⛶</span> Exit full screen':'<span aria-hidden="true">⛶</span> Full screen';
+});
 $("source-select").addEventListener("change",updateAudioChoice);
 $("start").addEventListener("click",async()=>{
  try{
   clearTimeout(genresSaveTimer);
   const mode=chosenSource();
-  if(mode==="catalog"){
+  if(mode==="catalog"||mode==="deezer"){
+   if(mode==="deezer"&&!deezerAuthorized)throw Error("Deezer is awaiting authorization.");
    const filters=chosenFilters();
    if(!filters.genres.length)throw Error("Select at least one genre");
    await call("settings",filters);
@@ -594,7 +717,10 @@ $("start").addEventListener("click",async()=>{
   await call("start",data);
  }catch(e){message(e.message)}
 });
+$("deezer-play-hint").addEventListener("click",()=>startClip());
+$("deezer-replay-hint").addEventListener("click",()=>startClip(true));
 $("youtube-play-hint").addEventListener("click",()=>startClip());
+$("youtube-replay-hint").addEventListener("click",()=>startClip(true));
 $("youtube-next-form").addEventListener("submit",async e=>{
  e.preventDefault();
  try{const data=youtubeRound("next-youtube");await call("next",data)}
@@ -613,7 +739,7 @@ document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
  if(document.hidden&&isHost()){
   cancelNext();
-  if(room?.mode==="youtube"||room?.mode==="catalog"){
+  if(room?.mode==="youtube"||room?.mode==="catalog"||room?.mode==="deezer"){
    clearAudio();
    if(room?.phase==="playing")rpc("pause").then(b=>applyState(b.state)).catch(()=>{});
   }
@@ -630,4 +756,5 @@ try{
  }
 }catch{}
 render();
+refreshDeezerApproval();
 setInterval(()=>{if(access&&!document.hidden)refresh()},550);

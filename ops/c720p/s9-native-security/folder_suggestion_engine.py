@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Human-review-only provisional folder appearance ranking.
+"""Human-review-only provisional media folder appearance ranking.
 
-Consumes the two 512-D appearance embeddings emitted by PersonFeatureExtractor.
+Consumes two 512-D appearance embeddings emitted by MediaFeatureExtractor.
 Uses the conditional scorer from PR #808: aligned+compatible structural/visual
 (0.70/0.30), otherwise visual/PAIRWISE HSV (0.75/0.25).
-This is not identity recognition, identity probability or automatic assignment.
+This is not recognition, probability, or automatic assignment.
 
 All reference labels must be explicit, media-bound human decisions. Historic
 unbound approvals, unknown models and revoked/stale media cannot become training
@@ -29,6 +29,8 @@ NEGATIVE_PENALTY = 0.25
 MAX_ONLINE_REFERENCE_PAIRS = 20_000
 MAX_JOURNAL_BYTES = 2_000_000
 SCHEMA = "folder_suggestions_v1"
+VECTOR_ONLY = "visual_embedding_cosine_v1"
+SCORING_MODES = frozenset(("hybrid", VECTOR_ONLY))
 
 
 def unit(values: Any, *, dimension: int = DIM) -> tuple[float, ...] | None:
@@ -66,8 +68,6 @@ def histogram(values: Any) -> tuple[float, ...] | None:
 
 
 def cosine(a: tuple[float, ...], b: tuple[float, ...]) -> float:
-    # CPython 3.12+ computes float dot products in optimized C, avoiding
-    # expensive Python generator loops on the low-power C720P.
     dot = math.sumprod(a, b) if hasattr(math, "sumprod") else math.fsum(
         x * y for x, y in zip(a, b))
     return max(-1.0, min(1.0, dot))
@@ -86,7 +86,6 @@ def normalized_centroid(vectors: Sequence[tuple[float, ...]]) -> tuple[float, ..
         return None
     n = len(vectors)
     means = tuple(math.fsum(vec[i] for vec in vectors) / n for i in range(DIM))
-    # Opposite vectors can cancel. Refuse to invent a centroid in that case.
     length = math.sqrt(math.fsum(v * v for v in means))
     if length < 1e-10:
         return None
@@ -112,7 +111,6 @@ class ClipFeatures:
 
     @classmethod
     def from_dict(cls, obj: Mapping[str, Any]) -> "ClipFeatures":
-        # Do not collapse equal filenames across SD, Drive or other archives.
         source = str(obj.get("source") or "")
         clip_id = str(obj.get("clip_id") or obj.get("name") or "")
         media_sha = str(obj.get("media_sha256") or obj.get("original_sha256") or "")
@@ -138,11 +136,18 @@ class ClipFeatures:
                    structural_id, structural, aligned, hsv)
 
 
-def pair_score(a: ClipFeatures, b: ClipFeatures) -> dict[str, Any] | None:
+def pair_score(a: ClipFeatures, b: ClipFeatures, *,
+               scoring_mode: str = "hybrid") -> dict[str, Any] | None:
     """Mirror PhoneOfflineSimilarity.compare(Evidence, Evidence, pairColor)."""
+    if scoring_mode not in SCORING_MODES:
+        raise ValueError("Unsupported appearance similarity method")
     if a.key == b.key or a.visual_model_id != b.visual_model_id:
         return None
     visual_score = cosine(a.visual, b.visual)
+    if scoring_mode == VECTOR_ONLY:
+        return {"score": visual_score, "method": VECTOR_ONLY,
+                "upper_crop_score": None, "visual_score": visual_score,
+                "color_score": None}
     upper = None
     color = color_affinity(a.hsv, b.hsv)
     if (a.structural_aligned_verified and b.structural_aligned_verified
@@ -155,23 +160,32 @@ def pair_score(a: ClipFeatures, b: ClipFeatures) -> dict[str, Any] | None:
         score = 0.75 * visual_score + 0.25 * color
         method = "visual_75_color_25"
     else:
-        return None  # never treat missing color as zero or skip its 25% share
+        return None
     return {"score": score, "method": method, "upper_crop_score": upper,
             "visual_score": visual_score, "color_score": color}
 
 
 def centroid_score(candidate: ClipFeatures,
-                   refs: Sequence[ClipFeatures]) -> dict[str, Any] | None:
+                   refs: Sequence[ClipFeatures], *,
+                   scoring_mode: str = "hybrid") -> dict[str, Any] | None:
     compatible = [r for r in refs if r.key != candidate.key
                   and r.visual_model_id == candidate.visual_model_id]
+    if scoring_mode not in SCORING_MODES:
+        raise ValueError("Unsupported appearance similarity method")
     if not compatible:
         return None
+    if scoring_mode == VECTOR_ONLY:
+        mean = normalized_centroid([r.visual for r in compatible])
+        if mean is None:
+            return None
+        score = cosine(candidate.visual, mean)
+        return {"score": score, "method": VECTOR_ONLY, "visual_score": score,
+                "upper_crop_score": None, "color_score": None}
     structural = [r for r in compatible if candidate.structural_aligned_verified
                   and candidate.structural is not None and r.structural_aligned_verified
                   and r.structural is not None and candidate.structural_model_id
                   and candidate.structural_model_id == r.structural_model_id]
     if structural:
-        # Both centroids use the EXACT same compatible population.
         visual_mean = normalized_centroid([r.visual for r in structural])
         upper_mean = normalized_centroid([r.structural for r in structural])
         if visual_mean is not None and upper_mean is not None:
@@ -181,7 +195,6 @@ def centroid_score(candidate: ClipFeatures,
                     "method": "structural_70_visual_30",
                     "upper_crop_score": upper, "visual_score": visual,
                     "color_score": None}
-    # Color is inherently pairwise: do not manufacture a per-clip color score.
     usable = [(r, color_affinity(candidate.hsv, r.hsv)) for r in compatible]
     usable = [(r, c) for r, c in usable if c is not None]
     if not usable:
@@ -190,8 +203,6 @@ def centroid_score(candidate: ClipFeatures,
     if visual_mean is None:
         return None
     visual = cosine(candidate.visual, visual_mean)
-    # Reference color is an aggregate *histogram*, not a fabricated
-    # per-clip pair score. Compute Bhattacharyya affinity to the aggregate.
     mean_hsv = tuple(math.fsum(r.hsv[i] for r, _ in usable) / len(usable)
                      for i in range(len(candidate.hsv)))
     color = color_affinity(candidate.hsv, mean_hsv)
@@ -202,7 +213,7 @@ def centroid_score(candidate: ClipFeatures,
 
 
 def suggestion_confidence(score: float) -> float:
-    """Display index, NOT a calibrated probability of the same identity."""
+    """Display index, NOT a calibrated probability."""
     return 100.0 / (1.0 + math.exp(-10.0 * (score - 0.42)))
 
 
@@ -218,7 +229,6 @@ def bound_decision(row: Mapping[str, Any], clip: ClipFeatures) -> bool:
 
 def latest_decisions(rows: Sequence[Mapping[str, Any]]
                      ) -> dict[tuple[str, str], Mapping[str, Any]]:
-    # Ordered persisted decisions only; last per (folder, qualified clip) wins.
     out = {}
     for row in rows:
         if row.get("folder_id") and row.get("source") and row.get("clip_id"):
@@ -226,16 +236,8 @@ def latest_decisions(rows: Sequence[Mapping[str, Any]]
     return out
 
 
-def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_THRESHOLD
-                ) -> list[dict[str, Any]]:
-    """Deterministic exact complete-linkage agglomeration.
-
-    Every merged cluster has all cross-pairs at or above threshold. A heap
-    avoids rescanning every cluster pair after each merge (cubic behavior).
-    Original 512-D pair scores are computed once; subsequent cluster
-    similarities are their complete-linkage minima. A missing/incompatible
-    pair is NOT allowed to bridge clusters.
-    """
+def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_THRESHOLD,
+                *, scoring_mode: str = "hybrid") -> list[dict[str, Any]]:
     import heapq
     if not -1 <= threshold <= 1:
         raise ValueError("Invalid clustering threshold")
@@ -243,15 +245,13 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
     if len(entries) > 400:
         raise ValueError("Too many unreviewed clips for bounded clustering")
 
-    # Cluster IDs are never reused, making stale heap entries harmless.
-    # No source/media bytes are copied or changed.
     count = len(entries)
     active = {i: [i] for i in range(count)}
     distance: dict[tuple[int, int], float] = {}
     heap: list[tuple[float, int, int]] = []
     for i in range(count):
         for j in range(i + 1, count):
-            pair = pair_score(entries[i], entries[j])
+            pair = pair_score(entries[i], entries[j], scoring_mode=scoring_mode)
             if pair is None or pair["score"] < threshold:
                 continue
             sim = pair["score"]
@@ -269,13 +269,10 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
         saved = distance.get(ordered(i, j))
         if saved is None or saved < threshold:
             continue
-        # Exactly the best complete-link score; tie order is deterministic.
         if abs(saved + negative) > 1e-12:
             continue
         members = active.pop(i) + active.pop(j)
         distance.pop(ordered(i, j), None)
-        # New cluster is compared with each still-active cluster using
-        # min(sim(k,i), sim(k,j)) -- never average/single-link linkage.
         for k in list(active):
             left = distance.pop(ordered(k, i), None)
             right = distance.pop(ordered(k, j), None)
@@ -305,7 +302,7 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
                             "media_revision": entries[i].media_revision,
                             "state": "pending_review",
                             "human_review_required": True,
-                            "verified_same_person": False}
+                            "verified_same_group": False}
                            for i in sorted(members, key=lambda index: entries[index].key)
                        ],
                        "member_count": len(keys), "human_review_required": True,
@@ -318,7 +315,10 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                  decisions: Sequence[Mapping[str, Any]],
                  *, match_threshold: float = MATCH_THRESHOLD,
                  cluster_threshold: float = CLUSTER_THRESHOLD,
-                 nonreference_reviewed: Sequence[str] = ()) -> dict[str, Any]:
+                 nonreference_reviewed: Sequence[str] = (),
+                 scoring_mode: str = "hybrid") -> dict[str, Any]:
+    if scoring_mode not in SCORING_MODES:
+        raise ValueError("Unsupported appearance similarity method")
     if not -1 <= match_threshold <= 1:
         raise ValueError("Invalid folder match threshold")
     if len(clips) > 2000 or len(folders) > 250:
@@ -332,9 +332,6 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
     folder_ids = [str(f.get("id") or "") for f in folders]
     if any(not f for f in folder_ids) or len(set(folder_ids)) != len(folder_ids):
         raise ValueError("Invalid or duplicate folder identifiers")
-    # Old explicit human reviews stay authoritative for avoiding duplicate
-    # review prompts, but were NOT digest-bound at the time of the original
-    # decision. They must never enter the vector reference pool.
     if not isinstance(nonreference_reviewed, (tuple, list, set)):
         raise ValueError("Invalid legacy reviewed source index")
     if len(nonreference_reviewed) > 20000 or any(
@@ -353,9 +350,6 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
         clip = indexed.get(key)
         if folder not in refs or clip is None:
             continue
-        # Historical manual decisions must NOT become references without
-        # original-byte binding, but an already reviewed clip must also not
-        # be falsely presented as a brand-new, unreviewed recording.
         if (row.get("human_confirmed") is True
                 and row.get("status") in ("approved", "rejected")
                 and row.get("revoked") is not True):
@@ -371,8 +365,6 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
             globally_approved.add(key)
         else:
             rejected[folder].append(clip)
-    # Preserve the mainline synchronous online CPU budget. Never silently
-    # truncate reference pools or skip folders to make a check pass.
     candidate_count = len(indexed) - len(globally_approved | historically_approved_keys)
     pair_budget = candidate_count * sum(
         len(refs[folder]) + len(rejected[folder]) for folder in folder_ids)
@@ -385,36 +377,34 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                 or clip.key in suppressed):
             continue
         top = -math.inf
+        clip_candidates = []
         for folder in folder_ids:
             current_decision = review.get((folder, clip.key))
-            # Exact rejected clips go into that folder's exclusion list.
             if (current_decision and current_decision.get("human_confirmed") is True
                     and current_decision.get("revoked") is not True
                     and current_decision.get("status") == "rejected"):
-                # Exact human exclusions survive legacy unbound metadata;
-                # only new verified binding can seed negative exemplar vectors.
                 continue
-            possible = [(r, pair_score(clip, r)) for r in refs[folder]]
+            possible = [(r, pair_score(clip, r, scoring_mode=scoring_mode)) for r in refs[folder]]
             possible = [(r, p) for r, p in possible if p is not None]
-            centroid = centroid_score(clip, refs[folder])
+            centroid = centroid_score(clip, refs[folder], scoring_mode=scoring_mode)
             if centroid is None or not possible:
                 continue
             closest, exemplar = max(possible, key=lambda it: (it[1]["score"], it[0].key))
             raw = 0.40 * centroid["score"] + 0.60 * exemplar["score"]
-            negatives = [pair_score(clip, r) for r in rejected[folder]]
+            negatives = [pair_score(clip, r, scoring_mode=scoring_mode) for r in rejected[folder]]
             neg_max = max((n["score"] for n in negatives if n is not None),
                           default=-math.inf)
             penalty = NEGATIVE_PENALTY if neg_max > NEGATIVE_THRESHOLD else 0.0
             score = raw - penalty
             top = max(top, score)
             if score < match_threshold:
-                continue  # below-threshold recordings belong only to Awaiting Review
-            matches.append({
+                continue
+            clip_candidates.append({
                 "folder_id": folder, "source": clip.source, "clip_id": clip.clip_id,
                 "source_qualified_clip_id": clip.key, "media_sha256": clip.media_sha256,
                 "media_revision": clip.media_revision,
                 "state": "pending_review", "human_review_required": True,
-                "verified_same_person": False, "automatically_assigned": False,
+                "verified_same_group": False, "automatically_assigned": False,
                 "score": round(score, 8), "unpenalized_score": round(raw, 8),
                 "centroid_score": round(centroid["score"], 8),
                 "exemplar_score": round(exemplar["score"], 8),
@@ -428,32 +418,30 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                 "color_score": exemplar["color_score"],
                 "suggestion_confidence": round(suggestion_confidence(score), 2),
                 "meets_threshold": score >= match_threshold,
-                "confidence_is_identity_probability": False})
-        # Only unassigned records that are BELOW threshold in every folder
-        # form new tentative groups. Existing positive human reviews never do.
+                "confidence_is_probability": False})
+        if scoring_mode == VECTOR_ONLY and clip_candidates:
+            clip_candidates.sort(key=lambda m: (-m["score"], m["folder_id"]))
+            matches.append(clip_candidates[0])
+        else:
+            matches.extend(clip_candidates)
         if top < match_threshold and clip.key not in reviewed_keys:
             unmatched.append(clip)
     matches.sort(key=lambda m: (-m["score"], m["folder_id"],
                                 m["source_qualified_clip_id"]))
     return {"schema": SCHEMA, "status": "human_review_only", "match_threshold": match_threshold,
             "cluster_threshold": cluster_threshold, "matches": matches,
-            "provisional_clusters": agglomerate(unmatched, cluster_threshold),
+            "provisional_clusters": agglomerate(unmatched, cluster_threshold,
+                                                scoring_mode=scoring_mode),
+            "scoring_mode": scoring_mode,
             "folder_options": [{"id": str(f["id"]), "label": str(f.get("label") or f["id"])}
                                for f in folders],
             "approved_reference_counts": {key: len(refs[key]) for key in folder_ids},
             "excluded_unbound_or_legacy_decisions": legacy_or_unbound,
             "suppressed_historical_reviewed_clips": len(set(indexed) & suppressed),
-            "automatic_assignments": 0, "identity_probabilities": False}
+            "automatic_assignments": 0, "probabilities": False}
 
 
 class ReviewJournal:
-    """Versioned folder-specific feedback, independent of global skip/reject.
-
-    The caller MUST first verify the original recording actually opened for
-    review and persist its authoritative folder assignment on approval.
-    The journal never pretends to have performed either action itself.
-    """
-
     def __init__(self, path: str | Path):
         self.path = Path(path)
 
@@ -474,8 +462,6 @@ class ReviewJournal:
     def record(self, *, clip: ClipFeatures, folder_id: str, action: str,
                expected_revision: int, opened_sha256: str, opened_revision: str,
                authoritative_persisted: bool, human_confirmed: bool) -> dict[str, Any]:
-        # Readers see atomic snapshots; writers acquire an interprocess lock.
-        # The caller's successful authoritative review transaction is required.
         import fcntl
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         lock_path = self.path.with_name(self.path.name + ".lock")
@@ -490,7 +476,6 @@ class ReviewJournal:
                     authoritative_persisted=authoritative_persisted,
                     human_confirmed=human_confirmed)
         finally:
-            # fdopen() closes the descriptor. Keep lockfile for reuse.
             pass
 
     def _record_locked(self, *, clip: ClipFeatures, folder_id: str, action: str,
@@ -502,7 +487,6 @@ class ReviewJournal:
                 or opened_sha256 != clip.media_sha256
                 or opened_revision != clip.media_revision):
             raise ValueError("Human opened-media proof and persisted action required")
-        # Caller serializes writes (e.g. server's own mutex) around read+record.
         doc = self.read()
         if expected_revision != doc["revision"]:
             raise ValueError("Review revision changed; refresh")

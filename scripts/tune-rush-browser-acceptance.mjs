@@ -38,26 +38,82 @@ async function join(p,code,name){
  await p.locator("#join-code").fill(code);
  await p.locator("#nickname").fill(name);
  await p.locator("#join-form button[type=submit]").click();
- await wait(p,()=>room?.role==="player");
+ try{await wait(p,()=>room?.role==="player")}
+ catch(e){
+  const diagnosis=await p.evaluate(()=>({
+   toast:document.querySelector("#toast")?.textContent||"",
+   joinCode:document.querySelector("#join-code")?.value||"",
+   hasRoom:Boolean(room),role:room?.role||null,
+   formVisible:!document.querySelector("#join-form")?.hidden,
+   pending:loading
+  }));
+  console.error("BROWSER_JOIN_DIAGNOSTIC",JSON.stringify({name,code,...diagnosis}));
+  throw e;
+ }
 }
 async function createGame(host){
  await host.locator("#create").click();
  await wait(host,()=>room?.role==="host"&&room.code?.length===6);
  return (await state(host));
 }
-async function waitBuzz(p){
- await wait(p,()=>{const b=document.querySelector("#buzz");return b&&!b.hidden&&!b.disabled},22000);
+async function waitBuzz(p,host=null){
+ try{
+  await wait(p,()=>{const b=document.querySelector("#buzz");return b&&!b.hidden&&!b.disabled},22000);
+ }catch(e){
+  const details=await p.evaluate(()=>({phase:room?.phase,step:room?.step,round:room?.round,mode:room?.mode,
+   firstAnswered:room?.firstAnswered,blockedStep:room?.myBlockedStep,buttonDisabled:document.getElementById("buzz")?.disabled,
+   toast:document.getElementById("toast")?.textContent||"",loading,pollBusy}));
+  const hostState=host?await host.evaluate(()=>({phase:room?.phase,step:room?.step,round:room?.round,mode:room?.mode,
+   loading,clipTimer:clipTimer!==null,nextTimer:nextTimer!==null,ctxState:ctx?.state||"none",
+   toast:document.getElementById("toast")?.textContent||""})):null;
+  console.error("BROWSER_BUZZ_NOT_READY",JSON.stringify({details,hostState}));
+  throw e;
+ }
 }
 try {
  if(process.env.TUNE_RUSH_YOUTUBE_ONLY!=="1"){
  const host=await page(pad,"demo-host"),alice=await page(phone1,"demo-alice"),bob=await page(phone2,"demo-bob");
  const initial=await createGame(host);
- await Promise.all([join(alice,initial.code,"QAlice"),join(bob,initial.code,"QBob")]);
+ assert.ok(await host.locator("#room").evaluate(el=>el.classList.contains("host-mode")),"tablet host uses immersive studio theme");
+ await host.locator(".lobby-caption").waitFor({state:"visible"});
+ assert.ok(await host.locator("#host-fullscreen").isVisible(),"tablet host has working fullscreen control");
+ assert.equal(await host.locator(".source-select label:visible").count(),4,"all four music sources are visible");
+ assert.equal(await host.locator("#deezer-source-option").isVisible(),true,"Deezer is visibly listed rather than hidden");
+ assert.ok(await host.locator('#deezer-source-option input[type=radio]').isDisabled(),"Deezer cannot be selected without server approval");
+ assert.ok((await host.locator("#deezer-license-status").innerText()).includes("not authorized"),"explicit Deezer approval status must be readable");
+ const lobbyUI=await host.evaluate(()=>{
+   const cards=[...document.querySelectorAll(".source-select .source-card")].map(c=>{
+     const b=c.getBoundingClientRect();
+     return {title:c.querySelector(".source-copy strong")?.textContent,w:b.width,h:b.height,x:b.x,y:b.y}
+   });
+   const box=document.getElementById("lobby")?.getBoundingClientRect();
+   return {cards,lobbyWidth:box?.width,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};
+ });
+ assert.equal(lobbyUI.cards.length,4);
+ assert.ok(lobbyUI.cards.every(c=>c.w>220&&c.h>145),"music cards must remain readable at tablet size: "+JSON.stringify(lobbyUI));
+ assert.ok(Math.abs(lobbyUI.cards[0].y-lobbyUI.cards[1].y)<3&&lobbyUI.cards[2].y>lobbyUI.cards[0].y,
+   "music sources should form an ordered 2x2 desktop grid");
+ assert.ok(lobbyUI.scrollWidth<=lobbyUI.viewport+2,"host lobby must not overflow horizontally");
+ console.log("BROWSER_LOBBY_V9_PASS",JSON.stringify({cards:4,deezer:"visible but unavailable",grid:"2x2",viewport:lobbyUI.viewport}));
+ assert.ok(!(await alice.locator(".host-stage-hero").isVisible()),"welcome phone never shows host stage");
+ await join(alice,initial.code,"QAlice");
+ await join(bob,initial.code,"QBob");
  await wait(host,()=>room?.players.length===2);
  assert.ok((await host.locator("#lobby-players").innerText()).includes("QBob"));
  await host.locator("#start").click();
  await wait(host,()=>room?.round===1&&room?.phase!=="lobby");
- await waitBuzz(alice);
+ await host.locator(".host-stage-hero").waitFor({state:"visible"});
+ assert.ok(await host.locator(".disc-core").isVisible(),"mystery cover on tablet");
+ assert.equal(await host.locator(".sound-bars i").count(),21,"21 decorative waveform bars");
+ assert.ok(await host.locator("#host-track-context").isVisible(),"host audio source context readable");
+ assert.ok(await host.locator(".score-panel").isVisible(),"host scoreboard visible");
+ await wait(alice,()=>room?.phase!=="lobby"&&room?.round===1);
+ assert.ok(await alice.locator(".mobile-disc-icon").isVisible(),"old player phone disc preserved");
+ assert.ok(!(await alice.locator(".disc-art-top").isVisible()),"mystery studio graphics not shown on phone");
+ const geometry=await host.evaluate(()=>({vw:innerWidth,scroll:document.documentElement.scrollWidth,track:document.getElementById("host-track-context")?.textContent||""}));
+ assert.ok(geometry.scroll<=geometry.vw+2,"tablet page must not overflow horizontally: "+JSON.stringify(geometry));
+ console.log("BROWSER_HOST_STUDIO_LAYOUT_PASS",JSON.stringify({viewport:geometry.vw,waveBars:21,scoreboard:"visible",playerTheme:"preserved"}));
+ await waitBuzz(alice,host);
  await alice.locator("#buzz").click();
  await wait(alice,()=>room?.phase==="answering"&&room.lockedPlayer===room.me);
  await alice.locator("#answer-overlay").waitFor({state:"visible"});
@@ -110,6 +166,8 @@ try {
  await join(catalogGuest,cr.code,"CatalogPlayer");
  await catalogHost.locator('input[name="music-source"][value="catalog"]').check();
  await catalogHost.locator("#catalog-settings").waitFor({state:"visible"});
+ assert.ok((await catalogHost.locator(".lobby-caption").isVisible()),"catalog host setup uses tablet studio");
+ assert.ok(!(await catalogGuest.locator(".lobby-caption").isVisible()),"player never sees host studio setup");
  await catalogHost.locator("#genre-options input[value=rock]").uncheck();
  await catalogHost.locator("#decade-options input[value='1970']").check();
  await catalogHost.locator("#start").click();
@@ -135,7 +193,8 @@ try {
  yh.on("requestfailed",req=>{if(/youtube|googlevideo|ytimg|gstatic/i.test(req.url()))ytRequestsFailed.push([req.url().slice(0,170),req.failure()?.errorText])});
  yh.on("console",msg=>{if(msg.type()==="error")ytConsoleErrors.push(msg.text().slice(0,200))});
  const youtube=await createGame(yh);
- await Promise.all([join(ya,youtube.code,"YouA"),join(yb,youtube.code,"YouB")]);
+ await join(ya,youtube.code,"YouA");
+ await join(yb,youtube.code,"YouB");
  await yh.locator('input[name="music-source"][value="youtube"]').check();
  await yh.locator("#youtube-setup").waitFor({state:"visible"});
  await yh.locator("#youtube-link").fill("https://music.youtube.com/watch?v=dQw4w9WgXcQ");
