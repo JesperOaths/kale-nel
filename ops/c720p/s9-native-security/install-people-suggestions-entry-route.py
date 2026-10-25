@@ -12,7 +12,7 @@ import tempfile
 PAGE = "security-people-v33.html"
 TARGET = "security-people-v52.html?v=vector-only-suggestions-20261025"
 BASE = Path("/opt/homeassistant/config/www/frontyard-security-new")
-LEGACY_SHA256 = "dd62c5001fbfd4fb4d971905b8d1b726ae676959"
+LEGACY_SHA256 = "8fd33f3f364b0d92dd00136b9e65aba2746c818cc265f2f81ffeecfb379ab223"
 
 def build_page():
     return (
