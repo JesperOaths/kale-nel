@@ -63,7 +63,18 @@ values
  ('oiKj0Z_Xnjc','Papaoutai','Stromae',array['dance','pop'],2013,now()),
  ('TUVcZfQe-Kw','Levitating','Dua Lipa',array['pop','dance'],2020,now()),
  ('dQw4w9WgXcQ','Never Gonna Give You Up','Rick Astley',array['pop'],1987,now()),
- ('aGCdLKXNF3w','Everybody Wants to Rule the World','Tears for Fears',array['pop','rock'],1985,now())
+ ('aGCdLKXNF3w','Everybody Wants to Rule the World','Tears for Fears',array['pop','rock'],1985,now()),
+ ('eIX2SZW4Ih8','Het Is Een Nacht','Guus Meeuwis',array['dutch','pop'],1995,now()),
+ ('uel8ToMHGBM','Bloed, Zweet en Tranen','André Hazes',array['dutch','pop'],2002,now()),
+ ('dZkbhA1NcTM','Het Regent Zonnestralen','Acda en de Munnik',array['dutch','pop','rock'],1998,now()),
+ ('YVkUvmDQ3HY','Without Me','Eminem',array['hiphop'],2002,now()),
+ ('gOMhN-hfMtY','Stan','Eminem',array['hiphop'],2000,now()),
+ ('_CL6n0FJZpk','Still D.R.E.','Dr. Dre',array['hiphop'],1999,now()),
+ ('GtUVQei3nX4','Drop It Like It''s Hot','Snoop Dogg',array['hiphop'],2004,now()),
+ ('tvTRZJ-4EyI','HUMBLE.','Kendrick Lamar',array['hiphop'],2017,now()),
+ ('uxpDa-c-4Mc','Hotline Bling','Drake',array['hiphop','pop','rnb'],2015,now()),
+ ('XbGs_qK2PQA','Rap God','Eminem',array['hiphop'],2013,now()),
+ ('PEGccV-NOm8','Bodak Yellow','Cardi B',array['hiphop'],2017,now())
 on conflict(video_id) do update set
  title=excluded.title,artist=excluded.artist,genres=excluded.genres,
  release_year=excluded.release_year,checked_at=excluded.checked_at;
