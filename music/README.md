@@ -1,5 +1,12 @@
 # Tune Rush — Kalenel music quiz
 
+## Recovering an interrupted clue
+The host can use **Replay current clue** after a clue starts, including the final 20-second clue. A failed start changes the main button to **Retry this clue**. Replay retains the same hint length, song position, scores and answer-attempt restrictions. It cannot interrupt a claimed buzzer or undo an answer. Every replay identifies its exact round and clue, so a delayed request cannot replay a newer song. After a reconnect, a host can recover a server-side playing clue whose local player stopped.
+
+Deploy `supabase/migrations/20261025032513_musicquiz_replay_current_clue.sql` before publishing the v6 browser assets. It guards against unexpected changes to the existing function; its only game-logic addition is the host-only `replay` action. No table or permission changes. Rollback: revert the website assets and restore only the `musicquiz_v1` function definition from `sql/musicquiz-official-youtube-enrichment-v4.sql` (do not rerun that entire migration). `scripts/test-tune-rush-replay-db.mjs` tests the SQL using isolated, in-memory PostgreSQL. After deployment run `node scripts/tune-rush-replay-smoke.mjs` against the live guest endpoint.
+
+Host controls disable while a request is pending and requests time out after 12 seconds. Mutating requests are never automatically repeated, because an interrupted response may still have changed the server state.
+
 ## YouTube playback recovery (25 October 2026)
 Both automatic-library and manual YouTube games wait for the host to tap **Play next clue**. The player is checked for readiness, visibility and known embedding failures before the server advances a hint. A persistent message beneath the official video explains blocked videos, connection failures and browser-required taps. The host can skip blocked videos; the game never tries to bypass YouTube restrictions. The iframe stays visible and resizes to the host screen.
 
