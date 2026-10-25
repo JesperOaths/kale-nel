@@ -30,7 +30,7 @@ class Contracts(unittest.TestCase):
               CAPTURE.index('if("recording".equals(mode)&&lastFrameAt-lastStart>2500)')]
   self.assertNotIn('lastMovementAt=lastFrameAt;',raw)
   self.assertNotIn('eventChain.evidence(',raw)
-  self.assertIn('boolean recordingCheck=recording&&temperature()<405&&',raw)
+  self.assertIn('boolean recordingCheck=recording&&temperature()<420&&',raw)
   confirmed=CAPTURE[CAPTURE.index('private void evaluateGardenPersonAsync('):
                     CAPTURE.index('private boolean rateAllowed(')]
   self.assertIn('if("recording".equals(mode)){',confirmed)
