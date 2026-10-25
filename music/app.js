@@ -702,6 +702,8 @@ $("start").addEventListener("click",async()=>{
   await call("start",data);
  }catch(e){message(e.message)}
 });
+$("deezer-play-hint").addEventListener("click",()=>startClip());
+$("deezer-replay-hint").addEventListener("click",()=>startClip(true));
 $("youtube-play-hint").addEventListener("click",()=>startClip());
 $("youtube-replay-hint").addEventListener("click",()=>startClip(true));
 $("youtube-next-form").addEventListener("submit",async e=>{
@@ -722,7 +724,7 @@ document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
  if(document.hidden&&isHost()){
   cancelNext();
-  if(room?.mode==="youtube"||room?.mode==="catalog"){
+  if(room?.mode==="youtube"||room?.mode==="catalog"||room?.mode==="deezer"){
    clearAudio();
    if(room?.phase==="playing")rpc("pause").then(b=>applyState(b.state)).catch(()=>{});
   }
@@ -739,4 +741,5 @@ try{
  }
 }catch{}
 render();
+refreshDeezerApproval();
 setInterval(()=>{if(access&&!document.hidden)refresh()},550);
