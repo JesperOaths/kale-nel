@@ -264,7 +264,7 @@ body:has(#room.host-mode:not([hidden])) .shell{width:min(1320px,calc(100% - 48px
 .host-mode .source-card:hover:not(.is-unavailable){border-color:#78bfa0;background:#233634;transform:translateY(-2px)}
 .host-mode .source-card:has(input:focus-visible){outline:3px solid #c6ffad;outline-offset:3px}
 .host-mode .source-card:has(input:checked){background:linear-gradient(132deg,#234636,#1b3b2e);border:1.5px solid #91eeab;box-shadow:inset 0 0 0 1px #74dc9750,0 10px 33px #06160b40}
-.host-mode .source-card input[type=radio]{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.host-mode .source-card input[type=radio]{position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;cursor:pointer;margin:0}.host-mode .source-card.is-unavailable input[type=radio]{cursor:not-allowed}
 .host-mode .source-top{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%}
 .host-mode .source-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#345044;color:#d4ffe0;font-size:24px;font-weight:800;line-height:1}
 .host-mode .source-catalog .source-icon{background:#3d364d;color:#d2bfff}
