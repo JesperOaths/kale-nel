@@ -102,6 +102,28 @@ try {
  console.log("BROWSER_DEMO_ROUND2_CONTINUE_PASS",JSON.stringify({aliceScore:0.5,bobScore:0,step:(await state(host)).step}));
 
  }
+ // Browser verify automatic library filtering, quick skip and automatic next song.
+ const catalogCtx=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
+ const catalogGuestCtx=await browser.newContext({...devices["iPhone 13"]});
+ const catalogHost=await page(catalogCtx,"catalog-host"),catalogGuest=await page(catalogGuestCtx,"catalog-guest");
+ const cr=await createGame(catalogHost);
+ await join(catalogGuest,cr.code,"CatalogPlayer");
+ await catalogHost.locator('input[name="music-source"][value="catalog"]').check();
+ await catalogHost.locator("#catalog-settings").waitFor({state:"visible"});
+ await catalogHost.locator("#genre-options input[value=rock]").uncheck();
+ await catalogHost.locator("#decade-options input[value='1970']").check();
+ await catalogHost.locator("#start").click();
+ await wait(catalogHost,()=>room?.mode==="catalog"&&room.round===1);
+ const firstVideo=(await state(catalogHost)).audio.source;
+ assert.equal((await state(catalogGuest)).audio,null,"guest cannot read video ID in catalog mode");
+ assert.equal((await state(catalogGuest)).title,null,"guest cannot read catalog answer");
+ assert.ok(await catalogHost.locator("#skip-round").isVisible(),"host can skip embedding failure on first hint");
+ await catalogHost.locator("#skip-round").click();
+ await wait(catalogHost,()=>room?.phase==="solved");
+ await catalogHost.locator("#next-round").click();
+ await wait(catalogHost,()=>room?.round===2);
+ assert.notEqual((await state(catalogHost)).audio.source,firstVideo,"catalog should not repeat before pool exhausted");
+ console.log("BROWSER_CATALOG_FILTERS_PASS",JSON.stringify({mode:"catalog",decade:"1970",genre:"pop",round:2}));
  // Separate YouTube mode host + two independent phone-browser sessions.
  const yHostCtx=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
  const yAContext=await browser.newContext({...devices["iPhone 13"]});
