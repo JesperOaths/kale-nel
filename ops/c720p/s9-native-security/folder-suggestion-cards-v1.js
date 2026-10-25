@@ -210,6 +210,10 @@
                 typeof member.media_revision !== 'string' || !member.media_revision)
               continue;
             const card = element('article', undefined, 'folder-suggestion-card');
+            if (typeof hooks.onPreview === 'function') {
+              const preview = hooks.onPreview(member);
+              if (preview && preview.nodeType === 1) card.append(preview);
+            }
             card.append(element('strong', member.source_qualified_clip_id),
               element('p', 'Provisional group member · no verified folder confidence yet'));
             const rowChoices = element('select');

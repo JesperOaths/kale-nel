@@ -198,7 +198,7 @@ def install(H, provider, journal: ReviewJournal,
         origin = self.headers.get("Origin", "").strip()
         if origin and origin not in ORIGINS:
             return self.js(403, {"ok": False, "error": "origin_blocked"})
-        if self.headers.get("Sec-Fetch-Site", "") not in ("", "same-origin", "none"):
+        if self.headers.get("Sec-Fetch-Site", "") not in ("", "same-origin", "same-site", "none"):
             return self.js(403, {"ok": False, "error": "cross_site_blocked"})
         try:
             size = int(self.headers.get("Content-Length", "0"))
