@@ -184,6 +184,59 @@ try {
  await wait(catalogHost,()=>room?.round===2);
  assert.notEqual((await state(catalogHost)).audio.source,firstVideo,"catalog should not repeat before pool exhausted");
  console.log("BROWSER_CATALOG_FILTERS_PASS",JSON.stringify({mode:"catalog",decade:"1970",genre:"pop",round:2}));
+
+ // Functional LOCAL AUDIO mode: WAV File objects stay in the host browser.
+ const makeWav=(hz,seconds=35)=>{
+  const rate=8000,samples=rate*seconds,out=Buffer.alloc(44+samples*2);
+  out.write("RIFF",0);out.writeUInt32LE(out.length-8,4);out.write("WAVEfmt ",8);
+  out.writeUInt32LE(16,16);out.writeUInt16LE(1,20);out.writeUInt16LE(1,22);
+  out.writeUInt32LE(rate,24);out.writeUInt32LE(rate*2,28);
+  out.writeUInt16LE(2,32);out.writeUInt16LE(16,34);
+  out.write("data",36);out.writeUInt32LE(samples*2,40);
+  for(let i=0;i<samples;i++)out.writeInt16LE(Math.round(Math.sin(i*2*Math.PI*hz/rate)*700),44+2*i);
+  return out;
+ };
+ const localCtx=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
+ const localGuestCtx=await browser.newContext({...devices["iPhone 13"]});
+ const lh=await page(localCtx,"local-host"),lg=await page(localGuestCtx,"local-guest");
+ const localGame=await createGame(lh);
+ await join(lg,localGame.code,"LocalPlayer");
+ await lh.locator('input[name="music-source"][value="local"]').check();
+ await lh.locator("#local-settings").waitFor({state:"visible"});
+ await lh.locator("#local-music-files").setInputFiles([
+  {name:"ABBA - Dancing Queen.wav",mimeType:"audio/wav",buffer:makeWav(440)},
+  {name:"Queen - Bohemian Rhapsody.wav",mimeType:"audio/wav",buffer:makeWav(520)}
+ ]);
+ await wait(lh,()=>localTracks.length===2&&!localImporting,15000);
+ assert.ok(await lh.locator("#local-review").isVisible(),"local metadata editor is visible");
+ const rows=lh.locator(".local-track-row");
+ for(let i=0;i<2;i++){
+  await rows.nth(i).locator("input").nth(2).fill("pop");
+  await rows.nth(i).locator("input").nth(2).press("Tab");
+  await rows.nth(i).locator("input").nth(3).fill("1975");
+  await rows.nth(i).locator("input").nth(3).press("Tab");
+ }
+ await lh.locator("#decade-options input[value='1970']").check();
+ assert.ok((await lh.locator("#local-music-count").innerText()).includes("2 match"));
+ await lh.locator("#start").click();
+ await wait(lh,()=>room?.mode==="local"&&room?.round===1,17000);
+ const firstLocal=await state(lh);
+ assert.match(firstLocal.audio?.source||"",/^local:\d+$/);
+ assert.equal((await state(lg)).audio,null,"guest cannot see local host audio index or cue");
+ assert.equal((await state(lg)).title,null,"guest cannot see the local title");
+ assert.ok(await lh.locator("#local-play-hint").isVisible(),"host local play button available");
+ assert.ok((await lh.locator("#licensed-player").getAttribute("src")||"").startsWith("blob:"),
+  "host audio file plays directly from browser-created object URL");
+ await lh.locator("#local-play-hint").click();
+ await wait(lh,()=>room?.step===0&&room?.phase==="paused",17000);
+ await lh.locator("#skip-round").click();
+ await wait(lh,()=>room?.phase==="solved");
+ await lh.locator("#next-round").click();
+ await wait(lh,()=>room?.round===2&&room?.mode==="local",17000);
+ assert.notEqual((await state(lh)).audio.source,firstLocal.audio.source,"local tracks don't repeat before exhaustion");
+ console.log("BROWSER_LOCAL_FILES_PASS",JSON.stringify({round:2,source:"host-only WAV blobs",
+  uploadedRecordingBytes:0,metadata:"editable",cue:"random middle",guestAudio:"hidden",nextSong:"different"}));
+
  // Separate YouTube mode host + two independent phone-browser sessions.
  const yHostCtx=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
  const yAContext=await browser.newContext({...devices["iPhone 13"]});
