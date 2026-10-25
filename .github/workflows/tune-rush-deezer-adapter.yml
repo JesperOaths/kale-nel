@@ -1,0 +1,31 @@
+name: Tune Rush Deezer preview adapter (license-gated)
+on:
+  pull_request:
+    paths:
+      - 'music/deezer-preview.mjs'
+      - 'scripts/test-deezer-preview.mjs'
+      - 'scripts/deezer-metadata-preflight.mjs'
+      - '.github/workflows/tune-rush-deezer-adapter.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Setup Node 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - name: Verify Deezer source parses
+        run: |
+          node --check music/deezer-preview.mjs
+          node --check scripts/test-deezer-preview.mjs
+          node --check scripts/deezer-metadata-preflight.mjs
+      - name: Verify matching, preview offsets, timers and network-free fixtures
+        run: |
+          node scripts/test-deezer-preview.mjs
+          node scripts/deezer-metadata-preflight.mjs --fixtures
