@@ -13,7 +13,7 @@ raw=s[s.index('if(change && lastFrameAt>=cameraControlSettleUntil)'):
       s.index('if("recording".equals(mode)&&lastFrameAt-lastStart>2500)')]
 assert "lastMovementAt=lastFrameAt;" not in raw, "raw motion must not refresh 10-second tail"
 assert "eventChain.evidence(" not in raw, "raw motion must not arm continuation"
-assert 'boolean recordingCheck=recording&&temperature()<405&&' in raw
+assert 'boolean recordingCheck=recording&&temperature()<420&&' in raw
 confirmed=s[s.index('private void evaluateGardenPersonAsync('):
             s.index('private boolean rateAllowed(')]
 assert 'personTrackGate.offer(now,jpegAt,score,personBox,localCells)' in confirmed
