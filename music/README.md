@@ -84,3 +84,19 @@ The native YouTube Data API is the **supported** way to discover additional vide
 - YouTube API quotas, policies, potential embed errors 101/150, advertisements and geographical availability still apply. A YouTube Premium session is not used for server-side playback.
 
 **Current status:** the importer and daily schedule can be installed, but real automatic discovery remains inactive without the two secrets. The 71 curated songs are immediately selectable by genre and decade independently of this optional importer. Video playback continues through the host's visible YouTube iframe; it cannot be moved to an invisible server process or made ad-free with an ad blocker under YouTube's developer terms.
+
+## Local full-song music on the host tablet (v10)
+
+The host can now use ordinary audio files already available on their iPad, laptop, or other host device. This is an independent playback path; no Spotify, YouTube, Deezer, provider SDK, provider advertising, or preview clip limitations. It does **not** provide a free catalog of copyrighted hits; the host supplies playable files they have the right to use.
+
+1. Tap **Create lobby → Play your music collection → Choose audio files** (or **Choose a music folder** on browsers supporting folder input).
+2. Select MP3 or another natively supported browser audio format (e.g. AAC/M4A/WAV). MP3 ID3v2.2/v2.3/v2.4 or ID3v1 tags may fill title, artist, genre and release year automatically; filename **Artist - Title.ext** is a fallback. Other formats can be edited in the built-in collection review list. Review missing fields before proceeding.
+3. Select **GENRES** and independently **RELEASE DECADES**. E.g. **Pop + 1970s** uses only matching imported tracks. Leave decades unchecked for all decades.
+4. Invite players to the room and tap **Start the game**. Only the host's song title, artist, transient numerical file index, and randomized seek position reach Supabase. Actual music audio bytes remain on the host browser and are never uploaded or sent to the guest devices. Players continue using their phones.
+5. Tap **Play next clue** on the tablet, with the usual 0.5, 1.5, 3, 5, 8, 12 and 20 second hints. Every hint uses the same server-persisted random cue (leaving at least 21 seconds until the end); host skip/replay/next works normally. Files avoid repeats until the matching pool is exhausted and then reshuffle, without an artificial round limit.
+
+The music files are available **only for that browser tab's lifetime**: refreshing or closing the host's tab loses access to local File objects and cannot restore local audio for an active game. Reimport the files into a new game. Browser support for AAC, FLAC and other codecs differs by device, and only recordings at least 30 seconds long are accepted.
+
+**Copyright:** Local playback removes service-level playback restrictions, not the rights in the recordings. In the Netherlands, BumaStemra notes that private parties attended by friends/family without paid admission may qualify for an exemption; public/commercial events may require permission from BumaStemra and Sena. Use files you are authorized to play, and do not attempt to extract DRM-protected streaming downloads.
+
+Implementation: `music/local-tracks.js`, `sql/musicquiz-local-host-files-v6.sql`, `scripts/test-tune-rush-local-tracks.mjs`, and six-browser live multiplayer acceptance.

@@ -112,6 +112,7 @@ async function rpc(action,extra={},attempt=0) {
   genres:Array.isArray(extra.genres)?extra.genres.slice(0,12):[],
   decades:Array.isArray(extra.decades)?extra.decades.slice(0,8):[],
   durationMs:Number.isInteger(extra.durationMs)?extra.durationMs:0,
+  fileIndex:Number.isInteger(extra.fileIndex)?extra.fileIndex:-1,
   mode:String(extra.mode||"demo"),
   videoId:String(extra.videoId||""),
   cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0,
@@ -140,12 +141,134 @@ async function rpc(action,extra={},attempt=0) {
 }
 
 
+
+/** Full-length local music: browser File handles stay on the host; no audio uploads. */
+let localTracks=[],localPlayed=new Set(),localSourceCache=new Set(),localCurrentIndex=null;
+let localAudioUrl=null,localReviewShown=60,localImporting=false,localModulePromise=null;
+function localLib(){return localModulePromise||(localModulePromise=import("./local-tracks.js"))}
+function localStatus(note){setText("local-playback-status",note)}
+function localReadyCount(){
+ const filters=chosenFilters();
+ return localTracks.filter(t=>t.artist&&t.title&&t.year&&t.genres.some(g=>filters.genres.includes(g))&&
+  (!filters.decades.length||filters.decades.includes(String(Math.floor(t.year/10)*10)))).length;
+}
+function renderLocalTracks(){
+ const root=$("local-track-list"),search=$("local-music-search").value.toLowerCase().trim();
+ const subset=localTracks.filter(t=>!search||(t.title+" "+t.artist+" "+t.file.name).toLowerCase().includes(search));
+ root.replaceChildren();
+ for(const t of subset.slice(0,localReviewShown)){
+  const row=document.createElement("div");row.className="local-track-row"+(t.needsReview?" needs-review":"");
+  for(const [name,label,value] of [["title","Song title",t.title],["artist","Artist",t.artist],
+   ["genres","Genres",t.genres.join(", ")],["year","Year",t.year||""]]){
+   const l=document.createElement("label");l.textContent=label;
+   const inp=document.createElement("input");inp.value=String(value);inp.maxLength=name==="year"?4:100;
+   inp.setAttribute("aria-label",label+" for "+t.file.name);
+   if(name==="year")inp.inputMode="numeric";
+   inp.addEventListener("change",()=>{
+    if(name==="year"){const num=Number(inp.value);t.year=Number.isInteger(num)&&num>=1950&&num<=2100?num:null;}
+    else if(name==="genres"){t.genres=[...new Set(inp.value.toLowerCase().split(/[,;]/)
+     .map(x=>x.trim()).filter(x=>["pop","rock","hiphop","electronic","indie","dutch","disco","rnb","metal","dance"].includes(x)))];}
+    else t[name]=inp.value.slice(0,100).trim();
+    t.needsReview=!t.title||!t.artist||!t.year||!t.genres.length;
+    updateLocalCounts();row.classList.toggle("needs-review",t.needsReview);
+   });
+   l.append(inp);row.append(l);
+  }
+  root.append(row);
+ }
+ show("local-review",localTracks.length>0);
+ setText("local-tracks-shown",subset.length?"Showing "+Math.min(subset.length,localReviewShown)+" of "+subset.length+" matches":"No matching songs");
+ show("local-show-more",subset.length>localReviewShown);
+ setText("local-review-count",localTracks.length+" imported");
+}
+function updateLocalCounts(){
+ const complete=localTracks.filter(t=>!t.needsReview).length;
+ const eligible=localReadyCount();
+ setText("local-music-count",localImporting?"Reading local song metadata…":
+  localTracks.length+" audio files selected · "+complete+" fully tagged · "+eligible+" match the current genre/decade filters.");
+}
+async function importLocalFiles(list){
+ if(room?.phase!=="lobby"||!isHost()||localImporting)return;
+ localImporting=true;updateLocalCounts();
+ try{
+  const lib=await localLib();
+  const files=[...list].filter(f=>f.size>0),added=[];
+  for(const file of files){
+   const key=file.name+"::"+file.size+"::"+file.lastModified;
+   if(localSourceCache.has(key))continue;
+   const track=await lib.inspectLocalTrack(file,localTracks.length+added.length);
+   if(track){added.push(track);localSourceCache.add(key)}
+   if(added.length%20===0)await new Promise(resolve=>setTimeout(resolve,0));
+  }
+  localTracks.push(...added);
+  if(!added.length)message("No new playable audio files found. Try MP3, M4A or another supported audio file.");
+  else message(added.length+" music files added locally. No audio uploaded.");
+ }catch(e){message("Could not read the selected music: "+e.message)}
+ finally{localImporting=false;updateLocalCounts();renderLocalTracks();}
+}
+function discardLocalAudio(){
+ try{playerAudio.pause();playerAudio.removeAttribute("src");playerAudio.load()}catch{}
+ if(localAudioUrl){URL.revokeObjectURL(localAudioUrl);localAudioUrl=null}
+ localCurrentIndex=null;
+}
+async function getLocalDuration(file){
+ const url=URL.createObjectURL(file),probe=new Audio();
+ try{
+  probe.preload="metadata";
+  const duration=await new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>{cleanup();reject(Error("Audio metadata timed out"))},9000);
+   const cleanup=()=>{clearTimeout(timer);probe.onloadedmetadata=null;probe.onerror=null};
+   probe.onloadedmetadata=()=>{cleanup();resolve(probe.duration)};
+   probe.onerror=()=>{cleanup();reject(Error("This audio format is not supported by the browser"))};
+   probe.src=url;probe.load();
+  });
+  if(!Number.isFinite(duration)||duration<30||duration>7200)throw Error("Song length is not supported");
+  return duration;
+ }finally{probe.removeAttribute("src");probe.load();URL.revokeObjectURL(url)}
+}
+async function selectLocalRound(){
+ if(localImporting)throw Error("Music is still importing.");
+ const lib=await localLib(),f=chosenFilters();
+ if(!f.genres.length)throw Error("Select at least one genre.");
+ const attempted=new Set(localPlayed),max=localTracks.length;
+ for(let tries=0;tries<max;tries++){
+  const track=lib.chooseNextLocalTrack(localTracks,f.genres,f.decades,attempted);
+  attempted.add(track.index);
+  let duration;
+  try{duration=await getLocalDuration(track.file)}catch{continue}
+  const cueMs=lib.chooseFullTrackCue(duration);
+  const url=URL.createObjectURL(track.file);
+  discardLocalAudio();
+  localAudioUrl=url;localCurrentIndex=track.index;
+  playerAudio.preload="auto";playerAudio.src=url;playerAudio.load();
+  localStatus("Track ready. Tap Play next clue to hear the recording.");
+  return {mode:"local",song:track.title,artist:track.artist,
+   fileIndex:track.index,cueMs,durationMs:Math.floor(duration*1000)};
+ }
+ throw Error("No matching playable recordings. Check file formats and song metadata.");
+}
+async function playLocalHint(info){
+ const index=Number(String(info.source||"").slice(6));
+ if(!Number.isInteger(index)||index!==localCurrentIndex||!localAudioUrl)
+  throw Error("The host audio file is not loaded. Reopen the song collection on this tablet.");
+ const cue=(info.cueMs||0)/1000;
+ if(playerAudio.readyState===0)throw Error("The selected file could not load. Try a supported MP3.");
+ playerAudio.currentTime=cue;
+ try{await playerAudio.play()}catch(e){throw Error("Your browser blocked audio. Tap the Play clue button again: "+String(e.message||e))}
+ localStatus("Playing clue from "+Math.round(cue)+" seconds into the song.");
+}
+
 function chosenSource(){return document.querySelector('input[name="music-source"]:checked')?.value||"demo"}
 function updateAudioChoice(){
  const mode=chosenSource();
  show("youtube-setup",mode==="youtube");
  show("demo-settings",mode==="demo");
- show("catalog-settings",mode==="catalog"||mode==="deezer");
+ show("catalog-settings",mode==="catalog"||mode==="deezer"||mode==="local");
+ show("local-settings",mode==="local");
+ if(mode==="local")updateLocalCounts();
+ setText("catalog-filter-note",mode==="local"?
+  "Choose genres and decades from the metadata of your local songs. Pop + 1970s only draws imported Pop songs tagged 1970–1979. Leave decades empty for all years. Tracks do not repeat until the matching collection is exhausted.":
+  "For example, Pop + 1970s draws only 1970–1979 pop tracks. Leave decades unchecked for all years. Tracks only repeat once the matching pool has been exhausted. Some YouTube videos may show ads or reject embedding.");
 }
 function parseYoutubeVideo(link){
  const u=new URL(String(link||"").trim());
@@ -316,7 +439,9 @@ function freq(note){
 }
 async function startAudio(info,ms) {
  if(!info?.source)throw Error("No recording assigned");
- if(info.source.startsWith("deezer:")){
+ if(info.source.startsWith("local:")){
+  await playLocalHint(info);
+ } else if(info.source.startsWith("deezer:")){
   if(!deezerPlayer||deezerPreparedRound!==room.code+":"+room.round+":"+info.source)
    throw Error("Deezer preview has not been prepared for this track.");
   await deezerPlayer.play(ms);
@@ -369,7 +494,7 @@ async function soundResumeSilently(){
  if(ctx.state!=="running")throw Error("Please tap Enable tablet audio");
 }
 function scheduleNext(delay){
- if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube"||room.mode==="catalog"||room.mode==="deezer")return;
+ if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube"||room.mode==="catalog"||room.mode==="deezer"||room.mode==="local")return;
  const round=room.round,step=room.step;
  nextTimer=setTimeout(async()=>{
   nextTimer=null;
@@ -386,6 +511,11 @@ async function startClip(replay=false){
  const generation=++clipGeneration,round=room.round,initialStep=room.step;
  try{
   setLoading(true);
+  if(room.mode==="local"){
+   const expectedIndex=Number(room.audio?.source?.slice(6));
+   if(!room.audio?.source?.startsWith("local:")||expectedIndex!==localCurrentIndex||!localAudioUrl)
+    throw Error("This song's original file is no longer available. The host must keep this music tab open.");
+  }
   if(room.mode==="deezer"){
    await ensureDeezerPreview();
    if(generation!==clipGeneration)return;
@@ -436,6 +566,7 @@ async function startClip(replay=false){
   clearAudio();message(e.message||"Playback failed");
   if(room?.mode==="youtube"||room?.mode==="catalog")youtubeStatus(e.message||"Playback failed. Choose another video.");
   if(room?.mode==="deezer")deezerStatus(e.message||"Deezer preview could not play; skip this track.");
+  if(room?.mode==="local")localStatus(e.message||"Unable to play this recording.");
   if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
  }
  finally{setLoading(false)}
@@ -481,8 +612,8 @@ function render(){
  $("room").dataset.phase=phase;
  show("host-fullscreen",host);
  if(host){
-  const source=room.mode==="deezer"?"DEEZER PREVIEW":room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
-  const filters=(room.mode==="catalog"||room.mode==="deezer")?[
+  const source=room.mode==="local"?"YOUR MUSIC COLLECTION":room.mode==="deezer"?"DEEZER PREVIEW":room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
+  const filters=(room.mode==="catalog"||room.mode==="deezer"||room.mode==="local")?[
    ...(room.genres||[]).filter(x=>x!=="demo").map(x=>({hiphop:"HIP-HOP",rnb:"R&B",dutch:"DUTCH",electronic:"ELECTRONIC"}[x]||x.toUpperCase())),
    ...(room.decades||[]).map(x=>x+"s")
   ]:[];
@@ -552,9 +683,14 @@ function render(){
   show("deezer-play-hint",host&&deezerMode&&phase==="paused"&&room.step<6);
   show("deezer-replay-hint",host&&deezerMode&&room.step>=0&&!room.firstAnswered&&
    (phase==="paused"||(phase==="playing"&&!startedClip)));
+  const localMode=room.mode==="local";
+  show("local-player",host&&localMode);
+  show("local-play-hint",host&&localMode&&phase==="paused"&&room.step<6);
+  show("local-replay-hint",host&&localMode&&room.step>=0&&!room.firstAnswered&&
+   (phase==="paused"||(phase==="playing"&&!startedClip)));
 
-  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode||deezerMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
-  show("enable-sound",host&&!youtubeMode&&!deezerMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
+  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode||deezerMode||localMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
+  show("enable-sound",host&&!youtubeMode&&!deezerMode&&!localMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
@@ -621,7 +757,7 @@ async function refresh(){
  finally{pollBusy=false}
 }
 function reset(){
- cancelNext();clearAudio();failedClue="";deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;room=null;access=null;safeStore();render();
+ cancelNext();clearAudio();discardLocalAudio();localTracks=[];localPlayed.clear();localSourceCache.clear();localReviewShown=60;renderLocalTracks();failedClue="";deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;room=null;access=null;safeStore();render();
 }
 async function create(){
  if(loading)return;
@@ -675,7 +811,7 @@ function chosenFilters(){
  };
 }
 async function saveGenres(){
- if(!room||!isHost()||room.phase!=="lobby"||!["catalog","deezer"].includes(chosenSource()))return;
+ if(!room||!isHost()||room.phase!=="lobby"||!["catalog","deezer","local"].includes(chosenSource()))return;
  const filters=chosenFilters();
  if(!filters.genres.length){message("Select at least one genre");return}
  genresDirty=true;
@@ -704,7 +840,7 @@ $("start").addEventListener("click",async()=>{
  try{
   clearTimeout(genresSaveTimer);
   const mode=chosenSource();
-  if(mode==="catalog"||mode==="deezer"){
+  if(mode==="catalog"||mode==="deezer"||mode==="local"){
    if(mode==="deezer"&&!deezerAuthorized)throw Error("Deezer is awaiting authorization.");
    const filters=chosenFilters();
    if(!filters.genres.length)throw Error("Select at least one genre");
@@ -713,10 +849,17 @@ $("start").addEventListener("click",async()=>{
    await call("settings",{genres:["demo"],decades:[]});
    await soundUnlock();
   }
-  const data=mode==="youtube"?youtubeRound("youtube"):{mode};
-  await call("start",data);
+  const data=mode==="youtube"?youtubeRound("youtube"):mode==="local"?await selectLocalRound():{mode};
+  const result=await call("start",data);
+  if(result&&mode==="local")localPlayed.add(data.fileIndex);
  }catch(e){message(e.message)}
 });
+$("local-play-hint").addEventListener("click",()=>startClip());
+$("local-replay-hint").addEventListener("click",()=>startClip(true));
+$("local-music-files").addEventListener("change",e=>importLocalFiles(e.target.files));
+$("local-music-folder").addEventListener("change",e=>importLocalFiles(e.target.files));
+$("local-music-search").addEventListener("input",()=>{localReviewShown=60;renderLocalTracks()});
+$("local-show-more").addEventListener("click",()=>{localReviewShown+=60;renderLocalTracks()});
 $("deezer-play-hint").addEventListener("click",()=>startClip());
 $("deezer-replay-hint").addEventListener("click",()=>startClip(true));
 $("youtube-play-hint").addEventListener("click",()=>startClip());
@@ -726,27 +869,34 @@ $("youtube-next-form").addEventListener("submit",async e=>{
  try{const data=youtubeRound("next-youtube");await call("next",data)}
  catch(e){message(e.message)}
 });
-$("next-round").addEventListener("click",async()=>{try{await call("next")}catch{}});
+$("next-round").addEventListener("click",async()=>{
+ try{
+  if(room?.mode==="local"){
+   const data=await selectLocalRound(),result=await call("next",data);
+   if(result)localPlayed.add(data.fileIndex);
+  }else await call("next");
+ }catch(e){message(e.message)}
+});
 $("continue-hints").addEventListener("click",async()=>{try{await call("resume")}catch{}});
 $("skip-round").addEventListener("click",async()=>{try{await call("skip")}catch{}});
 $("buzz").addEventListener("click",requestBuzz);
 $("steal").addEventListener("click",async()=>{try{await call("steal")}catch{}});
 $("pass").addEventListener("click",async()=>{try{await call("forfeit")}catch{}});
 $("answer-form").addEventListener("submit",submitGuess);
-$("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
+$("genre-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);if(chosenSource()==="local")updateLocalCounts()});
 $("decade-options").addEventListener("change",()=>{clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250)});
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
  if(document.hidden&&isHost()){
   cancelNext();
-  if(room?.mode==="youtube"||room?.mode==="catalog"||room?.mode==="deezer"){
+  if(room?.mode==="youtube"||room?.mode==="catalog"||room?.mode==="deezer"||room?.mode==="local"){
    clearAudio();
    if(room?.phase==="playing")rpc("pause").then(b=>applyState(b.state)).catch(()=>{});
   }
  }
  if(!document.hidden&&isHost()&&room?.phase==="paused")scheduleNext(500);
 });
-window.addEventListener("pagehide",()=>{clearAudio();cancelNext()});
+window.addEventListener("pagehide",()=>{clearAudio();cancelNext();discardLocalAudio()});
 const fromUrl=new URLSearchParams(location.search).get("room");
 if(fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl))$("join-code").value=fromUrl.toUpperCase();
 try{
