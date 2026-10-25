@@ -1,0 +1,34 @@
+name: C720P Camera Settings Stage V24
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-camera-settings-stage-v24.py'
+      - 'ops/c720p/s9-native-security/test-camera-settings-stage-v24.py'
+      - '.github/workflows/c720p-camera-settings-stage-v24-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-camera-settings-stage-v24.py'
+      - 'ops/c720p/s9-native-security/test-camera-settings-stage-v24.py'
+      - '.github/workflows/c720p-camera-settings-stage-v24-ci.yml'
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate mounting the controls in the visible security stage
+        run: |
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-camera-settings-stage-v24.py
+          python3 ops/c720p/s9-native-security/test-camera-settings-stage-v24.py
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          p=Path('ops/c720p/s9-native-security/deploy-camera-settings-stage-v24.py')
+          sp=importlib.util.spec_from_file_location('v24',p)
+          m=importlib.util.module_from_spec(sp);sp.loader.exec_module(m)
+          Path('/tmp/c720p-stage-v24.js').write_text(m.SCRIPT.split('<script id="security-camera-settings-stage-v24">')[1].split('</script>')[0])
+          PY
+          node --check /tmp/c720p-stage-v24.js
