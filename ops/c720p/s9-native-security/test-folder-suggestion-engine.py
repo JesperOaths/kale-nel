@@ -248,5 +248,72 @@ class FolderSuggestionsTest(unittest.TestCase):
         self.assertNotIn("sd:historic.mp4", grouped)
         self.assertNotIn("sd:rejected.mp4", grouped)
 
+
+    def test_vector_only_onnx_appearance_suggestions_ignore_color(self):
+        confirmed = feature("A-reference", visual=axis(0), aligned=False, hsv=None)
+        unknown = feature("unreviewed", visual=axis(0), aligned=False, hsv=None)
+        different = feature("B-reference", visual=axis(1), aligned=False, hsv=None)
+        rows = [decision(confirmed, "Group_A"), decision(different, "Group_B")]
+        proposed = eng.rank_folders([confirmed, unknown, different],
+                                    folders("Group_A", "Group_B"), rows,
+                                    scoring_mode=eng.VECTOR_ONLY, match_threshold=.68)
+        self.assertEqual(proposed["scoring_mode"], eng.VECTOR_ONLY)
+        self.assertEqual(len(proposed["matches"]), 1)
+        candidate = proposed["matches"][0]
+        self.assertEqual(candidate["folder_id"], "Group_A")
+        self.assertEqual(candidate["state"], "pending_review")
+        self.assertEqual(candidate["method"], eng.VECTOR_ONLY)
+        self.assertAlmostEqual(candidate["score"], 1.)
+        self.assertIsNone(candidate["color_score"])
+        self.assertIsNone(candidate["upper_crop_score"])
+        self.assertFalse(candidate["automatically_assigned"])
+        self.assertEqual(proposed["automatic_assignments"], 0)
+        self.assertEqual(proposed["approved_reference_counts"]["Group_A"], 1)
+
+    def test_vector_only_cold_start_and_denial_exclude_reference(self):
+        ref = feature("reference", visual=axis(0), aligned=False, hsv=None)
+        candidate = feature("candidate", visual=axis(0), aligned=False, hsv=None)
+        base = eng.rank_folders([ref,candidate],folders("Group_A"),[],
+                                scoring_mode=eng.VECTOR_ONLY)
+        self.assertEqual(base["matches"], [])
+        self.assertTrue(base["provisional_clusters"])
+        denied = eng.rank_folders([ref,candidate],folders("Group_A"),
+                                  [decision(ref, "Group_A", status="rejected")],
+                                  scoring_mode=eng.VECTOR_ONLY)
+        self.assertEqual(denied["approved_reference_counts"]["Group_A"], 0)
+        self.assertEqual(denied["matches"], [])
+        approved = eng.rank_folders([ref,candidate],folders("Group_A"),
+                                    [decision(ref, "Group_A")],
+                                    scoring_mode=eng.VECTOR_ONLY)
+        self.assertEqual(len(approved["matches"]), 1)
+        self.assertEqual(approved["approved_reference_counts"]["Group_A"], 1)
+
+    def test_vector_only_model_mismatch_and_config_validation(self):
+        ref = feature("reference", visual=axis(0), model="model-A", hsv=None)
+        cand = feature("candidate", visual=axis(0), model="model-B", hsv=None)
+        result = eng.rank_folders([ref,cand],folders("Group_A"),
+                                  [decision(ref,"Group_A")],
+                                  scoring_mode=eng.VECTOR_ONLY)
+        self.assertEqual(result["matches"], [])
+        with self.assertRaisesRegex(ValueError, "Unsupported"):
+            eng.rank_folders([ref,cand],folders("Group_A"),
+                             [decision(ref,"Group_A")],scoring_mode="invalid")
+
+    def test_vector_only_centroid_normalization_with_negative_feedback(self):
+        ref = feature("A", visual=axis(0), hsv=None)
+        second = feature("B", visual=axis(1), hsv=None)
+        test = feature("candidate", visual=[1.,1.]+[0.]*510, hsv=None)
+        negative = feature("denied-same-vector",visual=[1.,1.]+[0.]*510,hsv=None)
+        base = eng.rank_folders([ref,second,test],folders("Group_A"),
+                                [decision(ref,"Group_A"), decision(second,"Group_A")],
+                                scoring_mode=eng.VECTOR_ONLY,match_threshold=.68)
+        self.assertEqual(len(base["matches"]),1)
+        self.assertAlmostEqual(base["matches"][0]["centroid_score"],1.0)
+        with_negative = eng.rank_folders([ref,second,test,negative],folders("Group_A"),
+                                [decision(ref,"Group_A"),decision(second,"Group_A"),
+                                 decision(negative,"Group_A","rejected")],
+                                scoring_mode=eng.VECTOR_ONLY,match_threshold=.68)
+        self.assertEqual(with_negative["matches"],[])
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

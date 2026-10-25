@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 
 from folder_suggestion_engine import (
     ClipFeatures, ReviewJournal, rank_folders, bound_decision,
+    VECTOR_ONLY, MATCH_THRESHOLD, SCORING_MODES,
 )
 
 GET_ROUTE = "/new/api/folder-suggestions"
@@ -32,6 +33,21 @@ FOLDER = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 SHA = re.compile(r"^[a-f0-9]{64}$")
 GUARD = threading.RLock()
 
+def ranking_config(data: dict) -> tuple[str, float]:
+    """Trusted server/provider settings only; never accept a client threshold.
+
+    Changing either parameter must also advance the provider revision, so a
+    previously opened original cannot authorize a differently ranked proposal.
+    """
+    method = data.get("scoring_mode", "hybrid")
+    if method not in SCORING_MODES:
+        raise ValueError("Unapproved appearance ranking method")
+    raw = data.get("embedding_similarity_threshold",
+                   0.68 if method == VECTOR_ONLY else MATCH_THRESHOLD)
+    if type(raw) not in (int, float) or not 0.50 <= raw <= 0.99:
+        raise ValueError("Similarity threshold must be 0.50..0.99")
+    return method, float(raw)
+
 
 def snapshot(provider, journal: ReviewJournal) -> dict:
     """Provider must source immutable, independently verified media+features."""
@@ -44,10 +60,12 @@ def snapshot(provider, journal: ReviewJournal) -> dict:
             or not isinstance(data.get("revision"), str)
             or not data["revision"]):
         raise ValueError("No verified original/feature snapshot")
+    mode, threshold = ranking_config(data)
     state = journal.read()
     # Only decisions written by the media-bound journal become references.
     result = rank_folders(data["clips"], data["folders"], state["decisions"],
-                          nonreference_reviewed=data["historic_reviewed_keys"])
+                          nonreference_reviewed=data["historic_reviewed_keys"],
+                          match_threshold=threshold, scoring_mode=mode)
     result["journal_revision"] = state["revision"]
     result["feature_snapshot_revision"] = data.get("revision")
     result["verified_media_evidence"] = True
@@ -106,9 +124,11 @@ def review(payload, provider, journal: ReviewJournal,
                 return 409, {"ok": False, "error": "source_or_original_changed"}
             if journal.read()["revision"] != payload["journal_revision"]:
                 return 409, {"ok": False, "error": "review_revision_changed"}
+            mode, threshold = ranking_config(data)
             ranking = rank_folders(data["clips"], data["folders"],
                                    journal.read()["decisions"],
-                                   nonreference_reviewed=data["historic_reviewed_keys"])
+                                   nonreference_reviewed=data["historic_reviewed_keys"],
+                                   match_threshold=threshold, scoring_mode=mode)
             nominated = any(
                 row["source"] == source and row["clip_id"] == name
                 and row["folder_id"] == folder and row["state"] == "pending_review"
@@ -139,6 +159,7 @@ def review(payload, provider, journal: ReviewJournal,
                     fresh.get("historic_review_index_verified") is not True or
                     fresh.get("historic_reviewed_keys") != data["historic_reviewed_keys"] or
                     fresh.get("revision") != data["revision"] or
+                    ranking_config(fresh) != (mode, threshold) or
                     not any(raw.get("source") == source and raw.get("clip_id") == name
                             and raw.get("media_sha256") == matched.media_sha256
                             and raw.get("media_revision") == matched.media_revision
