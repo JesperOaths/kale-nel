@@ -1,159 +1,202 @@
 #!/usr/bin/env python3
-"""Task9 V373: bounded phone-app_process peak observer; *library only*.
+"""PROPOSED ONLY — one-frame S9 worker peak monitor; no independent scheduling.
 
-This is NOT a qualification layer, another timer or a way to start inference.
-The existing V304 worker must already hold its shared locks and processing lease,
-pass its unchanged camera_guard(), and enroll the pinned V372 release switch.
-It samples only the unique verified phone worker PID while that one frame runs.
-No process is ever terminated unless its PID and cmdline still match the exact
-enrolled standalone process, and the Camera2 recorder PID differs.
+The caller owns the existing V304 queue lease and shared locks, passes the
+unchanged camera_guard, and binds the enrolled source/model/task arguments.
+No admission floors or existing camera/host guards are changed by this module.
 """
 import re
 import subprocess
 import time
 
-POLL_SECONDS=3
-MAX_FRAME_SECONDS=65
-MAX_SAMPLES=24
-PHONE_CLASS="nl.kalenel.s9offline.S9Original4KGapAuditV370"
-PHONE_JAR="/data/local/tmp/s9_worker/s9_gap_v371.dex.jar"
-PID_RX=re.compile(r"[0-9]{2,7}\Z")
-MEM_RX=re.compile(r"^MemAvailable:\s+([0-9]+)\s+kB\s*$",re.M)
-RSS_RX=re.compile(r"^(VmRSS|VmHWM):\s+([0-9]+)\s+kB\s*$",re.M)
+PHONE_CLASS = 'nl.kalenel.s9offline.S9Original4KGapAuditV370'
+PID_RE = re.compile(r'[0-9]{2,7}\Z')
+HEX64 = re.compile(r'[a-f0-9]{64}\Z')
+SAMPLE_SECONDS = 3
+MAX_FRAME_SECONDS = 65
+MAX_SAMPLES = 24
 
-class Unsafe(RuntimeError):
-    pass
+class Unqualified(RuntimeError):
+    """Frame and all its partial evidence must be discarded."""
 
-def phone_pid(ps, *, camera_pid):
-    """Fail closed if two workers, indistinguishable wrappers or malformed ps."""
-    if not isinstance(ps,str) or len(ps)>65536:
-        raise Unsafe("unbounded_phone_ps")
-    lines=ps.splitlines()
-    if not lines or "PID" not in lines[0] or "ARGS" not in lines[0]:
-        raise Unsafe("phone_ps_columns_unavailable")
-    matches=[]
+def required_args(clip, sha, size, revision, offset):
+    if not (re.fullmatch(r'motion_[0-9]{13}\.mp4', clip)
+            and HEX64.fullmatch(sha) and HEX64.fullmatch(revision)
+            and type(size) is int and 100000 < size < 800000000
+            and type(offset) is int and 0 <= offset < 300000):
+        raise Unqualified('untrusted_original_task_arguments')
+    return (PHONE_CLASS, '--probe-one-frame', clip, sha, str(size),
+            revision, str(offset))
+
+def parse_start_ticks(stat, pid):
+    """Linux /proc/PID/stat field 22, handling ')' in comm correctly."""
+    if not isinstance(stat, str) or len(stat) > 4096 or not PID_RE.fullmatch(str(pid)):
+        raise Unqualified('untrusted_process_stat')
+    end = stat.rfind(')')
+    if end < 2 or stat[:stat.find('(')].strip() != str(pid):
+        raise Unqualified('process_stat_pid_mismatch')
+    # Remaining fields begin with number 3 (state); 22 => offset 19.
+    fields = stat[end + 1:].strip().split()
+    if len(fields) < 20 or not fields[19].isdigit():
+        raise Unqualified('process_starttime_missing')
+    ticks = int(fields[19])
+    if ticks <= 0:
+        raise Unqualified('process_starttime_invalid')
+    return ticks
+
+def process_matches(argv, expected):
+    """Match real argv; CLASSPATH is an environment variable, not argv."""
+    if not isinstance(argv, str) or len(argv) > 4096:
+        return False
+    words = argv.replace('\x00', ' ').split()
+    if not words or words[0].rsplit('/',1)[-1] not in (
+            'app_process','app_process32','app_process64'):
+        return False
+    return tuple(words[-len(expected):]) == expected
+
+def matching_pid(ps, expected, recorder_pid):
+    if not isinstance(ps, str) or len(ps) > 65536:
+        raise Unqualified('unbounded_phone_process_list')
+    lines = ps.splitlines()
+    if not lines or 'PID' not in lines[0] or 'ARGS' not in lines[0]:
+        raise Unqualified('phone_process_list_untrusted')
+    matches = []
     for line in lines[1:]:
-        terms=line.strip().split(maxsplit=1)
-        if len(terms)!=2 or not PID_RX.fullmatch(terms[0]):continue
-        args=terms[1]
-        # CLASSPATH is an environment variable, not app_process argv.
-        # The jar SHA is checked separately by the enrolled V372 runner.
-        if ("app_process" in args and PHONE_CLASS in args
-                and "--probe-one-frame" in args):
-            matches.append(terms[0])
-    if len(matches)>1:
-        raise Unsafe("multiple_phone_workers")
-    if not matches:return None
-    pid=matches[0]
-    if pid==str(camera_pid):
-        raise Unsafe("phone_worker_pid_matches_recorder")
-    return pid
+        cols = line.strip().split(maxsplit=1)
+        if len(cols) != 2 or not PID_RE.fullmatch(cols[0]):
+            continue
+        # Never allow an unrecognized standalone instance to be silently
+        # ignored; it might belong to a prior timeout or a different task.
+        if PHONE_CLASS in cols[1] and 'app_process' in cols[1]:
+            if not process_matches(cols[1], expected):
+                raise Unqualified('different_phone_worker_or_stale_task_running')
+            matches.append(cols[0])
+    if len(matches) > 1:
+        raise Unqualified('multiple_phone_workers')
+    if matches and matches[0] == str(recorder_pid):
+        raise Unqualified('phone_pid_is_camera2')
+    return matches[0] if matches else None
 
-def process_memory(status, meminfo):
-    """Measured Linux high-water mark, not a hard allocation limit."""
-    if not isinstance(status,str) or not isinstance(meminfo,str):
-        raise Unsafe("phone_process_telemetry_invalid")
-    fields={}
-    for key,num in RSS_RX.findall(status):
-        fields[key]=int(num)
-    available=MEM_RX.search(meminfo)
-    if not (available and 0<fields.get("VmRSS",0)<=fields.get("VmHWM",0)
-            and 0<int(available.group(1))<12_000_000):
-        raise Unsafe("phone_process_telemetry_missing")
-    return {"rss_kib":fields["VmRSS"],"peak_rss_kib":fields["VmHWM"],
-            "mem_available_kib":int(available.group(1))}
+def extract_memory(status, meminfo):
+    fields = dict((k, int(v)) for k,v in re.findall(
+        r'^(VmRSS|VmHWM):\s+([0-9]+)\s+kB$', status, flags=re.M))
+    available = re.search(r'^MemAvailable:\s+([0-9]+)\s+kB$', meminfo, re.M)
+    if not available or not (0 < fields.get('VmRSS', 0)
+            <= fields.get('VmHWM', 0) < 8 * 1024 * 1024):
+        raise Unqualified('unavailable_native_peak_metrics')
+    return (fields['VmRSS'], fields['VmHWM'], int(available.group(1)))
 
-def supervise(*, command, recorder_pid, phone_mem_floor_kib,
-              camera_guard, read_phone, cleanup_remote, start=subprocess.Popen,
-              clock=time.monotonic):
-    """Run exactly one already-authorized phone frame, with bounded monitor.
+def identity(snapshot, expected, recorder_pid):
+    """Caller must read stat and cmdline on either side of its /proc read."""
+    pid = matching_pid(snapshot['ps'], expected, recorder_pid)
+    if pid is None:
+        return None
+    if snapshot.get('pid') != pid or not process_matches(snapshot.get('argv'), expected):
+        raise Unqualified('android_process_identity_unverified')
+    before = parse_start_ticks(snapshot.get('stat_before', ''), pid)
+    after = parse_start_ticks(snapshot.get('stat_after', ''), pid)
+    if before != after:
+        raise Unqualified('android_pid_reuse_detected')
+    return (pid, before, expected)
 
-    read_phone() must return {ps,status,meminfo,cmdline}: a SINGLE bounded
-    read-only telemetry snapshot from established ADB. No extra worker.
-    Returning None status during startup is permitted for one 3s cycle.
-    camera_guard() is the unmodified installed V304 full guard (900MiB hub,
-    <=34.5C phone, 4K watch/buffer/drops/exclusions). A failed guard aborts.
-    On abort, close only our HOST adb client; the caller's approved cleanup
-    routine must verify/stop any orphaned phone process before a retry.
+def supervise(*, argv, expected, recorder_pid, startup_floor_kib,
+              protected_runtime_reserve_kib, frame_budget_seconds,
+              camera_guard, snapshot, cleanup_remote,
+              start=subprocess.Popen, monotonic=time.monotonic):
+    """One authorized frame; kernel VmHWM provides a sampled resident peak.
+
+    The 1536MiB startup floor is independent of the runtime reserve. Neither
+    is a hard allocation cap. A too-fast worker without VmHWM is unqualified.
+    cleanup_remote(identity, expected, aborted) is called on BOTH success and
+    failure and must prove remote worker absence or fail closed, blocking
+    retry. Local ADB exit alone never establishes Android worker exit.
     """
-    if not isinstance(command,list) or not command or command[:3]!=[
-        "adb","-s","192.168.178.250:5555"]:
-        raise Unsafe("command_not_pinned_adb")
-    if type(phone_mem_floor_kib)is not int or phone_mem_floor_kib<1536*1024:
-        raise Unsafe("unapproved_phone_ram_floor")
-    if not PID_RX.fullmatch(str(recorder_pid)):
-        raise Unsafe("recorder_pid_invalid")
+    if (not isinstance(argv, list) or argv[:3] !=
+            ['adb','-s','192.168.178.250:5555'] or
+            type(startup_floor_kib) is not int or
+            startup_floor_kib < 1536 * 1024 or
+            type(protected_runtime_reserve_kib) is not int or
+            protected_runtime_reserve_kib < 512 * 1024 or
+            type(frame_budget_seconds) not in (int, float) or
+            not 0 < frame_budget_seconds <= MAX_FRAME_SECONDS):
+        raise Unqualified('unapproved_worker_launch_or_ram_contract')
+    if not PID_RE.fullmatch(str(recorder_pid)) or len(expected) != 7:
+        raise Unqualified('invalid_recorder_or_expected_task')
+    begun = monotonic()
+    deadline_seconds = min(MAX_FRAME_SECONDS, frame_budget_seconds)
+    deadline = begun + deadline_seconds
+    # The caller's budget includes admission and process-launch overhead.
+    # Reaching the guard cannot reset an already elapsed coordinator budget.
     camera_guard()
-    proc=start(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
-    began=clock()
-    report={"peak_rss_kib":0,"min_phone_available_kib":None,
-            "samples":0,"worker_pid":None,"guard_checks":1,
-            "recorder_pid":str(recorder_pid),
-            "monitor_type":"read_only_peak_sampling_not_allocation_cap"}
-    abort_reason=None
+    if monotonic() >= deadline:
+        raise Unqualified('frame_deadline_reached_before_launch')
+    proc = None
+    found = None
+    report = {'sample_count':0, 'worker_vm_hwm_peak_kib':0,
+              'minimum_phone_available_kib':None, 'protected_runtime_reserve_kib':
+              protected_runtime_reserve_kib, 'startup_floor_kib':startup_floor_kib,
+              'peak_is_observed_not_hard_cap':True}
+    success = False
     try:
-        while True:
-            elapsed=clock()-began
-            if elapsed>=MAX_FRAME_SECONDS:
-                abort_reason="frame_walltime_exceeded"
-                break
-            if report["samples"]>=MAX_SAMPLES:
-                abort_reason="telemetry_sample_budget_exhausted"
-                break
+        proc = start(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if monotonic() >= deadline:
+            raise Unqualified('frame_deadline_reached_during_launch')
+        for _ in range(MAX_SAMPLES):
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                raise Unqualified('frame_deadline_reached')
             try:
-                out,err=proc.communicate(timeout=min(POLL_SECONDS,MAX_FRAME_SECONDS-elapsed))
-                if len(out)>14000 or len(err)>14000:
-                    raise Unsafe("unbounded_phone_worker_output")
-                if proc.returncode!=0:
-                    raise Unsafe("phone_worker_nonzero_exit")
-                if report["samples"]==0:
-                    raise Unsafe("no_peak_memory_telemetry_obtained")
-                camera_guard()
-                report["guard_checks"]+=1
-                return out.strip(),report
+                out, err = proc.communicate(timeout=min(SAMPLE_SECONDS, remaining))
             except subprocess.TimeoutExpired:
-                pass
-            camera_guard()
-            report["guard_checks"]+=1
-            sample=read_phone()
-            pid=phone_pid(sample["ps"],camera_pid=recorder_pid)
-            if pid is None:
-                if clock()-began>2*POLL_SECONDS:
-                    raise Unsafe("phone_worker_missing_during_run")
+                out = err = None
+            camera_guard()  # existing hub >=900, phone <=34.5, 4K, exclusions
+            # Do not accept after a slow ADB completion or a slow final guard.
+            if monotonic() >= deadline:
+                raise Unqualified('frame_deadline_reached_after_guard')
+            if out is not None:
+                if (proc.returncode != 0 or len(out) > 14000 or len(err) > 14000
+                        or report['sample_count'] == 0):
+                    raise Unqualified('phone_exit_or_peak_telemetry_missing')
+                # Even if ADB host exited, remote worker may still be alive.
+                cleanup_remote(found, expected, False)
+                if monotonic() >= deadline:
+                    raise Unqualified('frame_deadline_reached_during_cleanup')
+                success = True
+                return out.strip(), report
+            data = snapshot(expected)  # bounded read-only adb, /proc reads
+            if monotonic() >= deadline:
+                raise Unqualified('frame_deadline_reached_during_telemetry')
+            current = identity(data, expected, recorder_pid)
+            if current is None:
+                # A too-fast launch that cannot produce sampled VmHWM does not
+                # qualify, even if a receipt appears later.
                 continue
-            # Read identity twice in caller when sampling /proc, including
-            # process cmdline; reject a recycled PID or a wrapper shell.
-            cmdline=sample.get("cmdline","")
-            if PHONE_CLASS not in cmdline or "--probe-one-frame" not in cmdline:
-                raise Unsafe("worker_cmdline_not_pinned")
-            if report["worker_pid"] not in (None,pid):
-                raise Unsafe("phone_worker_pid_changed")
-            report["worker_pid"]=pid
-            memory=process_memory(sample["status"],sample["meminfo"])
-            report["samples"]+=1
-            report["peak_rss_kib"]=max(report["peak_rss_kib"],
-                                      memory["peak_rss_kib"])
-            nowavail=memory["mem_available_kib"]
-            prev=report["min_phone_available_kib"]
-            report["min_phone_available_kib"]=min(prev,nowavail) if prev is not None else nowavail
-            if nowavail<phone_mem_floor_kib:
-                abort_reason="phone_available_memory_below_enrolled_floor"
-                break
-        raise Unsafe(abort_reason or "unverified_frame_abort")
+            if found is not None and current != found:
+                raise Unqualified('pid_reused_or_worker_restarted')
+            found = current
+            rss, hwm, available = extract_memory(data['status'],data['meminfo'])
+            report['sample_count'] += 1
+            report['worker_vm_hwm_peak_kib'] = max(report['worker_vm_hwm_peak_kib'],hwm)
+            old = report['minimum_phone_available_kib']
+            report['minimum_phone_available_kib'] = min(old, available) if old is not None else available
+            if available < protected_runtime_reserve_kib:
+                raise Unqualified('camera_system_runtime_reserve_breached')
+        raise Unqualified('phone_peak_monitor_sample_budget_exhausted')
     finally:
-        if proc.poll() is None:
-            # Host client termination is NOT phone process cleanup. The
-            # caller must verify a bounded, PID-qualified remote teardown
-            # before any repeat; uncertainty remains an admission failure.
-            proc.terminate()
-            try:proc.communicate(timeout=2)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                try:proc.communicate(timeout=2)
-                except subprocess.TimeoutExpired:pass
-            # Remote termination is mandatory, never assume adb host exit
-            # implies the Android process exited. The callback must
-            # revalidate PID/JAR/class and stop ONLY the pinned worker.
-            if cleanup_remote is None:
-                raise Unsafe("remote_phone_cleanup_not_available")
-            cleanup_remote(report["worker_pid"],str(recorder_pid))
+        if not success:
+            # NEVER infer that host ADB exit equals phone exit. Controller must
+            # fail the entire recording on any unverified remote cleanup.
+            # Attempt remote absence verification even if local termination,
+            # kill or the final communicate itself raises or times out.
+            try:
+                if proc is not None and proc.poll() is None:
+                    proc.terminate()
+                    try:
+                        proc.communicate(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.communicate(timeout=2)
+            except (OSError,subprocess.SubprocessError):
+                raise Unqualified('host_teardown_cleanup_unverified') from None
+            finally:
+                cleanup_remote(found, expected, True)
