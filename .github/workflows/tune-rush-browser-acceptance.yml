@@ -13,10 +13,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-# These suites both open live room sessions in the shared Supabase backend.
-# Serialize across workflows to avoid CI-only concurrent load spikes.
+# Do not cancel separate required workflows that happen to share the same PR.
+# Each suite serializes only its own runs.
 concurrency:
-  group: tune-rush-live-${{ github.event.pull_request.number || github.ref_name }}
+  group: tune-rush-browser-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: false
 jobs:
   real-browser:
@@ -39,6 +39,8 @@ jobs:
         run: node scripts/test-tune-rush-local-tracks.mjs
       - name: Verify replay SQL in isolated PostgreSQL
         run: node scripts/test-tune-rush-replay-db.mjs
+      - name: Allow the short network-smoke job to finish first
+        run: sleep 12
       - name: Run six-browser acceptance against actual PR page and live game database
         run: |
           set -euo pipefail
