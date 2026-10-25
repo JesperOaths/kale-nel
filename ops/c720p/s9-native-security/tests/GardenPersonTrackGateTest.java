@@ -140,6 +140,48 @@ public final class GardenPersonTrackGateTest{
   eq(gate.offer(35000,34950,.64f,moving,2),
     GardenPersonTrackGate.Decision.FIRST,
     "missing geometry cannot complete a false pair");
+  // Stationary presence may keep an ALREADY admitted clip alive, but can
+  // never start one from two otherwise motionless model predictions.
+  gate.reset();
+  check(!gate.confirmStationaryPresence(90000,89950,.94f,walker),
+    "stationary high-confidence person without earlier motion cannot start");
+  eq(gate.offer(91000,90950,.74f,walker,2),GardenPersonTrackGate.Decision.FIRST,
+    "moving person's first admission frame");
+  eq(gate.offer(92000,91950,.76f,moving,2),GardenPersonTrackGate.Decision.CONFIRMED,
+    "moving person admitted before stationary tail");
+  eq(gate.offer(94500,94450,.87f,moving,0),GardenPersonTrackGate.Decision.FIRST,
+    "first no-motion recording check still cannot start another event");
+  check(!gate.confirmStationaryPresence(94500,94450,.87f,moving),
+    "one stationary image insufficient even after admission");
+  check(!gate.confirmStationaryPresence(95000,94450,.91f,moving),
+    "reusing identical JPEG cannot refresh tail");
+  eq(gate.offer(97000,96950,.89f,moving,0),GardenPersonTrackGate.Decision.NO_LOCAL_MOTION,
+    "ordinary initial-admission rule remains strict for motionless objects");
+  check(gate.confirmStationaryPresence(97000,96950,.89f,moving),
+    "two fresh high-confidence images keep known visitor in view");
+  check(gate.stationaryHolds==1,"stationary continuation counted exactly once");
+  check(!gate.rejectCompetingTransport(new float[][]{other}),
+    "background car cannot erase already verified stationary person");
+  check(!gate.confirmStationaryPresence(99000,98950,.90f,other),
+    "different high-confidence object must not take over confirmed person");
+  check(!gate.confirmStationaryPresence(100000,99950,.55f,moving),
+    "weak continuation does not refresh person");
+  check(!gate.confirmStationaryPresence(100500,100450,.90f,moving),
+    "first fresh observation after weak/different proposal not sufficient");
+  check(gate.rejectCompetingTransport(new float[][]{moving}),
+    "same-region high-confidence vehicle clears previously confirmed visitor");
+  check(!gate.confirmStationaryPresence(103000,102950,.92f,moving),
+    "car contradiction invalidates stationary hold even for strong person model");
+  gate.reset();
+  eq(gate.offer(105000,104950,.74f,walker,2),GardenPersonTrackGate.Decision.FIRST,
+    "new visitor after reset");
+  eq(gate.offer(106000,105950,.74f,moving,2),GardenPersonTrackGate.Decision.CONFIRMED,
+    "valid moving visitor");
+  check(!gate.confirmStationaryPresence(115001,115000,.90f,moving),
+    "stale verified pedestrian beyond nine seconds cannot extend recording");
+  gate.reset();
+  check(!gate.confirmStationaryPresence(117000,116950,.92f,moving),
+    "full reset never preserves a previous approved visitor");
   check(!GardenPersonTrackGate.valid(new float[]{.2f,Float.NaN,.7f,.9f}),"NaN never valid");
   System.out.println("S9_SPATIOTEMPORAL_PEDESTRIAN_V9_PASS "+assertions);
  }
