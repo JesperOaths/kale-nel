@@ -12,6 +12,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# These suites both open live room sessions in the shared Supabase backend.
+# Serialize across workflows to avoid CI-only concurrent load spikes.
+concurrency:
+  group: tune-rush-live-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: false
 jobs:
   smoke:
     runs-on: ubuntu-latest
