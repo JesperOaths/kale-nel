@@ -31,6 +31,13 @@ class FollowupTests(unittest.TestCase):
    self.assertIn(required,body)
   self.assertLess(body.index("GardenPersonTrackGate.Decision.CONFIRMED"),body.index("startRecording()"))
   self.assertIn("personTrackGate.rejectCompetingTransport(rejectedTransportBoxes)",body)
+  self.assertIn('personTrackGate.confirmStationaryPresence(now,jpegAt,score,personBox)',body)
+  self.assertIn('"recording".equals(mode)&&',body)
+  self.assertIn('if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED&&!stationaryPresent)return;',body)
+  self.assertLess(body.index('if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED&&!stationaryPresent)return;'),
+                  body.index('startRecording()'))
+  self.assertIn('d.put("garden_person_stationary_tail_refreshes",personTrackGate.stationaryHolds)',S)
+  self.assertIn('d.put("garden_person_stationary_tail_rejected",personTrackGate.stationaryHoldRejected)',S)
   self.assertIn("garden_person_transport_track_resets",S)
   self.assertIn("garden_unrelated_transport_vetoes_ignored",S)
   self.assertIn("lastGardenVetoedPersonBoxes.clear();",M)
