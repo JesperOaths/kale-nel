@@ -1,0 +1,519 @@
+{
+  "description": "Independent editorial song/title/year candidates for future official YouTube Data API lookup. No downloaded YouTube media.",
+  "candidates": [
+    {
+      "title": "Hey Jude",
+      "artist": "The Beatles",
+      "year": 1968,
+      "genres": [
+        "pop",
+        "rock"
+      ]
+    },
+    {
+      "title": "I Can't Get No Satisfaction",
+      "artist": "The Rolling Stones",
+      "year": 1965,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "You Can't Hurry Love",
+      "artist": "The Supremes",
+      "year": 1966,
+      "genres": [
+        "pop",
+        "rnb"
+      ]
+    },
+    {
+      "title": "Can't Help Falling in Love",
+      "artist": "Elvis Presley",
+      "year": 1961,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "Light My Fire",
+      "artist": "The Doors",
+      "year": 1967,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "Waterloo",
+      "artist": "ABBA",
+      "year": 1974,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "Hot Stuff",
+      "artist": "Donna Summer",
+      "year": 1979,
+      "genres": [
+        "disco",
+        "dance"
+      ]
+    },
+    {
+      "title": "Crocodile Rock",
+      "artist": "Elton John",
+      "year": 1972,
+      "genres": [
+        "pop",
+        "rock"
+      ]
+    },
+    {
+      "title": "I Want You Back",
+      "artist": "The Jackson 5",
+      "year": 1969,
+      "genres": [
+        "pop",
+        "rnb"
+      ]
+    },
+    {
+      "title": "September",
+      "artist": "Earth, Wind & Fire",
+      "year": 1978,
+      "genres": [
+        "disco",
+        "pop"
+      ]
+    },
+    {
+      "title": "Go Your Own Way",
+      "artist": "Fleetwood Mac",
+      "year": 1977,
+      "genres": [
+        "rock",
+        "pop"
+      ]
+    },
+    {
+      "title": "Heroes",
+      "artist": "David Bowie",
+      "year": 1977,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "We Will Rock You",
+      "artist": "Queen",
+      "year": 1977,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "Highway to Hell",
+      "artist": "AC/DC",
+      "year": 1979,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "Girls Just Want to Have Fun",
+      "artist": "Cyndi Lauper",
+      "year": 1983,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "Careless Whisper",
+      "artist": "George Michael",
+      "year": 1984,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "Purple Rain",
+      "artist": "Prince",
+      "year": 1984,
+      "genres": [
+        "pop",
+        "rock"
+      ]
+    },
+    {
+      "title": "Smoorverliefd",
+      "artist": "Doe Maar",
+      "year": 1981,
+      "genres": [
+        "dutch",
+        "pop"
+      ]
+    },
+    {
+      "title": "Dromen Zijn Bedrog",
+      "artist": "Marco Borsato",
+      "year": 1994,
+      "genres": [
+        "dutch",
+        "pop"
+      ]
+    },
+    {
+      "title": "Enjoy the Silence",
+      "artist": "Depeche Mode",
+      "year": 1990,
+      "genres": [
+        "electronic",
+        "pop"
+      ]
+    },
+    {
+      "title": "Firestarter",
+      "artist": "The Prodigy",
+      "year": 1996,
+      "genres": [
+        "electronic"
+      ]
+    },
+    {
+      "title": "Believe",
+      "artist": "Cher",
+      "year": 1998,
+      "genres": [
+        "pop",
+        "dance"
+      ]
+    },
+    {
+      "title": "November Rain",
+      "artist": "Guns N' Roses",
+      "year": 1991,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "Everlong",
+      "artist": "Foo Fighters",
+      "year": 1997,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "California Love",
+      "artist": "2Pac",
+      "year": 1995,
+      "genres": [
+        "hiphop"
+      ]
+    },
+    {
+      "title": "Juicy",
+      "artist": "The Notorious B.I.G.",
+      "year": 1994,
+      "genres": [
+        "hiphop"
+      ]
+    },
+    {
+      "title": "Gin and Juice",
+      "artist": "Snoop Dogg",
+      "year": 1994,
+      "genres": [
+        "hiphop"
+      ]
+    },
+    {
+      "title": "N.Y. State of Mind",
+      "artist": "Nas",
+      "year": 1994,
+      "genres": [
+        "hiphop"
+      ]
+    },
+    {
+      "title": "One More Time",
+      "artist": "Daft Punk",
+      "year": 2000,
+      "genres": [
+        "electronic",
+        "dance"
+      ]
+    },
+    {
+      "title": "Boulevard of Broken Dreams",
+      "artist": "Green Day",
+      "year": 2004,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "Uprising",
+      "artist": "Muse",
+      "year": 2009,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "Misery Business",
+      "artist": "Paramore",
+      "year": 2007,
+      "genres": [
+        "rock"
+      ]
+    },
+    {
+      "title": "Yellow",
+      "artist": "Coldplay",
+      "year": 2000,
+      "genres": [
+        "rock",
+        "pop"
+      ]
+    },
+    {
+      "title": "Brabant",
+      "artist": "Guus Meeuwis",
+      "year": 2002,
+      "genres": [
+        "dutch",
+        "pop"
+      ]
+    },
+    {
+      "title": "War",
+      "artist": "Kensington",
+      "year": 2014,
+      "genres": [
+        "dutch",
+        "rock"
+      ]
+    },
+    {
+      "title": "Oceaan",
+      "artist": "Racoon",
+      "year": 2012,
+      "genres": [
+        "dutch",
+        "pop"
+      ]
+    },
+    {
+      "title": "Titanium",
+      "artist": "David Guetta",
+      "year": 2011,
+      "genres": [
+        "electronic",
+        "dance"
+      ]
+    },
+    {
+      "title": "Don't You Worry Child",
+      "artist": "Swedish House Mafia",
+      "year": 2012,
+      "genres": [
+        "electronic",
+        "dance"
+      ]
+    },
+    {
+      "title": "Animals",
+      "artist": "Martin Garrix",
+      "year": 2013,
+      "genres": [
+        "electronic",
+        "dance"
+      ]
+    },
+    {
+      "title": "Feel So Close",
+      "artist": "Calvin Harris",
+      "year": 2011,
+      "genres": [
+        "electronic",
+        "dance"
+      ]
+    },
+    {
+      "title": "Shake It Off",
+      "artist": "Taylor Swift",
+      "year": 2014,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "Diamonds",
+      "artist": "Rihanna",
+      "year": 2012,
+      "genres": [
+        "pop",
+        "rnb"
+      ]
+    },
+    {
+      "title": "Sorry",
+      "artist": "Justin Bieber",
+      "year": 2015,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "7 Rings",
+      "artist": "Ariana Grande",
+      "year": 2019,
+      "genres": [
+        "pop",
+        "rnb"
+      ]
+    },
+    {
+      "title": "Don't Start Now",
+      "artist": "Dua Lipa",
+      "year": 2019,
+      "genres": [
+        "pop",
+        "dance"
+      ]
+    },
+    {
+      "title": "I Like It",
+      "artist": "Cardi B",
+      "year": 2018,
+      "genres": [
+        "hiphop"
+      ]
+    },
+    {
+      "title": "God's Plan",
+      "artist": "Drake",
+      "year": 2018,
+      "genres": [
+        "hiphop"
+      ]
+    },
+    {
+      "title": "Thrift Shop",
+      "artist": "Macklemore",
+      "year": 2012,
+      "genres": [
+        "hiphop"
+      ]
+    },
+    {
+      "title": "Circles",
+      "artist": "Post Malone",
+      "year": 2019,
+      "genres": [
+        "pop",
+        "hiphop"
+      ]
+    },
+    {
+      "title": "Say So",
+      "artist": "Doja Cat",
+      "year": 2019,
+      "genres": [
+        "pop",
+        "rnb"
+      ]
+    },
+    {
+      "title": "Reünie",
+      "artist": "Snelle",
+      "year": 2019,
+      "genres": [
+        "dutch",
+        "hiphop"
+      ]
+    },
+    {
+      "title": "Als Het Avond Is",
+      "artist": "Suzan & Freek",
+      "year": 2018,
+      "genres": [
+        "dutch",
+        "pop"
+      ]
+    },
+    {
+      "title": "Zoutelande",
+      "artist": "BLØF",
+      "year": 2017,
+      "genres": [
+        "dutch",
+        "pop",
+        "rock"
+      ]
+    },
+    {
+      "title": "Save Your Tears",
+      "artist": "The Weeknd",
+      "year": 2020,
+      "genres": [
+        "pop",
+        "rnb"
+      ]
+    },
+    {
+      "title": "Therefore I Am",
+      "artist": "Billie Eilish",
+      "year": 2020,
+      "genres": [
+        "pop",
+        "indie"
+      ]
+    },
+    {
+      "title": "Drivers License",
+      "artist": "Olivia Rodrigo",
+      "year": 2021,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "Espresso",
+      "artist": "Sabrina Carpenter",
+      "year": 2024,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "Good Luck, Babe!",
+      "artist": "Chappell Roan",
+      "year": 2024,
+      "genres": [
+        "pop"
+      ]
+    },
+    {
+      "title": "Not Like Us",
+      "artist": "Kendrick Lamar",
+      "year": 2024,
+      "genres": [
+        "hiphop"
+      ]
+    },
+    {
+      "title": "Noodgeval",
+      "artist": "Goldband",
+      "year": 2021,
+      "genres": [
+        "dutch",
+        "pop",
+        "dance"
+      ]
+    }
+  ]
+}
