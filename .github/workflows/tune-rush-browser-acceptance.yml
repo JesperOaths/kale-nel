@@ -2,6 +2,8 @@ name: Tune Rush real browser acceptance
 on:
   pull_request:
     paths:
+      - 'music/**'
+      - 'scripts/test-tune-rush-playback.mjs'
       - 'scripts/tune-rush-browser-acceptance.mjs'
       - '.github/workflows/tune-rush-browser-acceptance.yml'
   workflow_dispatch:
@@ -22,6 +24,8 @@ jobs:
         run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1
       - name: Verify browser source syntax
         run: node --check scripts/tune-rush-browser-acceptance.mjs
+      - name: Verify playback failure recovery and buzzer races
+        run: node scripts/test-tune-rush-playback.mjs
       - name: Run six-browser acceptance against actual PR page and live game database
         run: |
           set -euo pipefail
