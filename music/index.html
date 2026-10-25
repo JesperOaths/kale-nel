@@ -8,9 +8,9 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=6">
+<link rel="stylesheet" href="./style.css?v=7">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=6" defer></script>
+<script src="./app.js?v=7" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -28,12 +28,12 @@
 </section>
 <section id="room" hidden>
  <div class="room-head"><div><div class="eyebrow" id="role-indicator">HOST</div><h1 id="room-title">Game lobby</h1></div>
- <button id="leave" class="quiet">Leave</button></div>
+ <div class="room-head-actions"><button id="host-fullscreen" class="quiet host-fullscreen" type="button" hidden aria-label="Toggle fullscreen host view"><span aria-hidden="true">⛶</span> Full screen</button><button id="leave" class="quiet">Leave</button></div></div>
  <div class="room-key"><div><span class="kicker">ROOM CODE</span><strong id="room-code">------</strong></div><button id="copy-invite" class="outline">Copy invite link</button></div>
- <section id="lobby" class="room-layout">
-  <article class="panel"><div class="kicker">PLAYERS</div><h2>Waiting room</h2><div id="lobby-players" class="players"></div>
+ <section id="lobby" class="room-layout"><div class="lobby-caption host-only"><span class="host-pill"><span class="host-online-dot"></span> YOUR PARTY STUDIO</span><h2>Set the vibe. Start the game.</h2><p>Choose your music, invite your friends, and take over the room.</p></div>
+  <article class="panel lobby-main"><div class="kicker">YOUR LOBBY · LIVE PLAYERS</div><h2>You're the game master.</h2><p class="lobby-intro">Friends can join with the room code above. Their buzzers connect automatically.</p><div id="lobby-players" class="players"></div>
    <div id="host-settings">
-    <div class="kicker settings-title">AUDIO SOURCE</div>
+    <div class="kicker settings-title">01 / CHOOSE YOUR MUSIC</div>
     <div class="source-select" id="source-select">
       <label><input type="radio" name="music-source" value="demo" checked><span><strong>Demo melodies</strong><small>5 synthesized public-domain songs, automatic clues</small></span></label>
       <label><input type="radio" name="music-source" value="catalog"><span><strong>Automatic music library</strong><small>71 verified video links, randomized and filtered by genre and decade</small></span></label>
@@ -78,10 +78,10 @@
      </div>
      <p class="small-note">For example, Pop + 1970s draws only 1970–1979 pop tracks. Leave decades unchecked for all years. A new song is selected automatically after each solved/skipped round; tracks repeat only after the matching pool is exhausted. Some YouTube videos may block embedding or show ads.</p>
     </div>
-    <button id="start" class="primary">Start game <span aria-hidden="true">♫</span></button>
+    <button id="start" class="primary host-launch">Start the party <span aria-hidden="true">↗</span></button>
    </div><p id="guest-wait" class="waiting" hidden>Waiting for the host to start…</p>
   </article>
-  <article class="panel rules"><div class="kicker">HOW IT WORKS</div><h2>First to 20 wins.</h2>
+  <article class="panel rules"><div class="kicker">02 / PARTY RULES</div><h2>Listen. Buzz. Win.</h2><div class="rules-hero"><span class="rules-note" aria-hidden="true">♫</span><span>7 progressively longer clues, one mystery track.</span></div><h3>First to 20 points takes the crown.</h3>
    <p>Clips build from 0.5 to 1.5, 3, 5, 8, 12 and 20 seconds, with a pause between clips.</p>
    <div class="rule"><span>+0.5</span> Correct song title</div><div class="rule"><span>+0.5</span> Correct artist</div>
    <div class="rule"><span>−0.5</span> For each wrong part</div><div class="rule"><span>0</span> Leave a field empty or pass</div><div class="rule"><span>⚡</span> Steal: +0.5 correct, −1 per wrong field</div>
@@ -89,12 +89,15 @@
   </article>
  </section>
  <section id="playing" hidden>
-  <div class="host-ticker" id="host-ticker"><span class="live-pip"></span><strong>GAME MASTER</strong><span id="master-message">Get the room ready</span><span class="live-crown">★ FIRST TO 20</span></div>
+  <div class="host-ticker" id="host-ticker"><span class="live-pip"></span><strong>ON AIR · GAME MASTER</strong><span id="master-message">Get the room ready</span><span class="live-crown">FIRST TO 20 <span aria-hidden="true">✦</span></span></div>
   <div class="game-grid">
-   <article class="stage panel"><div class="stage-label"><span id="round-label">ROUND 1</span><span id="hint-label">0.5 S</span></div>
-    <div class="disc-shell"><span class="disc-glow"></span><div class="disc" aria-hidden="true"><div class="disc-inner">♫</div></div></div>
-    <div class="clip-timeline" id="clip-timeline" aria-label="Progress through song hints"></div>
-    <h2 id="stage-status">Get ready</h2><p id="stage-subtitle">Listen carefully…</p>
+   <article class="stage panel">
+    <div class="host-stage-hero host-only"><div class="stage-eyebrow"><span class="live-pip"></span> THE MUSIC CHALLENGE</div><h2>Guess the song<span>.</span></h2><p id="host-track-context" class="host-track-context">Your next mystery track is loading</p></div>
+    <div class="stage-label"><span id="round-label">ROUND 1</span><span id="hint-label">0.5 S</span></div>
+    <div class="disc-shell"><span class="disc-glow"></span><div class="disc" aria-hidden="true"><div class="disc-inner mobile-disc-icon">♫</div><div class="disc-art-top"><span class="disc-art-brand">TUNE RUSH</span><span class="disc-art-edition">MYSTERY 01</span></div><div class="disc-core"><span class="disc-question">?</span><span class="disc-core-note">NAME THAT TRACK</span></div><div class="sound-bars" aria-hidden="true"><i style="--amplitude:28%;--wave-delay:-0s"></i><i style="--amplitude:46%;--wave-delay:-1.1s"></i><i style="--amplitude:67%;--wave-delay:-2.2s"></i><i style="--amplitude:33%;--wave-delay:-3.3s"></i><i style="--amplitude:84%;--wave-delay:-0.9s"></i><i style="--amplitude:52%;--wave-delay:-2s"></i><i style="--amplitude:39%;--wave-delay:-3.1s"></i><i style="--amplitude:94%;--wave-delay:-0.7s"></i><i style="--amplitude:60%;--wave-delay:-1.8s"></i><i style="--amplitude:44%;--wave-delay:-2.9s"></i><i style="--amplitude:79%;--wave-delay:-0.5s"></i><i style="--amplitude:100%;--wave-delay:-1.6s"></i><i style="--amplitude:62%;--wave-delay:-2.7s"></i><i style="--amplitude:43%;--wave-delay:-0.3s"></i><i style="--amplitude:86%;--wave-delay:-1.4s"></i><i style="--amplitude:55%;--wave-delay:-2.5s"></i><i style="--amplitude:72%;--wave-delay:-0.1s"></i><i style="--amplitude:35%;--wave-delay:-1.2s"></i><i style="--amplitude:68%;--wave-delay:-2.3s"></i><i style="--amplitude:48%;--wave-delay:-3.4s"></i><i style="--amplitude:30%;--wave-delay:-1s"></i></div><div class="disc-art-bottom"><span>LISTEN CLOSELY</span><span>● ● ●</span></div></div></div>
+    <div class="clue-section"><div class="clue-header"><span>CLUE PROGRESSION</span><span id="host-hint-progress">7 chances to recognise it</span></div><div class="clip-timeline" id="clip-timeline" aria-label="Progress through song hints"></div></div>
+    <div class="stage-message"><span class="stage-message-orb" aria-hidden="true">♫</span><div><h2 id="stage-status">Get ready</h2><p id="stage-subtitle">Listen carefully…</p></div></div>
+    <button id="host-demo-play" class="primary host-demo-play host-only" type="button" hidden>▶ Play next clue</button>
     <div id="answer-reveal" class="reveal" hidden><strong id="revealed-title"></strong><span id="revealed-artist"></span></div>
     <section id="youtube-host" class="youtube-host" hidden aria-label="YouTube official video player">
       <div class="youtube-heading"><strong>▶ YOUTUBE · HOST PLAYER</strong><span>Video stays visible</span><button id="youtube-play-hint" class="primary" hidden>▶ Play next clue</button></div>
@@ -121,7 +124,7 @@
      </form></div>
     </div>
    </article>
-   <aside class="panel score-panel"><div class="kicker">LIVE LEADERBOARD</div><h2>Race to 20 <span class="trophy" aria-hidden="true">🏆</span></h2><p class="score-caption">Everyone sees the same live scores. The host watches all players here.</p><div id="scores" class="score-list"></div><div id="my-score" class="my-score" hidden>YOUR SCORE <strong>0</strong></div></aside>
+   <aside class="panel score-panel"><div class="score-panel-heading"><span class="kicker">THE SCOREBOARD</span><span class="leaderboard-live"><span class="host-online-dot"></span> LIVE</span></div><h2>Who's winning? <span class="trophy" aria-hidden="true">✦</span></h2><p class="score-caption">First player to 20 points wins the party.</p><div class="score-rule-divider"></div><div id="scores" class="score-list"></div><div id="host-score-footer" class="host-score-footer host-only"><span id="host-player-count">0 PLAYERS CONNECTED</span><span>20 POINTS TO WIN</span></div><div id="my-score" class="my-score" hidden>YOUR SCORE <strong>0</strong></div></aside>
   </div>
  </section>
  <section id="finish" class="finish panel" hidden><div class="kicker">GAME OVER</div><h1>We have a winner!</h1><p id="winner-name"></p><div id="final-scores"></div></section>
