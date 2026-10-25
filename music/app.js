@@ -112,6 +112,7 @@ async function rpc(action,extra={},attempt=0) {
   genres:Array.isArray(extra.genres)?extra.genres.slice(0,12):[],
   decades:Array.isArray(extra.decades)?extra.decades.slice(0,8):[],
   durationMs:Number.isInteger(extra.durationMs)?extra.durationMs:0,
+  fileIndex:Number.isInteger(extra.fileIndex)?extra.fileIndex:-1,
   mode:String(extra.mode||"demo"),
   videoId:String(extra.videoId||""),
   cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0,
@@ -435,7 +436,9 @@ function freq(note){
 }
 async function startAudio(info,ms) {
  if(!info?.source)throw Error("No recording assigned");
- if(info.source.startsWith("deezer:")){
+ if(info.source.startsWith("local:")){
+  await playLocalHint(info);
+ } else if(info.source.startsWith("deezer:")){
   if(!deezerPlayer||deezerPreparedRound!==room.code+":"+room.round+":"+info.source)
    throw Error("Deezer preview has not been prepared for this track.");
   await deezerPlayer.play(ms);
@@ -488,7 +491,7 @@ async function soundResumeSilently(){
  if(ctx.state!=="running")throw Error("Please tap Enable tablet audio");
 }
 function scheduleNext(delay){
- if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube"||room.mode==="catalog"||room.mode==="deezer")return;
+ if(!isHost()||!room||room.phase!=="paused"||room.step>=6||nextTimer||room.mode==="youtube"||room.mode==="catalog"||room.mode==="deezer"||room.mode==="local")return;
  const round=room.round,step=room.step;
  nextTimer=setTimeout(async()=>{
   nextTimer=null;
@@ -505,6 +508,11 @@ async function startClip(replay=false){
  const generation=++clipGeneration,round=room.round,initialStep=room.step;
  try{
   setLoading(true);
+  if(room.mode==="local"){
+   const expectedIndex=Number(room.audio?.source?.slice(6));
+   if(!room.audio?.source?.startsWith("local:")||expectedIndex!==localCurrentIndex||!localAudioUrl)
+    throw Error("This song's original file is no longer available. The host must keep this music tab open.");
+  }
   if(room.mode==="deezer"){
    await ensureDeezerPreview();
    if(generation!==clipGeneration)return;
@@ -555,6 +563,7 @@ async function startClip(replay=false){
   clearAudio();message(e.message||"Playback failed");
   if(room?.mode==="youtube"||room?.mode==="catalog")youtubeStatus(e.message||"Playback failed. Choose another video.");
   if(room?.mode==="deezer")deezerStatus(e.message||"Deezer preview could not play; skip this track.");
+  if(room?.mode==="local")localStatus(e.message||"Unable to play this recording.");
   if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
  }
  finally{setLoading(false)}
@@ -600,8 +609,8 @@ function render(){
  $("room").dataset.phase=phase;
  show("host-fullscreen",host);
  if(host){
-  const source=room.mode==="deezer"?"DEEZER PREVIEW":room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
-  const filters=(room.mode==="catalog"||room.mode==="deezer")?[
+  const source=room.mode==="local"?"YOUR MUSIC COLLECTION":room.mode==="deezer"?"DEEZER PREVIEW":room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
+  const filters=(room.mode==="catalog"||room.mode==="deezer"||room.mode==="local")?[
    ...(room.genres||[]).filter(x=>x!=="demo").map(x=>({hiphop:"HIP-HOP",rnb:"R&B",dutch:"DUTCH",electronic:"ELECTRONIC"}[x]||x.toUpperCase())),
    ...(room.decades||[]).map(x=>x+"s")
   ]:[];
@@ -671,9 +680,14 @@ function render(){
   show("deezer-play-hint",host&&deezerMode&&phase==="paused"&&room.step<6);
   show("deezer-replay-hint",host&&deezerMode&&room.step>=0&&!room.firstAnswered&&
    (phase==="paused"||(phase==="playing"&&!startedClip)));
+  const localMode=room.mode==="local";
+  show("local-player",host&&localMode);
+  show("local-play-hint",host&&localMode&&phase==="paused"&&room.step<6);
+  show("local-replay-hint",host&&localMode&&room.step>=0&&!room.firstAnswered&&
+   (phase==="paused"||(phase==="playing"&&!startedClip)));
 
-  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode||deezerMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
-  show("enable-sound",host&&!youtubeMode&&!deezerMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
+  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode||deezerMode||localMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
+  show("enable-sound",host&&!youtubeMode&&!deezerMode&&!localMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
@@ -740,7 +754,7 @@ async function refresh(){
  finally{pollBusy=false}
 }
 function reset(){
- cancelNext();clearAudio();failedClue="";deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;room=null;access=null;safeStore();render();
+ cancelNext();clearAudio();discardLocalAudio();localTracks=[];localPlayed.clear();localSourceCache.clear();localReviewShown=60;renderLocalTracks();failedClue="";deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;room=null;access=null;safeStore();render();
 }
 async function create(){
  if(loading)return;
@@ -794,7 +808,7 @@ function chosenFilters(){
  };
 }
 async function saveGenres(){
- if(!room||!isHost()||room.phase!=="lobby"||!["catalog","deezer"].includes(chosenSource()))return;
+ if(!room||!isHost()||room.phase!=="lobby"||!["catalog","deezer","local"].includes(chosenSource()))return;
  const filters=chosenFilters();
  if(!filters.genres.length){message("Select at least one genre");return}
  genresDirty=true;
@@ -823,7 +837,7 @@ $("start").addEventListener("click",async()=>{
  try{
   clearTimeout(genresSaveTimer);
   const mode=chosenSource();
-  if(mode==="catalog"||mode==="deezer"){
+  if(mode==="catalog"||mode==="deezer"||mode==="local"){
    if(mode==="deezer"&&!deezerAuthorized)throw Error("Deezer is awaiting authorization.");
    const filters=chosenFilters();
    if(!filters.genres.length)throw Error("Select at least one genre");
@@ -832,10 +846,17 @@ $("start").addEventListener("click",async()=>{
    await call("settings",{genres:["demo"],decades:[]});
    await soundUnlock();
   }
-  const data=mode==="youtube"?youtubeRound("youtube"):{mode};
-  await call("start",data);
+  const data=mode==="youtube"?youtubeRound("youtube"):mode==="local"?await selectLocalRound():{mode};
+  const result=await call("start",data);
+  if(result&&mode==="local")localPlayed.add(data.fileIndex);
  }catch(e){message(e.message)}
 });
+$("local-play-hint").addEventListener("click",()=>startClip());
+$("local-replay-hint").addEventListener("click",()=>startClip(true));
+$("local-music-files").addEventListener("change",e=>importLocalFiles(e.target.files));
+$("local-music-folder").addEventListener("change",e=>importLocalFiles(e.target.files));
+$("local-music-search").addEventListener("input",()=>{localReviewShown=60;renderLocalTracks()});
+$("local-show-more").addEventListener("click",()=>{localReviewShown+=60;renderLocalTracks()});
 $("deezer-play-hint").addEventListener("click",()=>startClip());
 $("deezer-replay-hint").addEventListener("click",()=>startClip(true));
 $("youtube-play-hint").addEventListener("click",()=>startClip());
@@ -845,7 +866,14 @@ $("youtube-next-form").addEventListener("submit",async e=>{
  try{const data=youtubeRound("next-youtube");await call("next",data)}
  catch(e){message(e.message)}
 });
-$("next-round").addEventListener("click",async()=>{try{await call("next")}catch{}});
+$("next-round").addEventListener("click",async()=>{
+ try{
+  if(room?.mode==="local"){
+   const data=await selectLocalRound(),result=await call("next",data);
+   if(result)localPlayed.add(data.fileIndex);
+  }else await call("next");
+ }catch(e){message(e.message)}
+});
 $("continue-hints").addEventListener("click",async()=>{try{await call("resume")}catch{}});
 $("skip-round").addEventListener("click",async()=>{try{await call("skip")}catch{}});
 $("buzz").addEventListener("click",requestBuzz);
@@ -858,14 +886,14 @@ document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
  if(document.hidden&&isHost()){
   cancelNext();
-  if(room?.mode==="youtube"||room?.mode==="catalog"||room?.mode==="deezer"){
+  if(room?.mode==="youtube"||room?.mode==="catalog"||room?.mode==="deezer"||room?.mode==="local"){
    clearAudio();
    if(room?.phase==="playing")rpc("pause").then(b=>applyState(b.state)).catch(()=>{});
   }
  }
  if(!document.hidden&&isHost()&&room?.phase==="paused")scheduleNext(500);
 });
-window.addEventListener("pagehide",()=>{clearAudio();cancelNext()});
+window.addEventListener("pagehide",()=>{clearAudio();cancelNext();discardLocalAudio()});
 const fromUrl=new URLSearchParams(location.search).get("room");
 if(fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl))$("join-code").value=fromUrl.toUpperCase();
 try{
