@@ -2,7 +2,7 @@ name: Tune Rush Deezer preview adapter (license-gated)
 on:
   pull_request:
     paths:
-      - 'music/deezer-preview.mjs'
+      - 'music/deezer-preview.js'
       - 'scripts/test-deezer-preview.mjs'
       - 'scripts/deezer-metadata-preflight.mjs'
       - 'scripts/test-deezer-license-db.mjs'
@@ -26,14 +26,15 @@ jobs:
         with:
           node-version: '24'
       - name: Install isolated PostgreSQL test engine
-        run: npm install --no-save --ignore-scripts --package-lock=false @electric-sql/pglite@0.5.11
+        run: npm install --no-save --ignore-scripts --package-lock=false @electric-sql/pglite@0.5.11 esbuild@0.25.12
       - name: Verify Deezer source parses
         run: |
-          node --check music/deezer-preview.mjs
+          node --check music/deezer-preview.js
           node --check scripts/test-deezer-preview.mjs
           node --check scripts/deezer-metadata-preflight.mjs
           node --check scripts/test-deezer-license-db.mjs
           node --check music/app.js
+          node node_modules/esbuild/bin/esbuild music/deezer-edge-candidate.ts --bundle --platform=neutral --outfile=/tmp/tune-rush-deezer-edge-candidate.js
       - name: Verify matching, preview offsets, timers and network-free fixtures
         run: |
           node scripts/test-deezer-preview.mjs
