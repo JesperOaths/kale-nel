@@ -97,7 +97,7 @@ public final class GardenPersonTrackGate {
   if(now<1||jpegAt<1||jpegAt>now+200||!Float.isFinite(score)||
      score<MIN_SCORE||!valid(box)){
    rejectedWeak++;
-   if(firstAt>0&&(now<firstAt||now-firstAt>MAX_PAIR_MS))reset();
+   if(firstAt>0&&(now<firstAt||now-firstAt>MAX_PAIR_MS))clearCandidate();
    return Decision.WEAK;
   }
   // Images with a broad, vehicle-like box must not become person evidence.
@@ -105,7 +105,7 @@ public final class GardenPersonTrackGate {
   // on 0..1 normalized XY coordinates.
   if(!plausiblePersonShape(box)){
    unlikePersonShape++;
-   if(firstAt>0&&(now<firstAt||now-firstAt>MAX_PAIR_MS))reset();
+   if(firstAt>0&&(now<firstAt||now-firstAt>MAX_PAIR_MS))clearCandidate();
    return Decision.WEAK;
   }
   if(firstAt>0&&jpegAt<=firstJpegAt){duplicateFrames++;return Decision.DUPLICATE_JPEG;}
