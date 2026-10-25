@@ -182,6 +182,25 @@ public final class GardenPersonTrackGateTest{
   gate.reset();
   check(!gate.confirmStationaryPresence(117000,116950,.92f,moving),
     "full reset never preserves a previous approved visitor");
+  gate.reset();
+  eq(gate.offer(210000,209950,.79f,walker,2),
+    GardenPersonTrackGate.Decision.FIRST,"late visitor initial motion");
+  eq(gate.offer(211000,210950,.81f,moving,2),
+    GardenPersonTrackGate.Decision.CONFIRMED,"late visitor admitted");
+  eq(gate.offer(211500,211450,.88f,moving,0),
+    GardenPersonTrackGate.Decision.FIRST,"first stationary observation");
+  check(!gate.confirmStationaryPresence(211500,211450,.88f,moving),
+    "single parked observation does not refresh");
+  eq(gate.offer(216900,216850,.20f,null,0),
+    GardenPersonTrackGate.Decision.WEAK,
+    "weak single dropout may expire tentative candidate");
+  check(!gate.confirmStationaryPresence(217100,217050,.88f,moving),
+    "first strong return after dropout insufficient");
+  check(gate.confirmStationaryPresence(219000,218950,.91f,moving),
+    "short weak dropout does not erase already verified visitor");
+  check(gate.stationaryHolds==2,
+    "two separately demonstrated stationary holds across test scenarios");
+
   check(!GardenPersonTrackGate.valid(new float[]{.2f,Float.NaN,.7f,.9f}),"NaN never valid");
   System.out.println("S9_SPATIOTEMPORAL_PEDESTRIAN_V9_PASS "+assertions);
  }
