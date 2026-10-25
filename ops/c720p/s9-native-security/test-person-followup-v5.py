@@ -11,7 +11,12 @@ class FollowupTests(unittest.TestCase):
   cb=S.split("boolean change=motion.analyze(frame);",1)[1].split('}catch(Throwable error)',1)[0]
   self.assertIn("gardenPersonCandidateUntil=lastFrameAt+GARDEN_PERSON_CANDIDATE_MS",cb)
   self.assertIn('!"watching".equals(mode)',S)
-  self.assertIn('if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&',cb)
+  self.assertIn('if(!pilotOnly&&gardenGateReady&&lastFrameAt>=cameraControlSettleUntil)',cb)
+  self.assertIn('boolean eventFollowup=watching&&lastFrameAt<gardenPersonCandidateUntil',cb)
+  self.assertIn('boolean recordingCheck=recording&&temperature()<405&&',cb)
+  self.assertIn('lastFrameAt-gardenPersonGateLastAt>=2500L',cb)
+  self.assertNotIn('eventChain.evidence(lastFrameAt)',cb)
+  self.assertNotIn('lastMovementAt=lastFrameAt',cb)
   self.assertIn("lastFrameAt>=cameraControlSettleUntil",cb)
   self.assertIn("evaluateGardenPersonAsync(safeSentinel);",cb)
   self.assertNotIn("startRecording();",cb.split("if(change &&",1)[1])
