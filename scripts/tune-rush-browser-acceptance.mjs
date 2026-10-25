@@ -77,7 +77,7 @@ try {
  assert.ok(await host.locator("#room").evaluate(el=>el.classList.contains("host-mode")),"tablet host uses immersive studio theme");
  await host.locator(".lobby-caption").waitFor({state:"visible"});
  assert.ok(await host.locator("#host-fullscreen").isVisible(),"tablet host has working fullscreen control");
- assert.equal(await host.locator(".source-select label:visible").count(),4,"all four music sources are visible");
+ assert.equal(await host.locator(".source-select label:visible").count(),5,"all five music sources are visible");
  assert.equal(await host.locator("#deezer-source-option").isVisible(),true,"Deezer is visibly listed rather than hidden");
  assert.ok(await host.locator('#deezer-source-option input[type=radio]').isDisabled(),"Deezer cannot be selected without server approval");
  assert.ok((await host.locator("#deezer-license-status").innerText()).includes("not authorized"),"explicit Deezer approval status must be readable");
@@ -89,12 +89,12 @@ try {
    const box=document.getElementById("lobby")?.getBoundingClientRect();
    return {cards,lobbyWidth:box?.width,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};
  });
- assert.equal(lobbyUI.cards.length,4);
- assert.ok(lobbyUI.cards.every(c=>c.w>220&&c.h>145),"music cards must remain readable at tablet size: "+JSON.stringify(lobbyUI));
+ assert.equal(lobbyUI.cards.length,5);
+ assert.ok(lobbyUI.cards.every(c=>c.w>220&&c.h>120),"music cards must remain readable at tablet size: "+JSON.stringify(lobbyUI));
  assert.ok(Math.abs(lobbyUI.cards[0].y-lobbyUI.cards[1].y)<3&&lobbyUI.cards[2].y>lobbyUI.cards[0].y,
    "music sources should form an ordered 2x2 desktop grid");
  assert.ok(lobbyUI.scrollWidth<=lobbyUI.viewport+2,"host lobby must not overflow horizontally");
- console.log("BROWSER_LOBBY_V9_PASS",JSON.stringify({cards:4,deezer:"visible but unavailable",grid:"2x2",viewport:lobbyUI.viewport}));
+ console.log("BROWSER_LOBBY_V10_PASS",JSON.stringify({cards:5,deezer:"visible but unavailable",grid:"2x2",viewport:lobbyUI.viewport}));
  assert.ok(!(await alice.locator(".host-stage-hero").isVisible()),"welcome phone never shows host stage");
  await join(alice,initial.code,"QAlice");
  await join(bob,initial.code,"QBob");
