@@ -216,3 +216,16 @@ body:has(#room.host-mode:not([hidden])) .brand-game{background:#48e29718;color:#
 /* Unchanged phone game display: the new host art must not leak into the player stage. */
 #room:not(.host-mode) .disc-art-top,#room:not(.host-mode) .disc-art-bottom,#room:not(.host-mode) .disc-core,#room:not(.host-mode) .sound-bars{display:none!important}
 .host-mode .mobile-disc-icon{display:none!important}
+
+/* Deezer preview host surface. This remains unreachable until trusted DB approval. */
+.deezer-host{width:100%;max-width:530px;margin:14px auto 17px;padding:16px 19px;background:linear-gradient(130deg,#121f1d,#102820);border:1px solid #3e8168;border-radius:18px;text-align:left}
+.deezer-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.deezer-heading strong{color:#76eeb1;font-size:12px;letter-spacing:.12em}
+.deezer-heading span{font-size:11px;color:#a8cabb}
+.deezer-status{border-radius:12px;background:#183a2b;padding:13px 14px;min-height:41px;font-size:12px;color:#bfe9d0!important;line-height:1.5;margin:13px 0}
+.deezer-buttons{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.deezer-buttons button{min-height:50px;flex:1;white-space:nowrap}
+.deezer-buttons .primary{background:#59ebb0;color:#103528}
+.deezer-host .small-note{font-size:11px;margin:13px 0 0;min-height:0}
+#deezer-source-option[hidden]{display:none!important}
+@media(max-width:570px){.deezer-heading{align-items:flex-start;flex-direction:column}.deezer-buttons{flex-direction:column}.deezer-buttons button{width:100%}}
