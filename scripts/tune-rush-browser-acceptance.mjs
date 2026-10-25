@@ -56,8 +56,19 @@ async function createGame(host){
  await wait(host,()=>room?.role==="host"&&room.code?.length===6);
  return (await state(host));
 }
-async function waitBuzz(p){
- await wait(p,()=>{const b=document.querySelector("#buzz");return b&&!b.hidden&&!b.disabled},22000);
+async function waitBuzz(p,host=null){
+ try{
+  await wait(p,()=>{const b=document.querySelector("#buzz");return b&&!b.hidden&&!b.disabled},22000);
+ }catch(e){
+  const details=await p.evaluate(()=>({phase:room?.phase,step:room?.step,round:room?.round,mode:room?.mode,
+   firstAnswered:room?.firstAnswered,blockedStep:room?.myBlockedStep,buttonDisabled:document.getElementById("buzz")?.disabled,
+   toast:document.getElementById("toast")?.textContent||"",loading,pollBusy}));
+  const hostState=host?await host.evaluate(()=>({phase:room?.phase,step:room?.step,round:room?.round,mode:room?.mode,
+   loading,clipTimer:clipTimer!==null,nextTimer:nextTimer!==null,ctxState:ctx?.state||"none",
+   toast:document.getElementById("toast")?.textContent||""})):null;
+  console.error("BROWSER_BUZZ_NOT_READY",JSON.stringify({details,hostState}));
+  throw e;
+ }
 }
 try {
  if(process.env.TUNE_RUSH_YOUTUBE_ONLY!=="1"){
@@ -86,7 +97,7 @@ try {
  const geometry=await host.evaluate(()=>({vw:innerWidth,scroll:document.documentElement.scrollWidth,track:document.getElementById("host-track-context")?.textContent||""}));
  assert.ok(geometry.scroll<=geometry.vw+2,"tablet page must not overflow horizontally: "+JSON.stringify(geometry));
  console.log("BROWSER_HOST_STUDIO_LAYOUT_PASS",JSON.stringify({viewport:geometry.vw,waveBars:21,scoreboard:"visible",playerTheme:"preserved"}));
- await waitBuzz(alice);
+ await waitBuzz(alice,host);
  await alice.locator("#buzz").click();
  await wait(alice,()=>room?.phase==="answering"&&room.lockedPlayer===room.me);
  await alice.locator("#answer-overlay").waitFor({state:"visible"});
