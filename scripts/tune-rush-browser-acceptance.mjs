@@ -67,6 +67,7 @@ try {
  assert.equal(await host.locator(".sound-bars i").count(),21,"21 decorative waveform bars");
  assert.ok(await host.locator("#host-track-context").isVisible(),"host audio source context readable");
  assert.ok(await host.locator(".score-panel").isVisible(),"host scoreboard visible");
+ await wait(alice,()=>room?.phase!=="lobby"&&room?.round===1);
  assert.ok(await alice.locator(".mobile-disc-icon").isVisible(),"old player phone disc preserved");
  assert.ok(!(await alice.locator(".disc-art-top").isVisible()),"mystery studio graphics not shown on phone");
  const geometry=await host.evaluate(()=>({vw:innerWidth,scroll:document.documentElement.scrollWidth,track:document.getElementById("host-track-context")?.textContent||""}));
