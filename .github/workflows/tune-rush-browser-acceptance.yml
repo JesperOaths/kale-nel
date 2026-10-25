@@ -5,6 +5,8 @@ on:
       - 'music/**'
       - 'scripts/test-tune-rush-playback.mjs'
       - 'scripts/test-tune-rush-local-tracks.mjs'
+      - 'scripts/test-three-game-rotation.mjs'
+      - 'sql/musicquiz-three-game-rotation-v7.sql'
       - 'sql/musicquiz-local-host-files-v6.sql'
       - 'scripts/test-tune-rush-replay-db.mjs'
       - 'supabase/migrations/*musicquiz*'
@@ -37,6 +39,8 @@ jobs:
         run: node scripts/test-tune-rush-playback.mjs
       - name: Verify local file metadata, repeat avoidance and random full-track cues
         run: node scripts/test-tune-rush-local-tracks.mjs
+      - name: Verify three consecutive games have 120 distinct songs
+        run: node scripts/test-three-game-rotation.mjs
       - name: Verify replay SQL in isolated PostgreSQL
         run: node scripts/test-tune-rush-replay-db.mjs
       - name: Allow the short network-smoke job to finish first
