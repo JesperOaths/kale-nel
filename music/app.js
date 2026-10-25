@@ -40,7 +40,7 @@ async function ensureDeezerPreview(){
   throw Error("Deezer playback has not been authorized for this game.");
  if(!/^deezer:[1-9][0-9]*$/.test(room.audio?.source||""))
   throw Error("The Deezer track is not available to this room.");
- const identity=room.round+":"+room.audio.source;
+ const identity=room.code+":"+room.round+":"+room.audio.source;
  if(deezerPreparedRound===identity&&deezerPlayer)return;
  deezerStatus("Verifying licensed Deezer preview…");
  const hostHash=await capabilityHash(access.token);
@@ -304,7 +304,7 @@ function freq(note){
 async function startAudio(info,ms) {
  if(!info?.source)throw Error("No recording assigned");
  if(info.source.startsWith("deezer:")){
-  if(!deezerPlayer||deezerPreparedRound!==room.round+":"+info.source)
+  if(!deezerPlayer||deezerPreparedRound!==room.code+":"+room.round+":"+info.source)
    throw Error("Deezer preview has not been prepared for this track.");
   await deezerPlayer.play(ms);
  } else if(info.source.startsWith("youtube:")){
@@ -422,6 +422,7 @@ async function startClip(replay=false){
   if(room?.phase==="playing")failedClue=room.round+":"+room.step;
   clearAudio();message(e.message||"Playback failed");
   if(room?.mode==="youtube"||room?.mode==="catalog")youtubeStatus(e.message||"Playback failed. Choose another video.");
+  if(room?.mode==="deezer")deezerStatus(e.message||"Deezer preview could not play; skip this track.");
   if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
  }
  finally{setLoading(false)}
@@ -606,7 +607,7 @@ async function refresh(){
  finally{pollBusy=false}
 }
 function reset(){
- cancelNext();clearAudio();failedClue="";room=null;access=null;safeStore();render();
+ cancelNext();clearAudio();failedClue="";deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;room=null;access=null;safeStore();render();
 }
 async function create(){
  if(loading)return;
