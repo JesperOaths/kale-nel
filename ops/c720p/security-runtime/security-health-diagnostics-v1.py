@@ -116,6 +116,8 @@ def headless_camera_state(phone):
         and phone.get("continuous_4k_ready") is True
         and type(phone.get("continuous_4k_buffered_ms")) is int
         and phone["continuous_4k_buffered_ms"]>=6500
+        and type(phone.get("continuous_4k_buffer_bytes")) is int
+        and phone["continuous_4k_buffer_bytes"]>0
         and phone.get("continuous_4k_dropped_output_frames")==0
         and phone.get("continuous_4k_error") in ("",None))
     exhausted=(phone.get("continuous_4k_ready") is False
@@ -142,13 +144,15 @@ def evaluate(*,now,root_free_bytes,root_total_bytes,phone,catalog,activity,ledge
     issues=[]
     def warn(code,severity):
         issues.append({"code":code,"severity":severity})
-    camera_ok=isinstance(phone,dict) and phone.get("ok") is True and \
-        phone.get("native_4k_enabled") is True and \
-        phone.get("continuous_4k_ready") is True and \
-        phone.get("continuous_4k_dropped_output_frames")==0 and \
-        phone.get("mode") in ("watching","recording")
-    if not camera_ok:warn("s9_capture_not_confirmed_healthy","critical")
     headless=headless_camera_state(phone)
+    # A persisted enable preference or one ready flag is not evidence of a
+    # functioning native 4K ring. Require fresh frames, trial session, actual
+    # 6.5s+ buffered video bytes, zero drops and no encoder error, using the
+    # same bounded physical readiness proof as the headless state model.
+    camera_ok=(isinstance(phone,dict)
+        and phone.get("native_4k_enabled") is True
+        and headless["native_4k_buffer_healthy"] is True)
+    if not camera_ok:warn("s9_capture_not_confirmed_healthy","critical")
     if headless["legacy_fallback_healthy"] and not camera_ok:
         warn("s9_fallback_surveillance_operational_4k_unavailable","warning")
     if headless["native_4k_auto_recovery_locked_out"]:
