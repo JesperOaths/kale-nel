@@ -7,7 +7,7 @@ on:
       - 'scripts/deezer-metadata-preflight.mjs'
       - 'scripts/test-deezer-license-db.mjs'
       - 'sql/musicquiz-deezer-preview-gated-v5.sql'
-      - 'music/deezer-edge-candidate.ts'
+      - 'scripts/deezer-edge-candidate.ts'
       - 'music/app.js'
       - 'music/index.html'
       - '.github/workflows/tune-rush-deezer-adapter.yml'
@@ -34,7 +34,7 @@ jobs:
           node --check scripts/deezer-metadata-preflight.mjs
           node --check scripts/test-deezer-license-db.mjs
           node --check music/app.js
-          node node_modules/esbuild/bin/esbuild music/deezer-edge-candidate.ts --bundle --platform=neutral --outfile=/tmp/tune-rush-deezer-edge-candidate.js
+          node node_modules/esbuild/bin/esbuild scripts/deezer-edge-candidate.ts --bundle --platform=neutral --outfile=/tmp/tune-rush-deezer-edge-candidate.js
       - name: Verify matching, preview offsets, timers and network-free fixtures
         run: |
           node scripts/test-deezer-preview.mjs
