@@ -74,12 +74,22 @@ public final class GardenPersonTrackGate {
   * Missing veto geometry is conservatively treated as a contradiction.
   */
  public boolean rejectCompetingTransport(float[][] vetoedPersonBoxes){
-  if(firstBox==null)return false;
+  if(firstBox==null&&confirmedBox==null)return false;
   if(vetoedPersonBoxes==null||vetoedPersonBoxes.length==0){
    rejectCompetingTransport();return true;
   }
   for(float[] veto:vetoedPersonBoxes){
-   if(samePerson(firstBox,veto)){rejectCompetingTransport();return true;}
+   boolean sameCandidate=firstBox!=null&&samePerson(firstBox,veto);
+   boolean sameConfirmed=confirmedBox!=null&&samePerson(confirmedBox,veto);
+   if(!sameCandidate&&!sameConfirmed)continue;
+   // The car's conflict is local. Preserve an independently confirmed
+   // pedestrian elsewhere when only a different proposal is rejected.
+   if(sameCandidate)clearCandidate();
+   if(sameConfirmed){
+    confirmedBox=null;confirmedAt=-1;confirmedJpegAt=-1;
+    clearStationaryProposal();
+   }
+   transportInterrupted++;return true;
   }
   unrelatedTransportIgnored++;return false;
  }
