@@ -536,11 +536,13 @@ public final class CameraService extends Service {
     ClipClassifier.GardenPersonEvidence evidence=null;
     float wholeFrameScore=0;boolean failed=false;
     boolean transportVetoOnly=false;
+    float[][] vetoedPersonBoxes=new float[0][];
     try{
      evidence=gardenGateClassifier.personEvidenceInGarden(jpg,top,margin,selectedZone);
      wholeFrameScore=gardenGateClassifier.lastPersonScoreAnywhere();
      // This is a stronger contradiction than a temporary detector dropout.
      transportVetoOnly=evidence==null&&gardenGateClassifier.lastGardenVehicleVetoes()>0;
+     if(transportVetoOnly)vetoedPersonBoxes=gardenGateClassifier.lastGardenVetoedPersonBoxes();
     }
     catch(Throwable issue){
      failed=true;
@@ -551,6 +553,7 @@ public final class CameraService extends Service {
     final float anyScore=wholeFrameScore;
     final boolean error=failed;
     final boolean rejectedByTransport=transportVetoOnly;
+    final float[][] rejectedTransportBoxes=vetoedPersonBoxes;
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
      gardenPersonGateBusy=false;
@@ -571,7 +574,7 @@ public final class CameraService extends Service {
       gardenPersonGateRejects++;
       // An explicit transport conflict must cancel the stale positive
       // rather than count as a recoverable missing detector observation.
-      if(rejectedByTransport)personTrackGate.rejectCompetingTransport();
+      if(rejectedByTransport)personTrackGate.rejectCompetingTransport(rejectedTransportBoxes);
       else personTrackGate.offer(now,jpegAt,score,null,0);
       return;
      }
@@ -1529,6 +1532,8 @@ public final class CameraService extends Service {
    d.put("garden_raw_motion_tail_ignored",gardenRawMotionTailIgnored);
    d.put("garden_person_tail_requires_verified_person",true);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
+   d.put("garden_person_transport_track_resets",personTrackGate.transportInterrupted);
+   d.put("garden_unrelated_transport_vetoes_ignored",personTrackGate.unrelatedTransportIgnored);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
     d.put("garden_person_gate_last_anywhere_score",gardenPersonGateAnyScore);
