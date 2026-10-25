@@ -29,6 +29,8 @@ NEGATIVE_PENALTY = 0.25
 MAX_ONLINE_REFERENCE_PAIRS = 20_000
 MAX_JOURNAL_BYTES = 2_000_000
 SCHEMA = "folder_suggestions_v1"
+VECTOR_ONLY = "visual_embedding_cosine_v1"
+SCORING_MODES = frozenset(("hybrid", VECTOR_ONLY))
 
 
 def unit(values: Any, *, dimension: int = DIM) -> tuple[float, ...] | None:
@@ -138,11 +140,18 @@ class ClipFeatures:
                    structural_id, structural, aligned, hsv)
 
 
-def pair_score(a: ClipFeatures, b: ClipFeatures) -> dict[str, Any] | None:
+def pair_score(a: ClipFeatures, b: ClipFeatures, *,
+               scoring_mode: str = "hybrid") -> dict[str, Any] | None:
     """Mirror PhoneOfflineSimilarity.compare(Evidence, Evidence, pairColor)."""
+    if scoring_mode not in SCORING_MODES:
+        raise ValueError("Unsupported appearance similarity method")
     if a.key == b.key or a.visual_model_id != b.visual_model_id:
         return None
     visual_score = cosine(a.visual, b.visual)
+    if scoring_mode == VECTOR_ONLY:
+        return {"score": visual_score, "method": VECTOR_ONLY,
+                "upper_crop_score": None, "visual_score": visual_score,
+                "color_score": None}
     upper = None
     color = color_affinity(a.hsv, b.hsv)
     if (a.structural_aligned_verified and b.structural_aligned_verified
@@ -161,11 +170,21 @@ def pair_score(a: ClipFeatures, b: ClipFeatures) -> dict[str, Any] | None:
 
 
 def centroid_score(candidate: ClipFeatures,
-                   refs: Sequence[ClipFeatures]) -> dict[str, Any] | None:
+                   refs: Sequence[ClipFeatures], *,
+                   scoring_mode: str = "hybrid") -> dict[str, Any] | None:
     compatible = [r for r in refs if r.key != candidate.key
                   and r.visual_model_id == candidate.visual_model_id]
+    if scoring_mode not in SCORING_MODES:
+        raise ValueError("Unsupported appearance similarity method")
     if not compatible:
         return None
+    if scoring_mode == VECTOR_ONLY:
+        mean = normalized_centroid([r.visual for r in compatible])
+        if mean is None:
+            return None
+        score = cosine(candidate.visual, mean)
+        return {"score": score, "method": VECTOR_ONLY, "visual_score": score,
+                "upper_crop_score": None, "color_score": None}
     structural = [r for r in compatible if candidate.structural_aligned_verified
                   and candidate.structural is not None and r.structural_aligned_verified
                   and r.structural is not None and candidate.structural_model_id
@@ -226,8 +245,8 @@ def latest_decisions(rows: Sequence[Mapping[str, Any]]
     return out
 
 
-def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_THRESHOLD
-                ) -> list[dict[str, Any]]:
+def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_THRESHOLD,
+                *, scoring_mode: str = "hybrid") -> list[dict[str, Any]]:
     """Deterministic exact complete-linkage agglomeration.
 
     Every merged cluster has all cross-pairs at or above threshold. A heap
@@ -251,7 +270,7 @@ def agglomerate(unmatched: Sequence[ClipFeatures], threshold: float = CLUSTER_TH
     heap: list[tuple[float, int, int]] = []
     for i in range(count):
         for j in range(i + 1, count):
-            pair = pair_score(entries[i], entries[j])
+            pair = pair_score(entries[i], entries[j], scoring_mode=scoring_mode)
             if pair is None or pair["score"] < threshold:
                 continue
             sim = pair["score"]
@@ -318,7 +337,10 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                  decisions: Sequence[Mapping[str, Any]],
                  *, match_threshold: float = MATCH_THRESHOLD,
                  cluster_threshold: float = CLUSTER_THRESHOLD,
-                 nonreference_reviewed: Sequence[str] = ()) -> dict[str, Any]:
+                 nonreference_reviewed: Sequence[str] = (),
+                 scoring_mode: str = "hybrid") -> dict[str, Any]:
+    if scoring_mode not in SCORING_MODES:
+        raise ValueError("Unsupported appearance similarity method")
     if not -1 <= match_threshold <= 1:
         raise ValueError("Invalid folder match threshold")
     if len(clips) > 2000 or len(folders) > 250:
@@ -394,14 +416,14 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                 # Exact human exclusions survive legacy unbound metadata;
                 # only new verified binding can seed negative exemplar vectors.
                 continue
-            possible = [(r, pair_score(clip, r)) for r in refs[folder]]
+            possible = [(r, pair_score(clip, r, scoring_mode=scoring_mode)) for r in refs[folder]]
             possible = [(r, p) for r, p in possible if p is not None]
-            centroid = centroid_score(clip, refs[folder])
+            centroid = centroid_score(clip, refs[folder], scoring_mode=scoring_mode)
             if centroid is None or not possible:
                 continue
             closest, exemplar = max(possible, key=lambda it: (it[1]["score"], it[0].key))
             raw = 0.40 * centroid["score"] + 0.60 * exemplar["score"]
-            negatives = [pair_score(clip, r) for r in rejected[folder]]
+            negatives = [pair_score(clip, r, scoring_mode=scoring_mode) for r in rejected[folder]]
             neg_max = max((n["score"] for n in negatives if n is not None),
                           default=-math.inf)
             penalty = NEGATIVE_PENALTY if neg_max > NEGATIVE_THRESHOLD else 0.0
@@ -437,7 +459,9 @@ def rank_folders(clips: Sequence[Mapping[str, Any]],
                                 m["source_qualified_clip_id"]))
     return {"schema": SCHEMA, "status": "human_review_only", "match_threshold": match_threshold,
             "cluster_threshold": cluster_threshold, "matches": matches,
-            "provisional_clusters": agglomerate(unmatched, cluster_threshold),
+            "provisional_clusters": agglomerate(unmatched, cluster_threshold,
+                                                scoring_mode=scoring_mode),
+            "scoring_mode": scoring_mode,
             "folder_options": [{"id": str(f["id"]), "label": str(f.get("label") or f["id"])}
                                for f in folders],
             "approved_reference_counts": {key: len(refs[key]) for key in folder_ids},
