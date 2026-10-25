@@ -67,6 +67,7 @@
         snapshot.identity_probabilities === true ||
         snapshot.probabilities !== false ||
         snapshot.historic_review_index_verified !== true ||
+        (hooks.requiredMode && snapshot.scoring_mode !== hooks.requiredMode) ||
         !Array.isArray(snapshot.matches) || !Array.isArray(snapshot.provisional_clusters)) {
       host.append(element('p', 'Verified provisional suggestions unavailable.'));
       return {visible: 0};
@@ -85,16 +86,19 @@
       const card = element('article', undefined, 'folder-suggestion-card');
       const label = element('h4', row.folder_id + ' · ' + row.source_qualified_clip_id);
       const detail = element('p', vectorOnly
-        ? 'Visual embedding cosine: ' + formatScore(row.visual_score) +
-          ' · configurable threshold ' + formatScore(snapshot.match_threshold) +
+        ? '512-D visual vector similarity: ' + formatScore(row.score) +
+          ' · cosine match threshold ' + formatScore(snapshot.match_threshold) +
           ' · pending human review'
         : 'Suggestion confidence index: ' +
           row.suggestion_confidence.toFixed(1) + '% · pending review');
       const subs = element('p', statusLine(row));
-      const breakdown = element('p', 'Centroid (40%): ' +
-        formatScore(row.centroid_score) + ' · closest approved example (60%): ' +
-        formatScore(row.exemplar_score) + ' · negative penalty: ' +
-        formatScore(row.negative_penalty));
+      const breakdown = element('p', vectorOnly
+        ? '512-D centroid cosine (40%): ' + formatScore(row.centroid_score) +
+          ' · nearest approved vector cosine (60%): ' + formatScore(row.exemplar_score) +
+          ' · rejected-reference penalty: ' + formatScore(row.negative_penalty)
+        : 'Centroid (40%): ' + formatScore(row.centroid_score) +
+          ' · closest approved example (60%): ' + formatScore(row.exemplar_score) +
+          ' · negative penalty: ' + formatScore(row.negative_penalty));
       const actions = element('div', undefined, 'actions');
       const message = element('p', 'Inspect this original recording to enable review.');
       message.setAttribute('data-review-status', '');
@@ -356,9 +360,7 @@
         return {visible: 0};
       }
       if (options.requiredMode && snapshot.scoring_mode !== options.requiredMode) {
-        host.replaceChildren(element('p',
-          'Vector-only suggestions are not verified or enabled. Manual review is unchanged.'));
-        return {visible: 0};
+        throw Error('Verified 512-D visual embedding rankings are unavailable.');
       }
       current = snapshot;
       if (typeof options.onSnapshot === 'function') options.onSnapshot(snapshot);
@@ -369,6 +371,7 @@
           snapshot.provisional_clusters
       });
       return render(host, narrowed, {
+        requiredMode: options.requiredMode,
         onOpen: async row => {
           const proof = await options.onOpen(Object.assign({}, row, {
             feature_snapshot_revision: current.feature_snapshot_revision
