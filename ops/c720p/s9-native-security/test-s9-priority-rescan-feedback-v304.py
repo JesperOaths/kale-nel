@@ -37,6 +37,7 @@ class QueueTest(unittest.TestCase):
    patch.object(v,"QUEUE",self.state/"queue.json"),
    patch.object(v,"LOCK",self.state/"queue.lock"),
    patch.object(v,"AUDIT",self.state/"transitions.jsonl"),
+   patch.object(v,"PHONE_INFLIGHT",self.state/"phone-inflight-v374.json"),
    patch.object(v,"REPORT",self.report),
    patch.object(v,"ARCHIVE",self.catalog),
    patch.object(v,"SECONDARY",self.secondary),
