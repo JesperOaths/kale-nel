@@ -36,8 +36,8 @@ async function main(){
  v=await call("answer",alice,{song:"Wrong",artist:"Wrong"});
  assert.equal(v.phase,"holding");
  await call("steal",bob);
- const correct={title:v.audio.source}; // host carries answer; guest never does.
  const hostState=await call("state",host);
+ assert.ok(hostState.audio?.source?.startsWith("youtube:"),"host retains private video during steal");
  // End the steal without leaking anything else to the guest until next round.
  await call("forfeit",bob);
  await call("skip",host);
