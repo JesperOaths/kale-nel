@@ -1,0 +1,265 @@
+-- Optional official YouTube Data API catalog enrichment, not audio extraction.
+-- Importer only accessible with GitHub Actions service_role secret.
+alter table musicquiz.video_pool add column if not exists origin text not null default 'curated';
+alter table musicquiz.video_pool add constraint musicquiz_video_pool_origin_check check (origin in ('curated','youtube_data_api'));
+create or replace function public.musicquiz_v1(
+ p_action text,p_code text,p_hash text,p_data jsonb default '{}'::jsonb
+) returns jsonb language plpgsql security definer
+set search_path = pg_catalog, musicquiz as $f$
+declare
+ r musicquiz.rooms%rowtype; p musicquiz.players%rowtype; t musicquiz.tracks%rowtype;
+ is_host boolean; who uuid;
+ n text; g text[]; song text; artist text; delta numeric(7,1):=0;
+ title_ok boolean; artist_ok boolean; done_title boolean; done_artist boolean;
+ picked uuid; result jsonb;
+ desired_mode text; video_id text; cue integer; selected musicquiz.video_pool%rowtype; d text[]; duration_ms integer; low_ms integer; high_ms integer;
+begin
+ if p_hash is null or p_hash !~ '^[a-f0-9]{64}$' then raise exception 'invalid_token'; end if;
+ if p_code is null or upper(trim(p_code)) !~ '^[A-HJ-NP-Z2-9]{6}$' then raise exception 'invalid_code'; end if;
+ if p_action='create' then
+  perform pg_advisory_xact_lock(711940092);
+  delete from musicquiz.rooms where expires_at < now();
+  if (select count(*) from musicquiz.rooms)>=150 then raise exception 'room_capacity_reached'; end if;
+  insert into musicquiz.rooms(code,host_hash) values(upper(trim(p_code)),p_hash)
+   returning * into r;
+  return musicquiz.visible_state(r.id,p_hash);
+ end if;
+
+ if p_action='state' then
+  select * into r from musicquiz.rooms where code=upper(trim(p_code));
+ else
+  select * into r from musicquiz.rooms where code=upper(trim(p_code)) for update;
+ end if;
+ if not found then raise exception 'room_not_found'; end if;
+ if r.expires_at < now() then raise exception 'room_expired'; end if;
+ is_host := (r.host_hash=p_hash);
+ if not is_host then
+  select * into p from musicquiz.players where room_id=r.id and secret_hash=p_hash;
+  if not found and p_action<>'join' then raise exception 'unauthorized'; end if;
+ end if;
+
+ if p_action='join' then
+  if r.phase<>'lobby' then raise exception 'game_already_started'; end if;
+  n:=left(trim(coalesce(p_data->>'name','')),20);
+  if length(n)<1 or n !~ '^[[:alnum:] _.-]+$' then raise exception 'invalid_name'; end if;
+  if (select count(*) from musicquiz.players where room_id=r.id)>=24 then raise exception 'room_full'; end if;
+  if exists(select 1 from musicquiz.players where room_id=r.id and lower(name)=lower(n)) then
+   raise exception 'name_taken';
+  end if;
+  insert into musicquiz.players(room_id,secret_hash,name) values(r.id,p_hash,n);
+ elsif p_action='settings' then
+  if not is_host or r.phase<>'lobby' then raise exception 'host_lobby_only'; end if;
+  select array_agg(distinct value) into g
+   from jsonb_array_elements_text(coalesce(p_data->'genres','[]'::jsonb)) as v(value)
+   where value in ('demo','pop','rock','hiphop','electronic','indie','dutch','disco','rnb','metal','dance');
+  if coalesce(array_length(g,1),0)=0 then raise exception 'select_a_genre'; end if;
+  select coalesce(array_agg(distinct value),'{}'::text[]) into d
+   from jsonb_array_elements_text(coalesce(p_data->'decades','[]'::jsonb)) as v(value)
+   where value in ('1960','1970','1980','1990','2000','2010','2020');
+  update musicquiz.rooms set genres=g,decades=d where id=r.id;
+ elsif p_action in ('start','next') then
+  if not is_host then raise exception 'host_only'; end if;
+  if p_action='start' and r.phase<>'lobby' then raise exception 'not_in_lobby'; end if;
+  if p_action='next' and r.phase<>'solved' then raise exception 'round_not_solved'; end if;
+  if p_action='start' and (select count(*) from musicquiz.players where room_id=r.id)<1 then
+   raise exception 'no_players';
+  end if;
+  desired_mode:=case when p_action='start' then coalesce(p_data->>'mode','demo') else r.source_mode end;
+  if desired_mode not in ('demo','youtube','catalog') then raise exception 'invalid_music_source'; end if;
+  if desired_mode='catalog' then
+   select y.* into selected from musicquiz.video_pool y
+   where y.enabled and (y.origin='curated' or y.checked_at>=now()-interval '29 days') and y.genres && r.genres
+    and (cardinality(r.decades)=0 or ((y.release_year / 10)*10)::text=any(r.decades))
+    and not(y.video_id=any(r.used_youtube_ids))
+   order by random() limit 1;
+   if not found then
+    select y.* into selected from musicquiz.video_pool y
+    where y.enabled and (y.origin='curated' or y.checked_at>=now()-interval '29 days') and y.genres && r.genres
+     and (cardinality(r.decades)=0 or ((y.release_year / 10)*10)::text=any(r.decades))
+    order by random() limit 1;
+    if not found then raise exception 'no_videos_for_filters'; end if;
+    r.used_youtube_ids:='{}';
+   end if;
+   update musicquiz.rooms set current_track=null,source_mode='catalog',
+    youtube_video_id=selected.video_id,youtube_title=selected.title,youtube_artist=selected.artist,
+    youtube_cue_ms=0,used_youtube_ids=array_append(r.used_youtube_ids,selected.video_id),
+    phase='paused',step=-1,round_number=r.round_number+1,
+    locked_player=null,answer_until=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
+    where id=r.id;
+  elsif desired_mode='youtube' then
+   video_id:=trim(coalesce(p_data->>'videoId',''));
+   song:=left(trim(coalesce(p_data->>'song','')),100);
+   artist:=left(trim(coalesce(p_data->>'artist','')),100);
+   if video_id !~ '^[A-Za-z0-9_-]{11}$' then raise exception 'invalid_youtube_video'; end if;
+   if length(song)<1 or length(artist)<1 then raise exception 'provide_song_and_artist'; end if;
+   if coalesce(p_data->>'cueMs','') !~ '^[0-9]{1,6}$' then raise exception 'invalid_cue'; end if;
+   cue:=(p_data->>'cueMs')::integer;
+   if cue>600000 then raise exception 'invalid_cue'; end if;
+   update musicquiz.rooms set current_track=null,source_mode='youtube',
+    youtube_video_id=video_id,youtube_title=song,youtube_artist=artist,youtube_cue_ms=cue,
+    phase='paused',step=-1,round_number=r.round_number+1,
+    locked_player=null,answer_until=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
+    where id=r.id;
+  else
+   select x.id into picked from musicquiz.tracks x
+    where x.enabled and x.genre=any(r.genres) and not(x.id=any(r.used_tracks))
+    order by random() limit 1;
+   if picked is null then
+    select x.id into picked from musicquiz.tracks x
+     where x.enabled and x.genre=any(r.genres) order by random() limit 1;
+    if picked is null then raise exception 'no_licensed_songs_for_genres'; end if;
+    r.used_tracks:='{}';
+   end if;
+   update musicquiz.rooms set current_track=picked,source_mode='demo',
+    youtube_video_id=null,youtube_title=null,youtube_artist=null,youtube_cue_ms=0,
+    used_tracks=array_append(r.used_tracks,picked),
+    phase='paused',step=-1,round_number=r.round_number+1,
+    locked_player=null,answer_until=null,first_answered=false,is_steal=false,title_done=false,artist_done=false
+    where id=r.id;
+  end if;
+  update musicquiz.players set blocked_step=-99 where room_id=r.id;
+ elsif p_action='random_cue' then
+  if not is_host or r.source_mode not in ('catalog','youtube')
+   or r.phase<>'paused' or r.step<>-1 then raise exception 'cue_not_available'; end if;
+  if coalesce(p_data->>'durationMs','') !~ '^[0-9]{5,8}$' then raise exception 'invalid_video_duration'; end if;
+  duration_ms:=(p_data->>'durationMs')::integer;
+  if duration_ms<45000 or duration_ms>7200000 then raise exception 'invalid_video_duration'; end if;
+  low_ms:=greatest(10000,least(60000,(duration_ms*0.15)::integer));
+  high_ms:=duration_ms-21000;
+  if high_ms<=low_ms then raise exception 'video_too_short_for_clues'; end if;
+  cue:=low_ms+floor(random()*(high_ms-low_ms))::integer;
+  update musicquiz.rooms set youtube_cue_ms=cue where id=r.id;
+ elsif p_action='play' then
+  if not is_host or r.phase<>'paused' or r.locked_player is not null then
+   raise exception 'not_ready_for_clip';
+  end if;
+  if r.step>=6 then raise exception 'all_hints_used'; end if;
+  update musicquiz.rooms set step=step+1,phase='playing',first_answered=false,is_steal=false where id=r.id;
+ elsif p_action='pause' then
+  if not is_host then raise exception 'host_only'; end if;
+  if r.phase='playing' then update musicquiz.rooms set phase='paused' where id=r.id; end if;
+ elsif p_action='resume' then
+  if not is_host or r.phase<>'holding' or r.step>=6 then raise exception 'resume_unavailable'; end if;
+  update musicquiz.rooms set phase='paused' where id=r.id;
+ elsif p_action='buzz' then
+  if is_host or r.phase not in ('playing','paused') or r.step<0 or r.first_answered then
+   raise exception 'buzz_closed';
+  end if;
+  if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
+  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=false,answer_until=now()+interval '25 seconds' where id=r.id;
+ elsif p_action='steal' then
+  if is_host or r.phase<>'holding' or not r.first_answered then raise exception 'steal_closed'; end if;
+  if p.blocked_step=r.step then raise exception 'already_tried_this_clip'; end if;
+  update musicquiz.rooms set phase='answering',locked_player=p.id,is_steal=true,answer_until=now()+interval '25 seconds' where id=r.id;
+ elsif p_action='expire' then
+  if r.phase<>'answering' or r.answer_until is null or now()<r.answer_until then
+   raise exception 'answer_still_open';
+  end if;
+  update musicquiz.players set blocked_step=r.step where id=r.locked_player;
+  update musicquiz.rooms set phase='holding',locked_player=null,
+    first_answered=true,is_steal=false,answer_until=null where id=r.id;
+ elsif p_action='forfeit' then
+  if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
+   raise exception 'not_your_turn';
+  end if;
+  update musicquiz.players set blocked_step=r.step where id=p.id;
+  update musicquiz.rooms set phase='holding',locked_player=null,
+    first_answered=true,is_steal=false,answer_until=null where id=r.id;
+ elsif p_action='answer' then
+  if r.answer_until is not null and now()>r.answer_until then raise exception 'answer_time_expired'; end if;
+  if is_host or r.phase<>'answering' or r.locked_player is distinct from p.id then
+   raise exception 'not_your_turn';
+  end if;
+  select * into t from musicquiz.tracks where id=r.current_track;
+  song:=left(trim(coalesce(p_data->>'song','')),100);
+  artist:=left(trim(coalesce(p_data->>'artist','')),100);
+  done_title:=r.title_done; done_artist:=r.artist_done;
+  if r.is_steal and ((not done_title and song='') or (not done_artist and artist='')) then
+    raise exception 'steal_requires_remaining_answers';
+  end if;
+  if song<>'' and not done_title then
+   title_ok := musicquiz.accepted_guess(song,
+    case when r.source_mode in ('youtube','catalog') then r.youtube_title else t.title end,
+    case when r.source_mode in ('youtube','catalog') then '{}'::text[] else t.title_aliases end);
+   delta:=delta+case when title_ok then 0.5 when r.is_steal then -1 else -0.5 end;
+   done_title:=title_ok;
+  end if;
+  if artist<>'' and not done_artist then
+   artist_ok := musicquiz.accepted_guess(artist,
+    case when r.source_mode in ('youtube','catalog') then r.youtube_artist else t.artist end,
+    case when r.source_mode in ('youtube','catalog') then '{}'::text[] else t.artist_aliases end);
+   delta:=delta+case when artist_ok then 0.5 when r.is_steal then -1 else -0.5 end;
+   done_artist:=artist_ok;
+  end if;
+  update musicquiz.players set score=greatest(0,score+delta),blocked_step=r.step where id=p.id
+    returning score into delta;
+  update musicquiz.rooms set
+   title_done=done_title,artist_done=done_artist,locked_player=null,answer_until=null,
+   first_answered=true,is_steal=false,
+   phase=case when delta>=20 then 'finished'
+        when done_title and done_artist then 'solved' else 'holding' end,
+   winner=case when delta>=20 then p.id else winner end where id=r.id;
+ elsif p_action='skip' then
+  if not is_host or r.phase not in ('paused','playing','holding') or (r.step<6 and r.source_mode='demo') then
+   raise exception 'skip_unavailable';
+  end if;
+  update musicquiz.rooms set phase='solved',title_done=true,artist_done=true,
+    locked_player=null where id=r.id;
+ elsif p_action<>'state' then
+  raise exception 'unknown_action';
+ end if;
+ return musicquiz.visible_state(r.id,p_hash);
+end
+$f$;
+
+revoke all on function public.musicquiz_v1(text,text,text,jsonb) from public,authenticated;
+grant execute on function public.musicquiz_v1(text,text,text,jsonb) to anon,service_role;
+
+create or replace function public.musicquiz_catalog_import_v1(p_items jsonb)
+returns jsonb language plpgsql security invoker
+set search_path=pg_catalog,musicquiz as $f$
+declare entry jsonb; g text[]; vid text; artist_name text; song_title text;
+ title_on_youtube text; yr integer; imported integer:=0;
+begin
+ if current_user<>'service_role' then raise exception 'service_role_only'; end if;
+ if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items) not between 1 and 25 then
+   raise exception 'invalid_batch';
+ end if;
+ for entry in select value from jsonb_array_elements(p_items) loop
+  vid:=coalesce(entry->>'videoId','');artist_name:=trim(coalesce(entry->>'artist',''));
+  song_title:=trim(coalesce(entry->>'title',''));
+  title_on_youtube:=left(trim(coalesce(entry->>'verifiedTitle','')),200);
+  if vid !~ '^[A-Za-z0-9_-]{11}$' or length(song_title) not between 1 and 100
+    or length(artist_name) not between 1 and 100 then
+    raise exception 'invalid_catalog_row';
+  end if;
+  if coalesce(entry->>'year','') !~ '^[0-9]{4}$' then raise exception 'invalid_release_year';end if;
+  yr:=(entry->>'year')::integer;
+  if yr<1950 or yr>2100 then raise exception 'invalid_release_year';end if;
+  select array_agg(distinct value) into g
+   from jsonb_array_elements_text(coalesce(entry->'genres','[]'::jsonb)) as t(value)
+   where value in ('pop','rock','hiphop','electronic','indie','dutch','disco','rnb','metal','dance');
+  if coalesce(cardinality(g),0)=0 then raise exception 'invalid_genres';end if;
+  insert into musicquiz.video_pool(video_id,title,artist,genres,release_year,enabled,verified_video_title,checked_at,origin)
+  values(vid,song_title,artist_name,g,yr,true,title_on_youtube,now(),'youtube_data_api')
+  on conflict(video_id) do update set
+   checked_at=excluded.checked_at,
+   verified_video_title=excluded.verified_video_title,
+   enabled=true,
+   title=excluded.title,artist=excluded.artist,genres=excluded.genres,release_year=excluded.release_year
+  where musicquiz.video_pool.origin='youtube_data_api';
+  imported:=imported+1;
+ end loop;
+ return jsonb_build_object('processed',imported);
+end
+$f$;
+revoke all on function public.musicquiz_catalog_import_v1(jsonb) from public,anon,authenticated;
+grant execute on function public.musicquiz_catalog_import_v1(jsonb) to service_role;
+
+-- YouTube non-authorized API data must be deleted or refreshed within 30 days.
+-- Only rows imported through the official API are purged; editorial curated IDs persist.
+select cron.schedule(
+ 'musicquiz_official_api_data_retention',
+ '17 3 * * *',
+ $$delete from musicquiz.video_pool where origin='youtube_data_api' and checked_at < now()-interval '29 days'$$
+);
