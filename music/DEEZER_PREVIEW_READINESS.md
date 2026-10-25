@@ -3,7 +3,7 @@
 This change is deliberately not enabled at `kalenel.nl/music/`. The live Tune Rush room backend only supports demo, YouTube link and authorized curated YouTube catalog modes. No Deezer preview is downloaded, played, streamed or proxied on the live website.
 
 ## What is implemented
-- `music/deezer-preview.mjs` — dependency-free short preview adapter. It validates a direct Deezer preview URL (official host and MP3 path only), strictly matches official artist/title rather than playing karaoke/cover tracks, and supports 0.5, 1.5, 3, 5, 8, 12, 20 second clips from the same randomized cue within the fixed 30-second preview. It cancels stale timer actions when buzzes or round transitions occur.
+- `music/deezer-preview.js` — dependency-free short preview adapter. It validates a direct Deezer preview URL (official host and MP3 path only), strictly matches official artist/title rather than playing karaoke/cover tracks, and supports 0.5, 1.5, 3, 5, 8, 12, 20 second clips from the same randomized cue within the fixed 30-second preview. It cancels stale timer actions when buzzes or round transitions occur.
 - `scripts/deezer-metadata-preflight.mjs --fixtures` — verifies exact matching without network access. `--live` performs **metadata-only** lookup for selected editorial catalog entries, reports preview availability, and does not fetch any preview audio.
 - `scripts/test-deezer-preview.mjs` and CI — simulate HTMLAudio playback, seeking, timing, stale timer cancellation, artist/version mismatches, and URL validation; no Deezer audio is fetched.
 
