@@ -14,6 +14,9 @@ public final class GardenPersonTrackGate {
  public static final float MIN_SCORE=.36f;
  public static final float HIGH_CONFIDENCE=.70f;
  public static final long MAX_PAIR_MS=5200L;
+ public static final String STATIONARY_HOLD_VERSION="confirmed_person_stationary_tail_v1";
+ public static final long MAX_STATIONARY_AGE_MS=9000L;
+ public static final float STATIONARY_HOLD_SCORE=.78f;
  public enum Decision { WEAK, FIRST, DUPLICATE_JPEG, UNRELATED, NO_LOCAL_MOTION, CONFIRMED }
  private float[] firstBox;
  private float firstScore;
@@ -21,7 +24,49 @@ public final class GardenPersonTrackGate {
  private boolean firstMotion;
  public long rejectedWeak=0,duplicateFrames=0,unrelatedBoxes=0,noLocalMotion=0,confirmed=0,unlikePersonShape=0;
  public long transportInterrupted=0;
- public void reset(){firstBox=null;firstAt=-1;firstJpegAt=-1;firstScore=0;firstMotion=false;}
+ private float[] confirmedBox,stationaryBox;
+ private long confirmedAt=-1,confirmedJpegAt=-1;
+ private long stationaryAt=-1,stationaryJpegAt=-1;
+ public long stationaryHolds=0,stationaryHoldRejected=0;
+ private void clearCandidate(){
+  firstBox=null;firstAt=-1;firstJpegAt=-1;firstScore=0;firstMotion=false;
+ }
+ private void clearStationaryProposal(){
+  stationaryBox=null;stationaryAt=-1;stationaryJpegAt=-1;
+ }
+ public void reset(){
+  clearCandidate();confirmedBox=null;confirmedAt=-1;confirmedJpegAt=-1;
+  clearStationaryProposal();
+ }
+ private void rememberConfirmed(long now,long jpegAt,float[] box){
+  confirmedBox=box.clone();confirmedAt=now;confirmedJpegAt=jpegAt;
+  clearStationaryProposal();
+ }
+ /** Continue an ALREADY admitted recording when its human remains still.
+  * Never use this for initial recording admission. Require two new, distinct,
+  * closely localized, high-confidence person JPEG observations within 9s of
+  * a motion-confirmed person (or its latest high-confidence hold). Transport
+  * contradictions are removed by ClipClassifier before this method is called.
+  */
+ public boolean confirmStationaryPresence(long now,long jpegAt,float score,float[] box){
+  if(confirmedBox==null||now<1||jpegAt<1||jpegAt>now+200||
+     confirmedAt<1||now<confirmedAt||now-confirmedAt>MAX_STATIONARY_AGE_MS||
+     jpegAt<=confirmedJpegAt||!Float.isFinite(score)||
+     score<STATIONARY_HOLD_SCORE||!plausiblePersonShape(box)||
+     !samePerson(confirmedBox,box)){
+   stationaryHoldRejected++;clearStationaryProposal();return false;
+  }
+  if(stationaryBox!=null){
+   if(jpegAt<=stationaryJpegAt){stationaryHoldRejected++;return false;}
+   if(now>stationaryAt&&now-stationaryAt>=800L&&
+      now-stationaryAt<=MAX_PAIR_MS&&samePerson(stationaryBox,box)){
+    rememberConfirmed(now,jpegAt,box);
+    stationaryHolds++;return true;
+   }
+  }
+  stationaryBox=box.clone();stationaryAt=now;stationaryJpegAt=jpegAt;
+  return false;
+ }
  /** Explicit same-region transport contradiction ends a pending person track. */
  public void rejectCompetingTransport(){transportInterrupted++;reset();}
  public long unrelatedTransportIgnored=0;
@@ -73,7 +118,7 @@ public final class GardenPersonTrackGate {
     noLocalMotion++;
     return Decision.NO_LOCAL_MOTION;
    }
-   reset();confirmed++;return Decision.CONFIRMED;
+   clearCandidate();rememberConfirmed(now,jpegAt,box);confirmed++;return Decision.CONFIRMED;
   }
   remember(now,jpegAt,score,box,motion);return Decision.FIRST;
  }
