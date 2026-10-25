@@ -33,6 +33,7 @@ async function refreshDeezerApproval(){
  choice.hidden=false;
  radio.disabled=!deezerAuthorized;
  choice.classList.toggle("is-unavailable",!deezerAuthorized);
+ $("deezer-provider-note").classList.toggle("approved",deezerAuthorized);
  choice.setAttribute("aria-disabled",String(!deezerAuthorized));
  setText("deezer-badge",deezerAuthorized?"AUTHORIZED":"PENDING");
  const foot=$("deezer-card-foot");
