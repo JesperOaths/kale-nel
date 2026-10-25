@@ -15,6 +15,8 @@ assert.match(html, /<section id="suggestions" hidden/);
 assert.match(html, /id="liveFolderSuggestionCards"/);
 assert.match(html, /folder-suggestions-top-tab-v1\.js/);
 assert.match(html, /security-people-v325\.js/);
+assert.match(html, /#suggestions \.folder-suggestion-card select[^\n]*width:100%/);
+assert.match(html, /vector-only-suggestions-20261025/);
 assert.doesNotMatch(html, /folder-suggestions-panel-v1\.js/);
 assert.match(nav, /'automatic','suggestions','folderView'/);
 assert.match(nav, /if\(pane==='suggestions'\)/);
@@ -40,6 +42,7 @@ const valid = { schema:'folder_suggestions_v1', status:'human_review_only',
   historic_review_index_verified:true, verified_media_evidence:true,
   raw_embeddings_exposed:false, automatic_assignments:0,
   probabilities:false, identity_probabilities:false,
+  scoring_mode:'visual_embedding_cosine_v1',
   matches:[{state:'pending_review',safe:true},{state:'pending_review',safe:false}]};
 let failure=false,sessionHeader=false,loads=0,connectOptions=null;
 const listeners=new Map();
@@ -71,6 +74,7 @@ vm.runInNewContext(controller,ctx,{filename:'folder-suggestions-top-tab-v1.js'})
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(loads,1,'top-level nav loads existing verified cards renderer');
   assert(connectOptions && connectOptions.onPreview && connectOptions.onOpen);
+  assert.equal(connectOptions.requiredMode,'visual_embedding_cosine_v1','tab must fail closed on hybrid mode');
   const image=connectOptions.onPreview({clip_id:'motion_1790000000000.mp4'});
   assert.equal(image.name,'img','preview thumbnails available');
   assert.equal(connectOptions.showProvisional,true);
