@@ -196,5 +196,45 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(status,503)
         self.assertEqual(self.calls,[])
 
+
+    def test_trusted_vector_only_threshold_and_no_raw_vectors(self):
+        self.index["scoring_mode"]=eng.VECTOR_ONLY
+        self.index["embedding_similarity_threshold"]=.73
+        self.a["structural_crop_embedding"]=None
+        self.b["structural_crop_embedding"]=None
+        result=api.snapshot(self.provider,self.journal)
+        self.assertEqual(result["scoring_mode"],eng.VECTOR_ONLY)
+        self.assertEqual(result["match_threshold"],.73)
+        self.assertEqual(result["matches"][0]["method"],eng.VECTOR_ONLY)
+        self.assertIsNone(result["matches"][0]["color_score"])
+        self.assertNotIn("visual_embedding",str(result))
+        self.assertEqual(result["automatic_assignments"],0)
+        self.assertEqual(result["status"],"human_review_only")
+
+    def test_provider_threshold_fail_closed(self):
+        self.index["scoring_mode"]=eng.VECTOR_ONLY
+        for threshold in (-1,.49,1.,float("nan"),"0.8",True):
+            with self.subTest(threshold=threshold):
+                self.index["embedding_similarity_threshold"]=threshold
+                with self.assertRaises(ValueError):
+                    api.snapshot(self.provider,self.journal)
+        self.index["embedding_similarity_threshold"]=.70
+        self.index["scoring_mode"]="unknown"
+        with self.assertRaises(ValueError):
+            api.snapshot(self.provider,self.journal)
+
+    def test_threshold_change_during_attested_review_fails_closed(self):
+        self.index["scoring_mode"]=eng.VECTOR_ONLY
+        self.index["embedding_similarity_threshold"]=.68
+        body=self.body()
+        def change_settings(*_):
+            self.index["embedding_similarity_threshold"]=.96
+            return True
+        code,result=api.review(body,self.provider,self.journal,change_settings,self.commit)
+        self.assertEqual(code,409)
+        self.assertEqual(result["error"],"original_changed_during_review")
+        self.assertEqual(self.calls,[])
+        self.assertEqual(self.journal.read()["revision"],2)
+
 if __name__=="__main__":
     unittest.main(verbosity=2)
