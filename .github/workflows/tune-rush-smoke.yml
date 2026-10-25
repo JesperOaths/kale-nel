@@ -7,6 +7,7 @@ on:
       - 'supabase/functions/music-game-v1/**'
       - 'scripts/tune-rush-smoke.mjs'
       - 'scripts/tune-rush-youtube-smoke.mjs'
+      - 'scripts/tune-rush-catalog-smoke.mjs'
       - '.github/workflows/tune-rush-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -24,3 +25,5 @@ jobs:
         run: node scripts/tune-rush-smoke.mjs
       - name: Live host video-source acceptance
         run: node scripts/tune-rush-youtube-smoke.mjs
+      - name: Live catalog genres and decades acceptance
+        run: node scripts/tune-rush-catalog-smoke.mjs
