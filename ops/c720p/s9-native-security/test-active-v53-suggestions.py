@@ -45,8 +45,9 @@ class ActiveSuggestionsUI(unittest.TestCase):
   hub=(BASE/'security-hub-v32.js').read_text()
   self.assertIn("security-people-v53.html?v=suggestions-active-v53-20261025&",hub)
   self.assertIn("security-task9-v1.html?v=task9-live-20261025",hub)
-  entry=(BASE/'security-hub-v30.html').read_text()
-  self.assertIn('security-hub-v32.js?v=suggestions-active-v53-20261025',entry)
+  installer=(BASE/'install-active-people-hub-loader.py').read_text()
+  self.assertIn('security-hub-v32.js?v=suggestions-active-v53-20261025',installer)
+  self.assertIn('EXPECTED_ORIGINAL_SHA256',installer)
 
 if __name__=='__main__':
  unittest.main()
