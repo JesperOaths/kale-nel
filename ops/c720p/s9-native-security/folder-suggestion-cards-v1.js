@@ -72,16 +72,25 @@
       host.append(element('p', 'Verified provisional suggestions unavailable.'));
       return {visible: 0};
     }
+
     const matches = snapshot.matches.filter(safeMatch).slice(0, 300);
+    const vectorOnly = snapshot.scoring_mode === 'visual_embedding_cosine_v1';
     const heading = element('h3', 'Pending appearance suggestions');
     host.append(heading, element('p',
-      'Scores are provisional resemblance indicators, never identity probabilities. ' +
-      'Approve or Reject only after inspecting the original clip.'));
+      vectorOnly
+        ? 'ONNX visual vector cosine similarity; not a probability of identity. ' +
+          'Confirm or Deny only after reviewing the original recording.'
+        : 'Scores are provisional resemblance indicators, never identity probabilities. ' +
+          'Approve or Reject only after inspecting the original clip.'));
     for (const row of matches) {
       const card = element('article', undefined, 'folder-suggestion-card');
       const label = element('h4', row.folder_id + ' · ' + row.source_qualified_clip_id);
-      const detail = element('p', 'Suggestion confidence index: ' +
-        row.suggestion_confidence.toFixed(1) + '% · pending review');
+      const detail = element('p', vectorOnly
+        ? 'Visual embedding cosine: ' + formatScore(row.visual_score) +
+          ' · configurable threshold ' + formatScore(snapshot.match_threshold) +
+          ' · pending human review'
+        : 'Suggestion confidence index: ' +
+          row.suggestion_confidence.toFixed(1) + '% · pending review');
       const subs = element('p', statusLine(row));
       const breakdown = element('p', 'Centroid (40%): ' +
         formatScore(row.centroid_score) + ' · closest approved example (60%): ' +
@@ -90,7 +99,7 @@
       const actions = element('div', undefined, 'actions');
       const message = element('p', 'Inspect this original recording to enable review.');
       message.setAttribute('data-review-status', '');
-      const approve = invoke(card, 'Approve in folder', async () => {
+      const approve = invoke(card, vectorOnly ? 'Confirm group' : 'Approve in folder', async () => {
         const result = await hooks.onApprove(row);
         if (!result || result.persisted !== true || result.media_verified !== true ||
             result.status !== 'approved') {
@@ -103,7 +112,7 @@
         reject.disabled = true;
         if (typeof hooks.onSaved === 'function') hooks.onSaved(result);
       }, row);
-      const reject = invoke(card, 'Reject for this folder', async () => {
+      const reject = invoke(card, vectorOnly ? 'Deny suggestion' : 'Reject for this folder', async () => {
         const result = await hooks.onReject(row);
         if (!result || result.persisted !== true || result.media_verified !== true ||
             result.status !== 'rejected') {
@@ -139,7 +148,15 @@
         reject.disabled = false;
       }, row);
       actions.append(open, approve, reject);
-      card.append(label, detail, subs, breakdown, actions, message);
+      if (typeof hooks.onPreview === 'function') {
+        // Only the authenticated UI can supply a source-qualified preview.
+        // Never accept an embedding response as an arbitrary image URL.
+        const preview = hooks.onPreview(row);
+        if (preview && preview.nodeType === 1) card.append(preview);
+      }
+      card.append(label, detail, vectorOnly
+        ? element('p','Embedding-only; no clothing colour or face score used.')
+        : subs, breakdown, actions, message);
       host.append(card);
     }
     if (!matches.length) host.append(element('p', 'No eligible named-folder matches.'));
@@ -313,6 +330,11 @@
           'Verified folder rankings unavailable. Existing manual review is unaffected.'));
         return {visible: 0};
       }
+      if (options.requiredMode && snapshot.scoring_mode !== options.requiredMode) {
+        host.replaceChildren(element('p',
+          'Vector-only suggestions are not verified or enabled. Manual review is unchanged.'));
+        return {visible: 0};
+      }
       current = snapshot;
       const narrowed = Object.assign({}, snapshot, {
         matches: (snapshot.matches || []).filter(row =>
@@ -335,6 +357,7 @@
         onApprove: row => send('approve', row),
         onReject: row => send('reject', row),
         preferredFolder: options.folderId,
+        onPreview: options.onPreview,
         onClusterOpen: options.onClusterOpen,
         onClusterName: options.onClusterName,
         onSaved: result => {
