@@ -415,7 +415,7 @@ def camera_guard(*,deadline=None):
       type(doc.get("continuous_4k_buffered_ms")) is int and
       doc["continuous_4k_buffered_ms"]>=6500 and
       type(doc.get("temperature_c")) in (int,float) and
-      0<doc["temperature_c"]<=34.5 and
+      0<doc["temperature_c"]<=40.0 and
       not any(doc.get(x) is True for x in (
         "recording_active","recording_in_progress",
         "face_backfill_queued","appearance_backfill_queued",

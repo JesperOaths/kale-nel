@@ -101,7 +101,7 @@ def camera(doc):
           and doc["continuous_4k_buffered_ms"]>=6500
           and doc.get("continuous_4k_dropped_output_frames")==0
           and type(doc.get("temperature_c")) in (int,float)
-          and 0<doc["temperature_c"]<=34.5)
+          and 0<doc["temperature_c"]<=40.0)
     exclusion=[name for name in
                ("recording_active","recording_in_progress","face_backfill_queued",
                 "appearance_backfill_queued","historical_import_queued",
@@ -159,7 +159,7 @@ def assess(samples,host_available_kib,root_free_bytes):
             "actual_phone_onnx_codec_peak_rss_measured":False,
             "reason":"no_inference_peak_measurement_and_full_admission_not_established",
             "required_next_phases":[
-              "existing 900MiB hub, 850MiB root, <=34.5C phone, 4K and exclusion guards must all pass",
+              "existing 900MiB hub, 850MiB root, <=40.0C phone, 4K and exclusion guards must all pass",
               "use conservative phone memory reservation from this receipt, never a positive arbitrary value",
               "begin one bounded real frame only through existing exclusive V304 lease",
               "measure phone app_process high water and remaining phone MemAvailable before/between/after frame; abort on unsafe pressure",

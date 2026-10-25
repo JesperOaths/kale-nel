@@ -65,6 +65,10 @@ jobs:
             test_file: ops/c720p/s9-native-security/offline-worker/test-s9-self-deadline-v374.py
             expected_tests: 7
             source_root_argument: '0'
+          - suite: existing_40c_thermal_policy
+            test_file: ops/c720p/s9-native-security/offline-worker/test-task9-thermal-policy-v374.py
+            expected_tests: 6
+            source_root_argument: '0'
           - suite: original_seven_regressions
             test_file: test_task9_remaining_boundaries.py
             expected_tests: 7
