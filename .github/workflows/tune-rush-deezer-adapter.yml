@@ -5,6 +5,11 @@ on:
       - 'music/deezer-preview.mjs'
       - 'scripts/test-deezer-preview.mjs'
       - 'scripts/deezer-metadata-preflight.mjs'
+      - 'scripts/test-deezer-license-db.mjs'
+      - 'sql/musicquiz-deezer-preview-gated-v5.sql'
+      - 'music/deezer-edge-candidate.ts'
+      - 'music/app.js'
+      - 'music/index.html'
       - '.github/workflows/tune-rush-deezer-adapter.yml'
   workflow_dispatch:
 permissions:
@@ -20,12 +25,18 @@ jobs:
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: '24'
+      - name: Install isolated PostgreSQL test engine
+        run: npm install --no-save --ignore-scripts --package-lock=false @electric-sql/pglite@0.5.11
       - name: Verify Deezer source parses
         run: |
           node --check music/deezer-preview.mjs
           node --check scripts/test-deezer-preview.mjs
           node --check scripts/deezer-metadata-preflight.mjs
+          node --check scripts/test-deezer-license-db.mjs
+          node --check music/app.js
       - name: Verify matching, preview offsets, timers and network-free fixtures
         run: |
           node scripts/test-deezer-preview.mjs
           node scripts/deezer-metadata-preflight.mjs --fixtures
+      - name: Fail-closed database gate and host-only metadata tests
+        run: node scripts/test-deezer-license-db.mjs
