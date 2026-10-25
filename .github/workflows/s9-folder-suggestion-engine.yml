@@ -10,6 +10,11 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/folder_suggestion_baseline_v1.py'
+      - 'ops/c720p/s9-native-security/s9_folder_suggestion_metrics_extension_v1.py'
+      - 'ops/c720p/s9-native-security/folder-suggestion-cards-live-v3.js'
+      - 'ops/c720p/s9-native-security/folder-suggestions-top-tab-live-v3.js'
+      - 'ops/c720p/s9-native-security/test-suggestions-nonblocking-live-v3.py'
       - 'ops/c720p/s9-native-security/security-hub-v33.js'
       - 'ops/c720p/s9-native-security/people-suggestions-dom-guard-v1.js'
       - 'ops/c720p/s9-native-security/install-active-surveillance-suggestions.py'
@@ -39,6 +44,11 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/folder_suggestion_baseline_v1.py'
+      - 'ops/c720p/s9-native-security/s9_folder_suggestion_metrics_extension_v1.py'
+      - 'ops/c720p/s9-native-security/folder-suggestion-cards-live-v3.js'
+      - 'ops/c720p/s9-native-security/folder-suggestions-top-tab-live-v3.js'
+      - 'ops/c720p/s9-native-security/test-suggestions-nonblocking-live-v3.py'
       - 'ops/c720p/s9-native-security/security-hub-v33.js'
       - 'ops/c720p/s9-native-security/people-suggestions-dom-guard-v1.js'
       - 'ops/c720p/s9-native-security/install-active-surveillance-suggestions.py'
@@ -83,6 +93,8 @@ jobs:
           python test-active-v53-suggestions.py
           python -m py_compile install-active-surveillance-suggestions.py
           python test-real-surveillance-suggestions-dom.py
+          python -m py_compile folder_suggestion_baseline_v1.py s9_folder_suggestion_metrics_extension_v1.py
+          python test-suggestions-nonblocking-live-v3.py
       - name: Syntax-check the optional UI bridge and original People UI
         run: |
           node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
@@ -96,4 +108,6 @@ jobs:
           node --check ops/c720p/s9-native-security/security-hub-v33.js
           node --check ops/c720p/s9-native-security/people-suggestions-dom-guard-v1.js
           node --check ops/c720p/s9-native-security/folder-suggestions-top-tab-v1.js
+          node --check ops/c720p/s9-native-security/folder-suggestions-top-tab-live-v3.js
+          node --check ops/c720p/s9-native-security/folder-suggestion-cards-live-v3.js
           node ops/c720p/s9-native-security/test-folder-suggestions-top-tab.js
