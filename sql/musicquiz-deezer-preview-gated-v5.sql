@@ -316,3 +316,35 @@ revoke all on function public.musicquiz_v1(text,text,text,jsonb) from public,aut
 grant execute on function public.musicquiz_v1(text,text,text,jsonb) to anon,service_role;
 revoke all on function musicquiz.visible_state(uuid,text) from public,anon,authenticated;
 grant execute on function musicquiz.visible_state(uuid,text) to service_role;
+
+
+-- Only the service role (a trusted server) may resolve private Deezer metadata.
+-- Host's SHA-256 capability is compared against the private room host hash.
+create or replace function public.musicquiz_deezer_host_preview_v1(
+ p_code text,p_hash text
+) returns jsonb language plpgsql security definer
+set search_path=pg_catalog,musicquiz as $f$
+declare r musicquiz.rooms%rowtype;
+begin
+ if p_hash is null or p_hash !~ '^[a-f0-9]{64}$' then raise exception 'unauthorized';end if;
+ select * into r from musicquiz.rooms where code=upper(trim(p_code));
+ if not found or r.expires_at<now() or r.host_hash<>p_hash then raise exception 'unauthorized';end if;
+ if r.source_mode<>'deezer' or r.deezer_track_id is null then raise exception 'not_deezer_room';end if;
+ if not exists (select 1 from musicquiz.deezer_approval
+                where id=1 and approved and authorized_at is not null and length(authorization_reference)>=12)
+ then raise exception 'deezer_not_authorized';end if;
+ return jsonb_build_object('trackId',r.deezer_track_id,'title',r.deezer_title,
+  'artist',r.deezer_artist,'cueMs',r.deezer_cue_ms,'round',r.round_number);
+end $f$;
+revoke all on function public.musicquiz_deezer_host_preview_v1(text,text) from public,anon,authenticated;
+grant execute on function public.musicquiz_deezer_host_preview_v1(text,text) to service_role;
+
+-- The public UI can discover whether the fully validated server-side feature is on.
+create or replace function public.musicquiz_deezer_enabled_v1()
+returns boolean language sql security definer
+set search_path=pg_catalog,musicquiz as $f$
+ select coalesce((select approved and authorized_at is not null and length(authorization_reference)>=12
+                  from musicquiz.deezer_approval where id=1),false)
+$f$;
+revoke all on function public.musicquiz_deezer_enabled_v1() from public,authenticated;
+grant execute on function public.musicquiz_deezer_enabled_v1() to anon,service_role;
