@@ -212,3 +212,7 @@ body:has(#room.host-mode:not([hidden])) .brand-game{background:#48e29718;color:#
 @media(max-width:1000px){.host-mode .room-layout{grid-template-columns:minmax(0,1fr) minmax(240px,.65fr)}.host-mode .source-select{grid-template-columns:1fr}.host-mode .source-select label{min-height:0}.host-mode .disc-shell{width:230px}.host-mode .game-grid{grid-template-columns:minmax(0,1.42fr) minmax(235px,.7fr)}.host-mode .stage{padding:20px}}
 @media(max-width:760px){.host-mode .room-layout,.host-mode .game-grid{grid-template-columns:1fr}.host-mode .stage{min-height:0}.host-mode .room-head{margin-top:17px}.host-mode .room-key{flex-wrap:wrap}.host-mode .room-key .outline{width:100%}.host-mode .disc-shell{width:min(240px,75vw)}.host-mode .score-panel{min-height:0}.host-mode .score-list{grid-template-columns:1fr}.host-mode .host-ticker{flex-wrap:wrap}.host-mode .host-stage-hero h2{font-size:clamp(2.15rem,8vw,3.2rem)}.host-mode .source-select{grid-template-columns:1fr}.host-mode .room-head-actions{gap:5px}.host-mode .room-head-actions .quiet{font-size:12px;padding:10px}}
 @media(prefers-reduced-motion:reduce){.host-mode .stage.is-playing .sound-bars i{animation:none}}
+
+/* Unchanged phone game display: the new host art must not leak into the player stage. */
+#room:not(.host-mode) .disc-art-top,#room:not(.host-mode) .disc-art-bottom,#room:not(.host-mode) .disc-core,#room:not(.host-mode) .sound-bars{display:none!important}
+.host-mode .mobile-disc-icon{display:none!important}
