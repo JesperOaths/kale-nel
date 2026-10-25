@@ -20,7 +20,7 @@ class ActiveSuggestionsUI(unittest.TestCase):
   self.assertIn('id="refreshSuggestions"',html)
  def test_current_page_loads_vector_review_and_preserves_appearance_evidence(self):
   html=(BASE/'security-people-v53.html').read_text()
-  for asset in ['folder-suggestion-cards-live-v3.js','folder-suggestions-top-tab-live-v3.js','security-people-v326.js','appearance-evidence-panel-v3.js']:
+  for asset in ['folder-suggestion-cards-live-v3.js','folder-suggestions-top-tab-live-v3.js','security-people-v327.js','appearance-evidence-panel-v3.js']:
    self.assertIn(asset,html)
   self.assertNotIn('security-people-v323.js?v=',html)
   self.assertIn('width:100%;max-width:100%',html)
@@ -34,7 +34,7 @@ class ActiveSuggestionsUI(unittest.TestCase):
   self.assertIn("node('button','Appearance comparisons')",appearance)
   self.assertNotIn("node('button','Folder Suggestions')",appearance)
  def test_v326_click_exclusively_opens_suggestions(self):
-  controller=(BASE/'security-people-v326.js').read_text()
+  controller=(BASE/'security-people-v327.js').read_text()
   self.assertIn("['overview','review','people','clothing','automatic','suggestions','folderView']",controller)
   self.assertIn("if(pane==='suggestions'){",controller)
   self.assertIn("window.dispatchEvent(new Event('people-folder-suggestions-open'))",controller)
