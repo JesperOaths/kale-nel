@@ -102,11 +102,16 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           source=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KGapAuditV370.java').read_text()
-          for marker in ('MAX_RUN_NS','MAX_SOURCE_BYTES','S9Original4KTimedDecoderV371.decode',
+          for marker in ('S9StandaloneDeadlineV374.start(args)','deadline.deadlineNanos()',
+                         'deadline.requireCurrent()','deadline.complete()',
+                         'MAX_SOURCE_BYTES','S9Original4KTimedDecoderV371.decode',
                          'MODEL_SHA','source_revision_changed_after_phone_inference',
                          'eligible_to_publish",false','host_attestation_required",true',
                          'one_frame_only",true','automatic_person_assignments",0'):
               assert marker in source,marker
+          watchdog=Path('ops/c720p/s9-native-security/offline-worker/S9StandaloneDeadlineV374.java').read_text()
+          assert 'MAXIMUM_NS=65_000_000_000L' in watchdog
+          assert 'Runtime.getRuntime().halt(124)' in watchdog
           timed=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KTimedDecoderV371.java').read_text()
           assert 'info.presentationTimeUs' in timed and 'MediaCodec' in timed
           assert 'new MediaMetadataRetriever(' not in timed
