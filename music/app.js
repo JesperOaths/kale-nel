@@ -28,7 +28,19 @@ async function refreshDeezerApproval(){
   });
   deezerAuthorized=r.ok&&(await r.json())===true;
  }catch{deezerAuthorized=false}
- show("deezer-source-option",deezerAuthorized);
+ const choice=$("deezer-source-option");
+ const radio=choice.querySelector('input[name="music-source"]');
+ choice.hidden=false;
+ radio.disabled=!deezerAuthorized;
+ choice.classList.toggle("is-unavailable",!deezerAuthorized);
+ choice.setAttribute("aria-disabled",String(!deezerAuthorized));
+ setText("deezer-badge",deezerAuthorized?"AUTHORIZED":"PENDING");
+ const foot=$("deezer-card-foot");
+ foot.firstChild.textContent=deezerAuthorized?"SELECT DEEZER ":"NOT YET AVAILABLE ";
+ setText("deezer-license-status",deezerAuthorized?"Deezer preview authorization confirmed":"Deezer integration ready · Playback not authorized");
+ setText("deezer-note-detail",deezerAuthorized?
+  "The provider authorization flag is enabled. Preview playback still depends on the authorized host resolver and available tracks.":
+  "We built the connection, but Deezer has not approved using previews in the public game.");
  if(!deezerAuthorized&&chosenSource()==="deezer"){
   document.querySelector('input[name="music-source"][value="demo"]').checked=true;
   updateAudioChoice();
@@ -485,6 +497,7 @@ function render(){
  show("host-settings",host);show("guest-wait",!host);
  if(host&&phase==="lobby")updateAudioChoice();
  $("lobby-players").replaceChildren(...room.players.map(x=>makePlayer(x.name)));
+ setText("lobby-player-count",room.players.length+" player"+(room.players.length===1?"":"s")+" joined");
  if(phase==="lobby"&&!genresDirty&&room.genres.some(g=>g!=="demo")){
   document.querySelectorAll("#genre-options input").forEach(input=>{
    input.checked=room.genres.includes(input.value);
