@@ -373,6 +373,10 @@ async function startClip(replay=false){
  const generation=++clipGeneration,round=room.round,initialStep=room.step;
  try{
   setLoading(true);
+  if(room.mode==="deezer"){
+   await ensureDeezerPreview();
+   if(generation!==clipGeneration)return;
+  }
   if(room.mode==="youtube"||room.mode==="catalog"){
    // Fail before consuming a hint when the player is unavailable or off screen.
    await ensureYoutubePlayer(room.audio?.source?.slice(8),room.audio?.cueMs||0);
@@ -427,7 +431,10 @@ function applyState(s){
  room=s;
  if(s.firstAnswered||s.phase==="answering")failedClue="";
  const newRound=s.round;
- if(oldRound!==newRound){lastBlockKey="";answeredFocusKey="";failedClue="";cancelNext();clearAudio();}
+ if(oldRound!==newRound){
+  lastBlockKey="";answeredFocusKey="";failedClue="";cancelNext();clearAudio();
+  deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;
+ }
  if(isHost()){
   if(s.phase==="answering"||s.phase==="holding"||s.phase==="solved"||s.phase==="finished"){clearAudio();cancelNext();}
   if(s.phase==="paused"){
@@ -460,8 +467,8 @@ function render(){
  $("room").dataset.phase=phase;
  show("host-fullscreen",host);
  if(host){
-  const source=room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
-  const filters=room.mode==="catalog"?[
+  const source=room.mode==="deezer"?"DEEZER PREVIEW":room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
+  const filters=(room.mode==="catalog"||room.mode==="deezer")?[
    ...(room.genres||[]).filter(x=>x!=="demo").map(x=>({hiphop:"HIP-HOP",rnb:"R&B",dutch:"DUTCH",electronic:"ELECTRONIC"}[x]||x.toUpperCase())),
    ...(room.decades||[]).map(x=>x+"s")
   ]:[];
@@ -525,9 +532,14 @@ function render(){
   show("youtube-replay-hint",host&&youtubeMode&&room.step>=0&&!room.firstAnswered&&
    (phase==="paused"||(phase==="playing"&&!startedClip)));
   show("youtube-next-form",host&&room.mode==="youtube"&&phase==="solved");
+  const deezerMode=room.mode==="deezer";
+  show("deezer-host",host&&deezerMode);
+  show("deezer-play-hint",host&&deezerMode&&phase==="paused"&&room.step<6);
+  show("deezer-replay-hint",host&&deezerMode&&room.step>=0&&!room.firstAnswered&&
+   (phase==="paused"||(phase==="playing"&&!startedClip)));
 
-  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
-  show("enable-sound",host&&!youtubeMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
+  show("next-round",host&&phase==="solved"&&room.mode!=="youtube");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(room.step===6||youtubeMode||deezerMode)&&(phase==="paused"||phase==="playing"||phase==="holding"));
+  show("enable-sound",host&&!youtubeMode&&!deezerMode&&phase!=="finished"&&(!ctx||ctx.state!=="running"));
   if(!host){
    const iAmAnswering=phase==="answering"&&room.lockedPlayer===room.me;
    const guessKey=room.round+":"+room.step;
@@ -648,7 +660,7 @@ function chosenFilters(){
  };
 }
 async function saveGenres(){
- if(!room||!isHost()||room.phase!=="lobby"||chosenSource()!=="catalog")return;
+ if(!room||!isHost()||room.phase!=="lobby"||!["catalog","deezer"].includes(chosenSource()))return;
  const filters=chosenFilters();
  if(!filters.genres.length){message("Select at least one genre");return}
  genresDirty=true;
@@ -677,7 +689,8 @@ $("start").addEventListener("click",async()=>{
  try{
   clearTimeout(genresSaveTimer);
   const mode=chosenSource();
-  if(mode==="catalog"){
+  if(mode==="catalog"||mode==="deezer"){
+   if(mode==="deezer"&&!deezerAuthorized)throw Error("Deezer is awaiting authorization.");
    const filters=chosenFilters();
    if(!filters.genres.length)throw Error("Select at least one genre");
    await call("settings",filters);
