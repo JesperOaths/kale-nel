@@ -597,7 +597,13 @@ public final class CameraService extends Service {
      GardenPersonTrackGate.Decision verdict=
          personTrackGate.offer(now,jpegAt,score,personBox,localCells);
      gardenPersonDuplicateJpegRejects=personTrackGate.duplicateFrames;
-     if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED)return;
+     // After a person has ALREADY passed motion-based admission, allow
+     // two new, high-confidence, matching detections to corroborate a
+     // person standing still. Never weaken the initial recording gate.
+     boolean stationaryPresent=verdict!=GardenPersonTrackGate.Decision.CONFIRMED&&
+         "recording".equals(mode)&&
+         personTrackGate.confirmStationaryPresence(now,jpegAt,score,personBox);
+     if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED&&!stationaryPresent)return;
      // A newly corroborated person may refresh an existing event's quiet
      // tail; this is deliberately NOT done for unverified pixel motion.
      if("recording".equals(mode)){
@@ -1533,6 +1539,9 @@ public final class CameraService extends Service {
    d.put("garden_person_tail_requires_verified_person",true);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
    d.put("garden_person_transport_track_resets",personTrackGate.transportInterrupted);
+   d.put("garden_person_stationary_tail_version",GardenPersonTrackGate.STATIONARY_HOLD_VERSION);
+   d.put("garden_person_stationary_tail_refreshes",personTrackGate.stationaryHolds);
+   d.put("garden_person_stationary_tail_rejected",personTrackGate.stationaryHoldRejected);
    d.put("garden_unrelated_transport_vetoes_ignored",personTrackGate.unrelatedTransportIgnored);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
