@@ -62,6 +62,14 @@ public final class GardenPersonTrackGateTest{
   check(gate.noLocalMotion>=4,"static false positive protection enforced");
   check(gate.unlikePersonShape>=1,"vehicle-like person boxes rejected");
   check(!GardenPersonTrackGate.samePerson(walker,other),"different boxes must not correlate");
+  check(GardenPersonTrackGate.samePerson(moving,other),
+    "broad walker matcher does allow nearby nonoverlap: do not use for car veto");
+  check(!GardenPersonTrackGate.sameRegionTransport(moving,other),
+    "nearby nonoverlapping car never invalidates stationary pedestrian");
+  check(GardenPersonTrackGate.sameRegionTransport(walker,moving),
+    "genuinely overlapping detections may veto same-region false object");
+  check(!GardenPersonTrackGate.sameRegionTransport(walker,other),
+    "far car must not veto real person");
   check(GardenPersonTrackGate.samePerson(walker,moving),"moving walker boxes stay associated");
   check(!GardenPersonTrackGate.plausiblePersonShape(broadCar),"wide car not person-shaped");
   check(GardenPersonTrackGate.plausiblePersonShape(walker),"upright walker accepted");
