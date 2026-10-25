@@ -38,7 +38,18 @@ async function join(p,code,name){
  await p.locator("#join-code").fill(code);
  await p.locator("#nickname").fill(name);
  await p.locator("#join-form button[type=submit]").click();
- await wait(p,()=>room?.role==="player");
+ try{await wait(p,()=>room?.role==="player")}
+ catch(e){
+  const diagnosis=await p.evaluate(()=>({
+   toast:document.querySelector("#toast")?.textContent||"",
+   joinCode:document.querySelector("#join-code")?.value||"",
+   hasRoom:Boolean(room),role:room?.role||null,
+   formVisible:!document.querySelector("#join-form")?.hidden,
+   pending:loading
+  }));
+  console.error("BROWSER_JOIN_DIAGNOSTIC",JSON.stringify({name,code,...diagnosis}));
+  throw e;
+ }
 }
 async function createGame(host){
  await host.locator("#create").click();
@@ -58,7 +69,8 @@ try {
  assert.equal(await host.locator(".source-select label:visible").count(),3,"only approved sources appear");
  assert.equal(await host.locator("#deezer-source-option").isVisible(),false,"unapproved Deezer mode must fail closed");
  assert.ok(!(await alice.locator(".host-stage-hero").isVisible()),"welcome phone never shows host stage");
- await Promise.all([join(alice,initial.code,"QAlice"),join(bob,initial.code,"QBob")]);
+ await join(alice,initial.code,"QAlice");
+ await join(bob,initial.code,"QBob");
  await wait(host,()=>room?.players.length===2);
  assert.ok((await host.locator("#lobby-players").innerText()).includes("QBob"));
  await host.locator("#start").click();
@@ -154,7 +166,8 @@ try {
  yh.on("requestfailed",req=>{if(/youtube|googlevideo|ytimg|gstatic/i.test(req.url()))ytRequestsFailed.push([req.url().slice(0,170),req.failure()?.errorText])});
  yh.on("console",msg=>{if(msg.type()==="error")ytConsoleErrors.push(msg.text().slice(0,200))});
  const youtube=await createGame(yh);
- await Promise.all([join(ya,youtube.code,"YouA"),join(yb,youtube.code,"YouB")]);
+ await join(ya,youtube.code,"YouA");
+ await join(yb,youtube.code,"YouB");
  await yh.locator('input[name="music-source"][value="youtube"]').check();
  await yh.locator("#youtube-setup").waitFor({state:"visible"});
  await yh.locator("#youtube-link").fill("https://music.youtube.com/watch?v=dQw4w9WgXcQ");
