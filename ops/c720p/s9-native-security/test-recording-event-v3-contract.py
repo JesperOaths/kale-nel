@@ -35,6 +35,7 @@ class Contract(unittest.TestCase):
   self.assertIn('personTrackGate.offer(now,jpegAt,score,personBox,localCells)',confirmed)
   self.assertIn('if(rejectedByTransport)personTrackGate.rejectCompetingTransport()',confirmed)
   self.assertIn('gardenPersonTailVerifiedRefreshes++;',confirmed)
+  self.assertIn('rejectCompetingTransport(rejectedTransportBoxes)',confirmed)
   self.assertIn('lastMovementAt=SystemClock.elapsedRealtime();',confirmed)
   self.assertIn('eventChain.evidence(lastMovementAt);',confirmed)
   self.assertIn('d.put("garden_raw_motion_tail_ignored",gardenRawMotionTailIgnored)',s)
