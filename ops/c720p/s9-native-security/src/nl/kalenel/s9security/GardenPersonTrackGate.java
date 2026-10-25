@@ -53,13 +53,13 @@ public final class GardenPersonTrackGate {
      confirmedAt<1||now<confirmedAt||now-confirmedAt>MAX_STATIONARY_AGE_MS||
      jpegAt<=confirmedJpegAt||!Float.isFinite(score)||
      score<STATIONARY_HOLD_SCORE||!plausiblePersonShape(box)||
-     !samePerson(confirmedBox,box)){
+     !sameRegionTransport(confirmedBox,box)){
    stationaryHoldRejected++;clearStationaryProposal();return false;
   }
   if(stationaryBox!=null){
    if(jpegAt<=stationaryJpegAt){stationaryHoldRejected++;return false;}
    if(now>stationaryAt&&now-stationaryAt>=800L&&
-      now-stationaryAt<=MAX_PAIR_MS&&samePerson(stationaryBox,box)){
+      now-stationaryAt<=MAX_PAIR_MS&&sameRegionTransport(stationaryBox,box)){
     rememberConfirmed(now,jpegAt,box);
     stationaryHolds++;return true;
    }
