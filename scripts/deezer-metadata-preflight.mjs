@@ -7,7 +7,7 @@
  */
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {chooseDeezerMatch} from "../music/deezer-preview.mjs";
+import {chooseDeezerMatch} from "../music/deezer-preview.js";
 const fixture={title:"Take on Me",artist:"a-ha",year:1985,genres:["pop"]};
 function mock(){
  const item={id:664107,title:"Take on Me",title_short:"Take on Me",artist:{name:"a-ha"},
