@@ -91,6 +91,28 @@ public final class S9MigratedActionWireTestV231 {
                   b(canonical.replace("expected_sequence=0",
                           "expected_sequence=-1"))),
                  "negative_sequence_refused");
+            // All FOUR numeric fields must have one canonical decimal spelling.
+            // A signed tuple with padded zeros must fail in the *wire parser*,
+            // rather than normalizing into an otherwise valid HMAC request.
+            String[] numericFields={"source_bytes","expected_sequence",
+                                    "issued_at_ms","expires_at_ms"};
+            for(String field:numericFields) {
+                String[] lines=canonical.split("\\n");
+                String unpadded=null;
+                for(String line:lines) {
+                    if(line.startsWith(field+"=")) {
+                        unpadded=line.substring(field.length()+1);
+                        break;
+                    }
+                }
+                check(unpadded!=null,"canonical_field_present_"+field);
+                final String alias=canonical.replace(
+                    field+"="+unpadded+"\n",field+"=0"+unpadded+"\n");
+                check(!alias.equals(canonical),"numerical_alias_really_modified");
+                deny(()->S9MigratedActionWireV231.decode(b(alias)),
+                     "leading_zero_numeric_field_rejected_"+field);
+            }
+
             deny(()->S9MigratedActionWireV231.decode(
                   b(canonical.replace("source_sha256="+HASH+"\n",
                           "unexpected_field=x\nsource_sha256="+HASH+"\n"))),
