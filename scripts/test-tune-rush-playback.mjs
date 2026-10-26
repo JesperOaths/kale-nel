@@ -6,7 +6,7 @@ const html=readFileSync(new URL("../music/index.html",import.meta.url),"utf8");
 const raw=readFileSync(new URL("../music/app.js",import.meta.url),"utf8");
 const source=raw.split('$("create").addEventListener')[0];
 
-for(const id of ["audius-check","audius-play-hint","audius-replay-hint","genre-options","decade-options"])
+for(const id of ["audius-check","audius-play-hint","audius-replay-hint","genre-options","decade-options","speaker-check-status"])
  assert.ok(html.includes('id="'+id+'"'),"Missing Audius control: "+id);
 for(const id of ["youtube-host","youtube-setup","deezer-host","deezer-source-option","local-music-files","source-select"])
  assert.ok(!html.includes('id="'+id+'"'),"Retired source still exposed: "+id);
@@ -17,7 +17,13 @@ function fixture(){
  const elements=new Map(),timers=new Map();let sequence=0;
  const element=id=>{
   if(!elements.has(id))elements.set(id,{
-   hidden:false,textContent:"",disabled:false,readyState:4,error:null,paused:false,
+   hidden:false,textContent:"",disabled:false,readyState:4,error:null,paused:false,seeking:false,
+   _time:0,listeners:new Map(),
+   get currentTime(){return this._time},
+   set currentTime(value){this._time=value;this.seeking=false;this.emit("seeked")},
+   addEventListener(type,fn){const set=this.listeners.get(type)||new Set();set.add(fn);this.listeners.set(type,set)},
+   removeEventListener(type,fn){this.listeners.get(type)?.delete(fn)},
+   emit(type){for(const fn of this.listeners.get(type)||[])fn()},
    setAttribute(){},pause(){this.paused=true},async play(){this.paused=false},querySelector(){return null}
   });
   return elements.get(id);
@@ -52,6 +58,30 @@ async function fireTimer(f,ms){
  for(let i=0;i<120;i++)await fireTimer(f,75);
  await assert.rejects(pending,/still buffering/,"Stalled playback must fail closed");
 }
+// A delayed seek must not accept a stale playhead from the previous clip.
+{
+ const f=fixture(),a=f.element("licensed-player");
+ a.currentTime=19;let clock=19,seekRequested=0;
+ Object.defineProperty(a,"currentTime",{configurable:true,
+  get:()=>clock,set:value=>{seekRequested=value;a.seeking=true}});
+ const pending=f.run('playLocalHint({source:"local:20000001",cueMs:13000})');
+ for(let i=0;i<60&&!([...f.timers.values()].some(t=>t.ms===75));i++)await Promise.resolve();
+ assert.equal(seekRequested,13,"seek must target the original random cue");
+ assert.ok([...f.timers.values()].some(t=>t.ms===75),"wait for seek evidence");
+ // Reading 19s from the previous clue is not proof that a new clue played.
+ await fireTimer(f,75);
+ assert.ok([...f.timers.values()].some(t=>t.ms===75),"old playhead must not complete cue");
+ clock=13.23;a.seeking=false;a.emit("seeked");
+ await fireTimer(f,75);await pending;
+ assert.match(f.element("audius-playback-status").textContent,/Playing clue/);
+}
+// A seek that jumps well past the original half-second clue fails closed.
+{
+ const f=fixture(),a=f.element("licensed-player");
+ a.play=async()=>{a.paused=false;a.currentTime=15};
+ await assert.rejects(f.run('playLocalHint({source:"local:20000001",cueMs:13000})'),
+  /jumped past the short clue/);
+}
 {
  const f=fixture(),a=f.element("licensed-player");
  a.play=async()=>{a.paused=false;a.currentTime=13.2};
@@ -67,4 +97,4 @@ async function fireTimer(f,ms){
  const f=fixture();
  await assert.rejects(f.run('startAudio({source:"youtube:dQw4w9WgXcQ"})'),/Only Audius/);
 }
-console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek clock; buffering; host controls");
+console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; host controls");
