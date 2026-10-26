@@ -685,6 +685,45 @@ try{
  assert.match(copiedText,/Winner: Demo Winner/);
  assert.match(copiedText,/Second Place — 11\.5 pts/);
  assert.ok(!copiedText.includes("secret_hash"));
+ // The final encore combines authoritative scores with only this tab's
+ // previously revealed songs. Nothing about round 2's mystery is exported.
+ const revealedInHostTab=await host.evaluate(()=>partySetlist.map(song=>({
+  name:song.artist+" — "+song.title,clues:song.clues
+ })));
+ assert.ok(revealedInHostTab.length>=1,"the host should remember an actual revealed song");
+ await host.evaluate(()=>{window.__copiedFinalScores="";window.__manualCopy=""});
+ assert.equal(await host.locator("#finish-copy-recap").isVisible(),true);
+ await host.locator("#finish-copy-recap").click();
+ await host.waitForFunction(()=>!!(window.__copiedFinalScores||window.__manualCopy),
+  null,{timeout:6000});
+ const fullRecap=await host.evaluate(()=>window.__copiedFinalScores||window.__manualCopy);
+ assert.match(fullRecap,/TUNE RUSH · PARTY RECAP/);
+ assert.match(fullRecap,/Winner: Demo Winner/);
+ assert.match(fullRecap,/FINAL STANDINGS/);
+ assert.match(fullRecap,/Second Place — 11\.5 pts/);
+ assert.match(fullRecap,/REVEALED SONGS \(\d+ saved in this tab\)/);
+ for(const song of revealedInHostTab)assert.ok(fullRecap.includes(song.name),
+  "all remembered and server-revealed songs should appear in the final recap");
+ assert.ok(!fullRecap.includes("Hidden Mystery"),"no mystery title may enter the recap");
+ assert.ok(!fullRecap.includes("fixture-token"),"no auth token may enter the recap");
+ assert.ok(!fullRecap.includes(previousParty),"room credentials must be omitted");
+ const otherRoomRecap=await host.evaluate(()=>{
+  const foreign=room.code==="AAAAAA"?"BBBBBB":"AAAAAA";
+  return partyRecapText({...room,code:foreign});
+ });
+ assert.match(otherRoomRecap,/REVEALED SONGS \(0 saved in this tab\)/,
+  "songs from a different room must never appear in a recap");
+ for(const song of revealedInHostTab)assert.ok(!otherRoomRecap.includes(song.name));
+ // Clipboard denial must offer a manual copy, rather than failing silently.
+ await host.evaluate(()=>{
+  Object.defineProperty(navigator,"clipboard",{configurable:true,value:{
+   writeText:async()=>{throw Error("Clipboard denied")}
+  }});
+  window.__manualCopy="";
+ });
+ await host.locator("#finish-copy-recap").click();
+ await host.waitForFunction(()=>!!window.__manualCopy,null,{timeout:6000});
+ assert.match(await host.evaluate(()=>window.__manualCopy),/TUNE RUSH · PARTY RECAP/);
  let createdNewParty=0,updatedNewParty=0;
  const trackNewParty=async route=>{
   const body=JSON.parse(route.request().postData()||"{}");
