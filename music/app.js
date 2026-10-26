@@ -1359,6 +1359,7 @@ function render(){
   show("finish-new-party",host&&phase==="finished");
   $("finish-new-party").disabled=newPartyBusy||loading;
   if(phase==="finished"){
+   renderPartyHighlights();
    const champion=room.players.find(p=>p.id===room.winner);
    setText("winner-name",champion?.name||"Winner");
    const final=$("final-scores");final.replaceChildren();
@@ -1493,6 +1494,49 @@ function partyRecapText(state=room){
   "","Song history is local to this tab; late joins and older rounds may be missing.",
   "https://kalenel.nl/music/"].join("\n");
 }
+function partyNightStats(state=room){
+ // Song history is deliberately tab-only, bounded, and scoped to this room.
+ // A zero count means "revealed before clues" and is not a timed solve.
+ const songs=state?.code&&partySetlistCode===state.code?partySetlist:[];
+ const played=songs.filter(song=>validRevealedSong(song)&&song.clues>0);
+ const total=played.reduce((sum,song)=>sum+song.clues,0);
+ return {count:songs.length,measured:played.length,
+  average:played.length?(total/played.length).toFixed(1):null,
+  fewest:played.length?Math.min(...played.map(song=>song.clues)):null};
+}
+function renderPartyHighlights(){
+ if(room?.phase!=="finished")return;
+ const stats=partyNightStats(room);
+ setText("finish-songs-remembered",String(stats.count));
+ setText("finish-average-clues",stats.average===null?"—":stats.average+" / 7");
+ setText("finish-fewest-clues",stats.fewest===null?"—":stats.fewest+" / 7");
+}
+function downloadPartyRecap(){
+ const state=room;
+ if(state?.phase!=="finished")return;
+ const summary=partyRecapText(state),code=state.code;
+ if(!summary)return;
+ let url;
+ try{
+  const file=new Blob(["\uFEFF",summary+"\n"],{type:"text/plain;charset=utf-8"});
+  url=URL.createObjectURL(file);
+  const a=document.createElement("a");
+  a.href=url;a.download="tune-rush-party-recap-"+new Date().toISOString().slice(0,10)+".txt";
+  a.style.display="none";
+  document.body.append(a);
+  try{a.click()}finally{a.remove()}
+  // A brief grace period avoids cancelling Safari/mobile downloads.
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+  url=null;
+  if(room?.code===code&&room?.phase==="finished")
+   setText("finish-recap-status","Recap file requested. Check your browser's Downloads folder.");
+ }catch{
+  if(url)try{URL.revokeObjectURL(url)}catch{}
+  if(room?.code===code&&room?.phase==="finished")
+   setText("finish-recap-status","Your browser could not save the file. Use Copy party recap instead.");
+ }
+}
+
 async function copyPartyRecap(){
  const state=room,summary=partyRecapText(state);
  if(!summary)return;
@@ -1661,6 +1705,7 @@ $("join-form").addEventListener("submit",join);
 $("finish-new-party").addEventListener("click",newParty);
 $("finish-copy-results").addEventListener("click",copyFinalScores);
 $("finish-copy-recap").addEventListener("click",copyPartyRecap);
+$("finish-download-recap").addEventListener("click",downloadPartyRecap);
 $("setlist-copy").addEventListener("click",copyPartySetlist);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
