@@ -508,6 +508,16 @@ try{
  assert.ok(copiedSetlist.includes(publicSong.artist+" — "+publicSong.title));
  assert.ok(!copiedSetlist.includes("fixture-token"));
  assert.ok(!copiedSetlist.includes("Hidden Mystery"));
+ // Positive share test using a real, server-revealed song in its own room.
+ // No database winner is fabricated: only a local formatting preview.
+ const ownRoomRecap=await host.evaluate(()=>partyRecapText({...room,
+  phase:"finished",players:[{id:"p1",name:"Preview Champion",score:20}],winner:"p1"}));
+ assert.match(ownRoomRecap,/TUNE RUSH · PARTY RECAP/);
+ assert.match(ownRoomRecap,/Winner: Preview Champion/);
+ assert.ok(ownRoomRecap.includes(publicSong.artist+" — "+publicSong.title),
+  "combined recap must include the room's actual revealed song");
+ assert.match(ownRoomRecap,/REVEALED SONGS \(1 saved in this tab\)/);
+ assert.ok(!ownRoomRecap.includes("fixture-token"));
  assert.ok(await host.locator("#audius-credit").isVisible());
  let nextWrites=0;
  const watchNext=async route=>{
@@ -661,9 +671,12 @@ try{
  // This verifies safe transition, QR refresh, filter settings and old-room
  // isolation without modifying existing player scores in the database.
  const previousParty=await host.evaluate(()=>room.code);
+ // Stop new polls and let any already-started state request settle before
+ // presenting the synthetic finish. Otherwise its late response may
+ // overwrite phase=finished between clicking Copy and reading the result.
+ await host.evaluate(()=>{window.__restoreRefresh=refresh;refresh=async()=>{};});
+ await host.waitForFunction(()=>!pollBusy&&!loading,null,{timeout:10000});
  await host.evaluate(()=>{
-  window.__restoreRefresh=refresh;
-  refresh=async()=>{}; // Hold an intentionally simulated winner UI steady.
   room={...room,phase:"finished",round:44,
    players:[{id:"p1",name:"Demo Winner",score:20},
     {id:"p2",name:"Second Place",score:11.5}],
@@ -685,6 +698,46 @@ try{
  assert.match(copiedText,/Winner: Demo Winner/);
  assert.match(copiedText,/Second Place — 11\.5 pts/);
  assert.ok(!copiedText.includes("secret_hash"));
+ // The final encore combines authoritative scores with only this tab's
+ // previously revealed songs. Nothing about round 2's mystery is exported.
+ const revealedInHostTab=await host.evaluate(()=>partySetlist.map(song=>({
+  name:song.artist+" — "+song.title,clues:song.clues
+ })));
+ assert.equal(revealedInHostTab.length,0,"leaving the previous room must clear its song history");
+ await host.evaluate(()=>{window.__copiedFinalScores="";window.__manualCopy=""});
+ assert.equal(await host.locator("#finish-copy-recap").isVisible(),true);
+ await host.locator("#finish-copy-recap").click();
+ await host.waitForFunction(()=>!!(window.__copiedFinalScores||window.__manualCopy),
+  null,{timeout:6000});
+ const fullRecap=await host.evaluate(()=>window.__copiedFinalScores||window.__manualCopy);
+ assert.match(fullRecap,/TUNE RUSH · PARTY RECAP/);
+ assert.match(fullRecap,/Winner: Demo Winner/);
+ assert.match(fullRecap,/FINAL STANDINGS/);
+ assert.match(fullRecap,/Second Place — 11\.5 pts/);
+ assert.match(fullRecap,/REVEALED SONGS \(\d+ saved in this tab\)/);
+ assert.match(fullRecap,/REVEALED SONGS \(0 saved in this tab\)/);
+ assert.ok(!fullRecap.includes(publicSong.artist+" — "+publicSong.title),
+  "a previous party’s revealed song must never enter this room’s recap");
+ assert.ok(!fullRecap.includes("Hidden Mystery"),"no mystery title may enter the recap");
+ assert.ok(!fullRecap.includes("fixture-token"),"no auth token may enter the recap");
+ assert.ok(!fullRecap.includes(previousParty),"room credentials must be omitted");
+ const otherRoomRecap=await host.evaluate(()=>{
+  const foreign=room.code==="AAAAAA"?"BBBBBB":"AAAAAA";
+  return partyRecapText({...room,code:foreign});
+ });
+ assert.match(otherRoomRecap,/REVEALED SONGS \(0 saved in this tab\)/,
+  "songs from a different room must never appear in a recap");
+ for(const song of revealedInHostTab)assert.ok(!otherRoomRecap.includes(song.name));
+ // Clipboard denial must offer a manual copy, rather than failing silently.
+ await host.evaluate(()=>{
+  Object.defineProperty(navigator,"clipboard",{configurable:true,value:{
+   writeText:async()=>{throw Error("Clipboard denied")}
+  }});
+  window.__manualCopy="";
+ });
+ await host.locator("#finish-copy-recap").click();
+ await host.waitForFunction(()=>!!window.__manualCopy,null,{timeout:6000});
+ assert.match(await host.evaluate(()=>window.__manualCopy),/TUNE RUSH · PARTY RECAP/);
  let createdNewParty=0,updatedNewParty=0;
  const trackNewParty=async route=>{
   const body=JSON.parse(route.request().postData()||"{}");

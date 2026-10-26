@@ -961,3 +961,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
  .setlist-tools .setlist-copy{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.setlist-chevron{transition:none}}
+
+/* Final encore: complete, privacy-scoped shareable party recap. */
+.finish-actions .finish-share-recap{background:linear-gradient(115deg,#335947,#244e53);
+ border:1px solid #a8eec2ab;color:#ecfff0;box-shadow:inset 0 1px 0 #ffffff12}
+.finish-actions .finish-share-recap:hover:not(:disabled){background:linear-gradient(115deg,#427257,#2c6268)}
+.finish .finish-recap-status{margin:13px auto 0;max-width:560px;font-size:12px;
+ font-weight:650;line-height:1.55;color:#c4e5d5}
+

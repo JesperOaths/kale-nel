@@ -1474,6 +1474,43 @@ function finalScoreboard(state){
   ...players.map((p,i)=>(i+1)+". "+p.name+" — "+Number(p.score).toFixed(1)+" pts"),
   "", "https://kalenel.nl/music/"].join("\n");
 }
+function partyRecapText(state=room){
+ // The finished game is authoritative for scores; the only song source is
+ // this tab's previously saved server-revealed history for that exact room.
+ if(!state||state.phase!=="finished")return "";
+ const clean=value=>String(value??"").replace(/[\u0000-\u001f\u007f]+/g," ").trim().slice(0,120);
+ const players=[...(state.players||[])].sort((a,b)=>Number(b.score)-Number(a.score));
+ const champion=players.find(p=>p.id===state.winner);
+ const songs=partySetlistCode===state.code?partySetlist:[];
+ return ["TUNE RUSH · PARTY RECAP",
+  "Winner: "+clean(champion?.name||"Undecided"),"",
+  "FINAL STANDINGS",
+  ...players.map((p,i)=>(i+1)+". "+clean(p.name)+" — "+Number(p.score).toFixed(1)+" pts"),
+  "","REVEALED SONGS ("+songs.length+" saved in this tab)",
+  ...(songs.length?songs.map(song=>song.round+". "+clean(song.artist)+" — "+
+   clean(song.title)+" · "+(song.clues?String(song.clues)+"/7 clues":"revealed before clues")):
+   ["No revealed songs saved in this tab."]),
+  "","Song history is local to this tab; late joins and older rounds may be missing.",
+  "https://kalenel.nl/music/"].join("\n");
+}
+async function copyPartyRecap(){
+ const state=room,summary=partyRecapText(state);
+ if(!summary)return;
+ const code=state.code;
+ try{
+  if(!navigator?.clipboard?.writeText)throw Error("Clipboard unavailable");
+  await navigator.clipboard.writeText(summary);
+  if(room?.code===code&&room?.phase==="finished")
+   setText("finish-recap-status","Party recap copied! It includes final standings and your tab's revealed songs.");
+ }catch{
+  if(room?.code!==code||room?.phase!=="finished")return;
+  if(typeof window.prompt==="function"){
+   window.prompt("Copy your party recap:",summary);
+   setText("finish-recap-status","Select and copy the recap from the dialog.");
+  }else setText("finish-recap-status","Clipboard blocked. Copy scores and revealed songs from the page.");
+ }
+}
+
 async function copyFinalScores(){
  if(room?.phase!=="finished")return;
  const summary=finalScoreboard(room);
@@ -1623,6 +1660,7 @@ $("create").addEventListener("click",create);
 $("join-form").addEventListener("submit",join);
 $("finish-new-party").addEventListener("click",newParty);
 $("finish-copy-results").addEventListener("click",copyFinalScores);
+$("finish-copy-recap").addEventListener("click",copyPartyRecap);
 $("setlist-copy").addEventListener("click",copyPartySetlist);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
