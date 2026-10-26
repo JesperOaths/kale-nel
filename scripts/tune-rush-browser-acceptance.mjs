@@ -65,7 +65,7 @@ try{
  assert.equal(await guest.locator(".stream-hero").isVisible(),false);
  // Host-only soundcheck uses AudioContext output (not Audius) and leaves
  // the current room, score and media source untouched.
- assert.equal(await guest.locator("[data-speaker-test]").isVisible(),false);
+ assert.equal(await guest.locator("[data-speaker-test]:visible").count(),0,"speaker controls are hidden from players");
  const beforeCheck=await host.evaluate(()=>({phase:room.phase,round:room.round,src:playerAudio.getAttribute("src")}));
  await host.locator(".speaker-check-line [data-speaker-test]").click();
  await host.waitForFunction(()=>document.getElementById("speaker-check-status")?.textContent.includes("Test tone sent"),
