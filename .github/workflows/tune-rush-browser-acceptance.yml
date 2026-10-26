@@ -4,7 +4,6 @@ on:
     paths:
       - 'music/**'
       - 'scripts/test-tune-rush-playback.mjs'
-      - 'scripts/test-tune-rush-local-tracks.mjs'
       - 'scripts/test-three-game-rotation.mjs'
       - 'scripts/test-audius-stream.mjs'
       - 'sql/musicquiz-three-game-rotation-v7.sql'
@@ -36,10 +35,8 @@ jobs:
         run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1 @electric-sql/pglite@0.5.11
       - name: Verify browser source syntax
         run: node --check scripts/tune-rush-browser-acceptance.mjs
-      - name: Verify playback failure recovery and buzzer races
+      - name: Verify Audius-only buffering and playback recovery
         run: node scripts/test-tune-rush-playback.mjs
-      - name: Verify local file metadata, repeat avoidance and random full-track cues
-        run: node scripts/test-tune-rush-local-tracks.mjs
       - name: Verify Audius HTTPS streaming selection and safe metadata filters
         run: node scripts/test-audius-stream.mjs
       - name: Verify three consecutive games have 120 distinct songs
@@ -48,7 +45,7 @@ jobs:
         run: node scripts/test-tune-rush-replay-db.mjs
       - name: Allow the short network-smoke job to finish first
         run: sleep 12
-      - name: Run six-browser acceptance against actual PR page and live game database
+      - name: Run Audius-only host and guest browser acceptance against game database
         run: |
           set -euo pipefail
           echo "Using browser binary:"
