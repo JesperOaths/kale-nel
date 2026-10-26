@@ -12,6 +12,10 @@
 5. Start the game. The host taps **Play next clue**, then players buzz and submit **song title** and **artist** from their own phones. The host can replay a clue, skip a song, or move to the next song.
 6. Each round uses one random cue and hints of **0.5, 1.5, 3, 5, 8, 12, and 20 seconds**. Correct components earn 0.5 points each; incorrect initial components cost 0.5 points, and incorrect steals cost 1 point per field. Scores never fall below zero. The first player to 20 points wins.
 
+### Host audio mixer
+
+The tablet/host view has a **Master output** fader (0–100%) and an accessible **Mute / Unmute** toggle in both the lobby and active-song player. Both faders control the same browser audio element without changing the room, song, cue, hints, scores or player sessions. Settings are saved under the browser-only preference key `tune-rush-host-output-v1` (volume percentage and muted flag only), so a host reload restores the output level. It does not store music files, stream URLs, answer data, or additional room credentials. The short **Test speakers** tone honors mute and mixer volume; it will not play while the mixer is muted or set to zero. Mobile Safari and some other devices can restrict programmatic volume adjustment, so users may still need hardware volume keys or Bluetooth/speaker output settings. The mixer controls are host-only and never appear on guest phones.
+
 ### Supported music
 
 Audius is the **only music source in the current frontend**. The browser discovers tracks at `https://api.audius.co/v1/tracks/trending`, checks each provider's streamability metadata, and streams selected music from `https://api.audius.co/v1/tracks/{id}/stream` with a native `HTMLAudioElement`. No backend downloader, USB music library, YouTube iframe, Deezer resolver, Spotify token or imported host-file music is used.
