@@ -226,6 +226,7 @@ let genresDirty=false,genresSaveTimer=null;
 let clipGeneration=0,mutationVersion=0;
 let failedClue="";
 let clueRescueBusy=false,clueRescueNotice="";
+let newPartyBusy=false;
 let connectionFailures=0,connectionRetryAt=0;
 function setConnectionProblem(){
  if(!access)return;
@@ -1056,6 +1057,8 @@ function render(){
   const me=room.players.find(p=>p.id===room.me);
   show("my-score",!!me);if(me)$("my-score").querySelector("strong").textContent=Number(me.score).toFixed(1);
   show("finish",phase==="finished");
+  show("finish-new-party",host&&phase==="finished");
+  $("finish-new-party").disabled=newPartyBusy||loading;
   if(phase==="finished"){
    const champion=room.players.find(p=>p.id===room.winner);
    setText("winner-name",champion?.name||"Winner");
@@ -1162,6 +1165,76 @@ async function create(){
   access={code:b.state.code,token:b.token};safeStore();applyState(b.state);
  }catch(e){message(e.message)}finally{setLoading(false)}
 }
+function finalScoreboard(state){
+ if(!state||state.phase!=="finished")throw Error("Final results are not ready.");
+ const players=[...(state.players||[])].sort((a,b)=>Number(b.score)-Number(a.score));
+ const champion=players.find(p=>p.id===state.winner);
+ return ["TUNE RUSH · FINAL SCORES","Winner: "+(champion?.name||"Undecided"),"",
+  ...players.map((p,i)=>(i+1)+". "+p.name+" — "+Number(p.score).toFixed(1)+" pts"),
+  "", "https://kalenel.nl/music/"].join("\n");
+}
+async function copyFinalScores(){
+ if(room?.phase!=="finished")return;
+ const summary=finalScoreboard(room);
+ try{
+  if(!navigator?.clipboard?.writeText)throw Error("Clipboard unavailable");
+  await navigator.clipboard.writeText(summary);
+  message("Final scores copied. Share them with your players!");
+ }catch{
+  // Some browsers require clipboard permissions; leave users a manual way.
+  if(typeof window.prompt==="function")window.prompt("Copy the final scores:",summary);
+  else message("Your browser blocked clipboard sharing. Use the final scoreboard on screen.");
+ }
+}
+async function newParty(){
+ if(newPartyBusy||loading||!access||!room||!isHost()||room.phase!=="finished")return;
+ const previous=room.code,session=access;
+ const filters={
+  genres:[...(room.genres||[])].filter(v=>typeof v==="string"),
+  decades:[...(room.decades||[])].filter(v=>typeof v==="string")
+ };
+ if(!filters.genres.length)filters.genres=chosenFilters().genres;
+ newPartyBusy=true;setLoading(true);
+ $("finish-new-party").disabled=true;
+ setText("finish-rematch-status","Creating a fresh room. Previous results remain available until the new lobby is confirmed…");
+ try{
+  // The live game backend intentionally has no same-room rematch. Create a
+  // fresh capability and room; never reset the finished game before create succeeds.
+  const created=await rpc("create");
+  if(session!==access||room?.code!==previous||room.phase!=="finished")return;
+  if(!created?.token||created.state?.phase!=="lobby"||
+     created.state?.role!=="host"||created.state?.code===previous)
+   throw Error("New party wasn't confirmed. The finished room is unchanged.");
+  reset();
+  access={code:created.state.code,token:created.token};safeStore();
+  // Keep the host's final selected mix on screen until the backend
+  // confirms it. A default new-lobby render would otherwise replace it.
+  genresDirty=true;setLoading(true);applyState(created.state);
+  try{
+   const configured=await rpc("settings",filters);
+   if(access?.code!==created.state.code||room?.code!==created.state.code)return;
+   if(configured.state?.code!==created.state.code||configured.state?.phase!=="lobby")
+    throw Error("Settings were not confirmed for the new lobby.");
+   applyState(configured.state);
+   genresDirty=false;render();
+   message("New party ready! Show the QR code so players can join.");
+  }catch(e){
+   if(access?.code!==created.state.code)return;
+   genresDirty=false;render();
+   message("New room created, but music preferences could not be restored. Check your filters before starting.");
+  }
+ }catch(e){
+  if(session===access&&room?.code===previous){
+   setText("finish-rematch-status","New room could not be confirmed. Your final results are still here; retry when connected.");
+   message(String(e.message||e));
+  }
+ }finally{
+  newPartyBusy=false;
+  if((session===access&&room?.code===previous)||(room?.role==="host"&&room?.phase==="lobby")){
+   setLoading(false);render();
+  }
+ }
+}
 async function join(e){
  e.preventDefault();if(loading)return;
  const code=$("join-code").value.trim().toUpperCase();
@@ -1241,6 +1314,8 @@ async function saveGenres(){
 }
 $("create").addEventListener("click",create);
 $("join-form").addEventListener("submit",join);
+$("finish-new-party").addEventListener("click",newParty);
+$("finish-copy-results").addEventListener("click",copyFinalScores);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
 $("host-fullscreen").addEventListener("click",async()=>{
