@@ -236,6 +236,39 @@ async function fireTimer(f,ms){
  assert.ok(![...f.timers.values()].some(t=>t.ms===250),
   "old lobby's pending settings debounce survives Leave");
 }
+// Auditions use an independent element, not a scored song or history write.
+{
+ const f=fixture(),demo=f.element("audition-audio");
+ const start=f.run(`room.phase="lobby";loading=false;
+  audiusPool=[{id:"first11",title:"First",artist:"Artist"},
+   {id:"second22",title:"Second",artist:"Artist"}];
+  audiusFiltersKey=JSON.stringify(chosenFilters());
+  audiusLib=async()=>({chooseAudiusTrack:pool=>pool[0],
+   streamUrl:id=>"https://api.audius.co/v1/tracks/"+id+"/stream"});
+  rotation=async()=>({audiusFreshTracks:tracks=>tracks,playedKeys:()=>new Set(),
+   audiusIdentity:t=>"song:"+t.id});pickAudition()`);
+ await start;
+ assert.equal(f.run("auditionTrack.id"),"first11");
+ assert.match(demo.src,/first11/);
+ assert.equal(f.run("room.phase"),"lobby");
+ assert.equal(f.run("room.round"),1);
+ assert.equal(f.run("rotationHistory.games.length"),0,"sampling must not mark a song played");
+ await f.run("playAudition()");
+ assert.equal(demo.paused,false);
+ assert.ok([...f.timers.values()].some(t=>t.ms===8000));
+ f.run('auditionExcluded.add("song:first11");stopAudition(false)');
+ assert.equal(demo.paused,true);
+ await f.run("pickAudition()");
+ assert.equal(f.run("auditionTrack.id"),"second22",
+  "a host rejection must keep an unwanted composition out of this room");
+ assert.equal(f.run("rotationHistory.games.length"),0);
+ f.run("reset()");
+ assert.equal(f.run("auditionTrack"),null);
+ assert.equal(f.run("auditionExcluded.size"),0);
+ assert.equal(f.run("auditionSeen.size"),0);
+ assert.ok(![...f.timers.values()].some(t=>t.ms===8000),
+  "Leaving must cancel a sample's pending stop timer");
+}
 // A server reply to a Play mutation arriving after Leave must never
 // recreate the previous room or touch the new host session.
 {
@@ -278,4 +311,4 @@ async function fireTimer(f,ms){
  const f=fixture();
  await assert.rejects(f.run('startAudio({source:"youtube:dQw4w9WgXcQ"})'),/Only Audius/);
 }
-console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; cancellable media metadata; host controls; persistent volume mixer");
+console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; cancellable media metadata; host controls; persistent volume mixer; isolated stream audition");
