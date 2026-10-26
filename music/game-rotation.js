@@ -44,7 +44,7 @@ export function playedKeys(history,kind){
 }
 export function notePlayed(history,roomCode,kind,key){
  openGame(history,roomCode);
- if(kind!=="local"&&kind!=="catalog")throw Error("Invalid source");
+ if(!["local","catalog","audius"].includes(kind))throw Error("Invalid source");
  const correct=kind==="local"?/^[a-f0-9]{16}$/:kind==="catalog"?/^[A-Za-z0-9_-]{11}$/:/^[A-Za-z0-9_-]{3,32}$/;
  if(!correct.test(key))throw Error("Invalid song identifier");
  const current=history.games[history.games.length-1][kind];

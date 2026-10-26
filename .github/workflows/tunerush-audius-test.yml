@@ -1,0 +1,27 @@
+name: Tune Rush Audius checks
+
+on:
+  pull_request:
+    paths:
+      - 'music/**'
+      - '.github/workflows/tunerush-audius-test.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'music/**'
+      - '.github/workflows/tunerush-audius-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audius:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - name: Browser module regression tests (offline)
+        run: node --test music/tests/audius-rotation.test.mjs

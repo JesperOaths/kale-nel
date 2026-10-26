@@ -150,7 +150,7 @@ let rotationModule=null,rotationHistory=null,rotationLoading=null,catalogCoverag
 async function rotation(){
  if(rotationModule)return rotationModule;
  if(rotationLoading)return rotationLoading;
- rotationLoading=import("./game-rotation.js").then(mod=>{
+ rotationLoading=import("./game-rotation.js?v=13").then(mod=>{
   rotationModule=mod;
   let raw=null;try{raw=localStorage.getItem(mod.STORAGE_KEY)}catch{}
   rotationHistory=mod.readRotation(raw);
@@ -256,7 +256,7 @@ function renderCoverageMatrix(data){
 // host browser playback; none are copied to hub, S21, USB, or Supabase.
 let audiusModule=null,audiusPool=[],audiusFiltersKey="",audiusActive=false;
 let audiusTrack=null,audiusIndex=20000000,audiusChecking=false;
-async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js"))}
+async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=13"))}
 async function discoverAudius(force=false){
  if(audiusChecking)throw Error("Audius is already checking tracks.");
  const filters=chosenFilters(),key=JSON.stringify(filters);
