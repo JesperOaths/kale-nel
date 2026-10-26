@@ -152,7 +152,7 @@ async function prepareAudiusPlayback(record){
  const lib=await audiusLib(),uri=lib.streamUrl(record.id);
  // Browser audio element streams HTTPS; HTMLMediaElement handles range seeking.
  // Do not use fetch(blob), ArrayBuffer, MediaRecorder, downloads or disk caching.
- discardLocalAudio();
+ clearAudiusStream();
  localAudioUrl=uri;
  localCurrentIndex=++audiusIndex;
  playerAudio.preload="metadata";
@@ -189,7 +189,7 @@ async function selectAudiusRound(){
    localStatus("Audius stream ready. Press Play next clue to hear the song.");
    return {mode:"local",song:track.title,artist:track.artist,
     fileIndex:prepared.index,cueMs:cue,durationMs:Math.floor(prepared.duration*1000)};
-  }catch(e){discardLocalAudio();audiusTrack=null}
+  }catch(e){clearAudiusStream();audiusTrack=null}
  }
  throw Error(candidateCount===0?
   "No unplayed Audius songs match your genres and decades. Expand the filters.":
@@ -198,9 +198,9 @@ async function selectAudiusRound(){
 
 let localCurrentIndex=null,localAudioUrl=null;
 function localStatus(note){setText("audius-playback-status",note)}
-function discardLocalAudio(){
+function clearAudiusStream(){
  try{playerAudio.pause();playerAudio.removeAttribute("src");playerAudio.load()}catch{}
- if(localAudioUrl){if(localAudioUrl.startsWith("blob:"))URL.revokeObjectURL(localAudioUrl);localAudioUrl=null}
+ localAudioUrl=null;
  localCurrentIndex=null;
 }
 async function playLocalHint(info){
@@ -472,7 +472,7 @@ async function refresh(){
  finally{pollBusy=false}
 }
 function reset(){
- cancelNext();clearAudio();discardLocalAudio();audiusActive=false;audiusTrack=null;
+ cancelNext();clearAudio();clearAudiusStream();audiusActive=false;audiusTrack=null;
  audiusPool=[];audiusFiltersKey="";failedClue="";room=null;access=null;
  safeStore();render();
 }
@@ -612,7 +612,7 @@ document.addEventListener("visibilitychange",()=>{
  }
  
 });
-window.addEventListener("pagehide",()=>{clearAudio();cancelNext();discardLocalAudio()});
+window.addEventListener("pagehide",()=>{clearAudio();cancelNext();clearAudiusStream()});
 const fromUrl=new URLSearchParams(location.search).get("room");
 if(fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl))$("join-code").value=fromUrl.toUpperCase();
 try{
