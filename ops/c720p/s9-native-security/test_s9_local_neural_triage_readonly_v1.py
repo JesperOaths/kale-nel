@@ -70,14 +70,45 @@ class TriageTests(unittest.TestCase):
 
 class DeviceData(unittest.TestCase):
     @unittest.skipUnless(mod.MODEL.is_file() and mod.S9.is_file(),'private corpus not present in CI')
-    def test_49_pending_and_3_assigned_verified_live_source(self):
+    def test_live_verified_and_excluded_count_consistency(self):
         model,crops,manual=mod.source_metadata()
         result=mod.calculate_queue(model,crops,manual)
-        self.assertEqual(result['count'],49)
-        self.assertEqual(len(result['assigned_s9_crops']),3)
-        self.assertEqual(len(crops),52)
-        self.assertEqual(len({v['image_id'] for v in result['items']}),49)
+        self.assertEqual(result['indexed_crop_count'],52)
+        self.assertEqual(result['verified_crop_count'],len(crops))
+        self.assertEqual(result['excluded_count'],len(crops.excluded))
+        self.assertEqual(result['count']+result['assigned_s9_count']+result['excluded_count'],52)
+        self.assertEqual(len({v['image_id'] for v in result['items']}),result['count'])
         self.assertTrue(all(mod.crop_blob(row) for row in crops.values()))
+        for row in result['items']:
+            self.assertEqual(row['identity_status'],'unidentified_review_needed')
+            self.assertIsNone(row['suggested_assignment'])
+            self.assertEqual(len(row['ranked_candidates']),3)
+            self.assertGreaterEqual(row['top_two_margin'],0)
+            self.assertEqual(row['ranked_candidates'][0]['folder_id'],row['folder_id'])
+    def test_native_source_sha_change_still_fails_closed(self):
+        native=json.loads(mod.NATIVE.read_text())
+        verified=next(iter(mod.source_metadata()[1]))
+        native['items'][verified]['sha256']='0'*64
+        with tempfile.TemporaryDirectory() as tmp:
+            file=Path(tmp)/'catalog.json'
+            file.write_text(json.dumps(native))
+            with patch.object(mod,'NATIVE',file):
+                with self.assertRaisesRegex(ValueError,'native_source_sha_changed'):
+                    mod.source_metadata()
+    def test_removed_catalog_entry_is_not_served_as_verified(self):
+        native=json.loads(mod.NATIVE.read_text())
+        verified=next(iter(mod.source_metadata()[1]))
+        del native['items'][verified]
+        with tempfile.TemporaryDirectory() as tmp:
+            file=Path(tmp)/'catalog.json'
+            file.write_text(json.dumps(native))
+            with patch.object(mod,'NATIVE',file):
+                model,crops,manual=mod.source_metadata()
+                self.assertNotIn(verified,crops)
+                self.assertIn(verified,crops.excluded)
+                response=mod.calculate_queue(model,crops,manual)
+                self.assertEqual(response['excluded_count'],len(crops.excluded))
+                self.assertEqual(response['count']+response['assigned_s9_count']+response['excluded_count'],52)
 
 if __name__=='__main__': unittest.main()
 
