@@ -332,11 +332,13 @@ async function restoreAudiusHost(state){
  const restoreSession=access;
  localStatus("Restoring this round's Audius stream without changing the song…");
  try{
-  await prepareAudiusPlayback(saved,wantedIndex);
+  const prepared=await prepareAudiusPlayback(saved,wantedIndex);
   if(!room||!isHost()||room.code!==state.code||room.round!==state.round||
      room.audio?.source!==state.audio.source||!restoreSession||
      restoreSession!==access){
-   clearAudiusStream();return;
+   // If the host left while loading, never tear down a newer song.
+   if(localAudioUrl===prepared.url&&localCurrentIndex===prepared.index)clearAudiusStream();
+   return;
   }
   audiusActive=true;
   audiusTrack={id:saved.id,title:saved.title,artist:saved.artist,permalink:
@@ -352,8 +354,11 @@ async function restoreAudiusHost(state){
   }
   localStatus("Stream recovered. Play or replay the current clue when ready.");
  }catch(e){
-  clearAudiusStream();audiusActive=false;audiusTrack=null;
-  localStatus("Could not restore the stream: "+String(e.message||e)+". Skip this song to continue.");
+  if(restoreSession===access&&room?.code===state.code&&room.round===state.round&&
+     room.audio?.source===state.audio.source){
+   clearAudiusStream();audiusActive=false;audiusTrack=null;
+   localStatus("Could not restore the stream: "+String(e.message||e)+". Skip this song to continue.");
+  }
  }finally{audiusRestoring=false}
 }
 function clearAudiusStream(){
