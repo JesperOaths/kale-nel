@@ -126,12 +126,16 @@ async function discoverAudius(force=false){
  if(!filters.genres.length)throw Error("Select at least one genre.");
  if(!force&&key===audiusFiltersKey&&audiusPool.length)return audiusPool;
  audiusChecking=true;
+ if(isHost()&&room?.phase==="lobby")$("start").disabled=true;
  $("audius-check").disabled=true;
  $("audius-check").textContent="⌛ Checking…";
  setText("audius-availability","Finding Audius tracks that match your selections…");
  try{
   const mod=await audiusLib();
   const tracks=await mod.discoverAudiusTracks(filters.genres,filters.decades);
+  // Reject results for a mix that changed while the network request was pending.
+  if(JSON.stringify(chosenFilters())!==key)
+   throw Error("The genres or eras changed during the scan. Check tracks again.");
   audiusPool=tracks;audiusFiltersKey=key;
   const rotationTools=await rotation(),used=rotationTools.playedKeys(rotationHistory,"audius");
   const free=tracks.filter(x=>!used.has(x.id));
@@ -148,6 +152,7 @@ async function discoverAudius(force=false){
   audiusChecking=false;
   $("audius-check").disabled=false;
   $("audius-check").textContent="↻ Check tracks";
+  $("start").disabled=loading;
  }
 }
 async function prepareAudiusPlayback(record,restoredIndex=null){
