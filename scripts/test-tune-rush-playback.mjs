@@ -187,6 +187,70 @@ async function fireTimer(f,ms){
  assert.equal(f.run("room"),null,"late response must not restore departed room");
  assert.equal(f.run("clueRescueBusy"),false);
 }
+// Winner results can be shared without tokens or unrevealed song data.
+{
+ const f=fixture();
+ f.run('room.phase="finished";room.winner="player2";'+
+  'room.players=[{id:"player1",name:"First",score:8.5},'+
+  '{id:"player2",name:"Champion",score:20}]');
+ const summary=f.run("finalScoreboard(room)");
+ assert.match(summary,/Winner: Champion/);
+ assert.ok(summary.indexOf("Champion — 20.0 pts")<summary.indexOf("First — 8.5 pts"));
+ assert.ok(!summary.includes("fixture-token"),"export must not include host credentials");
+ assert.throws(()=>f.run('finalScoreboard({...room,phase:"playing"})'),/not ready/);
+}
+// One click creates a new lobby, restores host filters, and never reuses
+// the old room code or other players' capabilities.
+{
+ const f=fixture();
+ f.run('room.phase="finished";room.genres=["pop","rock"];room.decades=["1990"];'+
+  'room.players=[{id:"player1",score:20}];room.winner="player1";'+
+  'let newRoomActions=[];rpc=async(action,data)=>{newRoomActions.push(action);'+
+  'if(action==="create")return {token:"b".repeat(64),'+
+  'state:{code:"BCD234",phase:"lobby",role:"host",round:0,step:-1,'+
+  'players:[],genres:["pop"],decades:[]}};'+
+  'if(action==="settings")return {state:{...room,genres:data.genres,decades:data.decades}};'+
+  'throw Error("unexpected action")};');
+ await f.run("newParty()");
+ assert.equal(f.run("room.code"),"BCD234");
+ assert.equal(f.run("room.phase"),"lobby");
+ assert.equal(f.run("room.players.length"),0);
+ assert.equal(f.run("room.genres.join(',')"),"pop,rock");
+ assert.equal(f.run("room.decades.join(',')"),"1990");
+ assert.equal(f.run("newRoomActions.join(',')"),"create,settings");
+ assert.equal(f.run("access.code"),"BCD234");
+ assert.equal(f.run("loading"),false);
+ assert.equal(f.run("newPartyBusy"),false);
+}
+// If the new room fails, the finished room and score are retained.
+{
+ const f=fixture();
+ f.run('room.phase="finished";room.genres=["pop"];room.players=['+
+  '{id:"champ",score:20}];room.winner="champ";'+
+  'let failedCreates=0;rpc=async()=>{failedCreates++;throw Error("temporary_failure")}');
+ await f.run("newParty()");
+ assert.equal(f.run("room.code"),"ABCDEF");
+ assert.equal(f.run("room.phase"),"finished");
+ assert.equal(f.run("room.players[0].score"),20);
+ assert.equal(f.run("failedCreates"),1);
+ assert.equal(f.run("loading"),false);
+ assert.match(f.element("finish-rematch-status").textContent,/still here/);
+}
+// Two fast taps cannot create two fresh rooms; a stale result cannot
+// switch back after the host leaves or starts another session.
+{
+ const f=fixture();
+ f.run('room.phase="finished";room.genres=["pop"];let releaseCreate,numberOfCreates=0;'+
+  'rpc=async(action)=>{numberOfCreates++;return new Promise(r=>{releaseCreate=r})}');
+ const one=f.run("newParty()"),two=f.run("newParty()");
+ assert.equal(f.run("numberOfCreates"),1);
+ assert.equal(f.run("newPartyBusy"),true);
+ f.run("reset()");
+ f.run('releaseCreate({token:"c".repeat(64),state:{code:"BCD234",phase:"lobby",role:"host",players:[]}})');
+ await Promise.all([one,two]);
+ assert.equal(f.run("room"),null,"old create response must not resurrect a departed session");
+ assert.equal(f.run("numberOfCreates"),1);
+}
 // Leaving during a long track transition must unlock controls for the
 // next room, not leave the Start button stuck disabled.
 {
