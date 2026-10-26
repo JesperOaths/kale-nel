@@ -227,66 +227,112 @@ function renderSoundtrackReserve(){
   stats.used+" recently heard · "+(audiusReservePartial?"partial scan":"Audius catalog sample");
 }
 let audiusTrack=null,audiusIndex=20000000,audiusChecking=false;
+let audiusScanVersion=0,audiusScanController=null,audiusScanPromise=null;
+let audiusScanKey="",audiusScanSession=null,audiusScanRoomCode="";
+function cancelAudiusScan(){
+ if(!audiusChecking&&!audiusScanController)return;
+ audiusScanVersion++;
+ const controller=audiusScanController;
+ audiusScanController=null;audiusScanPromise=null;
+ audiusScanKey="";audiusScanSession=null;audiusScanRoomCode="";
+ audiusChecking=false;
+ if(controller)controller.abort();
+ $("audius-scan-progress").hidden=true;
+ $("audius-check").disabled=false;
+ $("audius-check").textContent="↻ Check tracks";
+ $("start").disabled=loading||roundTransitionBusy;
+}
 const AUDIUS_HOST_SESSION="tune-rush-audius-host-stream-v1";
 let audiusRestoring=false;
-async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026scan"))}
+async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026scanowner"))}
 async function discoverAudius(force=false){
- if(audiusChecking)throw Error("Audius is already checking tracks.");
  const filters=chosenFilters(),key=JSON.stringify(filters);
  if(!filters.genres.length)throw Error("Select at least one genre.");
+ const session=access,code=room?.code||"";
+ if(audiusChecking){
+  // Start game may arrive during a matching manual Check tracks request.
+  // Share that request rather than launching duplicate provider traffic.
+  if(!force&&audiusScanPromise&&audiusScanKey===key&&
+     audiusScanSession===session&&audiusScanRoomCode===code)
+   return audiusScanPromise;
+  cancelAudiusScan();
+ }
  if(!force&&key===audiusFiltersKey&&audiusPool.length)return audiusPool;
+ const version=++audiusScanVersion;
+ const controller=new AbortController();
+ audiusScanController=controller;
+ audiusScanKey=key;audiusScanSession=session;audiusScanRoomCode=code;
  audiusChecking=true;
+ const current=()=>version===audiusScanVersion&&!controller.signal.aborted&&
+  session===access&&code===(room?.code||"")&&
+  key===JSON.stringify(chosenFilters());
  const scan=$("audius-scan-progress"),meter=scan.querySelector('[role="progressbar"]');
  scan.hidden=false;
  meter.setAttribute("aria-valuenow","0");
  $("audius-scan-fill").style.width="0%";
  setText("audius-scan-label","Connecting to Audius…");
- let scanResult={partial:false};
  if(isHost()&&room?.phase==="lobby")$("start").disabled=true;
  $("audius-check").disabled=true;
  $("audius-check").textContent="⌛ Checking…";
  setText("audius-availability","Finding Audius tracks that match your selections…");
- try{
-  const mod=await audiusLib();
-  const tracks=await mod.discoverAudiusTracks(filters.genres,filters.decades,fetch,{
-   onProgress:progress=>{
-    scanResult=progress;
-    if(JSON.stringify(chosenFilters())!==key)return;
-    const percent=Math.min(100,Math.round(100*progress.completed/Math.max(1,progress.total)));
-    meter.setAttribute("aria-valuenow",String(percent));
-    $("audius-scan-fill").style.width=percent+"%";
-    setText("audius-scan-label",progress.completed+" of "+progress.total+
-     " checks · "+progress.found+" matching tracks"+(progress.partial?" · incomplete scan":""));
+ const pending=(async()=>{
+  let scanResult={partial:false};
+  try{
+   const mod=await audiusLib();
+   if(!current())throw Error("Audius scan superseded by a new room or filter.");
+   const tracks=await mod.discoverAudiusTracks(filters.genres,filters.decades,fetch,{
+    signal:controller.signal,
+    onProgress:progress=>{
+     if(!current())return;
+     scanResult=progress;
+     const percent=Math.min(100,Math.round(100*progress.completed/Math.max(1,progress.total)));
+     meter.setAttribute("aria-valuenow",String(percent));
+     $("audius-scan-fill").style.width=percent+"%";
+     setText("audius-scan-label",progress.completed+" of "+progress.total+
+      " checks · "+progress.found+" matching tracks"+
+      (progress.partial?" · incomplete scan":""));
+    }
+   });
+   if(!current())throw Error("Audius scan superseded by a new room or filter.");
+   const rotationTools=await rotation();
+   if(!current())throw Error("Audius scan superseded by a new room or filter.");
+   const used=rotationTools.playedKeys(rotationHistory,"audius");
+   const signatures=rotationTools.playedKeys(rotationHistory,"audiusFingerprints");
+   const stats=rotationTools.audiusReadiness(tracks,used,120,signatures);
+   // Publish all scan data atomically once the room, filters and generation
+   // have been confirmed. Old requests may not mutate a new room's reserve.
+   audiusPool=tracks;audiusFiltersKey=key;audiusReservePartial=!!scanResult.partial;
+   renderSoundtrackReserve();
+   setText("audius-availability",stats.total+" distinct song titles found; "+stats.remaining+
+    " not heard in your last three games. "+(stats.ready?
+     "This meets the 120-song planning target.":"Three typical games need about 120; "+stats.shortfall+
+     " more would be needed for that target.")+
+     (filters.decades.length?" Audius dates reflect provider release metadata; older originals may be absent.":"")+
+     (scanResult.partial?" Some Audius pages could not be checked. This is only a partial catalog count; retry Check tracks.":""));
+   return tracks;
+  }catch(e){
+   if(current()){
+    $("soundtrack-reserve").hidden=true;
+    $("live-reserve").hidden=true;
+    setText("audius-availability",String(e.message||e));
    }
-  });
-  // Reject results for a mix that changed while the network request was pending.
-  if(JSON.stringify(chosenFilters())!==key)
-   throw Error("The genres or eras changed during the scan. Check tracks again.");
-  audiusPool=tracks;audiusFiltersKey=key;
-  const rotationTools=await rotation(),used=rotationTools.playedKeys(rotationHistory,"audius");
-  const signatures=rotationTools.playedKeys(rotationHistory,"audiusFingerprints");
-  audiusReservePartial=!!scanResult.partial;
-  const stats=rotationTools.audiusReadiness(tracks,used,120,signatures);
-  renderSoundtrackReserve();
-  setText("audius-availability",stats.total+" distinct song titles found; "+stats.remaining+
-   " not heard in your last three games. "+(stats.ready?
-    "This meets the 120-song planning target.":"Three typical games need about 120; "+stats.shortfall+
-    " more would be needed for that target.")+
-    (filters.decades.length?" Audius dates reflect provider release metadata; older originals may be absent.":"")+
-    (scanResult.partial?" Some Audius pages could not be checked. This is only a partial catalog count; retry Check tracks.":""));
-  return tracks;
- }catch(e){
-  $("soundtrack-reserve").hidden=true;
-  $("live-reserve").hidden=true;
-  setText("audius-availability",String(e.message||e));
-  throw e;
- }finally{
-  audiusChecking=false;
-  scan.hidden=true;
-  $("audius-check").disabled=false;
-  $("audius-check").textContent="↻ Check tracks";
-  $("start").disabled=loading||roundTransitionBusy;
- }
+   if(!current())throw Error("Audius scan superseded by a new room or filter.");
+   throw e;
+  }finally{
+   // A superseded request must never unlock a newer request's controls.
+   if(version===audiusScanVersion){
+    audiusChecking=false;
+    audiusScanPromise=null;audiusScanController=null;
+    audiusScanKey="";audiusScanSession=null;audiusScanRoomCode="";
+    scan.hidden=true;
+    $("audius-check").disabled=false;
+    $("audius-check").textContent="↻ Check tracks";
+    $("start").disabled=loading||roundTransitionBusy;
+   }
+  }
+ })();
+ audiusScanPromise=pending;
+ return pending;
 }
 async function prepareAudiusPlayback(record,restoredIndex=null,isCurrent=()=>true){
  const lib=await audiusLib();
@@ -858,6 +904,10 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
+ cancelAudiusScan();
+ // A queued settings debounce belongs to the departed lobby, not a room
+ // created a fraction of a second later on the same host browser.
+ clearTimeout(genresSaveTimer);genresSaveTimer=null;genresDirty=false;
  roundTransitionBusy=false;
  setLoading(false);
  roundTransitionToken++;
@@ -1034,11 +1084,13 @@ $("clear-audius-decades").addEventListener("click",()=>{
  document.querySelectorAll("#decade-options input").forEach(input=>input.checked=false);
  $("decade-options").dispatchEvent(new Event("change",{bubbles:true}));
 });
-$("audius-check").addEventListener("click",()=>discoverAudius(true).catch(e=>message(e.message)));
+$("audius-check").addEventListener("click",()=>discoverAudius(true).catch(e=>{
+ if(!/scan superseded/.test(e.message))message(e.message);
+}));
 $("reserve-expand").addEventListener("click",()=>{
  if(!room||!isHost()||room.phase!=="lobby"||audiusChecking)return;
  document.querySelector('[data-audius-preset="all"]').click();
- discoverAudius(true).catch(e=>message(e.message));
+ discoverAudius(true).catch(e=>{if(!/scan superseded/.test(e.message))message(e.message)});
 });
 document.querySelectorAll("[data-speaker-test]").forEach(button=>
  button.addEventListener("click",testSpeakers));
@@ -1052,6 +1104,7 @@ $("steal").addEventListener("click",async()=>{try{await call("steal")}catch{}});
 $("pass").addEventListener("click",async()=>{try{await call("forfeit")}catch{}});
 $("answer-form").addEventListener("submit",submitGuess);
 for(const id of ["genre-options","decade-options"])$(id).addEventListener("change",()=>{
+ cancelAudiusScan();
  genresDirty=true;
  clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);
  audiusPool=[];audiusFiltersKey="";audiusReservePartial=false;

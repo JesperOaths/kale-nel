@@ -223,6 +223,19 @@ async function fireTimer(f,ms){
  assert.equal(f.run("audiusTrack.id"),"new123");
  assert.equal(f.run("audiusRestoring"),false);
 }
+// A debounced settings write from an old lobby must be cancelled on Leave;
+ // otherwise it could overwrite filters in a newly created lobby.
+{
+ const f=fixture();
+ f.run("genresSaveTimer=setTimeout(()=>{},250);genresDirty=true");
+ assert.equal(f.run("genresDirty"),true);
+ assert.ok([...f.timers.values()].some(t=>t.ms===250));
+ f.run("reset()");
+ assert.equal(f.run("genresDirty"),false);
+ assert.equal(f.run("genresSaveTimer"),null);
+ assert.ok(![...f.timers.values()].some(t=>t.ms===250),
+  "old lobby's pending settings debounce survives Leave");
+}
 // A server reply to a Play mutation arriving after Leave must never
 // recreate the previous room or touch the new host session.
 {

@@ -44,6 +44,8 @@ export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch,option
  if(!choices.length)return [];
  const deadline=Date.now()+Math.max(100,Math.min(60000,Number(options.timeoutMs)||26000));
  const report=typeof options.onProgress==="function"?options.onProgress:()=>{};
+ const externalSignal=options.signal;
+ if(externalSignal?.aborted)throw Error("Audius scan cancelled.");
  const buckets=choices.map(()=>new Map()),seen=new Set();
  const maxRequests=choices.length*3;
  let nextGenre=0,completed=0,genreDone=0,success=0,failed=0,shortened=false;
@@ -55,6 +57,7 @@ export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch,option
  async function scanGenre(index){
   const bucket=buckets[index],genre=choices[index];
   for(const offset of [0,100,200]){
+   if(externalSignal?.aborted)break;
    if(seen.size>=900)break;
    const remaining=deadline-Date.now();
    if(remaining<=0){shortened=true;break;}
@@ -62,8 +65,10 @@ export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch,option
    u.searchParams.set("genre",genre);u.searchParams.set("limit","100");
    u.searchParams.set("offset",String(offset));
    try{
+    const timeoutSignal=AbortSignal.timeout(Math.max(1,Math.min(8500,remaining)));
+    const requestSignal=externalSignal?AbortSignal.any([externalSignal,timeoutSignal]):timeoutSignal;
     const response=await fetchImpl(u.toString(),{cache:"no-store",
-     signal:AbortSignal.timeout(Math.max(1,Math.min(8500,remaining))),
+     signal:requestSignal,
      headers:{"Accept":"application/json"}});
     if(!response.ok)throw Error("Audius returned HTTP "+response.status);
     const data=await response.json();
@@ -76,6 +81,7 @@ export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch,option
     }
     success++;
    }catch{
+    if(externalSignal?.aborted)break;
     failed++;completed++;progress();
     break; // One failed page stops this genre, not the rest of the scan.
    }
@@ -84,12 +90,13 @@ export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch,option
   genreDone++;progress();
  }
  const workers=Array.from({length:Math.min(3,choices.length)},async()=>{
-  while(nextGenre<choices.length){
+  while(nextGenre<choices.length&&!externalSignal?.aborted){
    const index=nextGenre++;
    await scanGenre(index);
   }
  });
  await Promise.all(workers);
+ if(externalSignal?.aborted)throw Error("Audius scan cancelled.");
  if(success===0)throw Error("Could not reach Audius to check songs. Try again in a moment.");
  progress();
  // Preserve choice order, independent of network response timing, for stable
