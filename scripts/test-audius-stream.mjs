@@ -26,7 +26,10 @@ const fakeFetch=async(url)=>{
 };
 const tracks=await discoverAudiusTracks(["pop","rock"],["2020"],fakeFetch);
 assert.deepEqual(tracks.map(x=>x.id),["abc12","def16"]);
-assert.ok(requested.every(u=>u.startsWith(AUDIUS_API+"/tracks/trending")));
+assert.equal(requested.filter(u=>u.startsWith(AUDIUS_API+"/tracks/trending")).length,6);
+assert.equal(requested.filter(u=>u.startsWith(AUDIUS_API+"/tracks/search")).length,4);
+assert.ok(requested.some(u=>new URL(u).searchParams.get("query")==="cover"));
+assert.ok(requested.some(u=>new URL(u).searchParams.get("sort_method")==="popular"));
 assert.ok(requested.every(u=>!u.includes("/download")));
 // Three concurrent genre workers, deterministic merging and live progress.
 let running=0,peak=0;
@@ -43,8 +46,8 @@ const concurrent=await discoverAudiusTracks(["pop","rock","indie"],[],slowFetch,
 assert.ok(peak>1&&peak<=3,"Audius provider search must overlap at most three requests");
 assert.equal(concurrent.length,3,"genre responses must be deduplicated and merged");
 assert.equal(concurrent[0].genres[0],"pop","genre order is deterministic despite networking");
-assert.equal(progress.at(-1).completed,9);
-assert.equal(progress.at(-1).total,9);
+assert.equal(progress.at(-1).completed,15);
+assert.equal(progress.at(-1).total,15);
 assert.equal(progress.at(-1).partial,false);
 assert.ok(progress.some(x=>x.found>0),"progress reports discovered track counts");
 
