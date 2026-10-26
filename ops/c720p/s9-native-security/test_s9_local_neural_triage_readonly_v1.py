@@ -85,6 +85,7 @@ class DeviceData(unittest.TestCase):
             self.assertEqual(len(row['ranked_candidates']),3)
             self.assertGreaterEqual(row['top_two_margin'],0)
             self.assertEqual(row['ranked_candidates'][0]['folder_id'],row['folder_id'])
+    @unittest.skipUnless(mod.NATIVE.is_file(),'private native catalog not present in CI')
     def test_native_source_sha_change_still_fails_closed(self):
         native=json.loads(mod.NATIVE.read_text())
         verified=next(iter(mod.source_metadata()[1]))
@@ -95,6 +96,7 @@ class DeviceData(unittest.TestCase):
             with patch.object(mod,'NATIVE',file):
                 with self.assertRaisesRegex(ValueError,'native_source_sha_changed'):
                     mod.source_metadata()
+    @unittest.skipUnless(mod.NATIVE.is_file(),'private native catalog not present in CI')
     def test_removed_catalog_entry_is_not_served_as_verified(self):
         native=json.loads(mod.NATIVE.read_text())
         verified=next(iter(mod.source_metadata()[1]))
