@@ -28,7 +28,7 @@ const ERROR_TEXT={
  not_your_turn:"Another player buzzed first.",not_ready_for_clip:"The music is paused for an answer.",
  replay_unavailable:"A clue can only be replayed before anyone answers it.",stale_clue:"The round has moved on. Use the current playback controls.",
  all_hints_used:"All snippets have played. The host can skip the song.",
- temporary_failure:"Connection interrupted. Wait for the room to update, then try again.",request_failed:"The request could not be completed.",invalid_music_source:"Only Audius streaming is available.",invalid_youtube_video:"Enter a valid YouTube Music song link.",provide_song_and_artist:"Enter both song title and artist.",invalid_cue:"Start time must be between 0 and 600 seconds.",no_videos_for_filters:"No videos match these genres and decades. Choose more genres or remove a decade.",invalid_video_duration:"Video duration unavailable.",video_too_short_for_clues:"This video is too short for the full hints.",cue_not_available:"Random cue is only available before the first hint."
+ temporary_failure:"Connection interrupted. Wait for the room to update, then try again.",request_failed:"The request could not be completed.",invalid_music_source:"Only Audius streaming is available.",provide_song_and_artist:"Enter both song title and artist.",cue_not_available:"Unable to select a usable position in this Audius track."
 };
 function message(s) {
  const el=$("toast");el.textContent=ERROR_TEXT[s]||String(s||"");el.hidden=false;
@@ -55,7 +55,7 @@ async function rpc(action,extra={},attempt=0) {
   decades:Array.isArray(extra.decades)?extra.decades.slice(0,8):[],
   durationMs:Number.isInteger(extra.durationMs)?extra.durationMs:0,
   fileIndex:Number.isInteger(extra.fileIndex)?extra.fileIndex:-1,
-  mode:String(extra.mode||"demo"),
+  mode:String(extra.mode||"local"),
   videoId:String(extra.videoId||""),
   cueMs:Number.isInteger(extra.cueMs)?extra.cueMs:0,
   expectedRound:Number.isInteger(extra.expectedRound)?extra.expectedRound:0,
@@ -290,7 +290,6 @@ function applyState(s){
  const newRound=s.round;
  if(oldRound!==newRound){
   lastBlockKey="";answeredFocusKey="";failedClue="";cancelNext();clearAudio();
-  deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;
  }
  if(isHost()){
   if(s.phase==="answering"||s.phase==="holding"||s.phase==="solved"||s.phase==="finished"){clearAudio();cancelNext();}
