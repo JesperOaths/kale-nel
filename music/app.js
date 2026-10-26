@@ -196,53 +196,81 @@ async function discoverAudius(force=false){
   $("start").disabled=loading||roundTransitionBusy;
  }
 }
-async function prepareAudiusPlayback(record,restoredIndex=null){
- const lib=await audiusLib(),uri=lib.streamUrl(record.id);
- // Browser audio element streams HTTPS; HTMLMediaElement handles range seeking.
- // Do not use fetch(blob), ArrayBuffer, MediaRecorder, downloads or disk caching.
+async function prepareAudiusPlayback(record,restoredIndex=null,isCurrent=()=>true){
+ const lib=await audiusLib();
+ // Module imports and network discovery are asynchronous. A host can leave
+ // while they run; never let a departed room clear another room's media.
+ if(!isCurrent())throw Error("Audio preparation cancelled: the room changed.");
+ const uri=lib.streamUrl(record.id);
+ if(restoredIndex!==null&&(!Number.isSafeInteger(restoredIndex)||restoredIndex<1||restoredIndex>2147483647))
+  throw Error("The saved host stream index is invalid.");
  clearAudiusStream();
+ const generation=audioLoadGeneration;
  localAudioUrl=uri;
  if(restoredIndex!==null){
-  if(!Number.isSafeInteger(restoredIndex)||restoredIndex<1||restoredIndex>2147483647)
-   throw Error("The saved host stream index is invalid.");
   localCurrentIndex=restoredIndex;
   audiusIndex=Math.max(audiusIndex,restoredIndex);
  }else localCurrentIndex=++audiusIndex;
+ const index=localCurrentIndex;
  playerAudio.preload="metadata";
  const ready=new Promise((resolve,reject)=>{
-  let timer=null;
-  const cleanup=()=>{clearTimeout(timer);playerAudio.removeEventListener("loadedmetadata",loaded);
-   playerAudio.removeEventListener("error",bad)};
-  const loaded=()=>{cleanup();resolve(playerAudio.duration)};
-  const bad=()=>{cleanup();reject(Error("Audius streaming host rejected this track"))};
+  let timer=null,settled=false;
+  const cleanup=()=>{
+   clearTimeout(timer);
+   playerAudio.removeEventListener("loadedmetadata",loaded);
+   playerAudio.removeEventListener("error",bad);
+   if(audioLoadCancel===cancel)audioLoadCancel=null;
+  };
+  const finish=(err,value)=>{
+   if(settled)return;
+   settled=true;cleanup();
+   if(err)reject(err);else resolve(value);
+  };
+  const cancel=()=>finish(Error("Audius loading cancelled because the song or room changed."));
+  const loaded=()=>{
+   if(generation!==audioLoadGeneration||!isCurrent())return cancel();
+   finish(null,playerAudio.duration);
+  };
+  const bad=()=>finish(Error("Audius streaming host rejected this track"));
   playerAudio.addEventListener("loadedmetadata",loaded,{once:true});
   playerAudio.addEventListener("error",bad,{once:true});
-  timer=setTimeout(()=>{cleanup();reject(Error("Audius audio loading timed out"))},13000);
+  audioLoadCancel=cancel;
+  timer=setTimeout(()=>finish(Error("Audius audio loading timed out")),13000);
  });
- playerAudio.src=uri;playerAudio.load();
+ playerAudio.src=uri;
+ playerAudio.load();
  const d=await ready;
+ if(!isCurrent()||generation!==audioLoadGeneration||localCurrentIndex!==index||localAudioUrl!==uri)
+  throw Error("Audius loading cancelled because the song or room changed.");
  if(!Number.isFinite(d)||d<35||d>7200)throw Error("Audius track duration is unavailable");
- return {duration:d,index:localCurrentIndex,url:uri};
+ return {duration:d,index,url:uri};
 }
-async function selectAudiusRound(){
+async function selectAudiusRound(isCurrent=()=>true){
  const lib=await audiusLib(),filters=chosenFilters();
  const tracks=await discoverAudius();
+ if(!isCurrent())throw Error("The room changed while checking Audius tracks.");
  const history=await rotation();
+ if(!isCurrent())throw Error("The room changed while choosing a song.");
  if(room?.code){history.openGame(rotationHistory,room.code);saveRotation()}
  const previously=history.playedKeys(rotationHistory,"audius");
  const attempts=new Set(previously);
  const candidateCount=tracks.filter(t=>!attempts.has(t.id)).length;
  for(let i=0;i<Math.min(candidateCount,9);i++){
+  if(!isCurrent())throw Error("Song preparation was cancelled.");
   const track=lib.chooseAudiusTrack(tracks,attempts);
   attempts.add(track.id);
   try{
-   const prepared=await prepareAudiusPlayback(track);
+   const prepared=await prepareAudiusPlayback(track,null,isCurrent);
+   if(!isCurrent())throw Error("Song preparation was cancelled.");
    audiusActive=true;audiusTrack=track;
    const cue=lib.randomizedCueMs(prepared.duration);
    localStatus("Audius stream ready. Press Play next clue to hear the song.");
    return {mode:"local",song:track.title,artist:track.artist,
     fileIndex:prepared.index,cueMs:cue,durationMs:Math.floor(prepared.duration*1000)};
-  }catch(e){clearAudiusStream();audiusTrack=null}
+  }catch(e){
+   if(!isCurrent())throw Error("Song preparation was cancelled.");
+   clearAudiusStream();audiusTrack=null;
+  }
  }
  throw Error(candidateCount===0?
   "No unplayed Audius songs match your genres and decades. Expand the filters.":
@@ -250,6 +278,7 @@ async function selectAudiusRound(){
 }
 
 let localCurrentIndex=null,localAudioUrl=null;
+let audioLoadGeneration=0,audioLoadCancel=null;
 function localStatus(note){setText("audius-playback-status",note)}
 let speakerCheckBusy=false;
 // Audible device diagnostic, not a music provider or a quiz track. It
@@ -332,7 +361,10 @@ async function restoreAudiusHost(state){
  const restoreSession=access;
  localStatus("Restoring this round's Audius stream without changing the song…");
  try{
-  const prepared=await prepareAudiusPlayback(saved,wantedIndex);
+  const prepared=await prepareAudiusPlayback(saved,wantedIndex,()=>
+   restoreSession===access&&isHost()&&!roundTransitionBusy&&
+   room?.code===state.code&&room.round===state.round&&
+   room.audio?.source===state.audio.source);
   if(!room||!isHost()||room.code!==state.code||room.round!==state.round||
      room.audio?.source!==state.audio.source||!restoreSession||
      restoreSession!==access){
@@ -362,6 +394,12 @@ async function restoreAudiusHost(state){
  }finally{audiusRestoring=false}
 }
 function clearAudiusStream(){
+ // Cancel pending media listeners/timers before altering the shared audio
+ // element. Old metadata/error events may never complete a newer request.
+ audioLoadGeneration++;
+ const cancel=audioLoadCancel;
+ audioLoadCancel=null;
+ if(cancel)cancel();
  try{playerAudio.pause();playerAudio.removeAttribute("src");playerAudio.load()}catch{}
  localAudioUrl=null;
  localCurrentIndex=null;
@@ -825,7 +863,9 @@ async function advanceRound(action){
   if(action==="start")
    setText("audius-availability","Choosing a playable Audius track…");
   else localStatus("Choosing the next playable Audius track…");
-  const chosen=await selectAudiusRound();
+  const chosen=await selectAudiusRound(()=>session===access&&
+   token===roundTransitionToken&&room?.code===code&&room.round===round&&
+   room.phase===expectedPhase);
   // Revalidate after every asynchronous Audius/media operation before
   // submitting a new round. Stale selections must not advance another game.
   if(session!==access||!room||room.code!==code||room.round!==round||room.phase!==expectedPhase){
