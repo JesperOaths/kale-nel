@@ -8,10 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026fair">
+<link rel="stylesheet" href="./style.css?v=20261026rescue">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261026fair" defer></script>
+<script src="./app.js?v=20261026rescue" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -149,6 +149,11 @@
       <p id="live-reserve" class="live-reserve" hidden aria-live="polite"></p>
       <div class="audius-credit" id="audius-credit" hidden>Track on <a id="audius-track-link" href="https://audius.co/" target="_blank" rel="noopener noreferrer">Audius</a></div>
       <div class="audius-player-actions"><button id="audius-play-hint" class="primary" type="button" hidden>▶ Play next clue</button><button id="audius-replay-hint" class="outline" type="button" hidden>↻ Replay clue</button></div>
+      <div id="clue-rescue-panel" class="clue-rescue-panel" hidden>
+       <div class="clue-rescue-copy"><strong>Can't hear this clue?</strong><span>Stop playback safely and retry the same snippet. Your score and the song stay unchanged.</span></div>
+       <button id="clue-rescue" class="clue-rescue-action" type="button">◼ Pause &amp; retry</button>
+      </div>
+      <p id="clue-rescue-status" class="clue-rescue-status" hidden role="status" aria-live="polite"></p>
       <div class="host-mixer" data-host-mixer>
        <div class="host-mixer-head"><span class="host-mixer-mark" aria-hidden="true">◉</span><div><strong>MASTER OUTPUT</strong><small>Adjust music and speaker test volume</small></div><output data-volume-label for="host-volume-player">100%</output></div>
        <div class="host-mixer-controls"><label for="host-volume-player" class="host-mixer-slider-label">Volume</label><input type="range" min="0" max="100" step="5" value="100" id="host-volume-player" data-host-volume aria-label="Host audio output volume"><button type="button" class="host-mixer-mute" data-volume-toggle aria-pressed="false">Mute</button></div>
