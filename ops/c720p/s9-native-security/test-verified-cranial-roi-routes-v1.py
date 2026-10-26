@@ -116,7 +116,7 @@ class ReadOnlyROIs(unittest.TestCase):
         self.assertIn('showProvisional: true',suggestions)
         self.assertIn("requiredMode: VECTOR_MODE",suggestions)
         page=(ROOT/'security-people-v53.html').read_text()
-        self.assertIn('security-people-v328.js?v=historical-verified-crops-v5-20261026',page)
+        self.assertIn('security-people-v328.js?v=neural-review-handoff-v1-20261026',page)
         self.assertIn('folder-suggestions-top-tab-v4.js?v=historical-verified-crops-v5-20261026',page)
 if __name__=='__main__':
     unittest.main()
