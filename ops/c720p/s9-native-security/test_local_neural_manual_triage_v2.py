@@ -10,7 +10,7 @@ class TriageV2(unittest.TestCase):
         self.s=(DIR/'local-neural-manual-triage-v2.js').read_text()
     def test_newest_page_asset(self):
         page=(DIR/'security-people-v53.html').read_text()
-        self.assertEqual(page.count('local-neural-manual-triage-v6.js?v=neural-review-reminder-v6-20261026'),1)
+        self.assertEqual(page.count('local-neural-manual-triage-v7.js?v=neural-unknown-top3-v7-20261026'),1)
         self.assertNotIn('local-neural-manual-triage-v1.js?v=',page)
     def test_real_queue_not_truncated(self):
         for fragment in ("doc.count!==49","doc.items.length!==49","row.score<q",
