@@ -407,6 +407,49 @@ async function fireTimer(f,ms){
  assert.equal(f.run('buildAnswerReceipt(b,{...b,role:"host"},{song:"hi"})'),null);
  assert.equal(f.run('buildAnswerReceipt(b,{...b,me:"guest2"},{song:"hi"})'),null);
 }
+// Public scoreboard momentum is built from authoritative same-room snapshots,
+// never guessed answers, room starts or repeated state polling.
+{
+ const f=fixture();
+ f.run('const priorScores={code:"ABCDEF",round:2,phase:"answering",players:['+
+  '{id:"p1",name:"A",score:5},{id:"p2",name:"B",score:1}]};'+
+  'const updatedScores={...priorScores,phase:"holding",players:['+
+  '{id:"p1",name:"A",score:5.5},{id:"p2",name:"B",score:0}]}');
+ const events=JSON.parse(f.run("JSON.stringify(scoreChangeEvents(priorScores,updatedScores))"));
+ assert.deepEqual(events,[{id:"p1",name:"A",delta:0.5,score:5.5},
+  {id:"p2",name:"B",delta:-1,score:0}]);
+ f.run("observeScoreChanges(priorScores,updatedScores)");
+ assert.equal(f.run("lastScoreChanges.size"),2);
+ assert.equal(f.run('lastScoreChanges.get("p1").delta'),0.5);
+ assert.equal(f.run('lastScoreChanges.get("p2").delta'),-1);
+ assert.match(f.run("lastScorePulse"),/A \+0.5 points/);
+ assert.match(f.run("lastScorePulse"),/B -1.0 points/);
+ const existing=f.run("lastScorePulse");
+ f.run("observeScoreChanges(updatedScores,updatedScores)");
+ assert.equal(f.run("lastScorePulse"),existing,"repeated polling never re-announces points");
+ f.run("observeScoreChanges(updatedScores,{...updatedScores,round:3})");
+ assert.equal(f.run("lastScoreChanges.size"),0,"new song clears previous-round score badges");
+ assert.equal(f.run("lastScorePulse"),"");
+ f.run("observeScoreChanges(priorScores,updatedScores)");
+ f.run("observeScoreChanges(updatedScores,{...updatedScores,code:'ZZZZZZ'})");
+ assert.equal(f.run("lastScoreChanges.size"),0,"room replacement cannot leak score changes");
+ assert.equal(f.run("scoreChangeEvents(priorScores,{...updatedScores,round:4}).length"),0);
+ assert.equal(f.run("scoreChangeEvents(priorScores,{...updatedScores,code:'ZZZZZZ'}).length"),0);
+ assert.equal(f.run("scoreChangeEvents({...priorScores,phase:'lobby'},updatedScores).length"),0);
+ assert.equal(f.run("scoreChangeEvents(priorScores,{...updatedScores,players:[{id:'new',name:'C',score:4}]}).length"),0,
+  "new players lack a previous score and cannot receive a fabricated badge");
+ f.run("observeScoreChanges(priorScores,updatedScores)");
+ f.run("reset()");
+ assert.equal(f.run("lastScoreChanges.size"),0);
+ assert.equal(f.run("lastScorePulse"),"");
+}
+// A score clamped to zero does not create a fake deduction.
+{
+ const f=fixture();
+ f.run("const a={code:'ABCDEF',round:1,phase:'answering',players:[{id:'p1',name:'A',score:0}]};");
+ assert.equal(f.run("scoreChangeEvents(a,{...a,phase:'holding'}).length"),0);
+ assert.equal(f.run("scoreChangeEvents(a,{...a,players:[{id:'p1',name:'A',score:0}]}).length"),0);
+}
 // Leaving during a long track transition must unlock controls for the
 // next room, not leave the Start button stuck disabled.
 {
