@@ -80,6 +80,7 @@ try{
  await guest2.locator("#join-form button[type=submit]").click();
  await guest2.waitForFunction(()=>room?.role==="player"&&room?.phase==="lobby",null,{timeout:17000});
  await host.waitForFunction(()=>room?.players?.length>=2,null,{timeout:17000});
+ await guest.evaluate(()=>window.__guestOriginalCode=room.code);
  assert.equal(await guest2.locator("#party-join-qr:visible").count(),0);
  assert.equal(await host.locator("#lobby-player-count").innerText(),"2 players joined");
  assert.ok(await host.locator(".stream-hero").isVisible());
@@ -490,6 +491,53 @@ try{
   audiusPool.find(t=>t.id===id))),vetoId),true);
  assert.equal(Number(await host.locator("#reserve-free").innerText()),Math.max(0,vetoBefore-1),
   "a rejected composition must leave the host's playable reserve");
+ // The backend has no same-room rematch operation. Simulate ONLY the local
+ // winner presentation, then create a real fresh authenticated server room.
+ // This verifies safe transition, QR refresh, filter settings and old-room
+ // isolation without modifying existing player scores in the database.
+ const previousParty=await host.evaluate(()=>room.code);
+ await host.evaluate(()=>{
+  window.__restoreRefresh=refresh;
+  refresh=async()=>{}; // Hold an intentionally simulated winner UI steady.
+  room={...room,phase:"finished",round:44,
+   players:[{id:"p1",name:"Demo Winner",score:20},
+    {id:"p2",name:"Second Place",score:11.5}],
+   winner:"p1",genres:["rock","pop"],decades:["2010"]};
+  navigator.clipboard.writeText=async value=>window.__copiedFinalScores=value;
+  render();
+ });
+ assert.equal(await host.locator("#finish-new-party").isVisible(),true);
+ assert.equal(await host.locator("#finish-copy-results").isVisible(),true);
+ assert.equal(await guest.locator("#finish-new-party:visible").count(),0);
+ await host.locator("#finish-copy-results").click();
+ assert.match(await host.evaluate(()=>window.__copiedFinalScores),/Winner: Demo Winner/);
+ assert.match(await host.evaluate(()=>window.__copiedFinalScores),/Second Place — 11\.5 pts/);
+ assert.ok(!String(await host.evaluate(()=>window.__copiedFinalScores)).includes("secret_hash"));
+ let createdNewParty=0,updatedNewParty=0;
+ const trackNewParty=async route=>{
+  const body=JSON.parse(route.request().postData()||"{}");
+  if(body.p_action==="create")createdNewParty++;
+  if(body.p_action==="settings")updatedNewParty++;
+  await route.continue();
+ };
+ await host.route(roomRpc,trackNewParty);
+ await host.locator("#finish-new-party").click();
+ await host.waitForFunction(before=>room?.role==="host"&&room?.phase==="lobby"&&
+  room.code!==before&&room.genres.includes("rock")&&room.genres.includes("pop")&&
+  room.decades.includes("2010")&&!loading&&!newPartyBusy,
+  previousParty,{timeout:22000});
+ await host.unroute(roomRpc,trackNewParty);
+ const newCode=await host.evaluate(()=>room.code);
+ assert.equal(createdNewParty,1,"one user action creates only one new room");
+ assert.equal(updatedNewParty,1,"the new room's previous mix is saved once");
+ assert.equal(await host.locator("#party-join-code").innerText(),newCode);
+ assert.equal(await host.locator("#party-join-qr svg").count(),1);
+ assert.equal(await host.evaluate(()=>new URL(inviteUrl()).searchParams.get("room")),newCode);
+ assert.equal(await host.evaluate(()=>room.players.length),0,
+  "new party must start at zero participants and scores");
+ assert.notEqual(newCode,previousParty);
+ assert.equal(await guest.evaluate(()=>room.code===window.__guestOriginalCode),true,
+  "an old room's guest must not silently move to the new private room");
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,players:2,devices:3,tracks:3,streamRequests,metadataRequests,
@@ -502,5 +550,6 @@ try{
   hostAudition:"heard sample excluded across refresh and 3-game history unchanged",hostVeto:true,
   noSpoilerGuard:"previewed song and matching reuploads blocked from quiz",
   clueRescue:"server-started silent clue paused, same step replayed without scores or song change",
+  newParty:"winner UI preview -> authenticated fresh room, same filters, new QR and zero participants",scoreSharing:true,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}

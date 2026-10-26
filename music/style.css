@@ -786,3 +786,19 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
  background:#69ddb518;border:1px solid #65debe6b;color:#baf9e0;font-size:12px;line-height:1.5}
 @media(max-width:520px){.clue-rescue-panel{flex-direction:column;align-items:stretch}
  .clue-rescue-action{width:100%}}
+
+
+/* New-party finish controls: one-click fresh private room and shareable scoreboard. */
+.finish-actions{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;
+ gap:11px;margin:28px auto 12px;max-width:620px}
+.finish-actions button{min-height:49px;border-radius:12px;padding:12px 18px;
+ font-size:13px;font-weight:880;letter-spacing:.015em}
+.finish-actions .finish-new-party{background:linear-gradient(110deg,#9deac4,#56cba7);
+ color:#153a35;box-shadow:0 7px 22px #4dd2ab39}
+.finish-actions .finish-share-results{border:1px solid #a0d6b36c;color:#e7fbf0}
+.finish-actions button:disabled{opacity:.55;cursor:wait}
+.finish-actions button:focus-visible{outline:3px solid #ffedac;outline-offset:3px}
+.finish-again{font-size:12px;line-height:1.6;color:#b5d1d0;
+ max-width:530px;margin:10px auto}
+@media(max-width:520px){.finish-actions{flex-direction:column}
+ .finish-actions button{width:min(100%,360px)}}
