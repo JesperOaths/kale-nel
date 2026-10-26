@@ -117,4 +117,56 @@ function fixture(){
  assert.equal(f.run('polls'),1,'buzz polling continues while video start is pending');
  assert.equal(f.run('room.phase'),'answering');
 }
+
+{
+ const f=fixture();
+ const audio=f.element('licensed-player');
+ Object.assign(audio,{readyState:4,currentTime:0,paused:false,error:null,ended:false,play:async()=>{}});
+ const pending=f.run('localCurrentIndex=9;localAudioUrl="https://api.audius.co/v1/tracks/WxM05o/stream";playLocalHint({source:"local:9",cueMs:17000})');
+ for(let i=0;i<10&&!f.timers.size;i++)await Promise.resolve();
+ assert.equal(audio.currentTime,17);
+ assert.ok([...f.timers.values()].some(t=>t.ms===75),'remote seek must wait for actual playback time advancement');
+ let done=false;pending.then(()=>{done=true});
+ await Promise.resolve();
+ assert.equal(done,false,'a resolving play() promise alone must not start the clue');
+ audio.currentTime=17.15;
+ const t=[...f.timers.entries()].find(([,v])=>v.ms===75);
+ f.timers.delete(t[0]);t[1].fn();
+ await pending;
+ assert.match(f.element('local-playback-status').textContent,/Playing clue/);
+}
+{
+ const f=fixture();
+ const audio=f.element('licensed-player');
+ Object.assign(audio,{readyState:4,currentTime:0,paused:false,error:null,ended:false,play:async()=>{}});
+ const pending=f.run('localCurrentIndex=9;localAudioUrl="https://api.audius.co/v1/tracks/WxM05o/stream";playLocalHint({source:"local:9",cueMs:17000})');
+ // Timers are fake; run all 120 probes without waiting nine real seconds.
+ for(let i=0;i<120;i++){
+  for(let n=0;n<10&&!f.timers.size;n++)await Promise.resolve();
+  const t=[...f.timers.entries()].find(([,v])=>v.ms===75);
+  assert.ok(t,'each buffering probe must be bounded');
+  f.timers.delete(t[0]);t[1].fn();
+  await Promise.resolve();
+ }
+ await assert.rejects(pending,/still buffering/,'a permanently stalled remote stream must fail, not hang');
+}
+{
+ const f=fixture();
+ const audio=f.element('licensed-player');
+ Object.assign(audio,{readyState:4,currentTime:0,paused:false,error:null,ended:false,
+  play:async()=>{audio.currentTime=13.15}});
+ const pending=f.run('localCurrentIndex=9;localAudioUrl="https://api.audius.co/v1/tracks/WxM05o/stream";room={role:"host",round:1,step:-1,phase:"paused",mode:"local",audio:{source:"local:9",cueMs:13000},clipMs:500};let calls=[];rpc=async action=>{calls.push(action);return {state:{...room,phase:action==="play"?"playing":"paused",step:action==="play"?0:room.step}}};startClip()');
+ await pending;
+ const initial=[...f.timers.entries()].find(([,t])=>t.ms===500);
+ assert.ok(initial,'local clue must start timer only after playback progressed');
+ audio.currentTime=13.2;
+ f.timers.delete(initial[0]);await initial[1].fn();
+ const buffering=[...f.timers.entries()].find(([,t])=>t.ms===80);
+ assert.ok(buffering,'an elapsed timer cannot end a stalled 0.5s clue');
+ assert.equal(f.run('room.phase'),'playing');
+ audio.currentTime=13.56;
+ f.timers.delete(buffering[0]);await buffering[1].fn();
+ assert.equal(f.run('room.phase'),'paused');
+ assert.equal(f.run('calls.join(",")'),'play,pause');
+}
 console.log('TUNE_RUSH_PLAYBACK_RECOVERY_PASS: explicit start, preflight, persistent errors, next video, buzzer cancellation, polling');
