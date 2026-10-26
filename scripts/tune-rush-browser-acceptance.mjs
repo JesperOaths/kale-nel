@@ -63,6 +63,17 @@ try{
  await host.waitForFunction(()=>room?.players?.length>=1,null,{timeout:17000});
  assert.ok(await host.locator(".stream-hero").isVisible());
  assert.equal(await guest.locator(".stream-hero").isVisible(),false);
+ assert.match(await host.locator("#lobby-launch-status").innerText(),/1 PLAYER READY/);
+ // A soundtrack preset changes only the host's checkbox choices and saves to the room.
+ await host.locator('[data-audius-preset="party"]').click();
+ assert.deepEqual((await host.locator("#genre-options input:checked").evaluateAll(xs=>xs.map(x=>x.value))).sort(),
+  ["dance","disco","electronic","pop"].sort());
+ assert.equal(await host.locator("#decade-options input:checked").count(),0,"presets include all eras by default");
+ await host.waitForFunction(()=>room?.genres?.includes("dance")&&room?.genres?.includes("disco"),null,{timeout:15000});
+ await host.locator("#decade-options input[value='2020']").check();
+ await host.locator("#clear-audius-decades").click();
+ assert.equal(await host.locator("#decade-options input:checked").count(),0,"all eras shortcut removes decade restrictions");
+ await host.waitForFunction(()=>!room?.decades?.length,null,{timeout:15000});
  await host.locator("#audius-check").click();
  await host.waitForFunction(()=>audiusPool.length===3&&!audiusChecking,null,{timeout:20000});
  assert.match(await host.locator("#audius-availability").innerText(),/3 distinct streamable tracks/);

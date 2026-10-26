@@ -556,3 +556,17 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 @media(max-width:820px){.hero{grid-template-columns:1fr 230px;gap:8px;padding:18px 0;min-height:310px}.hero h1{font-size:clamp(2.7rem,7vw,4.6rem)}.hero-art{min-height:230px}.hero-record{width:215px}.hero-art-footer{bottom:0}.host-mode #audius-filters .genres{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.hero{display:block;min-height:0;text-align:left;padding:30px 4px 8px}.hero .eyebrow{font-size:10px}.hero h1{font-size:clamp(3rem,13vw,4.6rem)}.hero-art{min-height:220px;margin:5px 0 0}.hero-record{width:186px;border-width:7px}.hero-art-footer{right:8%;bottom:8px}.hero-facts span{font-size:9px}.stream-hero{padding:15px;gap:12px;align-items:flex-start}.stream-hero-icon{width:45px;height:45px;font-size:28px;border-radius:12px}.stream-hero-mark{display:none}.host-mode #audius-filters{padding:14px}.host-mode #audius-filters .genres,.host-mode #audius-filters .decade-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.audius-info-top{align-items:stretch;flex-direction:column}.audius-info-top button{width:100%}.audius-player-actions{flex-direction:column}.playing-indicator{font-size:9px}.hero-copy{padding-right:8px}}
 @media(prefers-reduced-motion:reduce){.hero-record,.hero-art-footer i{animation:none!important}.primary{transition:none!important}}
+
+
+/* Audius studio shortcuts: compact, touch-friendly, always optional. */
+.mix-presets{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:4px 0 19px;padding:11px 0 17px;border-bottom:1px solid #b4cff01c}
+.mix-presets-caption{font-size:10px;font-weight:900;letter-spacing:.12em;color:#98b3cb;margin-right:5px;white-space:nowrap}
+.mix-chip,.host-mode .mix-chip{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:10px 14px;border-radius:999px;background:#243653;color:#dff9f5;border:1px solid #59718f;box-shadow:0 4px 13px #0002;font-size:12px;font-weight:800;letter-spacing:.005em;cursor:pointer;transition:background .15s,transform .15s,border-color .15s}
+.mix-chip:hover,.host-mode .mix-chip:hover{background:#2c4e62;border-color:#98f4dc;transform:translateY(-1px)}
+.mix-chip:active{transform:translateY(1px)}
+.filter-reset,.host-mode .filter-reset{color:#bffce5;border:1px solid #76ccb05c;background:#19514342;border-radius:999px;padding:9px 13px;min-height:34px;font-size:11px;font-weight:850;cursor:pointer;white-space:nowrap}
+.filter-reset:hover{background:#19675262}
+.host-mode .lobby-launch-note{margin-top:20px;background:#153d354d;padding:11px 12px;border:1px solid #66a48c3a;border-radius:12px;width:fit-content;max-width:100%;line-height:1.5}
+.host-mode .audius-info button:disabled{opacity:.64;cursor:progress}
+@media(max-width:560px){.mix-presets{gap:7px}.mix-presets-caption{width:100%;margin-bottom:2px}.mix-chip,.host-mode .mix-chip{font-size:11px;padding:9px 12px}.host-mode #audius-filters .filter-head{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.mix-chip{transition:none!important}}

@@ -8,9 +8,9 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026studio">
+<link rel="stylesheet" href="./style.css?v=20261026mix">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=20261026studio" defer></script>
+<script src="./app.js?v=20261026mix" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -56,6 +56,13 @@
     </div>
      <div id="audius-filters">
      <div class="filter-head"><div class="kicker settings-title">GENRES <small>· Pick your sound</small></div><span>01 / 02</span></div>
+     <div class="mix-presets" role="group" aria-label="Quick soundtrack mixes">
+      <span class="mix-presets-caption">QUICK MIXES</span>
+      <button type="button" class="mix-chip" data-audius-preset="party">✦ Party mix</button>
+      <button type="button" class="mix-chip" data-audius-preset="electronic">◉ Electronic</button>
+      <button type="button" class="mix-chip" data-audius-preset="guitar">♫ Guitar &amp; indie</button>
+      <button type="button" class="mix-chip" data-audius-preset="all">∞ All genres</button>
+     </div>
      <div id="genre-options" class="genres">
       <label><input type="checkbox" value="pop" checked> Pop</label>
       <label><input type="checkbox" value="rock" checked> Rock</label>
@@ -67,7 +74,7 @@
       <label><input type="checkbox" value="rnb"> R&amp;B</label>
       <label><input type="checkbox" value="metal"> Metal</label>
      </div>
-     <div class="filter-head"><div class="kicker settings-title">DECADES <small>· Optional, or leave all unchecked</small></div><span>02 / 02</span></div>
+     <div class="filter-head"><div class="kicker settings-title">DECADES <small>· Optional, or leave all unchecked</small></div><button type="button" id="clear-audius-decades" class="filter-reset">↺ All eras</button></div>
      <div id="decade-options" class="genres decade-grid">
       <label><input type="checkbox" value="1960"> 1960s</label>
       <label><input type="checkbox" value="1970"> 1970s</label>
@@ -79,7 +86,7 @@
      </div>
      <div class="filter-footnote"><span>◎</span> Leave decades unchecked to unlock the widest selection. Songs stay fresh across your last three games on this browser.</div>
     </div>
-    <div class="lobby-launch-note"><span class="signal-dot"></span> READY WHEN YOUR FRIENDS ARE</div>
+    <div class="lobby-launch-note" role="status" aria-live="polite"><span class="signal-dot"></span><span id="lobby-launch-status">INVITE A PLAYER TO GET STARTED</span></div>
      <button id="start" class="primary host-launch">Start the show <span aria-hidden="true">↗</span></button>
    </div><p id="guest-wait" class="waiting" hidden>Waiting for the host to start…</p>
    <div class="lobby-roster"><div class="lobby-roster-heading"><span class="kicker">THE ROOM</span><span id="lobby-player-count">0 players joined</span></div><div id="lobby-players" class="players"><span class="waiting-player">Waiting for players to join…</span></div></div>
