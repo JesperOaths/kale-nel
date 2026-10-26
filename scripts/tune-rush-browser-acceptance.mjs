@@ -478,9 +478,36 @@ try{
  }
  assert.deepEqual(await guest.evaluate(()=>window.__vibrationCalls),[[70,45,100]],
   "the previous buzzer winner must not receive duplicate alerts");
+ assert.equal(await host.locator("#party-setlist").isVisible(),false,
+  "the current mystery may not enter history while still in a live steal window");
  await host.locator("#skip-round").click();
  await host.waitForFunction(()=>room?.phase==="solved",null,{timeout:15000});
+ await guest.waitForFunction(()=>room?.phase==="solved",null,{timeout:15000});
  assert.match(await host.locator("#round-transition-title").innerText(),/SONG REVEALED/);
+ for(const page of [host,guest]){
+  assert.equal(await page.locator("#party-setlist").isVisible(),true);
+  assert.equal(await page.locator("#round-recap").isVisible(),true);
+  const revealed=await page.evaluate(()=>({title:room.title,artist:room.artist,round:room.round}));
+  assert.equal(await page.locator("#recap-title").innerText(),revealed.title);
+  assert.equal(await page.locator("#recap-artist").innerText(),revealed.artist);
+  assert.equal(await page.locator("#setlist-count").innerText(),"1");
+  await page.locator("#setlist-details summary").click();
+  assert.equal(await page.locator("#setlist-list li").count(),1);
+  assert.match(await page.locator("#setlist-list li").innerText(),/—/);
+ }
+ await guest.evaluate(()=>{
+  Object.defineProperty(navigator,"clipboard",{configurable:true,
+   value:{writeText:async value=>{window.__copiedSetlist=value;}}});
+  window.prompt=(_message,value)=>{window.__manualSetlist=value;return value};
+ });
+ await guest.locator("#setlist-copy").click();
+ await guest.waitForFunction(()=>typeof(window.__copiedSetlist||window.__manualSetlist)==="string",
+  null,{timeout:6000});
+ const copiedSetlist=await guest.evaluate(()=>window.__copiedSetlist||window.__manualSetlist);
+ const publicSong=await guest.evaluate(()=>({artist:room.artist,title:room.title}));
+ assert.ok(copiedSetlist.includes(publicSong.artist+" — "+publicSong.title));
+ assert.ok(!copiedSetlist.includes("fixture-token"));
+ assert.ok(!copiedSetlist.includes("Hidden Mystery"));
  assert.ok(await host.locator("#audius-credit").isVisible());
  let nextWrites=0;
  const watchNext=async route=>{
@@ -493,6 +520,14 @@ try{
   null,{timeout:25000});
  await host.unroute(roomRpc,watchNext);
  assert.equal(nextWrites,1,"double Next must not advance twice or replace the stream");
+ for(const page of [host,guest]){
+  await page.waitForFunction(()=>room?.round===2&&room?.phase==="paused",null,{timeout:15000});
+  assert.equal(await page.locator("#round-recap").isVisible(),false,
+   "the newest mystery must never show the previous round's recap");
+  assert.equal(await page.locator("#setlist-count").innerText(),"1");
+  assert.equal(await page.locator("#setlist-list li").count(),1,
+   "a new unrevealed round cannot be added to the setlist");
+ }
  const second=await host.evaluate(()=>({source:room.audio.source,ids:rotationHistory?.games?.at(-1)?.audius||[]}));
  assert.notEqual(second.source,first.source,"no-repeat selection must avoid previous track");
  assert.ok(second.ids.length>=2,"playing history must persist Audius IDs");
@@ -509,9 +544,15 @@ try{
   source:room.audio.source,cueMs:room.audio.cueMs,id:audiusTrack.id,
   checkpoint:JSON.parse(sessionStorage.getItem("tune-rush-audius-host-stream-v1")||"null")}));
  assert.equal(prior.checkpoint?.source,prior.source,"host saves its private track resume receipt");
+ assert.equal(await host.evaluate(()=>partySetlist.length),1,
+  "the first revealed song remains in host setlist during round two");
  assert.equal(await guest.evaluate(()=>sessionStorage.getItem("tune-rush-audius-host-stream-v1")),null,
   "guest cannot access the host's private stream checkpoint");
  await host.reload({waitUntil:"domcontentloaded",timeout:30000});
+ await host.waitForFunction(()=>partySetlist.length===1&&partySetlistCode===room?.code,
+  null,{timeout:16000});
+ assert.equal(await host.locator("#setlist-count").innerText(),"1",
+  "host reload restores revealed-song history from its own tab");
  try{
   await host.waitForFunction(()=>room?.round===2&&room?.phase==="paused"&&
    audiusActive&&localCurrentIndex===Number(room.audio.source.slice(6))&&
@@ -686,5 +727,6 @@ try{
   buzzerFeedback:"opt-in haptics, winner vs other claim, steal alerts without duplicate polling",
   answerReceipts:"private zero-clamped score receipt confirmed by backend; no secret answer leak",
   publicScoreMomentum:"host and guest ranked ties, score deltas and no duplicate-poll score alerts",
+  partySetlist:"host and phone capture only revealed songs, copy and restore across reload",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}

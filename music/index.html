@@ -8,10 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026momentum">
+<link rel="stylesheet" href="./style.css?v=20261026setlist">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261026momentum" defer></script>
+<script src="./app.js?v=20261026setlist" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -190,6 +190,27 @@
    </article>
    <aside class="panel score-panel"><div class="score-panel-heading"><span class="kicker">THE SCOREBOARD</span><span class="leaderboard-live"><span class="host-online-dot"></span> LIVE</span></div><h2>Who's winning? <span class="trophy" aria-hidden="true">✦</span></h2><p class="score-caption">First player to 20 points wins the party.</p><div class="score-rule-divider"></div><p class="scoreboard-pulse" id="scoreboard-pulse" hidden role="status" aria-live="polite" aria-atomic="true"></p><div id="scores" class="score-list" role="list" aria-label="Player scores sorted by rank"></div><div id="host-score-footer" class="host-score-footer host-only"><span id="host-player-count">0 PLAYERS CONNECTED</span><span>20 POINTS TO WIN</span></div><div id="my-score" class="my-score" hidden>YOUR SCORE <strong>0</strong></div></aside>
   </div>
+ </section>
+ <section id="party-setlist" class="party-setlist panel" hidden aria-label="Revealed songs in this party">
+  <div class="setlist-reveal" id="round-recap" hidden>
+   <div class="setlist-reveal-mark" aria-hidden="true">♫</div>
+   <div class="setlist-reveal-text">
+    <span class="kicker">THE SONG IS REVEALED</span>
+    <h2 id="recap-title">Mystery solved</h2>
+    <p id="recap-artist">Artist revealed by the host</p>
+    <span id="recap-clues" class="recap-clues">ROUND 1</span>
+   </div>
+  </div>
+  <div class="setlist-tools">
+   <div><span class="kicker">YOUR PARTY SETLIST</span><p>Only songs the game has already revealed appear here.</p></div>
+   <button id="setlist-copy" class="outline setlist-copy" type="button">Copy revealed songs</button>
+  </div>
+  <details id="setlist-details" class="setlist-details">
+   <summary>Previously revealed songs <strong id="setlist-count">0</strong><span class="setlist-chevron" aria-hidden="true">⌄</span></summary>
+   <ol id="setlist-list" class="setlist-list"></ol>
+  </details>
+  <p id="setlist-copy-status" class="setlist-status" role="status" aria-live="polite"></p>
+  <p class="setlist-privacy">Saved in this browser tab for the current room. Joining late may mean earlier songs are missing. No mystery-song previews or guesses are saved.</p>
  </section>
  <section id="finish" class="finish panel" hidden><div class="finish-confetti" aria-hidden="true">✦ ✳ ✧ ✦ ✳</div><div class="kicker">THE FINAL ENCORE</div><div class="finish-crown" aria-hidden="true">♛</div><h1>And the winner is…</h1><p id="winner-name" class="finish-winner"></p><p class="finish-caption">The room has spoken. One champion takes the stage.</p><div class="finish-score-heading">FINAL STANDINGS</div><div id="final-scores" class="finish-score-list"></div><div class="finish-actions">
   <button id="finish-new-party" type="button" class="primary finish-new-party" hidden>✦ Host a new party <span aria-hidden="true">↗</span></button>

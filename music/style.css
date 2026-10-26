@@ -908,3 +908,56 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
  .score-movement{padding:4px 5px;font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){.score-entry{transition:none}}
+
+
+/* Reveal recap and remembered setlist: only server-revealed songs. */
+.party-setlist.panel{margin-top:16px;padding:22px;border-radius:20px;
+ border:1px solid #98eac26e;background:radial-gradient(circle at 90% -20%,#7ceac128,transparent 54%),
+ linear-gradient(145deg,#183342,#20243b);color:#e7f6ec}
+.party-setlist[hidden],.setlist-reveal[hidden]{display:none!important}
+.setlist-reveal{display:flex;align-items:center;gap:18px;margin-bottom:20px;
+ padding:18px;border:1px solid #d9d79c8c;border-radius:16px;
+ background:linear-gradient(110deg,#364d40,#373747)}
+.setlist-reveal-mark{display:grid;place-items:center;flex:none;width:64px;height:64px;
+ border-radius:50%;border:1px solid #f1e4a29c;color:#ffe8aa;
+ background:#e8d69821;font-size:32px;box-shadow:0 0 25px #e6d18d1c}
+.setlist-reveal-text{min-width:0}
+.setlist-reveal-text h2{font-size:clamp(22px,3.4vw,31px);letter-spacing:-.04em;
+ line-height:1.18;color:#fff6df;margin:6px 0 3px;overflow-wrap:anywhere}
+.setlist-reveal-text p{font-size:16px;font-weight:750;color:#baf8e0;margin:0;overflow-wrap:anywhere}
+.recap-clues{display:block;margin-top:10px;letter-spacing:.09em;font-size:11px;
+ color:#d6d7d0;font-weight:850}
+.setlist-tools{display:flex;justify-content:space-between;gap:12px;
+ align-items:center;margin:0 0 12px}
+.setlist-tools p{font-size:12px;margin:4px 0 0;line-height:1.5;color:#c1d8da}
+.setlist-tools .setlist-copy{min-height:42px;padding:9px 13px;border-radius:11px;
+ font-size:12px;font-weight:800;white-space:nowrap}
+.setlist-details{border:1px solid #b7d9c54d;background:#0d293244;border-radius:12px;
+ padding:0 12px}
+.setlist-details summary{display:flex;align-items:center;gap:10px;
+ cursor:pointer;list-style:none;min-height:50px;padding:11px 3px;font-size:13px;
+ font-weight:850;color:#e8f7ef}
+.setlist-details summary::-webkit-details-marker{display:none}
+.setlist-details summary strong{display:inline-flex;align-items:center;justify-content:center;
+ min-width:28px;min-height:26px;border-radius:9px;background:#78e6bb28;
+ color:#c0ffde;font-variant-numeric:tabular-nums}
+.setlist-chevron{margin-left:auto;font-size:22px;transition:transform .15s;color:#b9dbcd}
+.setlist-details[open] .setlist-chevron{transform:rotate(180deg)}
+.setlist-list{list-style:none;margin:0;padding:3px 0 12px;display:grid;gap:7px;
+ max-height:320px;overflow-y:auto}
+.setlist-list li{display:flex;gap:11px;align-items:baseline;min-width:0;
+ padding:10px 9px;background:#ffffff0b;border-radius:9px}
+.setlist-song-number{flex:none;font-size:12px;font-weight:900;color:#c3ebc6}
+.setlist-song-info{font-size:13px;line-height:1.45;color:#eaf5ec;overflow-wrap:anywhere}
+.setlist-status{margin:9px 0 0;font-size:12px;color:#c8f1d5}
+.setlist-status:empty{display:none}
+.setlist-privacy{font-size:10px;color:#a6c6cb;line-height:1.55;margin:11px 0 0}
+@media(max-width:620px){
+ .party-setlist.panel{padding:14px}
+ .setlist-reveal{gap:11px;padding:12px}
+ .setlist-reveal-mark{width:47px;height:47px;font-size:25px}
+ .setlist-reveal-text p{font-size:14px}
+ .setlist-tools{flex-wrap:wrap}
+ .setlist-tools .setlist-copy{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.setlist-chevron{transition:none}}
