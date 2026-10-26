@@ -74,3 +74,16 @@ export function catalogReadiness(available,used,threshold=THREE_GAME_TARGET){
   shortfall:Math.max(0,threshold-remaining),
   expectedGames:Math.floor(remaining/TYPICAL_SONGS_PER_GAME)};
 }
+
+/** Counts only already-heard IDs that intersect this exact filtered Audius pool. */
+export function audiusReadiness(tracks,played,threshold=THREE_GAME_TARGET){
+ const available=new Set((tracks||[]).map(t=>typeof t==="string"?t:t?.id)
+  .filter(id=>typeof id==="string"&&/^[A-Za-z0-9_-]{3,32}$/.test(id)));
+ const recent=played instanceof Set?played:new Set(played||[]);
+ const used=[...available].filter(id=>recent.has(id)).length;
+ const total=available.size,remaining=total-used;
+ const goal=Number.isInteger(threshold)&&threshold>0?threshold:THREE_GAME_TARGET;
+ return {total,used,remaining,goal,ready:remaining>=goal,
+  shortfall:Math.max(0,goal-remaining),
+  expectedGames:Math.min(3,Math.floor(remaining/TYPICAL_SONGS_PER_GAME))};
+}
