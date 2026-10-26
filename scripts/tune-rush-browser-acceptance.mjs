@@ -11,6 +11,13 @@ const browser=await chromium.launch({executablePath:chrome,headless:true,args:["
 const pad=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
 const phone=await browser.newContext({...devices["iPhone 13"]});
 const phone2=await browser.newContext({...devices["iPhone 13"]});
+// Emulate supported Android-style vibration in the two independent browser
+// contexts. Production falls back to visual feedback if this API is absent.
+for(const context of [phone,phone2])await context.addInitScript(()=>{
+ window.__vibrationCalls=[];
+ Object.defineProperty(navigator,"vibrate",{configurable:true,
+  value:pattern=>{window.__vibrationCalls.push(pattern);return true;}});
+});
 const errors=[];
 function makeWav(freq=440,seconds=38){
  const rate=8000,samples=seconds*rate,b=Buffer.alloc(44+samples*2);
@@ -345,9 +352,27 @@ try{
   guest2.waitForFunction(()=>room?.phase==="paused"&&room?.step===1,null,{timeout:12000})
  ]);
  assert.equal(await guest2.locator("#buzz").isDisabled(),false);
+ assert.equal(await guest.locator("#buzzer-status-title").innerText(),"Buzzer open — go!");
+ assert.equal(await guest2.locator("#buzzer-status-panel").getAttribute("data-state"),"ready");
+ assert.equal(await host.locator("#buzzer-status-panel:visible").count(),0);
+ assert.equal(await guest.locator("#buzzer-haptics").isChecked(),false,
+  "new players opt in to vibration; it is off by default");
+ await guest.locator("#buzzer-haptics").check();
+ await guest2.locator("#buzzer-haptics").check();
+ assert.equal(await guest.evaluate(()=>phoneHapticsEnabled),true);
+ assert.equal(await guest.evaluate(()=>localStorage.getItem("tune-rush-phone-haptics-v1")),"yes");
  await guest.locator("#buzz").click();
  await guest.waitForFunction(()=>room?.phase==="answering",null,{timeout:12000});
  await guest2.waitForFunction(()=>room?.phase==="answering",null,{timeout:12000});
+ assert.equal(await guest.locator("#buzzer-status-panel").getAttribute("data-state"),"won");
+ assert.equal(await guest.locator("#buzzer-status-title").innerText(),"You won the buzz!");
+ assert.equal(await guest2.locator("#buzzer-status-panel").getAttribute("data-state"),"claimed");
+ assert.match(await guest2.locator("#buzzer-status-hint").innerText(),/Test Player is answering/);
+ const winVibrations=await guest.evaluate(()=>window.__vibrationCalls);
+ assert.deepEqual(winVibrations,[[70,45,100]],
+  "the winner receives exactly one success vibration, not one per poll");
+ assert.equal(await guest2.evaluate(()=>window.__vibrationCalls.length),0,
+  "other players must not get a winner vibration");
  assert.equal(await guest2.locator("#answer-overlay").isVisible(),false,
   "second phone must not be able to answer for the first player's buzzer");
  assert.equal(await guest.locator("#answer-clock").isVisible(),true,
@@ -390,6 +415,15 @@ try{
  await guest.locator("#artist-guess").fill("not that performer");
  await guest.locator("#answer-form button[type=submit]").click();
  await host.waitForFunction(()=>room?.phase==="holding"||room?.phase==="paused",null,{timeout:12000});
+ if(await guest2.evaluate(()=>room?.phase==="holding")){
+  await guest2.waitForFunction(()=>document.getElementById("buzzer-status-panel").dataset.state==="steal",
+   null,{timeout:6000});
+  assert.equal(await guest2.locator("#buzzer-status-title").innerText(),"Steal available!");
+  assert.deepEqual(await guest2.evaluate(()=>window.__vibrationCalls),[[40,45,40]],
+   "steal opportunity should vibrate once on the second opted-in phone");
+ }
+ assert.deepEqual(await guest.evaluate(()=>window.__vibrationCalls),[[70,45,100]],
+  "the previous buzzer winner must not receive duplicate alerts");
  await host.locator("#skip-round").click();
  await host.waitForFunction(()=>room?.phase==="solved",null,{timeout:15000});
  assert.match(await host.locator("#round-transition-title").innerText(),/SONG REVEALED/);
@@ -589,5 +623,6 @@ try{
   clueRescue:"server-started silent clue paused, same step replayed without scores or song change",
   newParty:"winner UI preview -> authenticated fresh room, same filters, new QR and zero participants",scoreSharing:true,
   answerCountdown:"25 seconds, 10-second warning, 5-second urgency, server-only expiry",
+  buzzerFeedback:"opt-in haptics, winner vs other claim, steal alerts without duplicate polling",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}

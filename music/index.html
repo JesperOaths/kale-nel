@@ -8,10 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026clock">
+<link rel="stylesheet" href="./style.css?v=20261026feedback">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261026clock" defer></script>
+<script src="./app.js?v=20261026feedback" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -165,6 +165,12 @@
     <div id="host-controls" hidden><button id="continue-hints" class="primary" hidden>Continue hints ▶</button><button id="next-round" class="primary" hidden>Next song →</button>
       <button id="skip-round" class="outline" hidden>Skip / Reveal song →</button></div>
      <div id="player-controls" hidden>
+     <section id="buzzer-status-panel" class="buzzer-status-panel" data-state="waiting" role="status" aria-live="polite" aria-atomic="true">
+       <span class="buzzer-status-icon" id="buzzer-status-icon" aria-hidden="true">◉</span>
+       <div class="buzzer-status-copy"><strong id="buzzer-status-title">Waiting for the next song</strong><span id="buzzer-status-hint">Your buzzer activates when a clue begins.</span></div>
+     </section>
+     <label class="buzzer-haptics" id="buzzer-haptics-label"><input type="checkbox" id="buzzer-haptics" aria-describedby="buzzer-haptics-help"><span>Vibrate when you win the buzzer or a steal opens</span></label>
+     <p class="buzzer-haptics-help" id="buzzer-haptics-help">Optional · Works on supported Android browsers. No sound or extra network requests.</p>
      <button id="buzz" class="buzzer" type="button">BUZZ!<small>FIRST PRESS WINS</small></button>
      <button id="steal" class="steal-button" type="button" hidden>⚡ STEAL THE ANSWER <small>+0.5 per correct · −1 per wrong</small></button>
      <div id="answer-overlay" class="answer-overlay" hidden><form id="answer-form" class="answer-form" role="dialog" aria-modal="true" aria-labelledby="answer-title"><div class="kicker" id="answer-kicker">YOUR TURN</div><h2 id="answer-title">Name that tune</h2><p id="answer-mode-text" class="answer-mode-text">Enter the song title and artist separately. Small typos are accepted.</p><div id="answer-clock" class="answer-clock" role="group" aria-label="Time remaining to submit your answer">

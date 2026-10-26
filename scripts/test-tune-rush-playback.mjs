@@ -298,6 +298,60 @@ async function fireTimer(f,ms){
  f.run("updateAnswerClock("+String(serverExpires+2000)+")");
  assert.equal(f.run("clockMutations"),0);
 }
+// Buzzer status is derived exclusively from authoritative player-room state.
+{
+ const f=fixture();
+ f.run('room={code:"ABCDEF",role:"player",me:"guest1",round:1,step:2,'+
+  'phase:"playing",firstAnswered:false,players:[{id:"guest1",name:"One"},'+
+  '{id:"guest2",name:"Two"}],myBlockedStep:-99}');
+ assert.equal(f.run('playerBuzzerState(room).kind'),"ready");
+ assert.equal(f.run('playerBuzzerState({...room,phase:"paused"}).kind'),"ready");
+ assert.equal(f.run('playerBuzzerState({...room,phase:"answering",lockedPlayer:"guest1"}).kind'),"won");
+ assert.equal(f.run('playerBuzzerState({...room,phase:"answering",lockedPlayer:"guest2"}).kind'),"claimed");
+ assert.match(f.run('playerBuzzerState({...room,phase:"answering",lockedPlayer:"guest2"}).hint'),/Two/);
+ assert.equal(f.run('playerBuzzerState({...room,phase:"holding",firstAnswered:true}).kind'),"steal");
+ assert.equal(f.run('playerBuzzerState({...room,phase:"holding",firstAnswered:true,myBlockedStep:2}).kind'),"blocked");
+ assert.equal(f.run('playerBuzzerState({...room,phase:"solved"}).kind'),"solved");
+ assert.equal(f.run('playerBuzzerState({...room,phase:"finished"}).kind'),"finished");
+ f.run('renderPlayerBuzzerFeedback()');
+ assert.equal(f.element("buzzer-status-title").textContent,"Buzzer open — go!");
+ assert.equal(f.element("buzzer-status-panel").dataset.state,"ready");
+}
+// Haptics are explicitly opt-in, fire once per new server-confirmed transition,
+// and never fire merely because the state was polled repeatedly.
+{
+ const f=fixture();
+ f.run('globalThis.navigator={vibrate:pattern=>{window.vibes.push(pattern);return true}};'+
+  'window.vibes=[];phoneHapticsEnabled=true;room={code:"ABCDEF",role:"player",'+
+  'me:"guest1",round:1,step:0,phase:"paused",firstAnswered:false,'+
+  'myBlockedStep:-99,players:[{id:"guest1",name:"One"},{id:"guest2",name:"Two"}]}');
+ f.run('applyState({...room,phase:"answering",lockedPlayer:"guest1"})');
+ assert.equal(f.run('window.vibes.length'),1);
+ assert.equal(f.run('window.vibes[0].join(",")'),"70,45,100");
+ f.run('applyState({...room})');
+ assert.equal(f.run('window.vibes.length'),1,"a repeated backend poll may not re-vibrate");
+ f.run('applyState({...room,phase:"holding",firstAnswered:true,lockedPlayer:null})');
+ assert.equal(f.run('window.vibes.length'),2);
+ assert.equal(f.run('window.vibes[1].join(",")'),"40,45,40");
+ f.run('phoneHapticsEnabled=false;applyState({...room,phase:"paused",step:1,firstAnswered:false})');
+ f.run('applyState({...room,phase:"answering",lockedPlayer:"guest1"})');
+ assert.equal(f.run('window.vibes.length'),2,"disable must silence all alerts");
+ f.run('phoneHapticsEnabled=true;room.role="host";applyState({...room,phase:"holding"})');
+ assert.equal(f.run('window.vibes.length'),2,"host must never receive guest vibrations");
+}
+// Another player winning must never trigger the local success vibration.
+{
+ const f=fixture();
+ f.run('globalThis.navigator={vibrate:pattern=>{window.vibes.push(pattern)}};window.vibes=[];'+
+  'phoneHapticsEnabled=true;room={code:"ABCDEF",role:"player",me:"guest1",'+
+  'round:1,step:0,phase:"paused",players:[{id:"guest2",name:"Two"}]}');
+ f.run('applyState({...room,phase:"answering",lockedPlayer:"guest2"})');
+ assert.equal(f.run('window.vibes.length'),0);
+ assert.equal(f.run('playerBuzzerState(room).kind'),"claimed");
+ f.run('globalThis.navigator={};phoneHapticsEnabled=true;'+
+  'applyState({...room,phase:"holding",firstAnswered:true})');
+ assert.equal(f.run('canVibratePhone()'),false);
+}
 // Leaving during a long track transition must unlock controls for the
 // next room, not leave the Start button stuck disabled.
 {
