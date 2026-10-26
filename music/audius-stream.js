@@ -27,7 +27,7 @@ export function normalizeAudiusTrack(t){
  if(rawGenre==="Electronic")genre.push("electronic","dance");
  if(rawGenre==="Indie")genre.push("indie");
  const path=String(t.permalink||"");
- const permalink=/^\\/(?!\\/)[A-Za-z0-9._~\\/-]+$/.test(path)
+ const permalink=/^\/(?!\/)[A-Za-z0-9._~\/-]+$/.test(path)
   ?"https://audius.co"+path:"https://audius.co/tracks/"+encodeURIComponent(id);
  return {id,title,artist,duration,year,genres:[...new Set(genre)],
   provider:"Audius",permalink};
