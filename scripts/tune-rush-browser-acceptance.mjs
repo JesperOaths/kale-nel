@@ -508,6 +508,16 @@ try{
  assert.ok(copiedSetlist.includes(publicSong.artist+" — "+publicSong.title));
  assert.ok(!copiedSetlist.includes("fixture-token"));
  assert.ok(!copiedSetlist.includes("Hidden Mystery"));
+ // Positive share test using a real, server-revealed song in its own room.
+ // No database winner is fabricated: only a local formatting preview.
+ const ownRoomRecap=await host.evaluate(()=>partyRecapText({...room,
+  phase:"finished",players:[{id:"p1",name:"Preview Champion",score:20}],winner:"p1"}));
+ assert.match(ownRoomRecap,/TUNE RUSH · PARTY RECAP/);
+ assert.match(ownRoomRecap,/Winner: Preview Champion/);
+ assert.ok(ownRoomRecap.includes(publicSong.artist+" — "+publicSong.title),
+  "combined recap must include the room's actual revealed song");
+ assert.match(ownRoomRecap,/REVEALED SONGS \(1 saved in this tab\)/);
+ assert.ok(!ownRoomRecap.includes("fixture-token"));
  assert.ok(await host.locator("#audius-credit").isVisible());
  let nextWrites=0;
  const watchNext=async route=>{
@@ -693,7 +703,7 @@ try{
  const revealedInHostTab=await host.evaluate(()=>partySetlist.map(song=>({
   name:song.artist+" — "+song.title,clues:song.clues
  })));
- assert.ok(revealedInHostTab.length>=1,"the host should remember an actual revealed song");
+ assert.equal(revealedInHostTab.length,0,"leaving the previous room must clear its song history");
  await host.evaluate(()=>{window.__copiedFinalScores="";window.__manualCopy=""});
  assert.equal(await host.locator("#finish-copy-recap").isVisible(),true);
  await host.locator("#finish-copy-recap").click();
@@ -705,8 +715,9 @@ try{
  assert.match(fullRecap,/FINAL STANDINGS/);
  assert.match(fullRecap,/Second Place — 11\.5 pts/);
  assert.match(fullRecap,/REVEALED SONGS \(\d+ saved in this tab\)/);
- for(const song of revealedInHostTab)assert.ok(fullRecap.includes(song.name),
-  "all remembered and server-revealed songs should appear in the final recap");
+ assert.match(fullRecap,/REVEALED SONGS \(0 saved in this tab\)/);
+ assert.ok(!fullRecap.includes(publicSong.artist+" — "+publicSong.title),
+  "a previous party’s revealed song must never enter this room’s recap");
  assert.ok(!fullRecap.includes("Hidden Mystery"),"no mystery title may enter the recap");
  assert.ok(!fullRecap.includes("fixture-token"),"no auth token may enter the recap");
  assert.ok(!fullRecap.includes(previousParty),"room credentials must be omitted");
