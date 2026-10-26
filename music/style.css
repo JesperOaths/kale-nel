@@ -991,3 +991,28 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
  .finish-highlight{padding:10px 4px}.finish-highlight strong{font-size:17px}
  .finish-highlight span{font-size:10px}}
 
+
+/* Collapsible final-night artwork: the canvas is generated locally, no image API. */
+.finish-poster-details{margin:23px auto 3px;max-width:640px;overflow:hidden;border-radius:18px;
+ border:1px solid #8ce5c47f;background:linear-gradient(135deg,#204144,#242944)}
+.finish-poster-details>summary{padding:16px 22px;cursor:pointer;text-align:left;color:#e5ffef;
+ font-size:15px;font-weight:850;list-style:none;display:flex;gap:12px;align-items:center}
+.finish-poster-details>summary::-webkit-details-marker{display:none}
+.finish-poster-details>summary>span:first-child{color:#ffe2a3;font-size:23px}
+.finish-poster-details .poster-open-hint{margin-left:auto;font-size:18px;color:#baf9d8}
+.finish-poster-details[open] .poster-open-hint{transform:rotate(180deg)}
+.finish-poster-body{display:flex;gap:19px;align-items:center;padding:17px;border-top:1px solid #abddc448}
+.finish-poster-body canvas{width:195px;height:auto;max-width:100%;aspect-ratio:4/5;flex:none;
+ border-radius:12px;border:1px solid #d5eadb66;box-shadow:0 10px 30px #0006}
+.finish-poster-controls{display:grid;gap:13px;flex:1;text-align:left}
+.finish .finish-poster-controls p{font-size:12px;color:#cae3dd;line-height:1.6;
+ margin:0;font-weight:600}
+.finish .finish-poster-controls button{min-height:46px;border:1px solid #c9f4d7a6;
+ background:#386756;color:#f5fff7;font-size:13px;font-weight:850;padding:12px;border-radius:11px}
+.finish .finish-poster-controls #finish-poster-status{color:#d5efdb;font-size:11px}
+.finish-poster-details>summary:focus-visible,.finish-poster-controls button:focus-visible{
+ outline:3px solid #ffedac;outline-offset:2px}
+@media(max-width:520px){.finish-poster-body{flex-direction:column;align-items:center}
+ .finish-poster-body canvas{width:180px}.finish-poster-controls{text-align:center}
+ .finish-poster-controls button{width:100%}}
+
