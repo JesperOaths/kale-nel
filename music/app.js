@@ -12,6 +12,59 @@ async function capabilityHash(token){
 const STORE="kalenel_tunerush_room_v001";
 const $=id=>document.getElementById(id);
 const playerAudio=$("licensed-player");
+// Browser-only host output preference. No source IDs, answers or audio bytes.
+const HOST_MIXER_STORE="tune-rush-host-output-v1";
+let hostVolume=100,hostMuted=false;
+function applyHostMixer(){
+ playerAudio.volume=hostVolume/100;
+ playerAudio.muted=hostMuted;
+ document.querySelectorAll("[data-host-volume]").forEach(input=>{
+  input.value=String(hostVolume);
+  input.setAttribute("aria-valuetext",(hostMuted?"Muted, ":"")+hostVolume+" percent");
+  input.style.setProperty("--level",hostVolume+"%");
+ });
+ document.querySelectorAll("[data-volume-label]").forEach(el=>{
+  el.textContent=hostMuted?"MUTED":hostVolume+"%";
+ });
+ document.querySelectorAll("[data-volume-toggle]").forEach(button=>{
+  button.textContent=hostMuted?"Unmute":"Mute";
+  button.setAttribute("aria-pressed",String(hostMuted));
+  button.setAttribute("aria-label",hostMuted?"Unmute host audio":"Mute host audio");
+ });
+}
+function saveHostMixer(){
+ try{localStorage.setItem(HOST_MIXER_STORE,JSON.stringify({
+  level:hostVolume,muted:hostMuted
+ }))}catch{}
+}
+function setHostVolume(level){
+ const parsed=Number(level);
+ if(!Number.isInteger(parsed)||parsed<0||parsed>100)return;
+ hostVolume=parsed;
+ if(parsed>0)hostMuted=false;
+ applyHostMixer();
+ saveHostMixer();
+}
+function toggleHostMute(){
+ hostMuted=!hostMuted;
+ if(!hostMuted&&hostVolume===0)hostVolume=50;
+ applyHostMixer();
+ saveHostMixer();
+}
+function initHostMixer(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(HOST_MIXER_STORE)||"null");
+  if(saved&&Number.isInteger(saved.level)&&saved.level>=0&&saved.level<=100&&
+     typeof saved.muted==="boolean"){
+   hostVolume=saved.level;hostMuted=saved.muted;
+  }
+ }catch{}
+ applyHostMixer();
+ document.querySelectorAll("[data-host-volume]").forEach(input=>
+  input.addEventListener("input",()=>setHostVolume(input.value)));
+ document.querySelectorAll("[data-volume-toggle]").forEach(button=>
+  button.addEventListener("click",toggleHostMute));
+}
 let access=null,room=null,loading=false,pollBusy=false,toastTimer=null;
 let roundTransitionBusy=false,roundTransitionToken=0;
 let confirmedHostSource="";
@@ -288,6 +341,11 @@ async function testSpeakers(){
  if(room?.phase==="playing"||room?.phase==="answering"||room?.phase==="holding"){
   message("Finish the current clue before testing your speakers.");return;
  }
+ if(hostMuted||hostVolume===0){
+  message("Unmute the host audio mixer and turn up the volume before testing speakers.");
+  setText("speaker-check-status","Mixer muted or at 0%. Unmute or raise volume first.");
+  return;
+ }
  const supported=window.AudioContext||window.webkitAudioContext;
  if(!supported){message("Speaker testing is not supported in this browser.");return}
  speakerCheckBusy=true;
@@ -300,8 +358,9 @@ async function testSpeakers(){
   if(context.state!=="running")throw Error("Audio output could not start.");
   const gain=context.createGain();
   gain.gain.setValueAtTime(0,context.currentTime);
-  gain.gain.linearRampToValueAtTime(0.075,context.currentTime+0.025);
-  gain.gain.setValueAtTime(0.075,context.currentTime+0.63);
+  const testLevel=0.075*(hostVolume/100);
+  gain.gain.linearRampToValueAtTime(testLevel,context.currentTime+0.025);
+  gain.gain.setValueAtTime(testLevel,context.currentTime+0.63);
   gain.gain.linearRampToValueAtTime(0,context.currentTime+0.81);
   gain.connect(context.destination);
   const first=context.createOscillator(),second=context.createOscillator();
@@ -980,6 +1039,7 @@ document.addEventListener("visibilitychange",()=>{
  }
 });
 window.addEventListener("pagehide",()=>{clearAudio();cancelNext();clearAudiusStream()});
+initHostMixer();
 const fromUrl=new URLSearchParams(location.search).get("room");
 if(fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl))$("join-code").value=fromUrl.toUpperCase();
 try{
