@@ -969,3 +969,25 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 .finish .finish-recap-status{margin:13px auto 0;max-width:560px;font-size:12px;
  font-weight:650;line-height:1.55;color:#c4e5d5}
 
+
+/* Final encore: real room-scoped stats, without implying complete history. */
+.finish-highlights{max-width:620px;margin:22px auto 5px;padding:17px;
+ border-radius:17px;border:1px solid #86ddb27d;
+ background:linear-gradient(130deg,#193e3fa1,#273148a8)}
+.finish-highlights-heading{font-size:11px;letter-spacing:.13em;font-weight:900;
+ color:#c2f9d9;text-align:center;margin-bottom:12px}
+.finish-highlights-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.finish-highlight{display:grid;gap:5px;justify-items:center;min-width:0;
+ padding:12px 6px;background:#d6f7e00a;border:1px solid #bbe8ce3a;border-radius:12px}
+.finish-highlight strong{font-size:clamp(18px,3vw,27px);font-weight:950;
+ font-variant-numeric:tabular-nums;color:#ffe0a0;white-space:nowrap}
+.finish-highlight span{font-size:11px;font-weight:750;color:#d3eee6;line-height:1.3}
+.finish .finish-highlights-note{font-size:10px;line-height:1.5;
+ color:#b9d4d2;margin:11px 0 0;font-weight:550}
+.finish-actions .finish-download-recap{background:#ffffff0a;border:1px solid #a8c8d9a8;
+ color:#edfdff}
+.finish-actions .finish-download-recap:hover:not(:disabled){background:#ffffff1b}
+@media(max-width:430px){.finish-highlights{padding:12px}.finish-highlights-grid{gap:6px}
+ .finish-highlight{padding:10px 4px}.finish-highlight strong{font-size:17px}
+ .finish-highlight span{font-size:10px}}
+
