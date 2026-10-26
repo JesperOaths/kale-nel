@@ -8,13 +8,18 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026speaker">
+<link rel="stylesheet" href="./style.css?v=20261026connect">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=20261026speaker" defer></script>
+<script src="./app.js?v=20261026connect" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
 <main class="shell">
+<div id="connection-status" class="connection-status" role="status" aria-live="polite" hidden>
+ <span class="connection-icon" aria-hidden="true">↻</span>
+ <div class="connection-message"><strong id="connection-title">Reconnecting to game…</strong><span id="connection-detail">Your room is saved. Scores may be out of date until connected.</span></div>
+ <button type="button" id="retry-connection" class="connection-retry">Retry now</button>
+</div>
 <section id="welcome" class="welcome">
  <div class="hero">
  <div class="hero-copy"><div class="eyebrow"><span class="signal-dot"></span> LIVE MUSIC QUIZ · POWERED BY AUDIUS</div>

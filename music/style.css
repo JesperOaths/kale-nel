@@ -590,3 +590,15 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 .audio-device-tip{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0 0;border-top:1px solid #ffffff2b;padding:14px 2px 0}
 .audio-device-tip>span{font-size:11px;color:#aed0d8;line-height:1.5}
 @media(max-width:530px){.audio-device-tip .speaker-check-button{width:100%}.speaker-check-line .speaker-check-button{width:100%}}
+
+/* Offline/reconnect feedback. Never hides or wipes the latest valid room. */
+.connection-status{display:flex;align-items:center;gap:14px;margin:18px 0 18px;padding:14px 18px;border:1px solid #e7b77691;border-radius:15px;background:linear-gradient(110deg,#42301f,#222b3e);box-shadow:0 8px 25px #0003;color:#ffefca}
+.connection-status[hidden]{display:none!important}
+.connection-icon{display:grid;place-items:center;width:37px;height:37px;border-radius:50%;border:1px solid #f5cf9c70;background:#d9a05f24;color:#ffe0ab;font-size:21px;flex:none}
+.connection-message{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;line-height:1.45}
+.connection-message strong{font-size:13px;color:#fff2df}
+.connection-message span{font-size:11px;color:#e3caac}
+.connection-retry{min-height:39px;border:1px solid #f1bc81;background:#f0bc83;color:#261b24;border-radius:11px;padding:9px 15px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}
+.connection-retry:hover{background:#ffdbab}
+.connection-retry:focus-visible{outline:3px solid #d7ffff;outline-offset:3px}
+@media(max-width:520px){.connection-status{padding:12px;gap:9px;flex-wrap:wrap}.connection-retry{width:100%}}

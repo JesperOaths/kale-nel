@@ -73,6 +73,37 @@ try{
  assert.deepEqual(await host.evaluate(()=>({phase:room.phase,round:room.round,src:playerAudio.getAttribute("src")})),
   beforeCheck,"soundcheck must not alter the room or Audius stream");
  assert.match(await host.locator("#lobby-launch-status").innerText(),/1 PLAYER READY/);
+ // Simulate a temporary server outage on the host only. The same room and
+ // guests must survive; the retry button must repair the status afterward.
+ const networkState=await host.evaluate(()=>({code:room.code,phase:room.phase,
+  role:room.role,players:room.players.length}));
+ const roomRpc="https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/musicquiz_v1";
+ let refused=0;
+ const refuse=async route=>{
+  if(JSON.parse(route.request().postData()||"{}").p_action!=="state"){
+   await route.continue();return;
+  }
+  refused++;
+  await route.fulfill({status:503,contentType:"application/json",
+   body:JSON.stringify({message:"temporary_failure"})});
+ };
+ await host.route(roomRpc,refuse);
+ await host.waitForFunction(()=>!document.getElementById("connection-status").hidden,
+  null,{timeout:10000});
+ assert.match(await host.locator("#connection-title").innerText(),/Reconnecting/);
+ assert.deepEqual(await host.evaluate(()=>({code:room.code,phase:room.phase,
+  role:room.role,players:room.players.length})),networkState,
+  "outage preserves room, role and player roster");
+ const refusedBefore=refused;
+ await host.waitForTimeout(700);
+ assert.equal(refused,refusedBefore,"reconnect backoff prevents server request flood");
+ await host.unroute(roomRpc,refuse);
+ await host.locator("#retry-connection").click();
+ await host.waitForFunction(()=>document.getElementById("connection-status").hidden,
+  null,{timeout:15000});
+ assert.deepEqual(await host.evaluate(()=>({code:room.code,phase:room.phase,
+  role:room.role,players:room.players.length})),networkState,
+  "reconnection must not reset the host game");
  // A soundtrack preset changes only the host's checkbox choices and saves to the room.
  await host.locator('[data-audius-preset="party"]').click();
  assert.deepEqual((await host.locator("#genre-options input:checked").evaluateAll(xs=>xs.map(x=>x.value))).sort(),
@@ -151,9 +182,30 @@ try{
  await host.locator("#audius-play-hint").click();
  await host.waitForFunction(()=>room?.step===0&&room?.phase==="paused",null,{timeout:22000});
  assert.ok(streamRequests>=3&&metadataRequests>0);
+ // An in-flight room state request must not recreate a room the host just
+ // left, even if a slow server response arrives after the Leave action.
+ let held=null,releaseHold;
+ const stateIntercepted=new Promise(resolve=>releaseHold=resolve);
+ const holdState=async route=>{
+  if(!held&&JSON.parse(route.request().postData()||"{}").p_action==="state"){
+   held=route;releaseHold();return;
+  }
+  await route.continue();
+ };
+ await host.route(roomRpc,holdState);
+ await Promise.race([stateIntercepted,new Promise((_resolve,reject)=>
+  setTimeout(()=>reject(Error("No state poll available for leave race")),5500))]);
+ host.once("dialog",dialog=>dialog.accept());
+ await host.locator("#leave").click();
+ assert.equal(await host.evaluate(()=>room),null,"leaving clears the current room immediately");
+ await held.continue();
+ await host.waitForTimeout(650);
+ assert.equal(await host.evaluate(()=>room),null,"old room response must not redraw a left game");
+ assert.ok(await host.locator("#welcome").isVisible());
+ await host.unroute(roomRpc,holdState);
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
-  nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",noRepeat:true,mobileOverflow:false,
+  nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",networkRecovery:true,staleLeaveBlocked:true,noRepeat:true,mobileOverflow:false,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}

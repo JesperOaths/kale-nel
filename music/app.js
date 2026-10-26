@@ -18,6 +18,26 @@ let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
 let clipGeneration=0,mutationVersion=0;
 let failedClue="";
+let connectionFailures=0,connectionRetryAt=0;
+function setConnectionProblem(){
+ if(!access)return;
+ connectionFailures=Math.min(10,connectionFailures+1);
+ // Poll normally at 550ms when healthy; an unavailable service gets a
+ // bounded 2/4/8/16-second backoff instead of repeated requests.
+ const delay=Math.min(16000,2000*Math.pow(2,Math.min(connectionFailures-1,3)));
+ connectionRetryAt=Date.now()+delay;
+ const offline=typeof navigator!=="undefined"&&navigator.onLine===false;
+ setText("connection-title",offline?"Your device is offline":"Reconnecting to your game…");
+ setText("connection-detail",offline
+  ?"Check Wi-Fi or mobile data. Your current room stays on screen."
+  :"Unable to refresh room state. Scores and buzzers may be out of date.");
+ $("connection-status").hidden=false;
+}
+function setConnectionHealthy(){
+ connectionFailures=0;connectionRetryAt=0;
+ $("connection-status").hidden=true;
+}
+
 const ERROR_TEXT={
  room_not_found:"That room does not exist.",room_expired:"Room expired. Create a new lobby.",
  unauthorized:"Your lobby session is no longer valid.",name_taken:"This name is already taken.",
@@ -588,33 +608,45 @@ async function call(action,extra={},quiet=false){
  if(loading)return;
  setLoading(true);
  try{
-  const b=await rpc(action,extra);applyState(b.state);
+  const b=await rpc(action,extra);applyState(b.state);setConnectionHealthy();
   if((action==="start"||action==="next")&&b.state?.role==="host"){
    checkpointAudiusHost(b.state);
    try{await rememberSelectedSong(b.state)}catch(e){message("Song history could not be saved on this browser.");}
   }
   return b;
  }
- catch(e){if(!quiet)message(e.message);throw e}
+ catch(e){
+  if(e.message==="temporary_failure"||e.message==="request_failed")setConnectionProblem();
+  if(!quiet)message(e.message);throw e
+ }
  finally{setLoading(false)}
 }
 async function refresh(){
- if(!access||pollBusy||loading)return;
+ if(!access||pollBusy||loading||Date.now()<connectionRetryAt)return;
  pollBusy=true;
- const version=mutationVersion;
+ const version=mutationVersion,session=access;
  try{
   const b=await rpc("state");
-  if(version!==mutationVersion)return;
+  // Leaving/changing a room invalidates in-flight responses, including
+  // failed authorization from a previous room. Never redraw a left room.
+  if(version!==mutationVersion||session!==access)return;
   if(b.state.phase==="answering"&&b.state.answerExpiresAt&&Date.now()>=new Date(b.state.answerExpiresAt).getTime()){
    try{const expired=await rpc("expire");applyState(expired.state);return;}catch{}
   }
   applyState(b.state);
+  setConnectionHealthy();
   await restoreAudiusHost(b.state);
  }
- catch(e){if(e.message==="unauthorized"||e.message==="room_expired"){reset();message(e.message)}}
+ catch(e){
+  if(version!==mutationVersion||session!==access)return;
+  if(e.message==="unauthorized"||e.message==="room_expired"){reset();message(e.message)}
+  else setConnectionProblem();
+ }
  finally{pollBusy=false}
 }
 function reset(){
+ mutationVersion++;
+ setConnectionHealthy();
  try{sessionStorage.removeItem(AUDIUS_HOST_SESSION)}catch{}
  cancelNext();clearAudio();clearAudiusStream();audiusActive=false;audiusTrack=null;
  audiusPool=[];audiusFiltersKey="";failedClue="";room=null;access=null;
@@ -746,6 +778,16 @@ for(const id of ["genre-options","decade-options"])$(id).addEventListener("chang
  clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);
  audiusPool=[];audiusFiltersKey="";
  setText("audius-availability","Filters changed. Check tracks to refresh availability.");
+});
+$("retry-connection").addEventListener("click",()=>{
+ connectionRetryAt=0;
+ if(access)refresh();
+});
+window.addEventListener("offline",()=>{if(access)setConnectionProblem()});
+window.addEventListener("online",()=>{
+ if(!access)return;
+ connectionRetryAt=0;
+ if(!document.hidden)refresh();
 });
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();
