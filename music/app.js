@@ -384,10 +384,14 @@ async function restoreAudiusHost(state){
       b.state.code===state.code&&b.state.round===state.round&&
       b.state.audio?.source===state.audio.source)applyState(b.state);
   }
-  localStatus("Stream recovered. Play or replay the current clue when ready.");
+  if(restoreSession===access&&!roundTransitionBusy&&room?.code===state.code&&
+     room.round===state.round&&room.audio?.source===state.audio.source)
+   localStatus("Stream recovered. Play or replay the current clue when ready.");
  }catch(e){
-  if(restoreSession===access&&room?.code===state.code&&room.round===state.round&&
-     room.audio?.source===state.audio.source){
+  // If Start/Next replaced this restore while its metadata was still loading,
+  // never tear down the newly prepared candidate or overwrite its status.
+  if(restoreSession===access&&!roundTransitionBusy&&room?.code===state.code&&
+     room.round===state.round&&room.audio?.source===state.audio.source){
    clearAudiusStream();audiusActive=false;audiusTrack=null;
    localStatus("Could not restore the stream: "+String(e.message||e)+". Skip this song to continue.");
   }
