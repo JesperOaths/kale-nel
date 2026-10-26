@@ -8,10 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026audition">
+<link rel="stylesheet" href="./style.css?v=20261026fair">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261026audition" defer></script>
+<script src="./app.js?v=20261026fair" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -76,11 +76,12 @@
        <span class="host-mixer-foot">Volume is saved on this host browser. On phones and tablets, hardware buttons or Bluetooth may also control loudness.</span>
       </div>
       <section class="audius-audition" id="audius-audition" aria-label="Live Audius music audition">
-       <div class="audition-intro"><span class="audition-symbol" aria-hidden="true">♫</span><div><span class="kicker">REAL MUSIC SOUNDCHECK</span><h3>Hear the actual soundtrack.</h3><p>Audition short Audius samples before starting. No points, rounds or repeat history are changed.</p></div></div>
+       <div class="audition-intro"><span class="audition-symbol" aria-hidden="true">♫</span><div><span class="kicker">REAL MUSIC SOUNDCHECK</span><h3>Hear the actual soundtrack.</h3><p>Listen before starting. Any song you hear is automatically excluded from this party's quiz, so guests won't get an advance clue.</p></div></div>
+       <div class="audition-fairness"><span aria-hidden="true">✦</span><strong>NO SPOILERS</strong><span id="audition-guard-count" aria-live="polite">0 heard · 0 rejected · all kept out of the quiz for this room</span></div>
        <div class="audition-buttons"><button type="button" id="audition-pick" class="outline" disabled>♫ Find a sample</button><button type="button" id="audition-play" class="primary" hidden>▶ Hear 8 seconds</button><button type="button" id="audition-next" class="outline" hidden>↻ Another song</button><button type="button" id="audition-exclude" class="outline" hidden>✕ Not for this party</button><button type="button" id="audition-stop" class="quiet" hidden>■ Stop</button></div>
        <div id="audition-selected" class="audition-selected" hidden><strong id="audition-track-title"></strong><span id="audition-track-artist"></span></div>
        <p id="audition-status" class="audition-status" role="status" aria-live="polite">Check tracks above to unlock real Audius music samples.</p>
-       <span class="audition-note">Samples play on the host device only. Excluded songs stay out of this room’s upcoming rounds without being marked as played. No music files are saved.</span>
+       <span class="audition-note">Hearing a sample automatically keeps that song (including reuploads) out of this room's quiz. “Not for this party” also excludes unheard selections. The host keeps only anonymous track identities until the room is left; the last-three-game played history is unchanged. No music files are saved.</span>
        <audio id="audition-audio" preload="none"></audio>
       </section>
       <div class="speaker-check-line">
