@@ -570,3 +570,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 .host-mode .audius-info button:disabled{opacity:.64;cursor:progress}
 @media(max-width:560px){.mix-presets{gap:7px}.mix-presets-caption{width:100%;margin-bottom:2px}.mix-chip,.host-mode .mix-chip{font-size:11px;padding:9px 12px}.host-mode #audius-filters .filter-head{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.mix-chip{transition:none!important}}
+
+/* Audius catalog scan: visible, accessible progress for large genre mixes. */
+.audius-scan-progress{display:grid;gap:8px;margin:14px 0 4px}
+.audius-scan-progress[hidden]{display:none!important}
+.audius-scan-track{height:8px;overflow:hidden;border-radius:99px;background:#071724;border:1px solid #6e99a755;box-shadow:inset 0 1px 3px #020b1299}
+#audius-scan-fill{display:block;height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,#6ce2c1,#f7ca81);transition:width .22s ease}
+#audius-scan-label{font-size:11px;color:#9cddcc;font-weight:700;letter-spacing:.025em;line-height:1.5}
+@media(prefers-reduced-motion:reduce){#audius-scan-fill{transition:none}}
