@@ -29,25 +29,28 @@ export function normalizeAudiusTrack(t){
  const path=String(t.permalink||"");
  const permalink=/^\/(?!\/)[A-Za-z0-9._~\/-]+$/.test(path)
   ?"https://audius.co"+path:"https://audius.co/tracks/"+encodeURIComponent(id);
+ const plays=Number(t.play_count);
  return {id,title,artist,duration,year,genres:[...new Set(genre)],
+  plays:Number.isFinite(plays)&&plays>0?Math.floor(plays):0,
   provider:"Audius",permalink};
 }
 export function matchesAudiusFilters(t,genres,decades){
  if(!t||!t.genres.some(g=>genres.includes(g)))return false;
  return !decades.length||(t.year!==null&&decades.includes(String(Math.floor(t.year/10)*10)));
 }
-// Discover up to three pages per selected provider genre. Bound total time,
+// Discover trending, popular and cover/tribute results per provider genre. Bound total time,
 // concurrent network activity and retries so the host never hangs indefinitely.
 // A partial count is explicitly reported; an entirely failed scan rejects.
 export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch,options={}){
  const choices=[...new Set(genres.map(g=>supported.get(g)).filter(Boolean))].slice(0,8);
  if(!choices.length)return [];
- const deadline=Date.now()+Math.max(100,Math.min(60000,Number(options.timeoutMs)||26000));
+ const deadline=Date.now()+Math.max(100,Math.min(60000,Number(options.timeoutMs)||35000));
  const report=typeof options.onProgress==="function"?options.onProgress:()=>{};
  const externalSignal=options.signal;
  if(externalSignal?.aborted)throw Error("Audius scan cancelled.");
  const buckets=choices.map(()=>new Map()),seen=new Set();
- const maxRequests=choices.length*3;
+ // Three trending pages plus two search pages: popular and cover versions.
+ const maxRequests=choices.length*5;
  let nextGenre=0,completed=0,genreDone=0,success=0,failed=0,shortened=false;
  const progress=()=>{
   try{report({completed,total:maxRequests,genreDone,genres:choices.length,
@@ -56,14 +59,23 @@ export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch,option
  progress();
  async function scanGenre(index){
   const bucket=buckets[index],genre=choices[index];
-  for(const offset of [0,100,200]){
+  const jobs=[
+   ...[0,100,200].map(offset=>({kind:"trending",offset})),
+   {kind:"search",query:"",sort:"popular"},
+   {kind:"search",query:"cover",sort:"popular"}
+  ];
+  for(const job of jobs){
    if(externalSignal?.aborted)break;
-   if(seen.size>=900)break;
+   if(seen.size>=1300)break;
    const remaining=deadline-Date.now();
    if(remaining<=0){shortened=true;break;}
-   const u=new URL(AUDIUS_API+"/tracks/trending");
+   const u=new URL(AUDIUS_API+"/tracks/"+job.kind);
    u.searchParams.set("genre",genre);u.searchParams.set("limit","100");
-   u.searchParams.set("offset",String(offset));
+   if(job.kind==="trending")u.searchParams.set("offset",String(job.offset));
+   else{
+    if(job.query)u.searchParams.set("query",job.query);
+    u.searchParams.set("sort_method",job.sort);
+   }
    try{
     const timeoutSignal=AbortSignal.timeout(Math.max(1,Math.min(8500,remaining)));
     const requestSignal=externalSignal?AbortSignal.any([externalSignal,timeoutSignal]):timeoutSignal;
@@ -109,7 +121,18 @@ export function chooseAudiusTrack(pool,used,random=Math.random){
  if(!pool.length)throw Error("Audius has no available full tracks for these selected genres and release decades.");
  const free=pool.filter(t=>!used.has(t.id));
  if(!free.length)throw Error("All matching Audius tracks found have been played. Change the filters to avoid repeats.");
- return free[Math.floor(Math.max(0,Math.min(0.99999999,random()))*free.length)];
+ // Popularity gently favors proven listens while still giving independent
+ // discoveries a chance. Missing play counts retain the old uniform choice.
+ const weights=free.map(track=>{
+  const plays=Math.max(0,Number(track.plays)||0);
+  return 1+Math.min(8,Math.log10(1+plays));
+ });
+ const total=weights.reduce((a,b)=>a+b,0);
+ let sample=Math.max(0,Math.min(0.99999999,random()))*total;
+ for(let i=0;i<free.length;i++){
+  sample-=weights[i];if(sample<0)return free[i];
+ }
+ return free[free.length-1];
 }
 export function randomizedCueMs(duration,random=Math.random){
  const d=Math.floor(duration*1000);

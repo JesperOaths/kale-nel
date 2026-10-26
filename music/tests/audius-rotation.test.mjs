@@ -84,8 +84,11 @@ test("Audius discovery deduplicates IDs across provider pages without audio down
  const tracks=await audius.discoverAudiusTracks(["pop"],[],fakeFetch);
  assert.equal(tracks.length,1);
  assert.equal(tracks[0].id,example.id);
- assert.equal(requestUrls.length,3);
- assert.ok(requestUrls.every(url=>url.includes("/tracks/trending?")));
+ assert.equal(requestUrls.length,5);
+ assert.equal(requestUrls.filter(url=>url.includes("/tracks/trending?")).length,3);
+ assert.equal(requestUrls.filter(url=>url.includes("/tracks/search?")).length,2);
+ assert.ok(requestUrls.some(url=>url.includes("/tracks/search?")&&url.includes("query=cover")));
+ assert.ok(requestUrls.some(url=>url.includes("/tracks/search?")&&url.includes("sort_method=popular")));
 });
 test("Randomized cue starts within the track and leaves room for progressive clues",()=>{
  const atStart=audius.randomizedCueMs(232,()=>0);

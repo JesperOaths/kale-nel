@@ -244,7 +244,7 @@ function cancelAudiusScan(){
 }
 const AUDIUS_HOST_SESSION="tune-rush-audius-host-stream-v1";
 let audiusRestoring=false;
-async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026scanowner"))}
+async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026party"))}
 async function discoverAudius(force=false){
  const filters=chosenFilters(),key=JSON.stringify(filters);
  if(!filters.genres.length)throw Error("Select at least one genre.");
@@ -274,7 +274,7 @@ async function discoverAudius(force=false){
  if(isHost()&&room?.phase==="lobby")$("start").disabled=true;
  $("audius-check").disabled=true;
  $("audius-check").textContent="⌛ Checking…";
- setText("audius-availability","Finding Audius tracks that match your selections…");
+ setText("audius-availability","Scanning Audius trending songs, popular tracks and covers…");
  const pending=(async()=>{
   let scanResult={partial:false};
   try{
@@ -740,6 +740,14 @@ function render(){
  setText("role-indicator",host?"HOST / TABLET":"PLAYER / PHONE");
  setText("room-title",playing?"Name that tune":"Game lobby");
  setText("room-code",room.code);
+ renderPartyInvitation();
+ if(host&&phase!=="lobby"){
+  const labels={paused:["READY TO PLAY","The host chooses when the next clue begins"],playing:["NOW PLAYING","Listen carefully — the buzzer is live"],answering:["BUZZER CLAIMED","One player is answering"],holding:["STEAL WINDOW","Other players can steal"],solved:["SONG REVEALED","Advance when everyone is ready"],finished:["FINAL ENCORE","Celebrate the champion"]};
+  const label=labels[phase]||["GET READY","New round incoming"];
+  setText("round-transition-number","ROUND "+room.round+" · "+Math.min(7,Math.max(0,room.step+1))+"/7 CLUES");
+  setText("round-transition-title",label[0]);setText("round-transition-hint",label[1]);
+  $("round-transition").dataset.phase=phase;
+ }
  show("lobby",phase==="lobby");show("playing",phase!=="lobby");
  show("host-settings",host);show("guest-wait",!host);
 
@@ -837,7 +845,15 @@ function render(){
    const champion=room.players.find(p=>p.id===room.winner);
    setText("winner-name",champion?.name||"Winner");
    const final=$("final-scores");final.replaceChildren();
-   room.players.forEach(p=>final.append(makePlayer(p.name+" • "+Number(p.score).toFixed(1)+" points")));
+   [...room.players].sort((a,b)=>Number(b.score)-Number(a.score)).forEach((p,i)=>{
+    const entry=document.createElement("div");entry.className="finish-entry";
+    if(p.id===room.winner)entry.classList.add("is-champion");
+    const rank=document.createElement("span");rank.className="finish-rank";
+    rank.textContent=["♛","Ⅱ","Ⅲ"][i]||String(i+1);
+    const name=document.createElement("span");name.className="finish-entry-name";name.textContent=p.name;
+    const score=document.createElement("strong");score.textContent=Number(p.score).toFixed(1)+" pts";
+    entry.append(rank,name,score);final.append(entry);
+   });
   }
  }
 }
@@ -916,6 +932,7 @@ function reset(){
  try{sessionStorage.removeItem(AUDIUS_HOST_SESSION)}catch{}
  cancelNext();clearAudio();clearAudiusStream();audiusActive=false;audiusTrack=null;
  audiusPool=[];audiusFiltersKey="";audiusReservePartial=false;
+ renderedInvitationCode=null;$("party-join-qr").replaceChildren();
  $("soundtrack-reserve").hidden=true;$("live-reserve").hidden=true;
  failedClue="";room=null;access=null;
  safeStore();render();
@@ -942,6 +959,32 @@ async function join(e){
 function inviteUrl(){
  const u=new URL(location.href);u.search="";u.searchParams.set("room",room?.code||"");
  return u.href;
+}
+let renderedInvitationCode=null;
+function renderPartyInvitation(){
+ const holder=$("party-join-qr");
+ if(!room||!isHost()||room.phase!=="lobby")return;
+ setText("party-join-code",room.code);
+ if(renderedInvitationCode===room.code&&holder.querySelector("svg"))return;
+ renderedInvitationCode=room.code;holder.replaceChildren();
+ try{
+  if(typeof qrcode!=="function")throw Error("QR renderer unavailable");
+  const qr=qrcode(0,"M");qr.addData(inviteUrl());qr.make();
+  const size=qr.getModuleCount(),quiet=4;
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 "+(size+quiet*2)+" "+(size+quiet*2));
+  svg.setAttribute("width","248");svg.setAttribute("height","248");
+  svg.setAttribute("aria-hidden","true");svg.setAttribute("focusable","false");
+  const path=document.createElementNS("http://www.w3.org/2000/svg","path"),modules=[];
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++)
+   if(qr.isDark(y,x))modules.push("M"+(x+quiet)+" "+(y+quiet)+"h1v1h-1z");
+  path.setAttribute("d",modules.join(""));path.setAttribute("fill","#08232d");
+  svg.append(path);holder.append(svg);
+  setText("party-join-qr-status","Scan to join · "+room.code);
+ }catch{
+  renderedInvitationCode=null;
+  setText("party-join-qr-status","QR unavailable. Use room code or Copy invite link.");
+ }
 }
 async function share(){
  const url=inviteUrl();

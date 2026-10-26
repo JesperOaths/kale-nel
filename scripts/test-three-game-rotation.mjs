@@ -106,6 +106,31 @@ assert.throws(()=>notePlayed(history,"GME2AC","audius","../attack"),/Invalid son
  await assert.rejects(pending,/Audius scan cancelled/);
  assert.equal(pageRequests,1,"aborted scan must not request the next catalog page");
 }
+// Discovery must test more than trending: popular and covers increase the
+// eligible catalog without pretending those are guaranteed original hits.
+{
+ const calls=[];let progress;
+ const results=await discoverAudiusTracks(["pop"],[],async url=>{
+  const u=new URL(url);calls.push(u);
+  const id="track"+String(calls.length).padStart(4,"0");
+  return {ok:true,json:async()=>({data:[{id,title:"Track "+calls.length,
+   user:{name:"Test Performer"},duration:233,genre:"Pop",is_streamable:true,
+   is_unlisted:false,play_count:calls.length*1000}]})};
+ },{timeoutMs:12000,onProgress:p=>progress=p});
+ assert.equal(calls.length,5);
+ assert.equal(calls.filter(u=>u.pathname.endsWith("/trending")).length,3);
+ assert.equal(calls.filter(u=>u.pathname.endsWith("/search")).length,2);
+ assert.ok(calls.some(u=>u.pathname.endsWith("/search")&&u.searchParams.get("sort_method")==="popular"&&!u.searchParams.get("query")));
+ assert.ok(calls.some(u=>u.pathname.endsWith("/search")&&u.searchParams.get("query")==="cover"));
+ assert.equal(results.length,5);
+ assert.equal(progress.completed,5);
+ assert.equal(progress.partial,false);
+ const ranked=chooseAudiusTrack([{id:"fresh01",plays:0},{id:"popular02",plays:1000000}],
+  new Set(),()=>0.5);
+ assert.equal(ranked.id,"popular02","popular songs should have a modest selection advantage");
+ assert.equal(chooseAudiusTrack([{id:"fresh01",plays:0},{id:"popular02",plays:1000000}],
+  new Set(["popular02"]),()=>0.5).id,"fresh01","popularity never overrides nonrepeat");
+}
 console.log("THREE_GAME_ROTATION_PASS",JSON.stringify({
  source:"Audius HTTPS",games:3,playedWithoutRepeating:selected.length,
  capacityGoal:THREE_GAME_TARGET,remaining:capacity.remaining,
