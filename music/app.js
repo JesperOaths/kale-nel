@@ -175,8 +175,12 @@ async function rememberSelectedSong(state){
  if(kind==="catalog"&&/^youtube:[A-Za-z0-9_-]{11}$/.test(state.audio?.source||""))
   key=state.audio.source.slice(8);
  if(kind==="local"&&/^local:[0-9]+$/.test(state.audio?.source||"")){
-  const t=localTracks.find(x=>x.index===Number(state.audio.source.slice(6)));
-  if(t)key=mod.songFingerprint(t);
+  if(audiusActive&&audiusTrack&&Number(state.audio.source.slice(6))===localCurrentIndex){
+   kind="audius";key=audiusTrack.id;
+  }else{
+   const t=localTracks.find(x=>x.index===Number(state.audio.source.slice(6)));
+   if(t)key=mod.songFingerprint(t);
+  }
  }
  if(!key)return;
  mod.notePlayed(rotationHistory,state.code,kind,key);
@@ -245,6 +249,83 @@ function renderCoverageMatrix(data){
  const caption=document.createElement("p");caption.className="matrix-caption";
  caption.textContent="These are playable-source entries, not guaranteed ad-free audio. Counts are real; zero means no songs are currently available for that combination.";
  root.append(caption);
+}
+
+
+// Stream-only provider. Audius audio bytes go straight from HTTPS provider to
+// host browser playback; none are copied to hub, S21, USB, or Supabase.
+let audiusModule=null,audiusPool=[],audiusFiltersKey="",audiusActive=false;
+let audiusTrack=null,audiusIndex=20000000,audiusChecking=false;
+async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js"))}
+async function discoverAudius(force=false){
+ if(audiusChecking)throw Error("Audius is already checking tracks.");
+ const filters=chosenFilters(),key=JSON.stringify(filters);
+ if(!filters.genres.length)throw Error("Select at least one genre.");
+ if(!force&&key===audiusFiltersKey&&audiusPool.length)return audiusPool;
+ audiusChecking=true;setText("audius-availability","Finding Audius tracks that match your selections…");
+ try{
+  const mod=await audiusLib();
+  const tracks=await mod.discoverAudiusTracks(filters.genres,filters.decades);
+  audiusPool=tracks;audiusFiltersKey=key;
+  const rotationTools=await rotation(),used=rotationTools.playedKeys(rotationHistory,"audius");
+  const free=tracks.filter(x=>!used.has(x.id));
+  setText("audius-availability",tracks.length+" distinct streamable tracks found; "+free.length+
+   " not heard in your last three games. "+(free.length>=120?
+    "This meets the 120-song planning target.":"Three typical games need about 120; "+Math.max(0,120-free.length)+
+    " more would be needed for that target.")+
+    (filters.decades.length?" Audius dates reflect provider release metadata; older originals may be absent.":""));
+  return tracks;
+ }catch(e){
+  setText("audius-availability",String(e.message||e));
+  throw e;
+ }finally{audiusChecking=false}
+}
+async function prepareAudiusPlayback(record){
+ const lib=await audiusLib(),uri=lib.streamUrl(record.id);
+ // Browser audio element streams HTTPS; HTMLMediaElement handles range seeking.
+ // Do not use fetch(blob), ArrayBuffer, MediaRecorder, downloads or disk caching.
+ discardLocalAudio();
+ localAudioUrl=uri;
+ localCurrentIndex=++audiusIndex;
+ playerAudio.preload="metadata";
+ const ready=new Promise((resolve,reject)=>{
+  let timer=null;
+  const cleanup=()=>{clearTimeout(timer);playerAudio.removeEventListener("loadedmetadata",loaded);
+   playerAudio.removeEventListener("error",bad)};
+  const loaded=()=>{cleanup();resolve(playerAudio.duration)};
+  const bad=()=>{cleanup();reject(Error("Audius streaming host rejected this track"))};
+  playerAudio.addEventListener("loadedmetadata",loaded,{once:true});
+  playerAudio.addEventListener("error",bad,{once:true});
+  timer=setTimeout(()=>{cleanup();reject(Error("Audius audio loading timed out"))},13000);
+ });
+ playerAudio.src=uri;playerAudio.load();
+ const d=await ready;
+ if(!Number.isFinite(d)||d<35||d>7200)throw Error("Audius track duration is unavailable");
+ return {duration:d,index:localCurrentIndex,url:uri};
+}
+async function selectAudiusRound(){
+ const lib=await audiusLib(),filters=chosenFilters();
+ const tracks=await discoverAudius();
+ const history=await rotation();
+ if(room?.code){history.openGame(rotationHistory,room.code);saveRotation()}
+ const previously=history.playedKeys(rotationHistory,"audius");
+ const attempts=new Set(previously);
+ const candidateCount=tracks.filter(t=>!attempts.has(t.id)).length;
+ for(let i=0;i<Math.min(candidateCount,9);i++){
+  const track=lib.chooseAudiusTrack(tracks,attempts);
+  attempts.add(track.id);
+  try{
+   const prepared=await prepareAudiusPlayback(track);
+   audiusActive=true;audiusTrack=track;
+   const cue=lib.randomizedCueMs(prepared.duration);
+   localStatus("Audius stream ready. Press Play next clue to hear the song.");
+   return {mode:"local",song:track.title,artist:track.artist,
+    fileIndex:prepared.index,cueMs:cue,durationMs:Math.floor(prepared.duration*1000)};
+  }catch(e){discardLocalAudio();audiusTrack=null}
+ }
+ throw Error(candidateCount===0?
+  "No unplayed Audius songs match your genres and decades. Expand the filters.":
+  "Couldn't load a playable Audius stream. Check your internet connection or change filters.");
 }
 
 let localTracks=[],localPlayed=new Set(),localSourceCache=new Set(),localCurrentIndex=null;
@@ -326,7 +407,7 @@ async function importLocalFiles(list){
 }
 function discardLocalAudio(){
  try{playerAudio.pause();playerAudio.removeAttribute("src");playerAudio.load()}catch{}
- if(localAudioUrl){URL.revokeObjectURL(localAudioUrl);localAudioUrl=null}
+ if(localAudioUrl){if(localAudioUrl.startsWith("blob:"))URL.revokeObjectURL(localAudioUrl);localAudioUrl=null}
  localCurrentIndex=null;
 }
 async function getLocalDuration(file){
@@ -345,6 +426,7 @@ async function getLocalDuration(file){
  }finally{probe.removeAttribute("src");probe.load();URL.revokeObjectURL(url)}
 }
 async function selectLocalRound(){
+ audiusActive=false;audiusTrack=null;
  if(localImporting)throw Error("Music is still importing.");
  const lib=await localLib(),f=chosenFilters();
  if(!f.genres.length)throw Error("Select at least one genre.");
@@ -388,13 +470,15 @@ function updateAudioChoice(){
  const mode=chosenSource();
  show("youtube-setup",mode==="youtube");
  show("demo-settings",mode==="demo");
- show("catalog-settings",mode==="catalog"||mode==="deezer"||mode==="local");
+ show("catalog-settings",mode==="catalog"||mode==="deezer"||mode==="local"||mode==="audius");
+ show("audius-info",mode==="audius");
  show("local-settings",mode==="local");
  if(mode==="local")updateLocalCounts();
  show("catalog-capacity",mode==="catalog");
  if(mode==="catalog")checkCatalogCoverage();
  setText("catalog-filter-note",mode==="local"?
   "Choose genres and decades from the metadata of your local songs. Pop + 1970s only draws imported Pop songs tagged 1970–1979. Leave decades empty for all years. Tracks do not repeat until the matching collection is exhausted.":
+  mode==="audius"?"Audius filters use provider-provided genre and release metadata; most available songs are recent independent releases. No traditional mainstream catalog is promised. Leave decades unchecked for the broadest choice.":
   "For example, Pop + 1970s draws only 1970–1979 pop tracks. Leave decades unchecked for all years. Tracks only repeat once the matching pool has been exhausted. Some YouTube videos may show ads or reject embedding.");
 }
 function parseYoutubeVideo(link){
@@ -739,7 +823,7 @@ function render(){
  $("room").dataset.phase=phase;
  show("host-fullscreen",host);
  if(host){
-  const source=room.mode==="local"?"YOUR MUSIC COLLECTION":room.mode==="deezer"?"DEEZER PREVIEW":room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
+  const source=room.mode==="local"?(audiusActive?"AUDIUS · ONLINE STREAM":"YOUR MUSIC COLLECTION"):room.mode==="deezer"?"DEEZER PREVIEW":room.mode==="catalog"?"AUTO MIX":room.mode==="youtube"?"YOUTUBE VIDEO":"DEMO MELODIES";
   const filters=(room.mode==="catalog"||room.mode==="deezer"||room.mode==="local")?[
    ...(room.genres||[]).filter(x=>x!=="demo").map(x=>({hiphop:"HIP-HOP",rnb:"R&B",dutch:"DUTCH",electronic:"ELECTRONIC"}[x]||x.toUpperCase())),
    ...(room.decades||[]).map(x=>x+"s")
@@ -812,6 +896,16 @@ function render(){
    (phase==="paused"||(phase==="playing"&&!startedClip)));
   const localMode=room.mode==="local";
   show("local-player",host&&localMode);
+  if(host&&localMode){
+   const title=$("local-player").querySelector(".local-player-title strong");
+   if(title)title.textContent=audiusActive?"AUDIUS · ONLINE MUSIC":"LOCAL MUSIC · HOST DEVICE";
+   const sub=$("local-player").querySelector(".local-player-title small");
+   if(sub)sub.textContent=audiusActive?"Direct HTTPS stream · No stored music":"Music stays on this device";
+  }
+  const attribution=host&&localMode&&audiusActive&&!!audiusTrack&&
+   (phase==="solved"||phase==="finished"||room.titleDone||room.artistDone);
+  show("audius-credit",attribution);
+  if(attribution)$("audius-track-link").href=audiusTrack.permalink;
   show("local-play-hint",host&&localMode&&phase==="paused"&&room.step<6);
   show("local-replay-hint",host&&localMode&&room.step>=0&&!room.firstAnswered&&
    (phase==="paused"||(phase==="playing"&&!startedClip)));
@@ -890,7 +984,7 @@ async function refresh(){
  finally{pollBusy=false}
 }
 function reset(){
- cancelNext();clearAudio();discardLocalAudio();localTracks=[];localPlayed.clear();localSourceCache.clear();localReviewShown=60;renderLocalTracks();failedClue="";deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;room=null;access=null;safeStore();render();
+ cancelNext();clearAudio();discardLocalAudio();audiusActive=false;audiusTrack=null;audiusPool=[];audiusFiltersKey="";localTracks=[];localPlayed.clear();localSourceCache.clear();localReviewShown=60;renderLocalTracks();failedClue="";deezerPreparedRound="";try{deezerPlayer?.dispose()}catch{}deezerPlayer=null;room=null;access=null;safeStore();render();
 }
 async function create(){
  if(loading)return;
@@ -944,7 +1038,7 @@ function chosenFilters(){
  };
 }
 async function saveGenres(){
- if(!room||!isHost()||room.phase!=="lobby"||!["catalog","deezer","local"].includes(chosenSource()))return;
+ if(!room||!isHost()||room.phase!=="lobby"||!["catalog","deezer","local","audius"].includes(chosenSource()))return;
  const filters=chosenFilters();
  if(!filters.genres.length){message("Select at least one genre");return}
  genresDirty=true;
@@ -973,7 +1067,7 @@ $("start").addEventListener("click",async()=>{
  try{
   clearTimeout(genresSaveTimer);
   const mode=chosenSource();
-  if(mode==="catalog"||mode==="deezer"||mode==="local"){
+  if(mode==="catalog"||mode==="deezer"||mode==="local"||mode==="audius"){
    if(mode==="deezer"&&!deezerAuthorized)throw Error("Deezer is awaiting authorization.");
    const filters=chosenFilters();
    if(!filters.genres.length)throw Error("Select at least one genre");
@@ -982,12 +1076,13 @@ $("start").addEventListener("click",async()=>{
    await call("settings",{genres:["demo"],decades:[]});
    await soundUnlock();
   }
-  const data=mode==="youtube"?youtubeRound("youtube"):mode==="local"?await selectLocalRound():
+  const data=mode==="youtube"?youtubeRound("youtube"):mode==="local"?await selectLocalRound():mode==="audius"?await selectAudiusRound():
    mode==="catalog"?{mode,excludeVideos:await currentCatalogExclusions()}:{mode};
   const result=await call("start",data);
   if(result&&mode==="local")localPlayed.add(data.fileIndex);
  }catch(e){message(e.message)}
 });
+$("audius-check").addEventListener("click",()=>discoverAudius(true).catch(e=>message(e.message)));
 $("local-play-hint").addEventListener("click",()=>startClip());
 $("local-replay-hint").addEventListener("click",()=>startClip(true));
 $("local-music-files").addEventListener("change",e=>importLocalFiles(e.target.files));
@@ -1005,7 +1100,9 @@ $("youtube-next-form").addEventListener("submit",async e=>{
 });
 $("next-round").addEventListener("click",async()=>{
  try{
-  if(room?.mode==="local"){
+  if(room?.mode==="local"&&audiusActive){
+   await call("next",await selectAudiusRound());
+  }else if(room?.mode==="local"){
    const data=await selectLocalRound(),result=await call("next",data);
    if(result)localPlayed.add(data.fileIndex);
   }else if(room?.mode==="catalog"){
@@ -1023,6 +1120,7 @@ for(const id of ["genre-options","decade-options"])$(id).addEventListener("chang
  clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);
  if(chosenSource()==="local")updateLocalCounts();
  if(chosenSource()==="catalog"){lastCatalogCoverageKey="";checkCatalogCoverage()}
+ if(chosenSource()==="audius"){audiusPool=[];audiusFiltersKey="";setText("audius-availability","Filters changed. Tap Check online songs for new results.")}
 });
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&access)refresh();

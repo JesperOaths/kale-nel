@@ -77,7 +77,7 @@ try {
  assert.ok(await host.locator("#room").evaluate(el=>el.classList.contains("host-mode")),"tablet host uses immersive studio theme");
  await host.locator(".lobby-caption").waitFor({state:"visible"});
  assert.ok(await host.locator("#host-fullscreen").isVisible(),"tablet host has working fullscreen control");
- assert.equal(await host.locator(".source-select label:visible").count(),5,"all five music sources are visible");
+ assert.equal(await host.locator(".source-select label:visible").count(),6,"all six music sources are visible");
  assert.equal(await host.locator("#deezer-source-option").isVisible(),true,"Deezer is visibly listed rather than hidden");
  assert.ok(await host.locator('#deezer-source-option input[type=radio]').isDisabled(),"Deezer cannot be selected without server approval");
  assert.ok((await host.locator("#deezer-license-status").innerText()).includes("not authorized"),"explicit Deezer approval status must be readable");
@@ -89,12 +89,12 @@ try {
    const box=document.getElementById("lobby")?.getBoundingClientRect();
    return {cards,lobbyWidth:box?.width,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};
  });
- assert.equal(lobbyUI.cards.length,5);
+ assert.equal(lobbyUI.cards.length,6);
  assert.ok(lobbyUI.cards.every(c=>c.w>220&&c.h>120),"music cards must remain readable at tablet size: "+JSON.stringify(lobbyUI));
  assert.ok(Math.abs(lobbyUI.cards[0].y-lobbyUI.cards[1].y)<3&&lobbyUI.cards[2].y>lobbyUI.cards[0].y,
    "music sources should form an ordered 2x2 desktop grid");
  assert.ok(lobbyUI.scrollWidth<=lobbyUI.viewport+2,"host lobby must not overflow horizontally");
- console.log("BROWSER_LOBBY_V10_PASS",JSON.stringify({cards:5,deezer:"visible but unavailable",grid:"2x2",viewport:lobbyUI.viewport}));
+ console.log("BROWSER_LOBBY_V12_PASS",JSON.stringify({cards:6,deezer:"visible but unavailable",grid:"2x2",viewport:lobbyUI.viewport}));
  assert.ok(!(await alice.locator(".host-stage-hero").isVisible()),"welcome phone never shows host stage");
  await join(alice,initial.code,"QAlice");
  await join(bob,initial.code,"QBob");
@@ -265,6 +265,56 @@ try {
  assert.notEqual((await state(lh)).audio.source,firstLocal.audio.source,"local tracks don't repeat before exhaustion");
  console.log("BROWSER_LOCAL_FILES_PASS",JSON.stringify({round:2,source:"host-only WAV blobs",
   uploadedRecordingBytes:0,metadata:"editable",cue:"random middle",guestAudio:"hidden",nextSong:"different"}));
+
+
+ // A complete browser-only Audius provider round. Mock its HTTPS network
+ // with playable WAV bytes: no music files are written on host, S21 or USB.
+ const audHostCtx=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
+ const audGuestCtx=await browser.newContext({...devices["iPhone 13"]});
+ const ah=await page(audHostCtx,"audius-host"),ag=await page(audGuestCtx,"audius-guest");
+ const audioIds=["abc12x","abc13x","abc14x"];
+ let providerQueries=0,providerStreams=0;
+ await ah.route("https://api.audius.co/v1/tracks/**",async route=>{
+  const path=new URL(route.request().url()).pathname;
+  if(path.includes("/stream")){
+   providerStreams++;
+   await route.fulfill({status:200,contentType:"audio/wav",
+    headers:{"access-control-allow-origin":"*","accept-ranges":"bytes"},
+    body:makeWav(440+providerStreams*30)});
+   return;
+  }
+  providerQueries++;
+  await route.fulfill({status:200,contentType:"application/json",
+   headers:{"access-control-allow-origin":"*"},
+   body:JSON.stringify({data:audioIds.map((id,i)=>({
+    id,title:"Audius Test Song "+i,user:{name:"Test Audius Artist "+i},
+    duration:35,genre:"Pop",release_date:"2025-03-14T00:00:00Z",is_streamable:true,is_unlisted:false
+   }))})});
+ });
+ const audGame=await createGame(ah);
+ await join(ag,audGame.code,"AudiusPlayer");
+ await ah.locator('input[name="music-source"][value="audius"]').check();
+ await ah.locator("#audius-info").waitFor({state:"visible"});
+ await ah.locator("#audius-check").click();
+ await wait(ah,()=>audiusPool.length===3&&!audiusChecking,20000);
+ assert.match(await ah.locator("#audius-availability").innerText(),/3 distinct streamable tracks/);
+ await ah.locator("#start").click();
+ await wait(ah,()=>room?.mode==="local"&&room?.round===1&&audiusActive,25000);
+ assert.equal((await state(ag)).audio,null,"guests must not learn stream or song");
+ const audFirst=await state(ah);
+ assert.match(await ah.locator("#licensed-player").getAttribute("src"),/^https:\/\/api\.audius\.co\/v1\/tracks\/[A-Za-z0-9_-]+\/stream$/);
+ await ah.locator("#local-play-hint").click();
+ await wait(ah,()=>room?.step===0&&room?.phase==="paused",21000);
+ await ah.locator("#skip-round").click();
+ await wait(ah,()=>room?.phase==="solved");
+ assert.ok(await ah.locator("#audius-credit").isVisible(),"provider attribution displayed at reveal");
+ await ah.locator("#next-round").click();
+ await wait(ah,()=>room?.round===2,25000);
+ assert.notEqual((await state(ah)).audio.source,audFirst.audio.source,"online song indices rotate");
+ assert.ok(providerStreams>=2&&providerQueries>=1);
+ console.log("BROWSER_AUDIUS_STREAM_PASS",JSON.stringify({mode:"direct Audius HTTPS",
+  providerSongs:3,providerStreams,metadataQueries:providerQueries,
+  artistAttribution:"on reveal",guestAudio:"hidden",audioFilesWritten:0,nextRound:"different"}));
 
  // Separate YouTube mode host + two independent phone-browser sessions.
  const yHostCtx=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
