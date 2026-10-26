@@ -10,6 +10,8 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/offline_verified_head_region_v1.py'
+      - 'ops/c720p/s9-native-security/test-offline-verified-head-region-v1.py'
       - 'ops/c720p/s9-native-security/security-people-v327.js'
       - 'ops/c720p/s9-native-security/security-hub-v35.js'
       - 'ops/c720p/s9-native-security/test-people-az-face-covers-v4.py'
@@ -47,6 +49,8 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/offline_verified_head_region_v1.py'
+      - 'ops/c720p/s9-native-security/test-offline-verified-head-region-v1.py'
       - 'ops/c720p/s9-native-security/security-people-v327.js'
       - 'ops/c720p/s9-native-security/security-hub-v35.js'
       - 'ops/c720p/s9-native-security/test-people-az-face-covers-v4.py'
@@ -101,6 +105,7 @@ jobs:
           python test-real-surveillance-suggestions-dom.py
           python -m py_compile folder_suggestion_baseline_v1.py s9_folder_suggestion_metrics_extension_v1.py
           python test-suggestions-nonblocking-live-v3.py
+          python test-offline-verified-head-region-v1.py
           python test-people-az-face-covers-v4.py
       - name: Syntax-check the optional UI bridge and original People UI
         run: |
