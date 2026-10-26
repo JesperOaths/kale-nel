@@ -433,3 +433,22 @@ body:has(#room.host-mode:not([hidden])) .shell{width:min(1320px,calc(100% - 48px
 .host-mode .catalog-genre-matrix td[data-level="short"]{background:#463827;color:#ffd9a2}
 .host-mode .catalog-genre-matrix td[data-level="ready"]{background:#225840;color:#caffdb}
 .host-mode .catalog-genre-matrix .matrix-caption{font-size:11px;color:#a9c4b7;line-height:1.55;margin:8px 0 0}
+
+
+/* v12: genuine remote streaming from Audius, with no persistent music files. */
+.host-mode .source-select .source-audius{grid-column:1/-1;min-height:126px;background:linear-gradient(115deg,#222f44,#182a3b);border-color:#597e9a;display:grid;grid-template-columns:54px 1fr;gap:7px 16px}
+.host-mode .source-audius .source-top{grid-row:1/3;grid-column:1;align-self:center}
+.host-mode .source-audius .source-icon{background:#3a5577;color:#dcf5ff}
+.host-mode .source-audius .source-top .source-tag{display:none}
+.host-mode .source-audius .source-copy{grid-row:1;grid-column:2}
+.host-mode .source-audius .source-copy strong{font-size:20px}
+.host-mode .source-audius .source-copy small{max-width:68ch}
+.host-mode .source-audius .source-bottom{grid-row:2;grid-column:2;color:#bddeff}
+.host-mode .source-select .source-audius:has(input:checked){border-color:#8ed6ff;background:linear-gradient(110deg,#244366,#17374b)}
+.host-mode .audius-info{margin:16px 0 5px;padding:15px 17px;background:#142a3e;border:1px solid #447b9a;border-radius:15px;color:#d3eafb}
+.host-mode .audius-info strong{font-size:13px;color:#addefb}
+.host-mode .audius-info p{font-size:12px;line-height:1.55;color:#c1d6e5;margin:9px 0}
+.host-mode .audius-info a{color:#99deff;text-decoration:underline}
+.host-mode .audius-credit{font-size:11px;color:#cbe3ec;border-top:1px solid #ffffff2a;padding-top:9px;margin-top:13px}
+.host-mode .audius-credit a{color:#a9deff;text-decoration:underline}
+@media(max-width:620px){.host-mode .source-select .source-audius{display:flex;flex-direction:column}.host-mode .source-audius .source-top{align-self:start;width:100%;display:flex}.host-mode .source-audius .source-top .source-tag{display:inline}}
