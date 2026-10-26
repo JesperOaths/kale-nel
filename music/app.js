@@ -13,6 +13,7 @@ const STORE="kalenel_tunerush_room_v001";
 const $=id=>document.getElementById(id);
 const playerAudio=$("licensed-player");
 let access=null,room=null,loading=false,pollBusy=false,toastTimer=null;
+let roundTransitionBusy=false;
 let clipTimer=null,nextTimer=null,startedClip=false;
 let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
@@ -57,8 +58,9 @@ function message(s) {
 function setText(id,value){$(id).textContent=String(value??"")}
 function setLoading(value){
  loading=value;
- for(const id of ["start","audius-play-hint","audius-replay-hint","next-round","continue-hints","skip-round"]){$(id).disabled=value}
- $("room").setAttribute("aria-busy",String(value));
+ const busy=value||roundTransitionBusy;
+ for(const id of ["start","audius-play-hint","audius-replay-hint","next-round","continue-hints","skip-round"]){$(id).disabled=busy}
+ $("room").setAttribute("aria-busy",String(busy));
 }
 function safeStore(){try{if(access)localStorage.setItem(STORE,JSON.stringify(access));else localStorage.removeItem(STORE)}catch{}}
 async function rpc(action,extra={},attempt=0) {
@@ -190,7 +192,7 @@ async function discoverAudius(force=false){
   scan.hidden=true;
   $("audius-check").disabled=false;
   $("audius-check").textContent="↻ Check tracks";
-  $("start").disabled=loading;
+  $("start").disabled=loading||roundTransitionBusy;
  }
 }
 async function prepareAudiusPlayback(record,restoredIndex=null){
@@ -606,9 +608,15 @@ function render(){
 }
 async function call(action,extra={},quiet=false){
  if(loading)return;
+ const session=access;
  setLoading(true);
  try{
-  const b=await rpc(action,extra);applyState(b.state);setConnectionHealthy();
+  const b=await rpc(action,extra);
+  // An in-flight host action is no longer authoritative after Leave or
+  // switching sessions; never recreate a departed room from a delayed reply.
+  if(session!==access||!session||b.state.code!==session.code)
+   throw Error("The room changed while that action was processing.");
+  applyState(b.state);setConnectionHealthy();
   if((action==="start"||action==="next")&&b.state?.role==="host"){
    checkpointAudiusHost(b.state);
    try{await rememberSelectedSong(b.state)}catch(e){message("Song history could not be saved on this browser.");}
@@ -646,6 +654,7 @@ async function refresh(){
 }
 function reset(){
  mutationVersion++;
+ roundTransitionBusy=false;
  setConnectionHealthy();
  try{sessionStorage.removeItem(AUDIUS_HOST_SESSION)}catch{}
  cancelNext();clearAudio();clearAudiusStream();audiusActive=false;audiusTrack=null;
@@ -726,16 +735,59 @@ $("host-fullscreen").addEventListener("click",async()=>{
 document.addEventListener("fullscreenchange",()=>{
  $("host-fullscreen").innerHTML=document.fullscreenElement?'<span aria-hidden="true">⛶</span> Exit full screen':'<span aria-hidden="true">⛶</span> Full screen';
 });
-$("start").addEventListener("click",async()=>{
+// Preparing a song can involve a slow Audius scan and several media probes.
+// Lock the entire transition, not merely the short Supabase RPC that follows.
+// Otherwise fast double taps can replace the selected stream mid-round.
+async function advanceRound(action){
+ if(roundTransitionBusy||loading||!room||!isHost())return;
+ const expectedPhase=action==="start"?"lobby":"solved";
+ if(room.phase!==expectedPhase)return;
+ const session=access,code=room.code,round=room.round;
+ roundTransitionBusy=true;
+ setLoading(false);
  try{
-  clearTimeout(genresSaveTimer);
-  if(!room?.players?.length)throw Error("Invite at least one player before starting.");
-  const filters=chosenFilters();
-  if(!filters.genres.length)throw Error("Select at least one genre");
-  await call("settings",filters);
-  await call("start",await selectAudiusRound());
- }catch(e){message(e.message)}
-});
+  if(action==="start"){
+   clearTimeout(genresSaveTimer);
+   if(!room.players.length)throw Error("Invite at least one player before starting.");
+   const filters=chosenFilters();
+   if(!filters.genres.length)throw Error("Select at least one genre.");
+   setText("audius-availability","Saving party settings before loading the first track…");
+   await call("settings",filters);
+  }
+  if(session!==access||!room||room.code!==code||room.round!==round||room.phase!==expectedPhase)
+   throw Error("The room changed while preparing a song. No new round was started.");
+  if(action==="start")
+   setText("audius-availability","Choosing a playable Audius track…");
+  else localStatus("Choosing the next playable Audius track…");
+  const chosen=await selectAudiusRound();
+  // Revalidate after every asynchronous Audius/media operation before
+  // submitting a new round. Stale selections must not advance another game.
+  if(session!==access||!room||room.code!==code||room.round!==round||room.phase!==expectedPhase){
+   clearAudiusStream();audiusActive=false;audiusTrack=null;
+   throw Error("The game moved on while preparing audio. Try again.");
+  }
+  const accepted=await call(action,chosen);
+  if(!accepted)throw Error("The game is busy. Try again.");
+ }catch(e){
+  if(session===access&&room?.code===code){
+   if(action==="start"&&room.phase==="lobby"){
+    clearAudiusStream();audiusActive=false;audiusTrack=null;
+    setText("audius-availability","Could not start the round. You can retry without losing the lobby.");
+   }else if(action==="next"&&room.phase==="solved"){
+    // Candidate selection temporarily replaced the old host media element.
+    // Restore the last accepted round from its private host-tab checkpoint.
+    await restoreAudiusHost(room);
+   }
+   message(e.message||"Unable to prepare the next track.");
+  }
+ }finally{
+  // A Leave may have cleared the transition while asynchronous work was
+  // running; do not silently retain the lock for a new room.
+  roundTransitionBusy=false;
+  setLoading(false);
+ }
+}
+$("start").addEventListener("click",()=>advanceRound("start"));
 const AUDIUS_PRESETS={
  party:["pop","dance","disco","electronic"],
  electronic:["electronic","dance","disco"],
@@ -764,9 +816,7 @@ document.querySelectorAll("[data-speaker-test]").forEach(button=>
  button.addEventListener("click",testSpeakers));
 $("audius-play-hint").addEventListener("click",()=>startClip());
 $("audius-replay-hint").addEventListener("click",()=>startClip(true));
-$("next-round").addEventListener("click",async()=>{
- try{await call("next",await selectAudiusRound())}catch(e){message(e.message)}
-});
+$("next-round").addEventListener("click",()=>advanceRound("next"));
 $("continue-hints").addEventListener("click",async()=>{try{await call("resume")}catch{}});
 $("skip-round").addEventListener("click",async()=>{try{await call("skip")}catch{}});
 $("buzz").addEventListener("click",requestBuzz);
