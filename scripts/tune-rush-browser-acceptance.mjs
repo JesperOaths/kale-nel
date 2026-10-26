@@ -539,7 +539,8 @@ try{
    players:[{id:"p1",name:"Demo Winner",score:20},
     {id:"p2",name:"Second Place",score:11.5}],
    winner:"p1",genres:["rock","pop"],decades:["2010"]};
-  navigator.clipboard.writeText=async value=>window.__copiedFinalScores=value;
+  Object.defineProperty(navigator,"clipboard",{configurable:true,
+   value:{writeText:async value=>{window.__copiedFinalScores=value;}}});
   render();
  });
  assert.equal(await host.locator("#finish-new-party").isVisible(),true);
