@@ -462,6 +462,16 @@ async function playLocalHint(info){
  if(playerAudio.readyState===0)throw Error("The selected file could not load. Try a supported MP3.");
  playerAudio.currentTime=cue;
  try{await playerAudio.play()}catch(e){throw Error("Your browser blocked audio. Tap the Play clue button again: "+String(e.message||e))}
+ // HTMLMediaElement.play() can resolve while a remote seek is still buffering.
+ // Never consume the 0.5-second first clue until the playback clock advances.
+ let advanced=false;
+ for(let probe=0;probe<120;probe++){
+  if(playerAudio.error)throw Error("The stream failed while seeking. Tap Play to retry this clue.");
+  if(playerAudio.paused)throw Error("Audio playback stopped before the clue began.");
+  if(playerAudio.currentTime>=cue+0.11){advanced=true;break}
+  await new Promise(resolve=>setTimeout(resolve,75));
+ }
+ if(!advanced)throw Error("The stream is still buffering. Tap Play to retry the same clue.");
  localStatus("Playing clue from "+Math.round(cue)+" seconds into the song.");
 }
 
@@ -762,15 +772,31 @@ async function startClip(replay=false){
   if(generation!==clipGeneration||!room||room.phase!=="playing")return;
   failedClue="";
   const expected=room.round,step=room.step;
-  clipTimer=setTimeout(async()=>{
+  let bufferPolls=0;
+  const finishClip=async()=>{
    if(!room||room.phase!=="playing"||room.round!==expected||room.step!==step)return;
+   if(room.mode==="local"&&localAudioUrl){
+    // A timer is not evidence of music: a remote stream can stall mid-clue.
+    // Finish only after the playhead covers the actual clue duration.
+    const playedMs=(playerAudio.currentTime-(room.audio?.cueMs||0)/1000)*1000;
+    if(!playerAudio.error&&!playerAudio.ended&&playedMs<room.clipMs-90&&bufferPolls<150){
+     bufferPolls++;
+     clipTimer=setTimeout(finishClip,80);
+     return;
+    }
+    if(playerAudio.error||playedMs<room.clipMs-90){
+     failedClue=expected+":"+step;
+     localStatus("The music stalled. Tap Play next clue to replay this clue.");
+    }
+   }
    clearAudio();
    if(room.mode==="youtube"||room.mode==="catalog")youtubeStatus("Clue finished. Players can buzz, or you can play the next clue.");
    try{
     const b=await rpc("pause");applyState(b.state);
     if(room.phase==="paused")scheduleNext(1000);
    }catch(e){message(e.message)}
-  },room.clipMs);
+  };
+  clipTimer=setTimeout(finishClip,room.clipMs);
  }catch(e){
   if(generation!==clipGeneration)return;
   if(room?.phase==="playing")failedClue=room.round+":"+room.step;
