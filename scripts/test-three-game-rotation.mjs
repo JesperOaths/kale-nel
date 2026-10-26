@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {readRotation,emptyRotation,openGame,playedKeys,notePlayed,catalogReadiness,THREE_GAME_TARGET} from "../music/game-rotation.js";
+import {readRotation,emptyRotation,openGame,playedKeys,notePlayed,catalogReadiness,audiusReadiness,THREE_GAME_TARGET} from "../music/game-rotation.js";
 import {chooseAudiusTrack} from "../music/audius-stream.js";
 
 assert.equal(THREE_GAME_TARGET,120);
@@ -23,6 +23,17 @@ assert.equal(selected.length,120);
 assert.equal(playedKeys(history,"audius").size,120);
 const capacity=catalogReadiness(catalog.length,playedKeys(history,"audius").size);
 assert.deepEqual([capacity.total,capacity.remaining,capacity.shortfall,capacity.ready],[150,30,90,false]);
+// A different genre/decade mix must count only the tracks heard from THAT
+// filtered pool; global history may include many unrelated songs.
+const mixedPool=[{id:"audiusA1"},{id:"audiusB2"},{id:"audiusB2"},{id:"audiusC3"}];
+const mixStats=audiusReadiness(mixedPool,new Set(["audiusA1","elsewhere9"]));
+assert.deepEqual([mixStats.total,mixStats.used,mixStats.remaining,mixStats.shortfall,
+ mixStats.expectedGames],[3,1,2,118,0],"only overlapping played IDs count");
+assert.equal(audiusReadiness(mixedPool,new Set()).remaining,3);
+assert.equal(audiusReadiness(Array.from({length:130},(_,i)=>"music"+String(i).padStart(5,"0")),
+ new Set()).ready,true);
+assert.equal(audiusReadiness([],new Set()).remaining,0);
+assert.equal(audiusReadiness(["not valid","validID1","validID1"],new Set()).total,1);
 const restored=readRotation(JSON.stringify(history));
 assert.equal(playedKeys(restored,"audius").size,120,"Audius history must persist after reload");
 openGame(restored,"GME2AD");
