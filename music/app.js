@@ -117,6 +117,8 @@ async function rememberSelectedSong(state){
 // host browser playback; none are copied to hub, S21, USB, or Supabase.
 let audiusModule=null,audiusPool=[],audiusFiltersKey="",audiusActive=false;
 let audiusTrack=null,audiusIndex=20000000,audiusChecking=false;
+const AUDIUS_HOST_SESSION="tune-rush-audius-host-stream-v1";
+let audiusRestoring=false;
 async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026a"))}
 async function discoverAudius(force=false){
  if(audiusChecking)throw Error("Audius is already checking tracks.");
@@ -124,12 +126,16 @@ async function discoverAudius(force=false){
  if(!filters.genres.length)throw Error("Select at least one genre.");
  if(!force&&key===audiusFiltersKey&&audiusPool.length)return audiusPool;
  audiusChecking=true;
+ if(isHost()&&room?.phase==="lobby")$("start").disabled=true;
  $("audius-check").disabled=true;
  $("audius-check").textContent="⌛ Checking…";
  setText("audius-availability","Finding Audius tracks that match your selections…");
  try{
   const mod=await audiusLib();
   const tracks=await mod.discoverAudiusTracks(filters.genres,filters.decades);
+  // Reject results for a mix that changed while the network request was pending.
+  if(JSON.stringify(chosenFilters())!==key)
+   throw Error("The genres or eras changed during the scan. Check tracks again.");
   audiusPool=tracks;audiusFiltersKey=key;
   const rotationTools=await rotation(),used=rotationTools.playedKeys(rotationHistory,"audius");
   const free=tracks.filter(x=>!used.has(x.id));
@@ -146,15 +152,21 @@ async function discoverAudius(force=false){
   audiusChecking=false;
   $("audius-check").disabled=false;
   $("audius-check").textContent="↻ Check tracks";
+  $("start").disabled=loading;
  }
 }
-async function prepareAudiusPlayback(record){
+async function prepareAudiusPlayback(record,restoredIndex=null){
  const lib=await audiusLib(),uri=lib.streamUrl(record.id);
  // Browser audio element streams HTTPS; HTMLMediaElement handles range seeking.
  // Do not use fetch(blob), ArrayBuffer, MediaRecorder, downloads or disk caching.
  clearAudiusStream();
  localAudioUrl=uri;
- localCurrentIndex=++audiusIndex;
+ if(restoredIndex!==null){
+  if(!Number.isSafeInteger(restoredIndex)||restoredIndex<1||restoredIndex>2147483647)
+   throw Error("The saved host stream index is invalid.");
+  localCurrentIndex=restoredIndex;
+  audiusIndex=Math.max(audiusIndex,restoredIndex);
+ }else localCurrentIndex=++audiusIndex;
  playerAudio.preload="metadata";
  const ready=new Promise((resolve,reject)=>{
   let timer=null;
@@ -198,6 +210,64 @@ async function selectAudiusRound(){
 
 let localCurrentIndex=null,localAudioUrl=null;
 function localStatus(note){setText("audius-playback-status",note)}
+// Only the host tab saves the transient Audius track identity. Never save audio bytes,
+// a guest capability, or a stream URL; sessionStorage disappears with the tab session.
+function checkpointAudiusHost(state){
+ if(state?.role!=="host"||state.mode!=="local"||!audiusActive||!audiusTrack)return;
+ const source=state.audio?.source;
+ if(!/^local:\d+$/.test(source||"")||Number(source.slice(6))!==localCurrentIndex)return;
+ const record={code:state.code,round:state.round,source,
+  id:audiusTrack.id,title:audiusTrack.title,artist:audiusTrack.artist,
+  permalink:audiusTrack.permalink,updatedAt:Date.now()};
+ try{sessionStorage.setItem(AUDIUS_HOST_SESSION,JSON.stringify(record))}catch{}
+}
+async function restoreAudiusHost(state){
+ if(audiusRestoring||state?.role!=="host"||state.mode!=="local"||
+    !/^local:\d+$/.test(state.audio?.source||"")||state.round<1||
+    !["playing","paused","holding","answering","solved"].includes(state.phase))return;
+ const wantedIndex=Number(state.audio.source.slice(6));
+ if(audiusActive&&localAudioUrl&&localCurrentIndex===wantedIndex)return;
+ let saved=null;
+ try{saved=JSON.parse(sessionStorage.getItem(AUDIUS_HOST_SESSION)||"null")}catch{}
+ // Host RPC deliberately redacts answer fields until reveal, including to
+ // the host. Authenticate the checkpoint against private host-issued audio
+ // source + room/round, and verify title/artist only when server reveals them.
+ const valid=saved&&saved.code===state.code&&saved.round===state.round&&
+  saved.source===state.audio.source&&
+  (state.title==null||saved.title===state.title)&&
+  (state.artist==null||saved.artist===state.artist)&&
+  typeof saved.title==="string"&&saved.title.length>0&&saved.title.length<=100&&
+  typeof saved.artist==="string"&&saved.artist.length>0&&saved.artist.length<=100&&
+  typeof saved.id==="string"&&/^[A-Za-z0-9_-]{3,32}$/.test(saved.id)&&
+  typeof saved.updatedAt==="number"&&Date.now()-saved.updatedAt>=0&&
+  Date.now()-saved.updatedAt<8*60*60*1000;
+ if(!valid){
+  localStatus("This host tab has no recoverable stream for this round. Use Skip / Reveal song, then Next song.");
+  return;
+ }
+ audiusRestoring=true;
+ localStatus("Restoring this round's Audius stream without changing the song…");
+ try{
+  await prepareAudiusPlayback(saved,wantedIndex);
+  if(!room||!isHost()||room.code!==state.code||room.round!==state.round||
+     room.audio?.source!==state.audio.source||!access||access.code!==state.code){
+   clearAudiusStream();return;
+  }
+  audiusActive=true;
+  audiusTrack={id:saved.id,title:saved.title,artist:saved.artist,permalink:
+   /^https:\/\/audius\.co\/[A-Za-z0-9._~\/-]+$/.test(saved.permalink||"")
+   ?saved.permalink:"https://audius.co/tracks/"+encodeURIComponent(saved.id)};
+  if(room.phase==="playing"){
+   // Browser reload stopped the old audio. Never leave an inaudible clue running.
+   const b=await rpc("pause");
+   if(room&&room.code===state.code&&room.round===state.round)applyState(b.state);
+  }
+  localStatus("Stream recovered. Play or replay the current clue when ready.");
+ }catch(e){
+  clearAudiusStream();audiusActive=false;audiusTrack=null;
+  localStatus("Could not restore the stream: "+String(e.message||e)+". Skip this song to continue.");
+ }finally{audiusRestoring=false}
+}
 function clearAudiusStream(){
  try{playerAudio.pause();playerAudio.removeAttribute("src");playerAudio.load()}catch{}
  localAudioUrl=null;
@@ -250,7 +320,7 @@ async function startClip(replay=false){
   if(room.mode!=="local"||!audiusActive||!localAudioUrl||
     !/^local:\d+$/.test(room.audio?.source||"")||
     Number(room.audio.source.slice(6))!==localCurrentIndex)
-    throw Error("This game needs its Audius stream on the host. Restart the round if the page was reloaded.");
+    throw Error("The Audius host stream is unavailable. Reload the same host tab to recover, or skip this song.");
   const body=await rpc(replay?"replay":"play",replay?{expectedRound:round,expectedStep:initialStep}:{});applyState(body.state);
   if(room.phase!=="playing")return;
   await startAudio(room.audio);
@@ -449,6 +519,7 @@ async function call(action,extra={},quiet=false){
  try{
   const b=await rpc(action,extra);applyState(b.state);
   if((action==="start"||action==="next")&&b.state?.role==="host"){
+   checkpointAudiusHost(b.state);
    try{await rememberSelectedSong(b.state)}catch(e){message("Song history could not be saved on this browser.");}
   }
   return b;
@@ -467,11 +538,13 @@ async function refresh(){
    try{const expired=await rpc("expire");applyState(expired.state);return;}catch{}
   }
   applyState(b.state);
+  await restoreAudiusHost(b.state);
  }
  catch(e){if(e.message==="unauthorized"||e.message==="room_expired"){reset();message(e.message)}}
  finally{pollBusy=false}
 }
 function reset(){
+ try{sessionStorage.removeItem(AUDIUS_HOST_SESSION)}catch{}
  cancelNext();clearAudio();clearAudiusStream();audiusActive=false;audiusTrack=null;
  audiusPool=[];audiusFiltersKey="";failedClue="";room=null;access=null;
  safeStore();render();

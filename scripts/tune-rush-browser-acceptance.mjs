@@ -98,10 +98,48 @@ try{
  const second=await host.evaluate(()=>({source:room.audio.source,ids:rotationHistory?.games?.at(-1)?.audius||[]}));
  assert.notEqual(second.source,first.source,"no-repeat selection must avoid previous track");
  assert.ok(second.ids.length>=2,"playing history must persist Audius IDs");
- assert.ok(streamRequests>=2&&metadataRequests>0);
+ // A real navigation must recover the same source and server round. It must
+ // never auto-play, skip, reveal, lose the buzzer session, or change the cue.
+ const prior=await host.evaluate(()=>({code:room.code,round:room.round,
+  source:room.audio.source,cueMs:room.audio.cueMs,id:audiusTrack.id,
+  checkpoint:JSON.parse(sessionStorage.getItem("tune-rush-audius-host-stream-v1")||"null")}));
+ assert.equal(prior.checkpoint?.source,prior.source,"host saves its private track resume receipt");
+ assert.equal(await guest.evaluate(()=>sessionStorage.getItem("tune-rush-audius-host-stream-v1")),null,
+  "guest cannot access the host's private stream checkpoint");
+ await host.reload({waitUntil:"domcontentloaded",timeout:30000});
+ try{
+  await host.waitForFunction(()=>room?.round===2&&room?.phase==="paused"&&
+   audiusActive&&localCurrentIndex===Number(room.audio.source.slice(6))&&
+   playerAudio.readyState>=1,null,{timeout:30000});
+ }catch(error){
+  const detail=await host.evaluate(()=>({
+   room:room?{role:room.role,phase:room.phase,round:room.round,code:room.code,
+    title:room.title,artist:room.artist,source:room.audio?.source}:null,
+   saved:(()=>{try{return JSON.parse(sessionStorage.getItem("tune-rush-audius-host-stream-v1")||"null")}catch{return null}})(),
+   active:audiusActive,restoring:audiusRestoring,stream:localAudioUrl,
+   localCurrentIndex,readyState:playerAudio.readyState,
+   mediaError:playerAudio.error?.message||null,
+   status:document.getElementById("audius-playback-status")?.textContent,
+   toast:document.getElementById("toast")?.textContent,
+   scriptLoaded:document.scripts.length
+  }));
+  console.error("BROWSER_AUDIUS_RESUME_DIAGNOSTIC",JSON.stringify(detail));
+  throw error;
+ }
+ const after=await host.evaluate(()=>({code:room.code,round:room.round,
+  source:room.audio.source,cueMs:room.audio.cueMs,id:audiusTrack.id,
+  status:document.getElementById("audius-playback-status")?.textContent}));
+ assert.deepEqual([after.code,after.round,after.source,after.cueMs,after.id],
+  [prior.code,prior.round,prior.source,prior.cueMs,prior.id],
+  "reload keeps the exact same round, random seek, stream identity and game room");
+ assert.match(after.status,/Stream recovered/);
+ assert.ok(await host.locator("#audius-play-hint").isVisible());
+ await host.locator("#audius-play-hint").click();
+ await host.waitForFunction(()=>room?.step===0&&room?.phase==="paused",null,{timeout:22000});
+ assert.ok(streamRequests>=3&&metadataRequests>0);
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
-  nextRound:2,playedMs:Math.round(heard.playedMs),noRepeat:true,mobileOverflow:false,
+  nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",noRepeat:true,mobileOverflow:false,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
