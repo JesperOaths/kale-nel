@@ -244,7 +244,7 @@ function cancelAudiusScan(){
 }
 const AUDIUS_HOST_SESSION="tune-rush-audius-host-stream-v1";
 let audiusRestoring=false;
-async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026scan"))}
+async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026scanowner"))}
 async function discoverAudius(force=false){
  const filters=chosenFilters(),key=JSON.stringify(filters);
  if(!filters.genres.length)throw Error("Select at least one genre.");
@@ -905,6 +905,9 @@ async function refresh(force=false){
 function reset(){
  mutationVersion++;
  cancelAudiusScan();
+ // A queued settings debounce belongs to the departed lobby, not a room
+ // created a fraction of a second later on the same host browser.
+ clearTimeout(genresSaveTimer);genresSaveTimer=null;genresDirty=false;
  roundTransitionBusy=false;
  setLoading(false);
  roundTransitionToken++;
