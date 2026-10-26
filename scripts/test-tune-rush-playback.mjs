@@ -142,6 +142,51 @@ async function fireTimer(f,ms){
  assert.equal(f.run("room.phase"),"paused");
  assert.equal(f.run("operations.join(',')"),"play,pause");
 }
+// A server-started clue with no audible music pauses without consuming a
+// hint, changing a score, or revealing the mystery song.
+{
+ const f=fixture(),audio=f.element("licensed-player");
+ audio.paused=false;
+ await f.run('room.phase="playing";room.step=0;room.clipMs=500;'+
+  'room.players=[{id:"guest1",name:"Guest",score:1}];room.firstAnswered=false;'+
+  'startedClip=true;let rescueActions=[];'+
+  'rpc=async action=>{rescueActions.push(action);return {state:{...room,'+
+  'phase:action==="pause"?"paused":"playing",step:room.step,players:room.players}}};'+
+  'pauseSilentClue()');
+ assert.equal(audio.paused,true,"rescue must stop the local stream");
+ assert.equal(f.run("room.phase"),"paused");
+ assert.equal(f.run("room.step"),0,"silence cannot consume a new clue");
+ assert.equal(f.run("room.players[0].score"),1,"rescue never changes score");
+ assert.equal(f.run("failedClue"),"1:0","next Play must repeat this same step");
+ assert.equal(f.run("rescueActions.join(',')"),"pause");
+ assert.match(f.run("clueRescueNotice"),/paused without advancing/);
+ await f.run('playerAudio.play=async()=>{playerAudio.paused=false;playerAudio.currentTime=13.2};startClip()');
+ assert.equal(f.run("room.step"),0);
+ assert.equal(f.run("rescueActions.join(',')"),"pause,replay");
+ assert.equal(f.run("room.players[0].score"),1);
+ f.run("clearAudio()");
+}
+// Once a player answered, the host cannot rewind an already-scored clue.
+{
+ const f=fixture();
+ f.run('room.phase="playing";room.step=2;room.firstAnswered=true;'+
+  'let rescues=0;rpc=async()=>{rescues++}');
+ await f.run("pauseSilentClue()");
+ assert.equal(f.run("rescues"),0);
+ assert.equal(f.run("room.phase"),"playing");
+}
+// Old pause responses never resurrect the game after Leave.
+{
+ const f=fixture();
+ const pending=f.run('room.phase="playing";room.step=0;room.firstAnswered=false;'+
+  'let settleRescue,originalRoom=room;'+
+  'rpc=async()=>new Promise(resolve=>{settleRescue=resolve});pauseSilentClue()');
+ f.run("reset()");
+ f.run('settleRescue({state:{...originalRoom,phase:"paused"}})');
+ await pending;
+ assert.equal(f.run("room"),null,"late response must not restore departed room");
+ assert.equal(f.run("clueRescueBusy"),false);
+}
 // Leaving during a long track transition must unlock controls for the
 // next room, not leave the Start button stuck disabled.
 {
@@ -326,4 +371,4 @@ async function fireTimer(f,ms){
  const f=fixture();
  await assert.rejects(f.run('startAudio({source:"youtube:dQw4w9WgXcQ"})'),/Only Audius/);
 }
-console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; cancellable media metadata; host controls; persistent volume mixer; isolated stream audition");
+console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; cancellable media metadata; host controls; persistent volume mixer; isolated stream audition; silent-clue rescue");

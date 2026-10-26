@@ -225,6 +225,7 @@ let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
 let clipGeneration=0,mutationVersion=0;
 let failedClue="";
+let clueRescueBusy=false,clueRescueNotice="";
 let connectionFailures=0,connectionRetryAt=0;
 function setConnectionProblem(){
  if(!access)return;
@@ -773,6 +774,7 @@ async function startClip(replay=false){
  if(!room||!isHost()||loading||roundTransitionBusy||(!replay&&room.phase!=="paused")||
   (replay&&(!["paused","playing"].includes(room.phase)||room.step<0||room.firstAnswered)))return;
  cancelNext();
+ clueRescueNotice="";
  const generation=++clipGeneration,session=access,code=room.code,source=room.audio?.source;
  const round=room.round,initialStep=room.step;
  try{
@@ -846,6 +848,51 @@ async function startClip(replay=false){
   if(session===access&&room?.code===code)setLoading(false);
  }
 }
+async function pauseSilentClue(){
+ if(!room||!isHost()||room.phase!=="playing"||room.step<0||
+    room.firstAnswered||loading||roundTransitionBusy||clueRescueBusy||
+    room.mode!=="local")return;
+ const session=access,code=room.code,round=room.round,step=room.step;
+ const source=room.audio?.source;
+ if(!/^local:\d+$/.test(source||""))return;
+ clueRescueBusy=true;
+ // The shared audio must stop before any network wait so a stalled stream
+ // cannot bleed into the next clue. Keep the same server-side step.
+ clearAudio();
+ failedClue=round+":"+step;
+ clueRescueNotice="Stopping this clue. Checking the room before retry…";
+ localStatus("Stopping audio. The same clue can be replayed after the room pauses.");
+ render();
+ try{
+  const pending=rpc("pause"),requestVersion=mutationVersion;
+  const response=await pending;
+  if(!currentClipRequest(session,code,round,source,requestVersion)||
+     room.step!==step||room.phase!=="playing")return;
+  if(response.state?.code!==code||response.state.round!==round||
+     response.state.step!==step||response.state.audio?.source!==source)return;
+  applyState(response.state);
+  if(room.phase==="paused"){
+   clueRescueNotice="Clue paused without advancing. Tap Retry this clue to play the same snippet.";
+   localStatus(clueRescueNotice);
+  }
+ }catch(e){
+  if(session!==access||room?.code!==code||room.round!==round||
+     room.step!==step)return;
+  clueRescueNotice="Couldn't confirm the pause. Rechecking the room; don't advance yet.";
+  message("Unable to pause the clue: "+String(e.message||e));
+  connectionRetryAt=0;
+  try{await refresh(true)}catch{}
+  // Do not assert the clue is paused unless the server confirms it.
+  if(session===access&&room?.code===code&&room.round===round&&room.step===step&&
+     room.phase==="paused"&&!room.firstAnswered)
+   clueRescueNotice="Room paused. Tap Retry this clue to replay the same snippet.";
+ }finally{
+  if(session===access&&room?.code===code){
+   clueRescueBusy=false;
+   render();
+  }
+ }
+}
 function applyState(s){
  const oldPhase=room?.phase||"",oldRound=room?.round||0,oldRoomCode=room?.code;
  if((oldPhase==="lobby"&&s.phase!=="lobby")||(oldRoomCode&&oldRoomCode!==s.code))
@@ -854,6 +901,8 @@ function applyState(s){
  if(s.role==="host"){syncAuditionGuard(s.code);refreshAuditionGuardStatus()}
  if(s.firstAnswered||s.phase==="answering")failedClue="";
  const newRound=s.round;
+ if(oldRound!==newRound||oldRoomCode&&oldRoomCode!==s.code)
+  clueRescueNotice="";
  if(oldRound!==newRound){
   lastBlockKey="";answeredFocusKey="";failedClue="";cancelNext();clearAudio();
  }
@@ -966,6 +1015,10 @@ function render(){
   show("audius-play-hint",host&&audiusMode&&phase==="paused"&&room.step<6);
   show("audius-replay-hint",host&&audiusMode&&room.step>=0&&!room.firstAnswered&&
     (phase==="paused"||(phase==="playing"&&!startedClip)));
+  show("clue-rescue-panel",host&&audiusMode&&phase==="playing"&&!room.firstAnswered);
+  $("clue-rescue").disabled=loading||roundTransitionBusy||clueRescueBusy;
+  show("clue-rescue-status",host&&audiusMode&&!!clueRescueNotice);
+  setText("clue-rescue-status",clueRescueNotice);
   setText("audius-play-hint",failedClue===room.round+":"+room.step?"↻ Retry this clue":"▶ Play next clue");
   show("next-round",host&&phase==="solved");show("continue-hints",host&&phase==="holding"&&room.step<6);show("skip-round",host&&(phase==="paused"||phase==="playing"||phase==="holding"));
   if(!host){
@@ -1082,6 +1135,7 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
+ clueRescueBusy=false;clueRescueNotice="";
  stopAudition(true);clearAuditionGuard();refreshAuditionGuardStatus();
  cancelAudiusScan();
  // A queued settings debounce belongs to the departed lobby, not a room
@@ -1303,6 +1357,7 @@ document.querySelectorAll("[data-speaker-test]").forEach(button=>
  button.addEventListener("click",testSpeakers));
 $("audius-play-hint").addEventListener("click",()=>startClip());
 $("audius-replay-hint").addEventListener("click",()=>startClip(true));
+$("clue-rescue").addEventListener("click",pauseSilentClue);
 $("next-round").addEventListener("click",()=>advanceRound("next"));
 $("continue-hints").addEventListener("click",async()=>{try{await call("resume")}catch{}});
 $("skip-round").addEventListener("click",async()=>{try{await call("skip")}catch{}});

@@ -765,3 +765,24 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 .audition-fairness strong{letter-spacing:.09em;color:#f1ffe8;white-space:nowrap}
 .audition-fairness span:last-child{color:#bee6df;font-variant-numeric:tabular-nums}
 @media(max-width:520px){.audition-fairness{gap:6px}}
+
+
+/* Host rescue: same clue, same score, never silently skip a stalled song. */
+.clue-rescue-panel{display:flex;gap:12px;align-items:center;justify-content:space-between;
+ border:1px solid #e6c58486;border-radius:13px;padding:13px 14px;
+ background:linear-gradient(120deg,#55402850,#30344d8c);
+ margin:10px 0;color:#fbe8b4}
+.clue-rescue-panel[hidden],.clue-rescue-status[hidden]{display:none!important}
+.clue-rescue-copy{display:grid;gap:4px;min-width:0}
+.clue-rescue-copy strong{font-size:13px;color:#fff0c4}
+.clue-rescue-copy span{font-size:11px;line-height:1.5;color:#dce1dd}
+.clue-rescue-action{border:1px solid #edd292b7;border-radius:11px;
+ background:#9a72464a;color:#fff1cb;font-size:12px;font-weight:850;
+ min-height:44px;min-width:145px;padding:10px 14px;cursor:pointer}
+.clue-rescue-action:hover{background:#c094515b}
+.clue-rescue-action:focus-visible{outline:3px solid #eafde9;outline-offset:3px}
+.clue-rescue-action:disabled{opacity:.5;cursor:not-allowed}
+.clue-rescue-status{margin:10px 0 5px;padding:11px 12px;border-radius:10px;
+ background:#69ddb518;border:1px solid #65debe6b;color:#baf9e0;font-size:12px;line-height:1.5}
+@media(max-width:520px){.clue-rescue-panel{flex-direction:column;align-items:stretch}
+ .clue-rescue-action{width:100%}}

@@ -310,10 +310,38 @@ try{
  const heard=await host.evaluate(()=>({playedMs:1000*(playerAudio.currentTime-room.audio.cueMs/1000),failedClue,step:room.step}));
  assert.ok(heard.playedMs>370,"audio must really advance before a 0.5s clue ends");
  assert.equal(heard.failedClue,"");
+ // Simulate a backend-accepted clue that the host device could not hear:
+ // the real game server enters phase "playing" but the host does not start
+ // its local media element. Rescue should pause that exact step safely.
+ const beforeRescue=await host.evaluate(()=>({round:room.round,step:room.step,
+  source:room.audio.source,scores:room.players.map(p=>p.score)}));
+ await host.evaluate(async()=>{
+  const result=await rpc("play");
+  applyState(result.state);
+ });
+ await host.waitForFunction(()=>room?.phase==="playing"&&room.step===1,null,{timeout:12000});
+ assert.equal(await host.locator("#clue-rescue-panel").isVisible(),true);
+ assert.equal(await guest.locator("#clue-rescue-panel:visible").count(),0,
+  "host-only recovery controls must not appear for players");
+ await host.locator("#clue-rescue").click();
+ await host.waitForFunction(()=>room?.phase==="paused"&&room.step===1&&
+  !clueRescueBusy,null,{timeout:12000});
+ assert.equal(await host.evaluate(()=>playerAudio.paused),true);
+ assert.equal(await host.evaluate(()=>failedClue),"1:1");
+ assert.match(await host.locator("#clue-rescue-status").innerText(),/paused without advancing/);
+ assert.equal(await host.locator("#audius-play-hint").innerText(),"↻ Retry this clue");
+ assert.deepEqual(await host.evaluate(()=>({round:room.round,source:room.audio.source,
+  scores:room.players.map(p=>p.score)})),{
+  round:beforeRescue.round,source:beforeRescue.source,scores:beforeRescue.scores
+ },"rescue must keep the same song and scores");
+ await host.locator("#audius-play-hint").click();
+ await host.waitForFunction(()=>room?.phase==="paused"&&room.step===1&&failedClue==="",
+  null,{timeout:23000});
+ assert.equal(await host.evaluate(()=>room.round),beforeRescue.round);
  // Two real guest phone sessions can see and participate in the same round.
  await Promise.all([
-  guest.waitForFunction(()=>room?.phase==="paused"&&room?.step===0,null,{timeout:12000}),
-  guest2.waitForFunction(()=>room?.phase==="paused"&&room?.step===0,null,{timeout:12000})
+  guest.waitForFunction(()=>room?.phase==="paused"&&room?.step===1,null,{timeout:12000}),
+  guest2.waitForFunction(()=>room?.phase==="paused"&&room?.step===1,null,{timeout:12000})
  ]);
  assert.equal(await guest2.locator("#buzz").isDisabled(),false);
  await guest.locator("#buzz").click();
@@ -473,5 +501,6 @@ try{
   roundsRibbon:true,popularAndCoverSearch:true,guestBuzzAndAnswer:true,
   hostAudition:"heard sample excluded across refresh and 3-game history unchanged",hostVeto:true,
   noSpoilerGuard:"previewed song and matching reuploads blocked from quiz",
+  clueRescue:"server-started silent clue paused, same step replayed without scores or song change",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
