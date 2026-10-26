@@ -8,11 +8,11 @@ HERE=Path(__file__).parent
 class ReviewHandoff(unittest.TestCase):
     def setUp(self):
         self.person=(HERE/'security-people-v328.js').read_text()
-        self.triage=(HERE/'local-neural-manual-triage-v4.js').read_text()
+        self.triage=(HERE/'local-neural-manual-triage-v6.js').read_text()
         self.page=(HERE/'security-people-v53.html').read_text()
     def test_cache_busted_page_integration(self):
         self.assertIn('security-people-v328.js?v=neural-review-handoff-v1-20261026',self.page)
-        self.assertIn('local-neural-manual-triage-v5.js?v=neural-assigned-crop-sync-v5-20261026',self.page)
+        self.assertIn('local-neural-manual-triage-v6.js?v=neural-review-reminder-v6-20261026',self.page)
         self.assertNotIn('local-neural-manual-triage-v3.js?v=',self.page)
     def test_explicit_user_action_with_correct_original_clip(self):
         self.assertEqual(self.triage.count("node('button','▶ Review this recording')"),1)
@@ -36,6 +36,18 @@ class ReviewHandoff(unittest.TestCase):
         self.assertNotIn('openApproval(',hook)
         self.assertIn("const clip=detail?.clip_id",hook)
         self.assertIn("state.reviewSource='sd'",hook)
+    def test_neural_handoff_reminder_is_text_only(self):
+        for item in ("Neural comparison reminder", "NOT reviewed or filed",
+                     "reviewPane.insertBefore(reviewHint,reviewPane.firstChild)",
+                     "const selected=dropdown.value",
+                     "kind:changed(row)?'Browser-only draft':'ONNX top-cosine suggestion'",
+                     "Copy folder name",
+                     "activeHint=null;reviewHint.hidden=true"):
+            self.assertIn(item,self.triage)
+        self.assertNotIn("approvalFolder",self.triage)
+        self.assertNotIn("reviewHint.querySelector('select')",self.triage)
+        self.assertNotIn("method:'POST'",self.triage)
+
     def test_existing_review_writes_still_use_original_workflow(self):
         self.assertIn("const ok=await manualLink",self.person)
         self.assertIn("const filename=decodeURIComponent(path.split('/').pop()",self.person)
