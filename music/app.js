@@ -215,7 +215,7 @@ function localStatus(note){setText("audius-playback-status",note)}
 function checkpointAudiusHost(state){
  if(state?.role!=="host"||state.mode!=="local"||!audiusActive||!audiusTrack)return;
  const source=state.audio?.source;
- if(!/^local:\\d+$/.test(source||"")||Number(source.slice(6))!==localCurrentIndex)return;
+ if(!/^local:\d+$/.test(source||"")||Number(source.slice(6))!==localCurrentIndex)return;
  const record={code:state.code,round:state.round,source,
   id:audiusTrack.id,title:audiusTrack.title,artist:audiusTrack.artist,
   permalink:audiusTrack.permalink,updatedAt:Date.now()};
@@ -223,7 +223,7 @@ function checkpointAudiusHost(state){
 }
 async function restoreAudiusHost(state){
  if(audiusRestoring||state?.role!=="host"||state.mode!=="local"||
-    !/^local:\\d+$/.test(state.audio?.source||"")||state.round<1||
+    !/^local:\d+$/.test(state.audio?.source||"")||state.round<1||
     !["playing","paused","holding","answering","solved"].includes(state.phase))return;
  const wantedIndex=Number(state.audio.source.slice(6));
  if(audiusActive&&localAudioUrl&&localCurrentIndex===wantedIndex)return;
