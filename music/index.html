@@ -8,9 +8,9 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026scan">
+<link rel="stylesheet" href="./style.css?v=20261026speaker">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=20261026scan" defer></script>
+<script src="./app.js?v=20261026speaker" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -53,6 +53,10 @@
       <div class="audius-info-top"><div><span class="kicker">TRACK AVAILABILITY</span><strong id="audius-availability">Choose your vibe and check how many songs are available.</strong></div>
       <button type="button" class="outline" id="audius-check">↻ Check tracks</button></div>
       <div id="audius-scan-progress" class="audius-scan-progress" hidden><div class="audius-scan-track" role="progressbar" aria-label="Audius catalog scan" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="audius-scan-fill"></span></div><span id="audius-scan-label">Connecting to Audius…</span></div>
+      <div class="speaker-check-line">
+       <button type="button" class="speaker-check-button" data-speaker-test aria-label="Play short speaker-test tone">♫ Test speakers</button>
+       <span id="speaker-check-status" role="status" aria-live="polite">A short test tone, not a quiz track. Check your device volume.</span>
+      </div>
       <p>Filtered by Audius metadata. The catalog focuses on independent releases, remixes and recent music. Older decades may return few tracks. <a href="https://audius.co/" target="_blank" rel="noopener noreferrer">Explore Audius</a></p>
     </div>
      <div id="audius-filters">
@@ -112,6 +116,7 @@
       <p id="audius-playback-status" aria-live="polite">Music is loaded. Play the first clue when you’re ready.</p>
       <div class="audius-credit" id="audius-credit" hidden>Track on <a id="audius-track-link" href="https://audius.co/" target="_blank" rel="noopener noreferrer">Audius</a></div>
       <div class="audius-player-actions"><button id="audius-play-hint" class="primary" type="button" hidden>▶ Play next clue</button><button id="audius-replay-hint" class="outline" type="button" hidden>↻ Replay clue</button></div>
+      <div class="audio-device-tip"><span>Muted? Check your tablet, Bluetooth and system volume.</span><button type="button" class="speaker-check-button" data-speaker-test>♫ Test speakers</button></div>
     </div>
      <div id="answer-reveal" class="reveal" hidden><strong id="revealed-title"></strong><span id="revealed-artist"></span></div>
     <div id="host-controls" hidden><button id="continue-hints" class="primary" hidden>Continue hints ▶</button><button id="next-round" class="primary" hidden>Next song →</button>
