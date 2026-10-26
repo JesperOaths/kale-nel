@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {readRotation,emptyRotation,openGame,playedKeys,notePlayed,catalogReadiness,audiusReadiness,THREE_GAME_TARGET} from "../music/game-rotation.js";
+import {readRotation,emptyRotation,openGame,playedKeys,notePlayed,catalogReadiness,audiusReadiness,audiusIdentity,audiusFreshTracks,noteAudiusPlayed,THREE_GAME_TARGET} from "../music/game-rotation.js";
 import {chooseAudiusTrack} from "../music/audius-stream.js";
 
 assert.equal(THREE_GAME_TARGET,120);
@@ -34,6 +34,46 @@ assert.equal(audiusReadiness(Array.from({length:130},(_,i)=>"music"+String(i).pa
  new Set()).ready,true);
 assert.equal(audiusReadiness([],new Set()).remaining,0);
 assert.equal(audiusReadiness(["not valid","validID1","validID1"],new Set()).total,1);
+// Multiple Audius uploads of the same artist/title must count as one song.
+const crossUploads=[
+ {id:"variantA1",artist:"Beyoncé",title:"Halo"},
+ {id:"variantB2",artist:"BEYONCE",title:"HALO!"},
+ {id:"variantC3",artist:"Beyoncé",title:"Halo (Live)"},
+ {id:"variantD4",artist:"Another Artist",title:"Halo"},
+ {id:"variantA1",artist:"Beyoncé",title:"Halo"}
+];
+assert.equal(audiusIdentity(crossUploads[0]),audiusIdentity(crossUploads[1]),
+ "case, accents and punctuation cannot evade song identity");
+assert.notEqual(audiusIdentity(crossUploads[0]),audiusIdentity(crossUploads[2]),
+ "a differently titled live version may still be selected");
+assert.notEqual(audiusIdentity(crossUploads[0]),audiusIdentity(crossUploads[3]),
+ "different artists remain separate");
+const deduped=audiusFreshTracks(crossUploads,new Set());
+assert.deepEqual(deduped.map(t=>t.id),["variantA1","variantC3","variantD4"]);
+let uniqueCount=audiusReadiness(crossUploads,new Set());
+assert.deepEqual([uniqueCount.total,uniqueCount.used,uniqueCount.remaining],[3,0,3]);
+const sameSongHistory=emptyRotation();
+noteAudiusPlayed(sameSongHistory,"GME2AB",crossUploads[0]);
+const fingerprints=playedKeys(sameSongHistory,"audiusFingerprints");
+assert.equal(fingerprints.size,1);
+assert.match([...fingerprints][0],/^[a-f0-9]{16}$/);
+assert.equal(JSON.stringify(sameSongHistory).includes("Halo"),false,
+ "the local history may contain song fingerprints but no song names");
+const candidates=audiusFreshTracks(crossUploads,new Set(),fingerprints);
+assert.deepEqual(candidates.map(t=>t.id),["variantC3","variantD4"]);
+uniqueCount=audiusReadiness(crossUploads,new Set(),120,fingerprints);
+assert.deepEqual([uniqueCount.total,uniqueCount.used,uniqueCount.remaining,uniqueCount.shortfall],
+ [3,1,2,118],"re-upload from a past game is not fresh");
+const legacyIdOnly=audiusReadiness(crossUploads,new Set(["variantB2"]));
+assert.equal(legacyIdOnly.remaining,2,"old ID-only history also blocks the matching artist/title group");
+const roundTripped=readRotation(JSON.stringify(sameSongHistory));
+assert.equal(playedKeys(roundTripped,"audiusFingerprints").size,1);
+openGame(roundTripped,"GME2AC");
+openGame(roundTripped,"GME2AD");
+openGame(roundTripped,"GME2AE");
+assert.equal(playedKeys(roundTripped,"audiusFingerprints").size,0,
+ "fingerprints rotate out with the oldest of three games");
+assert.throws(()=>notePlayed(roundTripped,"GME2AE","audiusFingerprints","Beyonce - Halo"),/Invalid song identifier/);
 const restored=readRotation(JSON.stringify(history));
 assert.equal(playedKeys(restored,"audius").size,120,"Audius history must persist after reload");
 openGame(restored,"GME2AD");
@@ -49,4 +89,4 @@ assert.throws(()=>notePlayed(history,"GME2AC","audius","../attack"),/Invalid son
 console.log("THREE_GAME_ROTATION_PASS",JSON.stringify({
  source:"Audius HTTPS",games:3,playedWithoutRepeating:selected.length,
  capacityGoal:THREE_GAME_TARGET,remaining:capacity.remaining,
- rotationPersists:true,legacyHistoryCompatible:true}));
+ rotationPersists:true,legacyHistoryCompatible:true,uploadIdentityDedup:true}));
