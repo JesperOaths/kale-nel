@@ -26,6 +26,8 @@ export function readRotation(text){
    Array.isArray(g?.local)&&Array.isArray(g?.catalog))
    .map(g=>({code:g.code,local:g.local.filter(x=>typeof x==="string"&&/^[a-f0-9]{16}$/.test(x)).slice(-10000),
     audius:(Array.isArray(g.audius)?g.audius:[]).filter(x=>typeof x==="string"&&/^[A-Za-z0-9_-]{3,32}$/.test(x)).slice(-10000),
+    audiusFingerprints:(Array.isArray(g.audiusFingerprints)?g.audiusFingerprints:[])
+     .filter(x=>typeof x==="string"&&/^[a-f0-9]{16}$/.test(x)).slice(-10000),
     catalog:g.catalog.filter(x=>typeof x==="string"&&/^[A-Za-z0-9_-]{11}$/.test(x)).slice(-10000)}));
   return {version:1,games:games.slice(-3)};
  }catch{return emptyRotation()}
@@ -34,20 +36,21 @@ export function openGame(history,roomCode){
  if(!validCode(roomCode))throw Error("Invalid room code for rotation");
  const games=history.games.filter(g=>g.code!==roomCode);
  const old=history.games.find(g=>g.code===roomCode);
- games.push(old||{code:roomCode,local:[],catalog:[],audius:[]});
+ games.push(old||{code:roomCode,local:[],catalog:[],audius:[],audiusFingerprints:[]});
  history.games=games.slice(-3);
  return history;
 }
 export function playedKeys(history,kind){
- if(!["local","catalog","audius"].includes(kind))throw Error("Invalid source");
+ if(!["local","catalog","audius","audiusFingerprints"].includes(kind))throw Error("Invalid source");
  return new Set((history.games||[]).flatMap(g=>g[kind]||[]));
 }
 export function notePlayed(history,roomCode,kind,key){
  openGame(history,roomCode);
- if(!["local","catalog","audius"].includes(kind))throw Error("Invalid source");
- const correct=kind==="local"?/^[a-f0-9]{16}$/:kind==="catalog"?/^[A-Za-z0-9_-]{11}$/:/^[A-Za-z0-9_-]{3,32}$/;
+ if(!["local","catalog","audius","audiusFingerprints"].includes(kind))throw Error("Invalid source");
+ const correct=kind==="local"||kind==="audiusFingerprints"?/^[a-f0-9]{16}$/:kind==="catalog"?/^[A-Za-z0-9_-]{11}$/:/^[A-Za-z0-9_-]{3,32}$/;
  if(!correct.test(key))throw Error("Invalid song identifier");
- const current=history.games[history.games.length-1][kind];
+ const game=history.games[history.games.length-1];
+ const current=game[kind]||(game[kind]=[]);
  if(!current.includes(key))current.push(key);
  return history;
 }
@@ -75,13 +78,59 @@ export function catalogReadiness(available,used,threshold=THREE_GAME_TARGET){
   expectedGames:Math.floor(remaining/TYPICAL_SONGS_PER_GAME)};
 }
 
-/** Counts only already-heard IDs that intersect this exact filtered Audius pool. */
-export function audiusReadiness(tracks,played,threshold=THREE_GAME_TARGET){
- const available=new Set((tracks||[]).map(t=>typeof t==="string"?t:t?.id)
-  .filter(id=>typeof id==="string"&&/^[A-Za-z0-9_-]{3,32}$/.test(id)));
- const recent=played instanceof Set?played:new Set(played||[]);
- const used=[...available].filter(id=>recent.has(id)).length;
- const total=available.size,remaining=total-used;
+/**
+ * A song identity is its normalized artist/title fingerprint, rather than a
+ * provider upload ID. The ID remains a fallback for legacy metadata-less lists.
+ * Different remix/live/version titles remain distinct.
+ */
+export function audiusIdentity(track){
+ if(typeof track==="string")return /^[A-Za-z0-9_-]{3,32}$/.test(track)?"id:"+track:null;
+ if(!track||typeof track.id!=="string"||!/^[A-Za-z0-9_-]{3,32}$/.test(track.id))
+  return null;
+ return typeof track.artist==="string"&&track.artist.trim()&&
+  typeof track.title==="string"&&track.title.trim()
+  ?"song:"+songFingerprint(track):"id:"+track.id;
+}
+function audiusGroups(tracks){
+ const groups=new Map();
+ for(const track of tracks||[]){
+  const identity=audiusIdentity(track);
+  if(!identity)continue;
+  const id=typeof track==="string"?track:track.id;
+  if(!groups.has(identity))groups.set(identity,{identity,ids:new Set(),tracks:[]});
+  const group=groups.get(identity);
+  if(!group.ids.has(id)){group.ids.add(id);group.tracks.push(track)}
+ }
+ return [...groups.values()];
+}
+function recentlyPlayed(group,ids,signatures){
+ return [...group.ids].some(id=>ids.has(id))||
+  (group.identity.startsWith("song:")&&signatures.has(group.identity.slice(5)));
+}
+/** Choose one representative of each fresh composition, avoiding re-uploads. */
+export function audiusFreshTracks(tracks,playedIds,playedFingerprints=new Set()){
+ const ids=playedIds instanceof Set?playedIds:new Set(playedIds||[]);
+ const signatures=playedFingerprints instanceof Set?playedFingerprints:new Set(playedFingerprints||[]);
+ return audiusGroups(tracks).filter(group=>!recentlyPlayed(group,ids,signatures))
+  .map(group=>group.tracks[0]);
+}
+/** Remember provider ID plus a privacy-preserving artist/title fingerprint. */
+export function noteAudiusPlayed(history,roomCode,track){
+ const id=typeof track==="string"?track:track?.id;
+ const identity=audiusIdentity(track);
+ if(!identity)throw Error("Invalid Audius song");
+ notePlayed(history,roomCode,"audius",id);
+ if(identity.startsWith("song:"))
+  notePlayed(history,roomCode,"audiusFingerprints",identity.slice(5));
+ return history;
+}
+/** Counts distinct compositions, not the number of Audius re-uploads. */
+export function audiusReadiness(tracks,played,threshold=THREE_GAME_TARGET,playedFingerprints=new Set()){
+ const ids=played instanceof Set?played:new Set(played||[]);
+ const signatures=playedFingerprints instanceof Set?playedFingerprints:new Set(playedFingerprints||[]);
+ const groups=audiusGroups(tracks);
+ const used=groups.filter(group=>recentlyPlayed(group,ids,signatures)).length;
+ const total=groups.length,remaining=total-used;
  const goal=Number.isInteger(threshold)&&threshold>0?threshold:THREE_GAME_TARGET;
  return {total,used,remaining,goal,ready:remaining>=goal,
   shortfall:Math.max(0,goal-remaining),
