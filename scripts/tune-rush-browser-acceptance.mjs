@@ -21,7 +21,7 @@ function makeWav(freq=440,seconds=38){
  for(let i=0;i<samples;i++)b.writeInt16LE(Math.round(Math.sin(i*2*Math.PI*freq/rate)*4500),44+i*2);
  return b;
 }
-const ids=["abc12x","abc13x","abc14x"];
+const ids=["abc12x","abc13x","abc14x","abc15x"];
 let metadataRequests=0,streamRequests=0;
 try{
  const host=await pad.newPage(),guest=await phone.newPage();
@@ -39,8 +39,9 @@ try{
   metadataRequests++;
   await route.fulfill({status:200,contentType:"application/json",
    headers:{"access-control-allow-origin":"*"},
-   body:JSON.stringify({data:ids.map((id,i)=>({id,title:"Test Track "+i,
-    user:{name:"Test Artist "+i},genre:"Pop",duration:38,
+   body:JSON.stringify({data:ids.map((id,i)=>({id,
+    title:"Test Track "+(i===3?0:i),
+    user:{name:"Test Artist "+(i===3?0:i)},genre:"Pop",duration:38,
     release_date:"2025-03-14T00:00:00Z",is_streamable:true,is_unlisted:false}))})});
  });
  await Promise.all([
@@ -135,8 +136,8 @@ try{
  assert.equal(await host.locator("#decade-options input:checked").count(),0,"all eras shortcut removes decade restrictions");
  await host.waitForFunction(()=>!room?.decades?.length,null,{timeout:15000});
  await host.locator("#audius-check").click();
- await host.waitForFunction(()=>audiusPool.length===3&&!audiusChecking,null,{timeout:20000});
- assert.match(await host.locator("#audius-availability").innerText(),/3 distinct streamable tracks/);
+ await host.waitForFunction(()=>audiusPool.length===4&&!audiusChecking,null,{timeout:20000});
+ assert.match(await host.locator("#audius-availability").innerText(),/3 distinct song titles/);
  assert.equal(await host.locator("#audius-scan-progress").isVisible(),false,"scan meter hides after completion");
  assert.equal(await host.locator("#audius-scan-progress [role=progressbar]").getAttribute("aria-valuenow"),"100",
   "full Audius scans reach 100 percent");
@@ -145,7 +146,8 @@ try{
  // The host sees only real Audius catalog coverage, never invented availability.
  assert.equal(await host.locator("#soundtrack-reserve").isVisible(),true);
  assert.equal(await guest.locator("#soundtrack-reserve").isVisible(),false);
- assert.equal(await host.locator("#reserve-total").innerText(),"3");
+ assert.equal(await host.locator("#reserve-total").innerText(),"3",
+  "four provider upload IDs include one duplicate song and must yield three distinct titles");
  assert.equal(await host.locator("#reserve-used").innerText(),"0");
  assert.equal(await host.locator("#reserve-free").innerText(),"3");
  assert.equal(await host.locator("#reserve-games").innerText(),"0 / 3");
@@ -225,6 +227,10 @@ try{
  const second=await host.evaluate(()=>({source:room.audio.source,ids:rotationHistory?.games?.at(-1)?.audius||[]}));
  assert.notEqual(second.source,first.source,"no-repeat selection must avoid previous track");
  assert.ok(second.ids.length>=2,"playing history must persist Audius IDs");
+ const namedHistory=await host.evaluate(()=>rotationHistory.games.at(-1).audiusFingerprints);
+ assert.equal(namedHistory.length,2,"accepted songs persist two anonymous composition signatures");
+ assert.equal(new Set(namedHistory).size,2,"fresh tracks must have distinct artist/title identities");
+ assert.ok(namedHistory.every(value=>/^[a-f0-9]{16}$/.test(value)));
  assert.match(await host.locator("#live-reserve").innerText(),/1 fresh tracks left/);
  assert.equal(await host.locator("#reserve-used").innerText(),"2");
  assert.equal(await host.locator("#reserve-free").innerText(),"1");
@@ -298,6 +304,6 @@ try{
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
   nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",networkRecovery:true,staleLeaveBlocked:true,noRepeat:true,mobileOverflow:false,
   lostStartAcknowledgment:"reconciled",doubleStartWrites:startWrites,doubleNextWrites:nextWrites,
-  hostMixer:"65% persisted, speaker test respects mute",soundtrackReserve:"3 → 2 → 1 fresh",
+  hostMixer:"65% persisted, speaker test respects mute",soundtrackReserve:"4 uploads -> 3 unique songs -> 2 -> 1 fresh",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
