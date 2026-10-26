@@ -578,3 +578,15 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 #audius-scan-fill{display:block;height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,#6ce2c1,#f7ca81);transition:width .22s ease}
 #audius-scan-label{font-size:11px;color:#9cddcc;font-weight:700;letter-spacing:.025em;line-height:1.5}
 @media(prefers-reduced-motion:reduce){#audius-scan-fill{transition:none}}
+
+
+/* In-room audio diagnostics: reassuring, compact and touch accessible. */
+.speaker-check-line{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:16px 0 4px;border-top:1px solid #8ddbc333;padding-top:14px}
+.speaker-check-line span{font-size:11px;color:#b8dbd5;line-height:1.5;flex:1;min-width:190px}
+.speaker-check-button,.host-mode .speaker-check-button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;min-width:130px;padding:10px 14px;background:#214453;color:#c6ffe8;border:1px solid #8de7c574;border-radius:12px;box-shadow:0 4px 14px #0003;font-size:12px;font-weight:800;cursor:pointer}
+.speaker-check-button:hover{border-color:#bbffec;background:#2d5966}
+.speaker-check-button:focus-visible{outline:3px solid #f8d69e;outline-offset:3px}
+.speaker-check-button:disabled{opacity:.6;cursor:progress}
+.audio-device-tip{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0 0;border-top:1px solid #ffffff2b;padding:14px 2px 0}
+.audio-device-tip>span{font-size:11px;color:#aed0d8;line-height:1.5}
+@media(max-width:530px){.audio-device-tip .speaker-check-button{width:100%}.speaker-check-line .speaker-check-button{width:100%}}

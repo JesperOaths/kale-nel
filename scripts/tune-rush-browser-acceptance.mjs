@@ -63,6 +63,15 @@ try{
  await host.waitForFunction(()=>room?.players?.length>=1,null,{timeout:17000});
  assert.ok(await host.locator(".stream-hero").isVisible());
  assert.equal(await guest.locator(".stream-hero").isVisible(),false);
+ // Host-only soundcheck uses AudioContext output (not Audius) and leaves
+ // the current room, score and media source untouched.
+ assert.equal(await guest.locator("[data-speaker-test]:visible").count(),0,"speaker controls are hidden from players");
+ const beforeCheck=await host.evaluate(()=>({phase:room.phase,round:room.round,src:playerAudio.getAttribute("src")}));
+ await host.locator(".speaker-check-line [data-speaker-test]").click();
+ await host.waitForFunction(()=>document.getElementById("speaker-check-status")?.textContent.includes("Test tone sent"),
+  null,{timeout:6500});
+ assert.deepEqual(await host.evaluate(()=>({phase:room.phase,round:room.round,src:playerAudio.getAttribute("src")})),
+  beforeCheck,"soundcheck must not alter the room or Audius stream");
  assert.match(await host.locator("#lobby-launch-status").innerText(),/1 PLAYER READY/);
  // A soundtrack preset changes only the host's checkbox choices and saves to the room.
  await host.locator('[data-audius-preset="party"]').click();
@@ -145,6 +154,6 @@ try{
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
-  nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",noRepeat:true,mobileOverflow:false,
+  nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",noRepeat:true,mobileOverflow:false,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
