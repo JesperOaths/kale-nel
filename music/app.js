@@ -931,6 +931,40 @@ function renderScores(target){
   bar.append(progress);row.append(name,score,bar);root.append(row);
  });
 }
+// Display the authoritative backend's absolute answer deadline. This clock
+// never drives game transitions or rejects a response: the server alone does.
+const ANSWER_LIMIT_SECONDS=25;
+function answerClockSnapshot(state,now=Date.now()){
+ if(!state||state.phase!=="answering"||!state.answerExpiresAt)return null;
+ const expires=Date.parse(state.answerExpiresAt);
+ if(!Number.isFinite(expires))return null;
+ const ms=Math.max(0,expires-now),seconds=Math.ceil(ms/1000);
+ const remaining=Math.min(ANSWER_LIMIT_SECONDS,Math.max(0,ms/1000));
+ return {seconds,remaining,expires,urgent:seconds<=5,warning:seconds<=10,expired:ms===0};
+}
+function updateAnswerClock(now=Date.now()){
+ if(!room||isHost()||room.phase!=="answering"||room.lockedPlayer!==room.me)return;
+ const meter=$("answer-clock-meter"),fill=$("answer-clock-fill"),panel=$("answer-clock");
+ const clock=answerClockSnapshot(room,now);
+ if(!clock){
+  setText("answer-countdown","—");
+  setText("answer-clock-help","Waiting for the game server's deadline.");
+  meter.setAttribute("aria-valuenow","0");
+  meter.setAttribute("aria-valuetext","Deadline unavailable");
+  fill.style.width="0%";
+  panel.dataset.timing="unknown";
+  return;
+ }
+ setText("answer-countdown",clock.expired?"0s":clock.seconds+"s");
+ meter.setAttribute("aria-valuenow",String(Math.ceil(clock.remaining)));
+ meter.setAttribute("aria-valuetext",clock.expired?"Deadline reached":clock.seconds+" seconds remaining");
+ fill.style.width=(clock.remaining/ANSWER_LIMIT_SECONDS*100)+"%";
+ panel.dataset.timing=clock.expired?"expired":clock.urgent?"urgent":clock.warning?"warning":"normal";
+ setText("answer-clock-help",clock.expired?"Time may be up. Waiting for server confirmation…":
+  clock.urgent?"Last few seconds — submit your answer now!":
+  clock.warning?"Under 10 seconds left — finish your guess!":
+  "Your answer deadline is set by the game server.");
+}
 function render(){
  if(!room){show("welcome",true);show("room",false);$("room").classList.remove("host-mode");return;}
  show("welcome",false);show("room",true);
@@ -1039,8 +1073,7 @@ function render(){
     setText("answer-mode-text",room.stealTurn?"+0.5 for each correct field, −1 for each wrong field. Complete both unknown fields. Your score cannot go below zero.":"Earn +0.5 for each correct field or lose 0.5 for each wrong field. Leave unknown fields blank. Minor typos are accepted.");
     setText("song-guess-label",room.stealTurn?"Song title (+0.5 / −1)":"Song title (+0.5 / −0.5)");
     setText("artist-guess-label",room.stealTurn?"Artist (+0.5 / −1)":"Artist (+0.5 / −0.5)");
-    const left=Math.max(0,Math.ceil((new Date(room.answerExpiresAt).getTime()-Date.now())/1000));
-    setText("answer-countdown",left+"s to answer");
+    updateAnswerClock();
     $("song-guess").required=room.stealTurn&&!room.titleDone;
     $("artist-guess").required=room.stealTurn&&!room.artistDone;
    }
@@ -1491,3 +1524,6 @@ try{
 }catch{}
 render();
 setInterval(()=>{if(access&&!document.hidden)refresh()},550);
+// No additional network polling; only repaint the deadline already provided
+// by authenticated state. Keep this quiet while the tab is in the background.
+setInterval(()=>{if(access&&!document.hidden)updateAnswerClock()},250);

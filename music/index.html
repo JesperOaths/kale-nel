@@ -8,10 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026newparty">
+<link rel="stylesheet" href="./style.css?v=20261026clock">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261026newparty" defer></script>
+<script src="./app.js?v=20261026clock" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -167,7 +167,11 @@
      <div id="player-controls" hidden>
      <button id="buzz" class="buzzer" type="button">BUZZ!<small>FIRST PRESS WINS</small></button>
      <button id="steal" class="steal-button" type="button" hidden>⚡ STEAL THE ANSWER <small>+0.5 per correct · −1 per wrong</small></button>
-     <div id="answer-overlay" class="answer-overlay" hidden><form id="answer-form" class="answer-form" role="dialog" aria-modal="true" aria-labelledby="answer-title"><div class="kicker" id="answer-kicker">YOUR TURN</div><h2 id="answer-title">Name that tune</h2><p id="answer-mode-text" class="answer-mode-text">Enter the song title and artist separately. Small typos are accepted.</p><div id="answer-countdown" class="countdown" aria-live="off"></div><label id="song-guess-label" for="song-guess">Song title (+0.5 / −0.5)</label><input id="song-guess" maxlength="100" autocomplete="off" placeholder="Enter title">
+     <div id="answer-overlay" class="answer-overlay" hidden><form id="answer-form" class="answer-form" role="dialog" aria-modal="true" aria-labelledby="answer-title"><div class="kicker" id="answer-kicker">YOUR TURN</div><h2 id="answer-title">Name that tune</h2><p id="answer-mode-text" class="answer-mode-text">Enter the song title and artist separately. Small typos are accepted.</p><div id="answer-clock" class="answer-clock" role="group" aria-label="Time remaining to submit your answer">
+       <div class="answer-clock-top"><span class="answer-clock-caption">TIME REMAINING</span><strong id="answer-countdown" class="countdown" aria-live="off">25s</strong></div>
+       <div id="answer-clock-meter" class="answer-clock-track" role="progressbar" aria-label="Estimated time remaining, server deadline" aria-valuemin="0" aria-valuemax="25" aria-valuenow="25" aria-valuetext="25 seconds left"><span id="answer-clock-fill"></span></div>
+       <p id="answer-clock-help" class="answer-clock-help">The server decides when answers close.</p>
+      </div><label id="song-guess-label" for="song-guess">Song title (+0.5 / −0.5)</label><input id="song-guess" maxlength="100" autocomplete="off" placeholder="Enter title">
       <label id="artist-guess-label" for="artist-guess">Artist (+0.5 / −0.5)</label><input id="artist-guess" maxlength="100" autocomplete="off" placeholder="Enter artist">
       <div class="button-row"><button type="submit" class="primary">Submit answer</button><button id="pass" type="button" class="outline">Pass</button></div>
      </form></div>

@@ -802,3 +802,27 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
  max-width:530px;margin:10px auto}
 @media(max-width:520px){.finish-actions{flex-direction:column}
  .finish-actions button{width:min(100%,360px)}}
+
+
+/* Player phone answer countdown: server-authoritative deadline, no client scoring. */
+.answer-clock{display:grid;gap:7px;margin:18px 0 8px;padding:14px 16px;
+ border:1px solid #70dec47b;border-radius:15px;background:linear-gradient(125deg,#1e504d77,#142d428e);
+ transition:border-color .2s,background .2s}
+.answer-clock-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.answer-clock-caption{font-size:11px;letter-spacing:.11em;font-weight:850;color:#c8e9e3}
+.answer-form .answer-clock .countdown{font-size:29px;line-height:1;
+ font-weight:950;letter-spacing:-.04em;color:#b9fce1;font-variant-numeric:tabular-nums}
+.answer-clock-track{height:12px;overflow:hidden;border:1px solid #b7e6d548;
+ background:#091923;border-radius:99px}
+.answer-clock-track span{display:block;height:100%;width:100%;border-radius:99px;
+ background:linear-gradient(90deg,#50d7a9,#b1f8d8);transition:width .23s linear}
+.answer-clock-help{margin:0;font-size:11px;line-height:1.5;color:#b8d4d1}
+.answer-clock[data-timing=warning]{border-color:#f0c277a8;background:#77512a36}
+.answer-clock[data-timing=warning] .countdown{color:#ffe0a0}
+.answer-clock[data-timing=warning] .answer-clock-track span{background:linear-gradient(90deg,#dd9451,#ffce75)}
+.answer-clock[data-timing=urgent],.answer-clock[data-timing=expired]{border-color:#f39c8ebc;background:#773b3538}
+.answer-clock[data-timing=urgent] .countdown,.answer-clock[data-timing=expired] .countdown{color:#ffc0ab}
+.answer-clock[data-timing=urgent] .answer-clock-track span,
+.answer-clock[data-timing=expired] .answer-clock-track span{background:#f28f81}
+@media(prefers-reduced-motion:reduce){.answer-clock,.answer-clock-track span{transition:none}}
+@media(max-width:440px){.answer-clock{padding:12px}.answer-form .answer-clock .countdown{font-size:27px}}

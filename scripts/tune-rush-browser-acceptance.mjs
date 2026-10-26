@@ -350,6 +350,42 @@ try{
  await guest2.waitForFunction(()=>room?.phase==="answering",null,{timeout:12000});
  assert.equal(await guest2.locator("#answer-overlay").isVisible(),false,
   "second phone must not be able to answer for the first player's buzzer");
+ assert.equal(await guest.locator("#answer-clock").isVisible(),true,
+  "claiming the buzzer must display the phone countdown");
+ assert.equal(await guest2.locator("#answer-clock").isVisible(),false,
+  "other players cannot see the answer dialog countdown");
+ const phoneClock=await guest.evaluate(()=>{
+  const expires=Date.parse(room.answerExpiresAt),round=room.round,phase=room.phase;
+  const panel=document.getElementById("answer-clock");
+  const meter=document.getElementById("answer-clock-meter");
+  const text=document.getElementById("answer-countdown");
+  const clock25=answerClockSnapshot(room,expires-25000);
+  updateAnswerClock(expires-9100);
+  const warn={display:text.textContent,mode:panel.dataset.timing,
+   value:meter.getAttribute("aria-valuenow"),width:document.getElementById("answer-clock-fill").style.width};
+  updateAnswerClock(expires-3900);
+  const urgent={display:text.textContent,mode:panel.dataset.timing};
+  updateAnswerClock(expires+400);
+  const ended={display:text.textContent,mode:panel.dataset.timing,
+   help:document.getElementById("answer-clock-help").textContent,
+   phaseStillOpen:room.phase==="answering"};
+  updateAnswerClock(Date.now());
+  return {clock25,warn,urgent,ended,sameRound:room.round===round&&room.phase===phase,
+   submitStillEnabled:!document.querySelector("#answer-form button[type=submit]").disabled};
+ });
+ assert.equal(phoneClock.clock25.seconds,25);
+ assert.equal(phoneClock.warn.display,"10s");
+ assert.equal(phoneClock.warn.mode,"warning");
+ assert.equal(phoneClock.warn.value,"10");
+ assert.equal(phoneClock.urgent.display,"4s");
+ assert.equal(phoneClock.urgent.mode,"urgent");
+ assert.equal(phoneClock.ended.display,"0s");
+ assert.equal(phoneClock.ended.mode,"expired");
+ assert.match(phoneClock.ended.help,/Waiting for server confirmation/);
+ assert.equal(phoneClock.ended.phaseStillOpen,true,
+  "client countdown reaching zero must not declare a player forfeited");
+ assert.equal(phoneClock.sameRound,true);
+ assert.equal(phoneClock.submitStillEnabled,true);
  await guest.locator("#song-guess").fill("completely incorrect answer");
  await guest.locator("#artist-guess").fill("not that performer");
  await guest.locator("#answer-form button[type=submit]").click();
@@ -503,7 +539,8 @@ try{
    players:[{id:"p1",name:"Demo Winner",score:20},
     {id:"p2",name:"Second Place",score:11.5}],
    winner:"p1",genres:["rock","pop"],decades:["2010"]};
-  navigator.clipboard.writeText=async value=>window.__copiedFinalScores=value;
+  Object.defineProperty(navigator,"clipboard",{configurable:true,
+   value:{writeText:async value=>{window.__copiedFinalScores=value;}}});
   render();
  });
  assert.equal(await host.locator("#finish-new-party").isVisible(),true);
@@ -551,5 +588,6 @@ try{
   noSpoilerGuard:"previewed song and matching reuploads blocked from quiz",
   clueRescue:"server-started silent clue paused, same step replayed without scores or song change",
   newParty:"winner UI preview -> authenticated fresh room, same filters, new QR and zero participants",scoreSharing:true,
+  answerCountdown:"25 seconds, 10-second warning, 5-second urgency, server-only expiry",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
