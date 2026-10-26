@@ -20,6 +20,8 @@ The catalog emphasizes independent artists, remixes and newer releases. **Audius
 
 Streaming is initiated by a host button, never background-autoplayed. A clue does not start counting until the browser's playback clock actually advances after a seek; stalls can be retried. Guests receive no secret title, artist, stream URL or cue position before reveal.
 
+**Host page refresh recovery:** the current stream's Audius ID, transient server audio index, room/round and host-only song metadata are stored in the host tab's `sessionStorage` after the server accepts Start/Next, and expire after eight hours. Refreshing **that same tab** reopens the same provider stream after checking the authenticated room, round and audio-source index. Playback is never restarted without a user click. If the tab is gone, private session storage is unavailable, or the stream cannot load, the host can skip/reveal and advance. Guests never receive or read this checkpoint. A filter change during discovery invalidates earlier results rather than displaying or selecting songs from a stale mix.
+
 ### Multiplayer backend and compatibility
 
 The existing Supabase `musicquiz_v1` RPC remains responsible for capabilities, rooms, buzzer locking, scoring, steal windows, replay, and rounds. Its validated `local` mode transports the **host-only Audius track metadata and transient index** for compatibility. This is a database protocol detail, not an exposed local-file playback path. Do not remove or rename the RPC mode without a separately tested database migration.
