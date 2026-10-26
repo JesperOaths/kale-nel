@@ -642,8 +642,10 @@ async function call(action,extra={},quiet=false){
  }
  finally{setLoading(false)}
 }
-async function refresh(){
- if(!access||pollBusy||loading||Date.now()<connectionRetryAt)return;
+async function refresh(force=false){
+ // Polls during slow audio preparation could otherwise see the previous
+ // round and restore its old stream over the pending Audius candidate.
+ if(!access||pollBusy||loading||(!force&&roundTransitionBusy)||Date.now()<connectionRetryAt)return;
  pollBusy=true;
  const version=mutationVersion,session=access;
  try{
@@ -795,7 +797,7 @@ async function advanceRound(action){
     // rejected mutation from a committed one.
     message("Checking whether the song was accepted by the game server…");
     connectionRetryAt=0;
-    await refresh();
+    await refresh(true);
    }else{
     if(action==="start"&&room.phase==="lobby"){
      clearAudiusStream();audiusActive=false;audiusTrack=null;
