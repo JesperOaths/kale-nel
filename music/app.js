@@ -715,8 +715,8 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
- setLoading(false);
  roundTransitionBusy=false;
+ setLoading(false);
  roundTransitionToken++;
  confirmedHostSource="";
  setConnectionHealthy();
