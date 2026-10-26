@@ -1497,7 +1497,7 @@ function partyRecapText(state=room){
 }
 // A client-only shareable image. The model contains only public final scores and
 // same-room songs the current tab already saw in a solved/finished server state.
-let posterPaintKey="",posterDownloadBusy=false;
+let posterPaintKey="",posterDownloadBusy=false,posterShareBusy=false;
 const safePosterText=value=>String(value??"").replace(/[\u0000-\u001f\u007f]+/g," ").trim().slice(0,120);
 function partyPosterModel(state=room){
  if(!state||state.phase!=="finished"||!state.code||state.code!==room?.code)return null;
@@ -1583,7 +1583,60 @@ function renderPartyPoster(force=false){
  posterPaintKey=key;
  return true;
 }
-function downloadPartyPoster(){
+// The Web Share API requires transient user activation. Encode the small,
+// locally rendered PNG synchronously in the actual click handler, then call
+// navigator.share without an intervening await (Canvas.toBlob/fetch would
+// lose the activation on some mobile browsers).
+function posterShareFile(){
+ const canvas=$("finish-poster-canvas");
+ if(typeof File!=="function"||typeof canvas?.toDataURL!=="function")return null;
+ const data=canvas.toDataURL("image/png"),prefix="data:image/png;base64,";
+ if(!data.startsWith(prefix))return null;
+ const binary=atob(data.slice(prefix.length)),bytes=new Uint8Array(binary.length);
+ for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+ return new File([bytes],"tune-rush-party-poster-"+new Date().toISOString().slice(0,10)+".png",
+  {type:"image/png"});
+}
+async function sharePartyPoster(){
+ const code=room?.code;
+ if(room?.phase!=="finished"||posterShareBusy||posterDownloadBusy)return;
+ if(!renderPartyPoster()){
+  setText("finish-poster-status","Poster unavailable on this browser.");
+  return;
+ }
+ let file;
+ try{file=posterShareFile()}catch{}
+ if(!file){
+  setText("finish-poster-status","PNG sharing is unavailable. Use Download poster PNG.");
+  return;
+ }
+ let supported=false;
+ try{supported=typeof navigator.share==="function"&&
+  typeof navigator.canShare==="function"&&navigator.canShare({files:[file]})}catch{}
+ if(!supported){
+  // No native share sheet (e.g. desktop Firefox): use the same tested
+  // download route, never send a link with room codes or credentials.
+  downloadPartyPoster(true);
+  return;
+ }
+ posterShareBusy=true;
+ $("finish-share-poster").disabled=true;
+ try{
+  await navigator.share({title:"Tune Rush · Final Encore",files:[file]});
+  if(room?.code===code&&room?.phase==="finished")
+   setText("finish-poster-status","Phone share sheet completed.");
+ }catch(e){
+  if(room?.code===code&&room?.phase==="finished")
+   setText("finish-poster-status",e?.name==="AbortError"?
+    "Sharing cancelled. Your poster is still ready to download.":
+    "Sharing was blocked. Use Download poster PNG instead.");
+ }finally{
+  posterShareBusy=false;
+  $("finish-share-poster").disabled=false;
+ }
+}
+
+function downloadPartyPoster(fromShareFallback=false){
  const code=room?.code;
  if(room?.phase!=="finished"||posterDownloadBusy)return;
  if(!renderPartyPoster()){setText("finish-poster-status","Poster unavailable on this browser.");return}
@@ -1614,7 +1667,9 @@ function downloadPartyPoster(){
     const savedUrl=url;
     setTimeout(()=>URL.revokeObjectURL(savedUrl),10000);
     url=null;
-    setText("finish-poster-status","Poster PNG requested. Check your Downloads folder.");
+    setText("finish-poster-status",fromShareFallback?
+    "Native sharing unavailable; poster download requested. Check Downloads.":
+    "Poster PNG requested. Check your Downloads folder.");
    }catch{
     if(url)URL.revokeObjectURL(url);
     setText("finish-poster-status","PNG download blocked; use Copy party recap.");
@@ -1840,7 +1895,8 @@ $("finish-new-party").addEventListener("click",newParty);
 $("finish-copy-results").addEventListener("click",copyFinalScores);
 $("finish-copy-recap").addEventListener("click",copyPartyRecap);
 $("finish-download-recap").addEventListener("click",downloadPartyRecap);
-$("finish-download-poster").addEventListener("click",downloadPartyPoster);
+$("finish-download-poster").addEventListener("click",()=>downloadPartyPoster());
+$("finish-share-poster").addEventListener("click",sharePartyPoster);
 $("setlist-copy").addEventListener("click",copyPartySetlist);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
