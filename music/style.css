@@ -756,3 +756,12 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 .audition-note{font-size:10px;color:#aac8d1}
 @media(max-width:520px){.audius-audition{padding:13px}.audition-intro{align-items:flex-start}
  .audition-buttons button{flex:1 1 40%}}
+
+
+/* Audition fairness receipt: shows the effect of playing a sample. */
+.audition-fairness{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+ padding:10px 12px;border-radius:12px;background:#2655407a;
+ border:1px solid #98ecb880;font-size:11px;line-height:1.5;color:#c5fce1}
+.audition-fairness strong{letter-spacing:.09em;color:#f1ffe8;white-space:nowrap}
+.audition-fairness span:last-child{color:#bee6df;font-variant-numeric:tabular-nums}
+@media(max-width:520px){.audition-fairness{gap:6px}}
