@@ -450,6 +450,47 @@ async function fireTimer(f,ms){
  assert.equal(f.run("scoreChangeEvents(a,{...a,phase:'holding'}).length"),0);
  assert.equal(f.run("scoreChangeEvents(a,{...a,players:[{id:'p1',name:'A',score:0}]}).length"),0);
 }
+// A setlist may contain ONLY previously server-revealed songs in this room.
+// It persists a host/guest tab reload and cannot include a mystery from
+// a playing, answering or partially revealed phase.
+{
+ const f=fixture();
+ f.run('globalThis.sessionStorage={items:new Map(),getItem(k){return this.items.get(k)||null},'+
+  'setItem(k,v){this.items.set(k,v)},removeItem(k){this.items.delete(k)}};');
+ f.run('recordRevealedSong({...room,phase:"playing",title:"Hidden Mystery",artist:"Secret",step:2})');
+ f.run('recordRevealedSong({...room,phase:"answering",title:"Hidden Mystery",artist:"Secret",step:2,titleDone:true})');
+ f.run('recordRevealedSong({...room,phase:"holding",title:"Hidden Mystery",artist:"Secret",step:2,titleDone:true,artistDone:true})');
+ assert.equal(f.run("partySetlist.length"),0,"partial or active hints may not enter setlist");
+ f.run('recordRevealedSong({...room,phase:"solved",title:" First Song ",artist:" First Artist ",step:2})');
+ assert.equal(f.run("partySetlist.length"),1);
+ assert.equal(f.run("partySetlist[0].title"),"First Song");
+ assert.equal(f.run("partySetlist[0].artist"),"First Artist");
+ assert.equal(f.run("partySetlist[0].clues"),3);
+ f.run('recordRevealedSong({...room,phase:"solved",title:"Repeated",artist:"Ignored",step:4})');
+ assert.equal(f.run("partySetlist.length"),1,"repeated server polls cannot duplicate a revealed round");
+ f.run('recordRevealedSong({...room,phase:"paused",round:2,title:"Unrevealed",artist:"Private",step:0})');
+ assert.equal(f.run("partySetlist.length"),1);
+ f.run('recordRevealedSong({...room,phase:"finished",round:2,title:"Final Song",artist:"Last Artist",step:1})');
+ assert.equal(f.run("partySetlist.length"),2);
+ const copied=f.run("partySetlistText()");
+ assert.match(copied,/First Artist — First Song/);
+ assert.match(copied,/Last Artist — Final Song/);
+ assert.ok(!copied.includes("Hidden Mystery")&&!copied.includes("Unrevealed"));
+ assert.ok(!copied.includes("fixture-token"),"setlist export must not contain room credentials");
+ assert.ok(!copied.includes("ABCDEF"),"setlist export has no room capability or join code");
+ f.run('partySetlistCode="";partySetlist=[];ensurePartySetlist("ABCDEF")');
+ assert.equal(f.run("partySetlist.length"),2,"a same-tab reload must restore revealed songs");
+ assert.equal(f.run("partySetlist[0].round"),1);
+ f.run('recordRevealedSong({...room,phase:"solved",round:2,title:"Changed",artist:"Unknown",step:4})');
+ assert.equal(f.run("partySetlist.length"),2);
+ f.run('ensurePartySetlist("NEW123")');
+ assert.equal(f.run("partySetlist.length"),0,"another room cannot inherit revealed setlist");
+ f.run('reset()');
+ assert.equal(f.run("partySetlistCode"),"");
+ assert.equal(f.run("partySetlist.length"),0);
+ assert.equal(f.run("sessionStorage.getItem(SETLIST_SESSION_KEY)"),null,
+  "Leave must clear saved setlist from the browser tab");
+}
 // Leaving during a long track transition must unlock controls for the
 // next room, not leave the Start button stuck disabled.
 {
