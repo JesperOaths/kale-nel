@@ -8,10 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026recap">
+<link rel="stylesheet" href="./style.css?v=20261026highlights">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261026recap" defer></script>
+<script src="./app.js?v=20261026highlights" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -212,12 +212,22 @@
   <p id="setlist-copy-status" class="setlist-status" role="status" aria-live="polite"></p>
   <p class="setlist-privacy">Saved in this browser tab for the current room. Joining late may mean earlier songs are missing. No mystery-song previews or guesses are saved.</p>
  </section>
- <section id="finish" class="finish panel" hidden><div class="finish-confetti" aria-hidden="true">✦ ✳ ✧ ✦ ✳</div><div class="kicker">THE FINAL ENCORE</div><div class="finish-crown" aria-hidden="true">♛</div><h1>And the winner is…</h1><p id="winner-name" class="finish-winner"></p><p class="finish-caption">The room has spoken. One champion takes the stage.</p><div class="finish-score-heading">FINAL STANDINGS</div><div id="final-scores" class="finish-score-list"></div><div class="finish-actions">
+ <section id="finish" class="finish panel" hidden><div class="finish-confetti" aria-hidden="true">✦ ✳ ✧ ✦ ✳</div><div class="kicker">THE FINAL ENCORE</div><div class="finish-crown" aria-hidden="true">♛</div><h1>And the winner is…</h1><p id="winner-name" class="finish-winner"></p><p class="finish-caption">The room has spoken. One champion takes the stage.</p><section class="finish-highlights" aria-label="This tab's party highlights">
+   <div class="finish-highlights-heading">✦ YOUR NIGHT AT A GLANCE</div>
+   <div class="finish-highlights-grid">
+    <div class="finish-highlight"><strong id="finish-songs-remembered">0</strong><span>Saved songs</span></div>
+    <div class="finish-highlight"><strong id="finish-average-clues">—</strong><span>Average clues</span></div>
+    <div class="finish-highlight"><strong id="finish-fewest-clues">—</strong><span>Fewest clues</span></div>
+   </div>
+   <p class="finish-highlights-note">Calculated only from songs revealed to this tab; clues exclude zero-clue reveals. Not a complete party record.</p>
+  </section>
+  <div class="finish-score-heading">FINAL STANDINGS</div><div id="final-scores" class="finish-score-list"></div><div class="finish-actions">
   <button id="finish-new-party" type="button" class="primary finish-new-party" hidden>✦ Host a new party <span aria-hidden="true">↗</span></button>
   <button id="finish-copy-recap" type="button" class="outline finish-share-recap">♫ Copy party recap</button>
+  <button id="finish-download-recap" type="button" class="outline finish-download-recap">↓ Save recap as .txt</button>
   <button id="finish-copy-results" type="button" class="outline finish-share-results">Copy final scores</button>
  </div>
- <p id="finish-recap-status" class="finish-recap-status" role="status" aria-live="polite">Share the final scores together with songs revealed in this tab.</p>
+ <p id="finish-recap-status" class="finish-recap-status" role="status" aria-live="polite">Share or save the final scores together with songs revealed in this tab.</p>
  <p id="finish-rematch-status" class="finish-again" role="status" aria-live="polite">A new party gets a fresh room code. Players scan its new QR to join; scores start at zero.</p></section>
 </section>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
