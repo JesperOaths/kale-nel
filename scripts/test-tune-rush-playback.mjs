@@ -377,6 +377,7 @@ async function fireTimer(f,ms){
  assert.match(f.element("answer-receipt-song").textContent,/Accepted/);
  f.run('applyState({...room,round:2,phase:"paused"})');
  assert.equal(f.run("lastAnswerReceipt"),null,"a new song clears old feedback");
+ f.run("renderAnswerReceipt()"); // The VM replaces render() with a stub.
  assert.equal(f.element("answer-receipt").hidden,true);
 }
 // Negative and zero-clamped results must never claim a specific field was
