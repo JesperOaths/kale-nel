@@ -428,6 +428,47 @@ try{
   "the host never sees a guest's private answer receipt");
  assert.equal(await guest.evaluate(()=>room.players.find(p=>p.id===room.me).score),0);
  await host.waitForFunction(()=>room?.phase==="holding"||room?.phase==="paused",null,{timeout:12000});
+ // The backend just scored an incorrect answer at zero; no public score
+ // movement may be invented when a clamped score did not change.
+ assert.equal(await host.locator("#scoreboard-pulse").isVisible(),false);
+ await guest2.waitForFunction(()=>room?.phase==="holding"||room?.phase==="paused",null,{timeout:12000});
+ assert.equal(await guest2.locator("#scoreboard-pulse").isVisible(),false);
+ // Render a controlled scored snapshot locally in BOTH browser roles, without
+ // mutating the game database, to exercise ranking, ties and public deltas.
+ const inspectMomentum=async page=>page.evaluate(()=>{
+  const original=room;
+  try{
+   const base={...original,phase:"answering"};
+   const tied={...base,phase:"holding",players:base.players.map(p=>({...p,score:1.5}))};
+   observeScoreChanges(base,tied);room=tied;renderScores("scores");
+   const tieRanks=[...document.querySelectorAll("#scores .score-entry")]
+    .map(e=>e.dataset.rank);
+   const tieBadges=[...document.querySelectorAll("#scores .score-movement")]
+    .map(e=>e.textContent);
+   const rise=lastScorePulse;
+   observeScoreChanges(tied,tied);
+   const noDuplicate=rise===lastScorePulse;
+   const deducted={...tied,players:tied.players.map((p,i)=>({...p,score:i===0?1.5:0.5}))};
+   observeScoreChanges(tied,deducted);room=deducted;renderScores("scores");
+   return {tieRanks,tieBadges,noDuplicate,displayed:[...document.querySelectorAll("#scores .score-entry")]
+     .map(e=>({rank:e.dataset.rank,name:e.querySelector(".score-player")?.textContent,
+      score:e.querySelector("strong")?.textContent,change:e.querySelector(".score-movement")?.textContent})),
+     pulse:document.querySelector("#scoreboard-pulse").textContent};
+  }finally{room=original;lastScoreChanges.clear();lastScorePulse="";renderScores("scores")}
+ });
+ const hostMomentum=await inspectMomentum(host);
+ const guestMomentum=await inspectMomentum(guest2);
+ for(const view of [hostMomentum,guestMomentum]){
+  assert.deepEqual(view.tieRanks,["1","1"],"tied leaders share first place");
+  assert.deepEqual(view.tieBadges,["+1.5","+1.5"]);
+  assert.equal(view.noDuplicate,true,"unchanged polls do not replay a movement");
+  assert.deepEqual(view.displayed.map(x=>x.rank),["1","2"]);
+  assert.deepEqual(view.displayed.map(x=>x.score),["1.5","0.5"]);
+  assert.equal(view.displayed[1].change,"-1.0");
+  assert.match(view.pulse,/-1.0 points/);
+ }
+ assert.equal(await host.locator("#scoreboard-pulse").isVisible(),false,
+  "after synthetic validation the authoritative scoreboard is restored");
  if(await guest2.evaluate(()=>room?.phase==="holding")){
   await guest2.waitForFunction(()=>document.getElementById("buzzer-status-panel").dataset.state==="steal",
    null,{timeout:6000});
@@ -641,5 +682,6 @@ try{
   answerCountdown:"25 seconds, 10-second warning, 5-second urgency, server-only expiry",
   buzzerFeedback:"opt-in haptics, winner vs other claim, steal alerts without duplicate polling",
   answerReceipts:"private zero-clamped score receipt confirmed by backend; no secret answer leak",
+  publicScoreMomentum:"host and guest ranked ties, score deltas and no duplicate-poll score alerts",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
