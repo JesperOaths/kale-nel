@@ -629,6 +629,7 @@ try{
    winner:"p1",genres:["rock","pop"],decades:["2010"]};
   Object.defineProperty(navigator,"clipboard",{configurable:true,
    value:{writeText:async value=>{window.__copiedFinalScores=value;}}});
+  window.prompt=(_message,text)=>{window.__manualCopy=text;return text};
   render();
  });
  assert.equal(await host.locator("#finish-new-party").isVisible(),true);
@@ -637,10 +638,12 @@ try{
  await host.locator("#finish-copy-results").click();
  // Click dispatch does not await asynchronous Clipboard API callbacks.
  // Verify the actual copied value rather than racing the Promise.
- await host.waitForFunction(()=>typeof window.__copiedFinalScores==="string",null,{timeout:6000});
- assert.match(await host.evaluate(()=>window.__copiedFinalScores),/Winner: Demo Winner/);
- assert.match(await host.evaluate(()=>window.__copiedFinalScores),/Second Place — 11\.5 pts/);
- assert.ok(!String(await host.evaluate(()=>window.__copiedFinalScores)).includes("secret_hash"));
+ await host.waitForFunction(()=>typeof(window.__copiedFinalScores||window.__manualCopy)==="string",
+  null,{timeout:6000});
+ const copiedText=await host.evaluate(()=>window.__copiedFinalScores||window.__manualCopy);
+ assert.match(copiedText,/Winner: Demo Winner/);
+ assert.match(copiedText,/Second Place — 11\.5 pts/);
+ assert.ok(!copiedText.includes("secret_hash"));
  let createdNewParty=0,updatedNewParty=0;
  const trackNewParty=async route=>{
   const body=JSON.parse(route.request().postData()||"{}");
