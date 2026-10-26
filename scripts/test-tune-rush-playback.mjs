@@ -41,7 +41,7 @@ async function fireTimer(f,ms){
 {
  const f=fixture(),a=f.element("licensed-player");a.currentTime=0;
  const pending=f.run('playLocalHint({source:"local:20000001",cueMs:13000})');
- for(let i=0;i<8;i++)await Promise.resolve();
+ for(let i=0;i<60&&![...f.timers.values()].some(t=>t.ms===75);i++)await Promise.resolve();
  assert.ok([...f.timers.values()].some(t=>t.ms===75),"Buffer wait is required");
  a.currentTime=13.2;await fireTimer(f,75);await pending;
  assert.match(f.element("audius-playback-status").textContent,/Playing clue/);
