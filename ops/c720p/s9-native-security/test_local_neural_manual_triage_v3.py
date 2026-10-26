@@ -9,7 +9,7 @@ class FrontendV3(unittest.TestCase):
         self.js=(ROOT/'local-neural-manual-triage-v3.js').read_text()
         self.page=(ROOT/'security-people-v53.html').read_text()
     def test_current_script_is_cache_busted(self):
-        self.assertIn('local-neural-manual-triage-v4.js?v=neural-review-handoff-v1-20261026',self.page)
+        self.assertIn('local-neural-manual-triage-v5.js?v=neural-assigned-crop-sync-v5-20261026',self.page)
         self.assertNotIn('local-neural-manual-triage-v2.js?v=',self.page)
     def test_queue_counts_dynamic_and_correlated(self):
         for clause in ('doc.count+doc.assigned_s9_count!==52','doc.indexed_crop_count!==52',
