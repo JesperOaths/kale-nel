@@ -222,6 +222,7 @@ let roundTransitionBusy=false,roundTransitionToken=0;
 let confirmedHostSource="";
 let clipTimer=null,nextTimer=null,startedClip=false;
 let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
+let lastAnswerReceipt=null;
 let genresDirty=false,genresSaveTimer=null;
 let clipGeneration=0,mutationVersion=0;
 let failedClue="";
@@ -968,6 +969,8 @@ function applyState(s){
  if((oldPhase==="lobby"&&s.phase!=="lobby")||(oldRoomCode&&oldRoomCode!==s.code))
   stopAudition(true);
  room=s;
+ if(previous&&(previous.code!==s.code||previous.round!==s.round))
+  lastAnswerReceipt=null;
  notifyPlayerBuzzerTransition(previous,s);
  if(s.role==="host"){syncAuditionGuard(s.code);refreshAuditionGuardStatus()}
  if(s.firstAnswered||s.phase==="answering")failedClue="";
@@ -1034,6 +1037,49 @@ function updateAnswerClock(now=Date.now()){
   clock.urgent?"Last few seconds — submit your answer now!":
   clock.warning?"Under 10 seconds left — finish your guess!":
   "Your answer deadline is set by the game server.");
+}
+function buildAnswerReceipt(before,after,{song="",artist=""}={}){
+ if(!before||!after||before.role!=="player"||after.role!=="player"||
+    before.code!==after.code||before.round!==after.round||before.step!==after.step||
+    before.me!==after.me||!before.me)return null;
+ const prev=before.players?.find(p=>p.id===before.me);
+ const next=after.players?.find(p=>p.id===after.me);
+ const oldScore=Number(prev?.score),newScore=Number(next?.score);
+ if(!prev||!next||!Number.isFinite(oldScore)||!Number.isFinite(newScore))return null;
+ const delta=Math.round((newScore-oldScore)*10)/10;
+ const field=(submitted,wasDone,isDone)=>{
+  if(wasDone)return "Already identified";
+  if(!String(submitted||"").trim())return "Not submitted";
+  return isDone?"Accepted":"Not accepted";
+ };
+ return {
+  code:after.code,round:after.round,step:after.step,delta,
+  score:newScore,previousScore:oldScore,
+  title:field(song,before.titleDone,after.titleDone),
+  artist:field(artist,before.artistDone,after.artistDone),
+  // Don't infer the answer text from client input, or claim an unconfirmed
+  // "correct" answer based on score alone (scores are clamped at zero).
+  kind:delta>0?"positive":delta<0?"negative":"neutral",
+  headline:delta>0?"Points earned!":delta<0?"Points deducted":"Answer recorded",
+  points:(delta>0?"+":"")+delta.toFixed(1)+" pts",
+  note:delta===0?"No change to your score. Scores cannot fall below zero.":
+   "Your score: "+oldScore.toFixed(1)+" → "+newScore.toFixed(1)+
+   ". Verified by the game server."
+ };
+}
+function renderAnswerReceipt(){
+ const receipt=lastAnswerReceipt;
+ const visible=!!room&&!isHost()&&!!receipt&&
+  room.code===receipt.code&&room.round===receipt.round&&room.phase!=="lobby";
+ show("answer-receipt",visible);
+ if(!visible)return;
+ $("answer-receipt").dataset.outcome=receipt.kind;
+ setText("answer-receipt-icon",receipt.delta>0?"★":receipt.delta<0?"−":"✓");
+ setText("answer-receipt-title",receipt.headline);
+ setText("answer-receipt-points",receipt.points);
+ setText("answer-receipt-song","Song title: "+receipt.title);
+ setText("answer-receipt-artist","Artist: "+receipt.artist);
+ setText("answer-receipt-note",receipt.note);
 }
 function render(){
  if(!room){show("welcome",true);show("room",false);$("room").classList.remove("host-mode");return;}
@@ -1138,6 +1184,7 @@ function render(){
    show("steal",!iAmAnswering&&phase==="holding");
    show("answer-overlay",iAmAnswering);
    renderPlayerBuzzerFeedback();
+   renderAnswerReceipt();
    if(iAmAnswering){
     setText("answer-kicker",room.stealTurn?"⚡ STEAL CHALLENGE":"🎤 YOUR BUZZ WON");
     setText("answer-title",room.stealTurn?"Risk it for the steal":"Name that tune");
@@ -1242,6 +1289,7 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
+ lastAnswerReceipt=null;
  clueRescueBusy=false;clueRescueNotice="";
  stopAudition(true);clearAuditionGuard();refreshAuditionGuardStatus();
  cancelAudiusScan();
@@ -1393,13 +1441,19 @@ async function requestBuzz(){
 }
 async function submitGuess(e){
  e?.preventDefault();
- if(!room)return;
+ if(!room||isHost()||room.phase!=="answering"||room.lockedPlayer!==room.me)return;
+ const before=room;
  const song=$("song-guess").disabled?"":$("song-guess").value;
  const artist=$("artist-guess").disabled?"":$("artist-guess").value;
  try{
   lastBlockKey=room.round+":"+room.step;
-  await call("answer",{song,artist});
-  message("Answer recorded");
+  const result=await call("answer",{song,artist});
+  // Only a successful, same-round backend response can create a receipt.
+  // A timeout or ambiguous network failure must never invent a result.
+  if(!result?.state||room!==result.state)return;
+  lastAnswerReceipt=buildAnswerReceipt(before,result.state,{song,artist});
+  renderAnswerReceipt();
+  message(lastAnswerReceipt?"Your answer was scored":"Answer recorded by the server");
  }catch{}
 }
 function chosenFilters(){
