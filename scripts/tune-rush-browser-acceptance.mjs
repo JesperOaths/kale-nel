@@ -594,6 +594,9 @@ try{
  assert.equal(await host.locator("#finish-copy-results").isVisible(),true);
  assert.equal(await guest.locator("#finish-new-party:visible").count(),0);
  await host.locator("#finish-copy-results").click();
+ // Click dispatch does not await asynchronous Clipboard API callbacks.
+ // Verify the actual copied value rather than racing the Promise.
+ await host.waitForFunction(()=>typeof window.__copiedFinalScores==="string",null,{timeout:6000});
  assert.match(await host.evaluate(()=>window.__copiedFinalScores),/Winner: Demo Winner/);
  assert.match(await host.evaluate(()=>window.__copiedFinalScores),/Second Place — 11\.5 pts/);
  assert.ok(!String(await host.evaluate(()=>window.__copiedFinalScores)).includes("secret_hash"));
