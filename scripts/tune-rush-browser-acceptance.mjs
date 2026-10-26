@@ -142,6 +142,17 @@ try{
   "full Audius scans reach 100 percent");
  assert.match(await host.locator("#audius-scan-label").innerText(),/9 of 9 checks/);
  assert.equal(await host.locator("#audius-check").isDisabled(),false,"Check tracks re-enables after scan");
+ // The host sees only real Audius catalog coverage, never invented availability.
+ assert.equal(await host.locator("#soundtrack-reserve").isVisible(),true);
+ assert.equal(await guest.locator("#soundtrack-reserve").isVisible(),false);
+ assert.equal(await host.locator("#reserve-total").innerText(),"3");
+ assert.equal(await host.locator("#reserve-used").innerText(),"0");
+ assert.equal(await host.locator("#reserve-free").innerText(),"3");
+ assert.equal(await host.locator("#reserve-games").innerText(),"0 / 3");
+ assert.equal(await host.locator("#reserve-target").innerText(),"3 / 120");
+ assert.match(await host.locator("#reserve-status").innerText(),/Need 117 more/);
+ assert.equal(await host.locator(".reserve-gauge").getAttribute("aria-valuenow"),"3");
+ assert.equal(await host.locator("#reserve-expand").isVisible(),true);
  const mobile=await guest.evaluate(()=>({vw:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
  assert.ok(mobile.scroll<=mobile.vw+3,"guest page overflows phone viewport");
  // Lose the HTTP success response *after* Supabase has accepted Start.
@@ -171,6 +182,10 @@ try{
   "lost Start reply must reconcile against authoritative room state");
  const first=await host.evaluate(()=>({source:room.audio.source,id:audiusTrack.id}));
  assert.match(first.source,/^local:\d+$/);
+ assert.equal(await host.locator("#live-reserve").isVisible(),true);
+ assert.match(await host.locator("#live-reserve").innerText(),/2 fresh tracks left/);
+ assert.equal(await host.locator("#reserve-used").innerText(),"1");
+ assert.equal(await host.locator("#reserve-free").innerText(),"2");
  // The in-game mixer should adjust live audio without changing the current
  // Audius source, random cue, round or clue counter.
  assert.equal(await host.locator("#host-volume-player").isVisible(),true);
@@ -210,6 +225,9 @@ try{
  const second=await host.evaluate(()=>({source:room.audio.source,ids:rotationHistory?.games?.at(-1)?.audius||[]}));
  assert.notEqual(second.source,first.source,"no-repeat selection must avoid previous track");
  assert.ok(second.ids.length>=2,"playing history must persist Audius IDs");
+ assert.match(await host.locator("#live-reserve").innerText(),/1 fresh tracks left/);
+ assert.equal(await host.locator("#reserve-used").innerText(),"2");
+ assert.equal(await host.locator("#reserve-free").innerText(),"1");
  // A real navigation must recover the same source and server round. It must
  // never auto-play, skip, reveal, lose the buzzer session, or change the cue.
  const prior=await host.evaluate(()=>({code:room.code,round:room.round,
@@ -280,6 +298,6 @@ try{
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
   nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",networkRecovery:true,staleLeaveBlocked:true,noRepeat:true,mobileOverflow:false,
   lostStartAcknowledgment:"reconciled",doubleStartWrites:startWrites,doubleNextWrites:nextWrites,
-  hostMixer:"65% persisted, speaker test respects mute",
+  hostMixer:"65% persisted, speaker test respects mute",soundtrackReserve:"3 → 2 → 1 fresh",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
