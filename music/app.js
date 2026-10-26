@@ -168,7 +168,7 @@ let rotationModule=null,rotationHistory=null,rotationLoading=null;
 async function rotation(){
  if(rotationModule)return rotationModule;
  if(rotationLoading)return rotationLoading;
- rotationLoading=import("./game-rotation.js?v=20261026reserve").then(mod=>{
+ rotationLoading=import("./game-rotation.js?v=20261026identity").then(mod=>{
   rotationModule=mod;
   let raw=null;try{raw=localStorage.getItem(mod.STORAGE_KEY)}catch{}
   rotationHistory=mod.readRotation(raw);
@@ -185,7 +185,7 @@ async function rememberSelectedSong(state){
  if(!audiusTrack||!audiusActive||!/^local:\d+$/.test(state.audio?.source||""))return;
  if(Number(state.audio.source.slice(6))!==localCurrentIndex)return;
  const mod=await rotation();
- mod.notePlayed(rotationHistory,state.code,"audius",audiusTrack.id);
+ mod.noteAudiusPlayed(rotationHistory,state.code,audiusTrack);
  saveRotation();
  renderSoundtrackReserve();
 }
@@ -200,7 +200,8 @@ function renderSoundtrackReserve(){
   card.hidden=true;live.hidden=true;return;
  }
  const used=rotationModule.playedKeys(rotationHistory,"audius");
- const stats=rotationModule.audiusReadiness(audiusPool,used);
+ const signatures=rotationModule.playedKeys(rotationHistory,"audiusFingerprints");
+ const stats=rotationModule.audiusReadiness(audiusPool,used,120,signatures);
  card.hidden=false;
  setText("reserve-total",stats.total);
  setText("reserve-used",stats.used);
@@ -263,10 +264,11 @@ async function discoverAudius(force=false){
    throw Error("The genres or eras changed during the scan. Check tracks again.");
   audiusPool=tracks;audiusFiltersKey=key;
   const rotationTools=await rotation(),used=rotationTools.playedKeys(rotationHistory,"audius");
+  const signatures=rotationTools.playedKeys(rotationHistory,"audiusFingerprints");
   audiusReservePartial=!!scanResult.partial;
-  const stats=rotationTools.audiusReadiness(tracks,used);
+  const stats=rotationTools.audiusReadiness(tracks,used,120,signatures);
   renderSoundtrackReserve();
-  setText("audius-availability",stats.total+" distinct streamable tracks found; "+stats.remaining+
+  setText("audius-availability",stats.total+" distinct song titles found; "+stats.remaining+
    " not heard in your last three games. "+(stats.ready?
     "This meets the 120-song planning target.":"Three typical games need about 120; "+stats.shortfall+
     " more would be needed for that target.")+
@@ -343,11 +345,14 @@ async function selectAudiusRound(isCurrent=()=>true){
  if(!isCurrent())throw Error("The room changed while choosing a song.");
  if(room?.code){history.openGame(rotationHistory,room.code);saveRotation()}
  const previously=history.playedKeys(rotationHistory,"audius");
- const attempts=new Set(previously);
- const candidateCount=tracks.filter(t=>!attempts.has(t.id)).length;
+ const signatures=history.playedKeys(rotationHistory,"audiusFingerprints");
+ // Deduplicate re-uploads of the same artist/title before choosing a stream.
+ const fresh=history.audiusFreshTracks(tracks,previously,signatures);
+ const attempts=new Set();
+ const candidateCount=fresh.length;
  for(let i=0;i<Math.min(candidateCount,9);i++){
   if(!isCurrent())throw Error("Song preparation was cancelled.");
-  const track=lib.chooseAudiusTrack(tracks,attempts);
+  const track=lib.chooseAudiusTrack(fresh,attempts);
   attempts.add(track.id);
   try{
    const prepared=await prepareAudiusPlayback(track,null,isCurrent);
@@ -363,7 +368,7 @@ async function selectAudiusRound(isCurrent=()=>true){
   }
  }
  throw Error(candidateCount===0?
-  "No unplayed Audius songs match your genres and decades. Expand the filters.":
+  "No unheard Audius song titles match these filters, even after checking re-uploads. Broaden the filters.":
   "Couldn't load a playable Audius stream. Check your internet connection or change filters.");
 }
 
