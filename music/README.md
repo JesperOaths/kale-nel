@@ -28,6 +28,18 @@ After **Check tracks**, the host now sees a live four-stat Audius reserve displa
 
 The tablet/host view has a **Master output** fader (0–100%) and an accessible **Mute / Unmute** toggle in both the lobby and active-song player. Both faders control the same browser audio element without changing the room, song, cue, hints, scores or player sessions. Settings are saved under the browser-only preference key `tune-rush-host-output-v1` (volume percentage and muted flag only), so a host reload restores the output level. It does not store music files, stream URLs, answer data, or additional room credentials. The short **Test speakers** tone honors mute and mixer volume; it will not play while the mixer is muted or set to zero. Mobile Safari and some other devices can restrict programmatic volume adjustment, so users may still need hardware volume keys or Bluetooth/speaker output settings. The mixer controls are host-only and never appear on guest phones.
 
+### Expanded familiar-music discovery
+
+Audius music searches now combine **three trending pages per selected genre** with **popular** and **cover** search results. Playback remains Audius-only and streamed directly to the host: there is no Spotify, Deezer, YouTube, iTunes, local-file storage, or user upload route. The randomized fresh-song chooser gives tracks with more actual Audius listens a moderate weighting while preserving composition-level no-repeats over three games. Genre and decade filters are still enforced using Audius release metadata, so new covers of older songs do **not** become 1980s or 1990s originals, and the catalog does not guarantee recognizable historical hits. Scans have a bounded 35-second deadline, up to three workers and cancellable requests; partial coverage remains clearly labeled.
+
+### QR invitations, game-master stages and winner podium
+
+The host lobby displays a large scannable QR that encodes only the public `https://kalenel.nl/music/?room=XXXXXX` join URL. Players scan it and enter their nickname in the guest view. The QR is generated *entirely in the host browser* from a locally vendored MIT-licensed QR generator (`vendor/qrcode.js`; license in `vendor/LICENSE-qrcode.txt`), without sending room codes or host access tokens to an external QR provider. The host's active game panel displays a room/round state ribbon for ready, playing, answering, steal, revealed and finished; the final screen ranks all participants by score and highlights the winning player.
+
+### What has been independently tested
+
+The project browser acceptance uses a real game database and **three independent browser devices** (one emulated tablet host and two emulated phones), with fixture-backed audio so it can deterministically verify round progress, live buzzing/guessing, recovery, host privileges, song history and join URLs. This establishes application behavior, not physical speaker audibility. A separate owner-device read-only provider check has returned real Audius catalog JSON and an HTTPS stream with `audio/mpeg`, and `ffprobe` confirmed a playable MP3 duration. Real-world familiarity and speaker loudness cannot be guaranteed by metadata or automated browser emulation.
+
 ### Supported music
 
 Audius is the **only music source in the current frontend**. The browser discovers tracks at `https://api.audius.co/v1/tracks/trending`, checks each provider's streamability metadata, and streams selected music from `https://api.audius.co/v1/tracks/{id}/stream` with a native `HTMLAudioElement`. No backend downloader, USB music library, YouTube iframe, Deezer resolver, Spotify token or imported host-file music is used.
