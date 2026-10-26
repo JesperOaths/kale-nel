@@ -989,12 +989,110 @@ function observeScoreChanges(previous,next){
  const describe=event=>event.name+" "+(event.delta>0?"+":"")+event.delta.toFixed(1)+" points";
  lastScorePulse=events.map(describe).join(" · ");
 }
+const SETLIST_SESSION_KEY="tune-rush-revealed-setlist-v1";
+const SETLIST_MAX=60;
+let partySetlistCode="",partySetlist=[],setlistPaintKey="";
+function validRevealedSong(entry){
+ return !!entry&&Number.isInteger(entry.round)&&entry.round>=1&&entry.round<=10000&&
+  typeof entry.title==="string"&&entry.title.length>0&&entry.title.length<=120&&
+  typeof entry.artist==="string"&&entry.artist.length>0&&entry.artist.length<=120&&
+  Number.isInteger(entry.clues)&&entry.clues>=0&&entry.clues<=7;
+}
+function ensurePartySetlist(code){
+ if(!code||partySetlistCode===code)return;
+ partySetlistCode=code;partySetlist=[];setlistPaintKey="";
+ try{
+  const stored=JSON.parse(sessionStorage.getItem(SETLIST_SESSION_KEY)||"null");
+  if(stored?.code!==code||!Array.isArray(stored.songs))return;
+  const seen=new Set();
+  for(const song of stored.songs.slice(-SETLIST_MAX)){
+   if(!validRevealedSong(song)||seen.has(song.round))continue;
+   partySetlist.push({round:song.round,title:song.title,artist:song.artist,clues:song.clues});
+   seen.add(song.round);
+  }
+  partySetlist.sort((a,b)=>a.round-b.round);
+ }catch{}
+}
+function recordRevealedSong(state){
+ if(!state?.code)return;
+ ensurePartySetlist(state.code);
+ // Never derive an answer from the host's private audio player or partial
+ // guesses. Only the game server's finished/revealed phase is permitted.
+ if(state.phase!=="solved"&&state.phase!=="finished")return;
+ const entry={
+  round:state.round,
+  title:typeof state.title==="string"?state.title.trim().slice(0,120):"",
+  artist:typeof state.artist==="string"?state.artist.trim().slice(0,120):"",
+  clues:Number.isInteger(state.step)?Math.max(0,Math.min(7,state.step+1)):0
+ };
+ if(!validRevealedSong(entry)||partySetlist.some(song=>song.round===entry.round))return;
+ partySetlist.push(entry);
+ partySetlist.sort((a,b)=>a.round-b.round);
+ partySetlist=partySetlist.slice(-SETLIST_MAX);
+ setlistPaintKey="";
+ try{sessionStorage.setItem(SETLIST_SESSION_KEY,JSON.stringify({
+  code:state.code,songs:partySetlist
+ }))}catch{}
+}
+function clearPartySetlist(){
+ partySetlistCode="";partySetlist=[];setlistPaintKey="";
+ try{sessionStorage.removeItem(SETLIST_SESSION_KEY)}catch{}
+}
+function partySetlistText(){
+ if(!room||room.code!==partySetlistCode||!partySetlist.length)return "";
+ return ["TUNE RUSH · REVEALED PARTY SETLIST",
+  ...partySetlist.map(song=>song.round+". "+song.artist+" — "+song.title),
+  "","https://kalenel.nl/music/"].join("\n");
+}
+function renderPartySetlist(){
+ const showList=!!room&&partySetlistCode===room.code&&partySetlist.length>0;
+ show("party-setlist",showList);
+ if(!showList)return;
+ const reveal=room.phase==="solved"||room.phase==="finished";
+ const current=reveal?partySetlist.find(song=>song.round===room.round):null;
+ show("round-recap",!!current);
+ if(current){
+  setText("recap-title",current.title);
+  setText("recap-artist",current.artist);
+  setText("recap-clues","ROUND "+current.round+" · "+
+   (current.clues?current.clues+" OF 7 CLUES PLAYED":"REVEALED BEFORE CLUES"));
+ }
+ setText("setlist-count",String(partySetlist.length));
+ $("setlist-copy").disabled=!partySetlist.length;
+ const key=room.code+":"+partySetlist.map(song=>song.round+":"+song.title+":"+song.artist).join("|");
+ if(key===setlistPaintKey)return;
+ setlistPaintKey=key;
+ const ol=$("setlist-list");ol.replaceChildren();
+ for(const song of partySetlist){
+  const item=document.createElement("li"),text=document.createElement("span"),
+   number=document.createElement("span");
+  number.className="setlist-song-number";number.textContent="#"+song.round;
+  text.className="setlist-song-info";text.textContent=song.artist+" — "+song.title;
+  item.append(number,text);ol.append(item);
+ }
+}
+async function copyPartySetlist(){
+ const code=room?.code,summary=partySetlistText();
+ if(!summary){setText("setlist-copy-status","No revealed songs to copy yet.");return}
+ try{
+  if(!navigator?.clipboard?.writeText)throw Error("Clipboard unavailable");
+  await navigator.clipboard.writeText(summary);
+  if(room?.code===code)setText("setlist-copy-status","Revealed songs copied. Share your party playlist!");
+ }catch{
+  if(room?.code!==code)return;
+  if(typeof window.prompt==="function"){
+   window.prompt("Copy your revealed party setlist:",summary);
+   setText("setlist-copy-status","Select and copy the setlist from the dialog.");
+  }else setText("setlist-copy-status","Clipboard blocked. Open the list and copy its songs manually.");
+ }
+}
 function applyState(s){
  const previous=room;
  const oldPhase=room?.phase||"",oldRound=room?.round||0,oldRoomCode=room?.code;
  if((oldPhase==="lobby"&&s.phase!=="lobby")||(oldRoomCode&&oldRoomCode!==s.code))
   stopAudition(true);
  room=s;
+ recordRevealedSong(s);
  observeScoreChanges(previous,s);
  if(previous&&(previous.code!==s.code||previous.round!==s.round))
   lastAnswerReceipt=null;
@@ -1131,7 +1229,7 @@ function renderAnswerReceipt(){
  setText("answer-receipt-note",receipt.note);
 }
 function render(){
- if(!room){show("welcome",true);show("room",false);$("room").classList.remove("host-mode");return;}
+ if(!room){show("welcome",true);show("room",false);show("party-setlist",false);$("room").classList.remove("host-mode");return;}
  show("welcome",false);show("room",true);
  const host=isHost(),phase=room.phase,playing=phase!=="lobby";
  $("room").classList.toggle("host-mode",host);
@@ -1151,6 +1249,7 @@ function render(){
  setText("room-title",playing?"Name that tune":"Game lobby");
  setText("room-code",room.code);
  renderPartyInvitation();
+ renderPartySetlist();
  if(host&&phase!=="lobby"){
   const labels={paused:["READY TO PLAY","The host chooses when the next clue begins"],playing:["NOW PLAYING","Listen carefully — the buzzer is live"],answering:["BUZZER CLAIMED","One player is answering"],holding:["STEAL WINDOW","Other players can steal"],solved:["SONG REVEALED","Advance when everyone is ready"],finished:["FINAL ENCORE","Celebrate the champion"]};
   const label=labels[phase]||["GET READY","New round incoming"];
@@ -1338,6 +1437,7 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
+ clearPartySetlist();
  lastAnswerReceipt=null;lastScoreChanges.clear();lastScorePulse="";
  clueRescueBusy=false;clueRescueNotice="";
  stopAudition(true);clearAuditionGuard();refreshAuditionGuardStatus();
@@ -1523,6 +1623,7 @@ $("create").addEventListener("click",create);
 $("join-form").addEventListener("submit",join);
 $("finish-new-party").addEventListener("click",newParty);
 $("finish-copy-results").addEventListener("click",copyFinalScores);
+$("setlist-copy").addEventListener("click",copyPartySetlist);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
 $("host-fullscreen").addEventListener("click",async()=>{
