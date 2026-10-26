@@ -38,8 +38,10 @@ export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch){
  if(!choices.length)return [];
  const found=new Map();
  for(const genre of choices){
+  for(const offset of [0,100,200]){
   const u=new URL(AUDIUS_API+"/tracks/trending");
   u.searchParams.set("genre",genre);u.searchParams.set("limit","100");
+  u.searchParams.set("offset",String(offset));
   try{
    const response=await fetchImpl(u.toString(),{cache:"no-store",signal:AbortSignal.timeout(12000),
      headers:{"Accept":"application/json"}});
@@ -51,7 +53,10 @@ export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch){
     if(track&&matchesAudiusFilters(track,genres,decades))found.set(track.id,track);
    }
   }catch(e){
-   if(choices.length===1)throw Error("Could not reach Audius: "+String(e.message||e));
+   if(offset===0&&choices.length===1)throw Error("Could not reach Audius: "+String(e.message||e));
+   break; // Stop paging this genre if a provider request fails.
+  }
+  if(found.size>=900)break;
   }
  }
  return [...found.values()];
