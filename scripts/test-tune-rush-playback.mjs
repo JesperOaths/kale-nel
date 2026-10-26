@@ -239,7 +239,7 @@ async function fireTimer(f,ms){
 // Auditions use an independent element, not a scored song or history write.
 {
  const f=fixture(),demo=f.element("audition-audio");
- const start=f.run(`room.phase="lobby";loading=false;
+ const start=f.run(`room.phase="lobby";loading=false;rotationHistory={version:1,games:[]};
   audiusPool=[{id:"first11",title:"First",artist:"Artist"},
    {id:"second22",title:"Second",artist:"Artist"}];
   audiusFiltersKey=JSON.stringify(chosenFilters());
