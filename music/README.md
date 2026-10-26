@@ -16,6 +16,8 @@
 
 Audius is the **only music source in the current frontend**. The browser discovers tracks at `https://api.audius.co/v1/tracks/trending`, checks each provider's streamability metadata, and streams selected music from `https://api.audius.co/v1/tracks/{id}/stream` with a native `HTMLAudioElement`. No backend downloader, USB music library, YouTube iframe, Deezer resolver, Spotify token or imported host-file music is used.
 
+Discovery uses at most **three parallel provider requests**, covers up to three trending pages per mapped genre and has a **26-second overall time budget**. The host sees how many pages have been checked and the distinct streamable track count. If one genre fails, tracks from working genres remain usable, but the availability estimate is clearly marked **partial**; if all provider requests fail, the search reports a connection error rather than claiming the catalog is empty. Starting a game does not use results from a genre/era selection changed during the scan.
+
 The catalog emphasizes independent artists, remixes and newer releases. **Audius release metadata is not a guarantee of a track's original release decade.** Some selected genres and eras can yield too few tracks. Playback and licensing remain subject to the provider's artist permissions and applicable event rights.
 
 Streaming is initiated by a host button, never background-autoplayed. A clue does not start counting until the browser's playback clock actually advances after a seek; stalls can be retried. Guests receive no secret title, artist, stream URL or cue position before reveal.
