@@ -1034,7 +1034,9 @@ function renderScores(target){
   row.dataset.rank=String(rank);
   const name=document.createElement("span");name.className="score-player";
   name.textContent=(rank===1?"♛ ":"#"+rank+" ")+p.name;
+  const amount=document.createElement("div");amount.className="score-amount";
   const score=document.createElement("strong");score.textContent=pts.toFixed(1);
+  amount.append(score);
   const movement=lastScoreChanges.get(p.id);
   if(movement){
    const delta=document.createElement("span");delta.className="score-movement";
@@ -1042,11 +1044,11 @@ function renderScores(target){
    delta.textContent=(movement.delta>0?"+":"")+movement.delta.toFixed(1);
    delta.setAttribute("aria-label",(movement.delta>0?"Gained ":"Lost ")+
     Math.abs(movement.delta).toFixed(1)+" points this song");
-   row.append(delta);
+   amount.append(delta);
   }
   const bar=document.createElement("div");bar.className="score-progress";
   const progress=document.createElement("i");progress.style.width=(Math.max(0,Math.min(20,pts))/20*100)+"%";
-  bar.append(progress);row.append(name,score,bar);root.append(row);
+  bar.append(progress);row.append(name,amount,bar);root.append(row);
  });
  show("scoreboard-pulse",!!lastScorePulse&&room.phase!=="lobby");
  setText("scoreboard-pulse",lastScorePulse);
