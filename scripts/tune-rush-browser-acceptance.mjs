@@ -155,6 +155,43 @@ try{
  assert.match(await host.locator("#reserve-status").innerText(),/Need 117 more/);
  assert.equal(await host.locator(".reserve-gauge").getAttribute("aria-valuenow"),"3");
  assert.equal(await host.locator("#reserve-expand").isVisible(),true);
+ // Hold one forced catalog scan, then change filters away and back to
+ // exactly the original values. An old scan can match the FINAL filter key,
+ // but it must still be rejected because the generation was invalidated.
+ await host.evaluate(()=>{
+  const base=audiusLib;
+  window.__scanCalls=0;window.__scanError="";
+  audiusLib=async()=>{
+   const lib=await base();
+   return {...lib,discoverAudiusTracks:(_g,_d,_fetch,options)=>{
+    window.__scanCalls++;
+    return new Promise(resolve=>{
+     window.__scanRelease=()=>resolve([...audiusPool]);
+     window.__scanSignal=options.signal;
+    });
+   }};
+  };
+  window.__restoreProvider=()=>{audiusLib=base};
+  discoverAudius(true).catch(e=>{window.__scanError=e.message});
+  discoverAudius(false).catch(e=>{window.__scanError=e.message});
+ });
+ await host.waitForFunction(()=>!!window.__scanRelease,null,{timeout:8000});
+ assert.equal(await host.evaluate(()=>window.__scanCalls),1,
+  "Start/Check must share a matching in-flight catalog scan");
+ await host.locator("#decade-options input[value='2020']").check();
+ await host.locator("#decade-options input[value='2020']").uncheck();
+ assert.equal(await host.evaluate(()=>window.__scanSignal.aborted),true,
+  "switching filters must abort the old provider request");
+ await host.evaluate(()=>window.__scanRelease());
+ await host.waitForFunction(()=>/superseded/.test(window.__scanError),null,{timeout:5000});
+ assert.equal(await host.evaluate(()=>audiusPool.length),0,
+  "stale scan may not restore a previous matching filter's pool");
+ assert.equal(await host.locator("#soundtrack-reserve").isVisible(),false);
+ assert.match(await host.locator("#audius-availability").innerText(),/Filters changed/);
+ await host.evaluate(()=>window.__restoreProvider());
+ await host.locator("#audius-check").click();
+ await host.waitForFunction(()=>audiusPool.length===4&&!audiusChecking,null,{timeout:20000});
+ assert.equal(await host.locator("#reserve-total").innerText(),"3");
  const mobile=await guest.evaluate(()=>({vw:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
  assert.ok(mobile.scroll<=mobile.vw+3,"guest page overflows phone viewport");
  // Lose the HTTP success response *after* Supabase has accepted Start.
@@ -278,6 +315,20 @@ try{
  await host.locator("#audius-play-hint").click();
  await host.waitForFunction(()=>room?.step===0&&room?.phase==="paused",null,{timeout:22000});
  assert.ok(streamRequests>=3&&metadataRequests>0);
+ // A metadata scan started in the old room is not allowed to repopulate
+ // a freshly created room, even when both lobbies use identical filters.
+ await host.evaluate(()=>{
+  const base=audiusLib;
+  audiusLib=async()=>{
+   const lib=await base();
+   return {...lib,discoverAudiusTracks:()=>
+    new Promise(resolve=>{window.__oldRoomCatalogResolve=()=>resolve([...audiusPool])})};
+  };
+  discoverAudius(true).catch(e=>window.__oldRoomCatalogError=e.message);
+ });
+ await host.waitForFunction(()=>!!window.__oldRoomCatalogResolve,null,{timeout:8000});
+ const departedCode=await host.evaluate(()=>room.code);
+ await host.evaluate(code=>window.__oldRoomCode=code,departedCode);
  // An in-flight room state request must not recreate a room the host just
  // left, even if a slow server response arrives after the Leave action.
  let held=null,releaseHold;
@@ -299,11 +350,24 @@ try{
  assert.equal(await host.evaluate(()=>room),null,"old room response must not redraw a left game");
  assert.ok(await host.locator("#welcome").isVisible());
  await host.unroute(roomRpc,holdState);
+ await host.locator("#create").click();
+ await host.waitForFunction(()=>room?.role==="host"&&room?.phase==="lobby"&&room.code!==window.__oldRoomCode,
+  null,{timeout:15000}).catch(async e=>{
+   const detail=await host.evaluate(()=>({code:room?.code,departure:window.__oldRoomCode}));
+   throw Error("Could not create replacement room: "+JSON.stringify(detail)+" "+e.message);
+  });
+ await host.evaluate(()=>window.__oldRoomCatalogResolve());
+ await host.waitForFunction(()=>/superseded/.test(window.__oldRoomCatalogError||""),
+  null,{timeout:8000});
+ assert.equal(await host.evaluate(()=>audiusPool.length),0,
+  "a late old-room scan may not seed a replacement room");
+ assert.equal(await host.locator("#soundtrack-reserve").isVisible(),false);
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
   nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",networkRecovery:true,staleLeaveBlocked:true,noRepeat:true,mobileOverflow:false,
   lostStartAcknowledgment:"reconciled",doubleStartWrites:startWrites,doubleNextWrites:nextWrites,
   hostMixer:"65% persisted, speaker test respects mute",soundtrackReserve:"4 uploads -> 3 unique songs -> 2 -> 1 fresh",
+  catalogCancellation:"same-key filter return and old-room scan rejected",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
