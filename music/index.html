@@ -8,10 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026feedback">
+<link rel="stylesheet" href="./style.css?v=20261026receipt">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261026feedback" defer></script>
+<script src="./app.js?v=20261026receipt" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -165,6 +165,11 @@
     <div id="host-controls" hidden><button id="continue-hints" class="primary" hidden>Continue hints ▶</button><button id="next-round" class="primary" hidden>Next song →</button>
       <button id="skip-round" class="outline" hidden>Skip / Reveal song →</button></div>
      <div id="player-controls" hidden>
+     <section id="answer-receipt" class="answer-receipt" hidden role="status" aria-live="polite" aria-atomic="true">
+       <div class="answer-receipt-head"><span class="answer-receipt-icon" id="answer-receipt-icon" aria-hidden="true">✓</span><div><span class="kicker">YOUR LAST ANSWER</span><h3 id="answer-receipt-title">Answer received</h3></div><strong id="answer-receipt-points">0.0 pts</strong></div>
+       <div class="answer-receipt-details"><span id="answer-receipt-song">Song title: pending</span><span id="answer-receipt-artist">Artist: pending</span></div>
+       <p id="answer-receipt-note">Scores come from the game server.</p>
+      </section>
      <section id="buzzer-status-panel" class="buzzer-status-panel" data-state="waiting" role="status" aria-live="polite" aria-atomic="true">
        <span class="buzzer-status-icon" id="buzzer-status-icon" aria-hidden="true">◉</span>
        <div class="buzzer-status-copy"><strong id="buzzer-status-title">Waiting for the next song</strong><span id="buzzer-status-hint">Your buzzer activates when a clue begins.</span></div>
