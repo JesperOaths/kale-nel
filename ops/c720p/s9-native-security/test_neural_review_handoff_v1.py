@@ -8,11 +8,11 @@ HERE=Path(__file__).parent
 class ReviewHandoff(unittest.TestCase):
     def setUp(self):
         self.person=(HERE/'security-people-v328.js').read_text()
-        self.triage=(HERE/'local-neural-manual-triage-v6.js').read_text()
+        self.triage=(HERE/'local-neural-manual-triage-v7.js').read_text()
         self.page=(HERE/'security-people-v53.html').read_text()
     def test_cache_busted_page_integration(self):
         self.assertIn('security-people-v328.js?v=neural-review-handoff-v1-20261026',self.page)
-        self.assertIn('local-neural-manual-triage-v6.js?v=neural-review-reminder-v6-20261026',self.page)
+        self.assertIn('local-neural-manual-triage-v7.js?v=neural-unknown-top3-v7-20261026',self.page)
         self.assertNotIn('local-neural-manual-triage-v3.js?v=',self.page)
     def test_explicit_user_action_with_correct_original_clip(self):
         self.assertEqual(self.triage.count("node('button','▶ Review this recording')"),1)
@@ -40,13 +40,23 @@ class ReviewHandoff(unittest.TestCase):
         for item in ("Neural comparison reminder", "NOT reviewed or filed",
                      "reviewPane.insertBefore(reviewHint,reviewPane.firstChild)",
                      "const selected=dropdown.value",
-                     "kind:changed(row)?'Browser-only draft':'ONNX top-cosine suggestion'",
+                     "kind:'Browser-only manual choice'",
                      "Copy folder name",
                      "activeHint=null;reviewHint.hidden=true"):
             self.assertIn(item,self.triage)
         self.assertNotIn("approvalFolder",self.triage)
         self.assertNotIn("reviewHint.querySelector('select')",self.triage)
         self.assertNotIn("method:'POST'",self.triage)
+
+    def test_uncertain_rankings_do_not_preselect_a_person(self):
+        for fragment in ("Not identified — review needed", "ranked_candidates",
+                         "top_two_margin", "dropdown.value=changed(row)&&choices.includes",
+                         "if(!dropdown.value)delete drafts[row.clip_id]"):
+            self.assertIn(fragment,self.triage)
+        self.assertIn("activeHint=null;",self.triage)
+        self.assertNotIn("dropdown.value=row.folder_id",self.triage)
+        self.assertNotIn("preview_ticket",self.triage)
+        self.assertNotIn("opened_ticket",self.triage)
 
     def test_existing_review_writes_still_use_original_workflow(self):
         self.assertIn("const ok=await manualLink",self.person)

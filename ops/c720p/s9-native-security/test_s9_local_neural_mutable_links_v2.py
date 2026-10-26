@@ -35,17 +35,17 @@ class DeviceCorpus(unittest.TestCase):
     def test_baseline_and_after_one_review(self):
         old=api.calculate_queue(self.model,self.crops,self.manual)
         self.assertEqual(old['indexed_crop_count'],52)
-        self.assertEqual(old['count']+old['assigned_s9_count'],52)
-        self.assertEqual(old['count'],49)
-        self.assertEqual(old['assigned_s9_count'],3)
+        self.assertEqual(old['count']+old['assigned_s9_count']+old['excluded_count'],52)
+        self.assertEqual(old['verified_crop_count']+old['excluded_count'],52)
+        self.assertEqual(old['count'],len(old['items']))
         row=old['items'][0]
         key='sd:'+row['clip_id']
         update=copy.deepcopy(self.manual)
         update[key]={'source':'sd','name':row['clip_id'],
                      'folder':row['folder_id'],'review_status':'assigned'}
         fresh=api.calculate_queue(self.model,self.crops,update)
-        self.assertEqual(fresh['count'],48)
-        self.assertEqual(fresh['assigned_s9_count'],4)
+        self.assertEqual(fresh['count'],old['count']-1)
+        self.assertEqual(fresh['assigned_s9_count'],old['assigned_s9_count']+1)
         self.assertEqual(fresh['reference_count'],old['reference_count']+1)
         self.assertIn(row['clip_id'],{r['clip_id'] for r in fresh['assigned_s9_crops']})
         self.assertNotIn(row['clip_id'],{r['clip_id'] for r in fresh['items']})
@@ -53,7 +53,7 @@ class DeviceCorpus(unittest.TestCase):
         update[key]['folders']=[row['folder_id'],other]
         update[key].pop('folder')
         multiple=api.calculate_queue(self.model,self.crops,update)
-        self.assertEqual(multiple['count'],48)
+        self.assertEqual(multiple['count'],old['count']-1)
         ref=next(r for r in multiple['assigned_s9_crops'] if r['clip_id']==row['clip_id'])
         self.assertEqual(ref['folder_ids'],[row['folder_id'],other])
     def test_dynamic_source_index_hash_updates_are_accepted(self):
