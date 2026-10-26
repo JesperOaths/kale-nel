@@ -63,6 +63,26 @@ try{
  await host.waitForFunction(()=>room?.players?.length>=1,null,{timeout:17000});
  assert.ok(await host.locator(".stream-hero").isVisible());
  assert.equal(await guest.locator(".stream-hero").isVisible(),false);
+ assert.equal(await guest.locator("[data-host-mixer]:visible").count(),0,
+  "guests must not see host audio controls");
+ assert.equal(await host.locator("[data-host-mixer]:visible").count(),1,
+  "host lobby has a visible audio mixer");
+ // Fader and mute cannot mutate game state. Both host controls reflect the
+ // same volume, and the speaker check must honor its mute setting.
+ await host.locator("#host-volume-lobby").evaluate(el=>{
+  el.value="35";el.dispatchEvent(new Event("input",{bubbles:true}));
+ });
+ assert.equal(await host.evaluate(()=>playerAudio.volume),0.35);
+ assert.equal(await host.locator("#host-volume-player").inputValue(),"35");
+ assert.equal(await host.locator('[data-host-mixer] [data-volume-label]').first().innerText(),"35%");
+ await host.locator("#host-settings [data-volume-toggle]").click();
+ assert.equal(await host.evaluate(()=>playerAudio.muted),true);
+ assert.equal(await host.locator("#host-settings [data-volume-toggle]").getAttribute("aria-pressed"),"true");
+ await host.locator(".speaker-check-line [data-speaker-test]").click();
+ assert.match(await host.locator("#speaker-check-status").innerText(),/Mixer muted/);
+ await host.locator("#host-settings [data-volume-toggle]").click();
+ assert.equal(await host.evaluate(()=>playerAudio.muted),false);
+ assert.equal(await host.evaluate(()=>playerAudio.volume),0.35);
  // Host-only soundcheck uses AudioContext output (not Audius) and leaves
  // the current room, score and media source untouched.
  assert.equal(await guest.locator("[data-speaker-test]:visible").count(),0,"speaker controls are hidden from players");
@@ -151,6 +171,21 @@ try{
   "lost Start reply must reconcile against authoritative room state");
  const first=await host.evaluate(()=>({source:room.audio.source,id:audiusTrack.id}));
  assert.match(first.source,/^local:\d+$/);
+ // The in-game mixer should adjust live audio without changing the current
+ // Audius source, random cue, round or clue counter.
+ assert.equal(await host.locator("#host-volume-player").isVisible(),true);
+ const audioIdentity=await host.evaluate(()=>({round:room.round,step:room.step,
+  cue:room.audio.cueMs,source:room.audio.source}));
+ await host.locator("#host-volume-player").evaluate(el=>{
+  el.value="65";el.dispatchEvent(new Event("input",{bubbles:true}));
+ });
+ assert.equal(await host.evaluate(()=>playerAudio.volume),0.65);
+ assert.equal(await host.evaluate(()=>playerAudio.muted),false);
+ assert.equal(await host.locator("#host-volume-lobby").inputValue(),"65");
+ assert.deepEqual(await host.evaluate(()=>({round:room.round,step:room.step,
+  cue:room.audio.cueMs,source:room.audio.source})),audioIdentity);
+ assert.equal(JSON.parse(await host.evaluate(()=>
+  localStorage.getItem("tune-rush-host-output-v1"))).level,65);
  assert.equal((await guest.evaluate(()=>room?.audio)),null,"guest must not learn Audius stream or private answer");
  assert.match(await host.locator("#licensed-player").getAttribute("src"),/^https:\/\/api\.audius\.co\/v1\/tracks\/[A-Za-z0-9_-]+\/stream$/);
  await host.locator("#audius-play-hint").click();
@@ -211,6 +246,11 @@ try{
   "reload keeps the exact same round, random seek, stream identity and game room");
  assert.match(after.status,/Stream recovered/);
  assert.ok(await host.locator("#audius-play-hint").isVisible());
+ assert.equal(await host.locator("#host-volume-player").inputValue(),"65",
+  "host mixer volume persists through an actual browser reload");
+ assert.equal(await host.evaluate(()=>playerAudio.volume),0.65);
+ assert.equal(await host.evaluate(()=>playerAudio.muted),false);
+ assert.equal(await guest.locator("[data-host-mixer]:visible").count(),0);
  await host.locator("#audius-play-hint").click();
  await host.waitForFunction(()=>room?.step===0&&room?.phase==="paused",null,{timeout:22000});
  assert.ok(streamRequests>=3&&metadataRequests>0);
@@ -240,5 +280,6 @@ try{
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
   nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",networkRecovery:true,staleLeaveBlocked:true,noRepeat:true,mobileOverflow:false,
   lostStartAcknowledgment:"reconciled",doubleStartWrites:startWrites,doubleNextWrites:nextWrites,
+  hostMixer:"65% persisted, speaker test respects mute",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}

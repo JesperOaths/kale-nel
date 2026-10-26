@@ -6,7 +6,7 @@ const html=readFileSync(new URL("../music/index.html",import.meta.url),"utf8");
 const raw=readFileSync(new URL("../music/app.js",import.meta.url),"utf8");
 const source=raw.split('$("create").addEventListener')[0];
 
-for(const id of ["audius-check","audius-play-hint","audius-replay-hint","genre-options","decade-options","speaker-check-status"])
+for(const id of ["audius-check","audius-play-hint","audius-replay-hint","genre-options","decade-options","speaker-check-status","host-volume-lobby","host-volume-player"])
  assert.ok(html.includes('id="'+id+'"'),"Missing Audius control: "+id);
 for(const id of ["youtube-host","youtube-setup","deezer-host","deezer-source-option","local-music-files","source-select"])
  assert.ok(!html.includes('id="'+id+'"'),"Retired source still exposed: "+id);
@@ -14,24 +14,31 @@ for(const name of ["youtubeWaitCancelled","deezerPlayer","localTracks","importLo
  assert.ok(!raw.includes(name),"Retired source function still present: "+name);
 
 function fixture(){
- const elements=new Map(),timers=new Map();let sequence=0;
+ const elements=new Map(),timers=new Map(),prefs=new Map();let sequence=0;
  const element=id=>{
   if(!elements.has(id))elements.set(id,{
    hidden:false,textContent:"",disabled:false,readyState:4,error:null,paused:false,seeking:false,
-   _time:0,listeners:new Map(),
+   _time:0,listeners:new Map(),style:{setProperty(){}},attrs:new Map(),
    get currentTime(){return this._time},
    set currentTime(value){this._time=value;this.seeking=false;this.emit("seeked")},
    addEventListener(type,fn){const set=this.listeners.get(type)||new Set();set.add(fn);this.listeners.set(type,set)},
    removeEventListener(type,fn){this.listeners.get(type)?.delete(fn)},
    emit(type){for(const fn of this.listeners.get(type)||[])fn()},
-   setAttribute(){},pause(){this.paused=true},load(){this.loadCount=(this.loadCount||0)+1},async play(){this.paused=false},querySelector(){return null}
+   setAttribute(name,value){this.attrs.set(name,value)},pause(){this.paused=true},load(){this.loadCount=(this.loadCount||0)+1},async play(){this.paused=false},querySelector(){return null}
   });
   return elements.get(id);
+ };
+ const groups={
+  "[data-host-volume]":[element("host-volume-lobby"),element("host-volume-player")],
+  "[data-volume-label]":[element("host-label-lobby"),element("host-label-player")],
+  "[data-volume-toggle]":[element("host-mute-lobby"),element("host-mute-player")]
  };
  const sandbox={URL,TextEncoder,Uint8Array,AbortController,console,
   crypto:{subtle:{digest:async()=>new Uint8Array(32).buffer}},
   location:{origin:"https://kalenel.nl"},window:{innerHeight:900},
-  document:{hidden:false,getElementById:element},
+  localStorage:{getItem:key=>prefs.get(key)??null,
+   setItem:(key,value)=>prefs.set(key,String(value)),removeItem:key=>prefs.delete(key)},
+  document:{hidden:false,getElementById:element,querySelectorAll:selector=>groups[selector]||[]},
   setTimeout(fn,ms){const id=++sequence;timers.set(id,{fn,ms});return id},
   clearTimeout(id){timers.delete(id)}};
  const context=vm.createContext(sandbox);
@@ -57,6 +64,48 @@ async function fireTimer(f,ms){
  const pending=f.run('playLocalHint({source:"local:20000001",cueMs:13000})');
  for(let i=0;i<120;i++)await fireTimer(f,75);
  await assert.rejects(pending,/still buffering/,"Stalled playback must fail closed");
+}
+// The two host volume faders are one preference; toggling mute only changes
+// browser output and never changes the active room or media source.
+{
+ const f=fixture(),audio=f.element("licensed-player");
+ f.run("initHostMixer()");
+ assert.equal(f.element("host-volume-lobby").value,"100");
+ assert.equal(f.element("host-volume-player").value,"100");
+ f.run("setHostVolume(35)");
+ assert.equal(audio.volume,0.35);
+ assert.equal(f.element("host-volume-lobby").value,"35");
+ assert.equal(f.element("host-volume-player").value,"35");
+ assert.equal(f.element("host-label-lobby").textContent,"35%");
+ assert.equal(f.element("host-label-player").textContent,"35%");
+ assert.equal(f.run("room.round"),1);
+ assert.equal(f.run("room.audio.source"),"local:20000001");
+ const beforeUrl=f.run("localAudioUrl");
+ f.run("toggleHostMute()");
+ assert.equal(audio.muted,true);
+ assert.equal(f.element("host-mute-player").attrs.get("aria-pressed"),"true");
+ assert.equal(f.element("host-label-lobby").textContent,"MUTED");
+ assert.equal(f.run("localAudioUrl"),beforeUrl);
+ await f.run("testSpeakers()");
+ assert.match(f.element("speaker-check-status").textContent,/Mixer muted/);
+ f.run("toggleHostMute()");
+ assert.equal(audio.muted,false);
+ assert.equal(audio.volume,0.35,"unmute restores volume");
+ assert.equal(f.element("host-mute-lobby").attrs.get("aria-pressed"),"false");
+ assert.equal(JSON.parse(f.run('localStorage.getItem(HOST_MIXER_STORE)')).level,35);
+ assert.equal(JSON.parse(f.run('localStorage.getItem(HOST_MIXER_STORE)')).muted,false);
+ f.run('setHostVolume(-2);setHostVolume(101);setHostVolume("bogus")');
+ assert.equal(audio.volume,0.35,"invalid volume data cannot change output");
+}
+{
+ const f=fixture(),audio=f.element("licensed-player");
+ f.run('localStorage.setItem(HOST_MIXER_STORE,JSON.stringify({level:65,muted:true}));initHostMixer()');
+ assert.equal(audio.volume,0.65);
+ assert.equal(audio.muted,true);
+ assert.equal(f.element("host-volume-player").value,"65");
+ f.run("toggleHostMute()");
+ assert.equal(audio.muted,false);
+ assert.equal(audio.volume,0.65);
 }
 // A delayed seek must not accept a stale playhead from the previous clip.
 {
@@ -216,4 +265,4 @@ async function fireTimer(f,ms){
  const f=fixture();
  await assert.rejects(f.run('startAudio({source:"youtube:dQw4w9WgXcQ"})'),/Only Audius/);
 }
-console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; cancellable media metadata; host controls");
+console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; cancellable media metadata; host controls; persistent volume mixer");
