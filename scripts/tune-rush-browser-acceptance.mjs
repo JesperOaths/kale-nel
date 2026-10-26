@@ -386,6 +386,7 @@ try{
  // a freshly created room, even when both lobbies use identical filters.
  await host.evaluate(()=>{
   const base=audiusLib;
+  window.__restoreProvider=()=>{audiusLib=base};
   audiusLib=async()=>{
    const lib=await base();
    return {...lib,discoverAudiusTracks:()=>
