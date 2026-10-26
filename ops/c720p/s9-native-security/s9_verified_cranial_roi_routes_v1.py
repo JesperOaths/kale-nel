@@ -113,6 +113,18 @@ def track_filename_for_index(entries,clip,key):
                 return filename
     raise ValueError('body_crop_reference_unavailable')
 
+def reply(handler,status,payload):
+    # Production LAN relay handler has no .js() method.
+    body=json.dumps(payload,separators=(',',':'),allow_nan=False).encode('utf-8')
+    handler.send_response(status)
+    handler.cors()
+    handler.send_header('Content-Type','application/json; charset=utf-8')
+    handler.send_header('Cache-Control','private, no-store')
+    handler.send_header('X-Content-Type-Options','nosniff')
+    handler.send_header('Content-Length',str(len(body)))
+    handler.end_headers()
+    if handler.command!='HEAD':handler.wfile.write(body)
+
 def install(H):
     if not hasattr(H,'authorized'):
         raise ValueError('authenticated_handler_required')
@@ -122,20 +134,20 @@ def install(H):
         if route.path!=PREFIX and not route.path.startswith(PREFIX+'/'):
             return previous(self,*a,**kw)
         if self.command not in ('GET','HEAD') or route.query:
-            return self.js(404,{'ok':False,'error':'not_found'})
+            return reply(self,404,{'ok':False,'error':'not_found'})
         if not self.authorized():
-            return self.js(401,{'ok':False,'error':'authentication_required'})
+            return reply(self,401,{'ok':False,'error':'authentication_required'})
         try:
             rows,lookup=verified_records()
         except (OSError,ValueError,TypeError,KeyError,json.JSONDecodeError):
-            return self.js(503,{'ok':False,'error':'verified_crop_archive_unavailable'})
+            return reply(self,503,{'ok':False,'error':'verified_crop_archive_unavailable'})
         if route.path==PREFIX:
-            return self.js(200,{'ok':True,'schema':'verified-cranial-rois-v1',
+            return reply(self,200,{'ok':True,'schema':'verified-cranial-rois-v1',
                 'count':len(rows),'identity_matching':False,'face_detection':False,
                 'original_attestation':False,'items':rows})
         found=re.fullmatch(re.escape(PREFIX)+r'/image/([a-f0-9]{64})',route.path)
         if not found or found.group(1) not in lookup:
-            return self.js(404,{'ok':False,'error':'crop_not_available'})
+            return reply(self,404,{'ok':False,'error':'crop_not_available'})
         body=lookup[found.group(1)][2]
         self.send_response(200)
         self.cors()
