@@ -518,6 +518,19 @@ try{
   "combined recap must include the room's actual revealed song");
  assert.match(ownRoomRecap,/REVEALED SONGS \(1 saved in this tab\)/);
  assert.ok(!ownRoomRecap.includes("fixture-token"));
+ // The poster model may only use this same-room, server-revealed track;
+ // a playing or holding room is ineligible for any poster export.
+ const posterWithRealReveal=await host.evaluate(()=>partyPosterModel({
+  ...room,phase:"finished",players:[{id:"p1",name:"Champion",score:20}],winner:"p1"
+ }));
+ assert.ok(posterWithRealReveal?.songs.some(song=>
+  song.artist===publicSong.artist&&song.title===publicSong.title));
+ assert.equal(posterWithRealReveal.totalSongs,1);
+ assert.equal(await host.evaluate(()=>partyPosterModel(room)),null,
+  "an unfinished room cannot create a shareable final poster");
+ assert.equal(await host.evaluate(()=>partyPosterModel({
+  ...room,code:"OTHER1",phase:"finished"
+ })),null,"a room code mismatch cannot request poster data");
  // Stats must come from actually revealed, same-room songs; "before
  // clues" is not counted as a numeric time-to-solve.
  const realNightStats=await host.evaluate(()=>({
@@ -705,6 +718,13 @@ try{
  assert.equal(await host.locator("#finish-new-party").isVisible(),true);
  assert.equal(await host.locator("#finish-copy-results").isVisible(),true);
  assert.equal(await host.locator("#finish-download-recap").isVisible(),true);
+ assert.equal(await host.locator("#finish-poster-details").isVisible(),true);
+ await host.locator("#finish-poster-details summary").click();
+ assert.equal(await host.locator("#finish-download-poster").isVisible(),true);
+ assert.deepEqual(await host.evaluate(()=>{
+  const canvas=document.getElementById("finish-poster-canvas");
+  return [canvas.width,canvas.height,Boolean(canvas.getContext("2d"))]
+ }),[1080,1350,true],"the finished room must have a rendered portrait poster");
  assert.equal(await host.locator("#finish-songs-remembered").innerText(),"0",
   "new room cannot display older party's song count");
  assert.equal(await host.locator("#finish-average-clues").innerText(),"—",
@@ -776,6 +796,34 @@ try{
  assert.ok(!fileText.includes(publicSong.artist+" — "+publicSong.title));
  assert.ok(!fileText.includes(previousParty));
  assert.match(await host.locator("#finish-recap-status").innerText(),/Downloads folder/);
+ const posterModel=await host.evaluate(()=>partyPosterModel());
+ assert.equal(posterModel.winner,"Demo Winner");
+ assert.equal(posterModel.players[1].name,"Second Place");
+ assert.equal(posterModel.totalSongs,0,"old room history cannot enter the replacement poster");
+ assert.deepEqual(posterModel.songs,[]);
+ // Instrument only visible drawing calls; no token, room code, or previous
+ // room's song can be painted into an image.
+ const paintedStrings=await host.evaluate(()=>{
+  const ctx=CanvasRenderingContext2D.prototype,original=ctx.fillText,values=[];
+  ctx.fillText=function(value,...args){values.push(String(value));return original.call(this,value,...args)};
+  try{renderPartyPoster(true)}finally{ctx.fillText=original}
+  return values;
+ });
+ assert.ok(paintedStrings.some(line=>line.includes("Demo Winner")));
+ assert.ok(paintedStrings.every(line=>!line.includes("fixture-token")&&
+  !line.includes(previousParty)&&!line.includes(publicSong.title)));
+ // Verify actual downloaded PNG, not merely a successful canvas method call.
+ const posterDownload=host.waitForEvent("download",{timeout:11000});
+ await host.locator("#finish-download-poster").click();
+ const poster=await posterDownload;
+ assert.match(poster.suggestedFilename(),/^tune-rush-party-poster-\d{4}-\d{2}-\d{2}\.png$/);
+ const png=await (await import("node:fs/promises")).readFile(await poster.path());
+ assert.ok(png.length>10000,"poster must be a substantial PNG, not an empty file");
+ assert.equal(png.subarray(0,8).toString("hex"),"89504e470d0a1a0a",
+  "downloaded file must have a genuine PNG signature");
+ assert.equal(png.readUInt32BE(16),1080);
+ assert.equal(png.readUInt32BE(20),1350);
+ assert.match(await host.locator("#finish-poster-status").innerText(),/Downloads folder/);
  let createdNewParty=0,updatedNewParty=0;
  const trackNewParty=async route=>{
   const body=JSON.parse(route.request().postData()||"{}");

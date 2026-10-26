@@ -1360,6 +1360,7 @@ function render(){
   $("finish-new-party").disabled=newPartyBusy||loading;
   if(phase==="finished"){
    renderPartyHighlights();
+   renderPartyPoster();
    const champion=room.players.find(p=>p.id===room.winner);
    setText("winner-name",champion?.name||"Winner");
    const final=$("final-scores");final.replaceChildren();
@@ -1494,6 +1495,139 @@ function partyRecapText(state=room){
   "","Song history is local to this tab; late joins and older rounds may be missing.",
   "https://kalenel.nl/music/"].join("\n");
 }
+// A client-only shareable image. The model contains only public final scores and
+// same-room songs the current tab already saw in a solved/finished server state.
+let posterPaintKey="",posterDownloadBusy=false;
+const safePosterText=value=>String(value??"").replace(/[\u0000-\u001f\u007f]+/g," ").trim().slice(0,120);
+function partyPosterModel(state=room){
+ if(!state||state.phase!=="finished"||!state.code||state.code!==room?.code)return null;
+ const ranked=[...(state.players||[])].filter(p=>Number.isFinite(Number(p.score)))
+  .sort((a,b)=>Number(b.score)-Number(a.score));
+ const champion=ranked.find(p=>p.id===state.winner);
+ const names=ranked.map(p=>({name:safePosterText(p.name)||"Player",
+  score:Number(p.score).toFixed(1)}));
+ const songs=partySetlistCode===state.code?partySetlist.filter(validRevealedSong):[];
+ return {winner:safePosterText(champion?.name||"Undecided"),players:names.slice(0,5),
+  extraPlayers:Math.max(0,names.length-5),totalPlayers:names.length,
+  songs:songs.slice(-7).map(s=>({round:s.round,title:safePosterText(s.title),
+   artist:safePosterText(s.artist),clues:s.clues})),
+  totalSongs:songs.length,extraSongs:Math.max(0,songs.length-7)};
+}
+function renderPartyPoster(force=false){
+ const model=partyPosterModel(),canvas=$("finish-poster-canvas");
+ if(!model||!canvas)return false;
+ const key=room.code+":"+JSON.stringify(model);
+ if(!force&&key===posterPaintKey)return true;
+ const g=canvas.getContext?.("2d");
+ if(!g)return false;
+ posterPaintKey="";
+ const W=1080,H=1350;
+ canvas.width=W;canvas.height=H;
+ const bg=g.createLinearGradient(0,0,W,H);
+ bg.addColorStop(0,"#101d34");bg.addColorStop(0.57,"#193b40");bg.addColorStop(1,"#17233d");
+ g.fillStyle=bg;g.fillRect(0,0,W,H);
+ const glow=g.createRadialGradient(850,160,20,850,160,690);
+ glow.addColorStop(0,"#70e5ba46");glow.addColorStop(1,"#70e5ba00");
+ g.fillStyle=glow;g.fillRect(0,0,W,H);
+ const rect=(x,y,w,h,r,fill,stroke)=>{
+  g.beginPath();g.moveTo(x+r,y);g.lineTo(x+w-r,y);g.quadraticCurveTo(x+w,y,x+w,y+r);
+  g.lineTo(x+w,y+h-r);g.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  g.lineTo(x+r,y+h);g.quadraticCurveTo(x,y+h,x,y+h-r);
+  g.lineTo(x,y+r);g.quadraticCurveTo(x,y,x+r,y);g.closePath();
+  g.fillStyle=fill;g.fill();
+  if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}
+ };
+ const text=(value,x,y,size,color,weight="700",align="left")=>{
+  g.font=weight+" "+size+"px system-ui, sans-serif";g.fillStyle=color;
+  g.textAlign=align;g.textBaseline="alphabetic";g.fillText(value,x,y);
+ };
+ const shorten=(value,maxWidth,size,weight="700")=>{
+  g.font=weight+" "+size+"px system-ui, sans-serif";
+  if(g.measureText(value).width<=maxWidth)return value;
+  let t=value;
+  while(t.length&&g.measureText(t+"…").width>maxWidth)t=t.slice(0,-1);
+  return t+"…";
+ };
+ // Identity is deliberately not the private room code or a join QR.
+ rect(70,70,350,54,27,"#c4ffd91b","#a1e8c27a");
+ text("TUNE RUSH  /  FINAL ENCORE",94,105,19,"#d1ffdf","850");
+ text("THE NIGHT",70,217,92,"#fff9e7","950");
+ text("WAS OURS.",70,311,92,"#fff9e7","950");
+ text("ONE CHAMPION. ALL THE SONGS YOU REMEMBER.",74,365,22,"#bee5d4","700");
+ rect(70,406,940,176,28,"#d2f6d915","#e2e2aa8f");
+ text("★",105,485,48,"#f4d993","900");
+ text("PARTY CHAMPION",185,470,20,"#c7e5d3","850");
+ text(shorten(model.winner,750,61,"900"),181,543,61,"#fff0b7","900");
+ text("FINAL STANDINGS",76,645,28,"#e6ffe9","850");
+ rect(70,674,940,266,24,"#101d319c","#8bbcb55e");
+ if(!model.players.length)text("No player scores available",105,740,25,"#bbd8d4");
+ for(let i=0;i<model.players.length;i++){
+  const p=model.players[i],y=720+i*43;
+  text(String(i+1).padStart(2,"0"),106,y,20,"#f4d993","800");
+  text(shorten(p.name,690,25,"750"),170,y,25,"#e9f7f0","750");
+  text(p.score+" pts",969,y,22,"#f9e3ad","850","right");
+ }
+ if(model.extraPlayers)text("+"+model.extraPlayers+" more players",110,925,15,"#bcd6d0");
+ text("REVEALED SONGS  •  "+model.totalSongs+" SAVED IN THIS TAB",76,1011,25,"#e4ffdf","850");
+ rect(70,1038,940,206,24,"#d7ffdd0a","#8dbfaa55");
+ if(!model.songs.length)text("No revealed songs saved in this tab.",105,1105,22,"#bed8d3");
+ model.songs.forEach((s,i)=>{
+  const y=1072+i*23;
+  text("#"+s.round,100,y,17,"#a8e6c8","850");
+  text(shorten(s.artist+" — "+s.title,690,18,"700"),170,y,18,"#f4f8ec","700");
+  text(s.clues?s.clues+"/7":"—",971,y,16,"#c4d7d2","800","right");
+ });
+ if(model.extraSongs)text("Latest 7 only • +"+model.extraSongs+" earlier saved songs",100,1230,14,"#aaccc5");
+ text("Local preview only • earlier or unseen rounds may be missing.",70,1296,18,"#b8d8cf","650");
+ text("kalenel.nl/music",1007,1296,17,"#e1e5b9","800","right");
+ posterPaintKey=key;
+ return true;
+}
+function downloadPartyPoster(){
+ const code=room?.code;
+ if(room?.phase!=="finished"||posterDownloadBusy)return;
+ if(!renderPartyPoster()){setText("finish-poster-status","Poster unavailable on this browser.");return}
+ const canvas=$("finish-poster-canvas");
+ if(typeof canvas.toBlob!=="function"){
+  setText("finish-poster-status","PNG saving is not supported here; use Copy party recap.");
+  return;
+ }
+ posterDownloadBusy=true;
+ $("finish-download-poster").disabled=true;
+ try{
+  canvas.toBlob(blob=>{
+   posterDownloadBusy=false;
+   $("finish-download-poster").disabled=false;
+   if(room?.code!==code||room?.phase!=="finished")return;
+   if(!blob||blob.type!=="image/png"){
+    setText("finish-poster-status","PNG generation failed; use Copy party recap.");
+    return;
+   }
+   let url;
+   try{
+    url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="tune-rush-party-poster-"+new Date().toISOString().slice(0,10)+".png";
+    a.style.display="none";document.body.append(a);
+    try{a.click()}finally{a.remove()}
+    const savedUrl=url;
+    setTimeout(()=>URL.revokeObjectURL(savedUrl),10000);
+    url=null;
+    setText("finish-poster-status","Poster PNG requested. Check your Downloads folder.");
+   }catch{
+    if(url)URL.revokeObjectURL(url);
+    setText("finish-poster-status","PNG download blocked; use Copy party recap.");
+   }
+  },"image/png");
+ }catch{
+  posterDownloadBusy=false;
+  $("finish-download-poster").disabled=false;
+  if(room?.code===code&&room?.phase==="finished")
+   setText("finish-poster-status","Poster generation is unavailable on this browser.");
+ }
+}
+
 function partyNightStats(state=room){
  // Song history is deliberately tab-only, bounded, and scoped to this room.
  // A zero count means "revealed before clues" and is not a timed solve.
@@ -1706,6 +1840,7 @@ $("finish-new-party").addEventListener("click",newParty);
 $("finish-copy-results").addEventListener("click",copyFinalScores);
 $("finish-copy-recap").addEventListener("click",copyPartyRecap);
 $("finish-download-recap").addEventListener("click",downloadPartyRecap);
+$("finish-download-poster").addEventListener("click",downloadPartyPoster);
 $("setlist-copy").addEventListener("click",copyPartySetlist);
 $("copy-invite").addEventListener("click",share);
 $("leave").addEventListener("click",()=>{if(confirm("Leave this game on this device?"))reset()});
