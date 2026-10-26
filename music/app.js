@@ -329,11 +329,13 @@ async function restoreAudiusHost(state){
   return;
  }
  audiusRestoring=true;
+ const restoreSession=access;
  localStatus("Restoring this round's Audius stream without changing the song…");
  try{
   await prepareAudiusPlayback(saved,wantedIndex);
   if(!room||!isHost()||room.code!==state.code||room.round!==state.round||
-     room.audio?.source!==state.audio.source||!access||access.code!==state.code){
+     room.audio?.source!==state.audio.source||!restoreSession||
+     restoreSession!==access){
    clearAudiusStream();return;
   }
   audiusActive=true;
@@ -343,7 +345,10 @@ async function restoreAudiusHost(state){
   if(room.phase==="playing"){
    // Browser reload stopped the old audio. Never leave an inaudible clue running.
    const b=await rpc("pause");
-   if(room&&room.code===state.code&&room.round===state.round)applyState(b.state);
+   if(restoreSession===access&&room?.code===state.code&&room.round===state.round&&
+      room.audio?.source===state.audio.source&&room.phase==="playing"&&
+      b.state.code===state.code&&b.state.round===state.round&&
+      b.state.audio?.source===state.audio.source)applyState(b.state);
   }
   localStatus("Stream recovered. Play or replay the current clue when ready.");
  }catch(e){
@@ -403,35 +408,49 @@ async function startAudio(info){
  await playLocalHint(info);
  startedClip=true;
 }
+// Guard every direct audio RPC against Leave, room replacement, new rounds,
+// and more recent actions. A response is authoritative only to the session
+// and playback generation that issued it.
+function currentClipRequest(session,code,round,source,version,generation=null){
+ return !!session&&session===access&&room?.code===code&&room.round===round&&
+  room.audio?.source===source&&mutationVersion===version&&
+  (generation===null||clipGeneration===generation);
+}
 async function startClip(replay=false){
  replay=replay||failedClue===room?.round+":"+room?.step;
- if(!room||!isHost()||loading||(!replay&&room.phase!=="paused")||
+ if(!room||!isHost()||loading||roundTransitionBusy||(!replay&&room.phase!=="paused")||
   (replay&&(!["paused","playing"].includes(room.phase)||room.step<0||room.firstAnswered)))return;
  cancelNext();
- const generation=++clipGeneration,round=room.round,initialStep=room.step;
+ const generation=++clipGeneration,session=access,code=room.code,source=room.audio?.source;
+ const round=room.round,initialStep=room.step;
  try{
   setLoading(true);
   if(room.mode!=="local"||!audiusActive||!localAudioUrl||
-    !/^local:\d+$/.test(room.audio?.source||"")||
-    Number(room.audio.source.slice(6))!==localCurrentIndex)
-    throw Error("The Audius host stream is unavailable. Reload the same host tab to recover, or skip this song.");
-  const body=await rpc(replay?"replay":"play",replay?{expectedRound:round,expectedStep:initialStep}:{});applyState(body.state);
+    !/^local:\d+$/.test(source||"")||
+    Number(source.slice(6))!==localCurrentIndex)
+   throw Error("The Audius host stream is unavailable. Reload the same host tab to recover, or skip this song.");
+  const pending=rpc(replay?"replay":"play",
+   replay?{expectedRound:round,expectedStep:initialStep}:{});
+  const requestVersion=mutationVersion;
+  const body=await pending;
+  if(!currentClipRequest(session,code,round,source,requestVersion,generation))return;
+  if(body.state.code!==code||body.state.round!==round||body.state.audio?.source!==source)return;
+  applyState(body.state);
   if(room.phase!=="playing")return;
   await startAudio(room.audio);
-  if(generation!==clipGeneration||!room||room.phase!=="playing")return;
+  if(!currentClipRequest(session,code,round,source,requestVersion,generation)||room.phase!=="playing")return;
   failedClue="";
   const expected=room.round,step=room.step;
   let bufferPolls=0;
   const finishClip=async()=>{
-   if(!room||room.phase!=="playing"||room.round!==expected||room.step!==step)return;
+   if(!currentClipRequest(session,code,expected,source,requestVersion,generation)||
+      room.phase!=="playing"||room.step!==step)return;
    if(room.mode==="local"&&localAudioUrl){
     // A timer is not evidence of music: a remote stream can stall mid-clue.
     // Finish only after the playhead covers the actual clue duration.
     const playedMs=(playerAudio.currentTime-(room.audio?.cueMs||0)/1000)*1000;
     if(!playerAudio.error&&!playerAudio.ended&&playedMs<room.clipMs-90&&bufferPolls<150){
-     bufferPolls++;
-     clipTimer=setTimeout(finishClip,80);
-     return;
+     bufferPolls++;clipTimer=setTimeout(finishClip,80);return;
     }
     if(playerAudio.error||playedMs<room.clipMs-90){
      failedClue=expected+":"+step;
@@ -439,20 +458,41 @@ async function startClip(replay=false){
     }
    }
    clearAudio();
+   const pauseGeneration=clipGeneration;
    try{
-    const b=await rpc("pause");applyState(b.state);
+    const pendingPause=rpc("pause"),pauseVersion=mutationVersion;
+    const b=await pendingPause;
+    if(!currentClipRequest(session,code,expected,source,pauseVersion,pauseGeneration)||
+       room.phase!=="playing"||room.step!==step)return;
+    if(b.state.code!==code||b.state.round!==expected||b.state.audio?.source!==source)return;
+    applyState(b.state);
     if(room.phase==="paused")scheduleNext(1000);
-   }catch(e){message(e.message)}
+   }catch(e){
+    if(currentClipRequest(session,code,expected,source,mutationVersion,pauseGeneration))
+     message(e.message);
+   }
   };
   clipTimer=setTimeout(finishClip,room.clipMs);
  }catch(e){
-  if(generation!==clipGeneration)return;
-  if(room?.phase==="playing")failedClue=room.round+":"+room.step;
+  if(!session||session!==access||generation!==clipGeneration||room?.code!==code||
+     room.round!==round||room.audio?.source!==source)return;
+  if(room.phase==="playing")failedClue=room.round+":"+room.step;
   clearAudio();message(e.message||"Playback failed");
   localStatus(e.message||"Audius playback failed. Retry this clue.");
-  if(room?.phase==="playing")try{const b=await rpc("pause");applyState(b.state)}catch{}
+  if(room.phase==="playing"){
+   const pauseGeneration=clipGeneration;
+   try{
+    const pendingPause=rpc("pause"),pauseVersion=mutationVersion;
+    const b=await pendingPause;
+    if(currentClipRequest(session,code,round,source,pauseVersion,pauseGeneration)&&
+       room.phase==="playing"&&b.state.code===code&&b.state.round===round&&b.state.audio?.source===source)
+     applyState(b.state);
+   }catch{}
+  }
+ }finally{
+  // A stale request must never unlock a newly joined room.
+  if(session===access&&room?.code===code)setLoading(false);
  }
- finally{setLoading(false)}
 }
 function applyState(s){
  const oldPhase=room?.phase||"",oldRound=room?.round||0;
@@ -670,6 +710,7 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
+ setLoading(false);
  roundTransitionBusy=false;
  roundTransitionToken++;
  confirmedHostSource="";
@@ -874,11 +915,20 @@ document.addEventListener("visibilitychange",()=>{
  if(document.hidden&&isHost()){
   cancelNext();
   if(room?.mode==="local"){
+   const session=access,code=room.code,round=room.round,source=room.audio?.source;
+   const shouldPause=room.phase==="playing";
    clearAudio();
-   if(room?.phase==="playing")rpc("pause").then(b=>applyState(b.state)).catch(()=>{});
+   if(shouldPause){
+    const pending=rpc("pause"),version=mutationVersion;
+    pending.then(b=>{
+     if(!currentClipRequest(session,code,round,source,version)||
+        room.phase!=="playing"||b.state.code!==code||b.state.round!==round||
+        b.state.audio?.source!==source)return;
+     applyState(b.state);
+    }).catch(()=>{});
+   }
   }
  }
- 
 });
 window.addEventListener("pagehide",()=>{clearAudio();cancelNext();clearAudiusStream()});
 const fromUrl=new URLSearchParams(location.search).get("room");
