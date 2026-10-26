@@ -13,7 +13,8 @@ const STORE="kalenel_tunerush_room_v001";
 const $=id=>document.getElementById(id);
 const playerAudio=$("licensed-player");
 let access=null,room=null,loading=false,pollBusy=false,toastTimer=null;
-let roundTransitionBusy=false;
+let roundTransitionBusy=false,roundTransitionToken=0;
+let confirmedHostSource="";
 let clipTimer=null,nextTimer=null,startedClip=false;
 let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let genresDirty=false,genresSaveTimer=null;
@@ -606,6 +607,19 @@ function render(){
   }
  }
 }
+// The server may accept Start/Next even if its HTTP response is lost.
+// Reconcile room state against the already prepared host stream on every
+// successful poll, so that audio recovery and three-game history survive.
+async function reconcileHostSelection(state){
+ if(state?.role!=="host"||state.mode!=="local"||!audiusActive||!audiusTrack||
+    !/^local:\d+$/.test(state.audio?.source||"")||
+    Number(state.audio.source.slice(6))!==localCurrentIndex)return;
+ const key=state.code+":"+state.round+":"+state.audio.source;
+ if(confirmedHostSource===key)return;
+ checkpointAudiusHost(state);
+ await rememberSelectedSong(state);
+ confirmedHostSource=key;
+}
 async function call(action,extra={},quiet=false){
  if(loading)return;
  const session=access;
@@ -618,8 +632,7 @@ async function call(action,extra={},quiet=false){
    throw Error("The room changed while that action was processing.");
   applyState(b.state);setConnectionHealthy();
   if((action==="start"||action==="next")&&b.state?.role==="host"){
-   checkpointAudiusHost(b.state);
-   try{await rememberSelectedSong(b.state)}catch(e){message("Song history could not be saved on this browser.");}
+   try{await reconcileHostSelection(b.state)}catch(e){message("Song history could not be saved on this browser.");}
   }
   return b;
  }
@@ -643,6 +656,7 @@ async function refresh(){
   }
   applyState(b.state);
   setConnectionHealthy();
+  try{await reconcileHostSelection(b.state)}catch{}
   await restoreAudiusHost(b.state);
  }
  catch(e){
@@ -655,6 +669,8 @@ async function refresh(){
 function reset(){
  mutationVersion++;
  roundTransitionBusy=false;
+ roundTransitionToken++;
+ confirmedHostSource="";
  setConnectionHealthy();
  try{sessionStorage.removeItem(AUDIUS_HOST_SESSION)}catch{}
  cancelNext();clearAudio();clearAudiusStream();audiusActive=false;audiusTrack=null;
@@ -743,6 +759,8 @@ async function advanceRound(action){
  const expectedPhase=action==="start"?"lobby":"solved";
  if(room.phase!==expectedPhase)return;
  const session=access,code=room.code,round=room.round;
+ const token=++roundTransitionToken;
+ let submitted=false;
  roundTransitionBusy=true;
  setLoading(false);
  try{
@@ -766,25 +784,35 @@ async function advanceRound(action){
    clearAudiusStream();audiusActive=false;audiusTrack=null;
    throw Error("The game moved on while preparing audio. Try again.");
   }
+  submitted=true;
   const accepted=await call(action,chosen);
   if(!accepted)throw Error("The game is busy. Try again.");
  }catch(e){
-  if(session===access&&room?.code===code){
-   if(action==="start"&&room.phase==="lobby"){
-    clearAudiusStream();audiusActive=false;audiusTrack=null;
-    setText("audius-availability","Could not start the round. You can retry without losing the lobby.");
-   }else if(action==="next"&&room.phase==="solved"){
-    // Candidate selection temporarily replaced the old host media element.
-    // Restore the last accepted round from its private host-tab checkpoint.
-    await restoreAudiusHost(room);
+  if(session===access&&room?.code===code&&token===roundTransitionToken){
+   if(submitted){
+    // The server can commit even if the POST times out. Do not destroy
+    // the candidate until an authoritative state request distinguishes a
+    // rejected mutation from a committed one.
+    message("Checking whether the song was accepted by the game server…");
+    connectionRetryAt=0;
+    await refresh();
+   }else{
+    if(action==="start"&&room.phase==="lobby"){
+     clearAudiusStream();audiusActive=false;audiusTrack=null;
+     setText("audius-availability","Could not start the round. You can retry without losing the lobby.");
+    }else if(action==="next"&&room.phase==="solved"){
+     await restoreAudiusHost(room);
+    }
+    message(e.message||"Unable to prepare the next track.");
    }
-   message(e.message||"Unable to prepare the next track.");
   }
  }finally{
-  // A Leave may have cleared the transition while asynchronous work was
-  // running; do not silently retain the lock for a new room.
-  roundTransitionBusy=false;
-  setLoading(false);
+  // A previous room's late completion must never unlock a new room's
+  // active track transition.
+  if(token===roundTransitionToken){
+   roundTransitionBusy=false;
+   setLoading(false);
+  }
  }
 }
 $("start").addEventListener("click",()=>advanceRound("start"));
