@@ -661,9 +661,12 @@ try{
  // This verifies safe transition, QR refresh, filter settings and old-room
  // isolation without modifying existing player scores in the database.
  const previousParty=await host.evaluate(()=>room.code);
+ // Stop new polls and let any already-started state request settle before
+ // presenting the synthetic finish. Otherwise its late response may
+ // overwrite phase=finished between clicking Copy and reading the result.
+ await host.evaluate(()=>{window.__restoreRefresh=refresh;refresh=async()=>{};});
+ await host.waitForFunction(()=>!pollBusy&&!loading,null,{timeout:10000});
  await host.evaluate(()=>{
-  window.__restoreRefresh=refresh;
-  refresh=async()=>{}; // Hold an intentionally simulated winner UI steady.
   room={...room,phase:"finished",round:44,
    players:[{id:"p1",name:"Demo Winner",score:20},
     {id:"p2",name:"Second Place",score:11.5}],
