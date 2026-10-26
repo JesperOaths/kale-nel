@@ -25,6 +25,7 @@ export function readRotation(text){
   const games=obj.games.filter(g=>validCode(g?.code)&&
    Array.isArray(g?.local)&&Array.isArray(g?.catalog))
    .map(g=>({code:g.code,local:g.local.filter(x=>typeof x==="string"&&/^[a-f0-9]{16}$/.test(x)).slice(-10000),
+    audius:(Array.isArray(g.audius)?g.audius:[]).filter(x=>typeof x==="string"&&/^[A-Za-z0-9_-]{3,32}$/.test(x)).slice(-10000),
     catalog:g.catalog.filter(x=>typeof x==="string"&&/^[A-Za-z0-9_-]{11}$/.test(x)).slice(-10000)}));
   return {version:1,games:games.slice(-3)};
  }catch{return emptyRotation()}
@@ -33,18 +34,18 @@ export function openGame(history,roomCode){
  if(!validCode(roomCode))throw Error("Invalid room code for rotation");
  const games=history.games.filter(g=>g.code!==roomCode);
  const old=history.games.find(g=>g.code===roomCode);
- games.push(old||{code:roomCode,local:[],catalog:[]});
+ games.push(old||{code:roomCode,local:[],catalog:[],audius:[]});
  history.games=games.slice(-3);
  return history;
 }
 export function playedKeys(history,kind){
- if(kind!=="local"&&kind!=="catalog")throw Error("Invalid source");
+ if(!["local","catalog","audius"].includes(kind))throw Error("Invalid source");
  return new Set((history.games||[]).flatMap(g=>g[kind]||[]));
 }
 export function notePlayed(history,roomCode,kind,key){
  openGame(history,roomCode);
  if(kind!=="local"&&kind!=="catalog")throw Error("Invalid source");
- const correct=kind==="local"?/^[a-f0-9]{16}$/:/^[A-Za-z0-9_-]{11}$/;
+ const correct=kind==="local"?/^[a-f0-9]{16}$/:kind==="catalog"?/^[A-Za-z0-9_-]{11}$/:/^[A-Za-z0-9_-]{3,32}$/;
  if(!correct.test(key))throw Error("Invalid song identifier");
  const current=history.games[history.games.length-1][kind];
  if(!current.includes(key))current.push(key);
