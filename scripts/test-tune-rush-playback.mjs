@@ -251,6 +251,53 @@ async function fireTimer(f,ms){
  assert.equal(f.run("room"),null,"old create response must not resurrect a departed session");
  assert.equal(f.run("numberOfCreates"),1);
 }
+// Answer countdown is purely a client-side view of the server's deadline.
+// Neither reaching zero nor a late invalid deadline changes room scores.
+{
+ const f=fixture();
+ const serverExpires=Date.parse("2026-10-26T19:00:25.000Z");
+ const state={phase:"answering",answerExpiresAt:"2026-10-26T19:00:25.000Z"};
+ const at=(ms)=>f.run('answerClockSnapshot('+JSON.stringify(state)+','+ms+')');
+ let clock=at(serverExpires-25000);
+ assert.equal(clock.seconds,25);
+ assert.equal(clock.remaining,25);
+ assert.equal(clock.warning,false);
+ clock=at(serverExpires-9500);
+ assert.equal(clock.seconds,10);
+ assert.equal(clock.warning,true);
+ assert.equal(clock.urgent,false);
+ clock=at(serverExpires-4200);
+ assert.equal(clock.seconds,5);
+ assert.equal(clock.urgent,true);
+ clock=at(serverExpires);
+ assert.equal(clock.seconds,0);
+ assert.equal(clock.expired,true);
+ assert.equal(at(serverExpires+15000).remaining,0);
+ assert.equal(f.run('answerClockSnapshot({phase:"answering",answerExpiresAt:"garbled"},0)'),null);
+ assert.equal(f.run('answerClockSnapshot({phase:"paused",answerExpiresAt:"2026-10-26T19:00:25Z"},0)'),null);
+ f.run('room.role="player";room.phase="answering";room.me="player-a";'+
+  'room.lockedPlayer="player-a";room.answerExpiresAt="2026-10-26T19:00:25Z";'+
+  'room.players=[{id:"player-a",score:5}];let clockMutations=0;'+
+  'rpc=async()=>{clockMutations++};');
+ f.run("updateAnswerClock("+String(serverExpires-9500)+")");
+ assert.equal(f.element("answer-countdown").textContent,"10s");
+ assert.equal(f.element("answer-clock").dataset.timing,"warning");
+ assert.equal(f.element("answer-clock-meter").attrs.get("aria-valuenow"),"10");
+ assert.equal(f.element("answer-clock-fill").style.width,"38%");
+ f.run("updateAnswerClock("+String(serverExpires-4200)+")");
+ assert.equal(f.element("answer-clock").dataset.timing,"urgent");
+ assert.match(f.element("answer-clock-help").textContent,/Last few seconds/);
+ f.run("updateAnswerClock("+String(serverExpires+1000)+")");
+ assert.equal(f.element("answer-countdown").textContent,"0s");
+ assert.equal(f.element("answer-clock").dataset.timing,"expired");
+ assert.equal(f.element("answer-clock-meter").attrs.get("aria-valuetext"),"Deadline reached");
+ assert.equal(f.run("room.phase"),"answering");
+ assert.equal(f.run("room.players[0].score"),5);
+ assert.equal(f.run("clockMutations"),0,"local countdown must never expire the server's answer");
+ f.run('room.lockedPlayer="someone-else"');
+ f.run("updateAnswerClock("+String(serverExpires+2000)+")");
+ assert.equal(f.run("clockMutations"),0);
+}
 // Leaving during a long track transition must unlock controls for the
 // next room, not leave the Start button stuck disabled.
 {
