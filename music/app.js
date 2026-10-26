@@ -123,7 +123,10 @@ async function discoverAudius(force=false){
  const filters=chosenFilters(),key=JSON.stringify(filters);
  if(!filters.genres.length)throw Error("Select at least one genre.");
  if(!force&&key===audiusFiltersKey&&audiusPool.length)return audiusPool;
- audiusChecking=true;setText("audius-availability","Finding Audius tracks that match your selections…");
+ audiusChecking=true;
+ $("audius-check").disabled=true;
+ $("audius-check").textContent="⌛ Checking…";
+ setText("audius-availability","Finding Audius tracks that match your selections…");
  try{
   const mod=await audiusLib();
   const tracks=await mod.discoverAudiusTracks(filters.genres,filters.decades);
@@ -139,7 +142,11 @@ async function discoverAudius(force=false){
  }catch(e){
   setText("audius-availability",String(e.message||e));
   throw e;
- }finally{audiusChecking=false}
+ }finally{
+  audiusChecking=false;
+  $("audius-check").disabled=false;
+  $("audius-check").textContent="↻ Check tracks";
+ }
 }
 async function prepareAudiusPlayback(record){
  const lib=await audiusLib(),uri=lib.streamUrl(record.id);
@@ -340,6 +347,11 @@ function render(){
 
  $("lobby-players").replaceChildren(...room.players.map(x=>makePlayer(x.name)));
  setText("lobby-player-count",room.players.length+" player"+(room.players.length===1?"":"s")+" joined");
+ if(host&&phase==="lobby"){
+  setText("lobby-launch-status",room.players.length
+    ?room.players.length+" PLAYER"+(room.players.length===1?"":"S")+" READY · START WHEN YOU LIKE"
+    :"INVITE AT LEAST ONE PLAYER TO START");
+ }
  if(phase==="lobby"&&!genresDirty&&(room.genres||[]).some(g=>["pop","rock","hiphop","electronic","dance","disco","indie","rnb","metal"].includes(g))){
   document.querySelectorAll("#genre-options input").forEach(input=>{
    input.checked=room.genres.includes(input.value);
@@ -541,11 +553,35 @@ document.addEventListener("fullscreenchange",()=>{
 $("start").addEventListener("click",async()=>{
  try{
   clearTimeout(genresSaveTimer);
+  if(!room?.players?.length)throw Error("Invite at least one player before starting.");
   const filters=chosenFilters();
   if(!filters.genres.length)throw Error("Select at least one genre");
   await call("settings",filters);
   await call("start",await selectAudiusRound());
  }catch(e){message(e.message)}
+});
+const AUDIUS_PRESETS={
+ party:["pop","dance","disco","electronic"],
+ electronic:["electronic","dance","disco"],
+ guitar:["rock","indie","metal"],
+ all:["pop","rock","hiphop","electronic","dance","disco","indie","rnb","metal"]
+};
+document.querySelectorAll("[data-audius-preset]").forEach(button=>button.addEventListener("click",()=>{
+ if(!room||!isHost()||room.phase!=="lobby")return;
+ const genres=AUDIUS_PRESETS[button.dataset.audiusPreset];
+ if(!genres)return;
+ document.querySelectorAll("#genre-options input").forEach(input=>{
+  input.checked=genres.includes(input.value);
+ });
+ // Quick mix intentionally resets decades so older-genre scarcity cannot silently apply.
+ document.querySelectorAll("#decade-options input").forEach(input=>input.checked=false);
+ $("genre-options").dispatchEvent(new Event("change",{bubbles:true}));
+ message(button.textContent.trim()+" selected · all eras");
+}));
+$("clear-audius-decades").addEventListener("click",()=>{
+ if(!room||!isHost()||room.phase!=="lobby")return;
+ document.querySelectorAll("#decade-options input").forEach(input=>input.checked=false);
+ $("decade-options").dispatchEvent(new Event("change",{bubbles:true}));
 });
 $("audius-check").addEventListener("click",()=>discoverAudius(true).catch(e=>message(e.message)));
 $("audius-play-hint").addEventListener("click",()=>startClip());
@@ -560,6 +596,7 @@ $("steal").addEventListener("click",async()=>{try{await call("steal")}catch{}});
 $("pass").addEventListener("click",async()=>{try{await call("forfeit")}catch{}});
 $("answer-form").addEventListener("submit",submitGuess);
 for(const id of ["genre-options","decade-options"])$(id).addEventListener("change",()=>{
+ genresDirty=true;
  clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);
  audiusPool=[];audiusFiltersKey="";
  setText("audius-availability","Filters changed. Check tracks to refresh availability.");
