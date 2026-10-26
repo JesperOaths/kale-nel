@@ -518,6 +518,22 @@ try{
   "combined recap must include the room's actual revealed song");
  assert.match(ownRoomRecap,/REVEALED SONGS \(1 saved in this tab\)/);
  assert.ok(!ownRoomRecap.includes("fixture-token"));
+ // Stats must come from actually revealed, same-room songs; "before
+ // clues" is not counted as a numeric time-to-solve.
+ const realNightStats=await host.evaluate(()=>({
+  stats:partyNightStats({...room,phase:"finished"}),
+  clues:partySetlist[0]?.clues
+ }));
+ assert.equal(realNightStats.stats.count,1);
+ assert.equal(realNightStats.stats.measured,realNightStats.clues>0?1:0);
+ assert.equal(realNightStats.stats.average,
+  realNightStats.clues>0?realNightStats.clues.toFixed(1):null);
+ assert.equal(realNightStats.stats.fewest,
+  realNightStats.clues>0?realNightStats.clues:null);
+ assert.equal(await host.evaluate(()=>{
+  const changed=partyNightStats({...room,code:"OTHER1",phase:"finished"});
+  return changed.count===0&&changed.average===null&&changed.fewest===null;
+ }),true,"other-room stats must be empty");
  assert.ok(await host.locator("#audius-credit").isVisible());
  let nextWrites=0;
  const watchNext=async route=>{
@@ -688,6 +704,12 @@ try{
  });
  assert.equal(await host.locator("#finish-new-party").isVisible(),true);
  assert.equal(await host.locator("#finish-copy-results").isVisible(),true);
+ assert.equal(await host.locator("#finish-download-recap").isVisible(),true);
+ assert.equal(await host.locator("#finish-songs-remembered").innerText(),"0",
+  "new room cannot display older party's song count");
+ assert.equal(await host.locator("#finish-average-clues").innerText(),"—",
+  "unknown clue average must never become zero");
+ assert.equal(await host.locator("#finish-fewest-clues").innerText(),"—");
  assert.equal(await guest.locator("#finish-new-party:visible").count(),0);
  await host.locator("#finish-copy-results").click();
  // Click dispatch does not await asynchronous Clipboard API callbacks.
@@ -738,6 +760,22 @@ try{
  await host.locator("#finish-copy-recap").click();
  await host.waitForFunction(()=>!!window.__manualCopy,null,{timeout:6000});
  assert.match(await host.evaluate(()=>window.__manualCopy),/TUNE RUSH · PARTY RECAP/);
+ // Download must be a real local UTF-8 text file with an explicit BOM so
+ // Windows Notepad opens song names and em dashes correctly.
+ const downloadEvent=host.waitForEvent("download",{timeout:9000});
+ await host.locator("#finish-download-recap").click();
+ const downloaded=await downloadEvent;
+ assert.match(downloaded.suggestedFilename(),/^tune-rush-party-recap-\d{4}-\d{2}-\d{2}\.txt$/,
+  "export filename must not expose a room code or player credential");
+ const fileBytes=await (await import("node:fs/promises")).readFile(await downloaded.path());
+ assert.ok(fileBytes.subarray(0,3).equals(Buffer.from([0xef,0xbb,0xbf])),
+  "UTF-8 BOM keeps Windows Notepad accents readable");
+ const fileText=fileBytes.toString("utf8").replace(/^\uFEFF/,"");
+ assert.equal(fileText,fullRecap+"\n");
+ assert.ok(!fileText.includes("fixture-token"));
+ assert.ok(!fileText.includes(publicSong.artist+" — "+publicSong.title));
+ assert.ok(!fileText.includes(previousParty));
+ assert.match(await host.locator("#finish-recap-status").innerText(),/Downloads folder/);
  let createdNewParty=0,updatedNewParty=0;
  const trackNewParty=async route=>{
   const body=JSON.parse(route.request().postData()||"{}");
