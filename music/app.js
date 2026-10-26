@@ -14,7 +14,7 @@ const $=id=>document.getElementById(id);
 const playerAudio=$("licensed-player");
 const auditionAudio=$("audition-audio");
 let auditionTrack=null,auditionTimer=null,auditionVersion=0;
-let auditionSession=null,auditionFilterKey="",auditionSeen=new Set();
+let auditionSession=null,auditionFilterKey="",auditionSeen=new Set(),auditionExcluded=new Set();
 function auditionReady(){
  return !!access&&isHost()&&room.phase==="lobby"&&!loading&&!roundTransitionBusy&&
   !audiusChecking&&audiusPool.length>0&&audiusFiltersKey===JSON.stringify(chosenFilters());
@@ -24,6 +24,7 @@ function updateAuditionControls(){
  const active=auditionReady()&&!!auditionTrack&&auditionSession===access&&
   auditionFilterKey===JSON.stringify(chosenFilters());
  $("audition-next").disabled=!active;$("audition-play").disabled=!active;
+ $("audition-exclude").disabled=!active;
 }
 function stopAudition(clear=false){
  auditionVersion++;clearTimeout(auditionTimer);auditionTimer=null;
@@ -32,7 +33,7 @@ function stopAudition(clear=false){
   try{auditionAudio.removeAttribute("src");auditionAudio.load()}catch{}
   auditionTrack=null;auditionSession=null;auditionFilterKey="";
   $("audition-selected").hidden=true;
-  for(const id of ["audition-play","audition-next","audition-stop"])$(id).hidden=true;
+  for(const id of ["audition-play","audition-next","audition-exclude","audition-stop"])$(id).hidden=true;
   setText("audition-status","Check tracks to unlock real Audius samples.");
  }
  updateAuditionControls();
@@ -50,7 +51,8 @@ async function pickAudition(){
   const [lib,rot]=await Promise.all([audiusLib(),rotation()]);
   if(!valid())return;
   const fresh=rot.audiusFreshTracks(audiusPool,rot.playedKeys(rotationHistory,"audius"),
-   rot.playedKeys(rotationHistory,"audiusFingerprints"));
+   rot.playedKeys(rotationHistory,"audiusFingerprints"))
+   .filter(t=>!auditionExcluded.has(rot.audiusIdentity(t)));
   if(!fresh.length)throw Error("No unheard songs in this mix. Broaden the filters.");
   let pool=fresh.filter(t=>!auditionSeen.has(t.id));
   if(!pool.length){auditionSeen.clear();pool=fresh}
@@ -60,7 +62,7 @@ async function pickAudition(){
   auditionSeen.add(track.id);auditionAudio.src=lib.streamUrl(track.id);
   setText("audition-track-title",track.title);setText("audition-track-artist",track.artist);
   $("audition-selected").hidden=false;
-  for(const id of ["audition-play","audition-next","audition-stop"])$(id).hidden=false;
+  for(const id of ["audition-play","audition-next","audition-exclude","audition-stop"])$(id).hidden=false;
   setText("audition-status","Ready. Hear eight seconds of this real Audius stream.");
   updateAuditionControls();
  }catch(e){
@@ -101,6 +103,15 @@ auditionAudio.addEventListener("error",()=>{
 });
 $("audition-pick").addEventListener("click",pickAudition);
 $("audition-next").addEventListener("click",pickAudition);
+$("audition-exclude").addEventListener("click",async()=>{
+ if(!auditionReady()||!auditionTrack||auditionSession!==access)return;
+ const rot=await rotation();
+ if(!auditionReady()||!auditionTrack||auditionSession!==access)return;
+ auditionExcluded.add(rot.audiusIdentity(auditionTrack));
+ stopAudition(true);
+ setText("audition-status","Excluded from this party's upcoming rounds.");
+ await pickAudition();
+});
 $("audition-play").addEventListener("click",playAudition);
 $("audition-stop").addEventListener("click",()=>{
  stopAudition(false);$("audition-stop").disabled=true;
@@ -492,7 +503,8 @@ async function selectAudiusRound(isCurrent=()=>true){
  const previously=history.playedKeys(rotationHistory,"audius");
  const signatures=history.playedKeys(rotationHistory,"audiusFingerprints");
  // Deduplicate re-uploads of the same artist/title before choosing a stream.
- const fresh=history.audiusFreshTracks(tracks,previously,signatures);
+ const fresh=history.audiusFreshTracks(tracks,previously,signatures)
+  .filter(t=>!auditionExcluded.has(history.audiusIdentity(t)));
  const attempts=new Set();
  const candidateCount=fresh.length;
  for(let i=0;i<Math.min(candidateCount,9);i++){
@@ -513,7 +525,7 @@ async function selectAudiusRound(isCurrent=()=>true){
   }
  }
  throw Error(candidateCount===0?
-  "No unheard Audius song titles match these filters, even after checking re-uploads. Broaden the filters.":
+  "No unplayed, host-approved songs remain in this mix. Broaden filters or create a fresh party.":
   "Couldn't load a playable Audius stream. Check your internet connection or change filters.");
 }
 
@@ -1022,7 +1034,7 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
- stopAudition(true);auditionSeen.clear();
+ stopAudition(true);auditionSeen.clear();auditionExcluded.clear();
  cancelAudiusScan();
  // A queued settings debounce belongs to the departed lobby, not a room
  // created a fraction of a second later on the same host browser.
