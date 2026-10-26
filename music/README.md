@@ -24,6 +24,10 @@ Streaming is initiated by a host button, never background-autoplayed. A clue doe
 
 **Host page refresh recovery:** the current stream's Audius ID, transient server audio index, room/round and host-only song metadata are stored in the host tab's `sessionStorage` after the server accepts Start/Next, and expire after eight hours. Refreshing **that same tab** reopens the same provider stream after checking the authenticated room, round and audio-source index. Playback is never restarted without a user click. If the tab is gone, private session storage is unavailable, or the stream cannot load, the host can skip/reveal and advance. Guests never receive or read this checkpoint. A filter change during discovery invalidates earlier results rather than displaying or selecting songs from a stale mix.
 
+### Starting and advancing rounds safely
+
+The host cannot launch overlapping **Start game** or **Next song** operations: the controls stay locked throughout the Audius catalog check, candidate stream loading and authoritative server update. Ordinary room polling pauses while selecting the new stream so an old-round refresh cannot accidentally restore the previous song over the candidate. If the server accepts a song but its HTTP acknowledgment is lost, Tune Rush checks the authenticated room again, keeps the matching prepared stream, and records it for three-game rotation and tab-reload recovery. Stale action responses from a room the host has left are ignored.
+
 ### Reconnecting without losing the game
 
 The host and player views keep the **last authoritative room state** visible during a temporary connection failure, displaying a clear reconnect notice instead of pretending scores and buzzers are up to date. State polling backs off to a maximum of 16 seconds on repeated failures; reconnecting or tapping **Retry now** requests a fresh authenticated state. A successful refresh hides the notice without clearing the room, replaying music or resetting points. A response from a previous room is ignored if the participant has since left or switched rooms. These retries do not create new song downloads or store extra user data.

@@ -124,8 +124,31 @@ try{
  assert.equal(await host.locator("#audius-check").isDisabled(),false,"Check tracks re-enables after scan");
  const mobile=await guest.evaluate(()=>({vw:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
  assert.ok(mobile.scroll<=mobile.vw+3,"guest page overflows phone viewport");
- await host.locator("#start").click();
- await host.waitForFunction(()=>room?.mode==="local"&&room?.round===1&&audiusActive,null,{timeout:26000});
+ // Lose the HTTP success response *after* Supabase has accepted Start.
+ // Two rapid attempts must create just one round. The host must recover the
+ // committed song from the authenticated state RPC, not discard its audio.
+ let startWrites=0;
+ const loseStartAck=async route=>{
+  const payload=JSON.parse(route.request().postData()||"{}");
+  if(payload.p_action==="start"){
+   startWrites++;
+   const response=await route.fetch();
+   assert.ok(response.ok(),"start was accepted before its reply was lost");
+   await route.fulfill({status:503,contentType:"application/json",
+    body:JSON.stringify({message:"temporary_failure"})});
+   return;
+  }
+  await route.continue();
+ };
+ await host.route(roomRpc,loseStartAck);
+ await host.evaluate(()=>{advanceRound("start");advanceRound("start")});
+ await host.waitForFunction(()=>room?.mode==="local"&&room?.round===1&&audiusActive&&
+  !roundTransitionBusy&&!!sessionStorage.getItem("tune-rush-audius-host-stream-v1"),
+  null,{timeout:32000});
+ await host.unroute(roomRpc,loseStartAck);
+ assert.equal(startWrites,1,"double Start must not create two rounds");
+ assert.equal(await host.locator("#connection-status").isVisible(),false,
+  "lost Start reply must reconcile against authoritative room state");
  const first=await host.evaluate(()=>({source:room.audio.source,id:audiusTrack.id}));
  assert.match(first.source,/^local:\d+$/);
  assert.equal((await guest.evaluate(()=>room?.audio)),null,"guest must not learn Audius stream or private answer");
@@ -138,8 +161,17 @@ try{
  await host.locator("#skip-round").click();
  await host.waitForFunction(()=>room?.phase==="solved",null,{timeout:15000});
  assert.ok(await host.locator("#audius-credit").isVisible());
- await host.locator("#next-round").click();
- await host.waitForFunction(()=>room?.round===2&&room?.phase==="paused",null,{timeout:25000});
+ let nextWrites=0;
+ const watchNext=async route=>{
+  if(JSON.parse(route.request().postData()||"{}").p_action==="next")nextWrites++;
+  await route.continue();
+ };
+ await host.route(roomRpc,watchNext);
+ await host.evaluate(()=>{advanceRound("next");advanceRound("next")});
+ await host.waitForFunction(()=>room?.round===2&&room?.phase==="paused"&&!roundTransitionBusy,
+  null,{timeout:25000});
+ await host.unroute(roomRpc,watchNext);
+ assert.equal(nextWrites,1,"double Next must not advance twice or replace the stream");
  const second=await host.evaluate(()=>({source:room.audio.source,ids:rotationHistory?.games?.at(-1)?.audius||[]}));
  assert.notEqual(second.source,first.source,"no-repeat selection must avoid previous track");
  assert.ok(second.ids.length>=2,"playing history must persist Audius IDs");
@@ -207,5 +239,6 @@ try{
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
   nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",networkRecovery:true,staleLeaveBlocked:true,noRepeat:true,mobileOverflow:false,
+  lostStartAcknowledgment:"reconciled",doubleStartWrites:startWrites,doubleNextWrites:nextWrites,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
