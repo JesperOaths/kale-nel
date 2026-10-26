@@ -181,6 +181,29 @@ try{
  assert.match(await host.locator("#reserve-status").innerText(),/Need 117 more/);
  assert.equal(await host.locator(".reserve-gauge").getAttribute("aria-valuenow"),"3");
  assert.equal(await host.locator("#reserve-expand").isVisible(),true);
+ // A real host-only music audition must not begin a round or store a song.
+ assert.equal(await host.locator("#audition-pick").isEnabled(),true);
+ assert.equal(await guest.locator("#audius-audition:visible").count(),0);
+ const beforeAudition=await host.evaluate(()=>({phase:room.phase,round:room.round,
+  songIds:rotationHistory.games.flatMap(g=>g.audius||[]).length}));
+ await host.locator("#audition-pick").click();
+ await host.waitForFunction(()=>auditionTrack!==null,null,{timeout:7000});
+ const firstSample=await host.evaluate(()=>auditionTrack.id);
+ assert.match(await host.locator("#audition-audio").getAttribute("src"),
+  /^https:\/\/api\.audius\.co\/v1\/tracks\/[A-Za-z0-9_-]+\/stream$/);
+ await host.locator("#audition-play").click();
+ await host.waitForFunction(()=>document.getElementById("audition-audio").currentTime>0.22,
+  null,{timeout:8500});
+ assert.equal(await host.evaluate(()=>auditionAudio.volume),0.35);
+ await host.locator("#audition-stop").click();
+ assert.equal(await host.evaluate(()=>auditionAudio.paused),true);
+ assert.equal(await host.evaluate(()=>auditionTimer),null);
+ await host.locator("#audition-next").click();
+ await host.waitForFunction(id=>auditionTrack!==null&&auditionTrack.id!==id,
+  firstSample,{timeout:7000});
+ assert.deepEqual(await host.evaluate(()=>({phase:room.phase,round:room.round,
+  songIds:rotationHistory.games.flatMap(g=>g.audius||[]).length})),
+  beforeAudition,"audition must not change the game or recent song history");
  // Hold one forced catalog scan, then change filters away and back to
  // exactly the original values. An old scan can match the FINAL filter key,
  // but it must still be rejected because the generation was invalidated.
@@ -363,6 +386,7 @@ try{
  // a freshly created room, even when both lobbies use identical filters.
  await host.evaluate(()=>{
   const base=audiusLib;
+  window.__restoreProvider=()=>{audiusLib=base};
   audiusLib=async()=>{
    const lib=await base();
    return {...lib,discoverAudiusTracks:()=>
@@ -406,6 +430,23 @@ try{
  assert.equal(await host.evaluate(()=>audiusPool.length),0,
   "a late old-room scan may not seed a replacement room");
  assert.equal(await host.locator("#soundtrack-reserve").isVisible(),false);
+ // Vet a different room's catalog without recording the rejected composition.
+ await host.evaluate(()=>window.__restoreProvider());
+ await host.locator("#audius-check").click();
+ await host.waitForFunction(()=>audiusPool.length===4&&!audiusChecking,null,{timeout:20000});
+ const vetoBefore=Number(await host.locator("#reserve-free").innerText());
+ const historyBefore=await host.evaluate(()=>JSON.stringify(rotationHistory));
+ await host.locator("#audition-pick").click();
+ await host.waitForFunction(()=>auditionTrack!==null,null,{timeout:7000});
+ const vetoId=await host.evaluate(()=>auditionTrack.id);
+ await host.locator("#audition-exclude").click();
+ await host.waitForFunction(()=>auditionExcluded.size===1,null,{timeout:7000});
+ assert.equal(await host.evaluate(()=>JSON.stringify(rotationHistory)),historyBefore,
+  "veto must not mark the song played");
+ assert.equal(await host.evaluate(id=>auditionExcluded.has(rotationModule.audiusIdentity(
+  audiusPool.find(t=>t.id===id))),vetoId),true);
+ assert.equal(Number(await host.locator("#reserve-free").innerText()),Math.max(0,vetoBefore-1),
+  "a rejected composition must leave the host's playable reserve");
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,players:2,devices:3,tracks:3,streamRequests,metadataRequests,
@@ -415,5 +456,6 @@ try{
   catalogCancellation:"same-key filter return and old-room scan rejected",
   qrJoin:"second phone joined through public QR link; SVG rendered locally",
   roundsRibbon:true,popularAndCoverSearch:true,guestBuzzAndAnswer:true,
+  hostAudition:"separate live-stream playback, zero score or round mutations",hostVeto:true,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
