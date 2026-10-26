@@ -1569,6 +1569,21 @@ for(const b of document.querySelectorAll('[data-pane]'))b.addEventListener('clic
  const p=b.dataset.pane;if(p==='review')openReview('all');else openHome(p);
 });
 $('openReview').addEventListener('click',()=>openReview('all'));
+
+// One-click neural comparison handoff: USER gesture opens the exact original
+// recording with the EXISTING review video player and original-media gate.
+// Browser-local suggested folder is intentionally NOT treated as approval.
+window.addEventListener('people-neural-review-target',event=>{
+ const detail=event?.detail;
+ const clip=detail?.clip_id;
+ if(detail?.source!=='sd'||typeof clip!=='string'||!clipName.test(clip))return;
+ if(state.busy)return;
+ state.reviewSource='sd';
+ openReview('all');
+ playVideo('/new/saved/clip/'+encodeURIComponent(clip),
+   'Original S9 recording · '+clip,0,{source:'sd',clip,name:clip});
+});
+
 $('peopleReviewNow').addEventListener('click',()=>openReview('all'));
 $('peopleRecheckNow').addEventListener('click',()=>{
  const person=savedFolders().find(x=>num(x.approvals_needing_person_recheck)>0);
