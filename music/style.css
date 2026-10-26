@@ -683,7 +683,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 
 
 /* Party join station: clean optical QR contrast and large shared room code. */
-.party-join{display:flex;align-items:center;justify-content:space-between;gap:22px;
+.party-join{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:22px;
  margin:10px 0 18px;padding:23px;border-radius:23px;
  border:1px solid #9beacb70;background:radial-gradient(circle at 90% 0,#4fd6ba24,transparent 56%),linear-gradient(120deg,#173744,#19223a);
  box-shadow:0 16px 35px #0004}
