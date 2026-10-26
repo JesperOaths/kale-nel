@@ -24,6 +24,11 @@ BACKBONE_SHA='ee5717ad7a90cf0c915afa1fb6a5399b966562c5d42aa6f4a0c6c84a5349e47d'
 HEX=re.compile(r'[a-f0-9]{64}\Z')
 CLIP=re.compile(r'motion_[0-9]{13}[.]mp4\Z')
 
+class VerifiedCropPool(dict):
+    # A dropped native-index entry is never promoted to verified evidence.
+    source_count=52
+    excluded=()
+
 def sha(b):return hashlib.sha256(b).hexdigest()
 def read(path,cap,minimum=1):
     if path.is_symlink() or not path.is_file():raise ValueError('private_source_missing')
@@ -71,20 +76,34 @@ def source_metadata():
     # every indexed S9 recording's original SHA independently below instead
     # of pinning the entire unrelated mutable catalog byte stream.
     native=json.loads(native_bytes)['items']
-    by_clip={}
+    if not isinstance(native,dict):raise ValueError('native_catalog_items_invalid')
+    by_clip=VerifiedCropPool()
+    excluded=[]
+    seen=set()
     for r in crop['items']:
         name=r.get('clip_id');ref=r.get('roi_id')
         if (r.get('source')!='sd' or not CLIP.fullmatch(str(name))
             or not HEX.fullmatch(str(ref))
             or not HEX.fullmatch(str(r.get('cached_thumbnail_sha256')))
             or not HEX.fullmatch(str(r.get('derived_sha256')))
+            or not HEX.fullmatch(str(r.get('original_index_sha256')))
             or r.get('image')!=str(ref)+'.jpg'
             or r.get('bound_to_same_native_keyframe') is not False
             or r.get('identity_verified') is not False or r.get('face_detected') is not False
-            or native.get(name,{}).get('sha256')!=r.get('original_index_sha256')
-            or name in by_clip):
+            or name in seen):
             raise ValueError('untrusted_s9_crop_index')
+        seen.add(name)
+        current=native.get(name)
+        if current is None:
+            # Deleted/expired from the live catalog: fail closed for THIS
+            # original, including image routes, without hiding other valid clips.
+            excluded.append(name)
+            continue
+        if not isinstance(current,dict) or current.get('sha256')!=r['original_index_sha256']:
+            raise ValueError('native_source_sha_changed')
         by_clip[name]=r
+    if len(by_clip)+len(excluded)!=52:raise ValueError('native_index_accounting_changed')
+    by_clip.excluded=tuple(sorted(excluded))
     return model,by_clip,manual
 
 def unit(values):
@@ -120,10 +139,16 @@ def calculate_queue(model,crops,manual):
             raise ValueError('unverified_neural_row')
         if source=='sd':
             idx=crops.get(name)
+            if idx is None and name in getattr(crops,'excluded',()):
+                continue
             if idx is None or row.get('head_sha256')!=idx['derived_sha256'] or row.get('original_index_sha256')!=idx['original_index_sha256']:
                 raise ValueError('s9_vector_crop_identity_mismatch')
         grouped[key].append(unit(row['neural_fused']))
-    if len(grouped)!=92:raise ValueError('unexpected_recording_pool')
+    excluded=tuple(getattr(crops,'excluded',()))
+    total=int(getattr(crops,'source_count',len(crops)))
+    if (len(grouped)!=92-len(excluded) or len(crops)+len(excluded)!=total
+        or total!=52):
+        raise ValueError('unexpected_recording_pool')
     vectors={key:mean(rows) for key,rows in grouped.items()}
     folders=defaultdict(list)
     assigned=set()
@@ -153,8 +178,14 @@ def calculate_queue(model,crops,manual):
             continue
         ranking=sorted(((fid,cosine(vectors[key],vector))
                        for fid,vector in centroids.items()),key=lambda pair:(-pair[1],pair[0]))
+        margin=ranking[0][1]-ranking[1][1] if len(ranking)>1 else 0.0
         candidates.append({**image,'folder_id':ranking[0][0],
              'score':round(ranking[0][1],6),
+             'ranked_candidates':[{'folder_id':fid,'score':round(score,6)}
+                                   for fid,score in ranking[:3]],
+             'top_two_margin':round(margin,6),
+             'identity_status':'unidentified_review_needed',
+             'suggested_assignment':None,
              'review_status':'manual_triage_only','review_ticket_issued':False,
              'automatic_identity_matching':False})
     if len(candidates)+len(refs)!=len(crops):
@@ -165,7 +196,9 @@ def calculate_queue(model,crops,manual):
        'identity_matching':False,'original_attestation':False,
        'review_writes_enabled':False,'automatic_assignments':0,
        'threshold_filter_applied':False,'count':len(candidates),'reference_count':len(assigned),
-       'indexed_crop_count':len(crops),'assigned_s9_count':len(refs),
+       'indexed_crop_count':total,'verified_crop_count':len(crops),
+       'excluded_count':len(excluded),'excluded_clip_ids':list(excluded),
+       'assigned_s9_count':len(refs),'default_identity_selection':'none',
        'folder_ids':sorted(folders),'items':candidates,'assigned_s9_crops':refs}
 
 def crop_blob(record):
