@@ -228,6 +228,48 @@ async function selectAudiusRound(){
 
 let localCurrentIndex=null,localAudioUrl=null;
 function localStatus(note){setText("audius-playback-status",note)}
+let speakerCheckBusy=false;
+// Audible device diagnostic, not a music provider or a quiz track. It
+// generates two brief low-volume tones locally; no music is saved or fetched.
+async function testSpeakers(){
+ if(!isHost()||speakerCheckBusy)return;
+ if(room?.phase==="playing"||room?.phase==="answering"||room?.phase==="holding"){
+  message("Finish the current clue before testing your speakers.");return;
+ }
+ const supported=window.AudioContext||window.webkitAudioContext;
+ if(!supported){message("Speaker testing is not supported in this browser.");return}
+ speakerCheckBusy=true;
+ const buttons=[...document.querySelectorAll("[data-speaker-test]")];
+ for(const b of buttons)b.disabled=true;
+ let context=null;
+ try{
+  context=new supported();
+  await context.resume();
+  if(context.state!=="running")throw Error("Audio output could not start.");
+  const gain=context.createGain();
+  gain.gain.setValueAtTime(0,context.currentTime);
+  gain.gain.linearRampToValueAtTime(0.075,context.currentTime+0.025);
+  gain.gain.setValueAtTime(0.075,context.currentTime+0.63);
+  gain.gain.linearRampToValueAtTime(0,context.currentTime+0.81);
+  gain.connect(context.destination);
+  const first=context.createOscillator(),second=context.createOscillator();
+  first.type="sine";first.frequency.value=440;first.connect(gain);
+  second.type="sine";second.frequency.value=660;second.connect(gain);
+  first.start(context.currentTime);first.stop(context.currentTime+0.36);
+  second.start(context.currentTime+0.40);second.stop(context.currentTime+0.81);
+  setText("speaker-check-status","Test tone sent. If silent, check volume, mute and Bluetooth output.");
+  message("Speaker test started · adjust your device volume if silent.");
+  await new Promise(resolve=>setTimeout(resolve,950));
+ }catch(e){
+  setText("speaker-check-status","Couldn't start audio. Check browser permissions and device audio.");
+  message("Speaker test failed: "+String(e.message||e));
+ }finally{
+  if(context)try{await context.close()}catch{}
+  speakerCheckBusy=false;
+  for(const b of buttons)b.disabled=false;
+ }
+}
+
 // Only the host tab saves the transient Audius track identity. Never save audio bytes,
 // a guest capability, or a stream URL; sessionStorage disappears with the tab session.
 function checkpointAudiusHost(state){
@@ -297,19 +339,30 @@ async function playLocalHint(info){
   throw Error("The host Audius stream is no longer available. Reload the game on the host.");
  const cue=(info.cueMs||0)/1000;
  if(playerAudio.readyState===0)throw Error("The Audius stream is not ready. Please retry.");
- playerAudio.currentTime=cue;
- try{await playerAudio.play()}catch(e){throw Error("Your browser blocked audio. Tap the Play clue button again: "+String(e.message||e))}
- // HTMLMediaElement.play() can resolve while a remote seek is still buffering.
- // Never consume the 0.5-second first clue until the playback clock advances.
- let advanced=false;
- for(let probe=0;probe<120;probe++){
-  if(playerAudio.error)throw Error("The stream failed while seeking. Tap Play to retry this clue.");
-  if(playerAudio.paused)throw Error("Audio playback stopped before the clue began.");
-  if(playerAudio.currentTime>=cue+0.11){advanced=true;break}
-  await new Promise(resolve=>setTimeout(resolve,75));
- }
- if(!advanced)throw Error("The stream is still buffering. Tap Play to retry the same clue.");
- localStatus("Playing clue from "+Math.round(cue)+" seconds into the song.");
+ // A previous clue may have left the player well past this cue. Setting
+ // currentTime starts an asynchronous seek: stale playhead readings must not
+ // count as 0.5-second audio. Require seek completion and a fresh near-cue
+ // playhead before accepting playback evidence.
+ let seekConfirmed=Math.abs(playerAudio.currentTime-cue)<0.08&&!playerAudio.seeking;
+ const onSeeked=()=>{seekConfirmed=true};
+ playerAudio.addEventListener("seeked",onSeeked);
+ try{
+  playerAudio.currentTime=cue;
+  try{await playerAudio.play()}catch(e){throw Error("Your browser blocked audio. Tap the Play clue button again: "+String(e.message||e))}
+  let advanced=false;
+  for(let probe=0;probe<120;probe++){
+   if(playerAudio.error)throw Error("The stream failed while seeking. Tap Play to retry this clue.");
+   if(playerAudio.paused)throw Error("Audio playback stopped before the clue began.");
+   if(seekConfirmed&&!playerAudio.seeking){
+    const offset=playerAudio.currentTime-cue;
+    if(offset>1.25)throw Error("The stream jumped past the short clue. Tap Play to retry.");
+    if(offset>=0.11){advanced=true;break}
+   }
+   await new Promise(resolve=>setTimeout(resolve,75));
+  }
+  if(!advanced)throw Error("The stream is still buffering or seeking. Tap Play to retry the same clue.");
+  localStatus("Playing clue from "+Math.round(cue)+" seconds into the song.");
+ }finally{playerAudio.removeEventListener("seeked",onSeeked)}
 }
 
 function clearAudio(){
@@ -675,6 +728,8 @@ $("clear-audius-decades").addEventListener("click",()=>{
  $("decade-options").dispatchEvent(new Event("change",{bubbles:true}));
 });
 $("audius-check").addEventListener("click",()=>discoverAudius(true).catch(e=>message(e.message)));
+document.querySelectorAll("[data-speaker-test]").forEach(button=>
+ button.addEventListener("click",testSpeakers));
 $("audius-play-hint").addEventListener("click",()=>startClip());
 $("audius-replay-hint").addEventListener("click",()=>startClip(true));
 $("next-round").addEventListener("click",async()=>{
