@@ -12,12 +12,108 @@ async function capabilityHash(token){
 const STORE="kalenel_tunerush_room_v001";
 const $=id=>document.getElementById(id);
 const playerAudio=$("licensed-player");
+const auditionAudio=$("audition-audio");
+let auditionTrack=null,auditionTimer=null,auditionVersion=0;
+let auditionSession=null,auditionFilterKey="",auditionSeen=new Set();
+function auditionReady(){
+ return !!access&&isHost()&&room.phase==="lobby"&&!loading&&!roundTransitionBusy&&
+  !audiusChecking&&audiusPool.length>0&&audiusFiltersKey===JSON.stringify(chosenFilters());
+}
+function updateAuditionControls(){
+ $("audition-pick").disabled=!auditionReady();
+ const active=auditionReady()&&!!auditionTrack&&auditionSession===access&&
+  auditionFilterKey===JSON.stringify(chosenFilters());
+ $("audition-next").disabled=!active;$("audition-play").disabled=!active;
+}
+function stopAudition(clear=false){
+ auditionVersion++;clearTimeout(auditionTimer);auditionTimer=null;
+ try{auditionAudio.pause()}catch{}
+ if(clear){
+  try{auditionAudio.removeAttribute("src");auditionAudio.load()}catch{}
+  auditionTrack=null;auditionSession=null;auditionFilterKey="";
+  $("audition-selected").hidden=true;
+  for(const id of ["audition-play","audition-next","audition-stop"])$(id).hidden=true;
+  setText("audition-status","Check tracks to unlock real Audius samples.");
+ }
+ updateAuditionControls();
+}
+async function pickAudition(){
+ if(!auditionReady())return;
+ const session=access,code=room.code,filters=JSON.stringify(chosenFilters());
+ const version=++auditionVersion;clearTimeout(auditionTimer);auditionTimer=null;
+ try{auditionAudio.pause();auditionAudio.removeAttribute("src");auditionAudio.load()}catch{}
+ auditionTrack=null;$("audition-stop").disabled=true;
+ const valid=()=>version===auditionVersion&&session===access&&room?.code===code&&
+  room.phase==="lobby"&&!roundTransitionBusy&&filters===JSON.stringify(chosenFilters());
+ setText("audition-status","Choosing an unheard Audius track…");
+ try{
+  const [lib,rot]=await Promise.all([audiusLib(),rotation()]);
+  if(!valid())return;
+  const fresh=rot.audiusFreshTracks(audiusPool,rot.playedKeys(rotationHistory,"audius"),
+   rot.playedKeys(rotationHistory,"audiusFingerprints"));
+  if(!fresh.length)throw Error("No unheard songs in this mix. Broaden the filters.");
+  let pool=fresh.filter(t=>!auditionSeen.has(t.id));
+  if(!pool.length){auditionSeen.clear();pool=fresh}
+  const track=lib.chooseAudiusTrack(pool,new Set());
+  if(!valid())return;
+  auditionTrack=track;auditionSession=session;auditionFilterKey=filters;
+  auditionSeen.add(track.id);auditionAudio.src=lib.streamUrl(track.id);
+  setText("audition-track-title",track.title);setText("audition-track-artist",track.artist);
+  $("audition-selected").hidden=false;
+  for(const id of ["audition-play","audition-next","audition-stop"])$(id).hidden=false;
+  setText("audition-status","Ready. Hear eight seconds of this real Audius stream.");
+  updateAuditionControls();
+ }catch(e){
+  if(!valid())return;
+  stopAudition(true);setText("audition-status",String(e.message||e));
+ }
+}
+async function playAudition(){
+ if(!auditionReady()||!auditionTrack||auditionSession!==access||
+    auditionFilterKey!==JSON.stringify(chosenFilters()))return;
+ const version=++auditionVersion,session=access,code=room.code;
+ clearTimeout(auditionTimer);auditionTimer=null;
+ auditionAudio.volume=hostVolume/100;auditionAudio.muted=hostMuted;
+ try{
+  auditionAudio.currentTime=0;
+  await auditionAudio.play();
+  if(version!==auditionVersion||session!==access||room?.code!==code||room.phase!=="lobby"){
+   stopAudition(true);return;
+  }
+  $("audition-stop").disabled=false;
+  setText("audition-status","Playing real Audius audio on the host device.");
+  auditionTimer=setTimeout(()=>{
+   if(version!==auditionVersion||session!==access||room?.code!==code)return;
+   stopAudition(false);$("audition-stop").disabled=true;
+   setText("audition-status","Eight-second sample finished. Replay or try another.");
+  },8000);
+ }catch(e){
+  if(version!==auditionVersion||session!==access||room?.code!==code)return;
+  $("audition-stop").disabled=true;
+  setText("audition-status","Sample playback failed: "+String(e.message||e)+". Try another.");
+ }
+}
+auditionAudio.addEventListener("error",()=>{
+ if(!auditionTrack||!isHost()||room?.phase!=="lobby")return;
+ clearTimeout(auditionTimer);auditionTimer=null;
+ $("audition-stop").disabled=true;
+ setText("audition-status","Audius could not play this sample. Try another song.");
+});
+$("audition-pick").addEventListener("click",pickAudition);
+$("audition-next").addEventListener("click",pickAudition);
+$("audition-play").addEventListener("click",playAudition);
+$("audition-stop").addEventListener("click",()=>{
+ stopAudition(false);$("audition-stop").disabled=true;
+ setText("audition-status","Stopped. Replay or try another.");
+});
 // Browser-only host output preference. No source IDs, answers or audio bytes.
 const HOST_MIXER_STORE="tune-rush-host-output-v1";
 let hostVolume=100,hostMuted=false;
 function applyHostMixer(){
  playerAudio.volume=hostVolume/100;
  playerAudio.muted=hostMuted;
+ auditionAudio.volume=hostVolume/100;
+ auditionAudio.muted=hostMuted;
  document.querySelectorAll("[data-host-volume]").forEach(input=>{
   input.value=String(hostVolume);
   input.setAttribute("aria-valuetext",(hostMuted?"Muted, ":"")+hostVolume+" percent");
@@ -114,6 +210,7 @@ function setLoading(value){
  loading=value;
  const busy=value||roundTransitionBusy;
  for(const id of ["start","audius-play-hint","audius-replay-hint","next-round","continue-hints","skip-round"]){$(id).disabled=busy}
+ updateAuditionControls();
  $("room").setAttribute("aria-busy",String(busy));
 }
 function safeStore(){try{if(access)localStorage.setItem(STORE,JSON.stringify(access));else localStorage.removeItem(STORE)}catch{}}
@@ -689,7 +786,9 @@ async function startClip(replay=false){
  }
 }
 function applyState(s){
- const oldPhase=room?.phase||"",oldRound=room?.round||0;
+ const oldPhase=room?.phase||"",oldRound=room?.round||0,oldRoomCode=room?.code;
+ if((oldPhase==="lobby"&&s.phase!=="lobby")||(oldRoomCode&&oldRoomCode!==s.code))
+  stopAudition(true);
  room=s;
  if(s.firstAnswered||s.phase==="answering")failedClue="";
  const newRound=s.round;
@@ -749,6 +848,7 @@ function render(){
   $("round-transition").dataset.phase=phase;
  }
  show("lobby",phase==="lobby");show("playing",phase!=="lobby");
+ updateAuditionControls();
  show("host-settings",host);show("guest-wait",!host);
 
  $("lobby-players").replaceChildren(...room.players.map(x=>makePlayer(x.name)));
@@ -920,6 +1020,7 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
+ stopAudition(true);auditionSeen.clear();
  cancelAudiusScan();
  // A queued settings debounce belongs to the departed lobby, not a room
  // created a fraction of a second later on the same host browser.
