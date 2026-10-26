@@ -824,6 +824,74 @@ try{
  assert.equal(png.readUInt32BE(16),1080);
  assert.equal(png.readUInt32BE(20),1350);
  assert.match(await host.locator("#finish-poster-status").innerText(),/Downloads folder/);
+ // Native mobile sharing must carry a real image File and must not include
+ // server tokens, join codes, hidden tracks, or a guessed answer in the payload.
+ assert.equal(await host.locator("#finish-share-poster").isVisible(),true);
+ await host.evaluate(()=>{
+  window.__sharedPoster=null;
+  Object.defineProperty(navigator,"canShare",{configurable:true,
+   value:data=>Array.isArray(data?.files)&&data.files.length===1});
+  Object.defineProperty(navigator,"share",{configurable:true,value:async data=>{
+   const file=data.files[0],b=new Uint8Array(await file.arrayBuffer());
+   const dv=new DataView(b.buffer,b.byteOffset,b.byteLength);
+   window.__sharedPoster={title:data.title,keys:Object.keys(data),
+    name:file.name,type:file.type,count:data.files.length,
+    length:b.length,signature:Array.from(b.subarray(0,8)).map(n=>n.toString(16).padStart(2,"0")).join(""),
+    width:dv.getUint32(16),height:dv.getUint32(20)};
+  }});
+ });
+ await host.locator("#finish-share-poster").click();
+ await host.waitForFunction(()=>!!window.__sharedPoster&&!posterShareBusy,
+  null,{timeout:12000});
+ const shared=await host.evaluate(()=>window.__sharedPoster);
+ assert.equal(shared.count,1);
+ assert.deepEqual(shared.keys.sort(),["files","title"]);
+ assert.equal(shared.title,"Tune Rush · Final Encore");
+ assert.match(shared.name,/^tune-rush-party-poster-\d{4}-\d{2}-\d{2}\.png$/);
+ assert.equal(shared.type,"image/png");
+ assert.ok(shared.length>10000);
+ assert.equal(shared.signature,"89504e470d0a1a0a");
+ assert.deepEqual([shared.width,shared.height],[1080,1350]);
+ assert.ok(!JSON.stringify(shared).includes(previousParty),"native share must omit room code");
+ assert.ok(!JSON.stringify(shared).includes(publicSong.title),"native share must omit old room music");
+ assert.match(await host.locator("#finish-poster-status").innerText(),/share sheet completed/i);
+ // Cancelling the OS share sheet is not treated as an error or a download.
+ await host.evaluate(()=>{
+  Object.defineProperty(navigator,"share",{configurable:true,
+   value:async()=>{throw new DOMException("User cancelled","AbortError")}});
+ });
+ await host.locator("#finish-share-poster").click();
+ await host.waitForFunction(()=>document.getElementById("finish-poster-status")
+  ?.textContent.includes("Sharing cancelled"),null,{timeout:8000});
+ assert.equal(await host.locator("#finish-share-poster").isDisabled(),false);
+ // Firefox/unsupported mobile browsers must get the existing real PNG
+ // download route without invoking navigator.share or copying an invite URL.
+ await host.evaluate(()=>{
+  window.__unexpectedShareCalls=0;
+  Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>false});
+  Object.defineProperty(navigator,"share",{configurable:true,
+   value:async()=>{window.__unexpectedShareCalls++}});
+ });
+ const nativeFallback=host.waitForEvent("download",{timeout:12000});
+ await host.locator("#finish-share-poster").click();
+ const fallbackFile=await nativeFallback;
+ assert.match(fallbackFile.suggestedFilename(),/^tune-rush-party-poster-\d{4}-\d{2}-\d{2}\.png$/);
+ const fallbackBytes=await (await import("node:fs/promises")).readFile(await fallbackFile.path());
+ assert.equal(fallbackBytes.subarray(0,8).toString("hex"),"89504e470d0a1a0a");
+ assert.equal(fallbackBytes.readUInt32BE(16),1080);
+ assert.equal(await host.evaluate(()=>window.__unexpectedShareCalls),0);
+ assert.match(await host.locator("#finish-poster-status").innerText(),/Native sharing unavailable/);
+ // A failure other than user cancel leaves the current party intact and
+ // presents the existing downloadable file as a visible alternative.
+ await host.evaluate(()=>{
+  Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>true});
+  Object.defineProperty(navigator,"share",{configurable:true,
+   value:async()=>{throw new DOMException("Not allowed","NotAllowedError")}});
+ });
+ await host.locator("#finish-share-poster").click();
+ await host.waitForFunction(()=>document.getElementById("finish-poster-status")
+  ?.textContent.includes("Sharing was blocked"),null,{timeout:8000});
+ assert.equal(await host.evaluate(()=>room.code),previousParty);
  let createdNewParty=0,updatedNewParty=0;
  const trackNewParty=async route=>{
   const body=JSON.parse(route.request().postData()||"{}");
