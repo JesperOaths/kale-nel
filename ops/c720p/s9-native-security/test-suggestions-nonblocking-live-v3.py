@@ -44,6 +44,6 @@ class BaselineNonBlocking(unittest.TestCase):
         self.assertIn('Informational validation only',cards)
         self.assertNotIn('if (!snapshot.baseline || snapshot.baseline.ready !== true)',cards)
         self.assertIn('opened_ticket: ticket',cards)
-        self.assertIn('folder-suggestions-top-tab-live-v3.js',page)
+        self.assertIn('folder-suggestions-top-tab-v4.js',page)
         self.assertIn('folder-suggestion-cards-live-v3.js',page)
 if __name__ == '__main__': unittest.main()

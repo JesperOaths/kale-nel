@@ -10,6 +10,11 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/s9_verified_cranial_roi_routes_v1.py'
+      - 'ops/c720p/s9-native-security/test-verified-cranial-roi-routes-v1.py'
+      - 'ops/c720p/s9-native-security/security-people-v328.js'
+      - 'ops/c720p/s9-native-security/folder-suggestions-top-tab-v4.js'
+      - 'ops/c720p/s9-native-security/security-hub-v36.js'
       - 'ops/c720p/s9-native-security/offline_verified_head_region_v1.py'
       - 'ops/c720p/s9-native-security/test-offline-verified-head-region-v1.py'
       - 'ops/c720p/s9-native-security/security-people-v327.js'
@@ -49,6 +54,11 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/s9_verified_cranial_roi_routes_v1.py'
+      - 'ops/c720p/s9-native-security/test-verified-cranial-roi-routes-v1.py'
+      - 'ops/c720p/s9-native-security/security-people-v328.js'
+      - 'ops/c720p/s9-native-security/folder-suggestions-top-tab-v4.js'
+      - 'ops/c720p/s9-native-security/security-hub-v36.js'
       - 'ops/c720p/s9-native-security/offline_verified_head_region_v1.py'
       - 'ops/c720p/s9-native-security/test-offline-verified-head-region-v1.py'
       - 'ops/c720p/s9-native-security/security-people-v327.js'
@@ -107,6 +117,8 @@ jobs:
           python test-suggestions-nonblocking-live-v3.py
           python test-offline-verified-head-region-v1.py
           python test-people-az-face-covers-v4.py
+          python -m py_compile s9_verified_cranial_roi_routes_v1.py
+          python test-verified-cranial-roi-routes-v1.py
       - name: Syntax-check the optional UI bridge and original People UI
         run: |
           node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
@@ -120,6 +132,9 @@ jobs:
           node --check ops/c720p/s9-native-security/security-hub-v33.js
           node --check ops/c720p/s9-native-security/security-hub-v35.js
           node --check ops/c720p/s9-native-security/security-people-v327.js
+          node --check ops/c720p/s9-native-security/security-people-v328.js
+          node --check ops/c720p/s9-native-security/folder-suggestions-top-tab-v4.js
+          node --check ops/c720p/s9-native-security/security-hub-v36.js
           node --check ops/c720p/s9-native-security/people-suggestions-dom-guard-v1.js
           node --check ops/c720p/s9-native-security/folder-suggestions-top-tab-v1.js
           node --check ops/c720p/s9-native-security/folder-suggestions-top-tab-live-v3.js
