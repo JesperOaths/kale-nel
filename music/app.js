@@ -229,9 +229,15 @@ async function restoreAudiusHost(state){
  if(audiusActive&&localAudioUrl&&localCurrentIndex===wantedIndex)return;
  let saved=null;
  try{saved=JSON.parse(sessionStorage.getItem(AUDIUS_HOST_SESSION)||"null")}catch{}
+ // Host RPC deliberately redacts answer fields until reveal, including to
+ // the host. Authenticate the checkpoint against private host-issued audio
+ // source + room/round, and verify title/artist only when server reveals them.
  const valid=saved&&saved.code===state.code&&saved.round===state.round&&
-  saved.source===state.audio.source&&saved.title===state.title&&
-  saved.artist===state.artist&&
+  saved.source===state.audio.source&&
+  (state.title==null||saved.title===state.title)&&
+  (state.artist==null||saved.artist===state.artist)&&
+  typeof saved.title==="string"&&saved.title.length>0&&saved.title.length<=100&&
+  typeof saved.artist==="string"&&saved.artist.length>0&&saved.artist.length<=100&&
   typeof saved.id==="string"&&/^[A-Za-z0-9_-]{3,32}$/.test(saved.id)&&
   typeof saved.updatedAt==="number"&&Date.now()-saved.updatedAt>=0&&
   Date.now()-saved.updatedAt<8*60*60*1000;
