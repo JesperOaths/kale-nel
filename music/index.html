@@ -8,10 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026highlights">
+<link rel="stylesheet" href="./style.css?v=20261026poster">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261026highlights" defer></script>
+<script src="./app.js?v=20261026poster" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -221,7 +221,19 @@
    </div>
    <p class="finish-highlights-note">Calculated only from songs revealed to this tab; clues exclude zero-clue reveals. Not a complete party record.</p>
   </section>
-  <div class="finish-score-heading">FINAL STANDINGS</div><div id="final-scores" class="finish-score-list"></div><div class="finish-actions">
+  <div class="finish-score-heading">FINAL STANDINGS</div><div id="final-scores" class="finish-score-list"></div>
+  <details id="finish-poster-details" class="finish-poster-details">
+   <summary><span aria-hidden="true">✦</span> Preview your party poster <span class="poster-open-hint">↓</span></summary>
+   <div class="finish-poster-body">
+    <canvas id="finish-poster-canvas" width="1080" height="1350" role="img" aria-label="Graphic of the winner, final standings, and this tab's saved revealed songs">Party poster preview</canvas>
+    <div class="finish-poster-controls">
+     <p>Save a shareable PNG poster with the winner, final standings, and songs revealed in this tab. No private guesses or unrevealed tracks.</p>
+     <button id="finish-download-poster" class="outline finish-poster-save" type="button">↓ Download poster PNG</button>
+     <p id="finish-poster-status" role="status" aria-live="polite"></p>
+    </div>
+   </div>
+  </details>
+  <div class="finish-actions">
   <button id="finish-new-party" type="button" class="primary finish-new-party" hidden>✦ Host a new party <span aria-hidden="true">↗</span></button>
   <button id="finish-copy-recap" type="button" class="outline finish-share-recap">♫ Copy party recap</button>
   <button id="finish-download-recap" type="button" class="outline finish-download-recap">↓ Save recap as .txt</button>
