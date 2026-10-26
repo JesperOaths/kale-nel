@@ -10,6 +10,7 @@ assert.ok(chrome,"Chrome or Chromium is required");
 const browser=await chromium.launch({executablePath:chrome,headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
 const pad=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
 const phone=await browser.newContext({...devices["iPhone 13"]});
+const phone2=await browser.newContext({...devices["iPhone 13"]});
 const errors=[];
 function makeWav(freq=440,seconds=38){
  const rate=8000,samples=seconds*rate,b=Buffer.alloc(44+samples*2);
@@ -24,8 +25,8 @@ function makeWav(freq=440,seconds=38){
 const ids=["abc12x","abc13x","abc14x","abc15x"];
 let metadataRequests=0,streamRequests=0;
 try{
- const host=await pad.newPage(),guest=await phone.newPage();
- for(const [p,label] of [[host,"host"],[guest,"guest"]])
+ const host=await pad.newPage(),guest=await phone.newPage(),guest2=await phone2.newPage();
+ for(const [p,label] of [[host,"host"],[guest,"guest"],[guest2,"guest2"]])
   p.on("pageerror",e=>errors.push(label+": "+e.message));
  await host.route("https://api.audius.co/v1/tracks/**",async route=>{
   const path=new URL(route.request().url()).pathname;
@@ -62,6 +63,24 @@ try{
  await guest.locator("#join-form button[type=submit]").click();
  await guest.waitForFunction(()=>room?.role==="player"&&room?.phase==="lobby",null,{timeout:17000});
  await host.waitForFunction(()=>room?.players?.length>=1,null,{timeout:17000});
+ // Independently join a second phone using exactly the public link encoded
+ // into the host's QR: no host token or guest credentials in the QR.
+ const publicJoin=await host.evaluate(()=>inviteUrl());
+ assert.equal(new URL(publicJoin).searchParams.get("room"),code);
+ assert.equal(new URL(publicJoin).searchParams.has("token"),false);
+ assert.equal(await host.locator("#party-join-code").innerText(),code);
+ assert.equal(await host.locator("#party-join-qr svg").count(),1,
+  "the host generates a QR matrix without an external QR API");
+ assert.ok((await host.locator("#party-join-qr svg path").getAttribute("d")).length>500,
+  "QR matrix must contain substantial encoded content");
+ await guest2.goto(publicJoin,{waitUntil:"domcontentloaded",timeout:30000});
+ assert.equal(await guest2.locator("#join-code").inputValue(),code);
+ await guest2.locator("#nickname").fill("Second Phone");
+ await guest2.locator("#join-form button[type=submit]").click();
+ await guest2.waitForFunction(()=>room?.role==="player"&&room?.phase==="lobby",null,{timeout:17000});
+ await host.waitForFunction(()=>room?.players?.length>=2,null,{timeout:17000});
+ assert.equal(await guest2.locator("#party-join-qr:visible").count(),0);
+ assert.equal(await host.locator("#lobby-player-count").innerText(),"2 players joined");
  assert.ok(await host.locator(".stream-hero").isVisible());
  assert.equal(await guest.locator(".stream-hero").isVisible(),false);
  assert.equal(await guest.locator("[data-host-mixer]:visible").count(),0,
@@ -141,7 +160,7 @@ try{
  assert.equal(await host.locator("#audius-scan-progress").isVisible(),false,"scan meter hides after completion");
  assert.equal(await host.locator("#audius-scan-progress [role=progressbar]").getAttribute("aria-valuenow"),"100",
   "full Audius scans reach 100 percent");
- assert.match(await host.locator("#audius-scan-label").innerText(),/9 of 9 checks/);
+ assert.match(await host.locator("#audius-scan-label").innerText(),/15 of 15 checks/);
  assert.equal(await host.locator("#audius-check").isDisabled(),false,"Check tracks re-enables after scan");
  // The host sees only real Audius catalog coverage, never invented availability.
  assert.equal(await host.locator("#soundtrack-reserve").isVisible(),true);
@@ -221,6 +240,8 @@ try{
   "lost Start reply must reconcile against authoritative room state");
  const first=await host.evaluate(()=>({source:room.audio.source,id:audiusTrack.id}));
  assert.match(first.source,/^local:\d+$/);
+ assert.match(await host.locator("#round-transition-title").innerText(),/READY TO PLAY/);
+ assert.match(await host.locator("#round-transition-number").innerText(),/ROUND 1/);
  assert.equal(await host.locator("#live-reserve").isVisible(),true);
  assert.match(await host.locator("#live-reserve").innerText(),/2 fresh tracks left/);
  assert.equal(await host.locator("#reserve-used").innerText(),"1");
@@ -249,6 +270,7 @@ try{
  assert.equal(heard.failedClue,"");
  await host.locator("#skip-round").click();
  await host.waitForFunction(()=>room?.phase==="solved",null,{timeout:15000});
+ assert.match(await host.locator("#round-transition-title").innerText(),/SONG REVEALED/);
  assert.ok(await host.locator("#audius-credit").isVisible());
  let nextWrites=0;
  const watchNext=async route=>{
@@ -364,10 +386,12 @@ try{
  assert.equal(await host.locator("#soundtrack-reserve").isVisible(),false);
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
-  source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
+  source:"Audius only",rooms:2,players:2,devices:3,tracks:3,streamRequests,metadataRequests,
   nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",speakerTest:"host only",networkRecovery:true,staleLeaveBlocked:true,noRepeat:true,mobileOverflow:false,
   lostStartAcknowledgment:"reconciled",doubleStartWrites:startWrites,doubleNextWrites:nextWrites,
   hostMixer:"65% persisted, speaker test respects mute",soundtrackReserve:"4 uploads -> 3 unique songs -> 2 -> 1 fresh",
   catalogCancellation:"same-key filter return and old-room scan rejected",
+  qrJoin:"second phone joined through public QR link; SVG rendered locally",
+  roundsRibbon:true,popularAndCoverSearch:true,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
