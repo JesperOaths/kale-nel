@@ -340,7 +340,7 @@ function render(){
 
  $("lobby-players").replaceChildren(...room.players.map(x=>makePlayer(x.name)));
  setText("lobby-player-count",room.players.length+" player"+(room.players.length===1?"":"s")+" joined");
- if(phase==="lobby"&&!genresDirty&&Array.isArray(room.genres)&&room.genres.length){
+ if(phase==="lobby"&&!genresDirty&&(room.genres||[]).some(g=>["pop","rock","hiphop","electronic","dance","disco","indie","rnb","metal"].includes(g))){
   document.querySelectorAll("#genre-options input").forEach(input=>{
    input.checked=room.genres.includes(input.value);
    input.disabled=!host;
