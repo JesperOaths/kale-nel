@@ -226,6 +226,74 @@ let genresDirty=false,genresSaveTimer=null;
 let clipGeneration=0,mutationVersion=0;
 let failedClue="";
 let clueRescueBusy=false,clueRescueNotice="";
+const PHONE_HAPTICS_KEY="tune-rush-phone-haptics-v1";
+let phoneHapticsEnabled=false;
+function canVibratePhone(){
+ return typeof navigator!=="undefined"&&typeof navigator.vibrate==="function";
+}
+function initPhoneHaptics(){
+ try{phoneHapticsEnabled=localStorage.getItem(PHONE_HAPTICS_KEY)==="yes"}catch{}
+ phoneHapticsEnabled=phoneHapticsEnabled&&canVibratePhone();
+ $("buzzer-haptics").checked=phoneHapticsEnabled;
+ $("buzzer-haptics").disabled=!canVibratePhone();
+ if(!canVibratePhone())setText("buzzer-haptics-help",
+  "Vibration isn't available on this browser. Visual buzzer feedback still works.");
+ $("buzzer-haptics").addEventListener("change",()=>{
+  phoneHapticsEnabled=!!$("buzzer-haptics").checked&&canVibratePhone();
+  try{localStorage.setItem(PHONE_HAPTICS_KEY,phoneHapticsEnabled?"yes":"no")}catch{}
+ });
+}
+function playerBuzzerState(s,ownBlocked=false){
+ if(!s||s.role!=="player")return {kind:"waiting",title:"Waiting for a room",hint:"Join the party to play.",icon:"◉"};
+ const blocked=ownBlocked||s.myBlockedStep===s.step;
+ if(s.phase==="answering"){
+  const mine=s.me&&s.me===s.lockedPlayer;
+  if(mine)return {kind:"won",title:s.stealTurn?"You won the steal!":"You won the buzz!",
+   hint:"Type your artist and song guesses before the countdown ends.",icon:"★"};
+  const owner=s.players?.find(p=>p.id===s.lockedPlayer);
+  return {kind:"claimed",title:"Buzzer claimed",hint:(owner?.name||"Another player")+
+   " is answering. Wait for the result.",icon:"◌"};
+ }
+ if(s.phase==="holding"){
+  if(!blocked)return {kind:"steal",title:"Steal available!",
+   hint:"You can try to steal the missing answers. Wrong steals cost 1 point per field.",icon:"⚡"};
+  return {kind:"blocked",title:"Wait for the next clue",
+   hint:"You've already tried this snippet.",icon:"◌"};
+ }
+ if(["playing","paused"].includes(s.phase)&&s.step>=0&&!s.firstAnswered){
+  if(!blocked)return {kind:"ready",title:"Buzzer open — go!",
+   hint:"Tap the big button when you recognize the music.",icon:"◎"};
+  return {kind:"blocked",title:"Already buzzed",
+   hint:"Your next chance comes with the next clue.",icon:"◌"};
+ }
+ if(s.phase==="solved")return {kind:"solved",title:"Song revealed",
+  hint:"The host will start the next song.",icon:"✦"};
+ if(s.phase==="finished")return {kind:"finished",title:"Game finished",
+  hint:"Check the final scores below.",icon:"♛"};
+ return {kind:"waiting",title:"Get ready",
+  hint:"The host will begin the next clue.",icon:"◉"};
+}
+function renderPlayerBuzzerFeedback(){
+ if(!room||isHost())return;
+ const blocked=lastBlockKey===room.round+":"+room.step;
+ const view=playerBuzzerState(room,blocked);
+ $("buzzer-status-panel").dataset.state=view.kind;
+ setText("buzzer-status-title",view.title);
+ setText("buzzer-status-hint",view.hint);
+ setText("buzzer-status-icon",view.icon);
+}
+function notifyPlayerBuzzerTransition(previous,next){
+ if(!phoneHapticsEnabled||!canVibratePhone()||document.hidden||!previous||
+  !next||previous.code!==next.code||next.role!=="player")return;
+ const before=playerBuzzerState(previous),after=playerBuzzerState(next);
+ const changed=previous.round!==next.round||previous.step!==next.step||
+  previous.phase!==next.phase||previous.lockedPlayer!==next.lockedPlayer;
+ if(!changed||before.kind===after.kind)return;
+ const pattern=after.kind==="won"?[70,45,100]:after.kind==="steal"?[40,45,40]:null;
+ if(!pattern)return;
+ try{navigator.vibrate(pattern)}catch{}
+}
+
 let newPartyBusy=false;
 let connectionFailures=0,connectionRetryAt=0;
 function setConnectionProblem(){
@@ -895,10 +963,12 @@ async function pauseSilentClue(){
  }
 }
 function applyState(s){
+ const previous=room;
  const oldPhase=room?.phase||"",oldRound=room?.round||0,oldRoomCode=room?.code;
  if((oldPhase==="lobby"&&s.phase!=="lobby")||(oldRoomCode&&oldRoomCode!==s.code))
   stopAudition(true);
  room=s;
+ notifyPlayerBuzzerTransition(previous,s);
  if(s.role==="host"){syncAuditionGuard(s.code);refreshAuditionGuardStatus()}
  if(s.firstAnswered||s.phase==="answering")failedClue="";
  const newRound=s.round;
@@ -1067,6 +1137,7 @@ function render(){
    show("buzz",!iAmAnswering&&phase!=="holding");
    show("steal",!iAmAnswering&&phase==="holding");
    show("answer-overlay",iAmAnswering);
+   renderPlayerBuzzerFeedback();
    if(iAmAnswering){
     setText("answer-kicker",room.stealTurn?"⚡ STEAL CHALLENGE":"🎤 YOUR BUZZ WON");
     setText("answer-title",room.stealTurn?"Risk it for the steal":"Name that tune");
@@ -1514,6 +1585,7 @@ document.addEventListener("visibilitychange",()=>{
 });
 window.addEventListener("pagehide",()=>{clearAudio();cancelNext();clearAudiusStream()});
 initHostMixer();
+initPhoneHaptics();
 const fromUrl=new URLSearchParams(location.search).get("room");
 if(fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl))$("join-code").value=fromUrl.toUpperCase();
 try{
