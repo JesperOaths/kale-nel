@@ -3,7 +3,7 @@
 from __future__ import annotations
 import importlib.util
 from pathlib import Path
-import hashlib, tempfile, unittest
+import hashlib, io, json, tempfile, unittest
 from unittest.mock import patch
 
 P=Path(__file__).with_name('s9_local_neural_triage_readonly_v1.py')
@@ -39,17 +39,22 @@ class TriageTests(unittest.TestCase):
                 with self.assertRaises(ValueError):mod.crop_blob(row)
     def test_unauthenticated_request_denied_without_disk_read(self):
         class H:
+            def __init__(self):
+                self.wfile=io.BytesIO();self.status=None;self.headers=[]
             def go(self,*a,**kw):return 'other'
             def authorized(self):return False
-            def js(self,status,data):return status,data
+            def send_response(self,status):self.status=status
+            def cors(self):pass
+            def send_header(self,k,v):self.headers.append((k,v))
+            def end_headers(self):pass
         mod.install(H)
         inst=H()
         inst.path=mod.PREFIX
         inst.command='GET'
         with patch.object(mod,'source_metadata',side_effect=AssertionError('read before auth')):
-            code,result=inst.go()
-        self.assertEqual(code,401)
-        self.assertEqual(result['error'],'authentication_required')
+            inst.go()
+        self.assertEqual(inst.status,401)
+        self.assertEqual(json.loads(inst.wfile.getvalue())['error'],'authentication_required')
         inst.path='/unrelated/path'
         self.assertEqual(inst.go(),'other')
     def test_readonly_no_decision_and_no_original_proof_path(self):

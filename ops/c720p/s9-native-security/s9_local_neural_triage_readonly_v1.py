@@ -162,6 +162,18 @@ def crop_blob(record):
         raise ValueError('derived_crop_changed')
     return crop
 
+def reply(handler,status,payload):
+    # The production relay H has send_response/cors, not a .js() helper.
+    body=json.dumps(payload,separators=(',',':'),allow_nan=False).encode('utf-8')
+    handler.send_response(status)
+    handler.cors()
+    handler.send_header('Content-Type','application/json; charset=utf-8')
+    handler.send_header('Cache-Control','private, no-store')
+    handler.send_header('X-Content-Type-Options','nosniff')
+    handler.send_header('Content-Length',str(len(body)))
+    handler.end_headers()
+    if handler.command!='HEAD':handler.wfile.write(body)
+
 def install(H):
     if not hasattr(H,'authorized'):raise ValueError('owner_auth_required')
     previous=H.go
@@ -170,19 +182,19 @@ def install(H):
         if path.path!=PREFIX and not path.path.startswith(PREFIX+'/'):
             return previous(self,*args,**kw)
         if self.command not in ('GET','HEAD') or path.query:
-            return self.js(404,{'ok':False,'error':'not_found'})
+            return reply(self,404,{'ok':False,'error':'not_found'})
         if not self.authorized():
-            return self.js(401,{'ok':False,'error':'authentication_required'})
+            return reply(self,401,{'ok':False,'error':'authentication_required'})
         try:
             model,crops,manual=source_metadata()
             if path.path==PREFIX:
                 result=calculate_queue(model,crops,manual)
                 # Complete bound-crop verification before showing queue images.
                 for record in crops.values():crop_blob(record)
-                return self.js(200,result)
+                return reply(self,200,result)
             match=re.fullmatch(re.escape(PREFIX)+r'/image/([a-f0-9]{64})',path.path)
             record=next((r for r in crops.values() if match and r['roi_id']==match.group(1)),None)
-            if record is None:return self.js(404,{'ok':False,'error':'not_indexed'})
+            if record is None:return reply(self,404,{'ok':False,'error':'not_indexed'})
             blob=crop_blob(record)
             self.send_response(200);self.cors()
             self.send_header('Content-Type','image/jpeg')
@@ -192,6 +204,6 @@ def install(H):
             self.end_headers()
             if self.command=='GET':self.wfile.write(blob)
         except (OSError,ValueError,TypeError,KeyError,json.JSONDecodeError):
-            return self.js(503,{'ok':False,'error':'local_neural_triage_unavailable'})
+            return reply(self,503,{'ok':False,'error':'local_neural_triage_unavailable'})
     H.go=go
 
