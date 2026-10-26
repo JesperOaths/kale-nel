@@ -55,10 +55,17 @@ def source_metadata():
         raise ValueError('model_or_crop_provenance_invalid')
     expected=model['source_manifest_hashes']
     if expected.get('s9_manifest')!=S9_SHA:raise ValueError('vector_manifest_source_mismatch')
-    manual_bytes=read(MANUAL,250000,20)
-    if sha(manual_bytes)!=expected.get('manual_assignments'):
-        raise ValueError('manual_assignments_modified_since_model_built')
-    manual=json.loads(manual_bytes)['items']
+    # Historical ONNX vectors and crop bytes remain immutable and pinned.
+    # Manual links are *live* reviewed state and legitimately change after
+    # a person confirms, reassigns, or removes a recording. Do not pin them
+    # to the historical training-snapshot SHA, which would make GET 503 on
+    # the very first ordinary review decision.
+    links=json.loads(read(MANUAL,250000,20))
+    if (not isinstance(links,dict) or links.get('version')!=1 or
+        type(links.get('revision')) is not int or
+        not isinstance(links.get('items'),dict)):
+        raise ValueError('invalid_live_assignment_index')
+    manual=links['items']
     native_bytes=read(NATIVE,2500000,100)
     # The mutable native catalog can contain unrelated later edits. Verify
     # every indexed S9 recording's original SHA independently below instead
@@ -94,10 +101,14 @@ def mean(rows):
 def cosine(a,b):return math.fsum(x*y for x,y in zip(a,b))
 def folder_ids(manual,key):
     entry=manual.get(key,{})
+    if not isinstance(entry,dict):raise ValueError('invalid_live_assignment_record')
     ids=entry.get('folders')
     if not ids:ids=[entry['folder']] if entry.get('folder') else []
-    if not isinstance(ids,list):raise ValueError('invalid_folder_index')
-    return [f for f in ids if isinstance(f,str) and f]
+    if (not isinstance(ids,list) or len(ids)>8 or
+        any(not isinstance(f,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,100}',f) for f in ids)
+        or len(set(ids))!=len(ids)):
+        raise ValueError('invalid_folder_index')
+    return ids
 
 def calculate_queue(model,crops,manual):
     grouped=defaultdict(list)
@@ -119,10 +130,13 @@ def calculate_queue(model,crops,manual):
     for key,v in vectors.items():
         ids=folder_ids(manual,key)
         if ids:
-            if len(ids)!=1:raise ValueError('ambiguous_reference_label')
-            folders[ids[0]].append(v)
+            # A recording may legitimately have several human-assigned people.
+            # It contributes once to each selected folder, never as an
+            # automatically verified identity.
+            for fid in ids:folders[fid].append(v)
             assigned.add(key)
-    if len(assigned)!=34 or len(folders)!=8:raise ValueError('reference_corpus_changed')
+    if not assigned or not folders or len(folders)>100:
+        raise ValueError('reference_corpus_unavailable')
     centroids={folder:mean(rows) for folder,rows in folders.items()}
     candidates=[];refs=[]
     for name,idx in crops.items():
@@ -134,7 +148,8 @@ def calculate_queue(model,crops,manual):
              'identity_verified':False,'face_detected':False,
              'same_keyframe_verified':False}
         if key in assigned:
-            refs.append({**image,'folder_id':folder_ids(manual,key)[0]})
+            ids=folder_ids(manual,key)
+            refs.append({**image,'folder_id':ids[0],'folder_ids':ids})
             continue
         ranking=sorted(((fid,cosine(vectors[key],vector))
                        for fid,vector in centroids.items()),key=lambda pair:(-pair[1],pair[0]))
@@ -142,13 +157,15 @@ def calculate_queue(model,crops,manual):
              'score':round(ranking[0][1],6),
              'review_status':'manual_triage_only','review_ticket_issued':False,
              'automatic_identity_matching':False})
-    if len(candidates)!=49 or len(refs)!=3:raise ValueError('wrong_unassigned_s9_corpus')
+    if len(candidates)+len(refs)!=len(crops):
+        raise ValueError('s9_membership_accounting_changed')
     candidates.sort(key=lambda row:(-row['score'],row['clip_id']))
     return {'ok':True,'schema':'local-neural-manual-triage-v1',
        'scoring_mode':'onnx_head_body_concat_1024d_manual_triage',
        'identity_matching':False,'original_attestation':False,
        'review_writes_enabled':False,'automatic_assignments':0,
-       'threshold_filter_applied':False,'count':len(candidates),'reference_count':34,
+       'threshold_filter_applied':False,'count':len(candidates),'reference_count':len(assigned),
+       'indexed_crop_count':len(crops),'assigned_s9_count':len(refs),
        'folder_ids':sorted(folders),'items':candidates,'assigned_s9_crops':refs}
 
 def crop_blob(record):
