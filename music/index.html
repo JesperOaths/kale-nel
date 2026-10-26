@@ -8,9 +8,10 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026reserve">
+<link rel="stylesheet" href="./style.css?v=20261026party">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=20261026scanowner" defer></script>
+<script src="./vendor/qrcode.js?v=20261026party" defer></script>
+<script src="./app.js?v=20261026party" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -45,6 +46,10 @@
     <div class="lobby-caption-copy"><span class="host-pill"><span class="host-online-dot"></span> TUNE RUSH / YOUR PARTY STUDIO</span><h2>Your party.<br><em>Your soundtrack.</em></h2><p>Your host streams from Audius. Pick a sound, invite your friends, and start the challenge.</p></div>
     <div class="lobby-progress" aria-label="Set up your party"><span><b>01</b> Tune your mix</span><i aria-hidden="true"></i><span><b>02</b> Invite friends</span><i aria-hidden="true"></i><span><b>03</b> Start playing</span></div>
   </div>
+  <section class="party-join host-only" id="party-join" aria-label="Join this party by scanning">
+    <div class="party-join-copy"><span class="kicker">02 / INVITE YOUR FRIENDS</span><h3>Point. Scan. Play.</h3><p>Friends can scan this code with their phone camera, then enter a nickname. No app to install.</p><div class="party-join-code">JOIN CODE <strong id="party-join-code">------</strong></div><p class="party-join-private">The QR contains only the public room code and website URL, never your host token.</p></div>
+    <div class="party-join-visual"><div id="party-join-qr" role="img" aria-label="QR code for players to join this room"></div><span id="party-join-qr-status">Preparing your invitation…</span></div>
+   </section>
   <article class="panel lobby-main">
    <div class="lobby-main-heading"><div class="kicker">01 / THE SOUNDTRACK</div><h2>Set the vibe.</h2><p>Pick your genres and eras. We’ll find fresh music from Audius, then play it straight through your host device.</p></div>
    <div id="host-settings">
@@ -156,7 +161,7 @@
    <aside class="panel score-panel"><div class="score-panel-heading"><span class="kicker">THE SCOREBOARD</span><span class="leaderboard-live"><span class="host-online-dot"></span> LIVE</span></div><h2>Who's winning? <span class="trophy" aria-hidden="true">✦</span></h2><p class="score-caption">First player to 20 points wins the party.</p><div class="score-rule-divider"></div><div id="scores" class="score-list"></div><div id="host-score-footer" class="host-score-footer host-only"><span id="host-player-count">0 PLAYERS CONNECTED</span><span>20 POINTS TO WIN</span></div><div id="my-score" class="my-score" hidden>YOUR SCORE <strong>0</strong></div></aside>
   </div>
  </section>
- <section id="finish" class="finish panel" hidden><div class="kicker">GAME OVER</div><h1>We have a winner!</h1><p id="winner-name"></p><div id="final-scores"></div></section>
+ <section id="finish" class="finish panel" hidden><div class="finish-confetti" aria-hidden="true">✦ ✳ ✧ ✦ ✳</div><div class="kicker">THE FINAL ENCORE</div><div class="finish-crown" aria-hidden="true">♛</div><h1>And the winner is…</h1><p id="winner-name" class="finish-winner"></p><p class="finish-caption">The room has spoken. One champion takes the stage.</p><div class="finish-score-heading">FINAL STANDINGS</div><div id="final-scores" class="finish-score-list"></div><p class="finish-again">Want another game? The host can leave and create a fresh room.</p></section>
 </section>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </main>
