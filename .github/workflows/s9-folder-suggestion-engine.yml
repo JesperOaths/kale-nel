@@ -10,6 +10,9 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/local-neural-manual-triage-v3.js'
+      - 'ops/c720p/s9-native-security/test_s9_local_neural_mutable_links_v2.py'
+      - 'ops/c720p/s9-native-security/test_local_neural_manual_triage_v3.py'
       - 'ops/c720p/s9-native-security/local-neural-manual-triage-v2.js'
       - 'ops/c720p/s9-native-security/test_local_neural_manual_triage_v2.py'
       - 'ops/c720p/s9-native-security/test_s9_verified_cranial_roi_native_reply_v1.py'
@@ -68,6 +71,9 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/local-neural-manual-triage-v3.js'
+      - 'ops/c720p/s9-native-security/test_s9_local_neural_mutable_links_v2.py'
+      - 'ops/c720p/s9-native-security/test_local_neural_manual_triage_v3.py'
       - 'ops/c720p/s9-native-security/local-neural-manual-triage-v2.js'
       - 'ops/c720p/s9-native-security/test_local_neural_manual_triage_v2.py'
       - 'ops/c720p/s9-native-security/test_s9_verified_cranial_roi_native_reply_v1.py'
@@ -156,6 +162,8 @@ jobs:
           python -m py_compile s9_local_neural_triage_readonly_v1.py
           python test_s9_local_neural_triage_readonly_v1.py -q
           python test_local_neural_manual_triage_v2.py -q
+          python test_local_neural_manual_triage_v3.py -q
+          python test_s9_local_neural_mutable_links_v2.py -q
           python test_s9_verified_cranial_roi_native_reply_v1.py -q
       - name: Syntax-check the optional UI bridge and original People UI
         run: |
