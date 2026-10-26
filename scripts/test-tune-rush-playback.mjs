@@ -24,7 +24,7 @@ function fixture(){
    addEventListener(type,fn){const set=this.listeners.get(type)||new Set();set.add(fn);this.listeners.set(type,set)},
    removeEventListener(type,fn){this.listeners.get(type)?.delete(fn)},
    emit(type){for(const fn of this.listeners.get(type)||[])fn()},
-   setAttribute(){},pause(){this.paused=true},async play(){this.paused=false},querySelector(){return null}
+   setAttribute(){},pause(){this.paused=true},load(){this.loadCount=(this.loadCount||0)+1},async play(){this.paused=false},querySelector(){return null}
   });
   return elements.get(id);
  };
@@ -104,6 +104,54 @@ async function fireTimer(f,ms){
  assert.equal(f.run("loading"),false);
  assert.equal(f.run("roundTransitionBusy"),false);
 }
+// Media metadata from a cancelled selection must never complete a newer
+// Audius load or overwrite its stream index.
+{
+ const f=fixture(),audio=f.element("licensed-player");
+ audio.duration=38;
+ f.run('audiusLib=async()=>({streamUrl:id=>"https://api.audius.co/v1/tracks/"+id+"/stream"})');
+ const first=f.run('prepareAudiusPlayback({id:"first01"})');
+ for(let i=0;i<30&&!f.run('audioLoadCancel!==null');i++)await Promise.resolve();
+ assert.equal(f.run("localAudioUrl"),"https://api.audius.co/v1/tracks/first01/stream");
+ const second=f.run('prepareAudiusPlayback({id:"second02"})');
+ for(let i=0;i<30&&f.run('localAudioUrl')!=="https://api.audius.co/v1/tracks/second02/stream";i++)await Promise.resolve();
+ await assert.rejects(first,/cancelled/,"replacing the source must cancel its old metadata wait");
+ assert.equal(f.run("localAudioUrl"),"https://api.audius.co/v1/tracks/second02/stream");
+ audio.emit("loadedmetadata");
+ const prepared=await second;
+ assert.equal(prepared.index,f.run("localCurrentIndex"));
+ assert.equal(prepared.duration,38);
+ assert.equal(f.run("audioLoadCancel"),null,"successful metadata load cleans up its listeners");
+}
+// Leaving the room must immediately cancel metadata loading and its timer.
+{
+ const f=fixture(),audio=f.element("licensed-player");
+ audio.duration=38;
+ f.run('audiusLib=async()=>({streamUrl:id=>"https://api.audius.co/v1/tracks/"+id+"/stream"})');
+ const pending=f.run('prepareAudiusPlayback({id:"slow123"})');
+ for(let i=0;i<30&&!f.run('audioLoadCancel!==null');i++)await Promise.resolve();
+ assert.equal(f.run("audioLoadCancel!==null"),true);
+ f.run("reset()");
+ await assert.rejects(pending,/cancelled/);
+ assert.equal(f.run("audioLoadCancel"),null);
+ assert.equal(f.run("localAudioUrl"),null);
+ assert.equal(audio.listeners.get("loadedmetadata")?.size||0,0,"old metadata listener remains after Leave");
+}
+// An asynchronous module import resolving after Leave must NOT clear the
+// media player of a newly joined room.
+{
+ const f=fixture();
+ const pending=f.run(`let releaseAudiusLibrary;
+  audiusLib=()=>new Promise(resolve=>releaseAudiusLibrary=resolve);
+  const session=access;
+  prepareAudiusPlayback({id:"late000"},null,()=>access===session)`);
+ f.run("reset()");
+ f.run('access={code:"NEW123",token:"new"};localAudioUrl="new-room-stream";localCurrentIndex=20000088');
+ f.run('releaseAudiusLibrary({streamUrl:id=>"https://api.audius.co/v1/tracks/"+id+"/stream"})');
+ await assert.rejects(pending,/room changed/);
+ assert.equal(f.run("localAudioUrl"),"new-room-stream");
+ assert.equal(f.run("localCurrentIndex"),20000088);
+}
 // A server reply to a Play mutation arriving after Leave must never
 // recreate the previous room or touch the new host session.
 {
@@ -146,4 +194,4 @@ async function fireTimer(f,ms){
  const f=fixture();
  await assert.rejects(f.run('startAudio({source:"youtube:dQw4w9WgXcQ"})'),/Only Audius/);
 }
-console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; host controls");
+console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; cancellable media metadata; host controls");
