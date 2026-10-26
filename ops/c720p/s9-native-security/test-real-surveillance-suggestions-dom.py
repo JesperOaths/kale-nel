@@ -24,7 +24,7 @@ class RuntimeSuggestionsRoute(unittest.TestCase):
         self.assertIn('id="suggestionsTabCount"',html)
         self.assertIn('id="liveFolderSuggestionCards"',html)
         self.assertIn('people-suggestions-dom-guard-v1.js?v=runtime-nav-20261025b',html)
-        self.assertIn('folder-suggestions-top-tab-live-v3.js?v=active-suggestions-v3-20261026',html)
+        self.assertIn('folder-suggestions-top-tab-v4.js?v=historical-verified-crops-v5-20261026',html)
     def test_guard_inserts_tab_or_reuses_existing_and_wires_click(self):
         js=(BASE/'people-suggestions-dom-guard-v1.js').read_text()
         for term in ('document.createElement(\'button\')','button.dataset.pane = \'suggestions\'',
