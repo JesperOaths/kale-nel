@@ -24,7 +24,7 @@ function fixture(){
    addEventListener(type,fn){const set=this.listeners.get(type)||new Set();set.add(fn);this.listeners.set(type,set)},
    removeEventListener(type,fn){this.listeners.get(type)?.delete(fn)},
    emit(type){for(const fn of this.listeners.get(type)||[])fn()},
-   setAttribute(name,value){this.attrs.set(name,value)},pause(){this.paused=true},load(){this.loadCount=(this.loadCount||0)+1},async play(){this.paused=false},querySelector(){return null}
+   setAttribute(name,value){this.attrs.set(name,value)},pause(){this.paused=true},load(){this.loadCount=(this.loadCount||0)+1},async play(){this.paused=false},querySelector(){return null},replaceChildren(...children){this.children=children}
   });
   return elements.get(id);
  };
