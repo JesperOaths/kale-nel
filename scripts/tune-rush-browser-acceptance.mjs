@@ -113,7 +113,7 @@ try{
   null,{timeout:6500});
  assert.deepEqual(await host.evaluate(()=>({phase:room.phase,round:room.round,src:playerAudio.getAttribute("src")})),
   beforeCheck,"soundcheck must not alter the room or Audius stream");
- assert.match(await host.locator("#lobby-launch-status").innerText(),/1 PLAYER READY/);
+ assert.match(await host.locator("#lobby-launch-status").innerText(),/2 PLAYERS READY/);
  // Simulate a temporary server outage on the host only. The same room and
  // guests must survive; the retry button must repair the status afterward.
  const networkState=await host.evaluate(()=>({code:room.code,phase:room.phase,
