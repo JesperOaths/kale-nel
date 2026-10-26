@@ -152,6 +152,28 @@ async function fireTimer(f,ms){
  assert.equal(f.run("localAudioUrl"),"new-room-stream");
  assert.equal(f.run("localCurrentIndex"),20000088);
 }
+// An old host-tab restore finishing while Next prepares a candidate must
+// not clear the candidate stream or replace its status.
+{
+ const f=fixture();
+ f.run(`clearAudiusStream();audiusActive=false;
+  sessionStorage={getItem:()=>JSON.stringify({
+   code:"ABCDEF",round:1,source:"local:20000001",id:"abc123",
+   title:"Test Track",artist:"Test Artist",permalink:"https://audius.co/tracks/abc123",
+   updatedAt:Date.now()})};
+  let releaseRestoreLibrary;
+  audiusLib=()=>new Promise(resolve=>releaseRestoreLibrary=resolve)`);
+ const pending=f.run("restoreAudiusHost(room)");
+ assert.equal(f.run("audiusRestoring"),true);
+ f.run(`roundTransitionBusy=true;localAudioUrl="new-candidate-stream";
+  localCurrentIndex=20000099;audiusTrack={id:"new123"};audiusActive=true`);
+ f.run('releaseRestoreLibrary({streamUrl:id=>"https://api.audius.co/v1/tracks/"+id+"/stream"})');
+ await pending;
+ assert.equal(f.run("localAudioUrl"),"new-candidate-stream");
+ assert.equal(f.run("localCurrentIndex"),20000099);
+ assert.equal(f.run("audiusTrack.id"),"new123");
+ assert.equal(f.run("audiusRestoring"),false);
+}
 // A server reply to a Play mutation arriving after Leave must never
 // recreate the previous room or touch the new host session.
 {
