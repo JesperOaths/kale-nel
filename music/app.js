@@ -79,9 +79,8 @@ async function playAudition(){
  try{
   auditionAudio.currentTime=0;
   await auditionAudio.play();
-  if(version!==auditionVersion||session!==access||room?.code!==code||room.phase!=="lobby"){
-   stopAudition(true);return;
-  }
+  if(version!==auditionVersion||session!==access||room?.code!==code||room.phase!=="lobby")
+   return; // A delayed old Play response must not clear a newer audition.
   $("audition-stop").disabled=false;
   setText("audition-status","Playing real Audius audio on the host device.");
   auditionTimer=setTimeout(()=>{
