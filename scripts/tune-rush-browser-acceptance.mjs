@@ -107,9 +107,25 @@ try{
  assert.equal(await guest.evaluate(()=>sessionStorage.getItem("tune-rush-audius-host-stream-v1")),null,
   "guest cannot access the host's private stream checkpoint");
  await host.reload({waitUntil:"domcontentloaded",timeout:30000});
- await host.waitForFunction(()=>room?.round===2&&room?.phase==="paused"&&
-  audiusActive&&localCurrentIndex===Number(room.audio.source.slice(6))&&
-  playerAudio.readyState>=1,null,{timeout:30000});
+ try{
+  await host.waitForFunction(()=>room?.round===2&&room?.phase==="paused"&&
+   audiusActive&&localCurrentIndex===Number(room.audio.source.slice(6))&&
+   playerAudio.readyState>=1,null,{timeout:30000});
+ }catch(error){
+  const detail=await host.evaluate(()=>({
+   room:room?{role:room.role,phase:room.phase,round:room.round,code:room.code,
+    title:room.title,artist:room.artist,source:room.audio?.source}:null,
+   saved:(()=>{try{return JSON.parse(sessionStorage.getItem("tune-rush-audius-host-stream-v1")||"null")}catch{return null}})(),
+   active:audiusActive,restoring:audiusRestoring,stream:localAudioUrl,
+   localCurrentIndex,readyState:playerAudio.readyState,
+   mediaError:playerAudio.error?.message||null,
+   status:document.getElementById("audius-playback-status")?.textContent,
+   toast:document.getElementById("toast")?.textContent,
+   scriptLoaded:document.scripts.length
+  }));
+  console.error("BROWSER_AUDIUS_RESUME_DIAGNOSTIC",JSON.stringify(detail));
+  throw error;
+ }
  const after=await host.evaluate(()=>({code:room.code,round:room.round,
   source:room.audio.source,cueMs:room.audio.cueMs,id:audiusTrack.id,
   status:document.getElementById("audius-playback-status")?.textContent}));
