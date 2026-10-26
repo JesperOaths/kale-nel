@@ -66,8 +66,12 @@ await assert.rejects(
 const beforeTimeout=Date.now();
 await assert.rejects(discoverAudiusTracks(["pop","rock"],[],async(_url,{signal})=>
  new Promise((_resolve,reject)=>{
-  if(signal.aborted)return reject(Error("aborted"));
-  signal.addEventListener("abort",()=>reject(Error("timed out")),{once:true});
+  // Keep the Node test event loop active: AbortSignal.timeout() uses an
+  // unref'ed timer, and without this watchdog top-level await exits early.
+  const watchdog=setTimeout(()=>reject(Error("timeout fixture failed to abort")),1500);
+  const abort=()=>{clearTimeout(watchdog);reject(Error("timed out"))};
+  if(signal.aborted)return abort();
+  signal.addEventListener("abort",abort,{once:true});
  }),{timeoutMs:120}),/Could not reach Audius/);
 assert.ok(Date.now()-beforeTimeout<1400,"timed-out Audius lookup must finish quickly");
 
