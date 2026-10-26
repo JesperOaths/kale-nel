@@ -195,6 +195,13 @@ try{
  await host.waitForFunction(()=>document.getElementById("audition-audio").currentTime>0.22,
   null,{timeout:8500});
  assert.equal(await host.evaluate(()=>auditionAudio.volume),0.35);
+ await host.waitForFunction(()=>auditionHeard.size===1,null,{timeout:6000});
+ assert.equal(await host.locator("#reserve-free").innerText(),"2",
+  "heard preview must leave the playable reserve without entering played history");
+ assert.match(await host.locator("#audition-guard-count").innerText(),/1 heard/);
+ assert.equal(await host.evaluate(()=>JSON.parse(sessionStorage.getItem(
+  "tune-rush-preview-guard-v1")).heard.length),1,
+  "anonymous played-preview identity survives a same-tab reload");
  await host.locator("#audition-stop").click();
  assert.equal(await host.evaluate(()=>auditionAudio.paused),true);
  assert.equal(await host.evaluate(()=>auditionTimer),null);
@@ -240,7 +247,8 @@ try{
  await host.evaluate(()=>window.__restoreProvider());
  await host.locator("#audius-check").click();
  await host.waitForFunction(()=>audiusPool.length===4&&!audiusChecking,null,{timeout:20000});
- assert.equal(await host.locator("#reserve-total").innerText(),"3");
+ assert.equal(await host.locator("#reserve-total").innerText(),"2",
+  "a new catalog scan must continue excluding a song heard during the soundcheck");
  const mobile=await guest.evaluate(()=>({vw:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
  assert.ok(mobile.scroll<=mobile.vw+3,"guest page overflows phone viewport");
  // Lose the HTTP success response *after* Supabase has accepted Start.
@@ -270,12 +278,16 @@ try{
   "lost Start reply must reconcile against authoritative room state");
  const first=await host.evaluate(()=>({source:room.audio.source,id:audiusTrack.id}));
  assert.match(first.source,/^local:\d+$/);
+ assert.equal(await host.evaluate(id=>rotationModule.audiusIdentity(
+  audiusPool.find(t=>t.id===id))===
+  [...auditionHeard][0],first.id),false,
+  "host must never quiz the song heard during the lobby soundcheck");
  assert.match(await host.locator("#round-transition-title").innerText(),/READY TO PLAY/);
  assert.match(await host.locator("#round-transition-number").innerText(),/ROUND 1/);
  assert.equal(await host.locator("#live-reserve").isVisible(),true);
- assert.match(await host.locator("#live-reserve").innerText(),/2 fresh tracks left/);
+ assert.match(await host.locator("#live-reserve").innerText(),/1 fresh tracks left/);
  assert.equal(await host.locator("#reserve-used").innerText(),"1");
- assert.equal(await host.locator("#reserve-free").innerText(),"2");
+ assert.equal(await host.locator("#reserve-free").innerText(),"1");
  // The in-game mixer should adjust live audio without changing the current
  // Audius source, random cue, round or clue counter.
  assert.equal(await host.locator("#host-volume-player").isVisible(),true);
@@ -335,9 +347,9 @@ try{
  assert.equal(namedHistory.length,2,"accepted songs persist two anonymous composition signatures");
  assert.equal(new Set(namedHistory).size,2,"fresh tracks must have distinct artist/title identities");
  assert.ok(namedHistory.every(value=>/^[a-f0-9]{16}$/.test(value)));
- assert.match(await host.locator("#live-reserve").innerText(),/1 fresh tracks left/);
+ assert.match(await host.locator("#live-reserve").innerText(),/0 fresh tracks left/);
  assert.equal(await host.locator("#reserve-used").innerText(),"2");
- assert.equal(await host.locator("#reserve-free").innerText(),"1");
+ assert.equal(await host.locator("#reserve-free").innerText(),"0");
  // A real navigation must recover the same source and server round. It must
  // never auto-play, skip, reveal, lose the buzzer session, or change the cue.
  const prior=await host.evaluate(()=>({code:room.code,round:room.round,
@@ -376,6 +388,9 @@ try{
  assert.ok(await host.locator("#audius-play-hint").isVisible());
  assert.equal(await host.locator("#host-volume-player").inputValue(),"65",
   "host mixer volume persists through an actual browser reload");
+ assert.equal(await host.evaluate(()=>auditionHeard.size),1,
+  "a host refresh must restore previewed-song exclusion identities");
+ assert.equal(await host.evaluate(()=>auditionGuardCode===room.code),true);
  assert.equal(await host.evaluate(()=>playerAudio.volume),0.65);
  assert.equal(await host.evaluate(()=>playerAudio.muted),false);
  assert.equal(await guest.locator("[data-host-mixer]:visible").count(),0);
@@ -456,6 +471,7 @@ try{
   catalogCancellation:"same-key filter return and old-room scan rejected",
   qrJoin:"second phone joined through public QR link; SVG rendered locally",
   roundsRibbon:true,popularAndCoverSearch:true,guestBuzzAndAnswer:true,
-  hostAudition:"separate live-stream playback, zero score or round mutations",hostVeto:true,
+  hostAudition:"heard sample excluded across refresh and 3-game history unchanged",hostVeto:true,
+  noSpoilerGuard:"previewed song and matching reuploads blocked from quiz",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}

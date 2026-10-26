@@ -15,6 +15,43 @@ const playerAudio=$("licensed-player");
 const auditionAudio=$("audition-audio");
 let auditionTrack=null,auditionTimer=null,auditionVersion=0;
 let auditionSession=null,auditionFilterKey="",auditionSeen=new Set(),auditionExcluded=new Set();
+// If a lobby sample was heard, nearby guests may recognize it in the quiz.
+const AUDITION_GUARD_SESSION="tune-rush-preview-guard-v1";
+let auditionGuardCode="",auditionHeard=new Set();
+function validAuditionIdentity(id){
+ return typeof id==="string"&&/^(?:song:[a-f0-9]{16}|id:[A-Za-z0-9_-]{3,32})$/.test(id);
+}
+function syncAuditionGuard(code){
+ if(!code||auditionGuardCode===code)return;
+ auditionGuardCode=code;auditionHeard.clear();auditionExcluded.clear();auditionSeen.clear();
+ try{
+  const saved=JSON.parse(sessionStorage.getItem(AUDITION_GUARD_SESSION)||"null");
+  if(saved?.code!==code)return;
+  for(const id of Array.isArray(saved.heard)?saved.heard.slice(0,1000):[])
+   if(validAuditionIdentity(id))auditionHeard.add(id);
+  for(const id of Array.isArray(saved.rejected)?saved.rejected.slice(0,1000):[])
+   if(validAuditionIdentity(id))auditionExcluded.add(id);
+ }catch{}
+}
+function saveAuditionGuard(){
+ if(!room?.code||!isHost())return;
+ try{sessionStorage.setItem(AUDITION_GUARD_SESSION,JSON.stringify({
+  code:room.code,heard:[...auditionHeard].slice(-1000),
+  rejected:[...auditionExcluded].slice(-1000)
+ }))}catch{}
+}
+function clearAuditionGuard(){
+ auditionGuardCode="";auditionHeard.clear();auditionExcluded.clear();auditionSeen.clear();
+ try{sessionStorage.removeItem(AUDITION_GUARD_SESSION)}catch{}
+}
+function auditionBlocked(track,rot){
+ const id=rot.audiusIdentity(track);
+ return auditionHeard.has(id)||auditionExcluded.has(id);
+}
+function refreshAuditionGuardStatus(){
+ setText("audition-guard-count",auditionHeard.size+" heard · "+auditionExcluded.size+
+  " rejected · all kept out of the quiz for this room");
+}
 function auditionReady(){
  return !!access&&isHost()&&room.phase==="lobby"&&!loading&&!roundTransitionBusy&&
   !audiusChecking&&audiusPool.length>0&&audiusFiltersKey===JSON.stringify(chosenFilters());
@@ -40,6 +77,7 @@ function stopAudition(clear=false){
 }
 async function pickAudition(){
  if(!auditionReady())return;
+ syncAuditionGuard(room.code);
  const session=access,code=room.code,filters=JSON.stringify(chosenFilters());
  const version=++auditionVersion;clearTimeout(auditionTimer);auditionTimer=null;
  try{auditionAudio.pause();auditionAudio.removeAttribute("src");auditionAudio.load()}catch{}
@@ -52,8 +90,8 @@ async function pickAudition(){
   if(!valid())return;
   const fresh=rot.audiusFreshTracks(audiusPool,rot.playedKeys(rotationHistory,"audius"),
    rot.playedKeys(rotationHistory,"audiusFingerprints"))
-   .filter(t=>!auditionExcluded.has(rot.audiusIdentity(t)));
-  if(!fresh.length)throw Error("No unheard songs in this mix. Broaden the filters.");
+   .filter(t=>!auditionBlocked(t,rot));
+  if(!fresh.length)throw Error("All fresh tracks have been heard or excluded. Broaden the filters.");
   let pool=fresh.filter(t=>!auditionSeen.has(t.id));
   if(!pool.length){auditionSeen.clear();pool=fresh}
   const track=lib.chooseAudiusTrack(pool,new Set());
@@ -81,8 +119,15 @@ async function playAudition(){
   await auditionAudio.play();
   if(version!==auditionVersion||session!==access||room?.code!==code||room.phase!=="lobby")
    return; // A delayed old Play response must not clear a newer audition.
+  // A selection alone does not consume quiz eligibility: only confirmed
+  // playback does. Reject the entire composition, including reuploads.
+  const identity=rotationModule?.audiusIdentity(auditionTrack);
+  if(validAuditionIdentity(identity)){
+   auditionHeard.add(identity);saveAuditionGuard();
+   renderSoundtrackReserve();refreshAuditionGuardStatus();
+  }
   $("audition-stop").disabled=false;
-  setText("audition-status","Playing real Audius audio on the host device.");
+  setText("audition-status","Playing live Audius audio. This sample cannot appear in this party's quiz.");
   auditionTimer=setTimeout(()=>{
    if(version!==auditionVersion||session!==access||room?.code!==code)return;
    stopAudition(false);$("audition-stop").disabled=true;
@@ -107,7 +152,7 @@ $("audition-exclude").addEventListener("click",async()=>{
  const rot=await rotation();
  if(!auditionReady()||!auditionTrack||auditionSession!==access)return;
  auditionExcluded.add(rot.audiusIdentity(auditionTrack));
- renderSoundtrackReserve();
+ saveAuditionGuard();renderSoundtrackReserve();refreshAuditionGuardStatus();
  stopAudition(true);
  setText("audition-status","Excluded from this party's upcoming rounds.");
  await pickAudition();
@@ -309,7 +354,7 @@ function renderSoundtrackReserve(){
  }
  const used=rotationModule.playedKeys(rotationHistory,"audius");
  const signatures=rotationModule.playedKeys(rotationHistory,"audiusFingerprints");
- const eligiblePool=audiusPool.filter(t=>!auditionExcluded.has(rotationModule.audiusIdentity(t)));
+ const eligiblePool=audiusPool.filter(t=>!auditionBlocked(t,rotationModule));
  const stats=rotationModule.audiusReadiness(eligiblePool,used,120,signatures);
  card.hidden=false;
  setText("reserve-total",stats.total);
@@ -407,7 +452,7 @@ async function discoverAudius(force=false){
    if(!current())throw Error("Audius scan superseded by a new room or filter.");
    const used=rotationTools.playedKeys(rotationHistory,"audius");
    const signatures=rotationTools.playedKeys(rotationHistory,"audiusFingerprints");
-   const eligiblePool=tracks.filter(t=>!auditionExcluded.has(rotationTools.audiusIdentity(t)));
+   const eligiblePool=tracks.filter(t=>!auditionBlocked(t,rotationTools));
    const stats=rotationTools.audiusReadiness(eligiblePool,used,120,signatures);
    // Publish all scan data atomically once the room, filters and generation
    // have been confirmed. Old requests may not mutate a new room's reserve.
@@ -506,7 +551,7 @@ async function selectAudiusRound(isCurrent=()=>true){
  const signatures=history.playedKeys(rotationHistory,"audiusFingerprints");
  // Deduplicate re-uploads of the same artist/title before choosing a stream.
  const fresh=history.audiusFreshTracks(tracks,previously,signatures)
-  .filter(t=>!auditionExcluded.has(history.audiusIdentity(t)));
+  .filter(t=>!auditionBlocked(t,history));
  const attempts=new Set();
  const candidateCount=fresh.length;
  for(let i=0;i<Math.min(candidateCount,9);i++){
@@ -806,6 +851,7 @@ function applyState(s){
  if((oldPhase==="lobby"&&s.phase!=="lobby")||(oldRoomCode&&oldRoomCode!==s.code))
   stopAudition(true);
  room=s;
+ if(s.role==="host"){syncAuditionGuard(s.code);refreshAuditionGuardStatus()}
  if(s.firstAnswered||s.phase==="answering")failedClue="";
  const newRound=s.round;
  if(oldRound!==newRound){
@@ -1036,7 +1082,7 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
- stopAudition(true);auditionSeen.clear();auditionExcluded.clear();
+ stopAudition(true);clearAuditionGuard();refreshAuditionGuardStatus();
  cancelAudiusScan();
  // A queued settings debounce belongs to the departed lobby, not a room
  // created a fraction of a second later on the same host browser.

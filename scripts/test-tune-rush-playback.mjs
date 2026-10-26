@@ -246,7 +246,11 @@ async function fireTimer(f,ms){
   audiusLib=async()=>({chooseAudiusTrack:pool=>pool[0],
    streamUrl:id=>"https://api.audius.co/v1/tracks/"+id+"/stream"});
   rotation=async()=>({audiusFreshTracks:tracks=>tracks,playedKeys:()=>new Set(),
-   audiusIdentity:t=>"song:"+t.id});pickAudition()`);
+   audiusIdentity:t=>"id:"+t.id});
+  rotationModule={audiusIdentity:t=>"id:"+t.id};renderSoundtrackReserve=()=>{};
+  sessionStorage={entries:new Map(),getItem(k){return this.entries.get(k)||null},
+    setItem(k,v){this.entries.set(k,v)},removeItem(k){this.entries.delete(k)}};
+  pickAudition()`);
  await start;
  assert.equal(f.run("auditionTrack.id"),"first11");
  assert.match(demo.src,/first11/);
@@ -255,17 +259,28 @@ async function fireTimer(f,ms){
  assert.equal(f.run("rotationHistory.games.length"),0,"sampling must not mark a song played");
  await f.run("playAudition()");
  assert.equal(demo.paused,false);
+ assert.equal(f.run('auditionHeard.has("id:first11")'),true,
+  "a successfully played preview must be ineligible for this room's game");
+ assert.equal(f.run('JSON.parse(sessionStorage.getItem(AUDITION_GUARD_SESSION)).heard[0]'),
+  "id:first11","anonymous preview identity should survive a same-tab reload");
+ assert.equal(f.run("rotationHistory.games.length"),0);
  assert.ok([...f.timers.values()].some(t=>t.ms===8000));
- f.run('auditionExcluded.add("song:first11");stopAudition(false)');
+ f.run('stopAudition(false)');
  assert.equal(demo.paused,true);
  await f.run("pickAudition()");
  assert.equal(f.run("auditionTrack.id"),"second22",
-  "a host rejection must keep an unwanted composition out of this room");
+  "an auditioned composition must not be offered again after a sample plays");
  assert.equal(f.run("rotationHistory.games.length"),0);
+ f.run('auditionHeard.clear();auditionGuardCode="";syncAuditionGuard("ABCDEF")');
+ assert.equal(f.run('auditionHeard.has("id:first11")'),true,
+  "room-scoped sample memory must restore from the same-tab checkpoint");
  f.run("reset()");
  assert.equal(f.run("auditionTrack"),null);
  assert.equal(f.run("auditionExcluded.size"),0);
  assert.equal(f.run("auditionSeen.size"),0);
+ assert.equal(f.run("auditionHeard.size"),0);
+ assert.equal(f.run("sessionStorage.getItem(AUDITION_GUARD_SESSION)"),null,
+  "leaving should clear the private host preview checkpoint");
  assert.ok(![...f.timers.values()].some(t=>t.ms===8000),
   "Leaving must cancel a sample's pending stop timer");
 }
