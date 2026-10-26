@@ -352,6 +352,61 @@ async function fireTimer(f,ms){
   'applyState({...room,phase:"holding",firstAnswered:true})');
  assert.equal(f.run('canVibratePhone()'),false);
 }
+// Personal answer receipts are based exclusively on confirmed, matching
+// server state; no secret answers or unscored optimistic deltas are displayed.
+{
+ const f=fixture();
+ f.run('const beforeAnswer={code:"ABCDEF",role:"player",me:"guest1",round:1,'+
+  'step:0,phase:"answering",titleDone:false,artistDone:false,'+
+  'players:[{id:"guest1",score:3},{id:"guest2",score:4}]}');
+ const receipt=f.run('buildAnswerReceipt(beforeAnswer,{...beforeAnswer,phase:"holding",'+
+  'titleDone:true,artistDone:false,players:[{id:"guest1",score:3.5}]},'+
+  '{song:"The Title",artist:"wrong artist"})');
+ assert.equal(receipt.points,"+0.5 pts");
+ assert.equal(receipt.title,"Accepted");
+ assert.equal(receipt.artist,"Not accepted");
+ assert.equal(receipt.score,3.5);
+ assert.equal(receipt.kind,"positive");
+ assert.ok(!JSON.stringify(receipt).includes("The Title"),"receipt must not echo hidden guessed text");
+ assert.ok(!JSON.stringify(receipt).includes("wrong artist"));
+ f.run('room={...beforeAnswer,phase:"holding"};lastAnswerReceipt='+JSON.stringify(receipt));
+ f.run("renderAnswerReceipt()");
+ assert.equal(f.element("answer-receipt").hidden,false);
+ assert.equal(f.element("answer-receipt").dataset.outcome,"positive");
+ assert.equal(f.element("answer-receipt-points").textContent,"+0.5 pts");
+ assert.match(f.element("answer-receipt-song").textContent,/Accepted/);
+ f.run('applyState({...room,round:2,phase:"paused"})');
+ assert.equal(f.run("lastAnswerReceipt"),null,"a new song clears old feedback");
+ f.run("renderAnswerReceipt()"); // The VM replaces render() with a stub.
+ assert.equal(f.element("answer-receipt").hidden,true);
+}
+// Negative and zero-clamped results must never claim a specific field was
+// correct unless the authoritative accepted flags show it.
+{
+ const f=fixture();
+ f.run('const b={code:"ABCDEF",role:"player",me:"guest1",round:1,step:0,'+
+  'phase:"answering",titleDone:false,artistDone:false,'+
+  'players:[{id:"guest1",score:1}]}');
+ const r=f.run('buildAnswerReceipt(b,{...b,phase:"holding",'+
+  'players:[{id:"guest1",score:0}]},{song:"bad",artist:"worse"})');
+ assert.equal(r.delta,-1);
+ assert.equal(r.points,"-1.0 pts");
+ assert.equal(r.title,"Not accepted");
+ assert.equal(r.artist,"Not accepted");
+ const clamp=f.run('buildAnswerReceipt({...b,players:[{id:"guest1",score:0}]},'+
+  '{...b,players:[{id:"guest1",score:0}]},{song:"bad",artist:"worse"})');
+ assert.equal(clamp.delta,0);
+ assert.equal(clamp.kind,"neutral");
+ assert.match(clamp.note,/Scores cannot fall below zero/);
+ const skip=f.run('buildAnswerReceipt(b,{...b,phase:"holding",'+
+  'players:[{id:"guest1",score:1}]},{song:"",artist:""})');
+ assert.equal(skip.title,"Not submitted");
+ assert.equal(skip.artist,"Not submitted");
+ assert.equal(f.run('buildAnswerReceipt(b,{...b,round:2},{song:"hi"})'),null);
+ assert.equal(f.run('buildAnswerReceipt(b,{...b,code:"ZZZZZZ"},{song:"hi"})'),null);
+ assert.equal(f.run('buildAnswerReceipt(b,{...b,role:"host"},{song:"hi"})'),null);
+ assert.equal(f.run('buildAnswerReceipt(b,{...b,me:"guest2"},{song:"hi"})'),null);
+}
 // Leaving during a long track transition must unlock controls for the
 // next room, not leave the Start button stuck disabled.
 {

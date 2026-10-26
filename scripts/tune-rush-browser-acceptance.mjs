@@ -414,6 +414,19 @@ try{
  await guest.locator("#song-guess").fill("completely incorrect answer");
  await guest.locator("#artist-guess").fill("not that performer");
  await guest.locator("#answer-form button[type=submit]").click();
+ await guest.waitForFunction(()=>!!lastAnswerReceipt&&room?.phase!=="answering",null,{timeout:12000});
+ assert.equal(await guest.locator("#answer-receipt").isVisible(),true);
+ assert.equal(await guest.locator("#answer-receipt-title").innerText(),"Answer recorded");
+ assert.equal(await guest.locator("#answer-receipt-points").innerText(),"0.0 pts",
+  "an incorrect answer at zero must show no net loss, not a negative score");
+ assert.equal(await guest.locator("#answer-receipt-song").innerText(),"Song title: Not accepted");
+ assert.equal(await guest.locator("#answer-receipt-artist").innerText(),"Artist: Not accepted");
+ assert.match(await guest.locator("#answer-receipt-note").innerText(),/Scores cannot fall below zero/);
+ assert.equal(await guest2.locator("#answer-receipt").isVisible(),false,
+  "a player must not see another player's personal answer receipt");
+ assert.equal(await host.locator("#answer-receipt:visible").count(),0,
+  "the host never sees a guest's private answer receipt");
+ assert.equal(await guest.evaluate(()=>room.players.find(p=>p.id===room.me).score),0);
  await host.waitForFunction(()=>room?.phase==="holding"||room?.phase==="paused",null,{timeout:12000});
  if(await guest2.evaluate(()=>room?.phase==="holding")){
   await guest2.waitForFunction(()=>document.getElementById("buzzer-status-panel").dataset.state==="steal",
@@ -581,6 +594,9 @@ try{
  assert.equal(await host.locator("#finish-copy-results").isVisible(),true);
  assert.equal(await guest.locator("#finish-new-party:visible").count(),0);
  await host.locator("#finish-copy-results").click();
+ // Click dispatch does not await asynchronous Clipboard API callbacks.
+ // Verify the actual copied value rather than racing the Promise.
+ await host.waitForFunction(()=>typeof window.__copiedFinalScores==="string",null,{timeout:6000});
  assert.match(await host.evaluate(()=>window.__copiedFinalScores),/Winner: Demo Winner/);
  assert.match(await host.evaluate(()=>window.__copiedFinalScores),/Second Place — 11\.5 pts/);
  assert.ok(!String(await host.evaluate(()=>window.__copiedFinalScores)).includes("secret_hash"));
@@ -624,5 +640,6 @@ try{
   newParty:"winner UI preview -> authenticated fresh room, same filters, new QR and zero participants",scoreSharing:true,
   answerCountdown:"25 seconds, 10-second warning, 5-second urgency, server-only expiry",
   buzzerFeedback:"opt-in haptics, winner vs other claim, steal alerts without duplicate polling",
+  answerReceipts:"private zero-clamped score receipt confirmed by backend; no secret answer leak",
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}

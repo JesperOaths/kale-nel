@@ -853,3 +853,30 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
 .buzzer-haptics-help{font-size:10px;line-height:1.5;margin:1px 5px 9px;color:#a5c6c9}
 @media(max-width:540px){.buzzer-status-panel{padding:12px}.buzzer-status-icon{width:42px;height:42px}
  .buzzer-status-copy strong{font-size:15px}}
+
+
+/* Private receipt displayed only to the player who submitted an answer. */
+.answer-receipt{display:grid;gap:10px;margin:13px 0 16px;padding:15px 16px;
+ border-radius:17px;border:1px solid #8ae5c18c;
+ background:linear-gradient(125deg,#194941,#203444);
+ box-shadow:0 7px 22px #0003}
+.answer-receipt[hidden]{display:none!important}
+.answer-receipt-head{display:flex;gap:12px;align-items:center;min-width:0}
+.answer-receipt-icon{display:grid;place-items:center;flex:none;width:43px;height:43px;
+ border-radius:13px;background:#a1f5d122;border:1px solid #a1f5d18c;
+ font-size:25px;color:#adf5d7}
+.answer-receipt-head>div{display:grid;gap:3px;min-width:0;flex:1}
+.answer-receipt-head h3{font-size:19px;line-height:1.2;color:#f1ffe9;margin:0;letter-spacing:-.025em}
+.answer-receipt-head .kicker{font-size:10px}
+.answer-receipt-points{white-space:nowrap;text-align:right;color:#aff6d6;
+ font-size:20px;font-variant-numeric:tabular-nums;letter-spacing:-.035em}
+.answer-receipt-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.answer-receipt-details span{padding:9px 10px;border-radius:10px;font-weight:700;
+ background:#ffffff0c;color:#d6ebe6;font-size:12px;overflow-wrap:anywhere}
+.answer-receipt p{margin:0;color:#bad9d7;font-size:11px;line-height:1.5}
+.answer-receipt[data-outcome=negative]{border-color:#f0af938e;background:linear-gradient(125deg,#523837,#222d42)}
+.answer-receipt[data-outcome=negative] .answer-receipt-points{color:#ffd0b5}
+.answer-receipt[data-outcome=neutral]{border-color:#f1cf8680;background:linear-gradient(125deg,#4c412d,#202e42)}
+.answer-receipt[data-outcome=neutral] .answer-receipt-points{color:#f8dda9}
+@media(max-width:490px){.answer-receipt{padding:12px}.answer-receipt-head h3{font-size:17px}
+ .answer-receipt-points{font-size:18px}.answer-receipt-details{grid-template-columns:1fr}}
