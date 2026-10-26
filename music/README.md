@@ -28,6 +28,10 @@ Streaming is initiated by a host button, never background-autoplayed. A clue doe
 
 The host cannot launch overlapping **Start game** or **Next song** operations: the controls stay locked throughout the Audius catalog check, candidate stream loading and authoritative server update. Ordinary room polling pauses while selecting the new stream so an old-round refresh cannot accidentally restore the previous song over the candidate. If the server accepts a song but its HTTP acknowledgment is lost, Tune Rush checks the authenticated room again, keeps the matching prepared stream, and records it for three-game rotation and tab-reload recovery. Stale action responses from a room the host has left are ignored.
 
+### Cancelling obsolete Audius media loads
+
+If a host leaves or changes rooms while Audius metadata is still loading, Tune Rush immediately cancels the outstanding media listener and timeout. A delayed browser `loadedmetadata` or `error` event cannot satisfy a newer song's request. The provider module import is checked against the current host session *before* touching the shared audio element; round selection and host-tab recovery carry the same session validity check. No media data is downloaded or stored, and no database migration is needed.
+
 ### Late playback responses cannot restore departed rooms
 
 The host now associates Play, Pause and background-tab pause responses with the originating room session, round, media-source identity and operation version. A delayed response from an old room or an already-superseded clue is ignored, rather than redrawing a game after Leave or interrupting a newer track. Host tab stream recovery is similarly checked before a failed/abandoned restore is allowed to clear the audio element. These safeguards are client-side; no changes to the database protocol or scoring rules are needed.
