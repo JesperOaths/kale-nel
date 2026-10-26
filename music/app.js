@@ -168,7 +168,7 @@ let rotationModule=null,rotationHistory=null,rotationLoading=null;
 async function rotation(){
  if(rotationModule)return rotationModule;
  if(rotationLoading)return rotationLoading;
- rotationLoading=import("./game-rotation.js?v=20261026a").then(mod=>{
+ rotationLoading=import("./game-rotation.js?v=20261026reserve").then(mod=>{
   rotationModule=mod;
   let raw=null;try{raw=localStorage.getItem(mod.STORAGE_KEY)}catch{}
   rotationHistory=mod.readRotation(raw);
@@ -187,11 +187,44 @@ async function rememberSelectedSong(state){
  const mod=await rotation();
  mod.notePlayed(rotationHistory,state.code,"audius",audiusTrack.id);
  saveRotation();
+ renderSoundtrackReserve();
 }
 
 // Stream-only provider. Audius audio bytes go straight from HTTPS provider to
 // host browser playback; none are copied to hub, S21, USB, or Supabase.
 let audiusModule=null,audiusPool=[],audiusFiltersKey="",audiusActive=false;
+let audiusReservePartial=false;
+function renderSoundtrackReserve(){
+ const card=$("soundtrack-reserve"),live=$("live-reserve");
+ if(!rotationModule||!audiusPool.length||audiusFiltersKey!==JSON.stringify(chosenFilters())){
+  card.hidden=true;live.hidden=true;return;
+ }
+ const used=rotationModule.playedKeys(rotationHistory,"audius");
+ const stats=rotationModule.audiusReadiness(audiusPool,used);
+ card.hidden=false;
+ setText("reserve-total",stats.total);
+ setText("reserve-used",stats.used);
+ setText("reserve-free",stats.remaining);
+ setText("reserve-games",stats.expectedGames+" / 3");
+ setText("reserve-target",stats.remaining+" / "+stats.goal);
+ setText("reserve-status",stats.ready
+  ?"Three-game planning goal reached"
+  :stats.remaining===0?"No fresh tracks in this mix"
+  :"Need "+stats.shortfall+" more for the full reserve");
+ const meter=card.querySelector('[role="progressbar"]');
+ meter.setAttribute("aria-valuenow",String(Math.min(stats.goal,stats.remaining)));
+ $("reserve-gauge-fill").style.width=Math.min(100,100*stats.remaining/stats.goal)+"%";
+ $("reserve-advice").textContent=(audiusReservePartial
+  ?"Some Audius requests failed. These figures describe only the tracks actually found; scan again for better coverage. "
+  :"")+
+  "Planning only: roughly 40 songs per game. Some tracks may later be unavailable for playback.";
+ const allFilters=chosenFilters();
+ $("reserve-expand").hidden=stats.ready||
+  (!allFilters.decades.length&&allFilters.genres.length===9);
+ live.hidden=!isHost()||room?.phase==="lobby";
+ if(!live.hidden)live.textContent=stats.remaining+" fresh tracks left in this mix · "+
+  stats.used+" recently heard · "+(audiusReservePartial?"partial scan":"Audius catalog sample");
+}
 let audiusTrack=null,audiusIndex=20000000,audiusChecking=false;
 const AUDIUS_HOST_SESSION="tune-rush-audius-host-stream-v1";
 let audiusRestoring=false;
@@ -230,15 +263,19 @@ async function discoverAudius(force=false){
    throw Error("The genres or eras changed during the scan. Check tracks again.");
   audiusPool=tracks;audiusFiltersKey=key;
   const rotationTools=await rotation(),used=rotationTools.playedKeys(rotationHistory,"audius");
-  const free=tracks.filter(x=>!used.has(x.id));
-  setText("audius-availability",tracks.length+" distinct streamable tracks found; "+free.length+
-   " not heard in your last three games. "+(free.length>=120?
-    "This meets the 120-song planning target.":"Three typical games need about 120; "+Math.max(0,120-free.length)+
+  audiusReservePartial=!!scanResult.partial;
+  const stats=rotationTools.audiusReadiness(tracks,used);
+  renderSoundtrackReserve();
+  setText("audius-availability",stats.total+" distinct streamable tracks found; "+stats.remaining+
+   " not heard in your last three games. "+(stats.ready?
+    "This meets the 120-song planning target.":"Three typical games need about 120; "+stats.shortfall+
     " more would be needed for that target.")+
     (filters.decades.length?" Audius dates reflect provider release metadata; older originals may be absent.":"")+
     (scanResult.partial?" Some Audius pages could not be checked. This is only a partial catalog count; retry Check tracks.":""));
   return tracks;
  }catch(e){
+  $("soundtrack-reserve").hidden=true;
+  $("live-reserve").hidden=true;
   setText("audius-availability",String(e.message||e));
   throw e;
  }finally{
@@ -823,7 +860,9 @@ function reset(){
  setConnectionHealthy();
  try{sessionStorage.removeItem(AUDIUS_HOST_SESSION)}catch{}
  cancelNext();clearAudio();clearAudiusStream();audiusActive=false;audiusTrack=null;
- audiusPool=[];audiusFiltersKey="";failedClue="";room=null;access=null;
+ audiusPool=[];audiusFiltersKey="";audiusReservePartial=false;
+ $("soundtrack-reserve").hidden=true;$("live-reserve").hidden=true;
+ failedClue="";room=null;access=null;
  safeStore();render();
 }
 async function create(){
@@ -991,6 +1030,11 @@ $("clear-audius-decades").addEventListener("click",()=>{
  $("decade-options").dispatchEvent(new Event("change",{bubbles:true}));
 });
 $("audius-check").addEventListener("click",()=>discoverAudius(true).catch(e=>message(e.message)));
+$("reserve-expand").addEventListener("click",()=>{
+ if(!room||!isHost()||room.phase!=="lobby"||audiusChecking)return;
+ document.querySelector('[data-audius-preset="all"]').click();
+ discoverAudius(true).catch(e=>message(e.message));
+});
 document.querySelectorAll("[data-speaker-test]").forEach(button=>
  button.addEventListener("click",testSpeakers));
 $("audius-play-hint").addEventListener("click",()=>startClip());
@@ -1005,7 +1049,8 @@ $("answer-form").addEventListener("submit",submitGuess);
 for(const id of ["genre-options","decade-options"])$(id).addEventListener("change",()=>{
  genresDirty=true;
  clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);
- audiusPool=[];audiusFiltersKey="";
+ audiusPool=[];audiusFiltersKey="";audiusReservePartial=false;
+ $("soundtrack-reserve").hidden=true;$("live-reserve").hidden=true;
  setText("audius-availability","Filters changed. Check tracks to refresh availability.");
 });
 $("retry-connection").addEventListener("click",()=>{
