@@ -93,6 +93,17 @@ async function fireTimer(f,ms){
  assert.equal(f.run("room.phase"),"paused");
  assert.equal(f.run("operations.join(',')"),"play,pause");
 }
+// Leaving during a long track transition must unlock controls for the
+// next room, not leave the Start button stuck disabled.
+{
+ const f=fixture();
+ f.run("roundTransitionBusy=true;setLoading(false)");
+ assert.equal(f.element("start").disabled,true);
+ f.run("reset()");
+ assert.equal(f.element("start").disabled,false,"Leaving during preparation must unlock Start");
+ assert.equal(f.run("loading"),false);
+ assert.equal(f.run("roundTransitionBusy"),false);
+}
 // A server reply to a Play mutation arriving after Leave must never
 // recreate the previous room or touch the new host session.
 {
