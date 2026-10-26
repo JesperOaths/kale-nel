@@ -24,6 +24,7 @@ function makeWav(freq=440,seconds=38){
 }
 const ids=["abc12x","abc13x","abc14x","abc15x"];
 let metadataRequests=0,streamRequests=0;
+const metadataUrls=[];
 try{
  const host=await pad.newPage(),guest=await phone.newPage(),guest2=await phone2.newPage();
  for(const [p,label] of [[host,"host"],[guest,"guest"],[guest2,"guest2"]])
@@ -37,7 +38,7 @@ try{
     body:makeWav(430+streamRequests*40)});
    return;
   }
-  metadataRequests++;
+  metadataRequests++;metadataUrls.push(route.request().url());
   await route.fulfill({status:200,contentType:"application/json",
    headers:{"access-control-allow-origin":"*"},
    body:JSON.stringify({data:ids.map((id,i)=>({id,
@@ -161,6 +162,12 @@ try{
  assert.equal(await host.locator("#audius-scan-progress [role=progressbar]").getAttribute("aria-valuenow"),"100",
   "full Audius scans reach 100 percent");
  assert.match(await host.locator("#audius-scan-label").innerText(),/15 of 15 checks/);
+ assert.ok(metadataUrls.some(u=>new URL(u).pathname.endsWith("/search")&&
+  new URL(u).searchParams.get("sort_method")==="popular"&&!new URL(u).searchParams.get("query")),
+  "the catalog must supplement trending with popular music");
+ assert.ok(metadataUrls.some(u=>new URL(u).pathname.endsWith("/search")&&
+  new URL(u).searchParams.get("query")==="cover"),
+  "the catalog must search for cover versions as an additional discovery route");
  assert.equal(await host.locator("#audius-check").isDisabled(),false,"Check tracks re-enables after scan");
  // The host sees only real Audius catalog coverage, never invented availability.
  assert.equal(await host.locator("#soundtrack-reserve").isVisible(),true);
@@ -268,6 +275,21 @@ try{
  const heard=await host.evaluate(()=>({playedMs:1000*(playerAudio.currentTime-room.audio.cueMs/1000),failedClue,step:room.step}));
  assert.ok(heard.playedMs>370,"audio must really advance before a 0.5s clue ends");
  assert.equal(heard.failedClue,"");
+ // Two real guest phone sessions can see and participate in the same round.
+ await Promise.all([
+  guest.waitForFunction(()=>room?.phase==="paused"&&room?.step===0,null,{timeout:12000}),
+  guest2.waitForFunction(()=>room?.phase==="paused"&&room?.step===0,null,{timeout:12000})
+ ]);
+ assert.equal(await guest2.locator("#buzz").isDisabled(),false);
+ await guest.locator("#buzz").click();
+ await guest.waitForFunction(()=>room?.phase==="answering",null,{timeout:12000});
+ await guest2.waitForFunction(()=>room?.phase==="answering",null,{timeout:12000});
+ assert.equal(await guest2.locator("#answer-overlay").isVisible(),false,
+  "second phone must not be able to answer for the first player's buzzer");
+ await guest.locator("#song-guess").fill("completely incorrect answer");
+ await guest.locator("#artist-guess").fill("not that performer");
+ await guest.locator("#answer-form button[type=submit]").click();
+ await host.waitForFunction(()=>room?.phase==="holding"||room?.phase==="paused",null,{timeout:12000});
  await host.locator("#skip-round").click();
  await host.waitForFunction(()=>room?.phase==="solved",null,{timeout:15000});
  assert.match(await host.locator("#round-transition-title").innerText(),/SONG REVEALED/);
@@ -392,6 +414,6 @@ try{
   hostMixer:"65% persisted, speaker test respects mute",soundtrackReserve:"4 uploads -> 3 unique songs -> 2 -> 1 fresh",
   catalogCancellation:"same-key filter return and old-room scan rejected",
   qrJoin:"second phone joined through public QR link; SVG rendered locally",
-  roundsRibbon:true,popularAndCoverSearch:true,
+  roundsRibbon:true,popularAndCoverSearch:true,guestBuzzAndAnswer:true,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}
