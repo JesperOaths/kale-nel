@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {readRotation,emptyRotation,openGame,playedKeys,notePlayed,catalogReadiness,audiusReadiness,audiusIdentity,audiusFreshTracks,noteAudiusPlayed,THREE_GAME_TARGET} from "../music/game-rotation.js";
-import {chooseAudiusTrack} from "../music/audius-stream.js";
+import {chooseAudiusTrack,discoverAudiusTracks} from "../music/audius-stream.js";
 
 assert.equal(THREE_GAME_TARGET,120);
 assert.equal(readRotation("garbage").games.length,0);
@@ -86,6 +86,26 @@ const old=readRotation('{"version":1,"games":[{"code":"ABCDEF","local":[],"catal
 notePlayed(old,"ABCDEF","audius","yyR1OZE");
 assert.ok(playedKeys(old,"audius").has("yyR1OZE"),"old browser history migrates safely");
 assert.throws(()=>notePlayed(history,"GME2AC","audius","../attack"),/Invalid song identifier/);
+// Provider requests must inherit the host's cancellation signal, not only
+// the per-page 8.5s timeout. An abandoned filter scan should stop immediately.
+{
+ const controller=new AbortController();
+ let pageRequests=0,requestSignal=null;
+ const heldFetch=(_url,{signal})=>{
+  pageRequests++;requestSignal=signal;
+  return new Promise((_resolve,reject)=>{
+   if(signal.aborted)reject(Error("Request aborted"));
+   else signal.addEventListener("abort",()=>reject(Error("Request aborted")),{once:true});
+  });
+ };
+ const pending=discoverAudiusTracks(["pop"],[],heldFetch,{signal:controller.signal});
+ assert.equal(pageRequests,1);
+ assert.equal(requestSignal.aborted,false);
+ controller.abort();
+ assert.equal(requestSignal.aborted,true,"host abort must reach provider fetch");
+ await assert.rejects(pending,/Audius scan cancelled/);
+ assert.equal(pageRequests,1,"aborted scan must not request the next catalog page");
+}
 console.log("THREE_GAME_ROTATION_PASS",JSON.stringify({
  source:"Audius HTTPS",games:3,playedWithoutRepeating:selected.length,
  capacityGoal:THREE_GAME_TARGET,remaining:capacity.remaining,
