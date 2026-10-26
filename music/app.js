@@ -108,6 +108,7 @@ $("audition-exclude").addEventListener("click",async()=>{
  const rot=await rotation();
  if(!auditionReady()||!auditionTrack||auditionSession!==access)return;
  auditionExcluded.add(rot.audiusIdentity(auditionTrack));
+ renderSoundtrackReserve();
  stopAudition(true);
  setText("audition-status","Excluded from this party's upcoming rounds.");
  await pickAudition();
@@ -309,7 +310,8 @@ function renderSoundtrackReserve(){
  }
  const used=rotationModule.playedKeys(rotationHistory,"audius");
  const signatures=rotationModule.playedKeys(rotationHistory,"audiusFingerprints");
- const stats=rotationModule.audiusReadiness(audiusPool,used,120,signatures);
+ const eligiblePool=audiusPool.filter(t=>!auditionExcluded.has(rotationModule.audiusIdentity(t)));
+ const stats=rotationModule.audiusReadiness(eligiblePool,used,120,signatures);
  card.hidden=false;
  setText("reserve-total",stats.total);
  setText("reserve-used",stats.used);
@@ -406,7 +408,8 @@ async function discoverAudius(force=false){
    if(!current())throw Error("Audius scan superseded by a new room or filter.");
    const used=rotationTools.playedKeys(rotationHistory,"audius");
    const signatures=rotationTools.playedKeys(rotationHistory,"audiusFingerprints");
-   const stats=rotationTools.audiusReadiness(tracks,used,120,signatures);
+   const eligiblePool=tracks.filter(t=>!auditionExcluded.has(rotationTools.audiusIdentity(t)));
+   const stats=rotationTools.audiusReadiness(eligiblePool,used,120,signatures);
    // Publish all scan data atomically once the room, filters and generation
    // have been confirmed. Old requests may not mutate a new room's reserve.
    audiusPool=tracks;audiusFiltersKey=key;audiusReservePartial=!!scanResult.partial;
