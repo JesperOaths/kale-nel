@@ -12,7 +12,7 @@ class ReviewHandoff(unittest.TestCase):
         self.page=(HERE/'security-people-v53.html').read_text()
     def test_cache_busted_page_integration(self):
         self.assertIn('security-people-v328.js?v=neural-review-handoff-v1-20261026',self.page)
-        self.assertIn('local-neural-manual-triage-v4.js?v=neural-review-handoff-v1-20261026',self.page)
+        self.assertIn('local-neural-manual-triage-v5.js?v=neural-assigned-crop-sync-v5-20261026',self.page)
         self.assertNotIn('local-neural-manual-triage-v3.js?v=',self.page)
     def test_explicit_user_action_with_correct_original_clip(self):
         self.assertEqual(self.triage.count("node('button','▶ Review this recording')"),1)
