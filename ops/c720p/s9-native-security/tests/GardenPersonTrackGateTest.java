@@ -62,6 +62,14 @@ public final class GardenPersonTrackGateTest{
   check(gate.noLocalMotion>=4,"static false positive protection enforced");
   check(gate.unlikePersonShape>=1,"vehicle-like person boxes rejected");
   check(!GardenPersonTrackGate.samePerson(walker,other),"different boxes must not correlate");
+  check(GardenPersonTrackGate.samePerson(moving,other),
+    "broad walker matcher does allow nearby nonoverlap: do not use for car veto");
+  check(!GardenPersonTrackGate.sameRegionTransport(moving,other),
+    "nearby nonoverlapping car never invalidates stationary pedestrian");
+  check(GardenPersonTrackGate.sameRegionTransport(walker,moving),
+    "genuinely overlapping detections may veto same-region false object");
+  check(!GardenPersonTrackGate.sameRegionTransport(walker,other),
+    "far car must not veto real person");
   check(GardenPersonTrackGate.samePerson(walker,moving),"moving walker boxes stay associated");
   check(!GardenPersonTrackGate.plausiblePersonShape(broadCar),"wide car not person-shaped");
   check(GardenPersonTrackGate.plausiblePersonShape(walker),"upright walker accepted");
@@ -75,8 +83,134 @@ public final class GardenPersonTrackGateTest{
     "weak competing car class cannot veto genuine pedestrian");
   check(!GardenPersonTrackGate.transportDominates(walker,.55f,other,.94f,"truck"),
     "nearby truck must not hide independent walker");
+  final float[] falsePersonInsideCar={.48f,.38f,.70f,.51f};
+  final float[] largerMovingCar={.43f,.10f,.73f,.80f};
+  check(GardenPersonTrackGate.plausiblePersonShape(falsePersonInsideCar),
+    "nested misclassified car part is person-shaped and requires transport veto");
+  check(GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,.92f,"car"),
+    "nested false person in high-confidence moving car vetoed despite low IoU");
+  check(GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,.92f,"truck"),
+    "nested high-confidence truck also vetoes false pedestrian");
+  check(!GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,.72f,"car"),
+    "uncertain vehicle label must not override person");
+  check(!GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.78f,
+        largerMovingCar,.92f,"car"),
+    "modest score difference must not suppress a separate person");
+  check(!GardenPersonTrackGate.transportDominates(walker,.53f,
+        largerMovingCar,.92f,"car"),
+    "pedestrian only partly overlapping car must remain detectable");
+  check(!GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,.92f,"dog"),
+    "animals never become transport vetoes");
+  check(!GardenPersonTrackGate.transportDominates(falsePersonInsideCar,.53f,
+        largerMovingCar,Float.NaN,"car"),
+    "non-finite transport confidence cannot veto a person");
   check(!GardenPersonTrackGate.transportDominates(walker,.50f,walker,.95f,"dog"),
     "animal class cannot be a transport veto");
+  gate.reset();
+  eq(gate.offer(25000,24950,.61f,falsePersonInsideCar,2),
+    GardenPersonTrackGate.Decision.FIRST,
+    "a single car part mislabeled person can propose but never start");
+  gate.rejectCompetingTransport();
+  eq(gate.offer(26000,25950,.61f,falsePersonInsideCar,2),
+    GardenPersonTrackGate.Decision.FIRST,
+    "vehicle veto must clear stale person evidence rather than pair with it");
+  check(gate.transportInterrupted==1,
+    "explicit transport rejection is recorded and track reset");
+  gate.reset();
+  eq(gate.offer(30000,29950,.64f,walker,2),GardenPersonTrackGate.Decision.FIRST,
+    "walking pedestrian begins");
+  check(!gate.rejectCompetingTransport(new float[][]{other}),
+    "distant vehicle must not reset real person");
+  eq(gate.offer(31000,30950,.63f,moving,2),
+    GardenPersonTrackGate.Decision.CONFIRMED,
+    "person still confirms alongside unrelated road car");
+  gate.reset();
+  eq(gate.offer(32000,31950,.64f,walker,2),
+    GardenPersonTrackGate.Decision.FIRST,"person before same-region vehicle");
+  check(gate.rejectCompetingTransport(new float[][]{walker}),
+    "same-region vehicle interrupts pending person");
+  eq(gate.offer(33000,32950,.63f,moving,2),
+    GardenPersonTrackGate.Decision.FIRST,
+    "same-region veto blocks two-frame false alarm");
+  check(gate.unrelatedTransportIgnored==1,
+    "distinct car veto tracked separately");
+  check(gate.transportInterrupted==2,
+    "existing and region-specific vehicle contradictions counted");
+  gate.reset();
+  eq(gate.offer(34000,33950,.64f,walker,2),
+    GardenPersonTrackGate.Decision.FIRST,"unknown veto geometry candidate");
+  check(gate.rejectCompetingTransport(new float[0][]),
+    "missing veto coordinates fail closed");
+  eq(gate.offer(35000,34950,.64f,moving,2),
+    GardenPersonTrackGate.Decision.FIRST,
+    "missing geometry cannot complete a false pair");
+  // Stationary presence may keep an ALREADY admitted clip alive, but can
+  // never start one from two otherwise motionless model predictions.
+  gate.reset();
+  check(!gate.confirmStationaryPresence(90000,89950,.94f,walker),
+    "stationary high-confidence person without earlier motion cannot start");
+  eq(gate.offer(91000,90950,.74f,walker,2),GardenPersonTrackGate.Decision.FIRST,
+    "moving person's first admission frame");
+  eq(gate.offer(92000,91950,.76f,moving,2),GardenPersonTrackGate.Decision.CONFIRMED,
+    "moving person admitted before stationary tail");
+  eq(gate.offer(94500,94450,.87f,moving,0),GardenPersonTrackGate.Decision.FIRST,
+    "first no-motion recording check still cannot start another event");
+  check(!gate.confirmStationaryPresence(94500,94450,.87f,moving),
+    "one stationary image insufficient even after admission");
+  check(!gate.confirmStationaryPresence(95000,94450,.91f,moving),
+    "reusing identical JPEG cannot refresh tail");
+  eq(gate.offer(97000,96950,.89f,moving,0),GardenPersonTrackGate.Decision.NO_LOCAL_MOTION,
+    "ordinary initial-admission rule remains strict for motionless objects");
+  check(gate.confirmStationaryPresence(97000,96950,.89f,moving),
+    "two fresh high-confidence images keep known visitor in view");
+  check(gate.stationaryHolds==1,"stationary continuation counted exactly once");
+  check(!gate.rejectCompetingTransport(new float[][]{other}),
+    "background car cannot erase already verified stationary person");
+  check(!gate.confirmStationaryPresence(99000,98950,.90f,other),
+    "different high-confidence object must not take over confirmed person");
+  check(!gate.confirmStationaryPresence(99500,99450,.91f,other),
+    "repeated nearby static false detection cannot extend known visitor");
+  check(!gate.confirmStationaryPresence(100000,99950,.55f,moving),
+    "weak continuation does not refresh person");
+  check(!gate.confirmStationaryPresence(100500,100450,.90f,moving),
+    "first fresh observation after weak/different proposal not sufficient");
+  check(gate.rejectCompetingTransport(new float[][]{moving}),
+    "same-region high-confidence vehicle clears previously confirmed visitor");
+  check(!gate.confirmStationaryPresence(103000,102950,.92f,moving),
+    "car contradiction invalidates stationary hold even for strong person model");
+  gate.reset();
+  eq(gate.offer(105000,104950,.74f,walker,2),GardenPersonTrackGate.Decision.FIRST,
+    "new visitor after reset");
+  eq(gate.offer(106000,105950,.74f,moving,2),GardenPersonTrackGate.Decision.CONFIRMED,
+    "valid moving visitor");
+  check(!gate.confirmStationaryPresence(115001,115000,.90f,moving),
+    "stale verified pedestrian beyond nine seconds cannot extend recording");
+  gate.reset();
+  check(!gate.confirmStationaryPresence(117000,116950,.92f,moving),
+    "full reset never preserves a previous approved visitor");
+  gate.reset();
+  eq(gate.offer(210000,209950,.79f,walker,2),
+    GardenPersonTrackGate.Decision.FIRST,"late visitor initial motion");
+  eq(gate.offer(211000,210950,.81f,moving,2),
+    GardenPersonTrackGate.Decision.CONFIRMED,"late visitor admitted");
+  eq(gate.offer(211500,211450,.88f,moving,0),
+    GardenPersonTrackGate.Decision.FIRST,"first stationary observation");
+  check(!gate.confirmStationaryPresence(211500,211450,.88f,moving),
+    "single parked observation does not refresh");
+  eq(gate.offer(216900,216850,.20f,null,0),
+    GardenPersonTrackGate.Decision.WEAK,
+    "weak single dropout may expire tentative candidate");
+  check(!gate.confirmStationaryPresence(217100,217050,.88f,moving),
+    "first strong return after dropout insufficient");
+  check(gate.confirmStationaryPresence(219000,218950,.91f,moving),
+    "short weak dropout does not erase already verified visitor");
+  check(gate.stationaryHolds==2,
+    "two separately demonstrated stationary holds across test scenarios");
+
   check(!GardenPersonTrackGate.valid(new float[]{.2f,Float.NaN,.7f,.9f}),"NaN never valid");
   System.out.println("S9_SPATIOTEMPORAL_PEDESTRIAN_V9_PASS "+assertions);
  }
