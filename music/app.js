@@ -223,6 +223,7 @@ let confirmedHostSource="";
 let clipTimer=null,nextTimer=null,startedClip=false;
 let lastBlockKey="",answeredFocusKey="",prevRound=0,prevPhase="";
 let lastAnswerReceipt=null;
+let lastScoreChanges=new Map(),lastScorePulse="";
 let genresDirty=false,genresSaveTimer=null;
 let clipGeneration=0,mutationVersion=0;
 let failedClue="";
@@ -963,12 +964,38 @@ async function pauseSilentClue(){
   }
  }
 }
+// Score momentum is public, never a guess transcript. Changes must come
+// from consecutive authenticated states in the exact same room/round.
+function scoreChangeEvents(previous,next){
+ if(!previous||!next||previous.code!==next.code||previous.round!==next.round||
+  previous.phase==="lobby"||next.phase==="lobby")return [];
+ const prior=new Map((previous.players||[]).map(p=>[p.id,p]));
+ return (next.players||[]).flatMap(p=>{
+  const old=prior.get(p.id),before=Number(old?.score),after=Number(p.score);
+  if(!old||!Number.isFinite(before)||!Number.isFinite(after)||
+   Math.abs(after-before)<0.00001)return [];
+  const delta=Math.round((after-before)*10)/10;
+  if(!delta)return [];
+  return [{id:p.id,name:p.name,delta,score:after}];
+ });
+}
+function observeScoreChanges(previous,next){
+ if(!previous||previous.code!==next.code||previous.round!==next.round){
+  lastScoreChanges.clear();lastScorePulse="";return;
+ }
+ const events=scoreChangeEvents(previous,next);
+ if(!events.length)return; // A background poll never replays the same badge.
+ for(const event of events)lastScoreChanges.set(event.id,event);
+ const describe=event=>event.name+" "+(event.delta>0?"+":"")+event.delta.toFixed(1)+" points";
+ lastScorePulse=events.map(describe).join(" · ");
+}
 function applyState(s){
  const previous=room;
  const oldPhase=room?.phase||"",oldRound=room?.round||0,oldRoomCode=room?.code;
  if((oldPhase==="lobby"&&s.phase!=="lobby")||(oldRoomCode&&oldRoomCode!==s.code))
   stopAudition(true);
  room=s;
+ observeScoreChanges(previous,s);
  if(previous&&(previous.code!==s.code||previous.round!==s.round))
   lastAnswerReceipt=null;
  notifyPlayerBuzzerTransition(previous,s);
@@ -995,14 +1022,34 @@ function makePlayer(name){
 }
 function renderScores(target){
  const root=$(target);root.replaceChildren();
- (room.players||[]).forEach((p,i)=>{
+ const sorted=[...(room.players||[])].sort((a,b)=>
+  Number(b.score)-Number(a.score)||String(a.name).localeCompare(String(b.name)));
+ let previousScore=null,rank=0;
+ sorted.forEach((p,i)=>{
+  const pts=Number(p.score);
+  if(previousScore===null||pts!==previousScore)rank=i+1;
+  previousScore=pts;
   const row=document.createElement("div");row.className="score-entry";
-  const name=document.createElement("span");name.textContent=(i===0?"♛ ":"")+p.name;
-  const score=document.createElement("strong");score.textContent=Number(p.score).toFixed(1);
+  row.setAttribute("role","listitem");
+  row.dataset.rank=String(rank);
+  const name=document.createElement("span");name.className="score-player";
+  name.textContent=(rank===1?"♛ ":"#"+rank+" ")+p.name;
+  const score=document.createElement("strong");score.textContent=pts.toFixed(1);
+  const movement=lastScoreChanges.get(p.id);
+  if(movement){
+   const delta=document.createElement("span");delta.className="score-movement";
+   delta.dataset.trend=movement.delta>0?"up":"down";
+   delta.textContent=(movement.delta>0?"+":"")+movement.delta.toFixed(1);
+   delta.setAttribute("aria-label",(movement.delta>0?"Gained ":"Lost ")+
+    Math.abs(movement.delta).toFixed(1)+" points this song");
+   row.append(delta);
+  }
   const bar=document.createElement("div");bar.className="score-progress";
-  const progress=document.createElement("i");progress.style.width=(Math.max(0,Math.min(20,Number(p.score)))/20*100)+"%";
+  const progress=document.createElement("i");progress.style.width=(Math.max(0,Math.min(20,pts))/20*100)+"%";
   bar.append(progress);row.append(name,score,bar);root.append(row);
  });
+ show("scoreboard-pulse",!!lastScorePulse&&room.phase!=="lobby");
+ setText("scoreboard-pulse",lastScorePulse);
 }
 // Display the authoritative backend's absolute answer deadline. This clock
 // never drives game transitions or rejects a response: the server alone does.
@@ -1289,7 +1336,7 @@ async function refresh(force=false){
 }
 function reset(){
  mutationVersion++;
- lastAnswerReceipt=null;
+ lastAnswerReceipt=null;lastScoreChanges.clear();lastScorePulse="";
  clueRescueBusy=false;clueRescueNotice="";
  stopAudition(true);clearAuditionGuard();refreshAuditionGuardStatus();
  cancelAudiusScan();
