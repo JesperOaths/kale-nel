@@ -77,10 +77,10 @@
       </div>
       <section class="audius-audition" id="audius-audition" aria-label="Live Audius music audition">
        <div class="audition-intro"><span class="audition-symbol" aria-hidden="true">♫</span><div><span class="kicker">REAL MUSIC SOUNDCHECK</span><h3>Hear the actual soundtrack.</h3><p>Audition short Audius samples before starting. No points, rounds or repeat history are changed.</p></div></div>
-       <div class="audition-buttons"><button type="button" id="audition-pick" class="outline" disabled>♫ Find a sample</button><button type="button" id="audition-play" class="primary" hidden>▶ Hear 8 seconds</button><button type="button" id="audition-next" class="outline" hidden>↻ Another song</button><button type="button" id="audition-stop" class="quiet" hidden>■ Stop</button></div>
+       <div class="audition-buttons"><button type="button" id="audition-pick" class="outline" disabled>♫ Find a sample</button><button type="button" id="audition-play" class="primary" hidden>▶ Hear 8 seconds</button><button type="button" id="audition-next" class="outline" hidden>↻ Another song</button><button type="button" id="audition-exclude" class="outline" hidden>✕ Not for this party</button><button type="button" id="audition-stop" class="quiet" hidden>■ Stop</button></div>
        <div id="audition-selected" class="audition-selected" hidden><strong id="audition-track-title"></strong><span id="audition-track-artist"></span></div>
        <p id="audition-status" class="audition-status" role="status" aria-live="polite">Check tracks above to unlock real Audius music samples.</p>
-       <span class="audition-note">Samples play on the host device only, where everyone nearby may hear them. No audio files are saved.</span>
+       <span class="audition-note">Samples play on the host device only. Excluded songs stay out of this room’s upcoming rounds without being marked as played. No music files are saved.</span>
        <audio id="audition-audio" preload="none"></audio>
       </section>
       <div class="speaker-check-line">
