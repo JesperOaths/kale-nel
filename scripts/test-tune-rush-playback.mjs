@@ -18,7 +18,7 @@ function fixture(){
  const element=id=>{
   if(!elements.has(id))elements.set(id,{
    hidden:false,textContent:"",disabled:false,readyState:4,error:null,paused:false,seeking:false,
-   _time:0,listeners:new Map(),style:{setProperty(){}},attrs:new Map(),
+   _time:0,listeners:new Map(),style:{setProperty(){}},dataset:{},attrs:new Map(),
    get currentTime(){return this._time},
    set currentTime(value){this._time=value;this.seeking=false;this.emit("seeked")},
    addEventListener(type,fn){const set=this.listeners.get(type)||new Set();set.add(fn);this.listeners.set(type,set)},
