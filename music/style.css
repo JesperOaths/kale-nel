@@ -1009,6 +1009,8 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #93f4
  margin:0;font-weight:600}
 .finish .finish-poster-controls button{min-height:46px;border:1px solid #c9f4d7a6;
  background:#386756;color:#f5fff7;font-size:13px;font-weight:850;padding:12px;border-radius:11px}
+.finish .finish-poster-controls .finish-poster-share{background:linear-gradient(125deg,#9be6bb,#56caad);color:#103b35;border-color:#b5f1c2}
+.finish .finish-poster-controls button:disabled{opacity:.57;cursor:wait}
 .finish .finish-poster-controls #finish-poster-status{color:#d5efdb;font-size:11px}
 .finish-poster-details>summary:focus-visible,.finish-poster-controls button:focus-visible{
  outline:3px solid #ffedac;outline-offset:2px}
