@@ -35,7 +35,7 @@ function fixture(){
   setTimeout(fn,ms){const id=++sequence;timers.set(id,{fn,ms});return id},
   clearTimeout(id){timers.delete(id)}};
  const context=vm.createContext(sandbox);
- vm.runInContext(source+'\nrender=()=>{};room={code:"ABCDEF",role:"host",round:1,step:-1,phase:"paused",mode:"local",audio:{source:"local:20000001",cueMs:13000},clipMs:500,players:[]};localCurrentIndex=20000001;localAudioUrl="https://api.audius.co/v1/tracks/abcdef/stream";audiusActive=true;',context);
+ vm.runInContext(source+'\nrender=()=>{};access={code:"ABCDEF",token:"fixture-token"};room={code:"ABCDEF",role:"host",round:1,step:-1,phase:"paused",mode:"local",audio:{source:"local:20000001",cueMs:13000},clipMs:500,players:[]};localCurrentIndex=20000001;localAudioUrl="https://api.audius.co/v1/tracks/abcdef/stream";audiusActive=true;',context);
  return {run:code=>vm.runInContext(code,context),element,timers};
 }
 async function fireTimer(f,ms){
@@ -93,8 +93,46 @@ async function fireTimer(f,ms){
  assert.equal(f.run("room.phase"),"paused");
  assert.equal(f.run("operations.join(',')"),"play,pause");
 }
+// A server reply to a Play mutation arriving after Leave must never
+// recreate the previous room or touch the new host session.
+{
+ const f=fixture();
+ const pending=f.run(`let finishPlay,staleState={...room,step:0,phase:"playing"};
+  rpc=async()=>new Promise(resolve=>{finishPlay=resolve});startClip()`);
+ assert.equal(f.run("loading"),true);
+ f.run("reset()");
+ assert.equal(f.run("room"),null);
+ f.run("finishPlay({state:staleState})");
+ await pending;
+ assert.equal(f.run("room"),null,"late play response resurrected a room after Leave");
+ assert.equal(f.run("access"),null,"late play response recreated the access token");
+ assert.equal(f.run("loading"),false,"stale action left the next room locked");
+}
+// A delayed Pause response after a real clue must not restore a departed room.
+{
+ const f=fixture(),a=f.element("licensed-player");
+ a.play=async()=>{a.paused=false;a.currentTime=13.23};
+ const pending=f.run(`let finishPause,mutations=[];
+  rpc=async action=>{
+   mutations.push(action);
+   if(action==="pause")return new Promise(resolve=>{finishPause=resolve});
+   return {state:{...room,phase:"playing",step:0,clipMs:500}};
+  };
+  startClip()`);
+ await pending;
+ a.currentTime=13.65;
+ const finishing=fireTimer(f,500);
+ for(let i=0;i<10&&!f.run("typeof finishPause==='function'");i++)await Promise.resolve();
+ assert.equal(f.run("typeof finishPause"),"function");
+ const stale=f.run("({...room,phase:'paused'})");
+ f.run("reset()");
+ f.run("finishPause({state:latePause})".replace("latePause",JSON.stringify(stale)));
+ await finishing;
+ assert.equal(f.run("room"),null,"late pause response resurrected a room after Leave");
+ assert.equal(f.run("loading"),false,"stale pause left the new room locked");
+}
 {
  const f=fixture();
  await assert.rejects(f.run('startAudio({source:"youtube:dQw4w9WgXcQ"})'),/Only Audius/);
 }
-console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; host controls");
+console.log("TUNE_RUSH_AUDIUS_ONLY_PLAYBACK_PASS: no obsolete providers; seek completion; stale playhead rejection; buffering; stale Play/Pause response fencing; host controls");
