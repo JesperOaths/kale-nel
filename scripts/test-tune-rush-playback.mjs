@@ -18,7 +18,7 @@ function fixture(){
  const element=id=>{
   if(!elements.has(id))elements.set(id,{
    hidden:false,textContent:"",disabled:false,readyState:4,error:null,paused:false,
-   setAttribute(){},pause(){this.paused=true},play:async()=>{this.paused=false},querySelector(){return null}
+   setAttribute(){},pause(){this.paused=true},async play(){this.paused=false},querySelector(){return null}
   });
   return elements.get(id);
  };
