@@ -17,7 +17,6 @@ class Fake:
         self.headers_sent={};self.wfile=io.BytesIO();self.code=None;self.json_out=None
     def authorized(self):return self.auth
     def go(self,*a,**k):self.code=499
-    def js(self,code,data):self.code=code;self.json_out=data
     def send_response(self,code):self.code=code
     def cors(self):pass
     def send_header(self,k,v):self.headers_sent[k]=v
@@ -88,9 +87,10 @@ class ReadOnlyROIs(unittest.TestCase):
         good=Fake(mod.PREFIX)
         good.go()
         self.assertEqual(good.code,200)
-        self.assertEqual(good.json_out['count'],108)
-        self.assertFalse(good.json_out['original_attestation'])
-        self.assertFalse(good.json_out['identity_matching'])
+        doc=json.loads(good.wfile.getvalue())
+        self.assertEqual(doc['count'],108)
+        self.assertFalse(doc['original_attestation'])
+        self.assertFalse(doc['identity_matching'])
     def test_jpeg_bytes_and_bad_path(self):
         rows,_=mod.verified_records()
         one=Fake(mod.PREFIX+'/image/'+rows[0]['image_id'])
