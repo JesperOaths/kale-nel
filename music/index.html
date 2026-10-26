@@ -8,9 +8,9 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
 <meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
-<link rel="stylesheet" href="./style.css?v=20261026mix">
+<link rel="stylesheet" href="./style.css?v=20261026scan">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
-<script src="./app.js?v=20261026resume" defer></script>
+<script src="./app.js?v=20261026scan" defer></script>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -52,6 +52,7 @@
      <div class="audius-info" id="audius-info" role="status" aria-live="polite">
       <div class="audius-info-top"><div><span class="kicker">TRACK AVAILABILITY</span><strong id="audius-availability">Choose your vibe and check how many songs are available.</strong></div>
       <button type="button" class="outline" id="audius-check">↻ Check tracks</button></div>
+      <div id="audius-scan-progress" class="audius-scan-progress" hidden><div class="audius-scan-track" role="progressbar" aria-label="Audius catalog scan" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="audius-scan-fill"></span></div><span id="audius-scan-label">Connecting to Audius…</span></div>
       <p>Filtered by Audius metadata. The catalog focuses on independent releases, remixes and recent music. Older decades may return few tracks. <a href="https://audius.co/" target="_blank" rel="noopener noreferrer">Explore Audius</a></p>
     </div>
      <div id="audius-filters">

@@ -77,6 +77,11 @@ try{
  await host.locator("#audius-check").click();
  await host.waitForFunction(()=>audiusPool.length===3&&!audiusChecking,null,{timeout:20000});
  assert.match(await host.locator("#audius-availability").innerText(),/3 distinct streamable tracks/);
+ assert.equal(await host.locator("#audius-scan-progress").isVisible(),false,"scan meter hides after completion");
+ assert.equal(await host.locator("#audius-scan-progress [role=progressbar]").getAttribute("aria-valuenow"),"100",
+  "full Audius scans reach 100 percent");
+ assert.match(await host.locator("#audius-scan-label").innerText(),/9 of 9 checks/);
+ assert.equal(await host.locator("#audius-check").isDisabled(),false,"Check tracks re-enables after scan");
  const mobile=await guest.evaluate(()=>({vw:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
  assert.ok(mobile.scroll<=mobile.vw+3,"guest page overflows phone viewport");
  await host.locator("#start").click();
@@ -140,6 +145,6 @@ try{
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,tracks:3,streamRequests,metadataRequests,
-  nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",noRepeat:true,mobileOverflow:false,
+  nextRound:2,playedMs:Math.round(heard.playedMs),hostReload:"same track recovered",catalogScan:"9/9",noRepeat:true,mobileOverflow:false,
   removedLegacyUI:true,guestPrivateAnswers:true}));
 } finally {console.log("BROWSER_PAGE_ERRORS",JSON.stringify(errors.slice(0,12)));await browser.close();}

@@ -119,20 +119,36 @@ let audiusModule=null,audiusPool=[],audiusFiltersKey="",audiusActive=false;
 let audiusTrack=null,audiusIndex=20000000,audiusChecking=false;
 const AUDIUS_HOST_SESSION="tune-rush-audius-host-stream-v1";
 let audiusRestoring=false;
-async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026a"))}
+async function audiusLib(){return audiusModule||(audiusModule=await import("./audius-stream.js?v=20261026scan"))}
 async function discoverAudius(force=false){
  if(audiusChecking)throw Error("Audius is already checking tracks.");
  const filters=chosenFilters(),key=JSON.stringify(filters);
  if(!filters.genres.length)throw Error("Select at least one genre.");
  if(!force&&key===audiusFiltersKey&&audiusPool.length)return audiusPool;
  audiusChecking=true;
+ const scan=$("audius-scan-progress"),meter=scan.querySelector('[role="progressbar"]');
+ scan.hidden=false;
+ meter.setAttribute("aria-valuenow","0");
+ $("audius-scan-fill").style.width="0%";
+ setText("audius-scan-label","Connecting to Audius…");
+ let scanResult={partial:false};
  if(isHost()&&room?.phase==="lobby")$("start").disabled=true;
  $("audius-check").disabled=true;
  $("audius-check").textContent="⌛ Checking…";
  setText("audius-availability","Finding Audius tracks that match your selections…");
  try{
   const mod=await audiusLib();
-  const tracks=await mod.discoverAudiusTracks(filters.genres,filters.decades);
+  const tracks=await mod.discoverAudiusTracks(filters.genres,filters.decades,fetch,{
+   onProgress:progress=>{
+    scanResult=progress;
+    if(JSON.stringify(chosenFilters())!==key)return;
+    const percent=Math.min(100,Math.round(100*progress.completed/Math.max(1,progress.total)));
+    meter.setAttribute("aria-valuenow",String(percent));
+    $("audius-scan-fill").style.width=percent+"%";
+    setText("audius-scan-label",progress.completed+" of "+progress.total+
+     " checks · "+progress.found+" matching tracks"+(progress.partial?" · incomplete scan":""));
+   }
+  });
   // Reject results for a mix that changed while the network request was pending.
   if(JSON.stringify(chosenFilters())!==key)
    throw Error("The genres or eras changed during the scan. Check tracks again.");
@@ -143,13 +159,15 @@ async function discoverAudius(force=false){
    " not heard in your last three games. "+(free.length>=120?
     "This meets the 120-song planning target.":"Three typical games need about 120; "+Math.max(0,120-free.length)+
     " more would be needed for that target.")+
-    (filters.decades.length?" Audius dates reflect provider release metadata; older originals may be absent.":""));
+    (filters.decades.length?" Audius dates reflect provider release metadata; older originals may be absent.":"")+
+    (scanResult.partial?" Some Audius pages could not be checked. This is only a partial catalog count; retry Check tracks.":""));
   return tracks;
  }catch(e){
   setText("audius-availability",String(e.message||e));
   throw e;
  }finally{
   audiusChecking=false;
+  scan.hidden=true;
   $("audius-check").disabled=false;
   $("audius-check").textContent="↻ Check tracks";
   $("start").disabled=loading;

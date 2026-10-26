@@ -36,33 +36,67 @@ export function matchesAudiusFilters(t,genres,decades){
  if(!t||!t.genres.some(g=>genres.includes(g)))return false;
  return !decades.length||(t.year!==null&&decades.includes(String(Math.floor(t.year/10)*10)));
 }
-export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch){
+// Discover up to three pages per selected provider genre. Bound total time,
+// concurrent network activity and retries so the host never hangs indefinitely.
+// A partial count is explicitly reported; an entirely failed scan rejects.
+export async function discoverAudiusTracks(genres,decades,fetchImpl=fetch,options={}){
  const choices=[...new Set(genres.map(g=>supported.get(g)).filter(Boolean))].slice(0,8);
  if(!choices.length)return [];
- const found=new Map();
- for(const genre of choices){
+ const deadline=Date.now()+Math.max(100,Math.min(60000,Number(options.timeoutMs)||26000));
+ const report=typeof options.onProgress==="function"?options.onProgress:()=>{};
+ const buckets=choices.map(()=>new Map()),seen=new Set();
+ const maxRequests=choices.length*3;
+ let nextGenre=0,completed=0,genreDone=0,success=0,failed=0,shortened=false;
+ const progress=()=>{
+  try{report({completed,total:maxRequests,genreDone,genres:choices.length,
+   found:seen.size,partial:failed>0||shortened,failed,success});}catch{}
+ };
+ progress();
+ async function scanGenre(index){
+  const bucket=buckets[index],genre=choices[index];
   for(const offset of [0,100,200]){
-  const u=new URL(AUDIUS_API+"/tracks/trending");
-  u.searchParams.set("genre",genre);u.searchParams.set("limit","100");
-  u.searchParams.set("offset",String(offset));
-  try{
-   const response=await fetchImpl(u.toString(),{cache:"no-store",signal:AbortSignal.timeout(12000),
+   if(seen.size>=900)break;
+   const remaining=deadline-Date.now();
+   if(remaining<=0){shortened=true;break;}
+   const u=new URL(AUDIUS_API+"/tracks/trending");
+   u.searchParams.set("genre",genre);u.searchParams.set("limit","100");
+   u.searchParams.set("offset",String(offset));
+   try{
+    const response=await fetchImpl(u.toString(),{cache:"no-store",
+     signal:AbortSignal.timeout(Math.max(1,Math.min(8500,remaining))),
      headers:{"Accept":"application/json"}});
-   if(!response.ok)throw Error("Audius returned HTTP "+response.status);
-   const data=await response.json();
-   if(!Array.isArray(data?.data))throw Error("Invalid Audius response");
-   for(const item of data.data){
-    const track=normalizeAudiusTrack(item);
-    if(track&&matchesAudiusFilters(track,genres,decades))found.set(track.id,track);
+    if(!response.ok)throw Error("Audius returned HTTP "+response.status);
+    const data=await response.json();
+    if(!Array.isArray(data?.data))throw Error("Invalid Audius response");
+    for(const item of data.data){
+     const track=normalizeAudiusTrack(item);
+     if(track&&matchesAudiusFilters(track,genres,decades)){
+      bucket.set(track.id,track);seen.add(track.id);
+     }
+    }
+    success++;
+   }catch{
+    failed++;completed++;progress();
+    break; // One failed page stops this genre, not the rest of the scan.
    }
-  }catch(e){
-   if(offset===0&&choices.length===1)throw Error("Could not reach Audius: "+String(e.message||e));
-   break; // Stop paging this genre if a provider request fails.
+   completed++;progress();
   }
-  if(found.size>=900)break;
-  }
+  genreDone++;progress();
  }
- return [...found.values()];
+ const workers=Array.from({length:Math.min(3,choices.length)},async()=>{
+  while(nextGenre<choices.length){
+   const index=nextGenre++;
+   await scanGenre(index);
+  }
+ });
+ await Promise.all(workers);
+ if(success===0)throw Error("Could not reach Audius to check songs. Try again in a moment.");
+ progress();
+ // Preserve choice order, independent of network response timing, for stable
+ // fixtures and reproducible deduplication.
+ const merged=new Map();
+ for(const bucket of buckets)for(const [id,track] of bucket)if(!merged.has(id))merged.set(id,track);
+ return [...merged.values()];
 }
 export function chooseAudiusTrack(pool,used,random=Math.random){
  if(!pool.length)throw Error("Audius has no available full tracks for these selected genres and release decades.");
