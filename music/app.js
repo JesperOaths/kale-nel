@@ -400,6 +400,7 @@ async function discoverAudius(force=false){
    // have been confirmed. Old requests may not mutate a new room's reserve.
    audiusPool=tracks;audiusFiltersKey=key;audiusReservePartial=!!scanResult.partial;
    renderSoundtrackReserve();
+   updateAuditionControls();
    setText("audius-availability",stats.total+" distinct song titles found; "+stats.remaining+
     " not heard in your last three games. "+(stats.ready?
      "This meets the 120-song planning target.":"Three typical games need about 120; "+stats.shortfall+
@@ -425,6 +426,7 @@ async function discoverAudius(force=false){
     $("audius-check").disabled=false;
     $("audius-check").textContent="↻ Check tracks";
     $("start").disabled=loading||roundTransitionBusy;
+    updateAuditionControls();
    }
   }
  })();
@@ -1145,6 +1147,7 @@ async function advanceRound(action){
  if(roundTransitionBusy||loading||!room||!isHost())return;
  const expectedPhase=action==="start"?"lobby":"solved";
  if(room.phase!==expectedPhase)return;
+ stopAudition(true);
  const session=access,code=room.code,round=room.round;
  const token=++roundTransitionToken;
  let submitted=false;
@@ -1248,6 +1251,7 @@ $("steal").addEventListener("click",async()=>{try{await call("steal")}catch{}});
 $("pass").addEventListener("click",async()=>{try{await call("forfeit")}catch{}});
 $("answer-form").addEventListener("submit",submitGuess);
 for(const id of ["genre-options","decade-options"])$(id).addEventListener("change",()=>{
+ stopAudition(true);auditionSeen.clear();
  cancelAudiusScan();
  genresDirty=true;
  clearTimeout(genresSaveTimer);genresSaveTimer=setTimeout(saveGenres,250);
