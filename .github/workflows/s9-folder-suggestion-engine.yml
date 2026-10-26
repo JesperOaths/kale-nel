@@ -10,6 +10,10 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/offline_onnx_head_body_v1.py'
+      - 'ops/c720p/s9-native-security/test-offline-onnx-head-body-v1.py'
+      - 'ops/c720p/s9-native-security/requirements-offline-onnx-cpu-v1.txt'
+      - 'ops/c720p/s9-native-security/README-offline-onnx-head-body-v1.md'
       - 'ops/c720p/s9-native-security/offline_roi_fulltrack_fusion_v1.py'
       - 'ops/c720p/s9-native-security/test-offline-roi-fulltrack-fusion-v1.py'
       - 'ops/c720p/s9-native-security/offline_handcrafted_roi_512d_v1.py'
@@ -58,6 +62,10 @@ on:
       - 'ops/c720p/s9-native-security/security-people-v325.js'
       - 'ops/c720p/s9-native-security/security-people-v52.html'
       - 'ops/c720p/s9-native-security/security-people-v53.html'
+      - 'ops/c720p/s9-native-security/offline_onnx_head_body_v1.py'
+      - 'ops/c720p/s9-native-security/test-offline-onnx-head-body-v1.py'
+      - 'ops/c720p/s9-native-security/requirements-offline-onnx-cpu-v1.txt'
+      - 'ops/c720p/s9-native-security/README-offline-onnx-head-body-v1.md'
       - 'ops/c720p/s9-native-security/offline_roi_fulltrack_fusion_v1.py'
       - 'ops/c720p/s9-native-security/test-offline-roi-fulltrack-fusion-v1.py'
       - 'ops/c720p/s9-native-security/offline_handcrafted_roi_512d_v1.py'
@@ -131,6 +139,8 @@ jobs:
           python test-offline-handcrafted-roi-512d-v1.py
           python -m py_compile offline_roi_fulltrack_fusion_v1.py
           python test-offline-roi-fulltrack-fusion-v1.py
+          python -m py_compile offline_onnx_head_body_v1.py
+          python test-offline-onnx-head-body-v1.py -q
       - name: Syntax-check the optional UI bridge and original People UI
         run: |
           node --check ops/c720p/s9-native-security/folder-suggestion-cards-v1.js
