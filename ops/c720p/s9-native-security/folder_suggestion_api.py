@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Opt-in authenticated Security Hub adapter for folder_suggestion_engine.
-
-This module DOES NOT mount itself or fetch media. The existing authenticated
-relay may install it only once a trusted feature/decision provider, verified
-manual action writer and media-open attestor are available. It exposes only
-derived ranking cards, not raw embeddings or underlying camera files.
-"""
+"""Opt-in authenticated Security Hub adapter for folder_suggestion_engine."""
 from __future__ import annotations
 
 import json
@@ -33,12 +27,8 @@ FOLDER = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 SHA = re.compile(r"^[a-f0-9]{64}$")
 GUARD = threading.RLock()
 
-def ranking_config(data: dict) -> tuple[str, float]:
-    """Trusted server/provider settings only; never accept a client threshold.
 
-    Changing either parameter must also advance the provider revision, so a
-    previously opened original cannot authorize a differently ranked proposal.
-    """
+def ranking_config(data: dict) -> tuple[str, float]:
     method = data.get("scoring_mode", "hybrid")
     if method not in SCORING_MODES:
         raise ValueError("Unapproved appearance ranking method")
@@ -50,7 +40,6 @@ def ranking_config(data: dict) -> tuple[str, float]:
 
 
 def snapshot(provider, journal: ReviewJournal) -> dict:
-    """Provider must source immutable, independently verified media+features."""
     data = provider()
     if (not isinstance(data, dict) or data.get("features_verified") is not True
             or not isinstance(data.get("clips"), list)
@@ -62,7 +51,6 @@ def snapshot(provider, journal: ReviewJournal) -> dict:
         raise ValueError("No verified original/feature snapshot")
     mode, threshold = ranking_config(data)
     state = journal.read()
-    # Only decisions written by the media-bound journal become references.
     result = rank_folders(data["clips"], data["folders"], state["decisions"],
                           nonreference_reviewed=data["historic_reviewed_keys"],
                           match_threshold=threshold, scoring_mode=mode)
@@ -76,12 +64,6 @@ def snapshot(provider, journal: ReviewJournal) -> dict:
 
 def review(payload, provider, journal: ReviewJournal,
            opened_attestor, authoritative_commit) -> tuple[int, dict]:
-    """Single review transaction, bounded and fail-closed.
-
-    An opened-ticket verifier MUST bind the original actually shown to this
-    reviewer to its source, bytes digest, revision, and reviewed-session.
-    A bare client-provided digest is never proof of a media review.
-    """
     if not isinstance(payload, dict):
         return 400, {"ok": False, "error": "invalid_fields"}
     keys = {"action", "source", "clip_id", "folder_id", "media_sha256",
@@ -135,10 +117,6 @@ def review(payload, provider, journal: ReviewJournal,
                 and row["media_sha256"] == matched.media_sha256
                 and row["media_revision"] == matched.media_revision
                 for row in ranking["matches"])
-            # Cold-start bootstrap: after independent original-open attestation,
-            # a human may choose an existing named folder for a member of an
-            # Awaiting Review provisional cluster. The approval becomes its
-            # first verified exemplar, without silently trusting legacy labels.
             manual_seed = any(
                 member["source"] == source and member["clip_id"] == name
                 and member["media_sha256"] == matched.media_sha256
@@ -152,8 +130,6 @@ def review(payload, provider, journal: ReviewJournal,
                                         matched.media_sha256, matched.media_revision)
             if attested is not True:
                 return 409, {"ok": False, "error": "opened_original_not_attested"}
-            # A signed playback ticket may take time to attest. Revalidate
-            # the provider AFTER it finishes, before any authoritative write.
             fresh = provider()
             if (fresh.get("features_verified") is not True or
                     fresh.get("historic_review_index_verified") is not True or
@@ -165,9 +141,6 @@ def review(payload, provider, journal: ReviewJournal,
                             and raw.get("media_revision") == matched.media_revision
                             for raw in fresh.get("clips", []))):
                 return 409, {"ok": False, "error": "original_changed_during_review"}
-            # Actual authoritative review commit is supplied by the caller.
-            # Reject MUST be folder-specific: never translate it to global
-            # Skip/Reject in the existing manual-link store.
             proof = authoritative_commit(action=action, source=source, clip_id=name,
                                          folder_id=folder, media_sha256=matched.media_sha256,
                                          media_revision=matched.media_revision)
@@ -194,11 +167,6 @@ def review(payload, provider, journal: ReviewJournal,
 
 def install(H, provider, journal: ReviewJournal,
             opened_attestor=None, authoritative_commit=None):
-    """Opt-in only. Caller must provide genuine, independently verified hooks.
-
-    Do NOT install on a publicly exposed/non-authenticated handler. There is no
-    default or dummy attestor. No route is installed if hooks are absent.
-    """
     if not all(callable(v) for v in (provider, opened_attestor, authoritative_commit)):
         raise ValueError("Missing signed media-review or authoritative persistence hook")
     existing_get, existing_post = H.go, H.do_POST
