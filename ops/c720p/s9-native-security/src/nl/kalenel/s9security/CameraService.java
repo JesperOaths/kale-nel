@@ -107,6 +107,24 @@ public final class CameraService extends Service {
  // Allow thermal cooldown to restore verified full-resolution history.
  private long continuous4KRetryAfterMs=0;
  private int continuous4KRecoveryAttempts=0;
+ // Fail CLOSED if a live encoder provides no usable pre-event buffer.
+ // Never starts a new trial or alters the existing three-attempt limit.
+ private final RingReadinessWatchdog continuous4KReadiness=new RingReadinessWatchdog();
+ // Finish any active 4K event before failback; prevent auto-continuation.
+ private String continuous4KHealthFallbackPending="";
+ static final class RingReadinessWatchdog {
+  static final long MAX_UNREADY_MS=45000L;
+  private long since=-1;
+  private boolean previouslyReady=false;
+  boolean observe(long now,boolean watching,boolean ready){
+   if(!watching){since=-1;return false;}
+   if(ready){since=-1;previouslyReady=true;return false;}
+   if(since<0||now<since){since=now;return false;}
+   return now-since>=MAX_UNREADY_MS;
+  }
+  String reason(){return previouslyReady?"ring_stalled":"ring_never_ready";}
+  void reset(){since=-1;previouslyReady=false;}
+ }
  // One-shot, explicitly labelled on-phone validation clip. Never treated as
  // an ordinary person detection or indexed surveillance event.
  private boolean diagnosticPrerollActive=false,diagnosticPrerollUsed=false;
@@ -424,7 +442,51 @@ public final class CameraService extends Service {
    cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},5000);
   }catch(Exception e){failure("prepare_"+e.getClass().getSimpleName()+":"+e.getMessage(),e);shutdown();}
  }
+ private void record4KFallbackEvidence(String reason){
+  // Forward-only evidence. Do not infer causes for earlier attempts from
+  // the generic last_error or an already completed clip.
+  try{
+   String encoderError=continuous4K==null?"":continuous4K.error();
+   long drops=continuous4K==null?0:continuous4K.droppedOutputFrames();
+   String cause="other";
+   if(reason.startsWith("thermal_guard"))cause="thermal_guard";
+   else if(reason.startsWith("codec_health_guard"))
+    cause=encoderError.isEmpty()?"codec_dropped_output":"codec_exception";
+   else if(reason.startsWith("codec_rearm_")||reason.startsWith("muxer_"))
+    cause="codec_or_muxer_exception";
+   else if(reason.startsWith("session_configuration")||reason.startsWith("preview_"))
+    cause="camera_session_failure";
+   else if(reason.startsWith("ring_"))cause="ring_readiness_timeout";
+   else if("control_disabled".equals(reason))cause="explicit_disable";
+   JSONObject row=new JSONObject()
+     .put("time_utc_ms",System.currentTimeMillis())
+     .put("reason",reason.length()>96?reason.substring(0,96):reason)
+     .put("cause",cause)
+     .put("temperature_c",temperature()/10.0)
+     .put("recovery_attempts_this_process",continuous4KRecoveryAttempts)
+     .put("encoder_error_class",encoderError)
+     .put("encoder_dropped_output_frames",drops)
+     .put("mode_before_fallback",mode)
+     .put("buffered_ms_before_fallback",continuous4K==null?0:continuous4K.bufferedMs());
+   android.content.SharedPreferences prefs=getSharedPreferences("native",MODE_PRIVATE);
+   JSONArray history;
+   try{history=new JSONArray(prefs.getString("continuous_4k_recovery_evidence_v1","[]"));}
+   catch(org.json.JSONException invalid){history=new JSONArray();}
+   JSONArray bounded=new JSONArray();
+   for(int i=Math.max(0,history.length()-2);i<history.length();i++)
+    if(history.optJSONObject(i)!=null)bounded.put(history.optJSONObject(i));
+   bounded.put(row);
+   if(!prefs.edit().putString("continuous_4k_recovery_evidence_v1",bounded.toString()).commit())
+    Log.w(TAG,"4k_recovery_evidence_persist_failed");
+  }catch(Exception error){
+   // A telemetry failure must NEVER prevent restoring the original fallback.
+   Log.w(TAG,"4k_recovery_evidence_unavailable",error);
+  }
+ }
  private void restoreLegacy4K(String reason){
+  continuous4KHealthFallbackPending="";
+  record4KFallbackEvidence(reason);
+  continuous4KReadiness.reset();
   continuous4KLastResult="fallback_"+reason;
   boolean thermalOnly=reason.startsWith("thermal_guard");
   // Failed codecs remain disabled until explicitly re-verified. For a
@@ -744,6 +806,10 @@ public final class CameraService extends Service {
    diagnosticPrerollActive=false;
    eventChain.reset();
    Log.i(TAG,"CONTINUOUS_4K_TEST_MP4 "+clip.getName());
+   if(!continuous4KHealthFallbackPending.isEmpty()){
+    String afterFinalize=continuous4KHealthFallbackPending;
+    restoreLegacy4K(afterFinalize);
+   }
    return;
   }
   completed++;
@@ -756,6 +822,13 @@ public final class CameraService extends Service {
   final String evidenceReason="continuous_native_4k_"+captureTier;
   writeCaptureEvidenceAsync(clip,segment);
   reviewer.submit(()->review(clip,evidenceReason,motionAtSave,segment));
+  // Only after original MP4 finalization and downstream review scheduling
+  // may this health failure release its encoder and restore old preroll.
+  if(!continuous4KHealthFallbackPending.isEmpty()){
+   String afterFinalize=continuous4KHealthFallbackPending;
+   restoreLegacy4K(afterFinalize);
+   return;
+  }
   // If motion continues at a safety cap, the same encoder's rolling
   // full-4K ring supplies the next segment (overlap, not missing footage).
   if(segment.autoResumeArmed)cameraHandler.postDelayed(()->{
@@ -1337,8 +1410,20 @@ public final class CameraService extends Service {
     failure("continuous_4k_trial_failed_health_guard",null);
     String reason=codecBad?"codec_health_guard":"thermal_guard";
     if("watching".equals(mode))restoreLegacy4K(reason);
-    else if("recording".equals(mode))stopRecording("trial_health_guard");
-    else if("stopping".equals(mode))restoreLegacy4K(reason+"_stopping");
+    else if("recording".equals(mode)){
+     continuous4KHealthFallbackPending=reason+"_after_finalization";
+     stopRecording("trial_health_guard");
+    }else if("stopping".equals(mode)){
+     // Do not destroy MediaMuxer while its original is finalizing.
+     if(continuous4KHealthFallbackPending.isEmpty())
+      continuous4KHealthFallbackPending=reason+"_after_finalization";
+    }
+   }else if(continuous4KReadiness.observe(n,"watching".equals(mode),
+                          continuous4K.readyForEvent())){
+    // A silent/unready encoder must not displace verified legacy preroll.
+    // Revert ONLY while watching; no action during event finalization.
+    failure("continuous_4k_buffer_readiness_timeout",null);
+    restoreLegacy4K(continuous4KReadiness.reason());
    }
   }
   if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
@@ -1380,6 +1465,13 @@ public final class CameraService extends Service {
    d.put("application_battery_temperature_max_c",42.0);
    d.put("face_review_4k_temperature_below_c",41.5);
    d.put("continuous_4k_last_result",continuous4KLastResult);
+   d.put("continuous_4k_recovery_evidence_scope","forward_only_not_historical");
+   JSONArray evidence;
+   try{
+    evidence=new JSONArray(getSharedPreferences("native",MODE_PRIVATE)
+        .getString("continuous_4k_recovery_evidence_v1","[]"));
+   }catch(org.json.JSONException invalid){evidence=new JSONArray();}
+   d.put("continuous_4k_recovery_evidence",evidence);
    d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
    d.put("preroll_ready",preRoll!=null&&preRoll.ready());
    d.put("preroll_buffered_frames",preRoll==null?0:preRoll.cachedFrames());
