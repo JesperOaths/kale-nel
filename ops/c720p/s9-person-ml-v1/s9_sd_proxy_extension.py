@@ -465,7 +465,19 @@ def install_local_sd(H):
  # Human-only folder links for original clips without person index, Drive
  # sources, and reversible returns to the archive. Overlay, not biometrics.
  import s9_manual_recording_links
- s9_manual_recording_links.install(H,rows)
+ # Manual migration is disabled by default. Never run two canonical writers.
+ # Activate only after the separately authenticated original-open, range,
+ # player-loaded and ticket-forwarding HTTP paths pass real acceptance.
+ import os as _chat3_os
+ if _chat3_os.environ.get('C720P_SIGNED_ORIGINAL_REVIEW_V1')=='verified':
+  import s9_review_activation_v1 as _chat3_activation
+  import s9_trusted_original_media_bridge_v1 as _chat3_media
+  _chat3_activation.activate(H,rows,
+   original_delegate=_chat3_media.serve_pinned_original,
+   source_resolver=_chat3_media.resolve_original,
+   relay_review_routes_verified=True)
+ else:
+  s9_manual_recording_links.install(H,rows)
  # Automatic Person proposals and denials remain private and opt-in to
  # human approval. No machine result writes an approved person assignment.
  import s9_automatic_person_review
@@ -473,6 +485,9 @@ def install_local_sd(H):
  # Preserve the independent S9 multivector appearance API already deployed.
  import s9_multivector_appearance_api
  s9_multivector_appearance_api.install(H)
+ # Preserve already installed anonymous multivector V3 route.
+ import s9_multivector_appearance_api_v3
+ s9_multivector_appearance_api_v3.install(H)
  # Historical auxiliary footage is separate from verified original recordings.
  import s9_auxiliary_recovery_api_v1
  s9_auxiliary_recovery_api_v1.install(H,play_sd)
@@ -480,6 +495,9 @@ def install_local_sd(H):
  # verified original 4K and manual person classification.
  import s9_c720p_imported_media_api_v1
  s9_c720p_imported_media_api_v1.install(H,play_sd)
+ # Preserve already installed migrated original snapshot route.
+ import s9_c720p_snapshots_v163
+ s9_c720p_snapshots_v163.install(H)
  # Camera2 control writes are bounded and require an explicit signed relay header.
  import s9_native_camera_controls
  s9_native_camera_controls.install(H)
@@ -488,6 +506,14 @@ def install_local_sd(H):
  except ModuleNotFoundError as error:
   if error.name!='s9_evidence_quality_v1':raise
  else:s9_evidence_quality_v1.install(H,rows)
+ # Chat 3: V361 remains current-source-only. Never fall back to class-only
+ # evidence qualification or silently convert revocation to a valid sample.
+ # Private 8795 is a threaded server; relay authentication is still owned by
+ # the separate signed 8794 transport.
+ import s9_anonymous_quality_http_adapter_v1 as v361_route
+ import s9_v361_http_reader_v1 as v369_transport
+ import s9_anonymous_evidence_consumer_v361 as v361_consumer
+ v361_route.install(H,rows,v361_consumer,v369_transport.fetch_live_http)
 def play_sd(handler,name,record,*,root_override=None):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:
