@@ -1,0 +1,29 @@
+name: S9 standalone read-only hardware codec inventory
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9CodecCapabilityProbe.java'
+      - '.github/workflows/s9-standalone-codec-capabilities.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/offline-worker/S9CodecCapabilityProbe.java'
+permissions:
+  contents: read
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: |
+          set -euo pipefail
+          sdk="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          jar="$(find "$sdk/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$jar"
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          javac -source 8 -target 8 -cp "$jar" -d "$dir" \
+            ops/c720p/s9-native-security/offline-worker/S9CodecCapabilityProbe.java
+          test -s "$dir/nl/kalenel/s9offline/S9CodecCapabilityProbe.class"
+          echo S9_CODEC_READONLY_JAVA_COMPILE_OK
