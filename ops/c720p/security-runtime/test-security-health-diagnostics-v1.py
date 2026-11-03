@@ -16,7 +16,10 @@ def parameters():
  return {
    "now":NOW,"root_free_bytes":4*1024**3,"root_total_bytes":20*1024**3,
    "phone":{"ok":True,"native_4k_enabled":True,"continuous_4k_ready":True,
-            "continuous_4k_dropped_output_frames":0,"mode":"watching"},
+            "continuous_4k_dropped_output_frames":0,"mode":"watching",
+            "last_frame_age_ms":25,"continuous_4k_trial_active":True,
+            "continuous_4k_buffered_ms":8995,"continuous_4k_buffer_bytes":27000000,
+            "continuous_4k_error":""},
    "catalog":{"source":"S9_native_microSD_sidecar_metadata","read_only":True,
               "recordings":2,"generated_at_utc":NOW.isoformat(),
               "auxiliary_mp4_inventory":{"preroll_without_verified_primary":0}},
@@ -80,6 +83,40 @@ class Tests(unittest.TestCase):
   a["phone"]["continuous_4k_dropped_output_frames"]=1
   self.assertFalse(m.headless_camera_state(a["phone"])["native_4k_buffer_healthy"])
   self.assertEqual(m.headless_camera_state(None)["capture_state"],"unavailable")
+ def test_ready_flag_cannot_mask_empty_or_stale_4k_ring(self):
+  changes=(
+    ("continuous_4k_buffered_ms",0),
+    ("continuous_4k_buffered_ms",6499),
+    ("continuous_4k_buffer_bytes",0),
+    ("continuous_4k_buffer_bytes",None),
+    ("last_frame_age_ms",1500),
+    ("last_frame_age_ms",None),
+    ("continuous_4k_trial_active",False),
+    ("continuous_4k_error","encoder_guard_failed"),
+    ("continuous_4k_dropped_output_frames",1),
+  )
+  for field,value in changes:
+   with self.subTest(field=field,value=value):
+    a=parameters()
+    a["phone"][field]=value
+    d=m.evaluate(**a)
+    self.assertEqual(d["overall_status"],"critical")
+    self.assertFalse(d["checks"]["s9_native_4k_capture_healthy"])
+    self.assertFalse(d["headless_camera"]["native_4k_buffer_healthy"])
+    self.assertNotEqual(d["headless_camera"]["capture_state"],"native_continuous_4k_verified")
+    self.assertIn("s9_capture_not_confirmed_healthy",
+                  [issue["code"] for issue in d["issues"]])
+    self.assertFalse(d["originals_modified"])
+    self.assertFalse(d["automations_modified"])
+
+ def test_observing_valid_recording_mode_does_not_require_camera_control(self):
+  args=parameters()
+  args["phone"]["mode"]="recording"
+  d=m.evaluate(**args)
+  self.assertTrue(d["checks"]["s9_native_4k_capture_healthy"])
+  self.assertEqual(d["headless_camera"]["capture_state"],"native_continuous_4k_verified")
+  self.assertIs(d["headless_camera"]["native_4k_rearm_command_sent"],False)
+  self.assertIs(d["headless_camera"]["physical_recovery_admitted"],False)
  def test_clock_and_low_disk_are_alerts_not_fake_repairs(self):
   args=parameters();args["root_free_bytes"]=650*1024**2
   args["ntp"]={"NTPSynchronized":"no","CanNTP":"no"}
