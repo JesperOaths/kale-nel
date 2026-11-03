@@ -360,10 +360,31 @@ def decode_manifest(raw):
  if not isinstance(value,dict):raise ValueError("manifest_not_object")
  return value
 
+# At most one reconnection attempt per catalog invocation, never per preview.
+# A missing actual file is NOT an ADB link fault and must never be invented.
+_ADB_RECONNECT_USED=False
+
 def adb(*args):
- p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
- if p.returncode:raise OSError("phone_adb_offline")
- return p.stdout
+ global _ADB_RECONNECT_USED
+ request=["adb","-s",ADDR,*args]
+ p=subprocess.run(request,capture_output=True,timeout=32)
+ if not p.returncode:return p.stdout
+ stderr=p.stderr.decode("utf8",errors="replace").lower()
+ link_error=("device offline" in stderr or "device not found" in stderr
+     or "no devices/emulators found" in stderr or "device '" in stderr and "not found" in stderr)
+ if link_error and not _ADB_RECONNECT_USED:
+  _ADB_RECONNECT_USED=True
+  attempt=subprocess.run(["adb","connect",ADDR],capture_output=True,timeout=12)
+  if not attempt.returncode:
+   p=subprocess.run(request,capture_output=True,timeout=32)
+   if not p.returncode:return p.stdout
+   stderr=p.stderr.decode("utf8",errors="replace").lower()
+  link_error=("device offline" in stderr or "device not found" in stderr
+      or "no devices/emulators found" in stderr or "device '" in stderr and "not found" in stderr)
+ if link_error:raise OSError("phone_adb_transport_unavailable")
+ if "no such file" in stderr or "does not exist" in stderr:
+  raise OSError("phone_remote_asset_missing")
+ raise OSError("phone_adb_read_failed")
 
 def verify_catalog_continuity(previous_rows,rows,legacy_names,recorded,native_listing_ok,native_snapshot):
  """A failed refresh is not evidence that an original was removed.
@@ -525,6 +546,7 @@ def build_catalog():
  # Do not mirror JPEG bytes to the hub: the secure media proxy reads microSD.
  if native_listing_ok:
   previews=[]
+  preview_failures=0
   for name in sorted(recorded,reverse=True):
    match=RE_PREVIEW.fullmatch(name)
    if not match:continue
@@ -558,14 +580,22 @@ def build_catalog():
        "sd_verified":True,"sd_only":True,"width":640,"height":480,
        "person_status":"not_evaluated","scene_category":"preview_only"})
    except Exception as e:
-    problems.append("preview:"+name+":"+type(e).__name__)
-  PRIVATE_FALLBACK.parent.mkdir(parents=True,exist_ok=True)
-  preview_index={"archive_mode":"S9-microSD-only","kind":"fallback_previews",
+    preview_failures+=1
+    reason=str(e) if isinstance(e,OSError) else type(e).__name__
+    problems.append("preview:"+name+":"+reason)
+  # A transient ADB/sidecar error must not replace a previously complete
+  # microSD preview listing with an apparently complete but truncated one.
+  # Recording continuity is independently enforced above.
+  if preview_failures:
+   problems.append("preview_refresh_incomplete_preserved_prior:"+str(preview_failures))
+  else:
+   PRIVATE_FALLBACK.parent.mkdir(parents=True,exist_ok=True)
+   preview_index={"archive_mode":"S9-microSD-only","kind":"fallback_previews",
                  "count":len(previews),"previews":previews}
-  tmp=PRIVATE_FALLBACK.with_suffix(".json.tmp")
-  tmp.write_text(json.dumps(preview_index,separators=(",",":"))+"\n")
-  os.chmod(tmp,0o600)
-  os.replace(tmp,PRIVATE_FALLBACK)
+   tmp=PRIVATE_FALLBACK.with_suffix(".json.tmp")
+   tmp.write_text(json.dumps(preview_index,separators=(",",":"))+"\n")
+   os.chmod(tmp,0o600)
+   os.replace(tmp,PRIVATE_FALLBACK)
  out={"storage_policy":"local_microSD","phone_recordings":sorted(rows,key=lambda r:r["timestamp"]),
       "total_phone_files":len(rows),"archived_total":len(rows),"errors":problems}
  dest=ROOT/"s9-phone-events.json"
