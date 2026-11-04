@@ -34,3 +34,30 @@ body.is-embedded .welcome{min-height:650px}
 /* Instant availability feedback: no network poll on filter changes. */
 .video-availability{margin:14px 0 10px;padding:9px 12px;border-radius:10px;background:#1d3544;color:#b8f1d6;font-size:.85rem;font-weight:650;line-height:1.5}
 .video-availability.availability-warning{background:#423022;color:#ffddac}
+
+/* Audio-quiz visual hierarchy: scope is independent of video and does not
+   inspect, alter or isolate YouTube's audio stream. */
+.audio-scope{position:relative;width:min(100%,700px);margin:18px auto 12px;padding:20px 18px 16px;border:1px solid #3c5977;border-radius:22px;background:radial-gradient(circle at 60% 0%,#244455 0%,transparent 60%),linear-gradient(145deg,#0c1c2c,#13283a);overflow:hidden;contain:layout style paint;box-shadow:inset 0 1px #ffffff18,0 16px 35px #0003}
+.scope-header{display:flex;align-items:center;gap:11px;text-align:left}
+.scope-label{display:inline-flex;align-items:center;gap:9px;font-size:.77rem;letter-spacing:.13em;font-weight:900;color:#bcece3}
+.scope-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#72c5b7;box-shadow:0 0 12px #72c5b780}
+.scope-playing .scope-dot{background:#8ff0d1;animation:scope-pulse .9s ease-in-out infinite alternate}
+.scope-activity{font-size:.66rem;font-weight:900;letter-spacing:.08em;color:#93aabb;margin-left:auto}
+.scope-clock{display:inline-block;min-width:90px;color:#fff;font-size:1.35rem;font-variant-numeric:tabular-nums;text-align:right}
+.scope-clock small{font-size:.68rem;color:#9fc8c5;font-weight:750}
+.scope-bars{height:108px;margin:22px auto 14px;display:flex;gap:3px;align-items:center;justify-content:space-between;overflow:hidden}
+.scope-bar{display:block;flex:1;min-width:2px;height:var(--height);border-radius:4px;background:linear-gradient(180deg,#fee5a7,#75e2c8 62%,#4a95ad);opacity:.83;transform-origin:center;transform:scaleY(.68)}
+.scope-playing .scope-bar{animation:scope-rise var(--speed,0.8s) ease-in-out var(--delay,0s) infinite alternate;opacity:1}
+@keyframes scope-rise{from{transform:scaleY(.34)}to{transform:scaleY(1)}}
+@keyframes scope-pulse{to{opacity:.4;box-shadow:0 0 4px #72c5b7}}
+.scope-progress-track{height:7px;width:100%;background:#3a4d5e;border-radius:10px;overflow:hidden}
+.scope-progress-fill{display:block;width:100%;height:100%;background:linear-gradient(90deg,#70dbc6,#fed68d);transform:scaleX(0);transform-origin:left center;will-change:transform}
+.scope-milestones{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-items:center;margin-top:12px;gap:4px}
+.scope-tick{font-size:.69rem;color:#809db6;text-align:center;white-space:nowrap;font-weight:800;font-variant-numeric:tabular-nums}
+.scope-tick-current{color:#ffe6af}
+.scope-tick-earlier{color:#b0e1d3}
+.scope-finished .scope-activity{color:#8cf0d1}
+.youtube-video-wrap{max-width:540px}
+.youtube-video-wrap iframe,.youtube-video-wrap #youtube-player{height:clamp(270px,40vw,308px)!important}
+@media(max-width:580px){.audio-scope{padding:14px 12px 12px;border-radius:15px;margin:12px auto 14px}.scope-bars{height:77px;gap:2px;margin:15px auto 12px}.scope-bar:nth-child(2n){display:none}.scope-label{font-size:.66rem}.scope-clock{font-size:1.1rem;min-width:72px}.scope-milestones{gap:2px}.scope-tick{font-size:.58rem}.scope-activity{font-size:.58rem}}
+@media(prefers-reduced-motion:reduce){.scope-playing .scope-bar,.scope-playing .scope-dot{animation:none}.scope-progress-fill{will-change:auto}}
