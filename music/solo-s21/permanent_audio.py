@@ -114,32 +114,39 @@ def select(genres,decades,limit,root=LIBRARY_ROOT):
             rows=db.execute('''SELECT c.spotify_uri AS catalog_id,c.title,c.artist,c.genres_json,
                 c.decades_json,c.rank,c.spotify_uri,c.sha256,r.extension
                 FROM tunerush_playable_catalog c JOIN recordings r ON r.sha256=c.sha256
-                WHERE r.extension='.mp3' ''').fetchall()
+                WHERE r.extension='.mp3' ORDER BY c.playlist,c.position,c.spotify_uri''').fetchall()
     except sqlite3.OperationalError as err:
         raise ValueError('No cached music has been imported on the S21 yet.') from err
     pool={}
     for row in rows:
         tags=json.loads(row['genres_json']);eras=json.loads(row['decades_json'])
-        if not any(g in tags for g in genres) or decades and not any(d in eras for d in decades):continue
         path=Path(root)/'tracks'/(row['sha256']+'.mp3')
         if not path.is_file() or path.is_symlink():continue
-        pool.setdefault(row['spotify_uri'] or row['catalog_id'],{
+        entry=pool.setdefault(row['sha256'],{
             'id':row['catalog_id'],'title':row['title'],'artist':row['artist'],
             'sha256':row['sha256'],'rank':row['rank'],'spotifyUri':row['spotify_uri'],
             'genres':tags,'decades':eras,'source':'persistent-library'})
+        # Album and single listings can refer to the very same recording.
+        # Retain every catalog row, but play these bytes only once per game.
+        entry['genres']=sorted(set(entry['genres'])|set(tags))
+        entry['decades']=sorted(set(entry['decades'])|set(eras))
+    pool={sha:t for sha,t in pool.items() if any(g in t['genres'] for g in genres)
+          and (not decades or any(d in t['decades'] for d in decades))}
     if len(pool)<limit:raise ValueError(f'Found {len(pool)} cached songs for this mix; choose more genres, All eras or fewer rounds.')
     return list(pool.values())
 
 def availability(root=LIBRARY_ROOT):
     try:
         with sqlite3.connect(Path(root)/'library.sqlite3') as db:
-            total,ready=db.execute('SELECT COUNT(*),COUNT(sha256) FROM tunerush_playable_catalog').fetchone()
-        return {'playlistCatalogSongs':total,'playableCachedSongs':ready,'missingCachedSongs':total-ready}
+            total,ready,unique=db.execute('SELECT COUNT(*),COUNT(sha256),COUNT(DISTINCT sha256) FROM tunerush_playable_catalog').fetchone()
+        return {'playlistCatalogSongs':total,'playableCachedSongs':ready,'uniquePlayableRecordings':unique,'missingCachedSongs':total-ready}
     except sqlite3.OperationalError:
-        return {'playlistCatalogSongs':0,'playableCachedSongs':0,'missingCachedSongs':0}
+        return {'playlistCatalogSongs':0,'playableCachedSongs':0,'uniquePlayableRecordings':0,'missingCachedSongs':0}
 
 def choose(pool,used,root=LIBRARY_ROOT):
-    candidates=[t for t in pool if t['id'] not in used]
+    used_hashes={t['sha256'] for t in pool if t['id'] in used}
+    candidates=list({t['sha256']:t for t in pool if t['id'] not in used
+                     and t['sha256'] not in used_hashes}.values())
     if not candidates:raise ValueError('No unused cached songs remain.')
     song=random.choice(candidates)
     info=inspect_mp3(Path(root)/'tracks'/(song['sha256']+'.mp3'))
