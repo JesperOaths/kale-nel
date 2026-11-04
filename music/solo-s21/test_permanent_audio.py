@@ -31,8 +31,16 @@ with sqlite3.connect(lib.database) as db:
         db.execute('INSERT INTO tunerush_playable_catalog VALUES(?,?,?,?,?,?,?,?,?,?)',
             ('fixture-'+str(i),'Private song '+str(i),'Artist '+str(i),json.dumps(['pop'] if i<6 else ['rock']),json.dumps(['1980']),900000,sha,156000,1,i))
 
-assert media.availability(root)=={'playlistCatalogSongs':7,'playableCachedSongs':7,'missingCachedSongs':0}
+# Spotify editions may share the same MP3 hash; never repeat identical bytes.
+with sqlite3.connect(lib.database) as db:
+    same_hash=db.execute("SELECT sha256 FROM tunerush_playable_catalog WHERE spotify_uri='fixture-0'").fetchone()[0]
+    db.execute('INSERT INTO tunerush_playable_catalog VALUES(?,?,?,?,?,?,?,?,?,?)',
+        ('fixture-alt-version','Private song 0 (single version)','Artist 0',
+         json.dumps(['pop']),json.dumps(['1980']),900000,same_hash,156000,2,1))
+assert media.availability(root)=={'playlistCatalogSongs':8,'playableCachedSongs':8,'uniquePlayableRecordings':7,'missingCachedSongs':0}
+
 pool=media.select(['pop'],['1980'],5,root);assert len(pool)==6
+assert len({song['sha256'] for song in pool})==len(pool)
 try:media.select(['rock'],[],5,root);raise AssertionError('Short pool accepted')
 except ValueError:pass
 used=[]
