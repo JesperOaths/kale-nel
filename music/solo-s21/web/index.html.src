@@ -22,7 +22,7 @@
   <p class="eyebrow">YOUR PRIVATE MUSIC CHALLENGE • POWERED BY S21</p>
   <h1>One player.<br><em>Every song a challenge.</em></h1>
   <p class="subline">Your laptop plays the clues. Your Samsung S21 selects the music, keeps score and runs the entire game service on Wi-Fi.</p>
-  <div class="feature-row"><span>♫ Real Audius music</span><span>⚡ Seven growing clues</span><span>◉ No account required</span></div>
+  <div class="feature-row"><span>♫ Cached songs</span><span>⚡ Seven growing clues</span><span>◉ Solo play</span></div>
  </div>
  <form id="start-form" class="setup panel">
   <div class="setup-heading"><div><span class="eyebrow">01 / YOUR MIX</span><h2>Set the soundtrack</h2></div><span class="mix-icon" aria-hidden="true">♫</span></div>
@@ -47,7 +47,7 @@
    </label>
   </div>
   <button id="start-button" class="primary" type="submit">Start solo challenge <span aria-hidden="true">↗</span></button>
-  <p class="fineprint">Audius specializes in independent music and remixes. Era filters use the uploader's release metadata, not the original recording decade.</p>
+  <p class="fineprint">Choose genres and eras. Your songs stay on the S21 between games.</p>
  </form>
 </section>
 <section id="game" hidden>

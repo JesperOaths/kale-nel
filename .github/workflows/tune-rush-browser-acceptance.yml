@@ -43,6 +43,10 @@ jobs:
         run: node scripts/test-three-game-rotation.mjs
       - name: Verify replay SQL in isolated PostgreSQL
         run: node scripts/test-tune-rush-replay-db.mjs
+      - name: Verify cached-solo relay limits and private cleanup
+        run: node scripts/test-tune-rush-relay-bounded-clues.mjs supabase/migrations/20261104135417_tunerush_s21_bounded_clues_v1.sql
+      - name: Verify browser acknowledges received results
+        run: node scripts/test-tune-rush-relay-ack.cjs music/solo/app.js
       - name: Allow the short network-smoke job to finish first
         run: sleep 12
       - name: Run Audius-only host and guest browser acceptance against game database

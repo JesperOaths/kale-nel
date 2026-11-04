@@ -101,6 +101,14 @@ stored inside `music-library-v1`; no music bytes are committed to GitHub.
 Missing files remain explicitly unavailable instead of falling back to a
 different song or an external streaming provider.
 
+The completed import covers all 1,000 playlist catalog entries, with no missing
+files. There are 999 distinct playable recordings: the two Darude Sandstorm
+listings reference the same recording. Both catalog entries are retained, while
+selection and saved-game rotation prevent replaying the same audio bytes.
+The public filter count uses this same recording-level grouping. The S21 retains
+1,062 content-addressed files; alternate downloads are preserved independently
+of the one-recording-per-game pool. Completing a game deletes none of them.
+
 ## Verification
 Local health endpoint:
 

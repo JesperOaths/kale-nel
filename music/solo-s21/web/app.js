@@ -106,7 +106,7 @@ async function startGame(ev){
  const genres=[...document.querySelectorAll('input[name="genre"]:checked')].map(e=>e.value);
  if(!genres.length){note("Choose at least one music genre.");return}
  const era=$("era").value;busy=true;$("start-button").disabled=true;
- set("start-button","Checking the Audius catalog on S21…");
+ set("start-button","Selecting cached songs on S21…");
  try{
   const result=await api("/api/session","POST",{genres,decades:era?[era]:[],limit:Number($("limit").value)},false);
   token=result.token;localStorage.setItem("tunerush_s21_solo_v1",token);
