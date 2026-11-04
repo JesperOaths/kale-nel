@@ -163,13 +163,23 @@ def restore():
   with STATE.open(encoding="utf-8") as f:state=json.load(f)
   if state.get("version")!=1:return
   for key,s in list(state.get("sessions",{}).items())[:16]:
-   if re.fullmatch("[0-9a-f]{64}",key) and time.time()-s["updated"]<43200:
+   if (re.fullmatch("[0-9a-f]{64}",key) and time.time()-s["updated"]<43200
+       and (s.get("source") in ("youtube","owned-library") or
+            os.environ.get("TUNERUSH_ALLOW_AUDIUS_TESTS")=="1")):
     s["ticket"]=secrets.token_urlsafe(24)
     SESSIONS[key]=s
  except (OSError,ValueError,TypeError,KeyError):pass
 
 def choose(s):
- if s.get("source")=="owned-library":
+ if s.get("source")=="youtube":
+  from youtube_catalog import choose as choose_youtube
+  song=choose_youtube(s["pool"],s["used"])
+  s["track"]=song;s["used"].append(song["id"])
+  s["ticket"]=secrets.token_urlsafe(24)
+  # Random beginning for EACH new song, retained for replay/longer clues.
+  # The YouTube player itself controls seek/stop, so no audio is extracted.
+  s["cueMs"]=1000*(25+secrets.randbelow(56))
+ elif s.get("source")=="owned-library":
   from owned_library import select_next
   song=select_next(s["pool"],s["used"])
   s["track"]=song;s["used"].append(song["id"])
@@ -205,13 +215,18 @@ def view(s):
   "minPlays":POPULAR_MIN_PLAYS if s.get("source")!="owned-library" else None}
  if s["phase"] in ("revealed","finished"):
   response["reveal"]={"title":s["track"]["title"],"artist":s["track"]["artist"]}
+  if s.get("source")=="youtube":
+   response["reveal"]["youtubeViewsAtIndex"]=s["track"]["youtubeViewsAtIndex"]
+   response["reveal"]["youtubeUrl"]="https://www.youtube.com/watch?v="+s["track"]["videoId"]
   if s.get("source")=="owned-library":
    response["reveal"]["rank"]=s["track"]["rank"]
    response["reveal"]["link"]="https://www.deezer.com/track/"+str(s["track"]["deezerId"])
   else:response["reveal"]["plays"]=s["track"]["plays"]
  else:
-  response["media"]=("owned:"+s["track"]["fileId"]
-   if s.get("source")=="owned-library" else "/api/audio/"+s["ticket"])
+  response["media"]=("youtube:"+s["track"]["videoId"]
+   if s.get("source")=="youtube" else
+   "owned:"+s["track"]["fileId"] if s.get("source")=="owned-library"
+   else "/api/audio/"+s["ticket"])
   response["cueMs"]=s["cueMs"]
  return response
 
@@ -226,8 +241,11 @@ def new_session(data):
   raise ValueError("Invalid music filters.")
  if type(limit)!=int or limit not in (5,10,20):
   raise ValueError("Choose 5, 10 or 20 songs.")
- source=data.get("source","")
- if source=="owned-library":
+ source=data.get("source","youtube")
+ if source=="youtube":
+  from youtube_catalog import select as select_youtube
+  pool=select_youtube(genres,decades,limit)
+ elif source=="owned-library":
   from owned_library import select
   pool=select(data.get("library"),genres,decades,limit)
  elif source=="legacy-audius" and os.environ.get("TUNERUSH_ALLOW_AUDIUS_TESTS")=="1":
@@ -235,7 +253,7 @@ def new_session(data):
   pool=discover(genres,decades)
   if len(pool)<limit:raise ValueError("Insufficient test fixtures.")
  else:
-  raise ValueError("Audius is retired. Choose music files you own or are authorized to use.")
+  raise ValueError("Audius is retired. Choose YouTube video playback or music you own.")
  with LOCK:
   for k,s in list(SESSIONS.items()):
    if time.time()-s["updated"]>43200:SESSIONS.pop(k,None)
@@ -245,7 +263,7 @@ def new_session(data):
   if len(SESSIONS)>=16:raise ValueError("S21 already has sixteen active sessions. Finish or resume an existing game.")
   token=secrets.token_hex(32)
   s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,
-     "source":source,"catalogVersion":3 if source=="owned-library" else 2,
+     "source":source,"catalogVersion":4 if source=="youtube" else 3 if source=="owned-library" else 2,
      "round":1,"score":0.0,"used":[],"history":[],"updated":time.time()}
   choose(s);SESSIONS[token]=s;persist()
   return {"token":token,"state":view(s)}
@@ -376,6 +394,8 @@ class Handler(BaseHTTPRequestHandler):
    s=check_token(self.headers)
    return self.json_out(200,{"state":view(s)}) if s else self.json_out(401,{"error":"Game session expired."})
   if p.startswith("/api/audio/"):
+   if os.environ.get("TUNERUSH_ALLOW_AUDIUS_TESTS")!="1":
+    return self.json_out(410,{"error":"Audius streaming is retired."})
    ticket=p[len("/api/audio/"):]
    if not re.fullmatch("[A-Za-z0-9_-]{25,40}",ticket):
     return self.json_out(404,{"error":"Music unavailable."})
