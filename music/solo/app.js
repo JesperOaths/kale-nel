@@ -7,7 +7,7 @@ try{token=localStorage.getItem("tunerush_s21_solo_v1")||""}catch{}
 const show=(id,visible)=>$(id).hidden=!visible;
 const set=(id,value)=>{$(id).textContent=String(value??"")};
 const note=(msg)=>{set("toast",msg);show("toast",true);clearTimeout(note.timer);note.timer=setTimeout(()=>show("toast",false),3800)};
-function stop(){playEpoch++;audio.pause();$("record-wrap").classList.remove("spinning")}
+function stop(){playEpoch++;audio.pause();window.TuneRushYouTube?.pause();$("record-wrap").classList.remove("spinning")}
 function fmt(s){return String(s??"").replace(/[\u0000-\u001f]/g," ").trim()}
 // Only transport is provided by Supabase. The S21 engine owns track choice,
  // scores, clue progression and saved game state.
@@ -78,6 +78,9 @@ function render(){
  show("welcome",!s);show("game",!!s&&s.phase!=="finished");show("finished",!!s&&s.phase==="finished");
  if(!s)return;
  const revealed=["revealed","finished"].includes(s.phase);
+ const isYoutube=s.source==="youtube";
+ show("youtube-video-wrap",isYoutube);
+ show("record-wrap",!isYoutube);
  const played=s.step>=0,canGuess=s.phase==="playing"&&s.guessedStep!==s.step;
  set("round-label",String(s.round).padStart(2,"0")+" / "+s.limit);
  set("score-label",s.score.toFixed(1)+" PTS");
@@ -161,7 +164,7 @@ async function startGame(ev){
   show("start-error",true);return;
  }
  const era=$("era").value;busy=true;$("start-button").disabled=true;
- set("start-button","Checking the Audius catalog on S21…");
+ set("start-button","Selecting verified YouTube hits on S21…");
  try{
   const result=await api("/api/session","POST",{genres,decades:era?[era]:[],limit:Number($("limit").value)},false);
   token=result.token;localStorage.setItem("tunerush_s21_solo_v1",token);
@@ -198,7 +201,15 @@ async function clip(playCurrent=false,targetStep=null){
  const capturedRound=state.round,step=state.step;
  const epoch=++playEpoch;
  const src=state.media;
- if(!src){note("No S21 stream is available.");return}
+ if(!src){note("No verified video or music file is available.");return}
+ if(src.startsWith("youtube:")){
+  try{
+   if(!window.TuneRushYouTube)throw Error("YouTube player code did not load. Refresh the music page.");
+   await window.TuneRushYouTube.play(src.slice(8),state.cueMs/1000,state.durations[step]/1000);
+   if(epoch!==playEpoch)window.TuneRushYouTube.pause();
+  }catch(e){set("playback-status","YouTube playback unavailable. Try Replay or reveal this song.");note(e.message)}
+  return;
+ }
  try{
   const changed=audio.getAttribute("src")!==src;
   if(changed){audio.src=src;audio.load()}
