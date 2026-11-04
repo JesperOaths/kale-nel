@@ -120,6 +120,9 @@ def sync_once(lib=None,*,catalog_path=CATALOG,inbox_dir=INBOX,
             meta=_metadata_for(path,authorized,lookup)
             if not meta:
                 skipped+=1;continue
+            if lib.source_unchanged(path,**meta):
+                duplicates+=1
+                continue
             if imported+duplicates>=_MAX_IMPORT_PER_RUN:break
             result=lib.import_authorized(path,**meta)
             if result["alreadyStored"]:duplicates+=1
