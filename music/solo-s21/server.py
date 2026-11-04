@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tune Rush Solo: LAN-only game service, designed for Samsung S21 / Termux."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import RLock
+from threading import RLock, Event
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urlsplit, urlencode
@@ -11,6 +11,9 @@ import unicodedata, urllib.request, urllib.error
 
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get("TUNERUSH_SOLO_DATA",str(Path.home()/".tunerush-solo")))
+CATALOG_STATE=DATA/"popular-audius-v2.json"
+CATALOG_TTL=3600
+POPULAR_MIN_PLAYS=50000
 HOST=os.environ.get("TUNERUSH_SOLO_BIND","::")
 PORT=int(os.environ.get("TUNERUSH_SOLO_PORT","8797"))
 API="https://api.audius.co/v1"
@@ -21,6 +24,8 @@ GENRES={"pop":"Pop","rock":"Rock","hiphop":"Hip-Hop/Rap",
 LOCK=RLock()
 SESSIONS={}
 CACHE={}
+GENRE_CACHE={}
+GENRE_INFLIGHT={}
 STATE=DATA/"state.json"
 
 def norm(value):
@@ -47,50 +52,105 @@ def track_from(item,genres,decades):
  if not re.fullmatch("[A-Za-z0-9_-]{3,32}",id):return None
  title=str(item.get("title") or "").strip()[:100]
  artist=str((item.get("user") or {}).get("name") or "").strip()[:100]
- try:duration=int(item.get("duration") or 0)
+ try:
+  duration=int(item.get("duration") or 0)
+  plays=max(0,int(item.get("play_count") or 0))
  except (ValueError,TypeError):return None
  if not title or not artist or not 35<=duration<=7200:return None
+ # Audius trending is not a measure of recognizability: it can contain uploads
+ # with single-digit listens. Strictly never use them in a guessing quiz.
+ if plays<POPULAR_MIN_PLAYS:return None
  category=str(item.get("genre") or "").casefold()
  if not any(category in (GENRES[g].casefold(),
   {"dance":"electronic","indie":"alternative"}.get(g,"__none__")) for g in genres):return None
- if decades:
-  date=str(item.get("orig_release_date") or item.get("release_date") or "")
-  try:decade=str(int(date[:4])//10*10)
-  except ValueError:return None
-  if decade not in decades:return None
+ date=str(item.get("orig_release_date") or item.get("release_date") or "")
+ year=int(date[:4]) if re.match(r"^\d{4}",date) else None
+ if decades and (year is None or str(year//10*10) not in decades):return None
  return {"id":id,"title":title,"artist":artist,"duration":duration,
-         "plays":max(0,int(item.get("play_count") or 0))}
+         "plays":plays,"year":year}
+
+
+def restore_catalog():
+ try:
+  obj=json.loads(CATALOG_STATE.read_text(encoding="utf-8"))
+  if obj.get("version")!=2:return
+  with LOCK:
+   for genre,entry in obj.get("genres",{}).items():
+    if (genre in GENRES.values() and isinstance(entry,dict)
+        and isinstance(entry.get("at"),(int,float))
+        and isinstance(entry.get("tracks"),list)):
+     GENRE_CACHE[genre]=(entry["at"],entry["tracks"])
+ except (OSError,ValueError,TypeError,AttributeError):pass
+
+
+def save_catalog():
+ # Cache publicly available metadata only: no protected media or credentials.
+ try:
+  DATA.mkdir(mode=0o700,parents=True,exist_ok=True)
+  tmp=CATALOG_STATE.with_suffix(".tmp")
+  obj={"version":2,"genres":{genre:{"at":ts,"tracks":tracks}
+    for genre,(ts,tracks) in GENRE_CACHE.items()}}
+  with tmp.open("w",encoding="utf-8") as f:
+   json.dump(obj,f,ensure_ascii=False,separators=(",",":"))
+  os.chmod(tmp,0o600);os.replace(tmp,CATALOG_STATE)
+ except OSError:pass
+
+
+def genre_catalog(genre):
+ with LOCK:
+  cached=GENRE_CACHE.get(genre)
+  if cached and time.time()-cached[0]<CATALOG_TTL:return list(cached[1])
+  waiting=GENRE_INFLIGHT.get(genre)
+  if waiting is None:
+   waiting=Event();GENRE_INFLIGHT[genre]=waiting;leader=True
+  else:leader=False
+ if not leader:
+  waiting.wait(timeout=15)
+  with LOCK:
+   recent=GENRE_CACHE.get(genre)
+   return list(recent[1]) if recent else None
+ try:
+  url=API+"/tracks/trending?"+urlencode({
+   "genre":genre,"time":"allTime","limit":100,"offset":0})
+  req=urllib.request.Request(url,headers={
+   "Accept":"application/json","User-Agent":"TuneRushSolo/2.0"})
+  with urllib.request.urlopen(req,timeout=9) as response:
+   rows=json.load(response).get("data")
+  if not isinstance(rows,list):return None
+  keys=[g for g in GENRES if GENRES[g]==genre]
+  tracks=[t for item in rows if (t:=track_from(item,keys,[]))]
+  with LOCK:
+   GENRE_CACHE[genre]=(time.time(),tracks)
+   save_catalog()
+  return tracks
+ except (OSError,ValueError,TypeError):return None
+ finally:
+  with LOCK:
+   GENRE_INFLIGHT.pop(genre,None);waiting.set()
+
 
 def discover(genres,decades):
- k=(tuple(sorted(genres)),tuple(sorted(decades)))
- with LOCK:
-  cached=CACHE.get(k)
-  if cached and time.time()-cached[0]<600:return list(cached[1])
  genre_values=list(dict.fromkeys(GENRES[g] for g in genres))
- def scan(genre):
-  url=API+"/tracks/trending?"+urlencode({"genre":genre,"limit":100,"offset":0})
-  req=urllib.request.Request(url,headers={"Accept":"application/json","User-Agent":"TuneRushSolo/1.0"})
-  try:
-   with urllib.request.urlopen(req,timeout=9) as response:
-    rows=json.load(response).get("data")
-   if not isinstance(rows,list):return None
-   return [t for item in rows if (t:=track_from(item,genres,decades))]
-  except (OSError,ValueError,TypeError):return None
- songs={};success=0
- # Bound catalog scanning to three workers: six genres cannot exceed the
- # laptop's 40-second fetch timeout if any provider requests time out.
- with ThreadPoolExecutor(max_workers=3) as workers:
-  for rows in workers.map(scan,genre_values):
-   if rows is None:continue
-   success+=1
-   for track in rows:songs.setdefault(ident(track),track)
- if not success:raise ValueError("Audius is unavailable. Check S21 internet access.")
- if not songs:
-  if decades:raise ValueError("Audius has no tracks with release dates in the selected era for this mix. Choose All eras; historical uploads are rare.")
-  raise ValueError("Audius has no playable tracks for the chosen genres. Try additional genres.")
- found=list(songs.values())
- with LOCK:CACHE[k]=(time.time(),found)
+ with ThreadPoolExecutor(max_workers=min(6,len(genre_values))) as workers:
+  catalogs=list(workers.map(genre_catalog,genre_values))
+ if not any(rows is not None for rows in catalogs):
+  raise ValueError("Audius is unavailable. Check S21 internet access.")
+ songs={}
+ for_rows=zip(genre_values,catalogs)
+ for genre,rows in for_rows:
+  if rows is None:continue
+  for t in rows:
+   if decades and (t.get("year") is None or str(t["year"]//10*10) not in decades):
+    continue
+   songs.setdefault(ident(t),t)
+ found=sorted(songs.values(),key=lambda t:(-t["plays"],t["artist"],t["title"]))
+ if not found:
+  if decades:
+   raise ValueError("No tracks with 50,000+ Audius plays match this release era. Try All eras or more genres.")
+  raise ValueError("No tracks with 50,000+ Audius plays match these genres. Choose other genres.")
  return found
+
+restore_catalog()
 
 def persist():
  DATA.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -109,9 +169,9 @@ def restore():
  except (OSError,ValueError,TypeError,KeyError):pass
 
 def choose(s):
- available=[t for t in s["pool"] if ident(t) not in s["used"]]
+ available=[t for t in s["pool"] if t.get("plays",0)>=POPULAR_MIN_PLAYS and ident(t) not in s["used"]]
  if not available:raise ValueError("No unused songs left in this mix.")
- weights=[1+min(8,t["plays"]**.18) for t in available]
+ weights=[max(1,t["plays"])**.5 for t in available]
  song=random.choices(available,weights=weights,k=1)[0]
  s["track"]=song;s["used"].append(ident(song))
  s["ticket"]=secrets.token_urlsafe(24)
@@ -133,9 +193,9 @@ def view(s):
   "score":s["score"],"step":s["step"],"guessedStep":s["guessedStep"],
   "durations":DURATIONS,"titleDone":s["titleDone"],"artistDone":s["artistDone"],
   "history":s["history"],"last":s["last"],"available":len(s["pool"]),
-  "genres":s["genres"],"decades":s["decades"]}
+  "genres":s["genres"],"decades":s["decades"],"minPlays":POPULAR_MIN_PLAYS}
  if s["phase"] in ("revealed","finished"):
-  response["reveal"]={"title":s["track"]["title"],"artist":s["track"]["artist"]}
+  response["reveal"]={"title":s["track"]["title"],"artist":s["track"]["artist"],"plays":s["track"]["plays"]}
  else:
   response["media"]="/api/audio/"+s["ticket"]
   response["cueMs"]=s["cueMs"]
@@ -153,6 +213,8 @@ def new_session(data):
  if type(limit)!=int or limit not in (5,10,20):
   raise ValueError("Choose 5, 10 or 20 songs.")
  pool=discover(genres,decades)
+ if len(pool)<limit:
+  raise ValueError(f"Only {len(pool)} tracks with 50,000+ Audius plays match this mix; choose more genres or a shorter game.")
  with LOCK:
   for k,s in list(SESSIONS.items()):
    if time.time()-s["updated"]>43200:SESSIONS.pop(k,None)
@@ -161,7 +223,7 @@ def new_session(data):
    if completed:SESSIONS.pop(completed[0][0],None)
   if len(SESSIONS)>=16:raise ValueError("S21 already has sixteen active sessions. Finish or resume an existing game.")
   token=secrets.token_hex(32)
-  s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,
+  s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,"catalogVersion":2,
      "round":1,"score":0.0,"used":[],"history":[],"updated":time.time()}
   choose(s);SESSIONS[token]=s;persist()
   return {"token":token,"state":view(s)}
@@ -206,6 +268,12 @@ def operation(s,data):
   if phase!="revealed":raise ValueError("Reveal the song first.")
   if s["round"]>=s["limit"]:s["phase"]="finished"
   else:
+   # An existing saved game may have been created with the old obscure
+   # trending catalog. Upgrade its next-round pool without losing the
+   # current game or resetting scores.
+   if s.get("catalogVersion")!=2:
+    s["pool"]=discover(s["genres"],s["decades"])
+    s["catalogVersion"]=2
    try:choose(s);s["round"]+=1
    except ValueError:s["phase"]="finished"
  elif op=="finish":
