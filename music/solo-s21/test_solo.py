@@ -73,6 +73,14 @@ assert request("/api/audio/not-a-ticket")[0]==404
 with tempfile.TemporaryDirectory() as _:pass
 solo.SESSIONS.clear();solo.restore();assert token in solo.SESSIONS
 assert solo.SESSIONS[token]["ticket"]!=state["media"].rsplit("/",1)[1]
-print("PASS",count,"HTTP assertions; persisted sessions; no leaks; scoring; bounds; repeat avoidance")
+# Completed sessions must not permanently occupy the four-session cap.
+for i in range(5):
+ status,out=request("/api/session","POST",{"genres":["pop"],"limit":5})
+ assert status==200,(i,status,out)
+ temp_token=out["token"]
+ status,out=request("/api/action","POST",{"op":"finish","round":1},temp_token)
+ assert status==200 and out["state"]["phase"]=="finished"
+assert len(solo.SESSIONS)<=4
+print("PASS",count,"HTTP assertions; persistence; mystery privacy; scoring; rotation; session eviction")
 srv.shutdown()
 
