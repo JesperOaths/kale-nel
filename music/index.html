@@ -7,11 +7,23 @@
 <meta name="robots" content="noindex">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Tune Rush • Kalenel</title>
-<meta name="description" content="Play Tune Rush: the live multiplayer music guessing game with fast buzzing and high-stakes steals. Host on tablet, play on your phone.">
+<meta name="description" content="Play Tune Rush solo on your laptop with an S21 game engine, or invite friends for the multiplayer music quiz.">
 <link rel="stylesheet" href="./style.css?v=20261026share">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
 <script src="./app.js?v=20261026share" defer></script>
+<script src="./solo-switch.js?v=20261104s21" defer></script>
+<style>
+/* Isolated solo presentation; original party mode remains unchanged. */
+#solo-stage{margin:28px 0 50px;padding:18px;border-radius:26px;border:1px solid #46566b;background:#11192a}
+#solo-stage .solo-stage-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:9px 12px 20px}
+#solo-stage .solo-stage-head strong{display:block;font-size:clamp(1.4rem,3vw,2rem);color:#fbc97b}
+#solo-stage .solo-stage-head small{display:block;margin-top:5px;font-size:.8rem;color:#b2c3d7}
+#solo-frame{display:block;width:100%;min-height:800px;height:950px;border:0;border-radius:20px;background:#0b1120;overflow:hidden}
+body.solo-mode-active #welcome,body.solo-mode-active #room,body.solo-mode-active #game,body.solo-mode-active #finish,body.solo-mode-active #party-setlist{display:none!important}
+body.solo-mode-active #solo-stage{display:block!important}
+@media(max-width:680px){#solo-stage{padding:7px;border-radius:16px}#solo-stage .solo-stage-head{padding:14px}#solo-frame{min-height:850px;border-radius:12px}}
+</style>
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -27,7 +39,7 @@
  <h1>Guess the track.<br><em>Own the moment.</em></h1>
  <p>One song. Seven clues. Fastest buzz wins. Get your friends together and make some noise.</p>
  <div class="hero-facts"><span>◉ Full-track streaming</span><span>⚡ Instant buzzers</span><span>♬ No music downloads</span></div>
- <p class="solo-entry" style="margin-top:23px"><a class="primary" href="./solo/" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;box-shadow:0 12px 35px #fbc97b22">♫ Play Solo on laptop <span aria-hidden="true">↗</span></a><span style="display:block;font-size:12px;margin-top:12px;color:#b4c4d9">Runs on your Samsung S21 · no other players needed</span></p></div>
+ <p class="solo-entry" style="margin-top:23px"><a class="primary" href="?mode=solo" id="solo-launch" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;box-shadow:0 12px 35px #fbc97b22">♫ Play Solo on laptop <span aria-hidden="true">↗</span></a><span style="display:block;font-size:12px;margin-top:12px;color:#b4c4d9">Runs on your Samsung S21 · no other players needed</span></p></div>
  <div class="hero-art" aria-hidden="true"><div class="hero-halo"></div><div class="hero-record"><div class="hero-grooves"></div><div class="hero-record-label"><b>TR</b><small>33⅓ RPM</small></div></div><div class="hero-art-footer"><span>LIVE ON AIR</span><i></i><i></i><i></i><i></i><i></i></div></div>
  </div>
  <div class="welcome-grid">
@@ -37,6 +49,13 @@
   <label for="nickname">Your nickname</label><input id="nickname" maxlength="20" autocomplete="nickname" placeholder="Your name" required><button class="secondary" type="submit">Join game <span aria-hidden="true">→</span></button></form></article>
  </div>
  <p class="small-note">Music streams directly through Audius. Independent tracks and release dates vary by genre; no files are saved on this device.</p>
+</section>
+<section id="solo-stage" hidden aria-label="Solo music quiz played on this page">
+ <div class="solo-stage-head">
+  <div><strong>♫ Tune Rush Solo</strong><small>All game logic runs on your S21. This page is your laptop controller.</small></div>
+  <button type="button" id="solo-exit" class="quiet">← Back to multiplayer</button>
+ </div>
+ <iframe id="solo-frame" title="Tune Rush Solo music quiz" data-src="./solo/" allow="autoplay; clipboard-write" loading="eager"></iframe>
 </section>
 <section id="room" hidden>
  <div class="room-head"><div><div class="eyebrow" id="role-indicator">HOST</div><h1 id="room-title">Game lobby</h1></div>
