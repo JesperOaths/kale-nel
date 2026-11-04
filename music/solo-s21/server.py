@@ -66,7 +66,7 @@ def discover(genres,decades):
  with LOCK:
   cached=CACHE.get(k)
   if cached and time.time()-cached[0]<600:return list(cached[1])
- genre_values=list(dict.fromkeys(GENRES[g] for g in genres))[:6]
+ genre_values=list(dict.fromkeys(GENRES[g] for g in genres))
  def scan(genre):
   url=API+"/tracks/trending?"+urlencode({"genre":genre,"limit":100,"offset":0})
   req=urllib.request.Request(url,headers={"Accept":"application/json","User-Agent":"TuneRushSolo/1.0"})
@@ -85,7 +85,9 @@ def discover(genres,decades):
    success+=1
    for track in rows:songs.setdefault(ident(track),track)
  if not success:raise ValueError("Audius is unavailable. Check S21 internet access.")
- if not songs:raise ValueError("No playable songs match your filters. Try All eras or more genres.")
+ if not songs:
+  if decades:raise ValueError("Audius has no tracks with release dates in the selected era for this mix. Choose All eras; historical uploads are rare.")
+  raise ValueError("Audius has no playable tracks for the chosen genres. Try additional genres.")
  found=list(songs.values())
  with LOCK:CACHE[k]=(time.time(),found)
  return found
@@ -100,7 +102,7 @@ def restore():
  try:
   with STATE.open(encoding="utf-8") as f:state=json.load(f)
   if state.get("version")!=1:return
-  for key,s in list(state.get("sessions",{}).items())[:4]:
+  for key,s in list(state.get("sessions",{}).items())[:16]:
    if re.fullmatch("[0-9a-f]{64}",key) and time.time()-s["updated"]<43200:
     s["ticket"]=secrets.token_urlsafe(24)
     SESSIONS[key]=s
@@ -143,7 +145,7 @@ def view(s):
 def new_session(data):
  genres=data.get("genres",["pop","rock"]);decades=data.get("decades",[])
  limit=data.get("limit",10)
- if (not isinstance(genres,list) or not 1<=len(genres)<=6 or
+ if (not isinstance(genres,list) or not 1<=len(genres)<=len(GENRES) or
      any(type(g)!=str or g not in GENRES for g in genres) or
      not isinstance(decades,list) or len(decades)>8 or
      any(type(d)!=str or not re.fullmatch("19[6-9]0|20[0-2]0",d) for d in decades)):
@@ -157,7 +159,7 @@ def new_session(data):
   if len(SESSIONS)>=4:
    completed=sorted(((k,v) for k,v in SESSIONS.items() if v["phase"]=="finished"),key=lambda pair:pair[1]["updated"])
    if completed:SESSIONS.pop(completed[0][0],None)
-  if len(SESSIONS)>=4:raise ValueError("S21 already has four active sessions. Finish one before starting another.")
+  if len(SESSIONS)>=16:raise ValueError("S21 already has sixteen active sessions. Finish or resume an existing game.")
   token=secrets.token_hex(32)
   s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,
      "round":1,"score":0.0,"used":[],"history":[],"updated":time.time()}
