@@ -78,10 +78,28 @@ header, enforces file/storage limits, hashes and deduplicates contents, and
 stores them under opaque names. Every game shares the same permanent files.
 Matching prefers exact Spotify IDs and ISRCs and rejects ambiguous matches.
 
-No Spotify or YouTube audio was downloaded by this integration.
-The public music page still plays through the official YouTube iframe until
-a separate authorized audio-delivery route is implemented. Private files
-on the S21 are not automatically accessible to the HTTPS music website.
+No Spotify or YouTube audio is downloaded by this integration.
+
+## Permanent-library game playback
+
+New Solo games use `persistent-library` as their default source. The phone
+selects only imported recordings from `tunerush_playable_catalog`, applies
+the catalog's genre/era filters, and prevents repeats within a game.
+The browser remains at `https://kalenel.nl/music/?mode=solo`.
+
+`permanent_audio.py` reads MP3 frames directly using the Python standard
+library. It returns only the current 0.5–20 second clue, with a short decode
+preroll and without ID3 artwork, titles or artist tags. The existing private
+session capability and S21 relay transport carry the clue over HTTPS;
+the full file and filesystem path stay on the phone. Clue timing and scoring
+remain authoritative on the S21. Finishing a game does not delete recordings.
+
+The reviewed Downloads importer verifies SHA-256 before finalizing each
+recording, keeps distinct duplicate downloads by content hash, and chooses
+one preferred recording per playlist entry. Its private manifest/report is
+stored inside `music-library-v1`; no music bytes are committed to GitHub.
+Missing files remain explicitly unavailable instead of falling back to a
+different song or an external streaming provider.
 
 ## Verification
 Local health endpoint:
@@ -95,3 +113,4 @@ S21 commands from its Termux shell:
     python music_library_sync.py
     python test_persistent_music_library.py
     python test_music_library_sync.py
+

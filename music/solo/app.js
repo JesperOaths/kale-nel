@@ -180,7 +180,7 @@ function updateVideoAvailability(){
  const label=$("video-availability");
  if(!label)return;
  if(!verifiedVideoAvailability){
-  label.textContent="The S21 checks verified-video availability when you start.";
+  label.textContent="The S21 checks its cached music library when you start.";
   return;
  }
  const selected=[...document.querySelectorAll('input[name="genre"]:checked')].map(e=>e.value);
@@ -191,10 +191,10 @@ function updateVideoAvailability(){
  if(!selected.length){
   label.textContent="Select at least one music genre.";
  }else if(total<desired){
-  label.textContent="Only "+total+" verified YouTube "+(total===1?"song":"songs")+
+  label.textContent="Only "+total+" cached "+(total===1?"song":"songs")+
    " available for this mix. Choose more genres, All eras, or fewer rounds.";
  }else{
-  label.textContent=total+" verified popular YouTube videos available for this mix. ✓";
+  label.textContent=total+" cached songs available for this mix. ✓";
  }
  label.classList.toggle("availability-warning",!selected.length||total<desired);
  if(!busy)$("start-button").disabled=!selected.length||total<desired;
@@ -204,10 +204,10 @@ function loadVideoAvailability(){
   // The public Pages build intentionally excludes standalone JSON files.
   // Embed this small, metadata-only index in the HTML instead of fetching
   // an excluded artifact or adding a new network request.
-  const node=document.getElementById("youtube-availability-data");
+  const node=document.getElementById("cached-library-availability-data");
   if(!node)throw Error("Catalog is not available");
   const d=JSON.parse(node.textContent);
-  if(d.v!==1||d.source!=="youtube"||!Array.isArray(d.songs))throw Error("Catalog invalid");
+  if(d.v!==1||d.source!=="persistent-library"||!Array.isArray(d.songs))throw Error("Catalog invalid");
   verifiedVideoAvailability=d.songs;
  }catch{
   // Filtering remains available if this optional count guide is missing.
@@ -225,9 +225,9 @@ async function startGame(ev){
   show("start-error",true);return;
  }
  const era=$("era").value;busy=true;$("start-button").disabled=true;
- set("start-button","Selecting verified YouTube hits on S21…");
+ set("start-button","Selecting cached songs on S21…");
  try{
-  const result=await api("/api/session","POST",{genres,decades:era?[era]:[],limit:Number($("limit").value)},false);
+  const result=await api("/api/session","POST",{source:"persistent-library",genres,decades:era?[era]:[],limit:Number($("limit").value)},false);
   token=result.token;localStorage.setItem("tunerush_s21_solo_v1",token);
   state=result.state;stop();render();warmYoutube();
  }catch(e){
@@ -278,7 +278,7 @@ async function clip(playCurrent=false,targetStep=null){
  }else if(state.phase!=="playing")return;
  const capturedRound=state.round,step=state.step;
  const epoch=primed?primedEpoch:++playEpoch;
- const src=state.media;
+ const src=state.clipAudio||state.media;
  if(!src){window.TuneRushYouTube?.pause();note("No verified video or music file is available.");return}
  if(src.startsWith("youtube:")){
   try{
@@ -400,3 +400,4 @@ if(window.parent!==window){
  window.addEventListener("load",sendHeight);
  setTimeout(sendHeight,500);
 }
+

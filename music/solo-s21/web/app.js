@@ -134,7 +134,7 @@ async function clip(playCurrent=false){
  }else if(state.phase!=="playing")return;
  const capturedRound=state.round,step=state.step;
  const epoch=++playEpoch;
- const src=state.media;
+ const src=state.clipAudio||state.media;
  if(!src){note("No S21 stream is available.");return}
  try{
   const changed=audio.getAttribute("src")!==src;
@@ -217,4 +217,5 @@ $("copy-history").addEventListener("click",copyRecap);
 window.addEventListener("pagehide",stop);
 window.addEventListener("focus",()=>{if(token&&!busy)refresh()});
 refresh();
+
 
