@@ -311,7 +311,7 @@ def operation(s,data):
    # An existing saved game may have been created with the old obscure
    # trending catalog. Upgrade its next-round pool without losing the
    # current game or resetting scores.
-   if s.get("source")!="owned-library" and s.get("catalogVersion")!=2:
+   if s.get("source") in ("legacy-audius","audius-legacy") and s.get("catalogVersion")!=2:
     s["pool"]=discover(s["genres"],s["decades"])
     s["catalogVersion"]=2
    try:choose(s);s["round"]+=1
