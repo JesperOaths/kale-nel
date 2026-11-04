@@ -11,3 +11,5 @@
 body.is-embedded .mast, body.is-embedded footer{display:none}
 body.is-embedded .shell{max-width:1150px;padding:12px 10px}
 body.is-embedded .welcome{min-height:650px}
+
+.setup-error{color:#ffcbba;font-size:.9rem;font-weight:750;line-height:1.5;margin:12px 0 0;white-space:normal}
