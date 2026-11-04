@@ -4,7 +4,7 @@
  * The S21 supplies a matched video ID, a randomized starting point and clip length.
  */
 window.TuneRushYouTube=(()=>{
- let player=null,ready=null,active=null,timer=null,pendingStartTimer=null;
+ let player=null,ready=null,active=null,timer=null,pendingStartTimer=null,currentVideoId=null;
  const $=id=>document.getElementById(id);
  const idPattern=/^[a-zA-Z0-9_-]{11}$/;
  const YT_URL="https://www.youtube.com/iframe_api";
@@ -15,6 +15,7 @@ window.TuneRushYouTube=(()=>{
  }
  function pause(){
   stopTimer();
+  window.TuneRushScope?.pause();
   try{if(player&&typeof player.pauseVideo==="function")player.pauseVideo()}catch{}
  }
  function report(message){
@@ -33,8 +34,11 @@ window.TuneRushYouTube=(()=>{
    let t;
    try{t=player.getCurrentTime()}catch{return}
    if(!Number.isFinite(t))return;
+   const elapsed=Math.max(0,Math.min(operation.duration,t-operation.start));
+   window.TuneRushScope?.progress(elapsed,operation.duration,true);
    if(t+0.08>=operation.stopAt||
       (now-operation.realStart>operation.duration*1000+1800 && t>operation.start-1)){
+    window.TuneRushScope?.progress(operation.duration,operation.duration,false);
     try{player.pauseVideo()}catch{}
     report("♫ "+operation.duration+"-second clue finished. Choose a longer clue or guess.");
     stopTimer();
@@ -49,9 +53,14 @@ window.TuneRushYouTube=(()=>{
    startTimer();
   }else if(event.data===0){
    report("Video ended. Choose the next clue or reveal.");
+   window.TuneRushScope?.pause();
    stopTimer();
-  }else if(event.data===2 && timer!==null){
-   clearInterval(timer);timer=null;
+  }else if(event.data===2){
+   window.TuneRushScope?.pause();
+   if(timer!==null){clearInterval(timer);timer=null}
+  }else if(event.data===3){
+   window.TuneRushScope?.pause();
+   if(timer!==null){clearInterval(timer);timer=null}
   }
  }
  function ensureReady(){
@@ -98,6 +107,14 @@ window.TuneRushYouTube=(()=>{
   });
   return ready;
  }
+ async function prepare(){
+  // Initialize the visible iframe before the first clue, but do NOT cue a
+  // video thumbnail: its title could reveal the answer prematurely.
+  const wrapper=$("youtube-video-wrap");
+  if(wrapper)wrapper.hidden=false;
+  try{await ensureReady();return true}
+  catch{return false}
+ }
  async function play(videoId,startSeconds,durationSeconds){
   if(!idPattern.test(videoId))throw new Error("S21 supplied an invalid YouTube video ID.");
   if(!Number.isFinite(startSeconds)||!Number.isFinite(durationSeconds)||
@@ -109,11 +126,20 @@ window.TuneRushYouTube=(()=>{
   const yt=await ensureReady();
   pause();
   const spec={start:startSeconds,duration:durationSeconds,stopAt:startSeconds+durationSeconds,realStart:0};
+  window.TuneRushScope?.progress(0,durationSeconds,false);
   active=spec;
   try{
    // The API enforces endSeconds at initial playback. The 65ms timer
    // additionally bounds replay/seek where endSeconds may be invalidated.
-   yt.loadVideoById({videoId,startSeconds,endSeconds:spec.stopAt});
+   if(currentVideoId===videoId && typeof yt.seekTo==="function"){
+     // Reuse the already loaded song when requesting a longer clue: avoid
+     // reloading the same iframe/media for each 0.5–20s milestone.
+     yt.seekTo(startSeconds,true);
+     yt.playVideo();
+   }else{
+     currentVideoId=videoId;
+     yt.loadVideoById({videoId,startSeconds,endSeconds:spec.stopAt});
+   }
    report("Preparing a "+durationSeconds+"-second YouTube clue…");
    pendingStartTimer=setTimeout(()=>{
     pendingStartTimer=null;
@@ -125,5 +151,5 @@ window.TuneRushYouTube=(()=>{
    stopTimer();throw err;
   }
  }
- return {play,pause,get ready(){return !!player}};
+ return {play,pause,prepare,get ready(){return !!player}};
 })();
