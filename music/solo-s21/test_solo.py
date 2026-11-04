@@ -4,6 +4,7 @@ import importlib.util, json, os, tempfile, threading, urllib.error, urllib.reque
 from pathlib import Path
 urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({})))
 os.environ["TUNERUSH_SOLO_DATA"]=tempfile.mkdtemp(prefix="solo-test-")
+os.environ["TUNERUSH_ALLOW_AUDIUS_TESTS"]="1"
 source=Path(__file__).with_name("server.py")
 spec=importlib.util.spec_from_file_location("tunerush_solo",source)
 solo=importlib.util.module_from_spec(spec)
@@ -31,6 +32,7 @@ base="http://[::1]:"+str(srv.server_port)
 count=0
 def request(path,method="GET",payload=None,token=None,origin=None):
  global count
+ if path=="/api/session" and isinstance(payload,dict):payload={"source":"legacy-audius",**payload}
  headers={"Accept":"application/json"}
  if token:headers["Authorization"]="Bearer "+token
  if origin:headers["Origin"]=origin
