@@ -13,3 +13,12 @@ body.is-embedded .shell{max-width:1150px;padding:12px 10px}
 body.is-embedded .welcome{min-height:650px}
 
 .setup-error{color:#ffcbba;font-size:.9rem;font-weight:750;line-height:1.5;margin:12px 0 0;white-space:normal}
+
+/* All later clue durations are explicit, keyboard-accessible actions. */
+.clue.selectable{appearance:none;cursor:pointer;background:#20354c;color:#f8dfb1;border:1px solid #8bbdb9;font:inherit;font-size:.78rem;font-weight:900;padding:9px 13px;min-width:49px;transition:background .14s,border-color .14s,transform .14s}
+.clue.selectable:hover:not(:disabled){background:#345568;border-color:#fbc97b;transform:translateY(-1px)}
+.clue.selectable:focus-visible{outline:3px solid #fbc97b;outline-offset:3px}
+.clue.selectable:disabled{cursor:wait;opacity:.5}
+.clue.past{color:#8e9caf;opacity:.7}
+.clue.current{background:#254e4b;border-color:#89f0d4;color:#e0fff7;font-weight:900}
+.clue-help{color:#b6c9df;font-size:.83rem;line-height:1.5;max-width:530px;margin:-6px auto 20px}
