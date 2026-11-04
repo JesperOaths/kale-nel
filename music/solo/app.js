@@ -138,17 +138,26 @@ async function mutate(op,other={}){
  }catch(e){note(e.message);return false}
  finally{busy=false;render()}
 }
+function clearStartError(){set("start-error","");show("start-error",false)}
 async function startGame(ev){
  ev.preventDefault();if(busy)return;
+ clearStartError();
  const genres=[...document.querySelectorAll('input[name="genre"]:checked')].map(e=>e.value);
- if(!genres.length){note("Choose at least one music genre.");return}
+ if(!genres.length){
+  set("start-error","Choose at least one music genre.");
+  show("start-error",true);return;
+ }
  const era=$("era").value;busy=true;$("start-button").disabled=true;
  set("start-button","Checking the Audius catalog on S21…");
  try{
   const result=await api("/api/session","POST",{genres,decades:era?[era]:[],limit:Number($("limit").value)},false);
   token=result.token;localStorage.setItem("tunerush_s21_solo_v1",token);
   state=result.state;stop();render();
- }catch(e){note(e.message)}finally{
+ }catch(e){
+  const message=String(e.message||"Could not start the game.");
+  set("start-error",message);show("start-error",true);
+  note(message);
+ }finally{
   busy=false;$("start-button").disabled=false;
   set("start-button","Start solo challenge ↗");
   render();
@@ -235,6 +244,8 @@ async function copyRecap(){
  }
 }
 $("start-form").addEventListener("submit",startGame);
+$("era").addEventListener("change",clearStartError);
+document.querySelectorAll('input[name="genre"]').forEach(el=>el.addEventListener("change",clearStartError));
 $("play-button").addEventListener("click",()=>clip());
 $("replay-button").addEventListener("click",()=>clip(true));
 $("answer-form").addEventListener("submit",submit);
