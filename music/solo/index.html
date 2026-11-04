@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<meta name="robots" content="noindex">
+<title>Play Solo · Tune Rush</title>
+<meta name="description" content="Launch Tune Rush Solo, hosted on your Samsung S21 over local Wi-Fi.">
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--text:#f7f4ec;--muted:#b6c2d5;--gold:#fbc97b;--line:#3c4a62}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 65% 0,#344065 0,transparent 52%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.55}
+header{display:flex;justify-content:space-between;align-items:center;padding:19px clamp(18px,5vw,58px);border-bottom:1px solid #ffffff24}
+.brand{font-weight:950;letter-spacing:.08em;text-decoration:none}.brand span{color:var(--gold)}
+header small{color:var(--gold);font-weight:900;letter-spacing:.15em}
+main{max-width:940px;margin:auto;padding:clamp(24px,6vw,74px) 20px}
+.kicker{font-size:.75rem;font-weight:900;letter-spacing:.14em;color:var(--gold)}
+h1{font-size:clamp(2.8rem,7.5vw,5.2rem);line-height:1;letter-spacing:-.065em;margin:18px 0 22px}
+h1 em{font-style:normal;color:var(--gold)}
+.lead{font-size:1.16rem;max-width:690px;color:var(--muted);margin-bottom:34px}
+.panel{background:linear-gradient(145deg,#202b42,#121928);border:1px solid var(--line);padding:clamp(22px,4vw,38px);border-radius:24px;box-shadow:0 22px 60px #0004}
+.panel h2{margin:5px 0 10px;font-size:1.8rem}
+.panel p{color:var(--muted)}
+label{display:block;font-size:.85rem;color:#d4deee;font-weight:800;margin:18px 0 7px}
+.controls{display:flex;gap:12px;align-items:stretch}
+input{flex:1;min-width:0;border:1px solid #718098;border-radius:13px;padding:16px;background:#0e1829;color:var(--text);font:inherit}
+button{border:0;border-radius:13px;padding:16px 24px;background:var(--gold);color:#172032;font:inherit;font-weight:900;cursor:pointer}
+button:hover{filter:brightness(1.07)}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #7de9d5;outline-offset:3px}
+.notice{font-size:.88rem;line-height:1.6}
+.explain{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:23px}
+.explain>div{padding:19px;border:1px solid #384863;border-radius:16px;background:#18243a}
+.explain strong{display:block;color:var(--gold);margin-bottom:6px}
+.explain span{font-size:.86rem;color:var(--muted)}
+.error{color:#ffcbb7!important;font-weight:800}
+footer{padding:25px;text-align:center;color:#93a0b7;font-size:.8rem}footer a{color:var(--gold)}
+@media(max-width:640px){.controls{flex-direction:column}.explain{grid-template-columns:1fr}button{width:100%}}
+</style>
+</head>
+<body>
+<header><a class="brand" href="../">KALENEL<span>.</span></a><small>TUNE RUSH · SOLO</small></header>
+<main>
+<p class="kicker">SINGLE PLAYER · LAPTOP EDITION</p>
+<h1>Just you.<br><em>The music.</em></h1>
+<p class="lead">Play Tune Rush on your laptop while your Samsung S21 runs the music service, track selection, scoring and game progress. No multiplayer room or second player required.</p>
+<section class="panel" aria-labelledby="connect-title">
+<p class="kicker">CONNECT TO YOUR S21</p>
+<h2 id="connect-title">Start your solo session</h2>
+<p>Your phone and laptop must be able to reach each other on the local network, and the Tune Rush Solo service must be running in Termux on the S21.</p>
+<form id="connect" autocomplete="off">
+<label for="server">S21 hostname or IP address</label>
+<div class="controls">
+<input id="server" value="Android-2.local" placeholder="Android-2.local or your S21 IP address" spellcheck="false" required aria-describedby="server-tip">
+<button type="submit">♫ Play Solo ↗</button>
+</div>
+<p id="server-tip" class="notice">Uses port 8797. The hostname is a convenient default; if it doesn't resolve from your laptop, enter your S21's current Wi-Fi IP or IPv6 address instead. The address is saved only in this browser.</p>
+<p id="status" class="notice" role="status" aria-live="polite"></p>
+</form>
+</section>
+<div class="explain">
+<div><strong>01 · Your laptop</strong><span>Displays clues, receives keyboard guesses and plays audio through its speakers.</span></div>
+<div><strong>02 · Your Samsung S21</strong><span>Hosts the solo game, gets music from Audius and maintains the score.</span></div>
+<div><strong>03 · Your network</strong><span>The connection is directly to the phone, not through the public Kalenel website.</span></div>
+</div>
+</main>
+<footer><a href="../">← Back to Tune Rush multiplayer</a> · Made by Bruis</footer>
+<script>
+(function(){
+ "use strict";
+ const field=document.getElementById("server"),status=document.getElementById("status");
+ try{const saved=localStorage.getItem("tunerush_solo_phone_host");if(saved)field.value=saved}catch(e){}
+ document.getElementById("connect").addEventListener("submit",function(e){
+  e.preventDefault();
+  let raw=field.value.trim();
+  if(!raw){status.textContent="Enter your S21 hostname or IP address.";status.className="notice error";return}
+  if(raw.startsWith("http://"))raw=raw.slice(7);
+  if(raw.startsWith("https://")||raw.includes("/")||raw.includes("@")||raw.includes("?")||raw.includes("#")||/\s/.test(raw)){
+   status.textContent="Enter only a hostname or IP address (no path, HTTPS, or username).";
+   status.className="notice error";return;
+  }
+  let host=raw.replace(/:8797$/,"");
+  if(host.includes(":")&&!host.startsWith("["))host="["+host+"]";
+  try{
+   const url=new URL("http://"+host+":8797/");
+   if(url.port!=="8797"||url.protocol!=="http:"||!url.hostname)throw Error("invalid address");
+   try{localStorage.setItem("tunerush_solo_phone_host",raw)}catch(e){}
+   status.textContent="Connecting directly to the S21…";
+   status.className="notice";
+   window.location.assign(url.href);
+  }catch(err){status.textContent="Invalid S21 address. Try Android-2.local or a valid Wi-Fi IP.";status.className="notice error"}
+ });
+})();
+</script>
+</body>
+</html>
