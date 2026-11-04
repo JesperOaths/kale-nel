@@ -84,16 +84,29 @@ function render(){
  set("clue-label",played?(s.step+1)+" / 7":"READY");
  set("phase-indicator",s.phase==="ready"?"READY":s.phase==="playing"?"LISTEN / GUESS":revealed?"REVEALED":"WAITING");
  set("stage-title",revealed?"Mystery solved.":s.phase==="ready"?(played?"Ready for another hint?":"Listen closely."):"Know the song?");
- set("stage-sub",revealed?"The complete answer is now visible.":s.phase==="ready"?"Each hint gets longer. Take your best guess.":"Use your ears, then enter the song title and artist.");
+ set("stage-sub",revealed?"The complete answer is now visible.":
+  "Need more music? Select any longer clue. You can guess whenever you are ready.");
  $("clues").replaceChildren();
- for(let i=0;i<7;i++){
-  const el=document.createElement("span");
-  el.className="clue"+(i<=s.step?" heard":"")+(i===s.step?" current":"");
-  el.textContent=LABELS[i]+"s";$("clues").append(el);
+ const canAdvance=(s.phase==="ready"||s.phase==="playing")&&s.step<6;
+ for(let i=0;i<LABELS.length;i++){
+  const canReplay=i===s.step&&s.phase==="playing";
+  const canSelect=canAdvance&&i>s.step;
+  const interactive=canReplay||canSelect;
+  const el=document.createElement(interactive?"button":"span");
+  if(interactive){
+   el.type="button";
+   el.disabled=busy;
+   el.setAttribute("aria-label",(canReplay?"Replay ":"Play ")+LABELS[i]+"-second clue");
+   el.addEventListener("click",()=>clip(canReplay,i));
+  }
+  el.className="clue"+(i<s.step?" past":"")+(i===s.step?" current":"")+(interactive?" selectable":"");
+  if(i===s.step)el.setAttribute("aria-current","step");
+  el.textContent=LABELS[i]+"s";
+  $("clues").append(el);
  }
- show("play-button",s.phase==="ready"||s.phase==="playing");
- $("play-button").disabled=busy||(s.phase==="playing")||s.step===6;
- set("play-button",s.step===-1?"▶ Play first clue":s.phase==="ready"?"▶ Play longer clue":"Clue already played");
+ show("play-button",canAdvance);
+ $("play-button").disabled=busy||!canAdvance;
+ set("play-button",s.step===-1?"▶ Play first clue":"▶ Play longer clue ("+LABELS[s.step+1]+"s)");
  show("replay-button",s.phase==="playing");$("replay-button").disabled=busy;
  $("submit-button").disabled=busy||!canGuess;
  $("guess-title").disabled=s.titleDone||!canGuess;
@@ -173,11 +186,14 @@ function waitFor(event,condition=()=>false,timeout=13000){
   audio.addEventListener(event,on,{once:true});audio.addEventListener("error",error,{once:true});
  });
 }
-async function clip(playCurrent=false){
+async function clip(playCurrent=false,targetStep=null){
  if(!state||busy)return;
  if(!playCurrent){
-  if(state.phase!=="ready")return;
-  if(!await mutate("clue"))return;
+  if(!["ready","playing"].includes(state.phase)||state.step>=6)return;
+  if(targetStep!==null&&(!Number.isInteger(targetStep)||targetStep<=state.step||targetStep>=LABELS.length))return;
+  // Cancel a previous playback monitor before starting a longer clue.
+  stop();
+  if(!await mutate("clue",targetStep===null?{}:{targetStep}))return;
  }else if(state.phase!=="playing")return;
  const capturedRound=state.round,step=state.step;
  const epoch=++playEpoch;
