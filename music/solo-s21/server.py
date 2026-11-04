@@ -148,7 +148,10 @@ def new_session(data):
  with LOCK:
   for k,s in list(SESSIONS.items()):
    if time.time()-s["updated"]>43200:SESSIONS.pop(k,None)
-  if len(SESSIONS)>=4:raise ValueError("S21 is running four sessions. End a previous session.")
+  if len(SESSIONS)>=4:
+   completed=sorted(((k,v) for k,v in SESSIONS.items() if v["phase"]=="finished"),key=lambda pair:pair[1]["updated"])
+   if completed:SESSIONS.pop(completed[0][0],None)
+  if len(SESSIONS)>=4:raise ValueError("S21 already has four active sessions. Finish one before starting another.")
   token=secrets.token_hex(32)
   s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,
      "round":1,"score":0.0,"used":[],"history":[],"updated":time.time()}
