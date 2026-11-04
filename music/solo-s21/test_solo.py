@@ -9,12 +9,21 @@ spec=importlib.util.spec_from_file_location("tunerush_solo",source)
 solo=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(solo)
 fixtures=[
- {"id":"4gBM54a","title":"Never Turn Back","artist":"J Miguel","duration":180,"plays":1000},
- {"id":"abc876","title":"Golden Lights","artist":"Late Nights","duration":190,"plays":400},
- {"id":"def562","title":"Sea And Stars","artist":"Starlight","duration":210,"plays":500},
- {"id":"ghi383","title":"Saturday Dance","artist":"Moon Birds","duration":200,"plays":700},
- {"id":"jkl127","title":"Wildflower","artist":"Indie Dreams","duration":175,"plays":900},
+ {"id":"4gBM54a","title":"Never Turn Back","artist":"J Miguel","duration":180,"plays":112000},
+ {"id":"abc876","title":"Golden Lights","artist":"Late Nights","duration":190,"plays":134000},
+ {"id":"def562","title":"Sea And Stars","artist":"Starlight","duration":210,"plays":155000},
+ {"id":"ghi383","title":"Saturday Dance","artist":"Moon Birds","duration":200,"plays":210000},
+ {"id":"jkl127","title":"Wildflower","artist":"Indie Dreams","duration":175,"plays":302000},
 ]
+# A catalog entry with a handful of listens must never enter a new pool.
+def audius_item(plays):
+ return {"id":"abc1234","title":"Sample","user":{"name":"Performer"},
+         "genre":"Pop","duration":180,"play_count":plays,
+         "is_streamable":True,"orig_release_date":"2024-03-01"}
+assert solo.track_from(audius_item(49999),["pop"],[]) is None
+assert solo.track_from(audius_item(50000),["pop"],[])["plays"]==50000
+assert solo.track_from(audius_item(100000),["pop"],["1980"]) is None
+assert solo.track_from(audius_item(100000),["pop"],["2020"])["year"]==2024
 solo.discover=lambda g,d:fixtures
 srv=solo.DualStackServer(("::1",0),solo.Handler);srv.daemon_threads=True
 thread=threading.Thread(target=srv.serve_forever,daemon=True);thread.start()
@@ -112,6 +121,6 @@ for i in range(5):
  status,out=request("/api/action","POST",{"op":"finish","round":1},temp_token)
  assert status==200 and out["state"]["phase"]=="finished"
 assert len(solo.SESSIONS)<=16
-print("PASS",count,"HTTP assertions; persistence; mystery privacy; scoring; rotation; session eviction")
+print("PASS",count,"HTTP assertions; 50k-popularity gate; persistence; mystery privacy; scoring; rotation; session eviction")
 srv.shutdown()
 
