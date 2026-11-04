@@ -32,6 +32,7 @@ def req(path,payload=None,token=None):
 status,created=req("/api/session",{"genres":["pop"],"decades":[],"limit":5})
 assert status==200,(status,created)
 token=created["token"];state=created["state"]
+assert solo.GAME_CACHE.summary(token)=={"slots":5,"stored":0,"bytes":0}
 assert state["source"]=="youtube"
 assert state["minPlays"] is None
 assert state["media"].startswith("youtube:") and re.fullmatch(r"youtube:[A-Za-z0-9_-]{11}",state["media"])
@@ -58,5 +59,6 @@ assert state["media"]!=video
 assert 25000<=state["cueMs"]<=80000
 assert state["reveal"] if "reveal" in state else True
 req("/api/action",{"round":2,"op":"finish"},token)
+assert solo.GAME_CACHE.summary(token)=={"slots":0,"stored":0,"bytes":0}
 srv.shutdown();srv.server_close()
 print("PASS YouTube: 360-index-compatible ID format, randomized playback starts, mystery privacy, clue selection, no Audius, session advancement")
