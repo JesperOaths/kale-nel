@@ -59,12 +59,21 @@ assert request("/api/action","POST",{"round":1,"op":"answer"},token)[0]==400
 assert request("/api/action","POST",{"round":0,"op":"clue"},token)[0]==400
 s=request("/api/action","POST",{"round":1,"op":"clue"},token)[1]["state"]
 assert s["phase"]=="playing" and s["step"]==0
-assert request("/api/action","POST",{"round":1,"op":"clue"},token)[0]==400
+# Going from 0.5 s straight to 3 s must work without submitting a guess.
+s=request("/api/action","POST",{"round":1,"op":"clue","targetStep":2},token)[1]["state"]
+assert s["phase"]=="playing" and s["step"]==2 and s["score"]==0
+assert not any(k in s for k in ("reveal","track"))
+# Neither replay by backtracking nor out-of-range durations may change state.
+for target in (0,1,2,7,-1,True,"3"):
+ assert request("/api/action","POST",{"round":1,"op":"clue","targetStep":target},token)[0]==400
+assert request("/api/state",token=token)[1]["state"]["step"]==2
 # Wrong title should not go below zero.
 s=request("/api/action","POST",{"round":1,"op":"answer","title":"Not the answer"},token)[1]["state"]
 assert s["phase"]=="ready" and s["score"]==0 and s["last"]["title"]=="incorrect"
 assert request("/api/action","POST",{"round":1,"op":"answer","title":"Again"},token)[0]==400
-s=request("/api/action","POST",{"round":1,"op":"clue"},token)[1]["state"]
+# Jump to 8 s after guessing at 3 s, then solve without intermediate clips.
+s=request("/api/action","POST",{"round":1,"op":"clue","targetStep":4},token)[1]["state"]
+assert s["phase"]=="playing" and s["step"]==4 and s["score"]==0
 song=solo.SESSIONS[token]["track"]
 s=request("/api/action","POST",{"round":1,"op":"answer","title":song["title"],"artist":song["artist"]},token)[1]["state"]
 assert s["phase"]=="revealed" and s["score"]==1.0 and s["reveal"]["title"]==song["title"]
@@ -74,6 +83,20 @@ assert s["phase"]=="ready" and s["round"]==2 and not any(k in s for k in ("revea
 assert solo.SESSIONS[token]["track"]["id"]!=song["id"]
 s=request("/api/action","POST",{"round":2,"op":"reveal"},token)[1]["state"]
 assert len(s["history"])==2
+# Final 20-second clue is selectable directly, without a score penalty.
+# The next session below repeats 0.5 -> 20 s before revealing.
+status,one_more=request("/api/session","POST",{"genres":["pop"],"decades":[],"limit":5})
+assert status==200
+free=one_more["token"]
+s=request("/api/action","POST",{"round":1,"op":"clue"},free)[1]["state"]
+assert s["step"]==0 and s["score"]==0
+s=request("/api/action","POST",{"round":1,"op":"clue","targetStep":6},free)[1]["state"]
+assert s["step"]==6 and s["phase"]=="playing" and s["score"]==0
+assert request("/api/action","POST",{"round":1,"op":"clue"},free)[0]==400
+s=request("/api/action","POST",{"round":1,"op":"reveal"},free)[1]["state"]
+assert s["phase"]=="revealed" and s["score"]==0
+s=request("/api/action","POST",{"round":1,"op":"finish"},free)[1]["state"]
+assert s["phase"]=="finished"
 s=request("/api/action","POST",{"round":2,"op":"finish"},token)[1]["state"]
 assert s["phase"]=="finished" and len(s["history"])==2
 assert request("/api/action","POST",{"round":2,"op":"clue"},token)[0]==400
@@ -88,7 +111,7 @@ for i in range(5):
  temp_token=out["token"]
  status,out=request("/api/action","POST",{"op":"finish","round":1},temp_token)
  assert status==200 and out["state"]["phase"]=="finished"
-assert len(solo.SESSIONS)<=4
+assert len(solo.SESSIONS)<=16
 print("PASS",count,"HTTP assertions; persistence; mystery privacy; scoring; rotation; session eviction")
 srv.shutdown()
 
