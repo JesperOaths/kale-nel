@@ -151,6 +151,7 @@ async function startGame(ev){
  }catch(e){note(e.message)}finally{
   busy=false;$("start-button").disabled=false;
   set("start-button","Start solo challenge ↗");
+  render();
  }
 }
 function waitFor(event,condition=()=>false,timeout=13000){
