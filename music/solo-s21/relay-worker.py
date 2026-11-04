@@ -87,6 +87,10 @@ def backend(cmd, token, data):
         return {"ok": False, "error": "S21 game engine unavailable: " + type(err).__name__}
     state = result.get("state", {})
     session_token = result.get("token") if cmd == "session" else token
+    if isinstance(state, dict) and isinstance(state.get("media"), str) and state["media"].startswith(("youtube:","owned:")):
+        # Official YouTube player handles audiovisual playback in the visible
+        # public-page iframe. Never extract/proxy audio or replace it with Audius.
+        return {"ok": True, "body": result}
     if isinstance(state, dict) and isinstance(state.get("media"), str):
         try:
             saved = json.loads(STATE_PATH.read_text(encoding="utf-8"))
