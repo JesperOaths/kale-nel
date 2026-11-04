@@ -169,14 +169,21 @@ def restore():
  except (OSError,ValueError,TypeError,KeyError):pass
 
 def choose(s):
- available=[t for t in s["pool"] if t.get("plays",0)>=POPULAR_MIN_PLAYS and ident(t) not in s["used"]]
- if not available:raise ValueError("No unused songs left in this mix.")
- weights=[max(1,t["plays"])**.5 for t in available]
- song=random.choices(available,weights=weights,k=1)[0]
- s["track"]=song;s["used"].append(ident(song))
- s["ticket"]=secrets.token_urlsafe(24)
- last=song["duration"]*1000-21000
- s["cueMs"]=min(last,max(0,int(song["duration"]*150))) # 15% into the track
+ if s.get("source")=="owned-library":
+  from owned_library import select_next
+  song=select_next(s["pool"],s["used"])
+  s["track"]=song;s["used"].append(song["id"])
+  s["ticket"]=secrets.token_urlsafe(24)
+  s["cueMs"]=0
+ else:
+  available=[t for t in s["pool"] if t.get("plays",0)>=POPULAR_MIN_PLAYS and ident(t) not in s["used"]]
+  if not available:raise ValueError("No unused songs left in this mix.")
+  weights=[max(1,t["plays"])**.5 for t in available]
+  song=random.choices(available,weights=weights,k=1)[0]
+  s["track"]=song;s["used"].append(ident(song))
+  s["ticket"]=secrets.token_urlsafe(24)
+  last=song["duration"]*1000-21000
+  s["cueMs"]=min(last,max(0,int(song["duration"]*150))) # 15% into the track
  s["phase"]="ready";s["step"]=-1;s["guessedStep"]=-1
  s["titleDone"]=False;s["artistDone"]=False;s["last"]=None
 
@@ -193,11 +200,18 @@ def view(s):
   "score":s["score"],"step":s["step"],"guessedStep":s["guessedStep"],
   "durations":DURATIONS,"titleDone":s["titleDone"],"artistDone":s["artistDone"],
   "history":s["history"],"last":s["last"],"available":len(s["pool"]),
-  "genres":s["genres"],"decades":s["decades"],"minPlays":POPULAR_MIN_PLAYS}
+  "genres":s["genres"],"decades":s["decades"],
+  "source":s.get("source","audius-legacy"),
+  "minPlays":POPULAR_MIN_PLAYS if s.get("source")!="owned-library" else None}
  if s["phase"] in ("revealed","finished"):
-  response["reveal"]={"title":s["track"]["title"],"artist":s["track"]["artist"],"plays":s["track"]["plays"]}
+  response["reveal"]={"title":s["track"]["title"],"artist":s["track"]["artist"]}
+  if s.get("source")=="owned-library":
+   response["reveal"]["rank"]=s["track"]["rank"]
+   response["reveal"]["link"]="https://www.deezer.com/track/"+str(s["track"]["deezerId"])
+  else:response["reveal"]["plays"]=s["track"]["plays"]
  else:
-  response["media"]="/api/audio/"+s["ticket"]
+  response["media"]=("owned:"+s["track"]["fileId"]
+   if s.get("source")=="owned-library" else "/api/audio/"+s["ticket"])
   response["cueMs"]=s["cueMs"]
  return response
 
@@ -212,9 +226,16 @@ def new_session(data):
   raise ValueError("Invalid music filters.")
  if type(limit)!=int or limit not in (5,10,20):
   raise ValueError("Choose 5, 10 or 20 songs.")
- pool=discover(genres,decades)
- if len(pool)<limit:
-  raise ValueError(f"Only {len(pool)} tracks with 50,000+ Audius plays match this mix; choose more genres or a shorter game.")
+ source=data.get("source","")
+ if source=="owned-library":
+  from owned_library import select
+  pool=select(data.get("library"),genres,decades,limit)
+ elif source=="legacy-audius" and os.environ.get("TUNERUSH_ALLOW_AUDIUS_TESTS")=="1":
+  # Existing offline regression fixtures only; NEVER available in production.
+  pool=discover(genres,decades)
+  if len(pool)<limit:raise ValueError("Insufficient test fixtures.")
+ else:
+  raise ValueError("Audius is retired. Choose music files you own or are authorized to use.")
  with LOCK:
   for k,s in list(SESSIONS.items()):
    if time.time()-s["updated"]>43200:SESSIONS.pop(k,None)
@@ -223,7 +244,8 @@ def new_session(data):
    if completed:SESSIONS.pop(completed[0][0],None)
   if len(SESSIONS)>=16:raise ValueError("S21 already has sixteen active sessions. Finish or resume an existing game.")
   token=secrets.token_hex(32)
-  s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,"catalogVersion":2,
+  s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,
+     "source":source,"catalogVersion":3 if source=="owned-library" else 2,
      "round":1,"score":0.0,"used":[],"history":[],"updated":time.time()}
   choose(s);SESSIONS[token]=s;persist()
   return {"token":token,"state":view(s)}
@@ -271,7 +293,7 @@ def operation(s,data):
    # An existing saved game may have been created with the old obscure
    # trending catalog. Upgrade its next-round pool without losing the
    # current game or resetting scores.
-   if s.get("catalogVersion")!=2:
+   if s.get("source")!="owned-library" and s.get("catalogVersion")!=2:
     s["pool"]=discover(s["genres"],s["decades"])
     s["catalogVersion"]=2
    try:choose(s);s["round"]+=1
