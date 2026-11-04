@@ -8,8 +8,8 @@
 <meta name="robots" content="noindex">
 <meta name="referrer" content="no-referrer">
 <title>Tune Rush • Solo on S21</title>
-<link rel="stylesheet" href="./style.css?v=20261104s21">
-<script src="./app.js?v=20261104s21b" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261104s21c">
+<script src="./app.js?v=20261104s21c" defer></script>
 </head>
 <body>
 <header class="mast">
@@ -48,7 +48,8 @@
    </label>
   </div>
   <button id="start-button" class="primary" type="submit">Start solo challenge <span aria-hidden="true">↗</span></button>
-  <p class="fineprint">Audius specializes in independent music and remixes. Era filters use the uploader's release metadata, not the original recording decade.</p>
+  <p id="start-error" role="alert" class="setup-error" hidden></p>
+  <p class="fineprint">Choose any combination of the nine genres. Audius specializes in independent music and remixes. Older decades may have no available tracks: the date filter uses the uploader's release metadata, not the original recording decade.</p>
  </form>
 </section>
 <section id="game" hidden>
