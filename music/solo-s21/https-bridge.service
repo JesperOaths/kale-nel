@@ -1,0 +1,19 @@
+[Unit]
+Description=Tune Rush transport to the S21 cached music engine
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=/home/jespern/tunerush-https-bridge
+ExecStart=/usr/bin/python3 /home/jespern/tunerush-https-bridge/https_bridge.py
+Environment=TUNERUSH_S21_UPSTREAM=http://192.168.178.196:8797
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+UMask=0077
+MemoryMax=64M
+TasksMax=32
+
+[Install]
+WantedBy=default.target

@@ -19,6 +19,35 @@ const SOLO_RPC_NAMES=Object.freeze({
   status:"tunerush_s21_status_v1"
 });
 const SOLO_RPC_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+// Optional direct HTTPS transport. The S21 remains the same session authority;
+// the hub forwards only the four game endpoints, without database polling.
+const SOLO_DIRECT_BASE="https://jesper-hub.tail87c632.ts.net";
+let directTransportProbe=null;
+async function directAPI(path,method="GET",data=null,authorized=true){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),path==="/api/health"?4500:18000);
+ try{
+  const headers={"Accept":"application/json"};
+  if(authorized&&token)headers.Authorization="Bearer "+token;
+  if(data!==null)headers["Content-Type"]="application/json";
+  const res=await fetch(SOLO_DIRECT_BASE+path,{method,headers,
+   body:data===null?undefined:JSON.stringify(data),mode:"cors",cache:"no-store",redirect:"error",signal:controller.signal});
+  const result=await res.json();
+  if(!res.ok)throw Error(result.error||"S21 game request failed ("+res.status+").");
+  return result;
+ }catch(e){
+  if(e.name==="AbortError")throw Error("The S21 connection timed out. Your game is saved; reload to reconnect.");
+  throw e;
+ }finally{clearTimeout(timer)}
+}
+async function useDirectTransport(){
+ if(!directTransportProbe)directTransportProbe=(async()=>{
+  try{
+   const health=await directAPI("/api/health","GET",null,false);
+   return health.ready===true&&health.service==="tunerush-s21-solo";
+  }catch{return false}
+ })();
+ return directTransportProbe;
+}
 function randomSoloToken(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes).map(x=>x.toString(16).padStart(2,"0")).join("")}
 async function hashSoloToken(key){
  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(key));
@@ -44,6 +73,9 @@ async function soloRPC(endpoint,data){
  }finally{clearTimeout(timer)}
 }
 async function api(path,method="GET",data=null,authorized=true){
+ // Decide before sending a mutation. Never replay a submitted action through
+ // another transport after a timeout: it may already have changed the score.
+ if(await useDirectTransport())return directAPI(path,method,data,authorized);
  if(path==="/api/health"){
   const h=await soloRPC("health",{});
   return {ready:!!h.online};
