@@ -87,6 +87,10 @@ def backend(cmd, token, data):
         return {"ok": False, "error": "S21 game engine unavailable: " + type(err).__name__}
     state = result.get("state", {})
     session_token = result.get("token") if cmd == "session" else token
+    if isinstance(state, dict) and state.get("source")=="persistent-library":
+        # Only the current bounded MP3 clue is transported. Full recordings,
+        # private paths and the answer remain on the S21 until reveal.
+        return {"ok": True, "body": result}
     if isinstance(state, dict) and isinstance(state.get("media"), str) and state["media"].startswith(("youtube:","owned:")):
         # Official YouTube player handles audiovisual playback in the visible
         # public-page iframe. Never extract/proxy audio or replace it with Audius.
@@ -159,4 +163,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

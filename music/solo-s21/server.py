@@ -11,6 +11,7 @@ import unicodedata, urllib.request, urllib.error
 from game_audio_cache import GameAudioCache, MAX_TRACKS
 from persistent_music_library import PersistentMusicLibrary
 from music_library_sync import sync_once as sync_permanent_music
+import permanent_audio
 
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get("TUNERUSH_SOLO_DATA",str(Path.home()/".tunerush-solo")))
@@ -169,14 +170,18 @@ def restore():
   if state.get("version")!=1:return
   for key,s in list(state.get("sessions",{}).items())[:16]:
    if (re.fullmatch("[0-9a-f]{64}",key) and time.time()-s["updated"]<43200
-       and (s.get("source") in ("youtube","owned-library") or
+       and (s.get("source") in ("youtube","owned-library","persistent-library") or
             os.environ.get("TUNERUSH_ALLOW_AUDIUS_TESTS")=="1")):
     s["ticket"]=secrets.token_urlsafe(24)
     SESSIONS[key]=s
  except (OSError,ValueError,TypeError,KeyError):pass
 
 def choose(s):
- if s.get("source")=="youtube":
+ if s.get("source")=="persistent-library":
+  song,cue=permanent_audio.choose(s["pool"],s["used"],GAME_LIBRARY.root)
+  s["track"]=song;s["used"].append(song["id"])
+  s["ticket"]=secrets.token_urlsafe(24);s["cueMs"]=cue
+ elif s.get("source")=="youtube":
   from youtube_catalog import choose as choose_youtube
   song=choose_youtube(s["pool"],s["used"])
   s["track"]=song;s["used"].append(song["id"])
@@ -217,7 +222,7 @@ def view(s):
   "history":s["history"],"last":s["last"],"available":len(s["pool"]),
   "genres":s["genres"],"decades":s["decades"],
   "source":s.get("source","audius-legacy"),
-  "minPlays":POPULAR_MIN_PLAYS if s.get("source") not in ("youtube","owned-library") else None}
+  "minPlays":POPULAR_MIN_PLAYS if s.get("source") not in ("youtube","owned-library","persistent-library") else None}
  if s["phase"] in ("revealed","finished"):
   response["reveal"]={"title":s["track"]["title"],"artist":s["track"]["artist"]}
   if s.get("source")=="youtube":
@@ -226,8 +231,18 @@ def view(s):
   elif s.get("source")=="owned-library":
    response["reveal"]["rank"]=s["track"]["rank"]
    response["reveal"]["link"]="https://www.deezer.com/track/"+str(s["track"]["deezerId"])
+  elif s.get("source")=="persistent-library":
+   response["reveal"]["rank"]=s["track"]["rank"]
   else:response["reveal"]["plays"]=s["track"]["plays"]
  else:
+  if s.get("source")=="persistent-library":
+   response["media"]="owned:"+s["ticket"]
+   if s["phase"]=="playing" and s["step"]>=0:
+    response["clipAudio"]=permanent_audio.clue_data(s["track"],s["cueMs"],DURATIONS[s["step"]],GAME_LIBRARY.root)
+    response["cueMs"]=250
+   else:
+    response["cueMs"]=0
+   return response
   response["media"]=("youtube:"+s["track"]["videoId"]
    if s.get("source")=="youtube" else
    "owned:"+s["track"]["fileId"] if s.get("source")=="owned-library"
@@ -246,8 +261,10 @@ def new_session(data):
   raise ValueError("Invalid music filters.")
  if type(limit)!=int or limit not in (5,10,20):
   raise ValueError("Choose 5, 10 or 20 songs.")
- source=data.get("source","youtube")
- if source=="youtube":
+ source=data.get("source","persistent-library")
+ if source=="persistent-library":
+  pool=permanent_audio.select(genres,decades,limit,GAME_LIBRARY.root)
+ elif source=="youtube":
   from youtube_catalog import select as select_youtube
   pool=select_youtube(genres,decades,limit)
  elif source=="owned-library":
@@ -273,7 +290,7 @@ def new_session(data):
   if len(SESSIONS)>=16:raise ValueError("S21 already has sixteen active sessions. Finish or resume an existing game.")
   token=secrets.token_hex(32)
   s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,
-     "source":source,"catalogVersion":4 if source=="youtube" else 3 if source=="owned-library" else 2,
+     "source":source,"catalogVersion":5 if source=="persistent-library" else 4 if source=="youtube" else 3 if source=="owned-library" else 2,
      "round":1,"score":0.0,"used":[],"history":[],"updated":time.time()}
   choose(s)
   # One GiB shared, at most ten recyclable slots even in a 20-round game.
@@ -307,7 +324,9 @@ def operation(s,data,token=None):
   for field,guess,done in (("title",title,"titleDone"),("artist",artist,"artistDone")):
    if s[done]:results[field]="already-correct"
    elif not guess:results[field]="not-entered"
-   elif matches(guess,s["track"][field]):
+   elif any(matches(guess,answer) for answer in (
+       permanent_audio.title_answers(s["track"][field])
+       if field=="title" and s.get("source")=="persistent-library" else [s["track"][field]])):
     s[done]=True;s["score"]=round(s["score"]+.5,1);results[field]="correct"
    else:
     s["score"]=max(0,round(s["score"]-.5,1));results[field]="incorrect"
@@ -411,7 +430,7 @@ class Handler(BaseHTTPRequestHandler):
    return self.json_out(200,{"service":"tunerush-s21-solo","ready":True,"version":1})
   if p=="/api/music-library/health":
    # Read-only counts; no file paths, credentials or audio.
-   return self.json_out(200,{"library":GAME_LIBRARY.stats()})
+   return self.json_out(200,{"library":{**GAME_LIBRARY.stats(),**permanent_audio.availability(GAME_LIBRARY.root)}})
   if p=="/api/state":
    s=check_token(self.headers)
    return self.json_out(200,{"state":view(s)}) if s else self.json_out(401,{"error":"Game session expired."})
@@ -433,7 +452,7 @@ class Handler(BaseHTTPRequestHandler):
    self.send_header("Content-Type",("text/html" if name.endswith(".html") else
     "text/javascript" if name.endswith(".js") else "text/css")+"; charset=utf-8")
    self.send_header("Content-Length",str(len(content)))
-   self.send_header("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self'; media-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'")
+   self.send_header("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self'; media-src 'self' data:; connect-src 'self'; img-src 'self' data:; base-uri 'none'")
    self.headers_safe();self.end_headers()
    if self.command!="HEAD":self.wfile.write(content)
    return
@@ -501,4 +520,5 @@ def serve(host=HOST,port=PORT):
 
 if __name__=="__main__":
  serve()
+
 

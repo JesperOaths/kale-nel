@@ -29,7 +29,7 @@ def req(path,payload=None,token=None):
  try:
   with urllib.request.urlopen(x,timeout=6) as r:return r.status,json.load(r)
  except urllib.error.HTTPError as err:return err.code,json.load(err)
-status,created=req("/api/session",{"genres":["pop"],"decades":[],"limit":5})
+status,created=req("/api/session",{"source":"youtube","genres":["pop"],"decades":[],"limit":5})
 assert status==200,(status,created)
 token=created["token"];state=created["state"]
 assert solo.GAME_CACHE.summary(token)=={"slots":5,"stored":0,"bytes":0}
@@ -62,3 +62,4 @@ req("/api/action",{"round":2,"op":"finish"},token)
 assert solo.GAME_CACHE.summary(token)=={"slots":0,"stored":0,"bytes":0}
 srv.shutdown();srv.server_close()
 print("PASS YouTube: 360-index-compatible ID format, randomized playback starts, mystery privacy, clue selection, no Audius, session advancement")
+

@@ -16,6 +16,10 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - name: Test solo HTTP protocol, scoring and persistence
         run: python3 music/solo-s21/test_solo.py
+      - name: Test permanent MP3 library and all clue lengths
+        run: python3 music/solo-s21/test_permanent_audio.py
+      - name: Test explicit legacy YouTube sessions
+        run: python3 music/solo-s21/test_youtube.py
       - name: Check server Python syntax
         run: python3 -m py_compile music/solo-s21/server.py
       - name: Build phone-only archive and verify page entry
