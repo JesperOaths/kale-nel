@@ -117,6 +117,13 @@ class PersistentMusicLibrary:
                   artist TEXT NOT NULL,
                   PRIMARY KEY(playlist,position)
                 );
+                CREATE TABLE IF NOT EXISTS source_imports (
+                  relative_path TEXT PRIMARY KEY,
+                  size INTEGER NOT NULL,
+                  mtime_ns INTEGER NOT NULL,
+                  metadata_hash TEXT NOT NULL,
+                  content_sha256 TEXT NOT NULL REFERENCES recordings(sha256)
+                );
                 """)
 
     @contextlib.contextmanager
@@ -166,9 +173,47 @@ class PersistentMusicLibrary:
     def _used(self,db):
         return int(db.execute("SELECT COALESCE(SUM(bytes),0) FROM recordings").fetchone()[0])
 
+    def _source_info(self,path,title="",artist="",spotify_uri=None,isrc=None):
+        source=Path(path).resolve(strict=True)
+        relative=source.relative_to(self.authorized_root.resolve(strict=True)).as_posix()
+        info=source.stat()
+        values={"title":str(title or ""),"artist":str(artist or ""),
+            "spotify_uri":str(spotify_uri or ""),"isrc":str(isrc or "")}
+        signature=hashlib.sha256(json.dumps(
+            values,sort_keys=True,separators=(",",":")).encode()).hexdigest()
+        return relative,info.st_size,info.st_mtime_ns,signature
+
+    def source_unchanged(self,path,**metadata):
+        """Fast incremental check: skip hashing unchanged, previously stored files."""
+        try:
+            relative,size,mtime,signature=self._source_info(path,**metadata)
+        except (OSError,ValueError):return False
+        with self._locked():
+            with self._db() as db:
+                row=db.execute("""SELECT i.content_sha256,r.filename
+                    FROM source_imports i JOIN recordings r
+                      ON r.sha256=i.content_sha256
+                    WHERE i.relative_path=? AND i.size=? AND
+                      i.mtime_ns=? AND i.metadata_hash=?""",
+                    (relative,size,mtime,signature)).fetchone()
+                return bool(row and (self.tracks/row["filename"]).is_file())
+
+    def _remember_source(self,db,path,sha,metadata):
+        relative,size,mtime,signature=self._source_info(path,**metadata)
+        db.execute("""INSERT INTO source_imports
+            (relative_path,size,mtime_ns,metadata_hash,content_sha256)
+            VALUES(?,?,?,?,?)
+            ON CONFLICT(relative_path) DO UPDATE SET
+                size=excluded.size,mtime_ns=excluded.mtime_ns,
+                metadata_hash=excluded.metadata_hash,
+                content_sha256=excluded.content_sha256""",
+            (relative,size,mtime,signature,sha))
+
     def import_authorized(self,path,*,title="",artist="",spotify_uri=None,isrc=None):
         """Copy once, address by SHA-256; never delete files on game completion."""
         source,ext,size=self._validate_file(path,self.authorized_root)
+        metadata={"title":title,"artist":artist,
+                  "spotify_uri":spotify_uri,"isrc":isrc}
         spotify_uri=_spotify(spotify_uri)
         isrc=_isrc(isrc)
         tmp=None
@@ -194,6 +239,7 @@ class PersistentMusicLibrary:
                             WHERE sha256=?""",
                             (title,title,artist,artist,spotify_uri,isrc,sha))
                         self._reconcile(db)
+                    self._remember_source(db,source,sha,metadata)
                     return {"sha256":sha,"bytes":existing["bytes"],"alreadyStored":True}
                 if current+size>LIBRARY_BYTES:
                     raise LibraryError("The permanent 20 GiB music library is full; nothing was deleted.")
@@ -217,6 +263,7 @@ class PersistentMusicLibrary:
                         VALUES(?,?,?,?,?,?,?,?,?)""",
                         (sha,filename,size,ext,str(title or "")[:256],str(artist or "")[:256],
                          isrc,spotify_uri,int(time.time())))
+                    self._remember_source(db,source,sha,metadata)
                     self._reconcile(db)
                     return {"sha256":sha,"bytes":size,"alreadyStored":False}
                 finally:
@@ -260,6 +307,8 @@ class PersistentMusicLibrary:
         with zipfile.ZipFile(path,"r") as archive:
             candidates=[f for f in archive.infolist() if f.filename.lower().endswith(".csv")
                 and not f.is_dir()]
+            if sum(f.file_size for f in candidates)>32*1024*1024:
+                raise LibraryError("Spotydroid ZIP contains too much expanded CSV data.")
             if len(candidates)>250:
                 raise LibraryError("Too many playlists in Spotydroid archive.")
             for item in candidates:
