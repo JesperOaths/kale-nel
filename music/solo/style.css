@@ -22,3 +22,11 @@ body.is-embedded .welcome{min-height:650px}
 .clue.past{color:#8e9caf;opacity:.7}
 .clue.current{background:#254e4b;border-color:#89f0d4;color:#e0fff7;font-weight:900}
 .clue-help{color:#b6c9df;font-size:.83rem;line-height:1.5;max-width:530px;margin:-6px auto 20px}
+
+/* YouTube's official video stays displayed at >=200 x 200, with controls
+   unobstructed; never cover or separate its audiovisual components. */
+.youtube-video-wrap{width:100%;max-width:700px;margin:2px auto 18px}
+.youtube-video-wrap #youtube-player,
+.youtube-video-wrap iframe{display:block;width:100%!important;min-width:200px;min-height:270px;height:clamp(270px,45vw,394px)!important;max-width:100%;border:0;border-radius:13px;background:#060c19}
+.youtube-disclosure{margin:8px 0 0;color:#c3d1e2;font-size:.78rem;text-align:center;line-height:1.5}
+@media(max-width:480px){.youtube-video-wrap #youtube-player,.youtube-video-wrap iframe{height:270px!important}}
