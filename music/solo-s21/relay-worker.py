@@ -116,7 +116,9 @@ def main():
     errors = 0
     while True:
         try:
+            claim_started = time.monotonic()
             response = post("tunerush_s21_claim_v1", {"p_worker_secret": secret})
+            claim_ms = round((time.monotonic() - claim_started) * 1000)
             jobs = response.get("jobs") or []
             if jobs:
                 active_until = time.monotonic() + 300
@@ -125,15 +127,24 @@ def main():
                 if not isinstance(job_id, str) or not UUID.fullmatch(job_id):
                     continue
                 request = job.get("request", {})
+                operation = request.get("command", "unknown")
+                engine_started = time.monotonic()
                 try:
-                    result = backend(request.get("command"), request.get("token"), request.get("data", {}))
+                    result = backend(operation, request.get("token"), request.get("data", {}))
                 except Exception as err:
                     result = {"ok": False, "error": "S21 game worker error: " + type(err).__name__}
+                engine_ms = round((time.monotonic() - engine_started) * 1000)
+                completed_started = time.monotonic()
                 post("tunerush_s21_complete_v1",
                      {"p_worker_secret": secret, "p_id": job_id, "p_result": result})
-                print("Processed a S21 game request", flush=True)
+                completion_ms = round((time.monotonic() - completed_started) * 1000)
+                # Durations only; never log session bearer tokens, guesses, or tracks.
+                print("S21 %s processed; claim=%dms engine=%dms publish=%dms" %
+                      (operation, claim_ms, engine_ms, completion_ms), flush=True)
             errors = 0
-            time.sleep(1.2 if time.monotonic() < active_until else 6.0)
+            # Short active polling makes button clicks responsive. A slower idle
+            # cadence prevents unnecessary traffic when no one is playing.
+            time.sleep(0.65 if time.monotonic() < active_until else 2.2)
         except KeyboardInterrupt:
             raise
         except Exception as err:
