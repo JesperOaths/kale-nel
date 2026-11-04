@@ -11,6 +11,9 @@ from pathlib import Path
 
 import persistent_music_library as library
 
+# The C720P test partition is small; production retains its 5 GiB reserve.
+library.RESERVED_FREE_BYTES=16*1024*1024
+
 
 def wave_audio(frames=250):
     f=io.BytesIO()
