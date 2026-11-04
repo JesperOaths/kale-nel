@@ -212,7 +212,7 @@ def view(s):
   "history":s["history"],"last":s["last"],"available":len(s["pool"]),
   "genres":s["genres"],"decades":s["decades"],
   "source":s.get("source","audius-legacy"),
-  "minPlays":POPULAR_MIN_PLAYS if s.get("source")!="owned-library" else None}
+  "minPlays":POPULAR_MIN_PLAYS if s.get("source") not in ("youtube","owned-library") else None}
  if s["phase"] in ("revealed","finished"):
   response["reveal"]={"title":s["track"]["title"],"artist":s["track"]["artist"]}
   if s.get("source")=="youtube":
