@@ -1,0 +1,22 @@
+name: Tune Rush Solo — S21 tests
+on:
+  push:
+    paths:
+      - 'music/solo-s21/**'
+      - '.github/workflows/tune-rush-s21-solo.yml'
+  pull_request:
+    paths:
+      - 'music/solo-s21/**'
+      - '.github/workflows/tune-rush-s21-solo.yml'
+jobs:
+  offline-game-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test solo HTTP protocol, scoring and persistence
+        run: python3 music/solo-s21/test_solo.py
+      - name: Check server Python syntax
+        run: python3 -m py_compile music/solo-s21/server.py
+      - name: Check browser JavaScript syntax
+        run: node --check music/solo-s21/web/app.js
