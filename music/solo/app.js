@@ -3,6 +3,7 @@ const $=id=>document.getElementById(id);
 const audio=$("music");
 let token="",state=null,busy=false,playEpoch=0;
 const LABELS=["0.5","1.5","3","5","8","12","20"];
+let verifiedVideoAvailability=null;
 try{token=localStorage.getItem("tunerush_s21_solo_v1")||""}catch{}
 const show=(id,visible)=>$(id).hidden=!visible;
 const set=(id,value)=>{$(id).textContent=String(value??"")};
@@ -155,6 +156,44 @@ async function mutate(op,other={}){
  finally{busy=false;render()}
 }
 function clearStartError(){set("start-error","");show("start-error",false)}
+function updateVideoAvailability(){
+ const label=$("video-availability");
+ if(!label)return;
+ if(!verifiedVideoAvailability){
+  label.textContent="The S21 checks verified-video availability when you start.";
+  return;
+ }
+ const selected=[...document.querySelectorAll('input[name="genre"]:checked')].map(e=>e.value);
+ const era=$("era").value;
+ const desired=Number($("limit").value);
+ const total=verifiedVideoAvailability.filter(s=>s[1].some(g=>selected.includes(g))&&
+  (!era||s[2].includes(era))).length;
+ if(!selected.length){
+  label.textContent="Select at least one music genre.";
+ }else if(total<desired){
+  label.textContent="Only "+total+" verified YouTube "+(total===1?"song":"songs")+
+   " available for this mix. Choose more genres, All eras, or fewer rounds.";
+ }else{
+  label.textContent=total+" verified popular YouTube videos available for this mix. ✓";
+ }
+ label.classList.toggle("availability-warning",!selected.length||total<desired);
+ if(!busy)$("start-button").disabled=!selected.length||total<desired;
+}
+async function loadVideoAvailability(){
+ try{
+  const res=await fetch("./youtube-availability.json?v=20261104yt1",{cache:"force-cache"});
+  if(!res.ok)throw Error("Catalog is not available");
+  const d=await res.json();
+  if(d.v!==1||d.source!=="youtube"||!Array.isArray(d.songs))throw Error("Catalog invalid");
+  verifiedVideoAvailability=d.songs;
+  updateVideoAvailability();
+ }catch{
+  // Never prevent play because a static guide failed to download.
+  verifiedVideoAvailability=null;
+  updateVideoAvailability();
+ }
+}
+
 async function startGame(ev){
  ev.preventDefault();if(busy)return;
  clearStartError();
@@ -177,6 +216,7 @@ async function startGame(ev){
   busy=false;$("start-button").disabled=false;
   set("start-button","Start solo challenge ↗");
   render();
+  updateVideoAvailability();
  }
 }
 function waitFor(event,condition=()=>false,timeout=13000){
@@ -271,8 +311,9 @@ async function copyRecap(){
  }
 }
 $("start-form").addEventListener("submit",startGame);
-$("era").addEventListener("change",clearStartError);
-document.querySelectorAll('input[name="genre"]').forEach(el=>el.addEventListener("change",clearStartError));
+$("era").addEventListener("change",()=>{clearStartError();updateVideoAvailability()});
+$("limit").addEventListener("change",updateVideoAvailability);
+document.querySelectorAll('input[name="genre"]').forEach(el=>el.addEventListener("change",()=>{clearStartError();updateVideoAvailability()}));
 $("play-button").addEventListener("click",()=>clip());
 $("replay-button").addEventListener("click",()=>clip(true));
 $("answer-form").addEventListener("submit",submit);
@@ -293,6 +334,7 @@ $("copy-history").addEventListener("click",copyRecap);
 window.addEventListener("pagehide",stop);
 window.addEventListener("focus",()=>{if(token&&!busy)refresh()});
 refresh();
+loadVideoAvailability();
 
 
 
