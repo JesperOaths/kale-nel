@@ -520,6 +520,14 @@ async function discoverAudius(force=false){
     }
    });
    if(!current())throw Error("Audius scan superseded by a new room or filter.");
+   if(tracks.length===0){
+    if(filters.decades.length)throw Error(
+     "Audius has no playable songs tagged with the chosen release decade(s) for these genres. "+
+     "This is a catalog/date limitation, not a genre-selection error. "+
+     "Click All eras to clear the decade filters, then Check tracks again.");
+    throw Error("Audius returned no playable tracks for the chosen genres. "+
+     "Try Check tracks again or change the selected genres.");
+   }
    const rotationTools=await rotation();
    if(!current())throw Error("Audius scan superseded by a new room or filter.");
    const used=rotationTools.playedKeys(rotationHistory,"audius");
