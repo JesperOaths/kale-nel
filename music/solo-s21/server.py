@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Tune Rush Solo: LAN-only game service, designed for Samsung S21 / Termux."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import RLock, Event
+from threading import RLock, Event, Thread
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urlsplit, urlencode
 from difflib import SequenceMatcher
 import hashlib, hmac, ipaddress, json, os, random, re, secrets, socket, time
 import unicodedata, urllib.request, urllib.error
+from game_audio_cache import GameAudioCache, MAX_TRACKS
 
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get("TUNERUSH_SOLO_DATA",str(Path.home()/".tunerush-solo")))
@@ -27,6 +28,7 @@ CACHE={}
 GENRE_CACHE={}
 GENRE_INFLIGHT={}
 STATE=DATA/"state.json"
+GAME_CACHE=GameAudioCache()
 
 def norm(value):
  value=unicodedata.normalize("NFKD",str(value).casefold())
@@ -256,19 +258,28 @@ def new_session(data):
   raise ValueError("Audius is retired. Choose YouTube video playback or music you own.")
  with LOCK:
   for k,s in list(SESSIONS.items()):
-   if time.time()-s["updated"]>43200:SESSIONS.pop(k,None)
+   if time.time()-s["updated"]>43200:
+    SESSIONS.pop(k,None)
+    GAME_CACHE.delete(k)
   if len(SESSIONS)>=4:
    completed=sorted(((k,v) for k,v in SESSIONS.items() if v["phase"]=="finished"),key=lambda pair:pair[1]["updated"])
-   if completed:SESSIONS.pop(completed[0][0],None)
+   if completed:
+    finished_token=completed[0][0]
+    SESSIONS.pop(finished_token,None)
+    GAME_CACHE.delete(finished_token)
   if len(SESSIONS)>=16:raise ValueError("S21 already has sixteen active sessions. Finish or resume an existing game.")
   token=secrets.token_hex(32)
   s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,
      "source":source,"catalogVersion":4 if source=="youtube" else 3 if source=="owned-library" else 2,
      "round":1,"score":0.0,"used":[],"history":[],"updated":time.time()}
-  choose(s);SESSIONS[token]=s;persist()
+  choose(s)
+  # One GiB shared, at most ten recyclable slots even in a 20-round game.
+  if source in ("youtube","owned-library"):
+   GAME_CACHE.reserve(token,slots=min(MAX_TRACKS,limit),source=source)
+  SESSIONS[token]=s;persist()
   return {"token":token,"state":view(s)}
 
-def operation(s,data):
+def operation(s,data,token=None):
  op=data.get("op")
  if type(data.get("round"))!=int or data["round"]!=s["round"]:
   raise ValueError("Stale round: refresh your game.")
@@ -321,6 +332,11 @@ def operation(s,data):
    reveal(s);s["phase"]="finished"
  else:raise ValueError("Unknown command.")
  s["updated"]=time.time()
+ if token and s.get("source") in ("youtube","owned-library"):
+  if s["phase"]=="finished":
+   GAME_CACHE.delete(token)
+  else:
+   GAME_CACHE.touch(token)
  return {"state":view(s)}
 
 def check_token(headers):
@@ -377,7 +393,7 @@ class Handler(BaseHTTPRequestHandler):
    s=check_token(self.headers)
    if not s:return self.json_out(401,{"error":"Game session expired."})
    with LOCK:
-    result=operation(s,data);persist()
+    result=operation(s,data,self.headers.get("Authorization","")[7:]);persist()
    return self.json_out(200,result)
   except (ValueError,TypeError,KeyError) as e:
    return self.json_out(400,{"error":str(e)[:160]})
@@ -453,9 +469,18 @@ class DualStackServer(ThreadingHTTPServer):
   self.socket.setsockopt(socket.IPPROTO_IPV6,socket.IPV6_V6ONLY,0)
   super().server_bind()
 
+def _cache_janitor():
+ # Remove abandoned temporary recordings every five minutes.
+ while True:
+  try:GAME_CACHE.sweep()
+  except (OSError,ValueError):pass
+  time.sleep(300)
+
 def serve(host=HOST,port=PORT):
  DATA.mkdir(mode=0o700,parents=True,exist_ok=True)
+ GAME_CACHE.sweep()
  restore()
+ Thread(target=_cache_janitor,name="TuneRushAudioJanitor",daemon=True).start()
  server=DualStackServer((host,port),Handler)
  server.daemon_threads=True
  print("Tune Rush Solo listening on port "+str(server.server_port),flush=True)
