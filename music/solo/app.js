@@ -12,7 +12,12 @@ function stop(){playEpoch++;audio.pause();window.TuneRushYouTube?.pause();$("rec
 function fmt(s){return String(s??"").replace(/[\u0000-\u001f]/g," ").trim()}
 // Only transport is provided by Supabase. The S21 engine owns track choice,
  // scores, clue progression and saved game state.
-const SOLO_RPC_BASE="https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/tunerush_s21_";
+const SOLO_RPC_BASE="https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/";
+const SOLO_RPC_NAMES=Object.freeze({
+  health:"tunerush_s21_health_v1",
+  submit:"tunerush_s21_submit_v1",
+  status:"tunerush_s21_status_v1"
+});
 const SOLO_RPC_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 function randomSoloToken(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes).map(x=>x.toString(16).padStart(2,"0")).join("")}
 async function hashSoloToken(key){
@@ -23,7 +28,9 @@ async function soloRPC(endpoint,data){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),16000);
  try{
-  const res=await fetch(SOLO_RPC_BASE+endpoint+"_v1",{
+  const fn=SOLO_RPC_NAMES[endpoint];
+  if(!fn)throw Error("Unsupported Solo RPC command");
+  const res=await fetch(SOLO_RPC_BASE+fn,{
    method:"POST",mode:"cors",cache:"no-store",signal:controller.signal,
    headers:{"Content-Type":"application/json","apikey":SOLO_RPC_KEY},
    body:JSON.stringify(data)
