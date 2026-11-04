@@ -174,9 +174,13 @@ def operation(s,data):
  if op=="clue":
   if phase not in ("ready","playing") or s["step"]>=6:
    raise ValueError("No clues remain; reveal the song.")
-  if phase=="playing" and s["guessedStep"]!=s["step"]:
-   raise ValueError("Guess first, or replay the current clue.")
-  s["step"]+=1;s["phase"]="playing";s["last"]=None
+  # A player may freely request the next or any longer clue without
+  # submitting a guess. Moving forward forfeits the unused guess for
+  # earlier durations, but never changes the score or exposes the answer.
+  target=data.get("targetStep",s["step"]+1)
+  if type(target)!=int or not s["step"]<target<len(DURATIONS):
+   raise ValueError("Choose a clue that is longer than the current one.")
+  s["step"]=target;s["phase"]="playing";s["last"]=None
  elif op=="answer":
   if phase!="playing" or s["step"]<0 or s["guessedStep"]==s["step"]:
    raise ValueError("Play a clue first. One guess is allowed per clue.")
