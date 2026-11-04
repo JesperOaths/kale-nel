@@ -3,95 +3,106 @@
 <!-- GEJAST_PAGE_VERSION = 'v817' -->
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b1020">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1120">
 <meta name="robots" content="noindex">
-<title>Play Solo · Tune Rush</title>
-<meta name="description" content="Launch Tune Rush Solo, hosted on your Samsung S21 over local Wi-Fi.">
-<style>
-:root{color-scheme:dark;--bg:#0b1020;--text:#f7f4ec;--muted:#b6c2d5;--gold:#fbc97b;--line:#3c4a62}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(circle at 65% 0,#344065 0,transparent 52%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.55}
-header{display:flex;justify-content:space-between;align-items:center;padding:19px clamp(18px,5vw,58px);border-bottom:1px solid #ffffff24}
-.brand{font-weight:950;letter-spacing:.08em;text-decoration:none}.brand span{color:var(--gold)}
-header small{color:var(--gold);font-weight:900;letter-spacing:.15em}
-main{max-width:940px;margin:auto;padding:clamp(24px,6vw,74px) 20px}
-.kicker{font-size:.75rem;font-weight:900;letter-spacing:.14em;color:var(--gold)}
-h1{font-size:clamp(2.8rem,7.5vw,5.2rem);line-height:1;letter-spacing:-.065em;margin:18px 0 22px}
-h1 em{font-style:normal;color:var(--gold)}
-.lead{font-size:1.16rem;max-width:690px;color:var(--muted);margin-bottom:34px}
-.panel{background:linear-gradient(145deg,#202b42,#121928);border:1px solid var(--line);padding:clamp(22px,4vw,38px);border-radius:24px;box-shadow:0 22px 60px #0004}
-.panel h2{margin:5px 0 10px;font-size:1.8rem}
-.panel p{color:var(--muted)}
-label{display:block;font-size:.85rem;color:#d4deee;font-weight:800;margin:18px 0 7px}
-.controls{display:flex;gap:12px;align-items:stretch}
-input{flex:1;min-width:0;border:1px solid #718098;border-radius:13px;padding:16px;background:#0e1829;color:var(--text);font:inherit}
-button{border:0;border-radius:13px;padding:16px 24px;background:var(--gold);color:#172032;font:inherit;font-weight:900;cursor:pointer}
-button:hover{filter:brightness(1.07)}
-input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #7de9d5;outline-offset:3px}
-.notice{font-size:.88rem;line-height:1.6}
-.explain{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:23px}
-.explain>div{padding:19px;border:1px solid #384863;border-radius:16px;background:#18243a}
-.explain strong{display:block;color:var(--gold);margin-bottom:6px}
-.explain span{font-size:.86rem;color:var(--muted)}
-.error{color:#ffcbb7!important;font-weight:800}
-footer{padding:25px;text-align:center;color:#93a0b7;font-size:.8rem}footer a{color:var(--gold)}
-@media(max-width:640px){.controls{flex-direction:column}.explain{grid-template-columns:1fr}button{width:100%}}
-</style>
+<meta name="referrer" content="no-referrer">
+<title>Tune Rush • Solo on S21</title>
+<link rel="stylesheet" href="./style.css?v=20261104s21">
+<script src="./app.js?v=20261104s21" defer></script>
 </head>
 <body>
-<header><a class="brand" href="../">KALENEL<span>.</span></a><small>TUNE RUSH · SOLO</small></header>
-<main>
-<p class="kicker">SINGLE PLAYER · LAPTOP EDITION</p>
-<h1>Just you.<br><em>The music.</em></h1>
-<p class="lead">Play Tune Rush on your laptop while your Samsung S21 runs the music service, track selection, scoring and game progress. No multiplayer room or second player required.</p>
-<section class="panel" aria-labelledby="connect-title">
-<p class="kicker">CONNECT TO YOUR S21</p>
-<h2 id="connect-title">Start your solo session</h2>
-<p>Your phone and laptop must be able to reach each other on the local network, and the Tune Rush Solo service must be running in Termux on the S21.</p>
-<form id="connect" autocomplete="off">
-<label for="server">S21 hostname or IP address</label>
-<div class="controls">
-<input id="server" value="Android-2.local" placeholder="Android-2.local or your S21 IP address" spellcheck="false" required aria-describedby="server-tip">
-<button type="submit">♫ Play Solo ↗</button>
-</div>
-<p id="server-tip" class="notice">Uses port 8797. The hostname is a convenient default; if it doesn't resolve from your laptop, enter your S21's current Wi-Fi IP or IPv6 address instead. The address is saved only in this browser.</p>
-<p id="status" class="notice" role="status" aria-live="polite"></p>
-</form>
+<header class="mast">
+  <a class="brand" href="https://kalenel.nl/music/">KALENEL<span>.</span></a>
+  <span class="edition">TUNE RUSH <b>SOLO</b></span>
+  <span id="server-status" class="online" role="status" aria-live="polite">Checking S21 connection…</span>
+</header>
+<main class="shell">
+<section id="welcome" class="welcome">
+ <div class="intro">
+  <p class="eyebrow">YOUR PRIVATE MUSIC CHALLENGE • POWERED BY S21</p>
+  <h1>One player.<br><em>Every song a challenge.</em></h1>
+  <p class="subline">Your laptop plays the clues. Your Samsung S21 selects the music, keeps score and runs the entire game engine through a secure relay.</p>
+  <div class="feature-row"><span>♫ Real Audius music</span><span>⚡ Seven growing clues</span><span>◉ No account required</span></div>
+ </div>
+ <form id="start-form" class="setup panel">
+  <div class="setup-heading"><div><span class="eyebrow">01 / YOUR MIX</span><h2>Set the soundtrack</h2></div><span class="mix-icon" aria-hidden="true">♫</span></div>
+  <fieldset><legend>Genres</legend>
+  <div class="chip-grid">
+   <label><input type="checkbox" name="genre" value="pop" checked><span>Pop</span></label>
+   <label><input type="checkbox" name="genre" value="rock" checked><span>Rock</span></label>
+   <label><input type="checkbox" name="genre" value="dance"><span>Dance</span></label>
+   <label><input type="checkbox" name="genre" value="electronic"><span>Electronic</span></label>
+   <label><input type="checkbox" name="genre" value="hiphop"><span>Hip-hop</span></label>
+   <label><input type="checkbox" name="genre" value="indie"><span>Indie</span></label>
+   <label><input type="checkbox" name="genre" value="disco"><span>Disco</span></label>
+   <label><input type="checkbox" name="genre" value="rnb"><span>R&B</span></label>
+   <label><input type="checkbox" name="genre" value="metal"><span>Metal</span></label>
+  </div></fieldset>
+  <div class="setup-options">
+   <label>Release era
+    <select id="era"><option value="">All eras (recommended)</option><option value="2020">2020s</option><option value="2010">2010s</option><option value="2000">2000s</option><option value="1990">1990s</option><option value="1980">1980s</option><option value="1970">1970s</option><option value="1960">1960s</option></select>
+   </label>
+   <label>Session length
+    <select id="limit"><option value="5">5 songs · Quick</option><option value="10" selected>10 songs · Classic</option><option value="20">20 songs · Marathon</option></select>
+   </label>
+  </div>
+  <button id="start-button" class="primary" type="submit">Start solo challenge <span aria-hidden="true">↗</span></button>
+  <p class="fineprint">Audius specializes in independent music and remixes. Era filters use the uploader's release metadata, not the original recording decade.</p>
+ </form>
 </section>
-<div class="explain">
-<div><strong>01 · Your laptop</strong><span>Displays clues, receives keyboard guesses and plays audio through its speakers.</span></div>
-<div><strong>02 · Your Samsung S21</strong><span>Hosts the solo game, gets music from Audius and maintains the score.</span></div>
-<div><strong>03 · Your network</strong><span>The connection is directly to the phone, not through the public Kalenel website.</span></div>
-</div>
+<section id="game" hidden>
+ <div class="stats">
+  <div class="stat"><span>ROUND</span><strong id="round-label">01 / 10</strong></div>
+  <div class="stat"><span>YOUR SCORE</span><strong id="score-label">0.0 <small>PTS</small></strong></div>
+  <div class="stat"><span>CLUE</span><strong id="clue-label">Ready</strong></div>
+  <div class="stat right"><button id="finish-button" type="button" class="ghost">End session</button></div>
+ </div>
+ <div class="game-grid">
+  <section class="stage panel">
+   <div class="stage-top"><span class="eyebrow">THE MYSTERY TRACK</span><span class="stage-indicator" id="phase-indicator">ON DECK</span></div>
+   <div class="record-wrap" id="record-wrap"><div class="record"><div class="record-label"><span>TR</span><small>SOLO 33⅓</small></div></div><span class="record-glow"></span></div>
+   <h1 class="stage-title" id="stage-title">Listen closely.</h1>
+   <p class="stage-sub" id="stage-sub">Press Play first clue when you're ready.</p>
+   <div class="clues" id="clues" aria-label="Seven clue durations"></div>
+   <div class="play-controls">
+    <button id="play-button" class="primary" type="button">▶ Play first clue</button>
+    <button id="replay-button" class="secondary" type="button" hidden>↺ Replay same clue</button>
+   </div>
+   <p class="playback-help" id="playback-status" role="status" aria-live="polite">Make sure your laptop speakers are on. The S21 chooses the song; Audius streams the audio securely to your laptop.</p>
+  </section>
+  <aside class="panel answer">
+   <span class="eyebrow">02 / NAME THAT TUNE</span>
+   <h2>What do you hear?</h2>
+   <p>Every correct field earns +0.5 points. Each wrong guess costs 0.5 points (minimum score: zero). One attempt per field per clue.</p>
+   <form id="answer-form">
+    <label for="guess-title">Song title</label><input id="guess-title" maxlength="100" autocomplete="off" placeholder="Guess the song title">
+    <label for="guess-artist">Artist</label><input id="guess-artist" maxlength="100" autocomplete="off" placeholder="Guess the artist">
+    <button id="submit-button" type="submit" class="secondary" disabled>Check my answer</button>
+   </form>
+   <p id="feedback" class="feedback" role="status" aria-live="polite">Your answers are scored privately by the S21.</p>
+   <div id="reveal-card" class="reveal-card" hidden>
+    <span class="eyebrow">TRACK REVEALED</span>
+    <h3 id="revealed-title"></h3><p id="revealed-artist"></p>
+    <button id="next-button" class="primary" type="button">Next song ↗</button>
+   </div>
+   <button id="reveal-button" class="text-button" type="button" hidden>Give up & reveal song</button>
+  </aside>
+ </div>
+ <section class="panel history" id="history-panel" hidden>
+  <div class="history-heading"><div><span class="eyebrow">YOUR SESSION</span><h2>Previously revealed tracks</h2></div><button class="ghost" type="button" id="copy-history">Copy setlist</button></div>
+  <ol id="history-list"></ol>
+ </section>
+</section>
+<section id="finished" class="panel finish" hidden>
+ <p class="eyebrow">FINAL ENCORE</p><div class="trophy">✦</div>
+ <h1>That's a wrap.</h1><p id="finished-summary"></p>
+ <div class="finish-actions"><button id="new-game" class="primary" type="button">Play another session ↗</button><button id="copy-recap" class="secondary" type="button">Copy recap</button></div>
+ <ol id="finished-tracks" class="finished-tracks"></ol>
+</section>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<audio id="music" preload="none"></audio>
 </main>
-<footer><a href="../">← Back to Tune Rush multiplayer</a> · <span class="version-watermark" data-version-watermark>v817 - Made by Bruis</span></footer>
-<script>
-(function(){
- "use strict";
- const field=document.getElementById("server"),status=document.getElementById("status");
- try{const saved=localStorage.getItem("tunerush_solo_phone_host");if(saved)field.value=saved}catch(e){}
- document.getElementById("connect").addEventListener("submit",function(e){
-  e.preventDefault();
-  let raw=field.value.trim();
-  if(!raw){status.textContent="Enter your S21 hostname or IP address.";status.className="notice error";return}
-  if(raw.startsWith("http://"))raw=raw.slice(7);
-  if(raw.startsWith("https://")||raw.includes("/")||raw.includes("@")||raw.includes("?")||raw.includes("#")||/\s/.test(raw)){
-   status.textContent="Enter only a hostname or IP address (no path, HTTPS, or username).";
-   status.className="notice error";return;
-  }
-  let host=raw.replace(/:8797$/,"");
-  if(host.includes(":")&&!host.startsWith("["))host="["+host+"]";
-  try{
-   const url=new URL("http://"+host+":8797/");
-   if(url.port!=="8797"||url.protocol!=="http:"||!url.hostname)throw Error("invalid address");
-   try{localStorage.setItem("tunerush_solo_phone_host",raw)}catch(e){}
-   status.textContent="Connecting directly to the S21…";
-   status.className="notice";
-   window.location.assign(url.href);
-  }catch(err){status.textContent="Invalid S21 address. Try Android-2.local or a valid Wi-Fi IP.";status.className="notice error"}
- });
-})();
-</script>
-</body>
-</html>
+<footer><span class="version-watermark" data-version-watermark>v817 - Made by Bruis</span> · Tune Rush Solo runs on your Galaxy S21 · <a href="https://kalenel.nl/music/">Multiplayer edition</a></footer>
+</body></html>
+
