@@ -4,12 +4,13 @@
  * The S21 supplies a matched video ID, a randomized starting point and clip length.
  */
 window.TuneRushYouTube=(()=>{
- let player=null,ready=null,active=null,timer=null;
+ let player=null,ready=null,active=null,timer=null,pendingStartTimer=null;
  const $=id=>document.getElementById(id);
  const idPattern=/^[a-zA-Z0-9_-]{11}$/;
  const YT_URL="https://www.youtube.com/iframe_api";
  function stopTimer(){
   if(timer!==null){clearInterval(timer);timer=null}
+  if(pendingStartTimer!==null){clearTimeout(pendingStartTimer);pendingStartTimer=null}
   active=null;
  }
  function pause(){
@@ -24,6 +25,7 @@ window.TuneRushYouTube=(()=>{
   if(!active||!player)return;
   const operation=active;
   operation.realStart=performance.now();
+  if(pendingStartTimer!==null){clearTimeout(pendingStartTimer);pendingStartTimer=null}
   if(timer!==null)clearInterval(timer);
   timer=setInterval(()=>{
    if(!active||active!==operation){clearInterval(timer);timer=null;return}
@@ -67,9 +69,16 @@ window.TuneRushYouTube=(()=>{
       events:{
        onReady:()=>{if(!resolved){resolved=true;clearTimeout(timeout);resolve(player)}},
        onStateChange:stateChange,
+       onAutoplayBlocked:()=>{
+        if(active)report("Your browser blocked automatic video playback. Click ▶ inside the visible YouTube player; the clue timer will then start.");
+       },
        onError:e=>{
-        const why=e.data===101||e.data===150?"Video owner disabled embedding":e.data===100?"Video unavailable":"YouTube playback error";
-        pause();report(why+". Try Reveal and Next Song.");
+        const why=e.data===101||e.data===150?"Video owner disabled embedding":
+         e.data===100?"This YouTube video was removed or made private":
+         e.data===153?"YouTube needs an origin referrer. Refresh the music page":
+         e.data===5?"This browser cannot play the requested video":
+         "YouTube playback error ("+e.data+")";
+        pause();report(why+". Use Reveal, then Next Song.");
        }
       }
      })
@@ -105,7 +114,13 @@ window.TuneRushYouTube=(()=>{
    // The API enforces endSeconds at initial playback. The 65ms timer
    // additionally bounds replay/seek where endSeconds may be invalidated.
    yt.loadVideoById({videoId,startSeconds,endSeconds:spec.stopAt});
-   report("Loading "+durationSeconds+"s at a random starting point… If playback is blocked, press Play in the YouTube player.");
+   report("Preparing a "+durationSeconds+"-second YouTube clue…");
+   pendingStartTimer=setTimeout(()=>{
+    pendingStartTimer=null;
+    if(active===spec&&!spec.realStart){
+     report("Ready to listen: click ▶ inside the visible YouTube player if it has not started. The timer starts with the video.");
+    }
+   },3200);
   }catch(err){
    stopTimer();throw err;
   }
