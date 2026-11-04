@@ -38,3 +38,23 @@ Service starts when invoked, not automatically at Android reboot.
 If Android terminates Termux, restart using start-solo.sh. On some devices
 Termux battery optimization settings affect long-running background sessions.
 
+
+
+Repository packaging and CI
+---------------------------
+The phone UI is intentionally stored as web/index.html.src rather than a
+publishable .html file. This keeps an account-free, S21-LAN-only interface out
+of the authenticated public GEJAST site's HTML route inventory. Do not expose
+it at https://kalenel.nl/ or weaken any site-wide login gate for it.
+
+Run from the repository root:
+    sh music/solo-s21/package.sh /tmp/tunerush-s21-solo.tar.gz
+The archive contains web/index.html and can be extracted into
+/data/data/com.termux/files/home/tune-rush-solo on the phone.
+
+Start start-solo.sh from the actual Termux app/service context. Launching
+Python directly from adb shell run-as uses Android's runas_app SELinux context,
+which cannot reliably resolve DNS or accept connections from the LAN. On
+Samsung Android 15, permitting Termux foreground/background activity may be
+needed to keep the process alive when the screen locks. The server is not a
+replacement for the public multiplayer service.
