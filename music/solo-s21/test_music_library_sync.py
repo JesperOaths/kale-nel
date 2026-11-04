@@ -59,6 +59,8 @@ with tempfile.TemporaryDirectory(prefix="tunerush-library-sync-") as tmp:
     assert result["newSpotifyMetadataArchives"]==1,result
     assert result["library"]["recordings"]==1
     assert result["library"]["matchedCatalogSongs"]==1
+    assert db.source_unchanged(audio,title="First Hit",artist="First Artist",
+                               spotify_uri="",isrc="")
     assert wishlist.exists()
     assert (db.root/"last-sync.json").exists()
     follow=worker.sync_once(db,catalog_path=catalog,inbox_dir=inbox,
