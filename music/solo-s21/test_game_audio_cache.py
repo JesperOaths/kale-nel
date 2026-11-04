@@ -108,4 +108,4 @@ with tempfile.TemporaryDirectory(prefix="tunerush-temp-audio-test-") as tmp:
     assert cache.delete(third)
     assert cache.stats()["usedBytes"]==0
 
-print("PASS: 10 slots, 300MB global budget, file validation, source restrictions, no symlinks, cleanup on finish and inactivity, empty cache per new game")
+print("PASS: 10 slots, 1GiB global budget, file validation, source restrictions, no symlinks, cleanup on finish and inactivity, empty cache per new game")
