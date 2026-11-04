@@ -116,7 +116,8 @@ class GameAudioCache:
         for entry in self.root.iterdir():
             if not entry.is_dir() or entry.is_symlink():continue
             for f in entry.iterdir():
-                if f.is_file() and not f.is_symlink() and not f.name.endswith(".tmp"):
+                if (f.is_file() and not f.is_symlink() and
+                    f.name.startswith("song-") and f.suffix.lower() in AUDIO_SUFFIXES):
                     total+=f.stat().st_size
         return total
 
