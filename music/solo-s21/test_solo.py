@@ -38,6 +38,14 @@ def request(path,method="GET",payload=None,token=None,origin=None):
 assert request("/api/health")[0]==200
 assert request("/api/state")[0]==401
 assert request("/api/session","POST",{"genres":["nonsense"]})[0]==400
+# Every checkbox offered by the public Solo UI must work, including all nine.
+all_genres=["pop","rock","dance","electronic","hiphop","indie","disco","rnb","metal"]
+status,all_mix=request("/api/session","POST",{"genres":all_genres,"decades":[],"limit":5})
+assert status==200,(status,all_mix)
+assert all_mix["state"]["genres"]==all_genres
+status,finished_mix=request("/api/action","POST",{"round":1,"op":"finish"},all_mix["token"])
+assert status==200 and finished_mix["state"]["phase"]=="finished"
+assert request("/api/session","POST",{"genres":all_genres+["pop"],"limit":5})[0]==400
 assert request("/api/session","POST",{"genres":["pop"]},origin="http://evil.invalid")[0]==403
 status,data=request("/api/session","POST",{"genres":["pop"],"decades":[],"limit":5})
 assert status==200,(status,data)
