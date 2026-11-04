@@ -2,6 +2,7 @@
 """Tune Rush Solo: LAN-only game service, designed for Samsung S21 / Termux."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import RLock
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urlsplit, urlencode
 from difflib import SequenceMatcher
@@ -65,19 +66,24 @@ def discover(genres,decades):
  with LOCK:
   cached=CACHE.get(k)
   if cached and time.time()-cached[0]<600:return list(cached[1])
- songs={};success=0
- for genre in list(dict.fromkeys(GENRES[g] for g in genres))[:6]:
+ genre_values=list(dict.fromkeys(GENRES[g] for g in genres))[:6]
+ def scan(genre):
   url=API+"/tracks/trending?"+urlencode({"genre":genre,"limit":100,"offset":0})
   req=urllib.request.Request(url,headers={"Accept":"application/json","User-Agent":"TuneRushSolo/1.0"})
   try:
    with urllib.request.urlopen(req,timeout=9) as response:
     rows=json.load(response).get("data")
-   if not isinstance(rows,list):continue
+   if not isinstance(rows,list):return None
+   return [t for item in rows if (t:=track_from(item,genres,decades))]
+  except (OSError,ValueError,TypeError):return None
+ songs={};success=0
+ # Bound catalog scanning to three workers: six genres cannot exceed the
+ # laptop's 40-second fetch timeout if any provider requests time out.
+ with ThreadPoolExecutor(max_workers=3) as workers:
+  for rows in workers.map(scan,genre_values):
+   if rows is None:continue
    success+=1
-   for item in rows:
-    t=track_from(item,genres,decades)
-    if t:songs.setdefault(ident(t),t)
-  except (OSError,ValueError,TypeError):continue
+   for track in rows:songs.setdefault(ident(track),track)
  if not success:raise ValueError("Audius is unavailable. Check S21 internet access.")
  if not songs:raise ValueError("No playable songs match your filters. Try All eras or more genres.")
  found=list(songs.values())
