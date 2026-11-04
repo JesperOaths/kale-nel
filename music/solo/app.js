@@ -8,7 +8,7 @@ try{token=localStorage.getItem("tunerush_s21_solo_v1")||""}catch{}
 const show=(id,visible)=>$(id).hidden=!visible;
 const set=(id,value)=>{$(id).textContent=String(value??"")};
 const note=(msg)=>{set("toast",msg);show("toast",true);clearTimeout(note.timer);note.timer=setTimeout(()=>show("toast",false),3800)};
-function stop(){playEpoch++;audio.pause();window.TuneRushYouTube?.pause();$("record-wrap").classList.remove("spinning")}
+function stop(){playEpoch++;audio.pause();window.TuneRushYouTube?.pause();window.TuneRushScope?.pause();$("record-wrap").classList.remove("spinning")}
 function fmt(s){return String(s??"").replace(/[\u0000-\u001f]/g," ").trim()}
 // Only transport is provided by Supabase. The S21 engine owns track choice,
  // scores, clue progression and saved game state.
@@ -59,7 +59,7 @@ async function api(path,method="GET",data=null,authorized=true){
  });
  const until=Date.now()+(command==="session"?105000:50000);
  while(Date.now()<until){
-  await new Promise(resolve=>setTimeout(resolve,950));
+  await new Promise(resolve=>setTimeout(resolve,500));
   const response=await soloRPC("status",{p_id:submission.id,p_poll_hash:pollHash});
   if(response.status==="done"){
    if(!response.result?.ok)throw Error(response.result?.error||"S21 rejected this request.");
@@ -74,12 +74,23 @@ async function refresh(){
   const h=await api("/api/health","GET",null,false);
   set("server-status",h.ready?"● S21 ONLINE":"S21 unavailable");
   if(token){
-   try{const s=await api("/api/state");state=s.state;render()}catch(e){
+   try{
+    const sessionToken=token;
+    const s=await api("/api/state");
+    if(token!==sessionToken)return;
+    state=s.state;render();warmYoutube();
+   }catch(e){
     if(/expired/.test(e.message)){token="";localStorage.removeItem("tunerush_s21_solo_v1")}
     else note(e.message);
    }
   }
  }catch(e){set("server-status","● S21 OFFLINE");note(e.message)}
+}
+function warmYoutube(){
+ if(state?.source==="youtube"&&!document.hidden){
+   // Prepare the player shell without cueing the video/title before guessing.
+   void window.TuneRushYouTube?.prepare();
+ }
 }
 function render(){
  const s=state;
@@ -87,6 +98,8 @@ function render(){
  if(!s)return;
  const revealed=["revealed","finished"].includes(s.phase);
  const isYoutube=s.source==="youtube";
+ const clueSeconds=s.durations?.[Math.max(0,s.step)]/1000||0.5;
+ window.TuneRushScope?.duration(clueSeconds,s.round,s.step);
  show("youtube-video-wrap",isYoutube);
  show("record-wrap",!isYoutube);
  const played=s.step>=0,canGuess=s.phase==="playing"&&s.guessedStep!==s.step;
@@ -152,12 +165,12 @@ function renderHistory(id,items){
  }
 }
 async function mutate(op,other={}){
- if(busy||!state)return;
+ if(busy||!state)return false;
  busy=true;const startRound=state.round;
  try{
   const result=await api("/api/action","POST",{op,round:startRound,...other});
-  if(!state||state.round!==startRound)return;
-  state=result.state;render();
+  if(!state||state.round!==startRound)return false;
+  state=result.state;
   return true;
  }catch(e){note(e.message);return false}
  finally{busy=false;render()}
@@ -216,7 +229,7 @@ async function startGame(ev){
  try{
   const result=await api("/api/session","POST",{genres,decades:era?[era]:[],limit:Number($("limit").value)},false);
   token=result.token;localStorage.setItem("tunerush_s21_solo_v1",token);
-  state=result.state;stop();render();
+  state=result.state;stop();render();warmYoutube();
  }catch(e){
   const message=String(e.message||"Could not start the game.");
   set("start-error",message);show("start-error",true);
@@ -273,11 +286,16 @@ async function clip(playCurrent=false,targetStep=null){
   $("record-wrap").classList.add("spinning");
   set("playback-status","♫ Playing "+LABELS[step]+" seconds from your S21 music stream…");
   const stopAt=cue+state.durations[step]/1000;
+  const durationSeconds=state.durations[step]/1000;
+  window.TuneRushScope?.progress(0,durationSeconds,true);
   const deadline=performance.now()+Math.max(16000,state.durations[step]+9000);
   const monitor=()=>{
-   if(epoch!==playEpoch||state?.round!==capturedRound){audio.pause();return}
+   if(epoch!==playEpoch||state?.round!==capturedRound){audio.pause();window.TuneRushScope?.pause();return}
+   const elapsed=Math.max(0,Math.min(durationSeconds,audio.currentTime-cue));
+   window.TuneRushScope?.progress(elapsed,durationSeconds,!audio.paused);
    if(audio.currentTime>=stopAt||performance.now()>deadline){
     audio.pause();$("record-wrap").classList.remove("spinning");
+    window.TuneRushScope?.progress(durationSeconds,durationSeconds,false);
     set("playback-status","Clue played. Enter a guess or replay the same clue.");
     return;
    }
@@ -329,7 +347,7 @@ $("answer-form").addEventListener("submit",submit);
 $("reveal-button").addEventListener("click",async()=>{stop();await mutate("reveal")});
 $("next-button").addEventListener("click",async()=>{
  stop();if(await mutate("next")){$("guess-title").value="";$("guess-artist").value="";
-  set("playback-status","Ready for the next mystery song.");}
+  set("playback-status","Ready for the next mystery song.");warmYoutube();}
 });
 $("finish-button").addEventListener("click",async()=>{
  if(!window.confirm("Finish this solo session and reveal your current song?"))return;
