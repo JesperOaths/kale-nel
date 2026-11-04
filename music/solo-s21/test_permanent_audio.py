@@ -31,8 +31,16 @@ with sqlite3.connect(lib.database) as db:
         db.execute('INSERT INTO tunerush_playable_catalog VALUES(?,?,?,?,?,?,?,?,?,?)',
             ('fixture-'+str(i),'Private song '+str(i),'Artist '+str(i),json.dumps(['pop'] if i<6 else ['rock']),json.dumps(['1980']),900000,sha,156000,1,i))
 
-assert media.availability(root)=={'playlistCatalogSongs':7,'playableCachedSongs':7,'missingCachedSongs':0}
+with sqlite3.connect(lib.database) as db:
+    first=db.execute("SELECT sha256 FROM tunerush_playable_catalog WHERE spotify_uri='fixture-0'").fetchone()[0]
+    db.execute('INSERT INTO tunerush_playable_catalog VALUES(?,?,?,?,?,?,?,?,?,?)',
+        ('fixture-alias','Private song 0 - Single','Artist 0',json.dumps(['dance']),json.dumps(['1990']),900000,first,156000,2,1))
+assert media.availability(root)=={'playlistCatalogSongs':8,'playableCachedSongs':8,'uniquePlayableRecordings':7,'missingCachedSongs':0}
+assert len(media.select(['dance'],['1990'],1,root))==1
 pool=media.select(['pop'],['1980'],5,root);assert len(pool)==6
+legacy=[pool[0],dict(pool[0],id='legacy-alias'),pool[1]]
+chosen,cue=media.choose(legacy,[pool[0]['id']],root)
+assert chosen['sha256']!=pool[0]['sha256'], 'Saved games must not replay an alias of a used recording'
 try:media.select(['rock'],[],5,root);raise AssertionError('Short pool accepted')
 except ValueError:pass
 used=[]
