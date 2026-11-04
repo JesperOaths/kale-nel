@@ -1096,6 +1096,13 @@ async function copyPartySetlist(){
 }
 function applyState(s){
  const previous=room;
+ // The realtime poll can return an identical room every 550ms. Avoid
+ // rebuilding all player rows, timeline markers, scores and QR panels when
+ // nothing authoritative has changed; the countdown has its own timer.
+ if(previous&&previous.code===s.code&&JSON.stringify(previous)===JSON.stringify(s)){
+  room=s;
+  return;
+ }
  const oldPhase=room?.phase||"",oldRound=room?.round||0,oldRoomCode=room?.code;
  if((oldPhase==="lobby"&&s.phase!=="lobby")||(oldRoomCode&&oldRoomCode!==s.code))
   stopAudition(true);
@@ -2081,7 +2088,9 @@ try{
  }
 }catch{}
 render();
-setInterval(()=>{if(access&&!document.hidden)refresh()},550);
-// No additional network polling; only repaint the deadline already provided
-// by authenticated state. Keep this quiet while the tab is in the background.
-setInterval(()=>{if(access&&!document.hidden)updateAnswerClock()},250);
+// The embedded Solo game owns the screen when active. Do not poll/redraw
+// the hidden multiplayer room during Solo; immediately resume on returning.
+const multiplayerVisible=()=>!document.hidden&&!document.body.classList.contains("solo-mode-active");
+setInterval(()=>{if(access&&multiplayerVisible())refresh()},550);
+// Local deadline repaint only; no network requests.
+setInterval(()=>{if(access&&multiplayerVisible())updateAnswerClock()},250);
