@@ -16,7 +16,8 @@ const SOLO_RPC_BASE="https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/";
 const SOLO_RPC_NAMES=Object.freeze({
   health:"tunerush_s21_health_v1",
   submit:"tunerush_s21_submit_v1",
-  status:"tunerush_s21_status_v1"
+  status:"tunerush_s21_status_v1",
+  ack:"tunerush_s21_ack_v1"
 });
 const SOLO_RPC_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 function randomSoloToken(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes).map(x=>x.toString(16).padStart(2,"0")).join("")}
@@ -62,6 +63,9 @@ async function api(path,method="GET",data=null,authorized=true){
   await new Promise(resolve=>setTimeout(resolve,500));
   const response=await soloRPC("status",{p_id:submission.id,p_poll_hash:pollHash});
   if(response.status==="done"){
+   // Acknowledge only after receiving the result. If the acknowledgment fails,
+   // the relay's age-based cleanup removes it; do not repeat a game action.
+   void soloRPC("ack",{p_id:submission.id,p_poll_hash:pollHash}).catch(()=>{});
    if(!response.result?.ok)throw Error(response.result?.error||"S21 rejected this request.");
    return response.result.body;
   }
