@@ -34,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix="tunerush-temp-audio-test-") as tmp:
     summary=cache.reserve(token,slots=10,source="licensed-audio")
     assert summary=={"slots":10,"stored":0,"bytes":0}
     stats=cache.stats()
-    assert stats["sessions"]==1 and stats["maxBytes"]==300*1024*1024
+    assert stats["sessions"]==1 and stats["maxBytes"]==1024*1024*1024
     assert stats["maxTracksPerGame"]==10 and stats["inactivitySeconds"]==7200
     assert (base/"cache").stat().st_mode & 0o777==0o700
 
