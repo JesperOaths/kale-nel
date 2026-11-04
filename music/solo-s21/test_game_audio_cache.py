@@ -11,6 +11,9 @@ from pathlib import Path
 
 import game_audio_cache as c
 
+# Test environments may use a small /tmp partition; production keeps a 2 GiB reserve.
+c.MIN_FREE_BYTES=16*1024*1024
+
 def tone_data(sample_count=400):
     buf=io.BytesIO()
     with wave.open(buf,"wb") as writer:
