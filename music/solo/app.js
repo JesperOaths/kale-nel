@@ -253,21 +253,42 @@ function waitFor(event,condition=()=>false,timeout=13000){
 }
 async function clip(playCurrent=false,targetStep=null){
  if(!state||busy)return;
+ let primed=null,primedEpoch=0,primedSource="";
  if(!playCurrent){
   if(!["ready","playing"].includes(state.phase)||state.step>=6)return;
   if(targetStep!==null&&(!Number.isInteger(targetStep)||targetStep<=state.step||targetStep>=LABELS.length))return;
-  // Cancel a previous playback monitor before starting a longer clue.
+  const nextStep=targetStep===null?state.step+1:targetStep;
+  // Stop an older clip, then preserve the trusted button click by sending
+  // playback to the already prepared official iframe immediately.
   stop();
-  if(!await mutate("clue",targetStep===null?{}:{targetStep}))return;
+  if(state.source==="youtube"&&window.TuneRushYouTube?.ready&&state.media?.startsWith("youtube:")){
+   primedSource=state.media;
+   primedEpoch=++playEpoch;
+   window.TuneRushScope?.duration(state.durations[nextStep]/1000,state.round,nextStep);
+   // The S21's secure clue mutation runs in parallel. A rejected mutation
+   // ALWAYS cancels the optimistic playback; no scoring is done client-side.
+   primed=window.TuneRushYouTube.play(
+    primedSource.slice(8),state.cueMs/1000,state.durations[nextStep]/1000
+   ).then(()=>null,e=>e);
+  }
+  if(!await mutate("clue",targetStep===null?{}:{targetStep})){
+   if(primed)window.TuneRushYouTube?.pause();
+   return;
+  }
  }else if(state.phase!=="playing")return;
  const capturedRound=state.round,step=state.step;
- const epoch=++playEpoch;
+ const epoch=primed?primedEpoch:++playEpoch;
  const src=state.media;
- if(!src){note("No verified video or music file is available.");return}
+ if(!src){window.TuneRushYouTube?.pause();note("No verified video or music file is available.");return}
  if(src.startsWith("youtube:")){
   try{
    if(!window.TuneRushYouTube)throw Error("YouTube player code did not load. Refresh the music page.");
-   await window.TuneRushYouTube.play(src.slice(8),state.cueMs/1000,state.durations[step]/1000);
+   if(primed&&src===primedSource){
+    const error=await primed;
+    if(error)throw error;
+   }else{
+    await window.TuneRushYouTube.play(src.slice(8),state.cueMs/1000,state.durations[step]/1000);
+   }
    if(epoch!==playEpoch)window.TuneRushYouTube.pause();
   }catch(e){set("playback-status","YouTube playback unavailable. Try Replay or reveal this song.");note(e.message)}
   return;
