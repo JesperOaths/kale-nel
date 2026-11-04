@@ -218,7 +218,7 @@ def view(s):
   if s.get("source")=="youtube":
    response["reveal"]["youtubeViewsAtIndex"]=s["track"]["youtubeViewsAtIndex"]
    response["reveal"]["youtubeUrl"]="https://www.youtube.com/watch?v="+s["track"]["videoId"]
-  if s.get("source")=="owned-library":
+  elif s.get("source")=="owned-library":
    response["reveal"]["rank"]=s["track"]["rank"]
    response["reveal"]["link"]="https://www.deezer.com/track/"+str(s["track"]["deezerId"])
   else:response["reveal"]["plays"]=s["track"]["plays"]
