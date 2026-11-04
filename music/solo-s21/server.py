@@ -9,6 +9,8 @@ from difflib import SequenceMatcher
 import hashlib, hmac, ipaddress, json, os, random, re, secrets, socket, time
 import unicodedata, urllib.request, urllib.error
 from game_audio_cache import GameAudioCache, MAX_TRACKS
+from persistent_music_library import PersistentMusicLibrary
+from music_library_sync import sync_once as sync_permanent_music
 
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get("TUNERUSH_SOLO_DATA",str(Path.home()/".tunerush-solo")))
@@ -28,7 +30,8 @@ CACHE={}
 GENRE_CACHE={}
 GENRE_INFLIGHT={}
 STATE=DATA/"state.json"
-GAME_CACHE=GameAudioCache()
+GAME_CACHE=GameAudioCache()  # Temporary session metadata only.
+GAME_LIBRARY=PersistentMusicLibrary()  # Permanent 20 GiB music store.
 
 def norm(value):
  value=unicodedata.normalize("NFKD",str(value).casefold())
@@ -406,6 +409,9 @@ class Handler(BaseHTTPRequestHandler):
   p=urlsplit(self.path).path
   if p=="/api/health":
    return self.json_out(200,{"service":"tunerush-s21-solo","ready":True,"version":1})
+  if p=="/api/music-library/health":
+   # Read-only counts; no file paths, credentials or audio.
+   return self.json_out(200,{"library":GAME_LIBRARY.stats()})
   if p=="/api/state":
    s=check_token(self.headers)
    return self.json_out(200,{"state":view(s)}) if s else self.json_out(401,{"error":"Game session expired."})
@@ -470,17 +476,23 @@ class DualStackServer(ThreadingHTTPServer):
   super().server_bind()
 
 def _cache_janitor():
- # Remove abandoned temporary recordings every five minutes.
+ # Sweep session metadata only; never delete permanent music recordings.
  while True:
   try:GAME_CACHE.sweep()
   except (OSError,ValueError):pass
+  try:sync_permanent_music(GAME_LIBRARY)
+  except (OSError,ValueError,RuntimeError) as err:
+   print("Tune Rush library sync: "+str(err)[:120],flush=True)
   time.sleep(300)
 
 def serve(host=HOST,port=PORT):
  DATA.mkdir(mode=0o700,parents=True,exist_ok=True)
  GAME_CACHE.sweep()
  restore()
- Thread(target=_cache_janitor,name="TuneRushAudioJanitor",daemon=True).start()
+ try:sync_permanent_music(GAME_LIBRARY)
+ except (OSError,ValueError,RuntimeError) as err:
+  print("Tune Rush startup library sync: "+str(err)[:120],flush=True)
+ Thread(target=_cache_janitor,name="TuneRushLibrarySync",daemon=True).start()
  server=DualStackServer((host,port),Handler)
  server.daemon_threads=True
  print("Tune Rush Solo listening on port "+str(server.server_port),flush=True)
