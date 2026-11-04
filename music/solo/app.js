@@ -179,19 +179,21 @@ function updateVideoAvailability(){
  label.classList.toggle("availability-warning",!selected.length||total<desired);
  if(!busy)$("start-button").disabled=!selected.length||total<desired;
 }
-async function loadVideoAvailability(){
+function loadVideoAvailability(){
  try{
-  const res=await fetch("./youtube-availability.json?v=20261104yt1",{cache:"force-cache"});
-  if(!res.ok)throw Error("Catalog is not available");
-  const d=await res.json();
+  // The public Pages build intentionally excludes standalone JSON files.
+  // Embed this small, metadata-only index in the HTML instead of fetching
+  // an excluded artifact or adding a new network request.
+  const node=document.getElementById("youtube-availability-data");
+  if(!node)throw Error("Catalog is not available");
+  const d=JSON.parse(node.textContent);
   if(d.v!==1||d.source!=="youtube"||!Array.isArray(d.songs))throw Error("Catalog invalid");
   verifiedVideoAvailability=d.songs;
-  updateVideoAvailability();
  }catch{
-  // Never prevent play because a static guide failed to download.
+  // Filtering remains available if this optional count guide is missing.
   verifiedVideoAvailability=null;
-  updateVideoAvailability();
  }
+ updateVideoAvailability();
 }
 
 async function startGame(ev){
