@@ -46,6 +46,23 @@ This is a playlist construction wishlist with Spotify search links, not
 a playlist in the user's account. Creating or modifying an actual Spotify
 playlist requires authorized OAuth and playlist write scope.
 
+The official 2026 Spotify playlist builder is installed as:
+
+    python spotify_playlist_builder.py
+
+By default it prints a dry-run summary without network or account access.
+With a Spotify Premium developer app (2026 Development Mode requirement) and
+an owner-approved OAuth access token granting playlist-modify-private,
+the owner can run:
+
+    TUNERUSH_SPOTIFY_ACCESS_TOKEN=... python spotify_playlist_builder.py --execute
+
+The builder calls POST /me/playlists and POST /playlists/{id}/items, matches
+songs conservatively, remembers the playlist ID, and adds new matching tracks
+without deleting previous tracks. It never downloads audio. Do not commit or
+share Spotify OAuth tokens, and use a private authorized method to supply them.
+
+
 ## Authorized audio importing
 Put recordings you own or are licensed to reuse in:
 
