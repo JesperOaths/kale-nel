@@ -8,8 +8,9 @@
 <meta name="robots" content="noindex">
 <meta name="referrer" content="no-referrer">
 <title>Tune Rush • Solo on S21</title>
-<link rel="stylesheet" href="./style.css?v=20261104clue1">
-<script src="./app.js?v=20261104clue1" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261104yt1">
+<script src="./youtube-player.js?v=20261104yt1" defer></script>
+<script src="./app.js?v=20261104yt1" defer></script>
 </head>
 <body>
 <header class="mast">
@@ -23,7 +24,7 @@
   <p class="eyebrow">YOUR PRIVATE MUSIC CHALLENGE • POWERED BY S21</p>
   <h1>One player.<br><em>Every song a challenge.</em></h1>
   <p class="subline">Your laptop plays the clues. Your Samsung S21 selects the music, keeps score and runs the entire game engine through a secure relay.</p>
-  <div class="feature-row"><span>♫ Real Audius music</span><span>⚡ Seven growing clues</span><span>◉ No account required</span></div>
+  <div class="feature-row"><span>♫ Verified YouTube hits</span><span>⚡ Seven growing clues</span><span>◉ No account required</span></div>
  </div>
  <form id="start-form" class="setup panel">
   <div class="setup-heading"><div><span class="eyebrow">01 / YOUR MIX</span><h2>Set the soundtrack</h2></div><span class="mix-icon" aria-hidden="true">♫</span></div>
@@ -49,7 +50,7 @@
   </div>
   <button id="start-button" class="primary" type="submit">Start solo challenge <span aria-hidden="true">↗</span></button>
   <p id="start-error" role="alert" class="setup-error" hidden></p>
-  <p class="fineprint">Choose any combination of the nine genres. Audius specializes in independent music and remixes. Older decades may have no available tracks: the date filter uses the uploader's release metadata, not the original recording decade.</p>
+  <p class="fineprint">Choose any combination of genres. Only matched mainstream videos are played. The YouTube video must stay visible and may reveal the performer or title. Era tags come from curated playlists rather than verified original release dates.</p>
  </form>
 </section>
 <section id="game" hidden>
@@ -63,6 +64,10 @@
   <section class="stage panel">
    <div class="stage-top"><span class="eyebrow">THE MYSTERY TRACK</span><span class="stage-indicator" id="phase-indicator">ON DECK</span></div>
    <div class="record-wrap" id="record-wrap"><div class="record"><div class="record-label"><span>TR</span><small>SOLO 33⅓</small></div></div><span class="record-glow"></span></div>
+   <div id="youtube-video-wrap" class="youtube-video-wrap" hidden>
+     <div id="youtube-player"></div>
+     <p class="youtube-disclosure">YouTube video player · video and its controls stay visible. The video may reveal the answer.</p>
+   </div>
    <h1 class="stage-title" id="stage-title">Listen closely.</h1>
    <p class="stage-sub" id="stage-sub">Press Play first clue when you're ready.</p>
    <div class="clues" id="clues" aria-label="Seven clue durations"></div>
@@ -71,7 +76,7 @@
     <button id="play-button" class="primary" type="button">▶ Play first clue</button>
     <button id="replay-button" class="secondary" type="button" hidden>↺ Replay same clue</button>
    </div>
-   <p class="playback-help" id="playback-status" role="status" aria-live="polite">Make sure your laptop speakers are on. The S21 chooses the song; Audius streams the audio securely to your laptop.</p>
+   <p class="playback-help" id="playback-status" role="status" aria-live="polite">The S21 selects the hit and a random starting point. YouTube plays the video and sound on your laptop.</p>
   </section>
   <aside class="panel answer">
    <span class="eyebrow">02 / NAME THAT TUNE</span>
