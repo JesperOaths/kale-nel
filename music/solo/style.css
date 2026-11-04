@@ -30,3 +30,7 @@ body.is-embedded .welcome{min-height:650px}
 .youtube-video-wrap iframe{display:block;width:100%!important;min-width:200px;min-height:270px;height:clamp(270px,45vw,394px)!important;max-width:100%;border:0;border-radius:13px;background:#060c19}
 .youtube-disclosure{margin:8px 0 0;color:#c3d1e2;font-size:.78rem;text-align:center;line-height:1.5}
 @media(max-width:480px){.youtube-video-wrap #youtube-player,.youtube-video-wrap iframe{height:270px!important}}
+
+/* Instant availability feedback: no network poll on filter changes. */
+.video-availability{margin:14px 0 10px;padding:9px 12px;border-radius:10px;background:#1d3544;color:#b8f1d6;font-size:.85rem;font-weight:650;line-height:1.5}
+.video-availability.availability-warning{background:#423022;color:#ffddac}
