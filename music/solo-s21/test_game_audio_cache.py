@@ -35,6 +35,7 @@ with tempfile.TemporaryDirectory(prefix="tunerush-temp-audio-test-") as tmp:
     assert summary=={"slots":10,"stored":0,"bytes":0}
     stats=cache.stats()
     assert stats["sessions"]==1 and stats["maxBytes"]==1024*1024*1024
+    assert stats["usedBytes"]==0  # manifest is not cached audio
     assert stats["maxTracksPerGame"]==10 and stats["inactivitySeconds"]==7200
     assert (base/"cache").stat().st_mode & 0o777==0o700
 
@@ -45,6 +46,7 @@ with tempfile.TemporaryDirectory(prefix="tunerush-temp-audio-test-") as tmp:
         assert Path(stored["name"]).suffix==".wav"
     info=cache.summary(token)
     assert info["stored"]==10 and info["bytes"]==10*source.stat().st_size
+    assert cache.stats()["usedBytes"]==info["bytes"]
     try:cache.stage_local(token,10,source)
     except c.CacheError:pass
     else:raise AssertionError("Track 11 unexpectedly accepted")
