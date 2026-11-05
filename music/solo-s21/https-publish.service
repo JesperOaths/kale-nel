@@ -1,0 +1,16 @@
+[Unit]
+Description=Publish the bounded Tune Rush transport over HTTPS
+After=tunerush-https-bridge.service
+Requires=tunerush-https-bridge.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/tailscale funnel --bg --https=443 http://127.0.0.1:8804
+TimeoutStartSec=0
+RemainAfterExit=yes
+UMask=0077
+StandardOutput=append:/home/jespern/tunerush-https-bridge/funnel-activation.log
+StandardError=inherit
+
+[Install]
+WantedBy=default.target
