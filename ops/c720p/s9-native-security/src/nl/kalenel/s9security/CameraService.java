@@ -163,6 +163,8 @@ public final class CameraService extends Service {
  private final GardenPersonTrackGate personTrackGate=new GardenPersonTrackGate();
  private volatile int gardenPersonLastLocalMotionCells=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
+ private volatile long gardenPersonTailVerifiedRefreshes=0;
+ private volatile long gardenRawMotionTailIgnored=0;
  private volatile long deepFaceScanned=0,deepFaceErrors=0;
  private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
@@ -176,7 +178,7 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- // End 10 seconds after the most recent accepted motion; continue capped events.
+ // End 10 seconds after the last corroborated person, not unverified motion.
  private static final long QUIET_MS=10000,MAX_MS=120000,COOLDOWN_MS=0;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
@@ -347,11 +349,10 @@ public final class CameraService extends Service {
      }
      if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
-      // Every temporally voted movement extends a running clip's quiet tail.
-      // The start still requires the person gate and MAX_MS still bounds each
-      // segment: do not cut the last ten seconds after a weak, valid movement.
-      lastMovementAt=lastFrameAt;
-      eventChain.evidence(lastFrameAt);
+      if("recording".equals(mode))gardenRawMotionTailIgnored++;
+      // Pixel motion only proposes a person check. Never refresh the recording
+      // quiet tail or event lineage from vehicles, leaves or lighting changes.
+      // Those may only be renewed by verified person tracking below.
       if(!pilotOnly&&"watching".equals(mode)){
        // Motion merely requests on-device person inference. Vehicles on the
        // road and non-person garden motion do not start new videos.
@@ -363,12 +364,19 @@ public final class CameraService extends Service {
        }
       }
      }
-     if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&
-         lastFrameAt>=cameraControlSettleUntil){
-      boolean eventFollowup=lastFrameAt<gardenPersonCandidateUntil;
-      boolean safeSentinel=!eventFollowup&&temperature()<420&&
-           lastFrameAt-gardenPersonGateLastAt>=GARDEN_PERSON_SENTINEL_MS;
-      if(eventFollowup||safeSentinel)evaluateGardenPersonAsync(safeSentinel);
+     if(!pilotOnly&&gardenGateReady&&lastFrameAt>=cameraControlSettleUntil){
+      boolean watching="watching".equals(mode);
+      boolean recording="recording".equals(mode)&&!temporaryTest&&
+          !diagnosticPrerollActive;
+      // During 4K recording, a lower-duty, thermally guarded confirmation
+      // is required to keep the tail open; raw motion is never sufficient.
+      boolean recordingCheck=recording&&temperature()<420&&
+          lastFrameAt-gardenPersonGateLastAt>=2500L;
+      boolean eventFollowup=watching&&lastFrameAt<gardenPersonCandidateUntil;
+      boolean safeSentinel=watching&&!eventFollowup&&temperature()<420&&
+          lastFrameAt-gardenPersonGateLastAt>=GARDEN_PERSON_SENTINEL_MS;
+      if(eventFollowup||safeSentinel||recordingCheck)
+       evaluateGardenPersonAsync(safeSentinel);
      }
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500){
        if(lastFrameAt-lastStart>MAX_MS)stopRecording("max_segment");
@@ -518,6 +526,7 @@ public final class CameraService extends Service {
   final boolean sentinelObservation=sentinel;
   if(now>lastMovementAt+250)gardenPersonFollowupChecks++;
   final long jpegAt=lastJpegAt;
+  final String requestedMode=mode;
   final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
   final String selectedZone=motion.gardenZone();
@@ -526,9 +535,14 @@ public final class CameraService extends Service {
     final long gateStarted=SystemClock.elapsedRealtime();
     ClipClassifier.GardenPersonEvidence evidence=null;
     float wholeFrameScore=0;boolean failed=false;
+    boolean transportVetoOnly=false;
+    float[][] vetoedPersonBoxes=new float[0][];
     try{
      evidence=gardenGateClassifier.personEvidenceInGarden(jpg,top,margin,selectedZone);
      wholeFrameScore=gardenGateClassifier.lastPersonScoreAnywhere();
+     // This is a stronger contradiction than a temporary detector dropout.
+     transportVetoOnly=evidence==null&&gardenGateClassifier.lastGardenVehicleVetoes()>0;
+     if(transportVetoOnly)vetoedPersonBoxes=gardenGateClassifier.lastGardenVetoedPersonBoxes();
     }
     catch(Throwable issue){
      failed=true;
@@ -538,6 +552,8 @@ public final class CameraService extends Service {
     final float[] personBox=evidence==null?null:evidence.box;
     final float anyScore=wholeFrameScore;
     final boolean error=failed;
+    final boolean rejectedByTransport=transportVetoOnly;
+    final float[][] rejectedTransportBoxes=vetoedPersonBoxes;
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
      gardenPersonGateBusy=false;
@@ -556,13 +572,16 @@ public final class CameraService extends Service {
      // A weak model prediction cannot form half of a valid two-frame track.
      if(score<GardenPersonTrackGate.MIN_SCORE){
       gardenPersonGateRejects++;
-      // Brief model dropout: keep last tracked positive within MAX_PAIR_MS
-      // but still require a later independent, associated detection.
-      personTrackGate.offer(now,jpegAt,score,null,0);
+      // An explicit transport conflict must cancel the stale positive
+      // rather than count as a recoverable missing detector observation.
+      if(rejectedByTransport)personTrackGate.rejectCompetingTransport(rejectedTransportBoxes);
+      else personTrackGate.offer(now,jpegAt,score,null,0);
       return;
      }
      gardenPersonGateMatches++;
-     if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
+     if(!running||!requestedMode.equals(mode)||
+         (!"watching".equals(mode)&&!"recording".equals(mode))||
+         SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
       personTrackGate.reset();
@@ -578,14 +597,28 @@ public final class CameraService extends Service {
      GardenPersonTrackGate.Decision verdict=
          personTrackGate.offer(now,jpegAt,score,personBox,localCells);
      gardenPersonDuplicateJpegRejects=personTrackGate.duplicateFrames;
-     if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED)return;
+     // After a person has ALREADY passed motion-based admission, allow
+     // two new, high-confidence, matching detections to corroborate a
+     // person standing still. Never weaken the initial recording gate.
+     boolean stationaryPresent=verdict!=GardenPersonTrackGate.Decision.CONFIRMED&&
+         "recording".equals(mode)&&
+         personTrackGate.confirmStationaryPresence(now,jpegAt,score,personBox);
+     if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED&&!stationaryPresent)return;
+     // A newly corroborated person may refresh an existing event's quiet
+     // tail; this is deliberately NOT done for unverified pixel motion.
+     if("recording".equals(mode)){
+      if(temperature()<420&&!temporaryTest&&!diagnosticPrerollActive){
+       lastMovementAt=SystemClock.elapsedRealtime();
+       eventChain.evidence(lastMovementAt);
+       gardenPersonTailVerifiedRefreshes++;
+      }
+      return;
+     }
      gardenPersonCandidateUntil=0;
-     // Also set the quiet-window anchor for periodic-only detections, where
-     // no MotionGrid vote ever updated lastMovementAt.
-     lastMovementAt=SystemClock.elapsedRealtime();
-     eventChain.evidence(lastMovementAt);
      if(temperature()<420 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024){
+      lastMovementAt=SystemClock.elapsedRealtime();
+      eventChain.evidence(lastMovementAt);
       gardenPersonGateConfirmedStarts++;
       if(sentinelObservation)gardenPersonSentinelStarts++;
       startRecording();
@@ -1501,7 +1534,15 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_matches",gardenPersonGateMatches);
    d.put("garden_person_gate_required_positive_frames",2);
    d.put("garden_person_gate_confirmed_starts",gardenPersonGateConfirmedStarts);
+   d.put("garden_person_tail_verified_refreshes",gardenPersonTailVerifiedRefreshes);
+   d.put("garden_raw_motion_tail_ignored",gardenRawMotionTailIgnored);
+   d.put("garden_person_tail_requires_verified_person",true);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
+   d.put("garden_person_transport_track_resets",personTrackGate.transportInterrupted);
+   d.put("garden_person_stationary_tail_version",GardenPersonTrackGate.STATIONARY_HOLD_VERSION);
+   d.put("garden_person_stationary_tail_refreshes",personTrackGate.stationaryHolds);
+   d.put("garden_person_stationary_tail_rejected",personTrackGate.stationaryHoldRejected);
+   d.put("garden_unrelated_transport_vetoes_ignored",personTrackGate.unrelatedTransportIgnored);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
     d.put("garden_person_gate_last_anywhere_score",gardenPersonGateAnyScore);

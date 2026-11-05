@@ -128,6 +128,14 @@ public final class ClipClassifier {
  // Only on the serialized S9+ inference worker. Rebuilt from every preview
  // pass so a vehicle class may challenge a false "person" observation.
  private final ArrayList<Detection> lastGardenTransports=new ArrayList<>();
+ // Person candidates vetoed in this exact inference pass by transport.
+ // Defensive copies stop the next preview pass from changing this evidence.
+ private final ArrayList<float[]> lastGardenVetoedPersonBoxes=new ArrayList<>();
+ public synchronized float[][] lastGardenVetoedPersonBoxes(){
+  float[][] boxes=new float[lastGardenVetoedPersonBoxes.size()][];
+  for(int i=0;i<boxes.length;i++)boxes[i]=lastGardenVetoedPersonBoxes.get(i).clone();
+  return boxes;
+ }
  public int lastGardenInferencePasses(){return lastGardenInferencePasses;}
  public int lastGardenVehicleVetoes(){return lastGardenVehicleVetoes;}
  public long totalGardenVehicleVetoes(){return totalGardenVehicleVetoes;}
@@ -245,6 +253,7 @@ public final class ClipClassifier {
    float[] bestBox=null;
    lastPersonAnywhere=0f;
    lastGardenVehicleVetoes=0;
+   lastGardenVetoedPersonBoxes.clear();
    for(Detection detection:detectGardenPeopleMultiscale(bitmap)){
     if(!"person".equals(detection.label))continue;
     any=Math.max(any,detection.score);
@@ -265,7 +274,11 @@ public final class ClipClassifier {
       strongerTransport=true;break;
      }
     }
-    if(strongerTransport){lastGardenVehicleVetoes++;totalGardenVehicleVetoes++;continue;}
+    if(strongerTransport){
+     lastGardenVehicleVetoes++;totalGardenVehicleVetoes++;
+     if(lastGardenVetoedPersonBoxes.size()<30)lastGardenVetoedPersonBoxes.add(b.clone());
+     continue;
+    }
     if(GardenPersonTrackGate.valid(b)&&detection.score>highest){
      highest=detection.score;bestBox=b;
     }

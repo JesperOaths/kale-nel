@@ -8,7 +8,17 @@ ROOT=Path(__file__).resolve().parent
 JAVA=ROOT/"src/nl/kalenel/s9security"
 s=(JAVA/"CameraService.java").read_text()
 assert re.search(r'QUIET_MS\s*=\s*10000\s*,\s*MAX_MS\s*=\s*120000',s), "post motion must be 10s; capped 120s"
-assert "lastMovementAt=lastFrameAt;" in s, "accepted new motion must reset quiet tail"
+# Raw pixel motion may request a detector check but must never extend a clip.
+raw=s[s.index('if(change && lastFrameAt>=cameraControlSettleUntil)'):
+      s.index('if("recording".equals(mode)&&lastFrameAt-lastStart>2500)')]
+assert "lastMovementAt=lastFrameAt;" not in raw, "raw motion must not refresh 10-second tail"
+assert "eventChain.evidence(" not in raw, "raw motion must not arm continuation"
+assert 'boolean recordingCheck=recording&&temperature()<420&&' in raw
+confirmed=s[s.index('private void evaluateGardenPersonAsync('):
+            s.index('private boolean rateAllowed(')]
+assert 'personTrackGate.offer(now,jpegAt,score,personBox,localCells)' in confirmed
+assert 'gardenPersonTailVerifiedRefreshes++;' in confirmed
+assert 'eventChain.evidence(lastMovementAt);' in confirmed
 assert 'else if(lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end")' in s
 assert 'continuous4KStopReason=reason;' in s, "actual stop reason must be saved"
 assert 'SystemClock.elapsedRealtime(),lastClip,finishedReason)' in s, "actual reason must flow into continuity"

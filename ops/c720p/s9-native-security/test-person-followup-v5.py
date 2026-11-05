@@ -11,7 +11,12 @@ class FollowupTests(unittest.TestCase):
   cb=S.split("boolean change=motion.analyze(frame);",1)[1].split('}catch(Throwable error)',1)[0]
   self.assertIn("gardenPersonCandidateUntil=lastFrameAt+GARDEN_PERSON_CANDIDATE_MS",cb)
   self.assertIn('!"watching".equals(mode)',S)
-  self.assertIn('if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&',cb)
+  self.assertIn('if(!pilotOnly&&gardenGateReady&&lastFrameAt>=cameraControlSettleUntil)',cb)
+  self.assertIn('boolean eventFollowup=watching&&lastFrameAt<gardenPersonCandidateUntil',cb)
+  self.assertIn('boolean recordingCheck=recording&&temperature()<420&&',cb)
+  self.assertIn('lastFrameAt-gardenPersonGateLastAt>=2500L',cb)
+  self.assertNotIn('eventChain.evidence(lastFrameAt)',cb)
+  self.assertNotIn('lastMovementAt=lastFrameAt',cb)
   self.assertIn("lastFrameAt>=cameraControlSettleUntil",cb)
   self.assertIn("evaluateGardenPersonAsync(safeSentinel);",cb)
   self.assertNotIn("startRecording();",cb.split("if(change &&",1)[1])
@@ -19,11 +24,25 @@ class FollowupTests(unittest.TestCase):
   body=S.split("private void evaluateGardenPersonAsync(boolean sentinel){",1)[1].split("private boolean rateAllowed",1)[0]
   for required in ("now-gardenPersonGateLastAt<900","gardenPersonGateBusy","gardenGateExecutor.execute",
     "gardenGateClassifier.personEvidenceInGarden","gardenGateClassifier.lastPersonScoreAnywhere",
+    "gardenGateClassifier.lastGardenVetoedPersonBoxes()",
     "personTrackGate.offer(now,jpegAt,score,personBox,localCells)",
     "personTrackGate","gardenPersonCandidateUntil=0",
     "temperature()<420","folder.getUsableSpace()>15L*1024*1024*1024"):
    self.assertIn(required,body)
   self.assertLess(body.index("GardenPersonTrackGate.Decision.CONFIRMED"),body.index("startRecording()"))
+  self.assertIn("personTrackGate.rejectCompetingTransport(rejectedTransportBoxes)",body)
+  self.assertIn('personTrackGate.confirmStationaryPresence(now,jpegAt,score,personBox)',body)
+  self.assertIn('"recording".equals(mode)&&',body)
+  self.assertIn('if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED&&!stationaryPresent)return;',body)
+  self.assertLess(body.index('if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED&&!stationaryPresent)return;'),
+                  body.index('startRecording()'))
+  self.assertIn('d.put("garden_person_stationary_tail_refreshes",personTrackGate.stationaryHolds)',S)
+  self.assertIn('d.put("garden_person_stationary_tail_rejected",personTrackGate.stationaryHoldRejected)',S)
+  self.assertIn("garden_person_transport_track_resets",S)
+  self.assertIn("garden_unrelated_transport_vetoes_ignored",S)
+  self.assertIn("lastGardenVetoedPersonBoxes.clear();",M)
+  self.assertIn("lastGardenVetoedPersonBoxes.add(b.clone())",M)
+  self.assertIn("lastGardenVetoedPersonBoxes.get(i).clone()",M)
  def test_roi_multiscale_passes_and_diagnostics(self):
   body=M.split("public synchronized float personScoreInGarden",1)[1].split("private static String upperClothingColour",1)[0]
   self.assertEqual(body.count("for(Detection detection:detectGardenPeopleMultiscale(bitmap))"),1)
