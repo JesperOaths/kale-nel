@@ -99,7 +99,7 @@ def _clue(path_string,mtime_ns,cue_ms,duration_ms):
         return b''.join(chunks)
 
 def clue_data(track,cue_ms,duration_ms,root=LIBRARY_ROOT):
-    if duration_ms not in (500,1500,3000,5000,8000,12000,20000):raise ValueError('Invalid clue duration.')
+    if duration_ms not in (500,1000,1500,3000,5000,8000,12000,20000):raise ValueError('Invalid clue duration.')
     sha=track.get('sha256','')
     if not _SHA.fullmatch(sha):raise ValueError('Invalid permanent music identifier.')
     path=Path(root)/'tracks'/(sha+'.mp3')
@@ -154,3 +154,4 @@ def choose(pool,used,root=LIBRARY_ROOT):
     minimum=min(10000,max_cue//3)
     cue=minimum+secrets.randbelow(max(1,max_cue-minimum))
     return dict(song),cue
+

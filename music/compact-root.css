@@ -1,0 +1,25 @@
+/* The solo workspace owns the viewport; the outer page adds no duplicate chrome. */
+body.solo-mode-active{height:100dvh;overflow:hidden;background:#10130f}
+body.solo-mode-active>header,body.solo-mode-active>footer{display:none!important}
+body.solo-mode-active main.shell{width:100%;max-width:none;padding:0;margin:0;height:100dvh}
+body.solo-mode-active #solo-stage{display:block!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;height:100dvh}
+body.solo-mode-active #solo-stage .solo-stage-head{display:none!important}
+body.solo-mode-active #solo-frame{display:block;width:100%;height:100dvh!important;min-height:0!important;border:0;border-radius:0!important;background:#10130f}
+body:not(.solo-mode-active){background:#10130f;color:#f3f5eb}
+body:not(.solo-mode-active) .top{background:#10130f;border-bottom-color:#30372c;min-height:55px;padding-top:12px;padding-bottom:12px}
+body:not(.solo-mode-active) main.shell{max-width:1180px;padding-top:22px;padding-bottom:12px}
+body:not(.solo-mode-active) .hero{padding:18px 0 25px;min-height:0;gap:25px}
+body:not(.solo-mode-active) .hero h1{font-size:clamp(35px,4.2vw,58px);line-height:1.05;margin-top:14px;margin-bottom:14px}
+body:not(.solo-mode-active) .hero h1 em{color:#c6f56b}
+body:not(.solo-mode-active) .hero-copy>p{font-size:13px;line-height:1.6;max-width:570px;margin-bottom:12px}
+body:not(.solo-mode-active) .hero-art{max-height:215px;transform:scale(.85)}
+body:not(.solo-mode-active) .hero-facts{gap:15px;font-size:10px}
+body:not(.solo-mode-active) .eyebrow{font-size:9px;letter-spacing:1.6px;color:#a7b79a}
+body:not(.solo-mode-active) .panel{padding:22px;border-color:#30372c;background:#191e17;border-radius:14px}
+body:not(.solo-mode-active) .panel h2{font-size:23px;margin-top:8px;margin-bottom:10px}
+body:not(.solo-mode-active) .panel p{font-size:12px;line-height:1.5;margin-bottom:15px}
+body:not(.solo-mode-active) .welcome-grid{gap:16px;margin-top:5px}
+body:not(.solo-mode-active) .primary{background:#c6f56b;color:#16200d;border-color:#c6f56b;box-shadow:none!important}
+body:not(.solo-mode-active) .secondary{background:#27351e;border-color:#4a5d39;color:#e2f0d5}
+body:not(.solo-mode-active) .small-note{font-size:10px;color:#7f8c74;margin-top:15px}
+@media(min-width:861px) and (max-height:760px){body:not(.solo-mode-active) .hero{padding-top:5px;padding-bottom:15px}body:not(.solo-mode-active) .hero-art{max-height:160px;transform:scale(.65)}body:not(.solo-mode-active) .hero h1{font-size:44px}body:not(.solo-mode-active) .panel{padding:18px}body:not(.solo-mode-active) .hero-facts,body:not(.solo-mode-active) .small-note{display:none}}
