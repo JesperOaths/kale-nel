@@ -111,10 +111,19 @@ def select(genres,decades,limit,root=LIBRARY_ROOT):
     try:
         with sqlite3.connect(Path(root)/'library.sqlite3') as db:
             db.row_factory=sqlite3.Row
-            rows=db.execute('''SELECT c.spotify_uri AS catalog_id,c.title,c.artist,c.genres_json,
-                c.decades_json,c.rank,c.spotify_uri,c.sha256,r.extension
+            rows=db.execute('''SELECT * FROM (
+                SELECT c.spotify_uri AS catalog_id,c.title,c.artist,c.genres_json,
+                c.decades_json,c.rank,c.spotify_uri,c.sha256,r.extension,
+                c.playlist,c.position
                 FROM tunerush_playable_catalog c JOIN recordings r ON r.sha256=c.sha256
-                WHERE r.extension='.mp3' ORDER BY c.playlist,c.position,c.spotify_uri''').fetchall()
+                WHERE r.extension='.mp3'
+                UNION ALL
+                SELECT c.catalog_id AS catalog_id,c.title,c.artist,c.genres_json,
+                c.decades_json,c.rank,COALESCE(c.spotify_uri,c.catalog_id) AS spotify_uri,
+                c.sha256,r.extension,11 AS playlist,0 AS position
+                FROM catalog c JOIN recordings r ON r.sha256=c.sha256
+                WHERE c.catalog_id LIKE 'tunerush-extra:%' AND r.extension='.mp3'
+                ) ORDER BY playlist,position,catalog_id''').fetchall()
     except sqlite3.OperationalError as err:
         raise ValueError('No cached music has been imported on the S21 yet.') from err
     pool={}
