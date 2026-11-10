@@ -55,8 +55,8 @@ def validate(expansions=TRACKS, original=CATALOG):
             raise ValueError("Expansion year must be a four-digit release year")
         seen.add(k)
         collections[name].append(row)
-    if len(collections) != 5 or any(len(songs) != 30 for songs in collections.values()):
-        raise ValueError("Expected exactly five lists of 30 unique new songs")
+    if len(collections) != 5 or any(len(songs) != 50 for songs in collections.values()):
+        raise ValueError("Expected exactly five lists of 50 unique new songs")
     return dict(collections)
 
 
@@ -99,7 +99,7 @@ def owned_playlists(api, user_id):
 
 
 def run(*, execute=False, token=None, catalog=CATALOG, expansions=TRACKS,
-        state=STATE, max_search=150):
+        state=STATE, max_search=250):
     groups = validate(expansions, catalog)
     result = {"dryRun": not execute, "playlists": {name: {
         "curated": len(rows), "created": False, "matched": 0,
@@ -174,7 +174,7 @@ def run(*, execute=False, token=None, catalog=CATALOG, expansions=TRACKS,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--execute", action="store_true")
-    parser.add_argument("--max-search", type=int, default=150)
+    parser.add_argument("--max-search", type=int, default=250)
     options = parser.parse_args()
     print(json.dumps(run(execute=options.execute,
                          token=os.environ.get("TUNERUSH_SPOTIFY_ACCESS_TOKEN"),

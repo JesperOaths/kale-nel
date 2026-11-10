@@ -20,6 +20,10 @@ jobs:
         run: python3 music/solo-s21/test_permanent_audio.py
       - name: Test explicit legacy YouTube sessions
         run: python3 music/solo-s21/test_youtube.py
+      - name: Validate five 50-song expansion playlists (offline)
+        run: |
+          python3 music/solo-s21/sync_expansion_playlists.py
+          python3 music/solo-s21/register_expansion_catalog.py
       - name: Check server Python syntax
         run: python3 -m py_compile music/solo-s21/server.py
       - name: Build phone-only archive and verify page entry
