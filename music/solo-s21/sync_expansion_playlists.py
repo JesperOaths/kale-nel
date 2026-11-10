@@ -53,6 +53,8 @@ def validate(expansions=TRACKS, original=CATALOG):
             raise ValueError("Duplicate or missing expansion title: " + str(k))
         if not re.fullmatch(r"19\d{2}|20\d{2}", row.get("year", "")):
             raise ValueError("Expansion year must be a four-digit release year")
+        if int(row["year"]) < 1970:
+            raise ValueError("Expansion tracks must date from 1970 or later")
         seen.add(k)
         collections[name].append(row)
     if len(collections) != 5 or any(len(songs) != 50 for songs in collections.values()):
