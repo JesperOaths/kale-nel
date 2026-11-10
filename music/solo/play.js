@@ -37,20 +37,24 @@ function renderAttempts(){
   }list.append(item);
  }
  const b=s.roundPoints||{},ledger=$("round-ledger");ledger.replaceChildren();
+ if(s.rulesVersion!==2){ledger.append(ledgerRow("Scoring","Original rules"),ledgerRow("Game score",points(s.score)+" pts","total"));return;}
  ledger.append(ledgerRow("Title + artist",signed((b.title||0)+(b.artist||0)),"positive"),ledgerRow("First-fragment bonus",signed(b.bonus||0),b.bonus?"positive":""),ledgerRow("Clues / wrong entries","−"+points(b.hints||0)+" / −"+points(b.misses||0),"negative"),ledgerRow("This round",points(b.total||0)+" pts","total"));
 }
 function renderFinish(){
- const s=state,summary=s.summary||{};set("final-score",points(s.score));
- set("finished-summary",(summary.solved||0)+" fully solved · "+(summary.titles||0)+" titles · "+(summary.artists||0)+" artists · "+s.history.length+" tracks");
+ const s=state,summary=s.summary||{},modern=s.rulesVersion===2;set("final-score",points(s.score));
+ const titles=s.history.filter(row=>row.titleCorrect).length,artists=s.history.filter(row=>row.artistCorrect).length,solved=s.history.filter(row=>row.titleCorrect&&row.artistCorrect).length;
+ set("finished-summary",solved+" fully solved · "+titles+" title"+(titles===1?"":"s")+" · "+artists+" artist"+(artists===1?"":"s")+" · "+s.history.length+" tracks");
+ show("score-summary",modern);
  const tiles=$("score-summary");tiles.replaceChildren();
  for(const [name,value,detail,deduct] of [["Song titles",summary.title,"+5 for each title"],["Artists",summary.artist,"+5 for each artist"],["Speed bonuses",summary.bonus,"Title at 0.5 seconds"],["Extra clues",summary.hints,"−0.25 per step",true],["Wrong entries",summary.misses,"−0.25 per new entry",true]]){
   const tile=node("div","summary-tile"+(deduct?" deduction":""));tile.append(node("span","",name),node("b","",(deduct?"−":"+")+points(value)),node("small","",detail));tiles.append(tile);
  }
  const rows=$("finished-tracks");rows.replaceChildren();
  for(const round of s.history){
-  const row=node("tr"),track=node("td"),b=round.breakdown||{};track.append(node("span","track-name",round.title),node("span","track-artist",round.artist+" · "+(round.seconds||0)+"s · "+(round.attemptCount||0)+" guesses"));
-  row.append(node("td","",round.round),track,node("td",b.title?"positive":"",round.titleCorrect?"✓ +"+points(b.title):"—"),node("td",b.artist?"positive":"",round.artistCorrect?"✓ +"+points(b.artist):"—"),node("td",b.bonus?"positive":"",b.bonus?"+"+points(b.bonus):"—"),node("td","negative","−"+points(b.hints)),node("td","negative","−"+points(b.misses)),node("td","",points(b.total)));rows.append(row);
+  const row=node("tr"),track=node("td"),b=round.breakdown||{},detail=modern?(round.seconds||0)+"s · "+(round.attemptCount||0)+" guesses":round.clues+" fragments";track.append(node("span","track-name",round.title),node("span","track-artist",round.artist+" · "+detail));
+  row.append(node("td","",round.round),track,node("td",round.titleCorrect?"positive":"",round.titleCorrect?(modern?"✓ +"+points(b.title):"✓"):"—"),node("td",round.artistCorrect?"positive":"",round.artistCorrect?(modern?"✓ +"+points(b.artist):"✓"):"—"),node("td",b.bonus?"positive":"",b.bonus?"+"+points(b.bonus):"—"),node("td","negative",modern?"−"+points(b.hints):"—"),node("td","negative",modern?"−"+points(b.misses):"—"),node("td","",modern?points(b.total):"—"));rows.append(row);
  }
+ if(!modern){set("recap-note","Saved game · original scoring. This earlier game did not store a point breakdown. Your total is "+points(s.score)+" points.");return;}
  set("recap-note",summary.floor?"Zero-point floors restored "+points(summary.floor)+" points across rounds. Rewards − deductions + floor adjustments = "+points(s.score)+" points.":"Every point is accounted for. Title + artist + bonus − hints − misses = "+points(s.score)+" points.");
 }
 function render(){
@@ -61,18 +65,19 @@ function render(){
  const dots=$("round-dots");dots.replaceChildren();for(let i=1;i<=s.limit;i++)dots.append(node("i",i<s.round?"done":i===s.round?"current":""));
  set("phase-indicator",revealed?"TRACK REVEALED":"MYSTERY TRACK");set("stage-title",revealed?(s.titleDone&&s.artistDone?"You got it.":s.titleDone||s.artistDone?"Every part counts.":"One for next time."):"Trust your ears.");
  set("stage-sub",modern?"Title, artist, or both. Keep trying.":"Saved game · original scoring rules");
+ show("bonus-pill",modern);document.querySelector(".round-score").hidden=!modern;
  const bonus=$("bonus-pill"),earned=s.roundPoints?.bonus>0;bonus.className="bonus-pill"+(earned?" earned":s.step>0?" inactive":"");bonus.textContent=earned?"✓ +2 speed bonus":s.step>0?"Speed bonus ended":"0.5s title = +2 bonus";
  const sec=ds[Math.max(0,s.step)]/1000;window.TuneRushScope?.duration(sec,s.round,s.step);
  if(s.clipAudio&&s.step>=0)void window.TuneRushScope?.load(s.clipAudio,s.cueMs/1000,sec);
  set("clue-label",s.step<0?ds.length+" chances to hear more":"Fragment "+(s.step+1)+" / "+ds.length);
  const clues=$("clues");clues.replaceChildren();clues.style.gridTemplateColumns="repeat("+ds.length+",minmax(0,1fr))";
  ds.forEach((ms,i)=>{const replay=i===s.step&&s.phase==="playing",select=i>s.step&&!revealed;const button=node("button","clue"+(i<s.step?" past":"")+(i===s.step?" current":"")+(select?" selectable":""),ms/1000+"s");button.type="button";button.disabled=busy||!(replay||select);button.setAttribute("aria-label",(replay?"Replay ":"Play ")+ms/1000+"-second fragment");if(i===s.step)button.setAttribute("aria-current","step");button.addEventListener("click",()=>clip(replay,i));clues.append(button);});
- const advance=!revealed&&s.step<ds.length-1;$("play-button").disabled=busy||!advance;show("play-button",!revealed);set("play-button",s.step<0?"▶ Play 0.5 seconds":advance?"▶ Play "+ds[s.step+1]/1000+" seconds":"All fragments unlocked");
+ const advance=!revealed&&s.step<ds.length-1;$("play-button").disabled=busy||!advance;show("play-button",!revealed);set("play-button",s.step<0?"▶ Play 0.5 seconds":advance?"▶ Play "+ds[s.step+1]/1000+(ds[s.step+1]===1000?" second":" seconds"):"All fragments unlocked");
  $("replay-button").disabled=busy||s.phase!=="playing";show("replay-button",!revealed);
  for(const field of ["title","artist"]){
   const done=s[field+"Done"],input=$("guess-"+field);$(field+"-field").classList.toggle("field-correct",done);input.disabled=busy||done||!canGuess;
   if(done)input.value=s.solved?.[field]||"Correct answer";
-  set(field+"-state",done?"✓ +5 earned":"+5 points");
+  set(field+"-state",modern?(done?"✓ +5 earned":"+5 points"):(done?"✓ Correct":"Original rules"));
   $("solved-"+field+"-card").classList.toggle("correct",done);set("solved-"+field,done?(s.solved?.[field]||"Correct answer"):"Still a mystery");set("solved-"+field+"-icon",done?"✓":"○");
  }
  $("submit-button").disabled=busy||!canGuess;show("answer-form",!revealed);document.querySelector(".guess-heading").hidden=revealed;
@@ -133,7 +138,7 @@ $("reveal-button").addEventListener("click",async()=>{stop();await mutate("revea
 $("next-button").addEventListener("click",async()=>{stop();if(await mutate("next"))for(const field of ["title","artist"])$("guess-"+field).value="";});
 $("finish-button").addEventListener("click",async()=>{if(!confirm("Finish this game and see your score recap?"))return;stop();await mutate("finish");});
 $("new-game").addEventListener("click",()=>{stop();revision++;token="";state=null;attempts.clear();try{localStorage.removeItem("tunerush_s21_solo_v1");}catch{}render();updateAvailability();});
-$("copy-recap").addEventListener("click",async()=>{if(!state)return;const text=["TUNE RUSH · "+points(state.score)+" points",...state.history.map(row=>{const b=row.breakdown||{};return row.round+". "+row.artist+" — "+row.title+": title +"+points(b.title)+", artist +"+points(b.artist)+", bonus +"+points(b.bonus)+", hints −"+points(b.hints)+", misses −"+points(b.misses)+", zero-floor +"+points(b.floor)+" = "+points(b.total)+" pts";}),"https://kalenel.nl/music/?mode=solo"].join("\n");try{await navigator.clipboard.writeText(text);note("Score recap copied.");}catch{note("Clipboard unavailable. Your full recap is shown on screen.");}});
+$("copy-recap").addEventListener("click",async()=>{if(!state)return;const text=["TUNE RUSH · "+points(state.score)+" points",...state.history.map(row=>{const b=row.breakdown||{},prefix=row.round+". "+row.artist+" — "+row.title;if(state.rulesVersion!==2)return prefix+": title "+(row.titleCorrect?"correct":"missed")+", artist "+(row.artistCorrect?"correct":"missed")+" (original scoring)";return prefix+": title +"+points(b.title)+", artist +"+points(b.artist)+", bonus +"+points(b.bonus)+", hints −"+points(b.hints)+", misses −"+points(b.misses)+", zero-floor +"+points(b.floor)+" = "+points(b.total)+" pts";}),"https://kalenel.nl/music/?mode=solo"].join("\n");try{await navigator.clipboard.writeText(text);note("Score recap copied.");}catch{note("Clipboard unavailable. Your full recap is shown on screen.");}});
 $("rules-button").addEventListener("click",()=>$("rules-dialog").showModal());$("close-rules").addEventListener("click",()=>$("rules-dialog").close());
 for(const el of document.querySelectorAll('input[name="genre"],#era,#limit'))el.addEventListener("change",()=>{show("start-error",false);updateAvailability();});
 window.addEventListener("pagehide",stop);window.addEventListener("focus",()=>{if(!busy)void refresh();});
