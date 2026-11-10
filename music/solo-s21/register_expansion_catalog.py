@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register 150 expansion tracks as metadata on the S21 without touching MP3s.
+"""Register 250 expansion tracks as metadata on the S21 without touching MP3s.
 
 Entries become selectable only if a distinct, owner-supplied recording has
 been imported and exactly reconciled to the title/artist or Spotify track URI.
