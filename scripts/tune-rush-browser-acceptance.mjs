@@ -62,7 +62,36 @@ try{
  assert.equal(await host.locator('input[name="music-source"]').count(),0);
  for(const id of ["youtube-host","youtube-setup","local-settings","deezer-host","deezer-source-option","source-select"])
   assert.equal(await host.locator("#"+id).count(),0,"retired source still exposed: "+id);
- assert.ok(await host.locator(".hero-record").isVisible());
+ // Desktop home acceptance: all three entry paths must fit on one screen.
+ // Check the 1194 × 834 host context, never the two narrow phone contexts.
+ const homeViewport=await host.evaluate(()=>({
+  width:window.innerWidth,height:window.innerHeight,
+  scrollHeight:document.documentElement.scrollHeight,
+  bodyHeight:document.body.scrollHeight,
+  scrollWidth:document.documentElement.scrollWidth
+ }));
+ assert.ok(homeViewport.width>=861&&homeViewport.height===834,
+  "home layout assertions require the desktop-sized host viewport");
+ for(const [selector,label] of [
+  ["#solo-launch","Solo entry"],
+  ["#create","Create lobby"],
+  ["#join-code","Room code"],
+  ["#nickname","Nickname"],
+  ['#join-form button[type="submit"]',"Join game"]
+ ]){
+  const control=host.locator(selector);
+  assert.ok(await control.isVisible(),label+" is visible");
+  const rect=await control.boundingBox();
+  assert.ok(rect&&rect.width>0&&rect.height>0,label+" has measurable bounds");
+  assert.ok(rect.x>=-2&&rect.y>=-2&&
+   rect.x+rect.width<=homeViewport.width+2&&
+   rect.y+rect.height<=homeViewport.height+2,
+   label+" must fit inside the desktop viewport: "+JSON.stringify({rect,homeViewport}));
+ }
+ assert.ok(Math.max(homeViewport.scrollHeight,homeViewport.bodyHeight)<=homeViewport.height+2,
+  "desktop home must not scroll vertically: "+JSON.stringify(homeViewport));
+ assert.ok(homeViewport.scrollWidth<=homeViewport.width+2,
+  "desktop home must not overflow horizontally: "+JSON.stringify(homeViewport));
  await host.locator("#create").click();
  await host.waitForFunction(()=>room?.role==="host"&&room?.phase==="lobby",null,{timeout:17000});
  const code=await host.evaluate(()=>room.code);
