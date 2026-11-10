@@ -49,7 +49,7 @@ begin
  select coalesce(jsonb_agg(jsonb_build_object('id',id,'request',request_payload)),'[]'::jsonb)
  into v_claimed from claimed;
  return jsonb_build_object('jobs',v_claimed);
-end;$function$
+end;$function$;
 
 
 CREATE OR REPLACE FUNCTION public.tunerush_s21_complete_v1(p_worker_secret text, p_id uuid, p_result jsonb)
@@ -85,7 +85,7 @@ begin
  where id=p_id and status='claimed';
  get diagnostics v_count = row_count;
  return jsonb_build_object('ok',v_count=1);
-end;$function$
+end;$function$;
 
 
 CREATE OR REPLACE FUNCTION public.tunerush_s21_health_v1()
@@ -99,5 +99,5 @@ begin
  select max(seen_at) into v_seen from public.tunerush_s21_relay_workers where id in ('s21-solo','c720p-transport');
  return jsonb_build_object('online',v_seen is not null and v_seen>now()-interval '25 seconds',
                            'seen_at',v_seen,'transport','s21-rpc-v1');
-end;$function$
+end;$function$;
 
