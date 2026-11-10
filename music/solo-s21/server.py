@@ -13,6 +13,7 @@ from persistent_music_library import PersistentMusicLibrary
 from music_library_sync import sync_once as sync_permanent_music
 import permanent_audio
 import game_rules
+import album_art
 
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get("TUNERUSH_SOLO_DATA",str(Path.home()/".tunerush-solo")))
@@ -246,6 +247,9 @@ def view(s,include_audio=False):
   elif s.get("source")=="persistent-library":
    response["reveal"]["rank"]=s["track"]["rank"]
   else:response["reveal"]["plays"]=s["track"]["plays"]
+  if s.get("source")=="persistent-library":
+   cover=album_art.cover_for_revealed(s["track"],GAME_LIBRARY.root)
+   if cover:response["reveal"]["cover"]=cover
  else:
   if s.get("source")=="persistent-library":
    response["media"]="owned:"+s["ticket"]
