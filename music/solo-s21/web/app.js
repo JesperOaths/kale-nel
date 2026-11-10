@@ -122,7 +122,7 @@ async function refresh(){
   const h=await api("/api/health","GET",null,false);
   set("server-status",h.ready?"● S21 ONLINE":"S21 unavailable");
   if(token){
-   try{const s=await api("/api/state");state=s.state;render()}catch(e){
+   try{const s=await api("/api/state");state=s.state;if(state.clipAudio){currentClip=state.clipAudio;clipKey=state.round+":"+state.step}render()}catch(e){
     if(/expired/.test(e.message)){token="";localStorage.removeItem("tunerush_s21_solo_v1")}
     else note(e.message);
    }
@@ -194,7 +194,7 @@ async function mutate(op,other={}){
  if(busy||!state)return;
  busy=true;const startRound=state.round;
  try{
-  const actionId=crypto.randomUUID().replace(/-/g,"");
+  const actionId=Array.from(crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,"0")).join("");
   const result=await api("/api/action","POST",{op,round:startRound,actionId,...other});
   if(!state||state.round!==startRound)return;
   const incoming=result.state;
