@@ -47,7 +47,7 @@ used=[]
 for _ in range(6):
     song,cue=media.choose(pool,used,root);assert song['id'] not in used;used.append(song['id'])
     assert 10000<=cue<110000
-    for length in (500,1500,3000,5000,8000,12000,20000):
+    for length in (500,1000,1500,3000,5000,8000,12000,20000):
         uri=media.clue_data(song,cue,length,root)
         assert uri.startswith('data:audio/mpeg;base64,')
         data=base64.b64decode(uri.split(',',1)[1]);assert b'Private song' not in data and not data.startswith(b'ID3')
@@ -71,4 +71,34 @@ assert state['cueMs']==250 and state['clipAudio'].startswith('data:audio/mpeg;ba
 assert 'Private song' not in json.dumps(state)
 server.operation(session,{'op':'finish','round':1},token)
 assert {p.name:p.read_bytes() for p in lib.tracks.iterdir()}==hashes
-print('PASS permanent audio: genre/era filters, nonrepeating tracks, all seven bounded MP3 clues, no answer metadata, source default, permanent retention')
+created=server.new_session({'genres':['pop'],'decades':['1980'],'limit':5,'rulesVersion':2})
+token=created['token'];session=server.SESSIONS[token]
+assert created['state']['durations']==(500,1000,1500,3000,5000,8000,12000,20000)
+state=server.operation(session,{'op':'clue','round':1,'targetStep':0,'actionId':'1'*32},token)['state']
+assert state['step']==0 and state['clipAudio'].startswith('data:audio/mpeg;base64,')
+song=session['track']
+answer={'op':'answer','round':1,'artist':song['artist'],'title':'An entirely wrong title','actionId':'2'*32}
+state=server.operation(session,answer,token)['state']
+assert state['artistDone'] and not state['titleDone'] and state['score']==4.75
+assert state['solved']=={'title':'','artist':song['artist']}
+assert 'clipAudio' not in state
+assert len(json.dumps(state))<12000
+state=server.operation(session,answer,token)['state']
+assert state['score']==4.75 and state['attemptCount']==1
+state=server.operation(session,{'op':'answer','round':1,'title':song['title'],'actionId':'3'*32},token)['state']
+assert state['phase']=='revealed' and state['score']==11.75
+assert state['summary']['bonus']==2 and state['summary']['misses']==.25
+state=server.operation(session,{'op':'next','round':1,'actionId':'4'*32},token)['state']
+assert state['round']==2
+state=server.operation(session,{'op':'clue','round':2,'targetStep':1,'actionId':'5'*32},token)['state']
+assert state['durations'][state['step']]==1000
+state=server.operation(session,{'op':'answer','round':2,'artist':'Wrong artist','actionId':'6'*32},token)['state']
+assert state['phase']=='playing'
+state=server.operation(session,{'op':'answer','round':2,'artist':'Another wrong artist','actionId':'7'*32},token)['state']
+assert state['attemptCount']==2 and state['phase']=='playing'
+state=server.operation(session,{'op':'finish','round':2,'actionId':'8'*32},token)['state']
+assert state['phase']=='finished' and state['score']==11.75
+assert state['summary']['total']==state['score']
+assert {p.name:p.read_bytes() for p in lib.tracks.iterdir()}==hashes
+print('PASS permanent audio: all eight bounded MP3 clues; v2 partial points, retries, duplicate delivery, speed bonus, recap, privacy and unchanged music hashes')
+

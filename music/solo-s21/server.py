@@ -12,6 +12,7 @@ from game_audio_cache import GameAudioCache, MAX_TRACKS
 from persistent_music_library import PersistentMusicLibrary
 from music_library_sync import sync_once as sync_permanent_music
 import permanent_audio
+import game_rules
 
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get("TUNERUSH_SOLO_DATA",str(Path.home()/".tunerush-solo")))
@@ -21,7 +22,8 @@ POPULAR_MIN_PLAYS=50000
 HOST=os.environ.get("TUNERUSH_SOLO_BIND","::")
 PORT=int(os.environ.get("TUNERUSH_SOLO_PORT","8797"))
 API="https://api.audius.co/v1"
-DURATIONS=(500,1500,3000,5000,8000,12000,20000)
+LEGACY_DURATIONS=(500,1500,3000,5000,8000,12000,20000)
+DURATIONS=game_rules.DURATIONS
 GENRES={"pop":"Pop","rock":"Rock","hiphop":"Hip-Hop/Rap",
  "electronic":"Electronic","dance":"Electronic","disco":"Disco",
  "indie":"Alternative","rnb":"R&B/Soul","metal":"Metal"}
@@ -206,23 +208,33 @@ def choose(s):
   s["cueMs"]=min(last,max(0,int(song["duration"]*150))) # 15% into the track
  s["phase"]="ready";s["step"]=-1;s["guessedStep"]=-1
  s["titleDone"]=False;s["artistDone"]=False;s["last"]=None
+ if s.get("rulesVersion")==game_rules.VERSION:game_rules.start_round(s)
 
 def reveal(s):
  if s["phase"] in ("revealed","finished"):return
  s["phase"]="revealed"
  t=s["track"]
  if not any(h["round"]==s["round"] for h in s["history"]):
-  s["history"].append({"round":s["round"],"title":t["title"],"artist":t["artist"],
-   "clues":s["step"]+1,"titleCorrect":s["titleDone"],"artistCorrect":s["artistDone"]})
+  if s.get("rulesVersion")==game_rules.VERSION:s["history"].append(game_rules.round_recap(s))
+  else:s["history"].append({"round":s["round"],"title":t["title"],"artist":t["artist"],
+    "clues":s["step"]+1,"titleCorrect":s["titleDone"],"artistCorrect":s["artistDone"]})
 
-def view(s):
+def view(s,include_audio=False):
+ durations=DURATIONS if s.get("rulesVersion")==game_rules.VERSION else LEGACY_DURATIONS
  response={"version":1,"phase":s["phase"],"round":s["round"],"limit":s["limit"],
   "score":s["score"],"step":s["step"],"guessedStep":s["guessedStep"],
-  "durations":DURATIONS,"titleDone":s["titleDone"],"artistDone":s["artistDone"],
+  "durations":durations,"titleDone":s["titleDone"],"artistDone":s["artistDone"],
   "history":s["history"],"last":s["last"],"available":len(s["pool"]),
   "genres":s["genres"],"decades":s["decades"],
   "source":s.get("source","audius-legacy"),
   "minPlays":POPULAR_MIN_PLAYS if s.get("source") not in ("youtube","owned-library","persistent-library") else None}
+ if s.get("rulesVersion")==game_rules.VERSION:
+  response.update(game_rules.public_details(s))
+  if s["phase"]=="finished":response["attempts"]=[]
+  # Keep non-audio metadata inside the existing secure relay's 12 KiB limit.
+  # The complete private transcript remains in the phone's saved session.
+  while response["attempts"] and len(json.dumps(response,ensure_ascii=False))>11000:
+   response["attempts"].pop(0)
  if s["phase"] in ("revealed","finished"):
   response["reveal"]={"title":s["track"]["title"],"artist":s["track"]["artist"]}
   if s.get("source")=="youtube":
@@ -238,7 +250,7 @@ def view(s):
   if s.get("source")=="persistent-library":
    response["media"]="owned:"+s["ticket"]
    if s["phase"]=="playing" and s["step"]>=0:
-    response["clipAudio"]=permanent_audio.clue_data(s["track"],s["cueMs"],DURATIONS[s["step"]],GAME_LIBRARY.root)
+    if include_audio:response["clipAudio"]=permanent_audio.clue_data(s["track"],s["cueMs"],durations[s["step"]],GAME_LIBRARY.root)
     response["cueMs"]=250
    else:
     response["cueMs"]=0
@@ -262,6 +274,8 @@ def new_session(data):
  if type(limit)!=int or limit not in (5,10,20):
   raise ValueError("Choose 5, 10 or 20 songs.")
  source=data.get("source","persistent-library")
+ rules_version=data.get("rulesVersion",1)
+ if type(rules_version)!=int or rules_version not in (1,game_rules.VERSION):raise ValueError("Unsupported game rules.")
  if source=="persistent-library":
   pool=permanent_audio.select(genres,decades,limit,GAME_LIBRARY.root)
  elif source=="youtube":
@@ -290,7 +304,7 @@ def new_session(data):
   if len(SESSIONS)>=16:raise ValueError("S21 already has sixteen active sessions. Finish or resume an existing game.")
   token=secrets.token_hex(32)
   s={"genres":genres,"decades":decades,"limit":limit,"pool":pool,
-     "source":source,"catalogVersion":5 if source=="persistent-library" else 4 if source=="youtube" else 3 if source=="owned-library" else 2,
+     "source":source,"rulesVersion":rules_version,"catalogVersion":5 if source=="persistent-library" else 4 if source=="youtube" else 3 if source=="owned-library" else 2,
      "round":1,"score":0.0,"used":[],"history":[],"updated":time.time()}
   choose(s)
   # One GiB shared, at most ten recyclable slots even in a 20-round game.
@@ -300,10 +314,24 @@ def new_session(data):
   return {"token":token,"state":view(s)}
 
 def operation(s,data,token=None):
+ action_id=data.get("actionId")
+ if action_id is not None:
+  if not isinstance(action_id,str) or not re.fullmatch("[a-f0-9]{32}",action_id):raise ValueError("Invalid action identifier.")
+  if action_id in s.get("recentActionIds",[]):return {"state":view(s,data.get("op")=="clue")}
+ result=_operation(s,data,token)
+ if action_id is not None:s["recentActionIds"]=(s.get("recentActionIds",[])+[action_id])[-64:]
+ return result
+
+def _operation(s,data,token=None):
  op=data.get("op")
  if type(data.get("round"))!=int or data["round"]!=s["round"]:
   raise ValueError("Stale round: refresh your game.")
  phase=s["phase"]
+ if s.get("rulesVersion")==game_rules.VERSION and op in ("clue","answer"):
+  game_rules.apply(s,data,matches,permanent_audio.title_answers,norm)
+  if s["titleDone"] and s["artistDone"]:reveal(s)
+  s["updated"]=time.time()
+  return {"state":view(s,op=="clue")}
  if op=="clue":
   if phase not in ("ready","playing") or s["step"]>=6:
    raise ValueError("No clues remain; reveal the song.")
@@ -311,7 +339,7 @@ def operation(s,data,token=None):
   # submitting a guess. Moving forward forfeits the unused guess for
   # earlier durations, but never changes the score or exposes the answer.
   target=data.get("targetStep",s["step"]+1)
-  if type(target)!=int or not s["step"]<target<len(DURATIONS):
+  if type(target)!=int or not s["step"]<target<len(LEGACY_DURATIONS):
    raise ValueError("Choose a clue that is longer than the current one.")
   s["step"]=target;s["phase"]="playing";s["last"]=None
  elif op=="answer":
@@ -359,7 +387,7 @@ def operation(s,data,token=None):
    GAME_CACHE.delete(token)
   else:
    GAME_CACHE.touch(token)
- return {"state":view(s)}
+ return {"state":view(s,op=="clue")}
 
 def check_token(headers):
  header=headers.get("Authorization","")
@@ -427,13 +455,13 @@ class Handler(BaseHTTPRequestHandler):
   if not self.allowed():return self.json_out(403,{"error":"Local Wi-Fi only."})
   p=urlsplit(self.path).path
   if p=="/api/health":
-   return self.json_out(200,{"service":"tunerush-s21-solo","ready":True,"version":1})
+   return self.json_out(200,{"service":"tunerush-s21-solo","ready":True,"version":2,"rulesVersion":game_rules.VERSION,"durations":DURATIONS})
   if p=="/api/music-library/health":
    # Read-only counts; no file paths, credentials or audio.
    return self.json_out(200,{"library":{**GAME_LIBRARY.stats(),**permanent_audio.availability(GAME_LIBRARY.root)}})
   if p=="/api/state":
    s=check_token(self.headers)
-   return self.json_out(200,{"state":view(s)}) if s else self.json_out(401,{"error":"Game session expired."})
+   return self.json_out(200,{"state":view(s,True)}) if s else self.json_out(401,{"error":"Game session expired."})
   if p.startswith("/api/audio/"):
    if os.environ.get("TUNERUSH_ALLOW_AUDIUS_TESTS")!="1":
     return self.json_out(410,{"error":"Audius streaming is retired."})
@@ -520,5 +548,6 @@ def serve(host=HOST,port=PORT):
 
 if __name__=="__main__":
  serve()
+
 
 

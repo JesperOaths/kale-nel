@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');
+const {tuneRushEnvelope}=require('./waveform.js');
+const first=tuneRushEnvelope([Float32Array.from([0,0,.5,-.75,0,0,1,-1])],0,8,4);
+assert.deepEqual([...first],[0,.75,0,1]);
+const second=tuneRushEnvelope([Float32Array.from([1,-1,0,0,.25,-.25,0,0])],0,8,4);
+assert.notDeepEqual([...first],[...second]);
+assert.deepEqual([...tuneRushEnvelope([new Float32Array(8)],0,8,4)],[0,0,0,0]);
+assert.deepEqual([...tuneRushEnvelope([Float32Array.from([1,1,0,0,.3,-.3,1,1])],2,6,2)].map(x=>Math.round(x*10)/10),[0,.3]);
+assert.deepEqual([...tuneRushEnvelope([new Float32Array(4),Float32Array.from([0,.5,0,1])],0,4,2)],[.5,1]);
+console.log('PASS actual-signal envelope: peaks, distinct recordings, silence, cue boundaries and stereo');
