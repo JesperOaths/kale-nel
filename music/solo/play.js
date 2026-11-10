@@ -57,6 +57,32 @@ function renderFinish(){
  if(!modern){set("recap-note","Saved game · original scoring. This earlier game did not store a point breakdown. Your total is "+points(s.score)+" points.");return;}
  set("recap-note",summary.floor?"Zero-point floors restored "+points(summary.floor)+" points across rounds. Rewards − deductions + floor adjustments = "+points(s.score)+" points.":"Every point is accounted for. Title + artist + bonus − hints − misses = "+points(s.score)+" points.");
 }
+function renderRevealArtwork(s,revealed){
+ const layer=$("album-overlay"),img=$("album-cover");
+ const src=revealed?s.reveal?.cover?.url:null;
+ let accepted=false;
+ if(src){try{
+  const url=new URL(src);
+  accepted=url.protocol==="https:"&&["i.scdn.co","image-cdn-fa.spotifycdn.com",
+   "image-cdn.spotifycdn.com","cdn-images.dzcdn.net"].includes(url.hostname);
+ }catch{}}
+ if(!accepted){layer.hidden=true;img.removeAttribute("src");return;}
+ if(img.getAttribute("src")!==src)img.setAttribute("src",src);
+ img.alt="Album artwork for "+s.reveal.title+" by "+s.reveal.artist;
+ img.onerror=()=>{layer.hidden=true;};
+ layer.hidden=false;
+}
+function renderRevealPoints(s){
+ const b=s.roundPoints||s.history.find(row=>row.round===s.round)?.breakdown||{};
+ set("reveal-round-score","+"+points(b.total||0));
+ set("reveal-total-score",points(s.score));
+ const deductions=(b.hints||0)+(b.misses||0);
+ set("reveal-breakdown","Title +"+points(b.title||0)+
+  " · Artist +"+points(b.artist||0)+
+  " · Speed +"+points(b.bonus||0)+
+  " · Penalties −"+points(deductions)+
+  (b.floor?" · Floor +"+points(b.floor):""));
+}
 function render(){
  show("welcome",!state);show("game",!!state&&state.phase!=="finished");show("finished",state?.phase==="finished");if(!state)return;
  const s=state,revealed=["revealed","finished"].includes(s.phase),modern=s.rulesVersion===2,ds=durations();
@@ -82,7 +108,8 @@ function render(){
  }
  $("submit-button").disabled=busy||!canGuess;show("answer-form",!revealed);document.querySelector(".guess-heading").hidden=revealed;
  show("reveal-button",!revealed);$("reveal-button").disabled=busy;show("reveal-card",revealed);
- if(revealed){set("revealed-title",s.reveal?.title);set("revealed-artist",s.reveal?.artist);set("next-button",s.round>=s.limit?"See your recap →":"Next song →");$("next-button").disabled=busy;}
+ if(revealed){set("revealed-title",s.reveal?.title);set("revealed-artist",s.reveal?.artist);set("next-button",s.round>=s.limit?"See your recap →":"Next song →");$("next-button").disabled=busy;renderRevealPoints(s);}
+ renderRevealArtwork(s,revealed);
  const feedback=$("feedback");feedback.className="";
  if(s.last){const names={correct:"correct",incorrect:"not quite","already-correct":"already solved","not-entered":"not entered",duplicate:"already checked"};set("feedback","Title: "+(names[s.last.title]||"—")+" · Artist: "+(names[s.last.artist]||"—")+" · "+signed(s.last.delta)+" pts");feedback.classList.toggle("success",s.last.delta>0);}
  else set("feedback",s.step<0?"Play a fragment, then make your first guess.":modern?"You can try again on this fragment, or hear a little more.":"Make your guess.");
