@@ -1,0 +1,23 @@
+[Unit]
+Description=Outbound Tune Rush transport to the S21 game engine
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/tunerush-relay/hub_relay.py %h/.config/tunerush-relay/config.json
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/state/tunerush-relay
+MemoryMax=64M
+TasksMax=8
+Nice=10
+
+[Install]
+WantedBy=default.target
