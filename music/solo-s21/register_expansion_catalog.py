@@ -12,7 +12,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from persistent_music_library import PersistentMusicLibrary
+from persistent_music_library import PersistentMusicLibrary, _normalize
 from sync_expansion_playlists import TRACKS, STATE, validate, canonical
 
 GENRE_MAP = {
@@ -37,6 +37,14 @@ def register(library=None, *, csv_file=TRACKS, state_file=STATE):
     count = 0
     with lib._locked():
         with lib._db() as db:
+            # Index existing recordings once; leave all original catalog rows alone.
+            by_uri, by_title = {}, {}
+            for item in db.execute("SELECT sha256,title,artist,spotify_uri FROM recordings"):
+                sha, title, artist, existing_uri = item
+                if existing_uri:
+                    by_uri.setdefault(existing_uri, set()).add(sha)
+                if title and artist:
+                    by_title.setdefault((_normalize(artist), _normalize(title)), set()).add(sha)
             for position, (playlist, rows) in enumerate(playlists.items()):
                 for rank, row in enumerate(rows):
                     unique = canonical(row)
@@ -57,8 +65,13 @@ def register(library=None, *, csv_file=TRACKS, state_file=STATE):
                         (catalog_id, row["title"], row["artist"],
                          json.dumps(genres), json.dumps([decade]),
                          5000-position*50-rank, uri))
+                    candidates = by_uri.get(uri, set()) if uri else set()
+                    if len(candidates) != 1:
+                        candidates = by_title.get((_normalize(row["artist"]), _normalize(row["title"])), set())
+                    verified_sha = next(iter(candidates)) if len(candidates) == 1 else None
+                    db.execute("UPDATE catalog SET sha256=? WHERE catalog_id=?",
+                               (verified_sha, catalog_id))
                     count += 1
-            lib._reconcile(db)
             matched = db.execute("""SELECT COUNT(*) FROM catalog
                        WHERE catalog_id LIKE 'tunerush-extra:%'
                          AND sha256 IS NOT NULL""").fetchone()[0]
