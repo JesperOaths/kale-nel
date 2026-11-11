@@ -50,3 +50,34 @@ body:not(.solo-mode-active) #join-form button{grid-column:1 / 3;margin-top:4px}
 body:not(.solo-mode-active) .welcome>.small-note{margin:14px 0 0}
 body:not(.solo-mode-active):has(#welcome:not([hidden]))>.foot{padding:10px;flex:none}
 }
+
+
+/* v819: comfortable reading size for lobby, multiplayer and results. */
+body:not(.solo-mode-active){font-size:16px}
+body:not(.solo-mode-active) main.shell{width:min(1480px,calc(100% - 40px));max-width:1480px}
+body:not(.solo-mode-active) .hero h1{font-size:clamp(42px,4.5vw,65px)}
+body:not(.solo-mode-active) .hero-copy>p,
+body:not(.solo-mode-active) .hero-copy>p:not(.solo-entry){font-size:16px;line-height:1.5}
+body:not(.solo-mode-active) .eyebrow{font-size:12px;letter-spacing:1.25px}
+body:not(.solo-mode-active) .panel h2{font-size:clamp(24px,2.5vw,31px)}
+body:not(.solo-mode-active) .panel p{font-size:15px;line-height:1.55}
+body:not(.solo-mode-active) .small-note,
+body:not(.solo-mode-active) .hero-facts{font-size:12px}
+body:not(.solo-mode-active) .welcome-grid .panel button{font-size:15px;min-height:46px}
+body:not(.solo-mode-active) #join-form label{font-size:13px}
+body:not(.solo-mode-active) #join-form input{font-size:16px;min-height:46px}
+body:not(.solo-mode-active) .solo-entry .primary{font-size:16px;padding:18px}
+body:not(.solo-mode-active) .host-mixer-head strong{font-size:15px}
+body:not(.solo-mode-active) .host-mixer-head small,
+body:not(.solo-mode-active) .host-mixer-foot{font-size:12px}
+body:not(.solo-mode-active) .host-mixer-slider-label{font-size:13px}
+@media(min-width:861px){
+ body:not(.solo-mode-active) .hero-copy{grid-template-columns:minmax(0,1fr) 320px}
+ body:not(.solo-mode-active):has(#welcome:not([hidden])){height:auto;min-height:100dvh;overflow:auto}
+ body:not(.solo-mode-active):has(#welcome:not([hidden])) main.shell{flex:1;align-items:center}
+}
+@media(max-width:860px){
+ body:not(.solo-mode-active) main.shell{width:min(100% - 24px,900px)}
+ body:not(.solo-mode-active) .hero h1{font-size:clamp(37px,7vw,54px)}
+ body:not(.solo-mode-active) .panel p{font-size:14px}
+}

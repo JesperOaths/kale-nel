@@ -3,6 +3,53 @@ const $=id=>document.getElementById(id),audio=$("music");
 let token="",state=null,busy=false,playEpoch=0,revision=0,availability=null,attemptRound="",attempts=new Map();
 try{token=localStorage.getItem("tunerush_s21_solo_v1")||"";}catch{}
 const set=(id,value)=>{$(id).textContent=String(value??"")},show=(id,visible)=>{$(id).hidden=!visible};
+
+// Solo and multiplayer share one browser-only output preference. This never
+// changes the phone's permanent files, the game scoring, or system volume.
+const SOLO_OUTPUT_STORE="tune-rush-host-output-v1";
+let soloVolume=100,soloMuted=false;
+function readSoloOutput(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(SOLO_OUTPUT_STORE)||"null");
+  if(saved&&Number.isInteger(saved.level)&&saved.level>=0&&saved.level<=100&&typeof saved.muted==="boolean"){
+   soloVolume=saved.level;soloMuted=saved.muted;
+  }
+ }catch{}
+}
+function applySoloOutput(){
+ audio.volume=soloVolume/100;
+ audio.muted=soloMuted;
+ const slider=$("solo-volume"),mute=$("solo-mute");
+ slider.value=String(soloVolume);
+ slider.style.setProperty("--level",soloVolume+"%");
+ slider.setAttribute("aria-valuetext",(soloMuted?"Muted, ":"")+soloVolume+" percent");
+ $("solo-volume-value").textContent=soloMuted?"Muted":soloVolume+"%";
+ mute.textContent=(soloMuted||soloVolume===0)?"🔇":"🔊";
+ mute.setAttribute("aria-pressed",String(soloMuted));
+ mute.setAttribute("aria-label",soloMuted?"Unmute music":"Mute music");
+ mute.title=soloMuted?"Unmute music":"Mute music";
+}
+function saveSoloOutput(){
+ try{localStorage.setItem(SOLO_OUTPUT_STORE,JSON.stringify({level:soloVolume,muted:soloMuted}));}catch{}
+}
+function initSoloOutput(){
+ readSoloOutput();applySoloOutput();
+ $("solo-volume").addEventListener("input",event=>{
+  const value=Number(event.currentTarget.value);
+  if(!Number.isInteger(value)||value<0||value>100)return;
+  soloVolume=value;if(value>0)soloMuted=false;
+  applySoloOutput();saveSoloOutput();
+ });
+ $("solo-mute").addEventListener("click",()=>{
+  soloMuted=!soloMuted;
+  if(!soloMuted&&soloVolume===0)soloVolume=50;
+  applySoloOutput();saveSoloOutput();
+ });
+ window.addEventListener("storage",event=>{
+  if(event.key===SOLO_OUTPUT_STORE){readSoloOutput();applySoloOutput();}
+ });
+}
+
 const points=value=>Number(value||0).toFixed(2).replace(/\.?0+$/,"")||"0";
 const signed=value=>(value>0?"+":"")+points(value);
 const durations=()=>state?.durations||[500,1000,1500,3000,5000,8000,12000,20000];
@@ -171,4 +218,4 @@ for(const el of document.querySelectorAll('input[name="genre"],#era,#limit'))el.
 window.addEventListener("pagehide",stop);window.addEventListener("focus",()=>{if(!busy)void refresh();});
 window.addEventListener("message",event=>{if(event.origin===location.origin&&event.data?.type==="tunerush-solo-pause")stop();});
 try{availability=JSON.parse($("cached-library-availability-data").textContent).songs;}catch{}
-render();updateAvailability();void refresh();
+initSoloOutput();render();updateAvailability();void refresh();

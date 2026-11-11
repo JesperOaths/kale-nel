@@ -26,3 +26,112 @@
 .reveal-card #next-button{white-space:nowrap;flex:none}
 @media(max-width:1000px){.reveal-card{grid-template-columns:minmax(0,1fr) auto}.reveal-points{grid-column:1/-1;grid-row:2}.reveal-card #next-button{grid-column:2;grid-row:1}}
 @media(max-width:620px){.reveal-card{grid-template-columns:1fr 1fr}.reveal-identity{grid-column:1/-1}.reveal-points{grid-column:1/-1;grid-row:2}.reveal-card #next-button{grid-column:1/-1;grid-row:3;width:100%}}
+
+
+/* v819: readable, screen-filling Solo at normal browser zoom. */
+.app-header{min-height:68px;height:68px;padding-inline:clamp(18px,2.3vw,38px)}
+.app-main{width:min(1620px,100%);padding:18px clamp(16px,2.3vw,38px) 14px}
+.brand{font-size:19px}.brand small{font-size:11px}
+.header-actions{gap:15px}.header-actions .quiet{font-size:13px}
+.connection{font-size:12px}.app-footer{font-size:11px}
+.solo-mixer{display:flex;align-items:center;gap:9px;border:1px solid #455a37;background:#1c2918;border-radius:11px;padding:7px 10px;min-width:225px}
+.solo-mixer label{font-size:12px;font-weight:700;color:#dce9d0}
+.solo-mixer input[type="range"]{width:105px;min-width:55px;flex:1;accent-color:var(--lime);height:26px;cursor:pointer;touch-action:pan-x}
+.solo-mixer output{font-size:12px;font-variant-numeric:tabular-nums;min-width:40px;text-align:right;color:var(--lime);font-weight:700}
+.solo-mute{flex:none;background:transparent;border:0;color:var(--lime);font-size:18px;line-height:1;padding:4px;border-radius:7px;min-width:29px;min-height:30px}
+.solo-mute:hover{background:#33462a}.solo-mute:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.primary,.secondary{font-size:14px;min-height:43px}
+.quiet{font-size:12px}
+.eyebrow{font-size:11px;letter-spacing:1.35px}
+h2{font-size:22px}
+.setup-screen{max-width:1340px;gap:5%}
+.intro-copy{font-size:17px;line-height:1.5}
+.intro-facts span,.intro-note{font-size:13px}
+.setup-card legend{font-size:15px}.setup-card legend span{font-size:12px}
+.genre-chips span{font-size:13px;padding:11px 14px}
+.setup-options label{font-size:13px}
+.setup-options select{font-size:14px;min-height:44px}
+.availability,.error{font-size:12px}
+.setup-card .start-button{font-size:15px;min-height:49px}
+.game-screen{gap:12px}
+.session-round strong{font-size:22px}
+.session-score span,.session-score small{font-size:12px}
+.session-score strong{font-size:31px}
+.round-dots i{width:8px;height:8px}
+.player-heading h1{font-size:clamp(28px,2.35vw,36px)}
+.bonus-pill{font-size:11px;padding:8px 10px}
+.clue-heading,.clue-heading span:last-child{font-size:11px}
+.clue{font-size:13px;min-height:44px;padding:10px 3px}
+.play-controls .primary,.play-controls .secondary{font-size:14px;min-height:43px}
+.playback-status,.waveform-message,.waveform-meta,.waveform-meta b{font-size:12px}
+.guess-heading h2{font-size:19px}.guess-heading span{font-size:12px}
+.answer-form label{font-size:13px}.answer-form label>span{font-size:11px}
+.answer-form input{font-size:15px;min-height:45px}
+.guess-footer p,.guess-footer .quiet{font-size:12px}
+.reveal-card .eyebrow,.reveal-card p,.reveal-points p{font-size:11px}
+.reveal-card h2{font-size:21px}.reveal-points small{font-size:10px}
+.attempts-heading h2{font-size:19px}
+.attempts-heading .eyebrow{font-size:10px}
+.round-score small{font-size:12px}
+.solved-card>span,.guess-kind,.attempt-meta,.attempt-list-heading{font-size:11px}
+.solved-card>strong,.empty-attempts,.attempt-guess{font-size:13px}
+.round-ledger,.round-ledger .total{font-size:12px}
+.finish-heading h1{font-size:clamp(36px,3.5vw,49px)}
+.finish-heading p:not(.eyebrow){font-size:14px}
+.final-score span,.summary-tile>span,.summary-tile small,.recap-note{font-size:11px}
+.summary-tile>b{font-size:29px}
+.recap-table{font-size:13px}.recap-table th{font-size:11px}
+.recap-table td:first-child,.track-artist{font-size:12px}
+dialog dl{font-size:14px}dialog p{font-size:13px}
+@media(min-width:861px){
+ .workspace{grid-template-columns:minmax(0,1fr) clamp(315px,25vw,370px);gap:18px}
+ .player{padding:22px 24px}
+ .attempts-panel{padding:21px}
+ .audio-scope{min-height:116px}
+ .setup-card{padding:27px}
+}
+@media(min-width:861px) and (max-height:760px){
+ .app-header{height:60px;min-height:60px}
+ .app-main{padding-top:12px;padding-bottom:9px}
+ .player{padding:17px 21px}
+ .audio-scope{min-height:88px;margin:10px 0 12px}
+ .clue{min-height:39px;padding:8px 3px}
+ .attempts-panel{padding:17px}
+ .setup-card{padding:22px}
+}
+@media(max-width:860px){
+ .app-header{height:auto;min-height:58px;flex-wrap:wrap;gap:7px;padding:10px 16px}
+ .header-actions{flex:1 1 auto;justify-content:flex-end;gap:11px}
+ .solo-mixer{min-width:192px}
+ .solo-mixer input[type="range"]{width:85px}
+ .app-main{width:100%;padding:18px 16px}
+ .setup-screen{gap:25px}
+ .workspace{grid-template-columns:minmax(0,1fr) 265px;gap:12px}
+ .attempts-panel{max-height:480px}
+ .audio-scope{min-height:110px}
+}
+@media(max-width:700px){
+ .app-header{align-items:center}
+ .header-actions{flex-basis:100%;justify-content:space-between;flex-wrap:wrap}
+ .solo-mixer{flex:1;min-width:175px;max-width:340px}
+ .app-main{padding-top:14px}
+ .setup-screen{display:block;max-width:540px}
+ .intro{padding-bottom:20px}
+ .workspace{display:flex;flex-direction:column}
+ .attempts-panel{max-height:none;height:320px;flex:none}
+ .player{min-height:480px}
+ .score-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .summary-tile:last-child{grid-column:1/-1}
+ .recap-table{font-size:12px}
+}
+@media(max-width:430px){
+ .solo-mixer{order:3;flex:1 1 100%;max-width:none}
+ .header-actions{gap:8px}
+ .header-actions .quiet{font-size:12px}
+ .intro h1{font-size:clamp(44px,13vw,57px)}
+ .session-score strong{font-size:25px}
+ .player{padding:16px;min-height:470px}
+ .play-controls{flex-wrap:wrap}
+ .playback-status{display:block;width:100%}
+ .clue{font-size:11px;padding:8px 1px}
+}
