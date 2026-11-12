@@ -1474,7 +1474,7 @@ function closeTabletTestPanel(discard=false){
  toggle.textContent="Test: tablet + phone";
  if(discard){
   const frame=$("tablet-test-frame");
-  if(frame.getAttribute("src"))frame.setAttribute("src","about:blank");
+  if(frame.getAttribute?.("src"))frame.setAttribute?.("src","about:blank");
   tabletTestCode="";
  }
 }
