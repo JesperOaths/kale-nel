@@ -9,7 +9,14 @@ async function capabilityHash(token){
  const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token));
  return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join("");
 }
-const STORE="kalenel_tunerush_room_v001";
+// Opt-in embedded tablet player keeps its own session capability, never the host token.
+const TABLET_TEST_GUEST=window.self!==window.top&&
+ new URLSearchParams(location.search).get("tabletPlayer")==="1";
+const TABLET_TEST_ROOM=new URLSearchParams(location.search).get("room")||"";
+const STORE=TABLET_TEST_GUEST
+ ?"kalenel_tunerush_tablet_test_"+TABLET_TEST_ROOM.toUpperCase()
+ :"kalenel_tunerush_room_v001";
+const ACCESS_STORAGE=TABLET_TEST_GUEST?sessionStorage:localStorage;
 const $=id=>document.getElementById(id);
 const playerAudio=$("licensed-player");
 const auditionAudio=$("audition-audio");
@@ -341,7 +348,7 @@ function setLoading(value){
  updateAuditionControls();
  $("room").setAttribute("aria-busy",String(busy));
 }
-function safeStore(){try{if(access)localStorage.setItem(STORE,JSON.stringify(access));else localStorage.removeItem(STORE)}catch{}}
+function safeStore(){try{if(access)ACCESS_STORAGE.setItem(STORE,JSON.stringify(access));else ACCESS_STORAGE.removeItem(STORE)}catch{}}
 async function rpc(action,extra={},attempt=0) {
  if(action!=="state")mutationVersion++;
  const creating=action==="create",joining=action==="join";
@@ -1244,11 +1251,12 @@ function renderAnswerReceipt(){
  setText("answer-receipt-note",receipt.note);
 }
 function render(){
- if(!room){show("welcome",true);show("room",false);show("party-setlist",false);$("room").classList.remove("host-mode");return;}
+ if(!room){syncTabletTestPanel();show("welcome",true);show("room",false);show("party-setlist",false);$("room").classList.remove("host-mode");return;}
  show("welcome",false);show("room",true);
  const host=isHost(),phase=room.phase,playing=phase!=="lobby";
  $("room").classList.toggle("host-mode",host);
  $("room").dataset.phase=phase;
+ syncTabletTestPanel();
  show("host-fullscreen",host);
  if(host){
   const filters=[
@@ -1452,6 +1460,45 @@ async function refresh(force=false){
  }
  finally{pollBusy=false}
 }
+
+// The test participant uses the ordinary server join/buzz/answer/score paths.
+// Neither opening nor closing this panel changes the real host capability.
+let tabletTestCode="";
+function closeTabletTestPanel(discard=false){
+ const panel=$("tablet-test-panel"),toggle=$("tablet-test-toggle");
+ panel.hidden=true;
+ toggle.setAttribute("aria-expanded","false");
+ toggle.textContent="Test: tablet + phone";
+ if(discard){
+  const frame=$("tablet-test-frame");
+  if(frame.getAttribute("src"))frame.setAttribute("src","about:blank");
+  tabletTestCode="";
+ }
+}
+function syncTabletTestPanel(){
+ const host=!!room&&isHost()&&!TABLET_TEST_GUEST;
+ $("tablet-test-toggle").hidden=!host;
+ if(!host||(tabletTestCode&&tabletTestCode!==room.code))
+  closeTabletTestPanel(true);
+}
+function toggleTabletTestPanel(){
+ if(!room||!isHost()||TABLET_TEST_GUEST)return;
+ const panel=$("tablet-test-panel"),toggle=$("tablet-test-toggle");
+ if(!panel.hidden){closeTabletTestPanel();return}
+ if(tabletTestCode!==room.code){
+  // Public room code only. No host capability or hidden answer in the URL.
+  const url=new URL("./",location.href);
+  url.search="";
+  url.searchParams.set("room",room.code);
+  url.searchParams.set("tabletPlayer","1");
+  $("tablet-test-frame").src=url.href;
+  tabletTestCode=room.code;
+ }
+ panel.hidden=false;
+ toggle.setAttribute("aria-expanded","true");
+ toggle.textContent="Hide tablet player";
+}
+
 function reset(){
  mutationVersion++;
  clearPartySetlist();
@@ -1467,6 +1514,7 @@ function reset(){
  roundTransitionToken++;
  confirmedHostSource="";
  setConnectionHealthy();
+ closeTabletTestPanel(true);
  try{sessionStorage.removeItem(AUDIUS_HOST_SESSION)}catch{}
  cancelNext();clearAudio();clearAudiusStream();audiusActive=false;audiusTrack=null;
  audiusPool=[];audiusFiltersKey="";audiusReservePartial=false;
@@ -1905,6 +1953,8 @@ async function saveGenres(){
  finally{genresDirty=false}
 }
 $("create").addEventListener("click",create);
+$("tablet-test-toggle").addEventListener("click",toggleTabletTestPanel);
+$("tablet-test-close").addEventListener("click",()=>closeTabletTestPanel());
 $("join-form").addEventListener("submit",join);
 $("finish-new-party").addEventListener("click",newParty);
 $("finish-copy-results").addEventListener("click",copyFinalScores);
@@ -2082,11 +2132,17 @@ initPhoneHaptics();
 const fromUrl=new URLSearchParams(location.search).get("room");
 if(fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl))$("join-code").value=fromUrl.toUpperCase();
 try{
- const stored=JSON.parse(localStorage.getItem(STORE)||"null");
+ const stored=JSON.parse(ACCESS_STORAGE.getItem(STORE)||"null");
  if(stored&&/^[A-HJ-NP-Z2-9]{6}$/.test(stored.code)&&/^[0-9a-f]{64}$/.test(stored.token)){
   access=stored;refresh();
  }
 }catch{}
+if(TABLET_TEST_GUEST&&!access&&fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl)){
+ // The host explicitly opened this player panel. Join with a new, distinct
+ // player capability; never reuse or overwrite the saved host capability.
+ $("nickname").value="Tablet Test";
+ $("join-form").requestSubmit();
+}
 render();
 // The embedded Solo game owns the screen when active. Do not poll/redraw
 // the hidden multiplayer room during Solo; immediately resume on returning.
