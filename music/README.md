@@ -8,7 +8,7 @@
 1. Open the public page on a tablet or laptop. Choose **Create lobby**.
 2. Pick a quick mix or customize the genre and optional decade checkboxes; **All eras** clears the year restriction.
 3. Use **Check tracks** to estimate the matching, streamable catalog and how many tracks remain unplayed in the host's last three games.
-4. Share the six-character room code or invite link. At least one player must join from a separate device.
+4. Share the six-character room code or invite link. A normal game needs at least one joined player. For **two-device testing**, use **Test: tablet + phone** on the tablet host: it opens a separate scored **Tablet Test** participant, while the phone joins normally as the second player.
 5. Start the game. The host taps **Play next clue**, then players buzz and submit **song title** and **artist** from their own phones. The host can replay a clue, skip a song, or move to the next song.
 6. Each round uses one random cue and hints of **0.5, 1.5, 3, 5, 8, 12, and 20 seconds**. Correct components earn 0.5 points each; incorrect initial components cost 0.5 points, and incorrect steals cost 1 point per field. Scores never fall below zero. The first player to 20 points wins.
 
@@ -23,6 +23,12 @@ A provider track ID alone is not a reliable song identity: the same artist and t
 ### Soundtrack reserve — track coverage for three games
 
 After **Check tracks**, the host now sees a live four-stat Audius reserve display: distinct matching tracks, already heard *within this filtered mix*, fresh tracks still available, and the number of roughly 40-song games that those fresh tracks could cover (capped at three). The progress gauge shows fresh songs toward the **120-track planning goal**. Selecting new genres/eras hides the stale estimate until a fresh scan finishes. The **Broaden to all genres & eras** action updates the filters and checks the wider Audius sample if the current mix is short. Once the game starts, the host's active player card shows the remaining fresh tracks after each accepted round. No track names, answers, music data or session history are sent to guests; the estimate uses existing browser-local Audius IDs. Counts are a *planning estimate*, not guaranteed playability; incomplete provider scans are clearly marked.
+
+### Two-device tablet + phone test
+
+The tablet can act as both the host and a separately scored player, so testing requires only a tablet and a phone. Create a multiplayer lobby on the tablet and tap **Test: tablet + phone**. A separate **Tablet Test** participant joins through the ordinary game's `join` RPC. Scan the host QR with the phone and join under a different nickname. Wait for both participants on the roster, then start the game. Close the tablet test panel to play the next clue as host; reopen to buzz, answer, steal, and see the tablet player's score. The phone participates normally.
+
+Nothing is simulated: the backend still controls scores, turn order and the song's answer. The tablet test player is opt-in, and its distinct capability is held in a room-scoped `sessionStorage` key instead of the host's `localStorage` key. Hiding/reopening does not add another participant. Leaving the host room or creating a different room closes the old embedded player. The iframe URL contains only the public room code. No server changes are required.
 
 ### Host audio mixer
 
