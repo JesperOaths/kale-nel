@@ -81,3 +81,28 @@ body:not(.solo-mode-active) .host-mixer-slider-label{font-size:13px}
  body:not(.solo-mode-active) .hero h1{font-size:clamp(37px,7vw,54px)}
  body:not(.solo-mode-active) .panel p{font-size:14px}
 }
+
+
+/* Optional tablet-as-player test. Keep standard host and phone layouts intact. */
+#room .room-head-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+#tablet-test-toggle{font-size:13px;min-height:41px;padding:9px 12px;color:#d1ffe6;border:1px solid #4a9773;background:#214434}
+#tablet-test-toggle:hover{background:#2b6148}
+.tablet-test-panel{position:fixed;right:clamp(12px,2vw,28px);top:clamp(70px,9vh,108px);z-index:89;
+ width:min(435px,calc(100vw - 24px));height:min(740px,calc(100dvh - 94px));display:flex;flex-direction:column;
+ padding:13px;gap:9px;background:#121b27;border:2px solid #75d9ae;border-radius:17px;
+ box-shadow:0 25px 90px #000d,0 0 0 9999px #07130b43}
+.tablet-test-panel[hidden]{display:none!important}
+.tablet-test-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tablet-test-head>div{display:grid;gap:3px}
+.tablet-test-head strong{color:#e5fff2;font-size:17px}
+.tablet-test-head span{color:#c4d7d0;font-size:11px}
+.tablet-test-head .quiet{min-height:34px;min-width:36px;padding:5px 10px;flex:none}
+.tablet-test-help{margin:0;color:#d7e7dd;font-size:12px;line-height:1.45}
+.tablet-test-panel iframe{display:block;min-height:0;flex:1;width:100%;
+ border:1px solid #456853;border-radius:10px;background:#10130f}
+@media(max-width:600px){
+ .tablet-test-panel{top:8px;right:6px;width:calc(100vw - 12px);height:calc(100dvh - 16px);
+ border-radius:12px;padding:10px;gap:7px}
+ .tablet-test-help{font-size:11px;line-height:1.4}
+ #tablet-test-toggle{font-size:12px}
+}
