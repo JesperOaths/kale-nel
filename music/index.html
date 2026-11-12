@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="./style.css?v=20261026share">
 <script>window.GEJAST_PAGE_VERSION='v817';</script>
 <script src="./vendor/qrcode.js?v=20261026party" defer></script>
-<script src="./app.js?v=20261104smooth" defer></script>
+<script src="./app.js?v=20261112tabletplayv1" defer></script>
 <script src="./solo-switch.js?v=20261104s21" defer></script>
 <style>
 /* Isolated solo presentation; original party mode remains unchanged. */
@@ -24,7 +24,7 @@ body.solo-mode-active #welcome,body.solo-mode-active #room,body.solo-mode-active
 body.solo-mode-active #solo-stage{display:block!important}
 @media(max-width:680px){#solo-stage{padding:7px;border-radius:16px}#solo-stage .solo-stage-head{padding:14px}#solo-frame{min-height:850px;border-radius:12px}}
 </style>
-<link rel="stylesheet" href="./compact-root.css?v=20261111ui819final4">
+<link rel="stylesheet" href="./compact-root.css?v=20261112tabletplayv1">
 </head>
 <body>
 <header class="top"><a class="brand" href="https://kalenel.nl/">KALENEL<span class="brand-dot">.</span></a><span class="brand-game">TUNE RUSH</span><span class="version">v817 - Made by Bruis</span></header>
@@ -60,8 +60,13 @@ body.solo-mode-active #solo-stage{display:block!important}
 </section>
 <section id="room" hidden>
  <div class="room-head"><div><div class="eyebrow" id="role-indicator">HOST</div><h1 id="room-title">Game lobby</h1></div>
- <div class="room-head-actions"><button id="host-fullscreen" class="quiet host-fullscreen" type="button" hidden aria-label="Toggle fullscreen host view"><span aria-hidden="true">⛶</span> Full screen</button><button id="leave" class="quiet">Leave</button></div></div>
+ <div class="room-head-actions"><button id="tablet-test-toggle" class="quiet host-only" type="button" hidden aria-controls="tablet-test-panel" aria-expanded="false">Test: tablet + phone</button><button id="host-fullscreen" class="quiet host-fullscreen" type="button" hidden aria-label="Toggle fullscreen host view"><span aria-hidden="true">⛶</span> Full screen</button><button id="leave" class="quiet">Leave</button></div></div>
  <div class="room-key"><div><span class="kicker">ROOM CODE</span><strong id="room-code">------</strong></div><button id="copy-invite" class="outline">Copy invite link</button></div>
+ <aside id="tablet-test-panel" class="tablet-test-panel" role="region" aria-label="Tablet test player" hidden>
+ <div class="tablet-test-head"><div><strong>Tablet test player</strong><span>Host music here · Buzz and answer in this panel</span></div><button id="tablet-test-close" class="quiet" type="button" aria-label="Close tablet player panel">✕</button></div>
+ <p class="tablet-test-help">Your tablet joins as <b>Tablet Test</b>, a real scored player. Join from your phone for a second player. Close this panel to control music, then reopen to buzz or answer. Both use the normal game server.</p>
+ <iframe id="tablet-test-frame" title="Tablet player buzzer, answers and score" loading="eager" allow="clipboard-write"></iframe>
+ </aside>
  <section id="lobby" class="room-layout">
   <div class="lobby-caption host-only">
     <div class="lobby-caption-copy"><span class="host-pill"><span class="host-online-dot"></span> TUNE RUSH / YOUR PARTY STUDIO</span><h2>Your party.<br><em>Your soundtrack.</em></h2><p>Your host streams from Audius. Pick a sound, invite your friends, and start the challenge.</p></div>

@@ -946,6 +946,64 @@ try{
  assert.notEqual(newCode,previousParty);
  assert.equal(await guest.evaluate(()=>room.code===window.__guestOriginalCode),true,
   "an old room's guest must not silently move to the new private room");
+ // Two physical devices: iPad hosts *and* joins as Tablet Test; one phone
+ // joins as the second real participant. No simulated scoring or host tokens.
+ const hostCapability=await host.evaluate(()=>{
+  const stored=JSON.parse(localStorage.getItem("kalenel_tunerush_room_v001")||"null");
+  return stored?.token;
+ });
+ assert.match(hostCapability,/^[0-9a-f]{64}$/);
+ assert.equal(await host.locator("#tablet-test-toggle").isVisible(),true);
+ assert.equal(await host.locator("#tablet-test-panel").isVisible(),false,
+  "the tablet player must be opt-in, not silently created");
+ await host.locator("#tablet-test-toggle").click();
+ const tabletFrame=host.frameLocator("#tablet-test-frame");
+ await tabletFrame.locator("#room").waitFor({state:"visible",timeout:20000});
+ await host.waitForFunction(()=>room?.players?.length===1,null,{timeout:17000});
+ assert.deepEqual(await host.evaluate(()=>room.players.map(p=>p.name)),["Tablet Test"]);
+ const publicTestURL=await host.locator("#tablet-test-frame").getAttribute("src");
+ assert.equal(new URL(publicTestURL).searchParams.get("room"),newCode);
+ assert.equal(new URL(publicTestURL).searchParams.get("tabletPlayer"),"1");
+ assert.equal(new URL(publicTestURL).searchParams.has("token"),false);
+ assert.equal(new URL(publicTestURL).searchParams.has("hash"),false);
+ const tabletCredential=await tabletFrame.locator("#room").evaluate(()=>{
+  const roomCode=new URLSearchParams(location.search).get("room");
+  const stored=JSON.parse(sessionStorage.getItem("kalenel_tunerush_tablet_test_"+roomCode)||"null");
+  return {stored,role:document.querySelector("#room")?.classList.contains("host-mode")};
+ });
+ assert.equal(tabletCredential.role,false,"embedded participant is not host");
+ assert.equal(tabletCredential.stored?.code,newCode);
+ assert.match(tabletCredential.stored?.token||"",/^[0-9a-f]{64}$/);
+ assert.notEqual(tabletCredential.stored.token,hostCapability,
+  "the embedded participant must have a different capability");
+ assert.equal(await host.evaluate(()=>JSON.parse(localStorage.getItem(
+  "kalenel_tunerush_room_v001")).token),hostCapability);
+ await host.locator("#tablet-test-close").click();
+ assert.equal(await host.locator("#tablet-test-panel").isVisible(),false);
+ await host.locator("#tablet-test-toggle").click();
+ await tabletFrame.locator("#room").waitFor({state:"visible"});
+ assert.equal(await host.evaluate(()=>room.players.length),1,
+  "hiding/reopening the tablet player must not add duplicate guests");
+ // Reuse exactly one phone context. It left its old game; the other original
+ // phone is not connected to this new room.
+ await guest2.evaluate(()=>reset());
+ await guest2.goto(await host.evaluate(()=>inviteUrl()),{
+  waitUntil:"domcontentloaded",timeout:30000
+ });
+ await guest2.locator("#nickname").fill("Phone Tester");
+ await guest2.locator("#join-form button[type=submit]").click();
+ await guest2.waitForFunction(()=>room?.role==="player"&&room.phase==="lobby",
+  null,{timeout:17000});
+ await host.waitForFunction(()=>room?.players?.length===2,null,{timeout:17000});
+ assert.deepEqual((await host.evaluate(()=>room.players.map(p=>p.name))).sort(),
+  ["Phone Tester","Tablet Test"]);
+ assert.equal(await host.locator("#lobby-player-count").innerText(),"2 players joined");
+ assert.equal(await host.locator("#start").isEnabled(),true);
+ assert.equal(await host.evaluate(()=>JSON.parse(localStorage.getItem(
+  "kalenel_tunerush_room_v001")).token),hostCapability,
+  "tablet-host login must remain intact after phone + embedded guest join");
+ assert.deepEqual(errors,[],"no uncaught browser errors in two-device test");
+
  assert.deepEqual(errors,[],"no uncaught browser errors");
  console.log("BROWSER_AUDIUS_ONLY_STUDIO_PASS",JSON.stringify({
   source:"Audius only",rooms:2,players:2,devices:3,tracks:3,streamRequests,metadataRequests,
