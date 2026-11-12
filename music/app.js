@@ -10,13 +10,16 @@ async function capabilityHash(token){
  return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join("");
 }
 // Opt-in embedded tablet player keeps its own session capability, never the host token.
-const TABLET_TEST_GUEST=window.self!==window.top&&
+const TABLET_TEST_GUEST=window.self!==window.top&&typeof URLSearchParams==="function"&&
  new URLSearchParams(location.search).get("tabletPlayer")==="1";
-const TABLET_TEST_ROOM=new URLSearchParams(location.search).get("room")||"";
+const TABLET_TEST_ROOM=TABLET_TEST_GUEST
+ ?(new URLSearchParams(location.search).get("room")||""):"";
 const STORE=TABLET_TEST_GUEST
  ?"kalenel_tunerush_tablet_test_"+TABLET_TEST_ROOM.toUpperCase()
  :"kalenel_tunerush_room_v001";
-const ACCESS_STORAGE=TABLET_TEST_GUEST?sessionStorage:localStorage;
+// Deliberately look up browser storage inside guarded calls. Offline VM test
+// harnesses and storage-restricted browsers do not expose every window API.
+function capabilityStorage(){return TABLET_TEST_GUEST?sessionStorage:localStorage;}
 const $=id=>document.getElementById(id);
 const playerAudio=$("licensed-player");
 const auditionAudio=$("audition-audio");
@@ -348,7 +351,7 @@ function setLoading(value){
  updateAuditionControls();
  $("room").setAttribute("aria-busy",String(busy));
 }
-function safeStore(){try{if(access)ACCESS_STORAGE.setItem(STORE,JSON.stringify(access));else ACCESS_STORAGE.removeItem(STORE)}catch{}}
+function safeStore(){try{const storage=capabilityStorage();if(access)storage.setItem(STORE,JSON.stringify(access));else storage.removeItem(STORE)}catch{}}
 async function rpc(action,extra={},attempt=0) {
  if(action!=="state")mutationVersion++;
  const creating=action==="create",joining=action==="join";
@@ -2132,7 +2135,7 @@ initPhoneHaptics();
 const fromUrl=new URLSearchParams(location.search).get("room");
 if(fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl))$("join-code").value=fromUrl.toUpperCase();
 try{
- const stored=JSON.parse(ACCESS_STORAGE.getItem(STORE)||"null");
+ const stored=JSON.parse(capabilityStorage().getItem(STORE)||"null");
  if(stored&&/^[A-HJ-NP-Z2-9]{6}$/.test(stored.code)&&/^[0-9a-f]{64}$/.test(stored.token)){
   access=stored;refresh();
  }
