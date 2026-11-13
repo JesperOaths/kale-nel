@@ -296,6 +296,17 @@ function phaseLabel(phase){
  answering:"Player is answering",holding:"Steal or next clue",solved:"Song revealed",
  finished:"Game finished"}[phase]||phase;
 }
+function refreshAnswerClock(){
+ if(!state||state.phase!=="answering")return;
+ const deadline=Number(state.answerExpiresAt);
+ const seconds=Number.isFinite(deadline)&&deadline>0?
+  Math.max(0,Math.ceil(deadline-Date.now()/1000)):25;
+ const clock=$("answer-countdown");
+ if(clock)clock.textContent=String(seconds);
+ $("phase-pill").textContent="Player answering · "+seconds+"s";
+ // Only the S21 is allowed to expire the buzzer lock. The regular room
+ // poll will observe and persist that transition, even if a guest quit.
+}
 function render(){
  const present=!!state;
  $("welcome").hidden=present;$("room").hidden=!present;
@@ -344,6 +355,7 @@ function render(){
  }
  if(state.code!==panelCode&&panelCode)closePanel(true);
  renderChips();renderRoster();renderLevels();renderButtons();
+ refreshAnswerClock();
 }
 function accept(next){
  if(!next||!validCode(next.code))throw Error("Invalid authoritative state");
@@ -507,6 +519,7 @@ function wire(){
 }
 async function boot(){
  wire();initOutput();audioVisualizer();restore();
+ window.setInterval(refreshAnswerClock,1000);
  if(validCode(JOIN_CODE))$("code-input").value=JOIN_CODE;
  if(EMBEDDED&&!access&&validCode(JOIN_CODE)){
   $("name-input").value="Tablet Player";
