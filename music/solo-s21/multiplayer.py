@@ -371,6 +371,14 @@ class MultiplayerEngine:
                 raise GameError("skip_unavailable")
             room.update(phase="solved", titleDone=True, artistDone=True,
                         lockedPlayer=None, answerExpiresAt=None)
+        elif action == "finish":
+            if not host or phase == "lobby":
+                raise GameError("host_only")
+            best = max((p["score"] for p in room["players"]),default=0)
+            winners = [p for p in room["players"] if p["score"] == best]
+            room.update(phase="finished", titleDone=True, artistDone=True,
+                        winner=winners[0]["id"] if len(winners)==1 else None,
+                        lockedPlayer=None, answerExpiresAt=None)
         else:
             raise GameError("unknown_action")
         return visible(room, credential)
