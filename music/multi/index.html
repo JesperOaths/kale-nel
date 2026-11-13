@@ -10,7 +10,7 @@
 <meta name="description" content="Tune Rush multiplayer powered by your permanent S21 music library.">
 <link rel="stylesheet" href="./style.css?v=20261113cloudstate1">
 <script>window.GEJAST_PAGE_VERSION="v817";</script>
-<script src="./app.js?v=20261113lobby1" defer></script>
+<script src="./app.js?v=20261113joinfix1" defer></script>
 </head>
 <body>
 <div class="app">
@@ -49,6 +49,7 @@
      <label for="name-input">Your nickname</label>
      <input id="name-input" maxlength="20" autocomplete="nickname" placeholder="Your name" required>
      <button type="submit" class="secondary large">Join as player <span aria-hidden="true">→</span></button>
+     <p id="join-error" class="join-error" role="alert" aria-live="assertive" hidden></p>
     </form>
     <p class="privacy-note"><span aria-hidden="true">◆</span> Only music fragments leave the S21. Answers and scoring stay on the phone.</p>
    </div>
