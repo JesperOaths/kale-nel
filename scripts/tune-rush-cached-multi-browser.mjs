@@ -8,6 +8,15 @@ const BASE=process.env.TUNERUSH_CACHED_BASE||"http://127.0.0.1:8080/music/multi/
 const errors=[];
 try{
  const context=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
+ // The ORIGINAL "Create lobby" button must navigate to the working S21
+ // room instead of making an Audius/Supabase RPC that can time out.
+ const homepage=await context.newPage();
+ await homepage.goto("http://127.0.0.1:8080/music/",{waitUntil:"domcontentloaded",timeout:25000});
+ const createLink=homepage.locator("#create");
+ assert.equal(await createLink.evaluate(el=>el.tagName),"A");
+ assert.equal(await createLink.getAttribute("href"),
+  "http://192.168.178.196:8798/?autocreate=1");
+ await homepage.close();
  const host=await context.newPage();host.on("pageerror",e=>errors.push("host: "+e.message));
  await host.goto(BASE,{waitUntil:"domcontentloaded",timeout:25000});
  await host.locator("#create").waitFor({state:"visible",timeout:15000});
