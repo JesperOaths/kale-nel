@@ -236,6 +236,7 @@ async function joinRoom(code,name){
      return restored;
     }
     access=previous;save();accept(restored);setNetwork(true);
+    try{STORAGE.removeItem(ROOM_PENDING_PREFIX+code)}catch{}
     alertUser("Reconnected to your existing player in this room.");
     return restored;
    }catch(err){
