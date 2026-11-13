@@ -1,7 +1,7 @@
 // Full browser contract for two physical devices using the S21's same-origin
 // LAN path. The test server supplies state only; MP3 truth is tested natively.
 import assert from "node:assert/strict";
-import {existsSync} from "node:fs";
+import {existsSync,readFileSync} from "node:fs";
 import {chromium,devices} from "playwright-core";
 
 const browserPath=["/usr/bin/google-chrome","/usr/bin/google-chrome-stable",
@@ -9,6 +9,8 @@ const browserPath=["/usr/bin/google-chrome","/usr/bin/google-chrome-stable",
 assert.ok(browserPath,"Chromium required");
 const browser=await chromium.launch({headless:true,executablePath:browserPath,
  args:["--no-sandbox","--disable-dev-shm-usage"]});
+const REMOTE_TEST=process.env.TUNERUSH_REMOTE_TEST==="1";
+const REMOTE_ORIGIN="https://online-test.trycloudflare.com";
 let game=null,cloudRequests=0;
 const errors=[],actions=[];
 function view(hash,action){
@@ -99,13 +101,32 @@ try{
   }
  });
  for(const context of [tabletContext,phoneContext]){
+  if(REMOTE_TEST){
+   // Simulate Cloudflare's public HTTPS origin with the SAME static client;
+   // all game actions are intercepted by the S21-equivalent room fixture.
+   await context.route(REMOTE_ORIGIN+"/**",route=>{
+    const path=new URL(route.request().url()).pathname;
+    if(path==="/api/health")return route.fulfill({
+     status:200,contentType:"application/json",body:JSON.stringify({
+      service:"tunerush-s21-multiplayer",ready:true,
+      source:"persistent-library",cachedSongs:1000,missingSongs:0})});
+    const names={"/":"index.html","/index.html":"index.html",
+      "/app.js":"app.js","/style.css":"style.css"};
+    const filename=names[path];
+    if(!filename)return route.fulfill({status:404,body:"Not found"});
+    const type=filename.endsWith(".js")?"application/javascript":
+     filename.endsWith(".css")?"text/css":"text/html";
+    return route.fulfill({status:200,contentType:type,
+      headers:{"Cache-Control":"no-store"},body:readFileSync("music/multi/"+filename)});
+   });
+  }
   await context.route("**/api/multiplayer",handle);
   await context.route("**/rest/v1/rpc/**",route=>{cloudRequests++;return route.abort()});
  }
  const tablet=await tabletContext.newPage(),phone=await phoneContext.newPage();
  tablet.on("pageerror",e=>errors.push("tablet: "+e.message));
  phone.on("pageerror",e=>errors.push("phone: "+e.message));
- const base="http://127.0.0.1:8798/";
+ const base=REMOTE_TEST?REMOTE_ORIGIN+"/":"http://127.0.0.1:8798/";
  // The original homepage Create lobby link must open a native S21 room.
  // Refreshing must not create another room.
  await tablet.goto(base+"?autocreate=1",{waitUntil:"domcontentloaded"});
@@ -124,7 +145,7 @@ try{
  assert.match(code,/^[A-HJ-NP-Z2-9]{6}$/);
  const invite=await tablet.locator("#invite-link").inputValue();
  assert.equal(new URL(invite).searchParams.get("room"),code);
- assert.equal(new URL(invite).origin,"http://127.0.0.1:8798");
+ assert.equal(new URL(invite).origin,new URL(base).origin);
  // The real S21 uses HTTP on a LAN IP, where navigator.clipboard is absent.
  // Exercise the non-secure fallback and verify honest manual-copy feedback.
  await tablet.evaluate(()=>{
@@ -218,7 +239,7 @@ try{
  assert.equal(await tablet.locator("#finished-view").isVisible(),true);
  assert.equal(cloudRequests,0,"direct local game must not contact Supabase");
  assert.deepEqual(errors,[],"no browser page errors");
- console.log("TUNERUSH_DIRECT_S21_TWO_DEVICE_PASS",JSON.stringify({
+ console.log(REMOTE_TEST?"TUNERUSH_REMOTE_HTTPS_TWO_DEVICE_PASS":"TUNERUSH_DIRECT_S21_TWO_DEVICE_PASS",JSON.stringify({
    simulatedDevices:2,tabletHostAndPlayer:true,phoneJoined:true,
    sameOriginS21:true,backendMusicMode:"persistent-library",
    scoredGuess:true,roundAdvance:true,cloudRequests:0,uniquePlayerTokens:true
