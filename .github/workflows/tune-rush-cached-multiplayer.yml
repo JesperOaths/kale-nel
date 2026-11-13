@@ -16,6 +16,7 @@ on:
       - 'music/solo-s21/install-multiplayer.sh'
       - 'music/solo-s21/package.sh'
       - 'scripts/tune-rush-cached-multi-browser.mjs'
+      - 'scripts/tune-rush-cached-multi-local-browser.mjs'
       - '.github/workflows/tune-rush-cached-multiplayer.yml'
   workflow_dispatch:
 permissions:
@@ -63,6 +64,7 @@ jobs:
           set -euo pipefail
           node --check music/multi/app.js
           node --check scripts/tune-rush-cached-multi-browser.mjs
+          node --check scripts/tune-rush-cached-multi-local-browser.mjs
           python3 -m http.server 8080 --bind 127.0.0.1 --directory . >/tmp/tunerush-cached-multi-http.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
@@ -71,3 +73,11 @@ jobs:
             sleep 0.2
           done
           TUNERUSH_CACHED_BASE="http://127.0.0.1:8080/music/multi/" node scripts/tune-rush-cached-multi-browser.mjs
+          python3 -m http.server 8798 --bind 127.0.0.1 --directory music/multi >/tmp/tunerush-s21-lan-test.log 2>&1 &
+          local_pid=$!
+          trap 'kill "$server_pid" "$local_pid" 2>/dev/null || true' EXIT
+          for try in {1..30}; do
+            if curl -fsS http://127.0.0.1:8798/ >/dev/null; then break; fi
+            sleep 0.2
+          done
+          node scripts/tune-rush-cached-multi-local-browser.mjs
