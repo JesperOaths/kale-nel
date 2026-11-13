@@ -42,7 +42,7 @@ begin
  where id=p_id and status='claimed';
  get diagnostics v_count = row_count;
  return jsonb_build_object('ok',v_count=1);
-end;$function$
+end;$function$;
 
 
 CREATE OR REPLACE FUNCTION public.tunerush_s21_mp_submit_v1(p_action text, p_code text, p_hash text, p_data jsonb, p_poll_hash text)
@@ -77,5 +77,5 @@ begin
  );
  return jsonb_build_object('id',v_id::text);
 end
-$function$
+$function$;
 
