@@ -45,7 +45,7 @@ with TemporaryDirectory(prefix="tunerush-cached-multi-test-") as temp:
         db=Path(temp)/"rooms.sqlite3"
         engine=multiplayer.MultiplayerEngine(db,library_root=Path(temp))
         service.ENGINE=engine
-        host=secret("test-host"),phone=secret("test-phone"),other=secret("test-other")
+        host=secret("test-host");phone=secret("test-phone");other=secret("test-other")
         code="ABC234"
         created=engine.call("create",code,host)
         assert created["role"]=="host" and created["players"]==[]
