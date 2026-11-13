@@ -26,6 +26,9 @@ HOME=Path("/data/data/com.termux/files/home")
 DATA=Path(os.environ.get("TUNERUSH_MULTIPLAYER_DATA",
                          str(HOME/".tunerush-multiplayer")))
 LIBRARY=Path(os.environ.get("TUNERUSH_PERMANENT_LIBRARY",str(LIBRARY_ROOT)))
+WEB=Path(os.environ.get("TUNERUSH_MULTIPLAYER_WEB",str(HOME/"tune-rush-solo"/"multiplayer-web")))
+WEB_FILES={"/":"index.html","/index.html":"index.html","/app.js":"app.js","/style.css":"style.css"}
+WEB_TYPES={"index.html":"text/html; charset=utf-8","app.js":"application/javascript; charset=utf-8","style.css":"text/css; charset=utf-8"}
 BIND=os.environ.get("TUNERUSH_MULTIPLAYER_BIND","::")
 PORT=int(os.environ.get("TUNERUSH_MULTIPLAYER_PORT","8798"))
 MAX_REQUEST=4096
@@ -63,14 +66,40 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         if self.command!="HEAD":self.wfile.write(raw)
 
+    def serve_web_file(self,name):
+        # Exact allowlist: no user-supplied paths and never serve library MP3s,
+        # database files, host credentials, or other Termux home content.
+        filename=WEB/name
+        try:
+            if not filename.is_file() or filename.is_symlink():raise FileNotFoundError
+            blob=filename.read_bytes()
+            if len(blob)>240000:raise ValueError("Unreasonably large web asset")
+        except (OSError,ValueError):
+            return self.send_json(404,{"error":"multiplayer_web_asset_unavailable"})
+        self.send_response(200)
+        self.send_header("Content-Type",WEB_TYPES[name])
+        self.send_header("Content-Length",str(len(blob)))
+        self.send_header("Cache-Control","no-cache, no-store, must-revalidate")
+        self.send_header("X-Content-Type-Options","nosniff")
+        self.send_header("Referrer-Policy","no-referrer")
+        self.send_header("X-Frame-Options","SAMEORIGIN")
+        self.send_header("Content-Security-Policy",
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; " +
+            "connect-src 'self'; img-src 'self' data:; media-src 'self' data:; " +
+            "frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'")
+        self.end_headers()
+        self.wfile.write(blob)
+
     def do_GET(self):
         if not self.permitted():return self.send_json(403,{"error":"local_network_only"})
-        if urlsplit(self.path).path=="/api/health":
+        path=urlsplit(self.path).path
+        if path=="/api/health":
             return self.send_json(200,{"service":"tunerush-s21-multiplayer",
                 "ready":bool(LIBRARY_STATUS.get("playableCachedSongs",0)),
                 "source":"persistent-library","version":1,
                 "cachedSongs":LIBRARY_STATUS.get("playableCachedSongs",0),
                 "missingSongs":LIBRARY_STATUS.get("missingCachedSongs",0)})
+        if path in WEB_FILES:return self.serve_web_file(WEB_FILES[path])
         return self.send_json(404,{"error":"not_found"})
 
     def do_POST(self):
