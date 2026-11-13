@@ -12,6 +12,12 @@ if [[ -z "$archive" || ! -s "$archive" || ! -d "$APP" || ! -x "$PREFIX/bin/pytho
   exit 2
 fi
 if [[ $(id -u) = 0 ]]; then echo "Refusing to run as root" >&2;exit 2;fi
+# Never install this package on the S9+ security phone or other paired devices.
+model=$(getprop ro.product.model 2>/dev/null || true)
+case "$model" in
+  SM-G991*) ;; # Samsung Galaxy S21 standard model variants
+  *) echo "Unexpected Android model: $model. Refusing non-S21 installation." >&2;exit 2 ;;
+esac
 mkdir -p "$TMPDIR"
 if python3 - <<'PY'
 import urllib.request
