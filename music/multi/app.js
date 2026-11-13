@@ -5,6 +5,9 @@
    Supabase and C720P transport messages; neither chooses or scores tracks. */
 const RPC="https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/";
 const PUBLISHABLE_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+// On the same trusted Wi-Fi the S21 serves this app on port 8798. Its
+// direct same-origin transport stays playable if Supabase PostgREST is down.
+const LOCAL_DIRECT=location.protocol==="http:"&&location.port==="8798";
 const GENRES=[["pop","Pop"],["rock","Rock"],["hiphop","Hip-Hop"],["indie","Indie"],["rnb","R&B"],["dance","Dance"],["electronic","Electronic"],["disco","Disco"],["metal","Metal"],["dutch","Dutch"]];
 const DECADES=["1970","1980","1990","2000","2010","2020"];
 const DURATIONS=[500,1500,3000,5000,8000,12000,20000];
@@ -80,6 +83,26 @@ async function post(name,body,limitMs=13000){
 async function transact(action,data={},selectedAccess=access){
  if(!selectedAccess||!validCode(selectedAccess.code)||!validCred(selectedAccess.hash))
   throw Error("Missing room credentials");
+ if(LOCAL_DIRECT){
+  // Auth stays in the same browser-scoped capability; never send answers,
+  // tokens, or MP3s to a third-party player or unauthenticated URL.
+  const aborter=new AbortController();
+  const timer=setTimeout(()=>aborter.abort(),18000);
+  try{
+   const response=await fetch("/api/multiplayer",{
+    method:"POST",cache:"no-store",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action,code:selectedAccess.code,hash:selectedAccess.hash,data}),
+    signal:aborter.signal});
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok||!result.state)throw Error(result.error||"S21 game request failed");
+   if(result.state.code!==selectedAccess.code)throw Error("Unexpected S21 room response");
+   return result.state;
+  }catch(error){
+   if(error?.name==="AbortError")throw Error("The_network_request_timed_out");
+   throw error;
+  }finally{clearTimeout(timer)}
+ }
  const pollHash=hex(),created=await post("tunerush_s21_mp_submit_v1",{
   p_action:action,p_code:selectedAccess.code,p_hash:selectedAccess.hash,
   p_data:data,p_poll_hash:pollHash});
