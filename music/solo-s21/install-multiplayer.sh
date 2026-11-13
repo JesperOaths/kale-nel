@@ -46,6 +46,13 @@ rollback(){
         rm -f "$APP/$f"
       fi
     done
+    for f in index.html app.js style.css; do
+      if [[ -f "$backup/multiplayer-web/$f" ]]; then
+        cp -p "$backup/multiplayer-web/$f" "$APP/multiplayer-web/$f"
+      else
+        rm -f "$APP/multiplayer-web/$f"
+      fi
+    done
   fi
   rm -rf "$work"
   if [[ $code -eq 0 ]]; then
@@ -57,13 +64,14 @@ rollback(){
 trap rollback EXIT
 # Only an exact whitelist of regular code files is allowed in the release.
 actual=$(tar -tzf "$archive" | LC_ALL=C sort)
-expected=$(printf '%s\n' MANIFEST.sha256 multiplayer.py multiplayer_service.py relay-worker.py start-multiplayer.sh watchdog.py | LC_ALL=C sort)
+expected=$(printf '%s\n' MANIFEST.sha256 multiplayer.py multiplayer_service.py relay-worker.py start-multiplayer.sh watchdog.py multiplayer-web/index.html multiplayer-web/app.js multiplayer-web/style.css | LC_ALL=C sort)
 if [[ "$actual" != "$expected" ]];then echo "Unexpected archive contents" >&2;exit 2;fi
 tar -xzf "$archive" -C "$work"
 (cd "$work" && sha256sum -c MANIFEST.sha256)
-for f in multiplayer.py multiplayer_service.py start-multiplayer.sh watchdog.py relay-worker.py;do
+for f in multiplayer.py multiplayer_service.py start-multiplayer.sh watchdog.py relay-worker.py multiplayer-web/index.html multiplayer-web/app.js multiplayer-web/style.css;do
   if [[ ! -f "$work/$f" || -L "$work/$f" ]];then echo "Unsafe archive member" >&2;exit 2;fi
 done
+if [[ -L "$APP/multiplayer-web" ]];then echo "Unsafe existing web directory" >&2;exit 2;fi
 "$PREFIX/bin/python3" -m py_compile "$work/multiplayer.py" "$work/multiplayer_service.py" "$work/watchdog.py" "$work/relay-worker.py"
 "$PREFIX/bin/python3" - <<PY
 import sys
@@ -77,6 +85,10 @@ PY
 for f in multiplayer.py multiplayer_service.py start-multiplayer.sh watchdog.py relay-worker.py;do
   if [[ -e "$APP/$f" ]];then cp -p "$APP/$f" "$backup/$f";fi
 done
+mkdir -p "$backup/multiplayer-web"
+for f in index.html app.js style.css;do
+  if [[ -e "$APP/multiplayer-web/$f" ]];then cp -p "$APP/multiplayer-web/$f" "$backup/multiplayer-web/$f";fi
+done
 installed=1
 for f in multiplayer.py multiplayer_service.py start-multiplayer.sh watchdog.py relay-worker.py;do
   cp "$work/$f" "$APP/.$f.deploying"
@@ -84,6 +96,12 @@ for f in multiplayer.py multiplayer_service.py start-multiplayer.sh watchdog.py 
   mv -f "$APP/.$f.deploying" "$APP/$f"
 done
 chmod 700 "$APP/start-multiplayer.sh"
+mkdir -p "$APP/multiplayer-web"
+for f in index.html app.js style.css;do
+  cp "$work/multiplayer-web/$f" "$APP/multiplayer-web/.$f.deploying"
+  chmod 600 "$APP/multiplayer-web/.$f.deploying"
+  mv -f "$APP/multiplayer-web/.$f.deploying" "$APP/multiplayer-web/$f"
+done
 # Only the new port 8798 is started. Running Solo 8797 and its worker stay up.
 nohup "$APP/start-multiplayer.sh" > "$APP/multiplayer.out.log" 2>&1 < /dev/null &
 pid=$!
@@ -95,6 +113,8 @@ try:
  with urllib.request.urlopen('http://127.0.0.1:8798/api/health',timeout=2) as response:
   o=json.load(response)
   assert o.get('ready') is True and o.get('source')=='persistent-library'
+ with urllib.request.urlopen('http://127.0.0.1:8798/',timeout=2) as response:
+  assert b'Tune Rush' in response.read(16000)
 except Exception:raise SystemExit(1)
 PY
   then ready=1;break;fi
