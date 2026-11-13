@@ -63,7 +63,7 @@ with TemporaryDirectory(prefix="tunerush-cached-multi-test-") as temp:
         assert secret_song["sha256"]=="a"*64
         guest=engine.call("state",code,phone)
         assert guest["audio"] is None and guest["title"] is None and guest["artist"] is None
-        server=service.DualStackServer(("::1",0),service.Handler)
+        server=service.DualStackServer(("::",0),service.Handler)
         thread=Thread(target=server.serve_forever,daemon=True)
         thread.start()
         def request(action,hash_value,data=None):
