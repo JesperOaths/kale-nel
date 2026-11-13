@@ -136,6 +136,34 @@ try{
  await tablet.waitForFunction(()=>state?.players?.length===2,null,{timeout:10000});
  assert.equal(await tablet.locator("#start").isEnabled(),true);
  assert.deepEqual(game.players.map(x=>x.name).sort(),["Phone Tester","Tablet Player"]);
+ // Re-entering the SAME correct code must resume this player's credential,
+ // not submit a new join that fails because the nickname is already taken.
+ const joinCalls=actions.filter(x=>x==="join").length;
+ const guestHash=await phone.evaluate(()=>JSON.parse(localStorage.getItem(
+  "tune-rush-s21-multi-access-v1")).hash);
+ await phone.goto(base+"?room="+code+"&name=Phone%20Tester&autojoin=1",
+  {waitUntil:"domcontentloaded"});
+ await phone.waitForFunction(()=>state?.role==="player",null,{timeout:12000});
+ assert.equal(actions.filter(x=>x==="join").length,joinCalls,
+  "Rejoining a room must reuse its original credential");
+ assert.equal(game.players.length,2,"Rejoining must not duplicate players");
+ assert.equal(await phone.evaluate(()=>JSON.parse(localStorage.getItem(
+  "tune-rush-s21-multi-access-v1")).hash),guestHash);
+ // A dropped response after server commit must also recover its pending
+ // credential without creating a second player.
+ await phone.evaluate(c=>{
+  const stored=JSON.parse(localStorage.getItem("tune-rush-s21-multi-access-v1"));
+  localStorage.setItem("tune-rush-s21-multi-pending-v1:"+c,JSON.stringify(stored));
+  localStorage.removeItem("tune-rush-s21-multi-access-v1");
+  localStorage.removeItem("tune-rush-s21-multi-room-v1:"+c);
+ },code);
+ await phone.goto(base+"?room="+code+"&name=Phone%20Tester&autojoin=1",
+  {waitUntil:"domcontentloaded"});
+ await phone.waitForFunction(()=>state?.role==="player",null,{timeout:12000});
+ assert.equal(actions.filter(x=>x==="join").length,joinCalls);
+ assert.equal(game.players.length,2);
+ assert.equal(await phone.evaluate(c=>localStorage.getItem(
+  "tune-rush-s21-multi-pending-v1:"+c),code),null);
  assert.equal(await tablet.evaluate(()=>JSON.parse(localStorage.getItem(
   "tune-rush-s21-multi-access-v1")).hash),hostToken);
  await tablet.locator("#tablet-close").click();
