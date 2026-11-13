@@ -27,3 +27,7 @@
 .cloud-notice span{font-size:12px;line-height:1.5;color:#bfd2b1}
 .cloud-notice a{padding:9px 13px;border-radius:9px;background:#c6f56b;color:#223313;text-align:center;font-size:12px;font-weight:800;text-decoration:none}
 .cloud-notice a:hover{text-decoration:underline}
+
+/* Joined-room rejection stays next to the input on small phone screens. */
+.join-error{margin:10px 0 0;padding:12px 13px;border-radius:9px;border:1px solid #a66360;background:#392522;color:#ffe1df;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+.join-error[hidden]{display:none!important}
