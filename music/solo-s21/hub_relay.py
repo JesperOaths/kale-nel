@@ -18,7 +18,7 @@ MAX_RESULT = 1_500_000
 TOKEN = re.compile(r"[a-f0-9]{64}\Z")
 ACTIONS = frozenset(("clue", "answer", "reveal", "next", "finish"))
 MULTIPLAYER_ACTIONS = frozenset(("create","state","join","settings","start","next",
-    "play","replay","pause","resume","buzz","steal","expire","forfeit","answer","skip"))
+    "play","replay","pause","resume","buzz","steal","expire","forfeit","answer","skip","finish"))
 INTERRUPTED = {
     "ok": False,
     "error": "The game connection was interrupted. Reload to check your saved game before retrying.",
@@ -87,9 +87,16 @@ class Transport:
     def engine(self, request):
         command, token, data = validate_request(request)
         if command == "multiplayer":
-            body = self.json_request(self.phone_url(8798) + "/api/multiplayer",
-                                     data, timeout=15)
-            return {"ok": True, "body": body}
+            try:
+                body = self.json_request(self.phone_url(8798) + "/api/multiplayer",
+                                         data, timeout=15)
+                return {"ok": True, "body": body}
+            except urllib.error.HTTPError as error:
+                try: detail = json.loads(error.read(4096)).get("error", "Game request denied")
+                except (OSError, ValueError, AttributeError): detail = "Game request denied"
+                return {"ok": False, "error": str(detail)[:170], "code": error.code}
+            except (OSError, ValueError):
+                return {"ok": False, "error": "S21 multiplayer temporarily unavailable"}
         path = {"session": "/api/session", "state": "/api/state", "action": "/api/action"}[command]
         headers = {"Authorization": "Bearer " + token} if token else {}
         try:
