@@ -10,6 +10,7 @@ const PUBLISHABLE_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 const LOCAL_DIRECT=location.protocol==="http:"&&location.port==="8798";
 const S21_LAN_ORIGIN="http://192.168.178.196:8798";
 const ROOM_ACCESS_PREFIX="tune-rush-s21-multi-room-v1:";
+const ROOM_PENDING_PREFIX="tune-rush-s21-multi-pending-v1:";
 const GENRES=[["pop","Pop"],["rock","Rock"],["hiphop","Hip-Hop"],["indie","Indie"],["rnb","R&B"],["dance","Dance"],["electronic","Electronic"],["disco","Disco"],["metal","Metal"],["dutch","Dutch"]];
 const DECADES=["1970","1980","1990","2000","2010","2020"];
 const DURATIONS=[500,1500,3000,5000,8000,12000,20000];
@@ -90,7 +91,7 @@ function readAccess(key,code){
  catch{return null}
 }
 function cachedAccess(code){
- return readAccess(ROOM_ACCESS_PREFIX+code,code)||readAccess(STORE,code);
+ return readAccess(ROOM_ACCESS_PREFIX+code,code)||readAccess(STORE,code)||readAccess(ROOM_PENDING_PREFIX+code,code);
 }
 function save(){
  try{
@@ -239,13 +240,18 @@ async function joinRoom(code,name){
     return restored;
    }catch(err){
     if(!/unauthorized|room_not_found|room_expired/.test(String(err)))throw err;
-    try{STORAGE.removeItem(ROOM_ACCESS_PREFIX+code)}catch{}
+    try{STORAGE.removeItem(ROOM_ACCESS_PREFIX+code);STORAGE.removeItem(ROOM_PENDING_PREFIX+code)}catch{}
     if(access?.code===code)access=null;
    }
   }
   const candidate={code,hash:hex(),name};
+  // Persist a pending capability BEFORE requesting the join. A successful
+  // server commit followed by a dropped mobile response can now be recovered.
+  try{STORAGE.setItem(ROOM_PENDING_PREFIX+code,JSON.stringify(candidate))}catch{}
   const joined=await transact("join",{name},candidate);
-  access=candidate;save();setNetwork(true);accept(joined);
+  access=candidate;save();
+  try{STORAGE.removeItem(ROOM_PENDING_PREFIX+code)}catch{}
+  setNetwork(true);accept(joined);
   return joined;
  }catch(error){
   const reason=message(error);
@@ -280,7 +286,7 @@ function openTablet(){
 function reset(){
  const oldCode=access?.code;
  access=null;state=null;save();stopAudio();
- if(oldCode)try{STORAGE.removeItem(ROOM_ACCESS_PREFIX+oldCode)}catch{}
+ if(oldCode)try{STORAGE.removeItem(ROOM_ACCESS_PREFIX+oldCode);STORAGE.removeItem(ROOM_PENDING_PREFIX+oldCode)}catch{}
  closePanel(true);$("code-input").value="";showJoinError("");
  render();
 }
