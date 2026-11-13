@@ -8,6 +8,8 @@ const PUBLISHABLE_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 // On the same trusted Wi-Fi the S21 serves this app on port 8798. Its
 // direct same-origin transport stays playable if Supabase PostgREST is down.
 const LOCAL_DIRECT=location.protocol==="http:"&&location.port==="8798";
+const S21_LAN_ORIGIN="http://192.168.178.196:8798";
+const ROOM_ACCESS_PREFIX="tune-rush-s21-multi-room-v1:";
 const GENRES=[["pop","Pop"],["rock","Rock"],["hiphop","Hip-Hop"],["indie","Indie"],["rnb","R&B"],["dance","Dance"],["electronic","Electronic"],["disco","Disco"],["metal","Metal"],["dutch","Dutch"]];
 const DECADES=["1970","1980","1990","2000","2010","2020"];
 const DURATIONS=[500,1500,3000,5000,8000,12000,20000];
@@ -29,6 +31,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const num=n=>Number.isFinite(Number(n))?Number(n):0;
 const validCode=code=>/^[A-HJ-NP-Z2-9]{6}$/.test(code||"");
 const validCred=key=>/^[a-f0-9]{64}$/.test(key||"");
+const normalizeCode=value=>String(value||"").normalize("NFKC").trim().toUpperCase().replace(/[\\s-]+/g,"");
 function fmt(ms){return ms<1000?ms+"ms":(ms/1000).toFixed(Number.isInteger(ms/1000)?0:1)+"s"}
 function alertUser(text,bad=false){
  const notice=$("notice");notice.textContent=text;notice.hidden=false;
@@ -41,7 +44,10 @@ function message(error){
   unauthorized:"This room's player credential is no longer valid.",
   room_not_found:"This room expired or no longer exists.",
   room_expired:"This room expired. Create another game.",
-  name_taken:"That name is taken. Choose another nickname.",
+  name_taken:"A player with that nickname is already in this room. Reopen the original player tab or choose a different nickname.", 
+  room_full:"This room already has the maximum number of players.",
+  invalid_name:"Use a nickname with letters, numbers, spaces, dots or hyphens.",
+  local_network_only:"The S21 is reachable only from its local Wi-Fi network.",
   game_already_started:"This party has already started.",
   no_players:"Wait for at least one player to join.",
   cached_tracks_unavailable:"Not enough cached songs match these filters. Choose more genres or All eras.",
@@ -74,11 +80,43 @@ async function checkLocalHealth(){
  }catch{setNetwork(false,"S21 multiplayer offline")}
  finally{clearTimeout(timeout)}
 }
-function save(){try{if(access)STORAGE.setItem(STORE,JSON.stringify(access));else STORAGE.removeItem(STORE)}catch{}}
-function restore(){
- try{const a=JSON.parse(STORAGE.getItem(STORE)||"null");
-  if(validCode(a?.code)&&validCred(a?.hash))access={code:a.code,hash:a.hash,name:a.name||""};
+function safeAccess(candidate,code){
+ if(!validCode(candidate?.code)||!validCred(candidate?.hash))return null;
+ if(code&&candidate.code!==code)return null;
+ return {code:candidate.code,hash:candidate.hash,name:candidate.name||""};
+}
+function readAccess(key,code){
+ try{return safeAccess(JSON.parse(STORAGE.getItem(key)||"null"),code)}
+ catch{return null}
+}
+function cachedAccess(code){
+ return readAccess(ROOM_ACCESS_PREFIX+code,code)||readAccess(STORE,code);
+}
+function save(){
+ try{
+  if(access){
+   const json=JSON.stringify(access);
+   STORAGE.setItem(STORE,json);
+   STORAGE.setItem(ROOM_ACCESS_PREFIX+access.code,json);
+  }else STORAGE.removeItem(STORE);
  }catch{}
+}
+function restore(){
+ access=validCode(JOIN_CODE)?cachedAccess(JOIN_CODE):readAccess(STORE);
+}
+function showJoinError(messageText){
+ const output=$("join-error");
+ if(output){output.textContent=messageText;output.hidden=!messageText}
+}
+function localDestination({code,name,create=false}){
+ const url=new URL(S21_LAN_ORIGIN+"/");
+ if(create)url.searchParams.set("autocreate","1");
+ else{
+  url.searchParams.set("room",code);
+  url.searchParams.set("autojoin","1");
+  url.searchParams.set("name",name);
+ }
+ return url.href;
 }
 async function post(name,body,limitMs=13000){
  const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),limitMs);
@@ -151,6 +189,9 @@ async function mutate(action,data={}){
  }finally{mutation=false;renderButtons()}
 }
 async function createRoom(){
+ if(!LOCAL_DIRECT){
+  location.assign(localDestination({create:true}));return;
+ }
  if(mutation)return;mutation=true;renderButtons();
  try{
   const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -168,15 +209,51 @@ async function createRoom(){
  finally{mutation=false;renderButtons()}
 }
 async function joinRoom(code,name){
- if(mutation)return;mutation=true;renderButtons();
+ if(mutation)return;
+ code=normalizeCode(code);name=String(name||"").trim();
+ showJoinError("");
+ if(!validCode(code)){showJoinError("Enter the six-character code displayed on the host's active S21 room.");return}
+ if(!/^[\p{L}\p{N}_ .-]{1,20}$/u.test(name)){
+  showJoinError("Enter a nickname (up to 20 letters, numbers, spaces, dots or hyphens).");return;
+ }
+ // The public cloud mode cannot accept joins while Supabase PostgREST is
+ // unavailable. Redirect both old and new web entrypoints to the same phone.
+ if(!LOCAL_DIRECT){
+  location.assign(localDestination({code,name}));return;
+ }
+ mutation=true;renderButtons();
  try{
-  if(!validCode(code))throw Error("Enter a valid six-character room code.");
-  if(!/^[\p{L}\p{N}_ .-]{1,20}$/u.test(name))throw Error("Enter a nickname, up to 20 characters.");
+  // A second click on Join, refresh, or a link from the homepage must RESUME
+  // the original player's capability, not join a duplicate with a new token.
+  const previous=cachedAccess(code);
+  if(previous){
+   try{
+    const restored=await transact("state",{},previous);
+    if(restored.role==="host"){
+     access=previous;save();accept(restored);setNetwork(true);
+     alertUser("This browser is already hosting that room. Open the player invite on another device.",true);
+     return restored;
+    }
+    access=previous;save();accept(restored);setNetwork(true);
+    alertUser("Reconnected to your existing player in this room.");
+    return restored;
+   }catch(err){
+    if(!/unauthorized|room_not_found|room_expired/.test(String(err)))throw err;
+    try{STORAGE.removeItem(ROOM_ACCESS_PREFIX+code)}catch{}
+    if(access?.code===code)access=null;
+   }
+  }
   const candidate={code,hash:hex(),name};
-  const next=await transact("join",{name},candidate);
-  access=candidate;save();setNetwork(true);accept(next);
- }catch(error){setNetwork(false,"Join failed");alertUser(message(error),true)}
- finally{mutation=false;renderButtons()}
+  const joined=await transact("join",{name},candidate);
+  access=candidate;save();setNetwork(true);accept(joined);
+  return joined;
+ }catch(error){
+  const reason=message(error);
+  if(error?.name==="TypeError"||/Failed to fetch|NetworkError|The_network_request_timed_out/i.test(String(error)))
+   setNetwork(false,"Cannot reach the S21");
+  showJoinError(reason+" Check that your phone and tablet are on the same Wi-Fi and using the S21 room.");
+  alertUser(reason,true);
+ }finally{mutation=false;renderButtons()}
 }
 function closePanel(discard=false){
  const box=$("tablet-panel");box.hidden=true;
@@ -201,8 +278,10 @@ function openTablet(){
  box.hidden=false;$("tablet-toggle").textContent="Hide Tablet Player";
 }
 function reset(){
+ const oldCode=access?.code;
  access=null;state=null;save();stopAudio();
- closePanel(true);$("code-input").value="";
+ if(oldCode)try{STORAGE.removeItem(ROOM_ACCESS_PREFIX+oldCode)}catch{}
+ closePanel(true);$("code-input").value="";showJoinError("");
  render();
 }
 function invite(){
@@ -517,7 +596,7 @@ function finish(){
 function wire(){
  $("create").addEventListener("click",createRoom);
  $("join-form").addEventListener("submit",e=>{
-  e.preventDefault();joinRoom($("code-input").value.trim().toUpperCase(),$("name-input").value.trim());
+  e.preventDefault();joinRoom($("code-input").value,$("name-input").value);
  });
  $("exit").addEventListener("click",()=>{
   if(!confirm("Leave this room on this device? Existing players keep their scores."))return;
@@ -552,9 +631,9 @@ function wire(){
 }
 async function boot(){
  wire();initOutput();audioVisualizer();restore();
- // An invite for a different room must never silently resume a stored
- // room from an earlier session instead of the explicitly requested one.
- if(validCode(JOIN_CODE)&&access?.code!==JOIN_CODE)access=null;
+ // The public page is a LAN launcher until its cloud transport is enabled.
+ // Stale cloud credentials must not silently trap the user in failed polling.
+ if(!LOCAL_DIRECT)access=null;
  window.setInterval(refreshAnswerClock,1000);
  if(validCode(JOIN_CODE))$("code-input").value=JOIN_CODE;
  if(EMBEDDED&&!access&&validCode(JOIN_CODE)){
@@ -583,7 +662,7 @@ async function boot(){
   render();
   if(/^[\p{L}\p{N}_ .-]{1,20}$/u.test(name))
    await joinRoom(JOIN_CODE,name);
-  else alertUser("Enter your nickname to join this room.",true);
+  else showJoinError("Enter a nickname to join this room.");
  }else if(access){
   render();await pollState();
  }else render();
