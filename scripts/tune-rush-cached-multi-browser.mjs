@@ -38,7 +38,7 @@ try{
  await host.locator("#tablet-close").click();
  assert.ok(!(await host.locator("#tablet-panel").isVisible()));
  // The actual browser's audio output obeys the shared Solo mixer.
- await host.locator("#volume").fill("44");
+ await host.locator("#volume").evaluate(el=>{el.value="44";el.dispatchEvent(new Event("input",{bubbles:true}))});
  assert.equal(await host.locator("#clip-audio").evaluate(el=>el.volume),0.44);
  assert.equal(await host.evaluate(()=>JSON.parse(localStorage.getItem("tune-rush-host-output-v1")).level),44);
  await host.evaluate(s=>{state={...s,phase:"paused",round:1,step:-1,
