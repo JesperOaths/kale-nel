@@ -91,6 +91,23 @@ try{
  assert.equal(await tablet.locator("#start").isDisabled(),true);
  const code=await tablet.locator("#room-code").innerText();
  assert.match(code,/^[A-HJ-NP-Z2-9]{6}$/);
+ const invite=await tablet.locator("#invite-link").inputValue();
+ assert.equal(new URL(invite).searchParams.get("room"),code);
+ assert.equal(new URL(invite).origin,"http://127.0.0.1:8798");
+ // The real S21 uses HTTP on a LAN IP, where navigator.clipboard is absent.
+ // Exercise the non-secure fallback and verify honest manual-copy feedback.
+ await tablet.evaluate(()=>{
+   Object.defineProperty(navigator,"clipboard",{value:undefined,configurable:true});
+   window.__legacyCopyCalls=0;
+   document.execCommand=(command)=>{if(command==="copy")window.__legacyCopyCalls++;return false;};
+ });
+ await tablet.locator("#copy-invite").click();
+ assert.equal(await tablet.locator("#invite-link").inputValue(),invite);
+ assert.match(await tablet.locator("#notice").innerText(),/Select and copy the phone invite link/);
+ assert.equal(await tablet.evaluate(()=>window.__legacyCopyCalls),1);
+ await tablet.evaluate(()=>{document.execCommand=(command)=>command==="copy"});
+ await tablet.locator("#copy-invite").click();
+ assert.match(await tablet.locator("#notice").innerText(),/Phone invite link copied/);
  const hostToken=await tablet.evaluate(()=>JSON.parse(localStorage.getItem(
   "tune-rush-s21-multi-access-v1")).hash);
  await tablet.locator("#tablet-toggle").click();
