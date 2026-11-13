@@ -552,13 +552,39 @@ function wire(){
 }
 async function boot(){
  wire();initOutput();audioVisualizer();restore();
+ // An invite for a different room must never silently resume a stored
+ // room from an earlier session instead of the explicitly requested one.
+ if(validCode(JOIN_CODE)&&access?.code!==JOIN_CODE)access=null;
  window.setInterval(refreshAnswerClock,1000);
  if(validCode(JOIN_CODE))$("code-input").value=JOIN_CODE;
  if(EMBEDDED&&!access&&validCode(JOIN_CODE)){
   $("name-input").value="Tablet Player";
   await joinRoom(JOIN_CODE,"Tablet Player");
  }
- if(access){
+ // A deliberate top-level Create lobby click opens the actual S21 server,
+ // creates a new phone-owned room and removes the one-shot URL flag so a
+ // refresh never creates duplicate lobbies. Embedded tablet guests cannot
+ // use this route, and the cloud page cannot silently create a local room.
+ const autoCreate=LOCAL_DIRECT&&!EMBEDDED&&PARAMS.get("autocreate")==="1";
+ const autoJoin=LOCAL_DIRECT&&!EMBEDDED&&validCode(JOIN_CODE)&&PARAMS.get("autojoin")==="1";
+ if(autoCreate){
+  const clean=new URL(location.href);
+  clean.searchParams.delete("autocreate");
+  history.replaceState(null,"",clean);
+  render();
+  await createRoom();
+ }else if(autoJoin){
+  const name=(PARAMS.get("name")||"").trim();
+  const clean=new URL(location.href);
+  clean.searchParams.delete("autojoin");
+  clean.searchParams.delete("name");
+  history.replaceState(null,"",clean);
+  $("name-input").value=name;
+  render();
+  if(/^[\p{L}\p{N}_ .-]{1,20}$/u.test(name))
+   await joinRoom(JOIN_CODE,name);
+  else alertUser("Enter your nickname to join this room.",true);
+ }else if(access){
   render();await pollState();
  }else render();
  startPolling();
