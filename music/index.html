@@ -47,8 +47,8 @@ body.solo-mode-active #solo-stage{display:block!important}
  <div class="welcome-grid">
   <article class="panel"><div class="kicker">01 / THE HOST</div><h2>Run the show.</h2><p>Your tablet plays the music and controls the next round. The host never competes.</p><a id="create" class="primary" href="http://192.168.178.196:8798/?autocreate=1" style="display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;min-height:49px" title="Create a lobby on the S21 cached-music game (same home Wi-Fi required)">Create lobby <span aria-hidden="true">→</span></a></article>
   <article class="panel"><div class="kicker">02 / THE PLAYERS</div><h2>Get in the game.</h2><p>Enter a room code and a nickname. No account or login required.</p>
-  <form id="join-form"><label for="join-code">Room code</label><input id="join-code" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="ABC234" required>
-  <label for="nickname">Your nickname</label><input id="nickname" maxlength="20" autocomplete="nickname" placeholder="Your name" required><button class="secondary" type="submit">Join game <span aria-hidden="true">→</span></button></form></article>
+  <form id="join-form" action="http://192.168.178.196:8798/" method="get"><input type="hidden" name="autojoin" value="1"><label for="join-code">Room code</label><input id="join-code" name="room" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="ABC234" required>
+  <label for="nickname">Your nickname</label><input id="nickname" name="name" maxlength="20" autocomplete="nickname" placeholder="Your name" required><button class="secondary" type="submit">Join game <span aria-hidden="true">→</span></button></form></article>
  </div>
  <p class="small-note">Play solo from your permanent music collection, or create a multiplayer room.</p>
 </section>
