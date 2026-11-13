@@ -17,6 +17,8 @@ const VOLUME_STORE="tune-rush-host-output-v1";
 const $=id=>document.getElementById(id);
 let access=null,state=null,mutation=false,polling=false,disconnected=false,timer=null;
 let panelCode="",clipData="",clipKey="",audioContext=null,analyser=null,frameId=null;
+// Local lobby filter draft must survive remote S21 state polls.
+let draftRoom="",draftGenres=null,draftDecades=null,draftDirty=false;
 let volume=100,muted=false,noticeTimer=null;
 const audio=$("clip-audio");
 const hex=(n=32)=>[...crypto.getRandomValues(new Uint8Array(n))].map(v=>v.toString(16).padStart(2,"0")).join("");
@@ -177,7 +179,15 @@ async function copyInvite(){
 }
 function renderChips(){
  const allowed=state?.role==="host"&&state.phase==="lobby";
- const genres=state?.genres||["rock","pop"],decades=state?.decades||[];
+ if(state?.code!==draftRoom){
+  draftRoom=state?.code||"";
+  draftGenres=null;draftDecades=null;draftDirty=false;
+ }
+ if(!draftDirty){
+  draftGenres=[...(state?.genres||["rock","pop"])];
+  draftDecades=[...(state?.decades||[])];
+ }
+ const genres=draftGenres||[],decades=draftDecades||[];
  const mount=(node,items,active)=>{node.replaceChildren();
   for(const [value,label] of items){
    const button=document.createElement("button");
@@ -187,6 +197,10 @@ function renderChips(){
    button.addEventListener("click",()=>{
     const chosen=button.classList.toggle("selected");
     button.setAttribute("aria-pressed",String(chosen));
+    const target=node.id==="genres"?draftGenres:draftDecades;
+    if(chosen){if(!target.includes(value))target.push(value)}
+    else{const i=target.indexOf(value);if(i>=0)target.splice(i,1)}
+    draftDirty=true;
    });
    node.append(button);
   }};
@@ -196,9 +210,15 @@ function renderChips(){
 function selected(id){return [...$(id).querySelectorAll("button.selected")].map(b=>b.dataset.value)}
 async function saveSettings(){
  if(state?.role!=="host")return;
- const genres=selected("genres"),decades=selected("decades");
+ const genres=[...(draftGenres||[])],decades=[...(draftDecades||[])];
  if(!genres.length){alertUser("Choose at least one genre.",true);return;}
- await mutate("settings",{genres,decades});
+ const next=await mutate("settings",{genres,decades});
+ if(next){
+  draftDirty=false;
+  draftGenres=[...next.genres];draftDecades=[...next.decades];
+  renderChips();
+  alertUser("Music mix saved on the S21.");
+ }
 }
 function renderRoster(){
  const roster=$("roster");roster.replaceChildren();
