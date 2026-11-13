@@ -57,7 +57,7 @@ def rate_limit(ip, action):
     now = time.monotonic()
     with LOCK:
         for key, queue, seconds, limit in (
-            (ip, REQUESTS[ip], 60, 160),
+            (ip, REQUESTS[ip], 60, 500),
             ((ip, "create"), CREATES[(ip, "create")], 300, 10),
             (("global", "create"), CREATES[("global", "create")], 60, 20),
         ):
@@ -131,6 +131,7 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(405, {"error": "method_not_allowed"})
 
     def do_GET(self):
+        self.connection.settimeout(18)
         parts = urlsplit(self.path)
         if not self.allowed_host() or parts.path not in ROUTES:
             return self.reply(404, {"error": "not_found"})
@@ -141,6 +142,7 @@ class Handler(BaseHTTPRequestHandler):
         return self.forward(parts.path, None)
 
     def do_POST(self):
+        self.connection.settimeout(18)
         parts = urlsplit(self.path)
         if not self.allowed_host() or parts.path != "/api/multiplayer" or parts.query:
             return self.reply(404, {"error": "not_found"})
