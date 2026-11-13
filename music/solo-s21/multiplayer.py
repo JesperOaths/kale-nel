@@ -146,6 +146,25 @@ class MultiplayerEngine:
             raise GameError("room_expired")
         return room
 
+    @staticmethod
+    def _expire_overdue_answer(room: dict) -> bool:
+        """Release a 25-second buzzer lock on phone-side request/poll.
+
+        This transition is authoritative, survives a crashed/closed guest tab
+        and is persisted even when only the host polls room state.
+        """
+        if (room.get("phase") != "answering" or
+            room.get("answerExpiresAt") is None or
+            time.time() < room["answerExpiresAt"]):
+            return False
+        for participant in room["players"]:
+            if participant["id"] == room["lockedPlayer"]:
+                participant["blockedStep"] = room["step"]
+                break
+        room.update(phase="holding", lockedPlayer=None, firstAnswered=True,
+                    stealTurn=False, answerExpiresAt=None)
+        return True
+
     def call(self, action: str, code: str, credential: str, data: dict | None = None) -> dict:
         if not isinstance(action, str):
             raise GameError("unknown_action")
@@ -157,7 +176,19 @@ class MultiplayerEngine:
             raise GameError("invalid_data")
         with self.lock:
             if action == "state":
-                return visible(self.read(code), credential)
+                room = self.read(code)
+                visible(room, credential)  # authorize BEFORE any state change
+                if self._expire_overdue_answer(room):
+                    self.db.execute("begin immediate")
+                    try:
+                        self.db.execute(
+                            "update rooms set data=? where code=?",
+                            (json.dumps(room, separators=(",", ":")), code))
+                        self.db.execute("commit")
+                    except Exception:
+                        self.db.execute("rollback")
+                        raise
+                return visible(room, credential)
             self.db.execute("begin immediate")
             try:
                 if action == "create":
@@ -165,7 +196,17 @@ class MultiplayerEngine:
                     self.db.execute("commit")
                     return result
                 room = self.read(code)
-                result = self._mutate(room, action, credential, data)
+                # Preserve a specific error for a guess submitted too late.
+                # A subsequent state poll or other action closes the lock.
+                if (action == "answer" and room["phase"] == "answering" and
+                    room["answerExpiresAt"] is not None and
+                    time.time() > room["answerExpiresAt"]):
+                    raise GameError("answer_time_expired")
+                expired = self._expire_overdue_answer(room)
+                if expired and action == "expire":
+                    result = visible(room, credential)
+                else:
+                    result = self._mutate(room, action, credential, data)
                 self.db.execute("update rooms set expires=?, data=? where code=?",
                                 (room["expires"], json.dumps(room, separators=(",", ":")), code))
                 self.db.execute("commit")
