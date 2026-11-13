@@ -1526,13 +1526,12 @@ function reset(){
  failedClue="";room=null;access=null;
  safeStore();render();
 }
-async function create(){
- if(loading)return;
- setLoading(true);
- try{
-  const b=await rpc("create"); // Create endpoint ignores the absent local room/token.
-  access={code:b.state.code,token:b.token};safeStore();applyState(b.state);
- }catch(e){message(e.message)}finally{setLoading(false)}
+function create(event){
+ // The legacy Audius+Supabase lobby is not operational; its Create action
+ // must never silently poll the unhealthy cloud API. This link is a real
+ // navigation so it also works when this legacy script fails to initialize.
+ event?.preventDefault();
+ window.location.assign("http://192.168.178.196:8798/?autocreate=1");
 }
 function finalScoreboard(state){
  if(!state||state.phase!=="finished")throw Error("Final results are not ready.");
