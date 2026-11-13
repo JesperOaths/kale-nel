@@ -86,6 +86,8 @@ try{
  const base="http://127.0.0.1:8798/";
  await tablet.goto(base,{waitUntil:"domcontentloaded"});
  assert.equal(await tablet.evaluate(()=>LOCAL_DIRECT),true);
+ assert.equal(await tablet.locator("#cloud-notice").isVisible(),false,
+  "Local game should never show the remote outage warning");
  await tablet.locator("#create").click();
  await tablet.waitForFunction(()=>state?.role==="host"&&state?.phase==="lobby");
  assert.equal(await tablet.locator("#start").isDisabled(),true);

@@ -18,3 +18,12 @@
 .invite-link-label{display:block;font-size:11px;font-weight:750;letter-spacing:.4px;color:#c8d7be;margin:10px 0 5px}
 .invite-link-input{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:10px 11px;margin:0 0 10px;background:#111d12;color:#d7efb6;border:1px solid #526e48;border-radius:8px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 .invite-link-input:focus-visible{outline:2px solid #c6f56b;outline-offset:2px}
+
+/* A clear distinction between working LAN play and unavailable cloud relay. */
+.cloud-notice{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:0 0 18px;padding:13px 16px;border:1px solid #5a6d42;border-radius:12px;background:#23301f;color:#e0f1d2}
+.cloud-notice[hidden]{display:none!important}
+.cloud-notice div{display:grid;gap:4px;min-width:220px;flex:1}
+.cloud-notice strong{font-size:14px;font-weight:800;color:#e2f7be}
+.cloud-notice span{font-size:12px;line-height:1.5;color:#bfd2b1}
+.cloud-notice a{padding:9px 13px;border-radius:9px;background:#c6f56b;color:#223313;text-align:center;font-size:12px;font-weight:800;text-decoration:none}
+.cloud-notice a:hover{text-decoration:underline}

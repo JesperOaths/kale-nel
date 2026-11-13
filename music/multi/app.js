@@ -59,6 +59,20 @@ function setNetwork(online,detail){
  disconnected=!online;
  const element=$("status");element.classList.toggle("online",online);element.classList.toggle("offline",!online);
  element.lastChild.textContent=" "+(online?"S21 connected":detail||"S21 unavailable");
+ const pending=$("cloud-notice");
+ if(pending)pending.hidden=LOCAL_DIRECT||online;
+}
+async function checkLocalHealth(){
+ if(!LOCAL_DIRECT)return;
+ const cancel=new AbortController();
+ const timeout=setTimeout(()=>cancel.abort(),4000);
+ try{
+  const response=await fetch("/api/health",{cache:"no-store",signal:cancel.signal});
+  const health=await response.json();
+  setNetwork(response.ok&&health.ready===true&&health.source==="persistent-library",
+   "S21 multiplayer offline");
+ }catch{setNetwork(false,"S21 multiplayer offline")}
+ finally{clearTimeout(timeout)}
 }
 function save(){try{if(access)STORAGE.setItem(STORE,JSON.stringify(access));else STORAGE.removeItem(STORE)}catch{}}
 function restore(){
@@ -548,8 +562,11 @@ async function boot(){
   render();await pollState();
  }else render();
  startPolling();
- // Health is deliberately derived from actual state/room requests, not a
- // fabricated green badge or availability claim.
- if(!access)setNetwork(false,"Create or join to connect");
+ // A real local health response may show green before creating a room.
+ // Cloud mode is intentionally pending until the remote RPC and grants work.
+ if(!access){
+  if(LOCAL_DIRECT)await checkLocalHealth();
+  else setNetwork(false,"Cloud mode not activated");
+ }
 }
 boot().catch(error=>{setNetwork(false,"Not connected");alertUser(message(error),true)});
