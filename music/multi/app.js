@@ -197,8 +197,26 @@ function invite(){
  return url.href;
 }
 async function copyInvite(){
- try{await navigator.clipboard.writeText(invite());alertUser("Phone invite link copied.")}
- catch{alertUser("Share this room code: "+state.code)}
+ if(!state)return;
+ const url=invite();
+ // Modern Clipboard API requires HTTPS/localhost; local S21 uses LAN HTTP.
+ if(navigator.clipboard?.writeText){
+  try{await navigator.clipboard.writeText(url);alertUser("Phone invite link copied.");return}
+  catch{}
+ }
+ const selected=document.activeElement;
+ const link=$("invite-link");
+ link.value=url;
+ link.focus();
+ link.select();
+ let copied=false;
+ try{copied=document.execCommand("copy")===true}catch{}
+ if(copied){
+  selected?.focus?.();
+  alertUser("Phone invite link copied.");return;
+ }
+ // Make the full link selectable instead of showing only a room code.
+ alertUser("Select and copy the phone invite link above, or use room code "+state.code+".");
 }
 function renderChips(){
  const allowed=state?.role==="host"&&state.phase==="lobby";
@@ -315,6 +333,7 @@ function render(){
  const isHost=state.role==="host",lobby=state.phase==="lobby",finished=state.phase==="finished";
  $("role").textContent=isHost?"HOST / YOUR PARTY STUDIO":"PLAYER / YOUR BUZZER";
  $("room-code").textContent=state.code;
+ $("invite-link").value=invite();
  $("room-heading").textContent=lobby?"Waiting room":finished?"Game results":"Music battle";
  document.title="Tune Rush • "+state.code;
  $("lobby-view").hidden=!lobby;$("game-view").hidden=lobby||finished;$("finished-view").hidden=!finished;
