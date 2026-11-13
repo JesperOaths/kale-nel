@@ -76,6 +76,28 @@ async function handle(route){
 try{
  const tabletContext=await browser.newContext({...devices["iPad Pro 11"],viewport:{width:1194,height:834}});
  const phoneContext=await browser.newContext({...devices["iPhone 13"]});
+ // Chrome on the guest phone must not allocate a WebAudio pipeline, reload
+ // a blank media element every state poll, or run a 60fps host waveform.
+ await phoneContext.addInitScript(()=>{
+  window.__guestResourceAudit={loads:0,animations:0,createdContexts:0};
+  const originalLoad=HTMLMediaElement.prototype.load;
+  HTMLMediaElement.prototype.load=function(...args){
+   window.__guestResourceAudit.loads++;
+   return originalLoad.apply(this,args);
+  };
+  const originalRaf=window.requestAnimationFrame;
+  window.requestAnimationFrame=function(callback){
+   window.__guestResourceAudit.animations++;
+   return originalRaf.call(this,callback);
+  };
+  const NativeAudioContext=window.AudioContext;
+  if(NativeAudioContext){
+   window.AudioContext=function(...args){
+    window.__guestResourceAudit.createdContexts++;
+    return new NativeAudioContext(...args);
+   };
+  }
+ });
  for(const context of [tabletContext,phoneContext]){
   await context.route("**/api/multiplayer",handle);
   await context.route("**/rest/v1/rpc/**",route=>{cloudRequests++;return route.abort()});
@@ -131,6 +153,10 @@ try{
  await phone.goto(base+"?room="+code+"&name=Phone%20Tester&autojoin=1",
   {waitUntil:"domcontentloaded"});
  await phone.waitForFunction(()=>state?.role==="player",null,{timeout:12000});
+ await phone.waitForTimeout(4200); // two real room state-poll intervals
+ assert.deepEqual(await phone.evaluate(()=>window.__guestResourceAudit),
+  {loads:0,animations:0,createdContexts:0},
+  "Guest must never churn a media element or animate an unused host waveform");
  assert.equal(new URL(phone.url()).searchParams.has("autojoin"),false);
  assert.equal(new URL(phone.url()).searchParams.has("name"),false);
  await tablet.waitForFunction(()=>state?.players?.length===2,null,{timeout:10000});
