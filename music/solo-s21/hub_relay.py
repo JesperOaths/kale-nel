@@ -49,7 +49,7 @@ class Transport:
                     capture_output=True,text=True,timeout=4)
                 address=found.stdout.strip().split()[-1]
                 ipv6=ipaddress.IPv6Address(address)
-                if found.returncode==0 and not ipv6.is_unspecified and not ipv6.is_loopback:
+                if found.returncode==0 and ipv6.is_global:
                     self._phone_url="http://["+str(ipv6)+"]:8797"
             except (OSError,ValueError,IndexError,subprocess.TimeoutExpired):
                 pass
