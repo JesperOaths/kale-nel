@@ -7,7 +7,11 @@ const RPC="https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/";
 const PUBLISHABLE_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 // On the same trusted Wi-Fi the S21 serves this app on port 8798. Its
 // direct same-origin transport stays playable if Supabase PostgREST is down.
-const LOCAL_DIRECT=location.protocol==="http:"&&location.port==="8798";
+// S21 on the home Wi-Fi, or the narrowly allowlisted HTTPS bridge.
+const LOCAL_DIRECT=(location.protocol==="http:"&&location.port==="8798")||
+ (location.protocol==="https:"&&
+  (/^[a-z0-9-]+\.trycloudflare\.com$/.test(location.hostname)||
+   location.hostname==="jesper-hub.tail87c632.ts.net"));
 const S21_LAN_ORIGIN="http://192.168.178.196:8798";
 const ROOM_ACCESS_PREFIX="tune-rush-s21-multi-room-v1:";
 const ROOM_PENDING_PREFIX="tune-rush-s21-multi-pending-v1:";

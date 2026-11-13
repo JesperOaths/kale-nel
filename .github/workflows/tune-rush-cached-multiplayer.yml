@@ -9,6 +9,8 @@ on:
       - 'music/solo-s21/test_multiplayer_timeout.py'
       - 'music/solo-s21/hub_relay.py'
       - 'music/solo-s21/test_hub_relay.py'
+      - 'music/solo-s21/hub_multiplayer_gateway.py'
+      - 'music/solo-s21/test_hub_multiplayer_gateway.py'
       - 'music/solo-s21/relay-worker.py'
       - 'music/solo-s21/watchdog.py'
       - 'music/solo-s21/multiplayer-cached-relay.sql'
@@ -36,6 +38,7 @@ jobs:
           python3 music/solo-s21/test_multiplayer_cached.py
           python3 music/solo-s21/test_multiplayer_timeout.py
           (cd music/solo-s21 && python3 -m unittest -q test_hub_relay)
+          python3 music/solo-s21/test_hub_multiplayer_gateway.py
           test -s music/solo-s21/multiplayer-cached-relay.sql
           test -s music/solo-s21/multiplayer-activate.sql
           sh -n music/solo-s21/package-multiplayer.sh
@@ -83,3 +86,4 @@ jobs:
             sleep 0.2
           done
           node scripts/tune-rush-cached-multi-local-browser.mjs
+          TUNERUSH_REMOTE_TEST=1 node scripts/tune-rush-cached-multi-local-browser.mjs
