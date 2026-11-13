@@ -23,6 +23,7 @@ const VOLUME_STORE="tune-rush-host-output-v1";
 const $=id=>document.getElementById(id);
 let access=null,state=null,mutation=false,polling=false,disconnected=false,timer=null;
 let panelCode="",clipData="",clipKey="",audioContext=null,analyser=null,frameId=null;
+let visualizerStarted=false,visualizerLastPaint=0;
 // Local lobby filter draft must survive remote S21 state polls.
 let draftRoom="",draftGenres=null,draftDecades=null,draftDirty=false;
 let volume=100,muted=false,noticeTimer=null;
@@ -431,6 +432,8 @@ function render(){
  $("mixer").hidden=!present||state.role!=="host";
  if(!present){document.title="Tune Rush • Multiplayer";renderButtons();return}
  const isHost=state.role==="host",lobby=state.phase==="lobby",finished=state.phase==="finished";
+ // Only the host uses audio or visualizations; don't animate phone players.
+ if(isHost&&!visualizerStarted)audioVisualizer();
  $("role").textContent=isHost?"HOST / YOUR PARTY STUDIO":"PLAYER / YOUR BUZZER";
  $("room-code").textContent=state.code;
  $("invite-link").value=invite();
@@ -489,7 +492,11 @@ function accept(next){
    clipKey=next.code+":"+next.round+":"+next.step;
    startAudio(clipData);
   }else if(before==="playing"&&next.phase!=="playing")stopAudio(false);
- }else stopAudio();
+ }else if(clipData||audio.hasAttribute("src")||!audio.paused){
+  // No media belongs to a guest. Avoid load() on every poll, which repeatedly
+  // tears down Chrome's media pipeline on resource-constrained phones.
+  stopAudio();
+ }
  render();
 }
 async function pollState(){
@@ -538,9 +545,17 @@ function initOutput(){
  });
 }
 function audioVisualizer(){
- const canvas=$("waveform"),ctx=canvas.getContext("2d");
+ if(visualizerStarted||state?.role!=="host")return;
+ const canvas=$("waveform"),ctx=canvas?.getContext("2d");
  if(!ctx)return;
- const frame=()=>{
+ visualizerStarted=true;
+ const frame=now=>{
+  frameId=requestAnimationFrame(frame);
+  if(document.hidden||state?.role!=="host")return;
+  // Host only: 30 frames per second during playback, 5 when idle.
+  const interval=audio.paused?200:33;
+  if(now-visualizerLastPaint<interval)return;
+  visualizerLastPaint=now;
   const W=canvas.width,H=canvas.height;
   ctx.clearRect(0,0,W,H);
   const middle=H/2;
@@ -556,9 +571,8 @@ function audioVisualizer(){
     ctx.fillRect(i*(barWidth+gap),middle-height/2,barWidth,height);
    }
   }
-  frameId=requestAnimationFrame(frame);
  };
- frame();
+ frameId=requestAnimationFrame(frame);
 }
 function ensureAnalyser(){
  if(analyser)return;
@@ -637,7 +651,7 @@ function wire(){
  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&access&&!mutation)pollState()});
 }
 async function boot(){
- wire();initOutput();audioVisualizer();restore();
+ wire();initOutput();restore();
  // The public page is a LAN launcher until its cloud transport is enabled.
  // Stale cloud credentials must not silently trap the user in failed polling.
  if(!LOCAL_DIRECT)access=null;
