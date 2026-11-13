@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10130f">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Tune Rush • Multiplayer</title>
+<meta name="description" content="Tune Rush multiplayer powered by your permanent S21 music library.">
+<link rel="stylesheet" href="./style.css?v=20261113cached1">
+<script src="./app.js?v=20261113cached1" defer></script>
+</head>
+<body>
+<div class="app">
+ <header class="app-header">
+  <div class="brand" aria-label="Tune Rush"><span class="brand-symbol">▶</span><span>TUNE <b>RUSH</b></span><span class="brand-mode">MULTIPLAYER</span></div>
+  <div class="header-actions">
+   <span id="status" class="server-status" role="status" aria-live="polite"><i></i> S21 checking</span>
+   <div id="mixer" class="mixer" role="group" aria-label="Music volume" hidden>
+    <button id="mute" type="button" aria-label="Mute" title="Mute music">🔊</button>
+    <label for="volume">Volume</label>
+    <input id="volume" type="range" min="0" max="100" step="1" value="100">
+    <output for="volume" id="volume-value">100%</output>
+   </div>
+   <a class="solo-link" href="../?mode=solo">Solo <span aria-hidden="true">↗</span></a>
+  </div>
+ </header>
+ <main class="main">
+  <section id="welcome" class="welcome">
+   <div class="intro">
+    <p class="eyebrow"><span class="dot"></span> THE MUSIC IS ALREADY ON YOUR S21</p>
+    <h1>Play together.<br><em>Name that track.</em></h1>
+    <p class="intro-text">Your phone stores the music. Your tablet plays the clues. Everyone competes on the same live scoreboard.</p>
+    <div class="stats"><div><b>1,000+</b><span>Cached hits</span></div><div><b>0.5s</b><span>First clue</span></div><div><b>2 devices</b><span>All you need</span></div></div>
+   </div>
+   <div class="start-panel">
+    <div class="panel-head"><span class="eyebrow">01 / START A PARTY</span><h2>Your next music night.</h2><p>No downloads or extra accounts. S21 picks each track and checks every answer.</p></div>
+    <button id="create" class="primary large" type="button">Create multiplayer room <span aria-hidden="true">→</span></button>
+    <div class="or"><span>OR JOIN A ROOM</span></div>
+    <form id="join-form" class="join-form">
+     <label for="code-input">Six-character room code</label>
+     <input id="code-input" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC234" required>
+     <label for="name-input">Your nickname</label>
+     <input id="name-input" maxlength="20" autocomplete="nickname" placeholder="Your name" required>
+     <button type="submit" class="secondary large">Join as player <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="privacy-note"><span aria-hidden="true">◆</span> Only music fragments leave the S21. Answers and scoring stay on the phone.</p>
+   </div>
+  </section>
+  <section id="room" class="room" hidden>
+   <div class="room-top">
+    <div><p class="eyebrow" id="role">HOST / YOUR PARTY STUDIO</p><h1 id="room-heading">Waiting room</h1></div>
+    <div class="room-top-controls"><div class="room-code"><span>ROOM CODE</span><strong id="room-code">------</strong></div><button type="button" id="copy-invite" class="secondary compact">Copy invite</button><button id="exit" type="button" class="quiet">Leave</button></div>
+   </div>
+   <div class="room-layout">
+    <section class="play-panel">
+     <div id="lobby-view" class="lobby-view">
+      <div class="section-head"><span class="eyebrow">01 / THE SOUNDTRACK</span><h2>Set the vibe.</h2><p>The S21 selects tracks from your permanent game cache.</p></div>
+      <div class="mix-label">Genres <span>Choose at least one</span></div>
+      <div id="genres" class="chip-grid" role="group" aria-label="Music genres"></div>
+      <div class="mix-label">Decades <span>None selected = all eras</span></div>
+      <div id="decades" class="chip-grid" role="group" aria-label="Music decades"></div>
+      <div class="start-row"><div class="library"><span class="library-icon" aria-hidden="true">♫</span><div><strong>Permanent S21 music library</strong><small>No Audius streaming · no music downloads</small></div></div>
+       <button id="save-settings" class="secondary" type="button">Apply mix</button></div>
+      <div class="lobby-actions"><p id="lobby-readiness">Waiting for players to join…</p><button id="start" class="primary large" type="button">Start the show <span aria-hidden="true">→</span></button></div>
+     </div>
+     <div id="game-view" class="game-view" hidden>
+      <div class="game-progress"><div class="current-round"><span>ROUND</span><strong id="round-number">01</strong></div><div class="game-score"><span>PLAYERS</span><strong id="game-player-count">2</strong></div><div id="phase-pill" class="phase-pill">Get ready</div></div>
+      <div class="song-head"><span class="eyebrow">GUESS THE SONG AND ARTIST</span><h2 id="song-title">Mystery track</h2><p id="song-artist">Listen closely — how fast can you name it?</p></div>
+      <div class="scope" aria-label="Real-time song audio waveform">
+       <div class="scope-top"><span class="scope-led">● LIVE CLUE</span><span id="scope-length">0.5 seconds</span></div>
+       <canvas id="waveform" width="1000" height="180" aria-label="Sound waveform generated from the current clip" role="img"></canvas>
+       <div class="scope-bottom"><span id="audio-feedback">Press Play clue to hear the music</span><span class="scope-lime">S21 CACHE</span></div>
+      </div>
+      <div id="clue-levels" class="clue-levels" role="group" aria-label="Available clue durations"></div>
+      <div id="host-game-controls" class="host-game-controls">
+       <button id="play" class="primary" type="button">▶ Play clue</button>
+       <button id="repeat" class="secondary" type="button" hidden>↺ Replay clue</button>
+       <button id="pause" class="secondary" type="button" hidden>Pause</button>
+       <button id="resume" class="secondary" type="button" hidden>Next clue</button>
+       <button id="skip" class="quiet" type="button">Reveal track</button>
+       <button id="next" class="primary" type="button" hidden>Next song →</button>
+       <button id="finish" class="quiet" type="button">End game</button>
+      </div>
+      <div id="guest-controls" class="guest-controls" hidden>
+       <button id="buzz" class="buzz" type="button">⚡ BUZZ IN</button>
+       <button id="steal" class="buzz secondary" type="button" hidden>⚡ STEAL ANSWER</button>
+       <div id="answer-form-panel" class="answer-panel" hidden>
+        <p class="eyebrow">YOUR TURN — 25 SECONDS</p>
+        <form id="answer-form"><label for="guess-title">Song title</label><input id="guess-title" autocomplete="off" placeholder="Name the song"><label for="guess-artist">Artist</label><input id="guess-artist" autocomplete="off" placeholder="Name the artist"><button type="submit" class="primary">Submit guess</button></form>
+        <button id="forfeit" type="button" class="quiet">Pass this turn</button>
+       </div>
+       <p id="guest-hint" class="guest-hint" role="status" aria-live="polite">Listen and buzz when you recognize it.</p>
+      </div>
+     </div>
+     <div id="finished-view" class="finished-view" hidden>
+      <span class="eyebrow">PARTY RECAP</span><h2>That's a wrap.</h2><p id="winner-line">Great game!</p><div class="trophy" aria-hidden="true">★</div><button id="again" class="primary large" type="button">Play another game →</button>
+     </div>
+    </section>
+    <aside class="side-panel">
+     <div class="side-head"><span class="eyebrow">02 / LIVE SCOREBOARD</span><h2>Players & points</h2><p id="roster-subtitle">Invite friends to join.</p></div>
+     <div id="roster" class="roster" aria-live="polite"></div>
+     <div id="host-options" class="host-options">
+      <div class="share-box"><span class="eyebrow">INVITE A FRIEND</span><strong>One code. Every device.</strong><p>Open the invite on your phone, or share the room code above.</p><button id="share-invite" class="secondary" type="button">Copy phone invite</button></div>
+      <div class="tablet-box"><div><span class="eyebrow">TWO-DEVICE TEST</span><strong>Tablet + phone</strong><p>Let this tablet compete as a second player while it hosts the music.</p></div><button id="tablet-toggle" class="secondary" type="button">Join as Tablet Player</button></div>
+     </div>
+     <div class="guide"><span class="eyebrow">HOW IT WORKS</span><p>Play a short clue from the tablet. First to buzz gets 25 seconds to guess. Correct title and artist earn points. The S21 locks turns and tracks every score.</p></div>
+    </aside>
+   </div>
+  </section>
+ </main>
+ <footer class="app-footer">TUNE RUSH <span>•</span> PRIVATE S21 MUSIC LIBRARY <span>•</span> GAMEPLAY AND SCORES ON THE PHONE</footer>
+</div>
+<aside id="tablet-panel" class="tablet-panel" hidden role="dialog" aria-modal="false" aria-label="Tablet test player">
+ <div class="tablet-panel-head"><div><strong>Tablet player</strong><small>Separate participant · same room</small></div><button id="tablet-close" type="button" class="quiet" aria-label="Close tablet player">✕</button></div>
+ <iframe id="tablet-frame" title="Tablet player, buzzer, guessing and scoreboard"></iframe>
+</aside>
+<audio id="clip-audio" preload="none"></audio>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
