@@ -16,6 +16,12 @@ try{
  assert.equal(await createLink.evaluate(el=>el.tagName),"A");
  assert.equal(await createLink.getAttribute("href"),
   "http://192.168.178.196:8798/?autocreate=1");
+ const nativeJoin=homepage.locator("#join-form");
+ assert.equal(await nativeJoin.getAttribute("method"),"get");
+ assert.equal(await nativeJoin.getAttribute("action"),"http://192.168.178.196:8798/");
+ assert.equal(await homepage.locator("#join-code").getAttribute("name"),"room");
+ assert.equal(await homepage.locator("#nickname").getAttribute("name"),"name");
+ assert.equal(await nativeJoin.locator("input[name=autojoin]").inputValue(),"1");
  await homepage.close();
  const host=await context.newPage();host.on("pageerror",e=>errors.push("host: "+e.message));
  await host.goto(BASE,{waitUntil:"domcontentloaded",timeout:25000});
