@@ -24,6 +24,15 @@ try{
  await host.evaluate(s=>{access={code:s.code,hash:"a".repeat(64),name:"Host"};state=s;render()},sample);
  assert.ok(await host.locator("#room").isVisible());
  assert.ok(await host.locator("#genres .chip.selected").count()===2);
+ // S21 state polling must not silently reset pending lobby filter edits.
+ await host.locator('#genres button[data-value="dance"]').click();
+ await host.locator('#genres button[data-value="rock"]').click();
+ await host.locator('#decades button[data-value="1980"]').click();
+ await host.evaluate(s=>{state={...s};render()},sample);
+ assert.deepEqual(await host.locator("#genres .chip.selected").evaluateAll(
+  nodes=>nodes.map(x=>x.dataset.value).sort()),["dance","pop"]);
+ assert.deepEqual(await host.locator("#decades .chip.selected").evaluateAll(
+  nodes=>nodes.map(x=>x.dataset.value)),["1980"]);
  assert.equal(await host.locator("#start").isDisabled(),true);
  await host.evaluate(s=>{state={...s,players:[{id:"phone",name:"Phone Tester",score:3.5},{id:"tablet",name:"Tablet Player",score:2.5}]};render()},sample);
  assert.equal(await host.locator("#start").isEnabled(),true);
