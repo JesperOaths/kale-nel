@@ -137,7 +137,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(404, {"error": "not_found"})
         if len(self.path) > 600:
             return self.reply(414, {"error": "request_uri_too_long"})
-        if parts.path not in ("/", "/index.html") and parts.query:
+        if parts.query and parts.path in ("/app.js", "/style.css"):
+            # Browser cache keys are safe, but never allow arbitrary
+            # upstream query parameters or proxy to other endpoints.
+            if not re.fullmatch(r"v=[a-zA-Z0-9_-]{1,64}", parts.query):
+                return self.reply(404, {"error": "not_found"})
+        elif parts.query and parts.path not in ("/", "/index.html"):
             return self.reply(404, {"error": "not_found"})
         return self.forward(parts.path, None)
 
