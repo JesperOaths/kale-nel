@@ -1871,16 +1871,20 @@ async function newParty(){
   }
  }
 }
-async function join(e){
- e.preventDefault();if(loading)return;
+function join(e){
+ e.preventDefault();
  const code=$("join-code").value.trim().toUpperCase();
  const name=$("nickname").value.trim();
- if(!/^[A-HJ-NP-Z2-9]{6}$/.test(code)||!name){message("Enter a valid code and nickname");return}
- setLoading(true);
- try{
-  const b=await rpc("join",{code,name});
-  access={code:b.state.code,token:b.token};safeStore();applyState(b.state);
- }catch(e){message(e.message)}finally{setLoading(false)}
+ if(!/^[A-HJ-NP-Z2-9]{6}$/.test(code)||!name||name.length>20){
+  message("Enter a valid code and nickname");return;
+ }
+ // The homepage's original Join button must use the same S21 room backend
+ // as Create lobby, not the retired Audius/Supabase lobby.
+ const url=new URL("http://192.168.178.196:8798/");
+ url.searchParams.set("room",code);
+ url.searchParams.set("name",name);
+ url.searchParams.set("autojoin","1");
+ window.location.assign(url.href);
 }
 function inviteUrl(){
  const u=new URL(location.href);u.search="";u.searchParams.set("room",room?.code||"");
