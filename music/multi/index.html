@@ -88,7 +88,7 @@
        <button id="buzz" class="buzz" type="button">⚡ BUZZ IN</button>
        <button id="steal" class="buzz secondary" type="button" hidden>⚡ STEAL ANSWER</button>
        <div id="answer-form-panel" class="answer-panel" hidden>
-        <p class="eyebrow">YOUR TURN — 25 SECONDS</p>
+        <p class="eyebrow">YOUR TURN — <span id="answer-countdown" aria-live="off">25</span> SECONDS REMAINING</p>
         <form id="answer-form"><label for="guess-title">Song title</label><input id="guess-title" autocomplete="off" placeholder="Name the song"><label for="guess-artist">Artist</label><input id="guess-artist" autocomplete="off" placeholder="Name the artist"><button type="submit" class="primary">Submit guess</button></form>
         <button id="forfeit" type="button" class="quiet">Pass this turn</button>
        </div>
