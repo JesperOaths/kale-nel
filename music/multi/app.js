@@ -558,7 +558,18 @@ async function boot(){
   $("name-input").value="Tablet Player";
   await joinRoom(JOIN_CODE,"Tablet Player");
  }
- if(access){
+ // A deliberate top-level Create lobby click opens the actual S21 server,
+ // creates a new phone-owned room and removes the one-shot URL flag so a
+ // refresh never creates duplicate lobbies. Embedded tablet guests cannot
+ // use this route, and the cloud page cannot silently create a local room.
+ const autoCreate=LOCAL_DIRECT&&!EMBEDDED&&PARAMS.get("autocreate")==="1";
+ if(autoCreate){
+  const clean=new URL(location.href);
+  clean.searchParams.delete("autocreate");
+  history.replaceState(null,"",clean);
+  render();
+  await createRoom();
+ }else if(access){
   render();await pollState();
  }else render();
  startPolling();
