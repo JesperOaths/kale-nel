@@ -23,6 +23,8 @@ import time
 import unicodedata
 import uuid
 
+import permanent_audio
+
 ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 GENRES = frozenset(("demo", "pop", "rock", "hiphop", "electronic",
                     "indie", "dutch", "disco", "rnb", "metal", "dance"))
@@ -105,14 +107,17 @@ def visible(room: dict, credential: str) -> dict:
         "titleDone": room["titleDone"], "artistDone": room["artistDone"],
         "title": song.get("title") if show_title else None,
         "artist": song.get("artist") if show_artist else None,
-        "audio": ({"source": "local:" + str(song["fileIndex"]), "cueMs": song["cueMs"]}
+        "audio": ({"source": "cached:" + str(room["round"]), "cueMs": song["cueMs"]}
+                  if host and song and room["mode"] == "persistent-library" else
+                  {"source": "local:" + str(song["fileIndex"]), "cueMs": song["cueMs"]}
                   if host and song and room["mode"] == "local" else None),
         "winner": room["winner"], "expiresAt": when(room["expires"]),
     }
 
 
 class MultiplayerEngine:
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, library_root: str | Path | None = None):
+        self.library_root = Path(library_root) if library_root is not None else None
         self.path = Path(path).expanduser()
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.lock = RLock()
@@ -181,7 +186,7 @@ class MultiplayerEngine:
             "round": 0, "step": -1, "firstAnswered": False, "stealTurn": False,
             "lockedPlayer": None, "answerExpiresAt": None,
             "titleDone": False, "artistDone": False, "song": None,
-            "winner": None,
+            "winner": None, "usedMusicIds": [],
         }
         try:
             self.db.execute("insert into rooms(code,expires,data) values(?,?,?)",
@@ -235,23 +240,44 @@ class MultiplayerEngine:
                 raise GameError("round_not_solved")
             if action == "start" and not room["players"]:
                 raise GameError("no_players")
-            if clean(data.get("mode"), 16) != "local":
+            source = clean(data.get("mode"), 24)
+            if source == "persistent-library":
+                if self.library_root is None:
+                    raise GameError("cached_library_unavailable")
+                if room["round"] >= 40:
+                    raise GameError("round_limit_reached")
+                # Selection, names, cue points and hashes are ALL determined by
+                # the S21. A browser must never submit the secret answer.
+                try:
+                    pool = permanent_audio.select(room["genres"], room["decades"], 1, self.library_root)
+                    selection, cue = permanent_audio.choose(
+                        pool, room.get("usedMusicIds", []), self.library_root)
+                except (ValueError, OSError, sqlite3.Error) as exc:
+                    raise GameError("cached_tracks_unavailable") from exc
+                if selection["id"] in room.get("usedMusicIds", []):
+                    raise GameError("cached_track_repeated")
+                song = {"title": selection["title"], "artist": selection["artist"],
+                        "sha256": selection["sha256"], "id": selection["id"], "cueMs": cue}
+                room.setdefault("usedMusicIds", []).append(selection["id"])
+            elif source == "local" and self.library_root is None:
+                # Legacy offline tests only. Production never accepts answer
+                # metadata, file indices, or clue timing from the browser.
+                title, artist = clean(data.get("song")), clean(data.get("artist"))
+                index, duration, cue = data.get("fileIndex"), data.get("durationMs"), data.get("cueMs")
+                if not title or not artist:
+                    raise GameError("local_song_metadata_missing")
+                if type(index) is not int or not 0 <= index <= 99999999:
+                    raise GameError("local_file_index_invalid")
+                if type(duration) is not int or not 30000 <= duration <= 7200000:
+                    raise GameError("local_duration_invalid")
+                if type(cue) is not int or not 0 <= cue <= duration - 21000:
+                    raise GameError("local_cue_invalid")
+                song = {"title": title, "artist": artist, "fileIndex": index,
+                        "durationMs": duration, "cueMs": cue}
+            else:
                 raise GameError("invalid_music_source")
-            title, artist = clean(data.get("song")), clean(data.get("artist"))
-            index, duration, cue = data.get("fileIndex"), data.get("durationMs"), data.get("cueMs")
-            if not title or not artist:
-                raise GameError("local_song_metadata_missing")
-            if type(index) is not int or not 0 <= index <= 99999999:
-                raise GameError("local_file_index_invalid")
-            if type(duration) is not int or not 30000 <= duration <= 7200000:
-                raise GameError("local_duration_invalid")
-            if type(cue) is not int or not 0 <= cue <= duration - 21000:
-                raise GameError("local_cue_invalid")
             room.update({
-                "mode": "local", "song": {
-                    "title": title, "artist": artist, "fileIndex": index,
-                    "durationMs": duration, "cueMs": cue,
-                }, "round": room["round"] + 1,
+                "mode": source, "song": song, "round": room["round"] + 1,
                 "phase": "paused", "step": -1,
                 "lockedPlayer": None, "answerExpiresAt": None,
                 "firstAnswered": False, "stealTurn": False,
