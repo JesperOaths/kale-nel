@@ -201,6 +201,7 @@ class MultiplayerEngine:
                 if (action == "answer" and room["phase"] == "answering" and
                     room["answerExpiresAt"] is not None and
                     time.time() > room["answerExpiresAt"]):
+                    visible(room, credential)  # never reveal timeout state to strangers
                     raise GameError("answer_time_expired")
                 expired = self._expire_overdue_answer(room)
                 if expired and action == "expire":
