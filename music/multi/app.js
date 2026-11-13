@@ -10,7 +10,7 @@ const PUBLISHABLE_KEY="sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 // S21 on the home Wi-Fi, or the narrowly allowlisted HTTPS bridge.
 const LOCAL_DIRECT=(location.protocol==="http:"&&location.port==="8798")||
  (location.protocol==="https:"&&
-  (/^[a-z0-9-]+\\.trycloudflare\\.com$/.test(location.hostname)||
+  (/^[a-z0-9-]+\.trycloudflare\.com$/.test(location.hostname)||
    location.hostname==="jesper-hub.tail87c632.ts.net"));
 const S21_LAN_ORIGIN="http://192.168.178.196:8798";
 const ROOM_ACCESS_PREFIX="tune-rush-s21-multi-room-v1:";
