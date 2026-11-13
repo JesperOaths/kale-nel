@@ -84,12 +84,19 @@ try{
  tablet.on("pageerror",e=>errors.push("tablet: "+e.message));
  phone.on("pageerror",e=>errors.push("phone: "+e.message));
  const base="http://127.0.0.1:8798/";
- await tablet.goto(base,{waitUntil:"domcontentloaded"});
+ // The original homepage Create lobby link must open a native S21 room.
+ // Refreshing must not create another room.
+ await tablet.goto(base+"?autocreate=1",{waitUntil:"domcontentloaded"});
  assert.equal(await tablet.evaluate(()=>LOCAL_DIRECT),true);
  assert.equal(await tablet.locator("#cloud-notice").isVisible(),false,
   "Local game should never show the remote outage warning");
- await tablet.locator("#create").click();
  await tablet.waitForFunction(()=>state?.role==="host"&&state?.phase==="lobby");
+ assert.equal(new URL(tablet.url()).searchParams.has("autocreate"),false);
+ assert.equal(actions.filter(x=>x==="create").length,1);
+ await tablet.reload({waitUntil:"domcontentloaded"});
+ await tablet.waitForFunction(()=>state?.role==="host"&&state?.phase==="lobby");
+ assert.equal(actions.filter(x=>x==="create").length,1,
+  "Page refresh must not create a second lobby");
  assert.equal(await tablet.locator("#start").isDisabled(),true);
  const code=await tablet.locator("#room-code").innerText();
  assert.match(code,/^[A-HJ-NP-Z2-9]{6}$/);
@@ -120,10 +127,12 @@ try{
  const frameUrl=await tablet.locator("#tablet-frame").getAttribute("src");
  assert.equal(new URL(frameUrl).searchParams.get("room"),code);
  assert.equal(new URL(frameUrl).searchParams.has("hash"),false);
- await phone.goto(base+"?room="+code,{waitUntil:"domcontentloaded"});
- await phone.locator("#name-input").fill("Phone Tester");
- await phone.locator("#join-form button[type=submit]").click();
+ // The original homepage Join game form must reach the same S21 backend.
+ await phone.goto(base+"?room="+code+"&name=Phone%20Tester&autojoin=1",
+  {waitUntil:"domcontentloaded"});
  await phone.waitForFunction(()=>state?.role==="player",null,{timeout:12000});
+ assert.equal(new URL(phone.url()).searchParams.has("autojoin"),false);
+ assert.equal(new URL(phone.url()).searchParams.has("name"),false);
  await tablet.waitForFunction(()=>state?.players?.length===2,null,{timeout:10000});
  assert.equal(await tablet.locator("#start").isEnabled(),true);
  assert.deepEqual(game.players.map(x=>x.name).sort(),["Phone Tester","Tablet Player"]);
