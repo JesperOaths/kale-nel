@@ -33,7 +33,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const num=n=>Number.isFinite(Number(n))?Number(n):0;
 const validCode=code=>/^[A-HJ-NP-Z2-9]{6}$/.test(code||"");
 const validCred=key=>/^[a-f0-9]{64}$/.test(key||"");
-const normalizeCode=value=>String(value||"").normalize("NFKC").trim().toUpperCase().replace(/[\\s-]+/g,"");
+const normalizeCode=value=>String(value||"").normalize("NFKC").trim().toUpperCase().replace(/[\s-]+/g,"");
 function fmt(ms){return ms<1000?ms+"ms":(ms/1000).toFixed(Number.isInteger(ms/1000)?0:1)+"s"}
 function alertUser(text,bad=false){
  const notice=$("notice");notice.textContent=text;notice.hidden=false;
@@ -476,7 +476,8 @@ function render(){
    (winners[0]?.name||"Everybody")+" wins with "+num(winners[0]?.score||0).toFixed(1)+" points!";
  }
  if(state.code!==panelCode&&panelCode)closePanel(true);
- renderChips();renderRoster();renderLevels();renderButtons();
+ if(isHost)renderChips(); // Guest config panel is hidden; do not rebuild 16 unused chip buttons on every poll.
+ renderRoster();renderLevels();renderButtons();
  refreshAnswerClock();
 }
 function accept(next){
