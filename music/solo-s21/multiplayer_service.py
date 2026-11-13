@@ -32,6 +32,7 @@ MAX_REQUEST=4096
 CODE=re.compile(r"^[A-HJ-NP-Z2-9]{6}$")
 CREDENTIAL=re.compile(r"^[a-f0-9]{64}$")
 ENGINE=None
+LIBRARY_STATUS={}
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version="HTTP/1.0"
@@ -66,7 +67,10 @@ class Handler(BaseHTTPRequestHandler):
         if not self.permitted():return self.send_json(403,{"error":"local_network_only"})
         if urlsplit(self.path).path=="/api/health":
             return self.send_json(200,{"service":"tunerush-s21-multiplayer",
-                "ready":True,"source":"persistent-library","version":1})
+                "ready":bool(LIBRARY_STATUS.get("playableCachedSongs",0)),
+                "source":"persistent-library","version":1,
+                "cachedSongs":LIBRARY_STATUS.get("playableCachedSongs",0),
+                "missingSongs":LIBRARY_STATUS.get("missingCachedSongs",0)})
         return self.send_json(404,{"error":"not_found"})
 
     def do_POST(self):
@@ -117,7 +121,11 @@ class DualStackServer(ThreadingHTTPServer):
         super().server_bind()
 
 def serve():
-    global ENGINE
+    global ENGINE,LIBRARY_STATUS
+    # "ready" must mean real cached songs exist, not just an open TCP port.
+    LIBRARY_STATUS=permanent_audio.availability(LIBRARY)
+    if LIBRARY_STATUS.get("playableCachedSongs",0)<1:
+        raise SystemExit("No playable cached S21 tracks. Keep Solo running and repair imports.")
     DATA.mkdir(parents=True,exist_ok=True,mode=0o700)
     ENGINE=MultiplayerEngine(DATA/"rooms.sqlite3",library_root=LIBRARY)
     httpd=DualStackServer((BIND,PORT),Handler)
