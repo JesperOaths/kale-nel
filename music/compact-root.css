@@ -106,3 +106,135 @@ body:not(.solo-mode-active) .host-mixer-slider-label{font-size:13px}
  .tablet-test-help{font-size:11px;line-height:1.4}
  #tablet-test-toggle{font-size:12px}
 }
+
+
+/* v820: legacy multiplayer, visually aligned with Solo's forest-dark workspace.
+   UI ONLY: selectors exclude solo-mode-active. No game logic or audio changes. */
+body:not(.solo-mode-active){
+ --bg:#10130f;--panel:#191e17;--line:#303d2a;
+ --text:#f3f5eb;--muted:#a0b09a;--gold:#c6f56b;
+ --teal:#90d6a3;--danger:#ff9999;
+ background:radial-gradient(ellipse at 49% -15%,#263921 0,transparent 55%),#10130f;
+ color:var(--text);
+}
+body:not(.solo-mode-active)::before{
+ background:radial-gradient(circle at 2% 30%,#416a3421,transparent 36%),
+            radial-gradient(circle at 95% 8%,#87ba3820,transparent 31%);
+}
+body:not(.solo-mode-active) .top{background:#151a13;border-bottom:1px solid #303d2a}
+body:not(.solo-mode-active) .brand-dot,
+body:not(.solo-mode-active) .brand-game,
+body:not(.solo-mode-active) .eyebrow,
+body:not(.solo-mode-active) .kicker{color:#c6f56b}
+body:not(.solo-mode-active) .brand-game{border-color:#47603c;border-radius:7px;padding:7px 10px}
+body:not(.solo-mode-active) h1 em,
+body:not(.solo-mode-active) h2 em{color:#c6f56b}
+body:not(.solo-mode-active) .panel,
+body:not(.solo-mode-active) .host-mode .panel,
+body:not(.solo-mode-active) .lobby-main,
+body:not(.solo-mode-active) .score-panel,
+body:not(.solo-mode-active) .stage{
+ background:#191e17;border-color:#3d4d35;border-radius:16px;
+ box-shadow:0 10px 45px #080e082c;
+}
+body:not(.solo-mode-active) .panel h2{color:#f4f7ee}
+body:not(.solo-mode-active) .primary{background:#c6f56b!important;color:#192710!important;border-color:#c6f56b!important}
+body:not(.solo-mode-active) .secondary{background:#2b4128;color:#e8f6df;border-color:#598149}
+body:not(.solo-mode-active) .outline,
+body:not(.solo-mode-active) .quiet{background:#232f20;color:#e5f0dc;border:1px solid #4a6240}
+body:not(.solo-mode-active) .outline:hover:not(:disabled),
+body:not(.solo-mode-active) .quiet:hover:not(:disabled){background:#304329;border-color:#8fb676}
+body:not(.solo-mode-active) .room-head h1{font-size:clamp(28px,3.5vw,47px)}
+body:not(.solo-mode-active) .room-key,
+body:not(.solo-mode-active) .host-mode .room-key{
+ background:#d1f58e;color:#213510;border-radius:13px;border:1px solid #d1f58e;
+}
+body:not(.solo-mode-active) .room-key .kicker,
+body:not(.solo-mode-active) .host-mode .room-key .kicker{color:#344b24}
+body:not(.solo-mode-active) .room-key .outline{color:#213510;border-color:#5a7944;background:#dbf8ad}
+body:not(.solo-mode-active) .host-ticker,
+body:not(.solo-mode-active) .host-mode .host-ticker{background:#263b23;border:1px solid #435f38;border-radius:12px}
+body:not(.solo-mode-active) .host-ticker strong{color:#c6f56b}
+body:not(.solo-mode-active) .stream-hero,
+body:not(.solo-mode-active) .host-mode .stream-hero{
+ background:linear-gradient(105deg,#283e25,#172418)!important;
+ border:1px solid #58774d;border-radius:14px;
+}
+body:not(.solo-mode-active) .stream-hero h3,
+body:not(.solo-mode-active) .stream-hero-kicker{color:#d4f7ae}
+body:not(.solo-mode-active) .party-join,
+body:not(.solo-mode-active) .audius-info,
+body:not(.solo-mode-active) .host-mixer,
+body:not(.solo-mode-active) .audius-audition,
+body:not(.solo-mode-active) .soundtrack-reserve,
+body:not(.solo-mode-active) .lobby-caption,
+body:not(.solo-mode-active) .lobby-roster,
+body:not(.solo-mode-active) .party-setlist,
+body:not(.solo-mode-active) .rules{
+ background:#222e1f;border-color:#47603c;border-radius:13px;
+}
+body:not(.solo-mode-active) .lobby-caption h2{font-size:clamp(29px,3vw,42px)}
+body:not(.solo-mode-active) .genres label,
+body:not(.solo-mode-active) .mix-chip{
+ background:#283427;border-color:#485b40;color:#e2eddc;border-radius:10px;
+ font-size:13px;min-height:41px;
+}
+body:not(.solo-mode-active) .genres label:has(input:checked),
+body:not(.solo-mode-active) .mix-chip.active{background:#486438;border-color:#a8da78;color:#f2ffe5}
+body:not(.solo-mode-active) input:not([type=checkbox]):not([type=range]){
+ background:#141e13;border-color:#4b5f42;color:#f5f8f0;border-radius:10px;min-height:45px;
+}
+body:not(.solo-mode-active) .host-mixer input[type=range]{accent-color:#c6f56b}
+body:not(.solo-mode-active) .host-mixer-head strong,
+body:not(.solo-mode-active) .host-mixer-foot{color:#d4eac9}
+body:not(.solo-mode-active) .disc{
+ border-color:#4b6741;
+ background:repeating-radial-gradient(circle,#35492f 0 3px,#182018 5px 9px);
+}
+body:not(.solo-mode-active) .disc-core,
+body:not(.solo-mode-active) .disc-inner{background:#c6f56b;color:#1a3114}
+body:not(.solo-mode-active) .host-stage-hero h2 span{color:#c6f56b}
+body:not(.solo-mode-active) .clip-timeline span,
+body:not(.solo-mode-active) .score-entry{
+ background:#273622;border-color:#495e41;color:#d9e9d3;border-radius:10px;
+}
+body:not(.solo-mode-active) .clip-timeline span.now{background:#c6f56b;color:#21370f}
+body:not(.solo-mode-active) .stage-message{
+ background:#273b23;border-color:#47623a;border-radius:13px;
+}
+body:not(.solo-mode-active) .score-entry strong,
+body:not(.solo-mode-active) .my-score strong,
+body:not(.solo-mode-active) .score-caption strong{color:#c6f56b}
+body:not(.solo-mode-active) .score-progress{background:#121b11}
+body:not(.solo-mode-active) .score-progress i{background:#c6f56b}
+body:not(.solo-mode-active) .buzzer{
+ background:linear-gradient(160deg,#c6f56b,#6ea84a);
+ border:7px solid #d9ffa3;box-shadow:0 10px 0 #3b5d30,0 17px 46px #4b943555;
+ color:#203411;
+}
+body:not(.solo-mode-active) .buzzer:not(:disabled):active{
+ transform:translateY(6px);box-shadow:0 4px 0 #3b5d30,0 9px 32px #4b943555;
+}
+body:not(.solo-mode-active) .answer-overlay{background:#0b100cdb}
+body:not(.solo-mode-active) .answer-form{background:#202f1d;border:1px solid #5f894d;border-radius:18px}
+body:not(.solo-mode-active) .answer-form .countdown{color:#c6f56b}
+body:not(.solo-mode-active) .reveal{background:#344a29;border-color:#749552}
+body:not(.solo-mode-active) .reveal span{color:#e7f8c7}
+body:not(.solo-mode-active) .finish-poster-details{background:linear-gradient(135deg,#203a22,#273925);border-color:#85a96c}
+body:not(.solo-mode-active) .finish .finish-poster-controls .finish-poster-share{
+ background:#c6f56b;color:#1b2c11;border-color:#d5ffa3;
+}
+body:not(.solo-mode-active) .toast{background:#d8f8a8;color:#1d2c12}
+@media(min-width:861px){
+ body:not(.solo-mode-active) #room .room-layout,
+ body:not(.solo-mode-active) .game-grid{gap:18px}
+ body:not(.solo-mode-active) .room-layout{grid-template-columns:minmax(0,1.8fr) minmax(275px,.7fr)}
+ body:not(.solo-mode-active) .game-grid{grid-template-columns:minmax(0,1.6fr) minmax(280px,.7fr)}
+}
+@media(max-width:860px){
+ body:not(.solo-mode-active) .panel{padding:17px}
+ body:not(.solo-mode-active) .room-layout,
+ body:not(.solo-mode-active) .game-grid{grid-template-columns:minmax(0,1fr)}
+ body:not(.solo-mode-active) .host-mode .room-key{padding:13px}
+ body:not(.solo-mode-active) .stage{padding:16px}
+}
