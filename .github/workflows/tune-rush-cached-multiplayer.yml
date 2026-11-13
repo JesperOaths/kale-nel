@@ -1,0 +1,83 @@
+name: Tune Rush S21 cached multiplayer
+on:
+  pull_request:
+    paths:
+      - 'music/multi/**'
+      - 'music/solo-s21/multiplayer.py'
+      - 'music/solo-s21/multiplayer_service.py'
+      - 'music/solo-s21/test_multiplayer_cached.py'
+      - 'music/solo-s21/hub_relay.py'
+      - 'music/solo-s21/test_hub_relay.py'
+      - 'music/solo-s21/relay-worker.py'
+      - 'music/solo-s21/watchdog.py'
+      - 'music/solo-s21/multiplayer-cached-relay.sql'
+      - 'music/solo-s21/multiplayer-activate.sql'
+      - 'music/solo-s21/package-multiplayer.sh'
+      - 'music/solo-s21/install-multiplayer.sh'
+      - 'music/solo-s21/package.sh'
+      - 'scripts/tune-rush-cached-multi-browser.mjs'
+      - 'scripts/tune-rush-cached-multi-local-browser.mjs'
+      - '.github/workflows/tune-rush-cached-multiplayer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  phone-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify persistent cache multiplayer and relay
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q music/solo-s21/multiplayer.py music/solo-s21/multiplayer_service.py music/solo-s21/hub_relay.py music/solo-s21/relay-worker.py
+          python3 music/solo-s21/test_multiplayer.py
+          python3 music/solo-s21/test_multiplayer_cached.py
+          (cd music/solo-s21 && python3 -m unittest -q test_hub_relay)
+          test -s music/solo-s21/multiplayer-cached-relay.sql
+          test -s music/solo-s21/multiplayer-activate.sql
+          sh -n music/solo-s21/package-multiplayer.sh
+          bash -n music/solo-s21/install-multiplayer.sh
+          sh -n music/solo-s21/package.sh
+          sh music/solo-s21/package-multiplayer.sh /tmp/tunerush-multiplayer-ci.tar.gz
+          mkdir -p /tmp/tunerush-multiplayer-ci-files
+          tar -xzf /tmp/tunerush-multiplayer-ci.tar.gz -C /tmp/tunerush-multiplayer-ci-files
+          (cd /tmp/tunerush-multiplayer-ci-files && sha256sum -c MANIFEST.sha256)
+          tar -tzf /tmp/tunerush-multiplayer-ci.tar.gz | grep -x 'multiplayer_service.py'
+          tar -tzf /tmp/tunerush-multiplayer-ci.tar.gz | grep -x 'start-multiplayer.sh'
+          if tar -tzf /tmp/tunerush-multiplayer-ci.tar.gz | grep -E 'music-library|tracks/|[.]mp3$'; then
+            echo 'Unexpected permanent music data in deploy archive'
+            exit 1
+          fi
+  visual-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - name: Install browser test controller
+        run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1
+      - name: Verify client JavaScript and responsive tablet / phone layout
+        run: |
+          set -euo pipefail
+          node --check music/multi/app.js
+          node --check scripts/tune-rush-cached-multi-browser.mjs
+          node --check scripts/tune-rush-cached-multi-local-browser.mjs
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory . >/tmp/tunerush-cached-multi-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for try in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/music/multi/ >/dev/null; then break; fi
+            sleep 0.2
+          done
+          TUNERUSH_CACHED_BASE="http://127.0.0.1:8080/music/multi/" node scripts/tune-rush-cached-multi-browser.mjs
+          python3 -m http.server 8798 --bind 127.0.0.1 --directory music/multi >/tmp/tunerush-s21-lan-test.log 2>&1 &
+          local_pid=$!
+          trap 'kill "$server_pid" "$local_pid" 2>/dev/null || true' EXIT
+          for try in {1..30}; do
+            if curl -fsS http://127.0.0.1:8798/ >/dev/null; then break; fi
+            sleep 0.2
+          done
+          node scripts/tune-rush-cached-multi-local-browser.mjs

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Isolated Termux watchdog for the S21 Tune Rush services.
 
-Does not control other phone apps, Home Assistant, or the existing multiplayer
-SQL service. Start under native Termux (not Android run-as) so network works.
+Does not control other phone apps, Home Assistant, or unrelated services. Start under native Termux (not Android run-as) so network works.
 """
 from __future__ import annotations
 
@@ -21,6 +20,7 @@ LOG = APP / "watchdog.log"
 SERVICES = (
     ("solo-engine", APP / "start-solo.sh", str(APP / "server.py")),
     ("cloud-relay", APP / "start-relay.sh", str(APP / "relay-worker.py")),
+    ("cached-multiplayer", APP / "start-multiplayer.sh", str(APP / "multiplayer_service.py")),
 )
 POLL_SECONDS = 30
 MIN_RESTART_SECONDS = 60

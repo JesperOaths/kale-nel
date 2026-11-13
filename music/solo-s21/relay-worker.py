@@ -41,22 +41,30 @@ def post(fn, payload, timeout=13):
     with urllib.request.urlopen(req, timeout=timeout) as response:
         return json.load(response)
 
-_multiplayer_engine = None
 def multiplayer_call(request):
-    """Phone-owned game state; SQL is only a message queue."""
-    global _multiplayer_engine
+    """Fallback worker transports the same S21 multiplayer engine as the hub."""
     if not isinstance(request, dict):
         return {"ok": False, "error": "invalid_data"}
-    from multiplayer import MultiplayerEngine, GameError
-    if _multiplayer_engine is None:
-        _multiplayer_engine = MultiplayerEngine(HOME / ".tunerush-multiplayer" / "rooms.sqlite3")
+    payload = json.dumps(request,separators=(",",":")).encode()
+    if len(payload)>4096:
+        return {"ok": False, "error": "invalid_data"}
+    req=urllib.request.Request(
+        "http://127.0.0.1:8798/api/multiplayer",
+        data=payload,
+        headers={"Accept":"application/json","Content-Type":"application/json"},
+        method="POST")
     try:
-        state = _multiplayer_engine.call(
-            request.get("action"), request.get("code"),
-            request.get("hash"), request.get("data") or {})
-    except GameError as err:
-        return {"ok": False, "error": str(err)[:160]}
-    return {"ok": True, "body": {"state": state}}
+        with urllib.request.urlopen(req,timeout=16) as response:
+            body=json.load(response)
+        if not isinstance(body,dict) or not isinstance(body.get("state"),dict):
+            raise ValueError("Invalid S21 multiplayer reply")
+        return {"ok":True,"body":body}
+    except urllib.error.HTTPError as err:
+        try:reason=json.load(err).get("error","Game request denied")
+        except (ValueError,TypeError):reason="Game request denied"
+        return {"ok":False,"error":str(reason)[:160],"code":err.code}
+    except (OSError,ValueError,TimeoutError):
+        return {"ok":False,"error":"S21 multiplayer currently unreachable"}
 
 def backend(cmd, token, data):
     if cmd == "multiplayer":

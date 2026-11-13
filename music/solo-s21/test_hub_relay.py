@@ -3,6 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import uuid
+from unittest.mock import patch
 
 from hub_relay import Relay, Transport, validate_request
 
@@ -97,11 +98,30 @@ class RelayTests(unittest.TestCase):
         self.assertNotIn(b"clipAudio", raw)
         self.assertNotIn(b"playing", raw)
 
+    def test_multiplayer_only_for_valid_s21_actions(self):
+        payload={"action":"play","code":"ABC234","hash":"c"*64,"data":{}}
+        command,token,data=validate_request({"command":"multiplayer","token":None,"data":payload})
+        self.assertEqual(command,"multiplayer")
+        self.assertIsNone(token)
+        self.assertEqual(data,payload)
+        transport=Transport({"upstream":"http://192.168.178.196:8797"})
+        calls=[]
+        transport.json_request=lambda *args,**kw: calls.append(args) or {"state":{"phase":"playing"}}
+        with patch.object(transport,"phone_url",return_value="http://192.168.178.196:8798"):
+            result=transport.engine({"command":"multiplayer","token":None,"data":payload})
+        self.assertTrue(result["ok"])
+        self.assertEqual(calls[0][0],"http://192.168.178.196:8798/api/multiplayer")
+        for bad in ({**payload,"hash":"invalid"}, {**payload,"action":"shell"},
+                    {**payload,"code":"BAD!"}):
+            with self.assertRaises(ValueError):
+                validate_request({"command":"multiplayer","token":None,"data":bad})
+
     def test_transport_retains_phone_owned_api_contract(self):
         transport = Transport({"upstream": "http://192.168.178.196:8797"})
         calls = []
         transport.json_request = lambda *args, **kwargs: calls.append((args, kwargs)) or {"state": {}}
-        transport.engine(self.job["request"])
+        with patch.object(transport,"phone_url",return_value="http://192.168.178.196:8797"):
+            transport.engine(self.job["request"])
         self.assertEqual(calls[0][0][0], "http://192.168.178.196:8797/api/action")
         self.assertEqual(calls[0][0][1], {"op": "clue", "round": 1})
         self.assertEqual(calls[0][0][2]["Authorization"], "Bearer " + "b" * 64)

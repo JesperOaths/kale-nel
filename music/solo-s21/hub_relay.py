@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Outbound transport only. The S21 remains the game and audio authority."""
 import json
+import ipaddress
+import subprocess
+from urllib.parse import urlsplit
 import os
 from pathlib import Path
 import re
@@ -14,6 +17,8 @@ import uuid
 MAX_RESULT = 1_500_000
 TOKEN = re.compile(r"[a-f0-9]{64}\Z")
 ACTIONS = frozenset(("clue", "answer", "reveal", "next", "finish"))
+MULTIPLAYER_ACTIONS = frozenset(("create","state","join","settings","start","next",
+    "play","replay","pause","resume","buzz","steal","expire","forfeit","answer","skip","finish"))
 INTERRUPTED = {
     "ok": False,
     "error": "The game connection was interrupted. Reload to check your saved game before retrying.",
@@ -30,6 +35,25 @@ class Transport:
         self.config = config
         self.opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({}), NoRedirect())
+        self._phone_url = config["upstream"]
+        self._last_discovery = 0.0
+
+    def phone_url(self,port=8797):
+        # The S21 changes its WLAN IPv4 prefix. Discover the verified Samsung
+        # device's mDNS IPv6 address; never use arbitrary request-supplied URLs.
+        if time.monotonic()-self._last_discovery>30:
+            self._last_discovery=time.monotonic()
+            try:
+                found=subprocess.run(
+                    ["/usr/bin/avahi-resolve","-6","-n","Android-2.local"],
+                    capture_output=True,text=True,timeout=4)
+                address=found.stdout.strip().split()[-1]
+                ipv6=ipaddress.IPv6Address(address)
+                if found.returncode==0 and ipv6.is_global:
+                    self._phone_url="http://["+str(ipv6)+"]:8797"
+            except (OSError,ValueError,IndexError,subprocess.TimeoutExpired):
+                pass
+        return self._phone_url.rsplit(":",1)[0]+":"+str(port)
 
     def json_request(self, url, data=None, headers=None, timeout=12):
         headers = {"Accept": "application/json", **(headers or {})}
@@ -49,7 +73,7 @@ class Transport:
 
     def ready(self):
         try:
-            result = self.json_request(self.config["upstream"] + "/api/health", timeout=3)
+            result = self.json_request(self.phone_url() + "/api/health", timeout=3)
             return result.get("ready") is True and result.get("service") == "tunerush-s21-solo"
         except (OSError, ValueError):
             return False
@@ -62,10 +86,21 @@ class Transport:
 
     def engine(self, request):
         command, token, data = validate_request(request)
+        if command == "multiplayer":
+            try:
+                body = self.json_request(self.phone_url(8798) + "/api/multiplayer",
+                                         data, timeout=15)
+                return {"ok": True, "body": body}
+            except urllib.error.HTTPError as error:
+                try: detail = json.loads(error.read(4096)).get("error", "Game request denied")
+                except (OSError, ValueError, AttributeError): detail = "Game request denied"
+                return {"ok": False, "error": str(detail)[:170], "code": error.code}
+            except (OSError, ValueError):
+                return {"ok": False, "error": "S21 multiplayer temporarily unavailable"}
         path = {"session": "/api/session", "state": "/api/state", "action": "/api/action"}[command]
         headers = {"Authorization": "Bearer " + token} if token else {}
         try:
-            body = self.json_request(self.config["upstream"] + path,
+            body = self.json_request(self.phone_url() + path,
                                      None if command == "state" else data,
                                      headers, timeout=15)
             return {"ok": True, "body": body}
@@ -86,10 +121,20 @@ def validate_request(request):
     if not isinstance(request, dict):
         raise ValueError("Invalid request")
     command, token, data = request.get("command"), request.get("token"), request.get("data", {})
-    if command not in ("session", "state", "action") or not isinstance(data, dict):
+    if command not in ("session", "state", "action", "multiplayer") or not isinstance(data, dict):
         raise ValueError("Unsupported game command")
     if len(json.dumps(data).encode()) > 4096:
         raise ValueError("Oversized request")
+    if command == "multiplayer":
+        # The queue submit RPC already enforces these fields. Check them again
+        # before forwarding, without ever logging secrets or full request JSON.
+        action,code,credential = data.get("action"),data.get("code"),data.get("hash")
+        if (token is not None or action not in MULTIPLAYER_ACTIONS
+            or not isinstance(code,str) or not re.fullmatch(r"[A-HJ-NP-Z2-9]{6}",code)
+            or not isinstance(credential,str) or not TOKEN.fullmatch(credential)
+            or not isinstance(data.get("data"),dict)):
+            raise ValueError("Invalid multiplayer command")
+        return command,None,data
     if command != "session" and (not isinstance(token, str) or not TOKEN.fullmatch(token)):
         raise ValueError("Invalid game credential")
     if command == "action" and data.get("op") not in ACTIONS:
