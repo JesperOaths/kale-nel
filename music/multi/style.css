@@ -43,3 +43,4 @@
 .no-buzz-actions button:focus-visible{outline:3px solid #edffa5;outline-offset:3px}
 .no-buzz-card .no-buzz-note{font-size:12px;color:#b8cbb0;margin-bottom:0}
 @media (max-width:430px){.no-buzz-overlay{padding:12px}.no-buzz-card{max-height:calc(100dvh - 24px);overflow-y:auto}.no-buzz-actions button{min-height:64px}}
+\n/* v818 — transparent points ledger and opt-out choice */\n.roster-entry .player-name .score-detail{display:block;margin-top:4px;font-size:10px;font-weight:500;color:#a6bb9a}.no-buzz-actions .optout{border:1px solid #bbaf87;background:#3e3a2d;color:#fff3d6}.no-buzz-actions .optout:hover{background:#514833}\n
