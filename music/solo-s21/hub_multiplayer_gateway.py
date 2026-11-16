@@ -244,11 +244,34 @@ class Handler(BaseHTTPRequestHandler):
             SLOTS.release()
 
 
+TRUSTED_S21 = Path("/home/jespern/tunerush-internet-bridge/trusted-s21.json")
+S21_LAN = ipaddress.IPv4Network("192.168.178.0/24")
+
+
+def valid_s21_upstream(upstream, proof):
+    """Only use a previously ADB-model-and-serial-verified S21 on this LAN."""
+    u = urlsplit(upstream)
+    if (u.scheme != "http" or u.port != 8798 or u.username or u.password
+            or u.path or u.query or u.fragment):
+        return False
+    try:
+        addr = ipaddress.IPv4Address(u.hostname)
+    except (ValueError, TypeError):
+        return False
+    return (addr in S21_LAN and addr not in (S21_LAN.network_address, S21_LAN.broadcast_address)
+            and isinstance(proof, dict) and
+            proof.get("ip") == str(addr) and
+            proof.get("model") == "SM-G991B" and
+            isinstance(proof.get("serial"), str) and 8 <= len(proof["serial"]) <= 40)
+
+
 def main():
-    u = urlsplit(UPSTREAM)
-    if (u.scheme != "http" or u.hostname != "192.168.178.196" or
-        u.port != 8798 or u.username or u.password or u.path or u.query or u.fragment):
-        raise SystemExit("Refusing unexpected S21 upstream")
+    try:
+        proof = json.loads(TRUSTED_S21.read_text())
+    except (OSError, ValueError):
+        raise SystemExit("Refusing missing S21 identity proof")
+    if not valid_s21_upstream(UPSTREAM, proof):
+        raise SystemExit("Refusing unexpected or unverified S21 upstream")
     if PORT not in (8806, 8807):
         raise SystemExit("Refusing unexpected local bind port")
     if STATIC_ROOT.is_symlink() or not STATIC_ROOT.is_dir():

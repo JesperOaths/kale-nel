@@ -1,3 +1,40 @@
+### S21 DHCP / ADB recovery (16 November 2026)
+
+The S21 moved from its original .196 LAN address to a different DHCP lease.
+The operator verified the phone through a real `adb-tls-connect` IPv4 mDNS
+advertisement, then connected by ADB and independently checked both the
+Android model and hardware serial. The *actual* serial and verified address
+are retained only on the C720P in a mode-0600 identity file:
+`/home/jespern/tunerush-internet-bridge/trusted-s21.json`. Never publish
+the serial or copy the identity file into GitHub.
+
+The scheduled `tunerush-s21-recovery.timer` runs
+`/home/jespern/tunerush-relay/s21_recovery.py`, now versioned in this
+repository as `music/solo-s21/s21_recovery.py`. Every cycle:
+
+- Accept only an IPv4 `_adb-tls-connect._tcp` advertisement identifying
+  the existing S21 and the same 192.168.178.0/24 home LAN.
+- Reconnect to the advertised ephemeral ADB port and independently verify
+  the device's model **and saved serial** before any change.
+- When both game services respond, update only the identity proof and
+  `tunerush-multiplayer-internet-bridge.service.d/10-s21-upstream.conf`
+  if its verified IP changed. Atomically replace those two files, restart
+  only the multiplayer loopback gateway and health-check it; roll back
+  on failure.
+- If game services have stopped, use the **native** Termux startup script,
+  not Android `run-as` networking. For safety, the ADB GUI start only
+  runs when the screen is awake, unlocked and showing Termux or the launcher;
+  it never types into another app.
+- Otherwise leave the existing Solo, S9+ camera, other ADB devices and
+  music cache untouched.
+
+Both `8797/api/health` (Solo) and `8798/api/health` (multiplayer) are
+validated, including split-packet HTTP responses. Missing mDNS or a
+locked/in-use phone leaves the old services unchanged; the timer retries.
+
+The permanent public address stays
+**https://jesper-hub.tail87c632.ts.net/** across phone DHCP changes.
+
 # Tune Rush multiplayer over 5G / external networks — 2026-11-13
 
 ## Permanent Funnel activation — 16 November 2026
