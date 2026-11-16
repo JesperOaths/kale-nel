@@ -98,4 +98,4 @@ with TemporaryDirectory(prefix="tunerush-no-buzz-") as temp:
         {"durationsMs":list(CLUES),"phoneFirstChoiceWins":True,
          "noGuestAudioOrAnswers":True,"replayDoesNotAdvance":True,
          "nextAdvancesOnce":True,"finalReveals":True,
-         "buzzOverridesPrompt":True,"scoreUnchanged":True})
+         "buzzOverridesPrompt":True,"paidPlaybackDebitsVerified":True})
