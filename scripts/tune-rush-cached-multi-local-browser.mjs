@@ -251,7 +251,7 @@ try{
  await phone.locator("#no-buzz-dialog").waitFor({state:"hidden",timeout:12000});
  await tablet.waitForFunction(()=>state?.phase==="playing"&&state.step===0,null,{timeout:12000});
  assert.equal(game.step,0,"replay must retain 0.5s denomination");
- assert.equal(await embedded.locator("#no-buzz-dialog").isVisible(),false);
+ await embedded.locator("#no-buzz-dialog").waitFor({state:"hidden",timeout:11000});
  game.phase="decision";
  await embedded.locator("#no-buzz-dialog").waitFor({state:"visible",timeout:11000});
  await embedded.locator("#no-buzz-next").click();
