@@ -30,6 +30,11 @@ GENRES = frozenset(("demo", "pop", "rock", "hiphop", "electronic",
                     "indie", "dutch", "disco", "rnb", "metal", "dance"))
 DECADES = frozenset(("1960", "1970", "1980", "1990", "2000", "2010", "2020"))
 CLUES = (500, 1500, 3000, 5000, 8000, 12000, 20000)
+START_POINTS = 20.0
+PAID_CLUE_START = 3
+PAID_CLUE_COST = 0.5
+ONE_CORRECT_POINTS = 5.0
+BOTH_CORRECT_POINTS = 12.0
 NO_BUZZ_GRACE_SECONDS = 3.5  # Everyone gets a short buzz window after the clue finishes.
 CODE_PATTERN = re.compile(r"^[A-HJ-NP-Z2-9]{6}$")
 HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -99,7 +104,14 @@ def visible(room: dict, credential: str) -> dict:
         "code": room["code"], "role": "host" if host else "player",
         "me": None if host else participant["id"],
         "myBlockedStep": None if host else participant["blockedStep"],
-        "players": [{"id": p["id"], "name": p["name"], "score": p["score"]} for p in rank],
+        "myOptedOut": False if host else participant.get("optedOutRound") == room["round"],
+        "rules": {"start": START_POINTS, "freeClues": list(CLUES[:PAID_CLUE_START]),
+                  "paidClues": list(CLUES[PAID_CLUE_START:]), "clueCost": PAID_CLUE_COST,
+                  "singleCorrect": ONE_CORRECT_POINTS, "bothCorrect": BOTH_CORRECT_POINTS},
+        "players": [{"id": p["id"], "name": p["name"], "score": p["score"],
+                     "earned": p.get("earned", 0.0), "spent": p.get("spent", 0.0),
+                     "optedOut": p.get("optedOutRound") == room["round"] and room["round"] > 0}
+                    for p in rank],
         "phase": phase, "mode": room["mode"], "genres": room["genres"],
         "decades": room["decades"], "round": room["round"], "step": room["step"],
         "pendingClue": room.get("pendingClue"),
@@ -258,6 +270,18 @@ class MultiplayerEngine:
             raise GameError("room_code_taken") from err
         return visible(room, credential)
 
+    @staticmethod
+    def _charge_clue(room: dict, step: int) -> None:
+        # Charge on each actual paid playback, not on a vote or a state poll.
+        # This includes replaying a paid denomination, but not a pause/resume.
+        if step < PAID_CLUE_START or room["round"] < 1:
+            return
+        for player in room["players"]:
+            if player.get("optedOutRound") == room["round"]:
+                continue
+            player["score"] = round(player["score"] - PAID_CLUE_COST, 1)
+            player["spent"] = round(player.get("spent", 0.0) + PAID_CLUE_COST, 1)
+
     def _mutate(self, room: dict, action: str, credential: str, data: dict) -> dict:
         host = hmac.compare_digest(room["hostHash"], credential)
         player = None if host else next(
@@ -279,7 +303,8 @@ class MultiplayerEngine:
                 raise GameError("name_taken")
             room["players"].append({
                 "id": str(uuid.uuid4()), "name": name, "hash": credential,
-                "score": 0.0, "blockedStep": -99, "joinedAt": time.time(),
+                "score": START_POINTS, "earned": 0.0, "spent": 0.0,
+                "optedOutRound": -1, "blockedStep": -99, "joinedAt": time.time(),
             })
         elif action == "settings":
             if not host or phase != "lobby":
@@ -349,6 +374,7 @@ class MultiplayerEngine:
             })
             for p in room["players"]:
                 p["blockedStep"] = -99
+                p["optedOutRound"] = -1
         elif action == "random_cue":
             raise GameError("cue_not_available")
         elif action == "play":
@@ -361,6 +387,7 @@ class MultiplayerEngine:
                 raise GameError("all_hints_used")
             if not replay_selected:
                 room["step"] += 1
+            self._charge_clue(room, room["step"])
             room.update(phase="playing", firstAnswered=False, stealTurn=False,
                         clueStartedAt=time.time(), pendingClue=None)
         elif action == "replay":
@@ -370,11 +397,26 @@ class MultiplayerEngine:
                 raise GameError("replay_unavailable")
             if data.get("expectedRound") != room["round"] or data.get("expectedStep") != room["step"]:
                 raise GameError("stale_clue")
+            self._charge_clue(room, room["step"])
             room.update(phase="playing", clueStartedAt=time.time(), pendingClue=None)
+        elif action == "opt_out":
+            # This is a private player decision, NOT a vote that advances the room.
+            # No refunds: only future paid clue playback is avoided.
+            if host or player is None or room["round"] < 1 or phase not in (
+                    "decision", "playing", "paused", "holding"):
+                raise GameError("opt_out_unavailable")
+            if (data.get("expectedRound") != room["round"] or
+                    data.get("expectedStep") != room["step"]):
+                raise GameError("stale_clue")
+            player["optedOutRound"] = room["round"]
+            if all(p.get("optedOutRound") == room["round"] for p in room["players"]):
+                room.update(phase="solved", titleDone=True, artistDone=True,
+                            pendingClue=None, clueStartedAt=None,
+                            lockedPlayer=None, answerExpiresAt=None)
         elif action == "clue_choice":
             # FIRST eligible phone vote wins. Concurrent/stale choices fail
             # inside the same SQLite transaction; the tablet owns audio.
-            if host or player is None or phase != "decision":
+            if host or player is None or phase != "decision" or player.get("optedOutRound") == room["round"]:
                 raise GameError("clue_choice_closed")
             if (type(data.get("expectedRound")) is not int or
                 type(data.get("expectedStep")) is not int or
@@ -399,14 +441,14 @@ class MultiplayerEngine:
                 raise GameError("resume_unavailable")
             room["phase"] = "paused"
         elif action == "buzz":
-            if host or phase not in ("playing", "paused") or room["step"] < 0 or room["firstAnswered"] or room.get("pendingClue"):
+            if host or phase not in ("playing", "paused") or room["step"] < 0 or room["firstAnswered"] or room.get("pendingClue") or player.get("optedOutRound") == room["round"]:
                 raise GameError("buzz_closed")
             if player["blockedStep"] == room["step"]:
                 raise GameError("already_tried_this_clip")
             room.update(phase="answering", lockedPlayer=player["id"],
                         answerExpiresAt=time.time() + 25, stealTurn=False)
         elif action == "steal":
-            if host or phase != "holding" or not room["firstAnswered"]:
+            if host or phase != "holding" or not room["firstAnswered"] or player.get("optedOutRound") == room["round"]:
                 raise GameError("steal_closed")
             if player["blockedStep"] == room["step"]:
                 raise GameError("already_tried_this_clip")
@@ -437,23 +479,21 @@ class MultiplayerEngine:
             if room["stealTurn"] and ((not done_title and not title) or
                                       (not done_artist and not artist)):
                 raise GameError("steal_requires_remaining_answers")
-            delta = 0.0
-            for field, guess, done in (("title", title, done_title),
-                                       ("artist", artist, done_artist)):
-                if guess and not done:
-                    correct = close_match(guess, room["song"][field])
-                    delta += 0.5 if correct else (-1 if room["stealTurn"] else -0.5)
-                    if correct:
-                        room["titleDone" if field == "title" else "artistDone"] = True
-            player["score"] = round(max(0, player["score"] + delta), 1)
+            correct_title = bool(title and not done_title and close_match(title, room["song"]["title"]))
+            correct_artist = bool(artist and not done_artist and close_match(artist, room["song"]["artist"]))
+            delta = (BOTH_CORRECT_POINTS if correct_title and correct_artist else
+                     ONE_CORRECT_POINTS * (int(correct_title) + int(correct_artist)))
+            if correct_title:
+                room["titleDone"] = True
+            if correct_artist:
+                room["artistDone"] = True
+            player["score"] = round(player["score"] + delta, 1)
+            player["earned"] = round(player.get("earned", 0.0) + delta, 1)
             player["blockedStep"] = room["step"]
-            winner = player["score"] >= 20
             room.update(
                 lockedPlayer=None, answerExpiresAt=None,
                 firstAnswered=True, stealTurn=False,
-                phase=("finished" if winner else "solved"
-                       if room["titleDone"] and room["artistDone"] else "holding"),
-                winner=player["id"] if winner else room["winner"],
+                phase="solved" if room["titleDone"] and room["artistDone"] else "holding",
             )
         elif action == "skip":
             if not host or phase not in ("paused", "playing", "decision", "holding"):
