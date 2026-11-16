@@ -50,5 +50,27 @@ with TemporaryDirectory() as tmp, patch.object(multiplayer.permanent_audio,"sele
  assert s["phase"]=="finished"
  assert s["winner"]==alice["id"]
  e.close()
+
+# Correct artist alone gives 5, and the second player may earn 5 for the title.
+with TemporaryDirectory() as tmp, patch.object(multiplayer.permanent_audio,"select",return_value=[song]), patch.object(multiplayer.permanent_audio,"choose",return_value=(song,12345)):
+ e=multiplayer.MultiplayerEngine(Path(tmp)/"partial.db",library_root=Path(tmp))
+ h=token("partial-host"); a=token("partial-a"); b=token("partial-b"); code="BCD345"
+ e.call("create",code,h)
+ e.call("join",code,a,{"name":"Alice"})
+ e.call("join",code,b,{"name":"Bob"})
+ e.call("start",code,h,{"mode":"persistent-library"})
+ e.call("play",code,h)
+ e.call("buzz",code,a)
+ s=e.call("answer",code,a,{"artist":"Some Artist","song":"wrong"})
+ assert s["phase"]=="holding"
+ assert next(p for p in s["players"] if p["name"]=="Alice")["score"]==25
+ e.call("steal",code,b)
+ s=e.call("answer",code,b,{"song":"One Star","artist":""})
+ assert s["phase"]=="solved"
+ assert next(p for p in s["players"] if p["name"]=="Bob")["score"]==25
+ s=e.call("finish",code,h)
+ assert s["winner"] is None  # tied scores
+ e.close()
 print("NEW_SCORING_AND_OPTOUT_TEST_PASS")
+
 
