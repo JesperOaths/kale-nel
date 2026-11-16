@@ -31,6 +31,7 @@ let visualizerStarted=false,visualizerLastPaint=0;
 // Local lobby filter draft must survive remote S21 state polls.
 let draftRoom="",draftGenres=null,draftDecades=null,draftDirty=false;
 let volume=100,muted=false,noticeTimer=null;
+let autoChoiceBusy=false,autoChoiceRetryAt=0;
 const audio=$("clip-audio");
 const hex=(n=32)=>[...crypto.getRandomValues(new Uint8Array(n))].map(v=>v.toString(16).padStart(2,"0")).join("");
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -63,7 +64,10 @@ function message(error){
   already_tried_this_clip:"You already guessed at this clue. Wait for another clue.",
   not_your_turn:"Another player currently owns the buzzer.",
   invalid_music_source:"The game did not accept its music source.",
-  The_network_request_timed_out:"The S21 game connection timed out. State may have changed; refresh the room before retrying."
+  The_network_request_timed_out:"The S21 game connection timed out. State may have changed; refresh the room before retrying.",
+  clue_choice_closed:"Another player already selected a clue. The room is updating.",
+  invalid_clue_choice:"This clue option is unavailable.",
+  stale_clue:"The room already advanced. Your choice was not applied."
  };
  return map[v]||v.replaceAll("_"," ").replace(/^./,s=>s.toUpperCase());
 }
@@ -400,7 +404,7 @@ function renderButtons(){
  $("start").disabled=mutation||!host||!updated||!(state?.players?.length);
  $("save-settings").disabled=mutation||!host||!updated;
  $("play").disabled=mutation||!host||phase!=="paused";
- $("repeat").disabled=mutation||!host||phase!=="playing"||state?.firstAnswered;
+ $("repeat").disabled=mutation||!host||!["playing","decision"].includes(phase)||state?.firstAnswered;
  $("pause").disabled=mutation||!host||phase!=="playing";
  $("resume").disabled=mutation||!host||phase!=="holding"||state?.step>=6;
  $("skip").disabled=mutation||!host||!["paused","playing","holding"].includes(phase);
@@ -414,9 +418,43 @@ function renderButtons(){
    state?.lockedPlayer!==state?.me;
  $("forfeit").disabled=mutation||phase!=="answering"||state?.lockedPlayer!==state?.me;
 }
+function renderNoBuzz(){
+ const dialog=$("no-buzz-dialog");
+ const eligible=!!state&&state.role==="player"&&state.phase==="decision"&&
+  state.firstAnswered===false&&state.step>=0;
+ dialog.hidden=!eligible;
+ if(!eligible)return;
+ const current=fmt(DURATIONS[state.step]);
+ const final=state.step===DURATIONS.length-1;
+ $("no-buzz-current").textContent="Nobody buzzed after the "+current+" clue.";
+ $("no-buzz-replay").textContent="↺ Replay "+current;
+ $("no-buzz-next").textContent=final?"Reveal song":"▶ Try "+fmt(DURATIONS[state.step+1]);
+ $("no-buzz-next").disabled=mutation;
+ $("no-buzz-replay").disabled=mutation;
+}
+async function chooseNoBuzz(choice){
+ if(mutation||!state||state.role!=="player"||state.phase!=="decision")return;
+ const final=state.step===DURATIONS.length-1;
+ if(choice==="next"&&final)choice="reveal";
+ const result=await mutate("clue_choice",{
+  choice,expectedRound:state.round,expectedStep:state.step});
+ if(!result&&access)await pollState();
+}
+function maybeAutoPlayChoice(){
+ if(!state||state.role!=="host"||state.phase!=="paused"||
+    !["next","replay"].includes(state.pendingClue)||mutation||autoChoiceBusy||
+    Date.now()<autoChoiceRetryAt)return;
+ autoChoiceBusy=true;
+ autoChoiceRetryAt=Date.now()+4000;
+ Promise.resolve().then(async()=>{
+  if(state?.role==="host"&&state.phase==="paused"&&
+     ["next","replay"].includes(state.pendingClue)&&!mutation)
+   await doAction("play");
+ }).finally(()=>{autoChoiceBusy=false});
+}
 function phaseLabel(phase){
  return {lobby:"Preparing party",paused:"Ready for next clue",playing:"Clue playing",
- answering:"Player is answering",holding:"Steal or next clue",solved:"Song revealed",
+ answering:"Player is answering",decision:"Waiting for phones to choose",holding:"Steal or next clue",solved:"Song revealed",
  finished:"Game finished"}[phase]||phase;
 }
 function refreshAnswerClock(){
@@ -457,19 +495,20 @@ function render(){
  const publicTitle=state.title||"Mystery track";
  const publicArtist=state.artist||"Listen closely — how fast can you name it?";
  $("song-title").textContent=publicTitle;$("song-artist").textContent=publicArtist;
- $("repeat").hidden=!isHost||state.phase!=="playing";
+ $("repeat").hidden=!isHost||!["playing","decision"].includes(state.phase);
  $("pause").hidden=!isHost||state.phase!=="playing";
  $("resume").hidden=!isHost||state.phase!=="holding";
  $("next").hidden=!isHost||state.phase!=="solved";
  $("play").hidden=!isHost||state.phase!=="paused";
- $("skip").hidden=!isHost||!["paused","playing","holding"].includes(state.phase);
- $("buzz").hidden=state.phase==="holding";
+ $("skip").hidden=!isHost||!["paused","playing","decision","holding"].includes(state.phase);
+ $("buzz").hidden=state.phase==="holding"||state.phase==="decision";
  $("steal").hidden=state.phase!=="holding";
  const answering=state.phase==="answering"&&state.lockedPlayer===state.me;
  $("answer-form-panel").hidden=!answering;
  $("guest-hint").textContent=answering?"It's your turn. You have 25 seconds.":state.phase==="answering"?
   "Someone else buzzed first. Watch the scoreboard.":
   state.phase==="holding"?"Use Steal if you know the remaining answer.":
+  state.phase==="decision"?"Nobody buzzed. Choose whether to replay or hear more.":
   state.myBlockedStep===state.step?"Your attempt is used for this clue. Wait for the next.":
   "Listen to the tablet and buzz when you recognize it.";
  if(finished){
@@ -481,7 +520,7 @@ function render(){
  }
  if(state.code!==panelCode&&panelCode)closePanel(true);
  if(isHost)renderChips(); // Guest config panel is hidden; do not rebuild 16 unused chip buttons on every poll.
- renderRoster();renderLevels();renderButtons();
+ renderRoster();renderLevels();renderButtons();renderNoBuzz();
  refreshAnswerClock();
 }
 function accept(next){
@@ -503,6 +542,7 @@ function accept(next){
   stopAudio();
  }
  render();
+ maybeAutoPlayChoice();
 }
 async function pollState(){
  if(!access||mutation||polling)return;
@@ -609,9 +649,8 @@ function stopAudio(clear=true){
  }
 }
 async function replay(){
- if(state?.phase==="playing"&&clipData&&clipKey===state.code+":"+state.round+":"+state.step){
-  await startAudio(clipData);return;
- }
+ if(!state||!["playing","decision"].includes(state.phase))return;
+ // Reset the authoritative S21 no-buzz countdown for manual host replays.
  await doAction("replay",{expectedRound:state.round,expectedStep:state.step});
 }
 function finish(){
@@ -642,6 +681,8 @@ function wire(){
  $("next").addEventListener("click",()=>doAction("next",{mode:"persistent-library"}));
  $("finish").addEventListener("click",finish);
  $("buzz").addEventListener("click",()=>doAction("buzz"));
+ $("no-buzz-replay").addEventListener("click",()=>chooseNoBuzz("replay"));
+ $("no-buzz-next").addEventListener("click",()=>chooseNoBuzz("next"));
  $("steal").addEventListener("click",()=>doAction("steal"));
  $("forfeit").addEventListener("click",()=>doAction("forfeit"));
  $("answer-form").addEventListener("submit",e=>{
@@ -652,7 +693,7 @@ function wire(){
   doAction("answer",{song,artist});
  });
  $("again").addEventListener("click",reset);
- audio.addEventListener("ended",()=>{$("audio-feedback").textContent="Clue finished. Listen for a buzz or advance the clue."});
+ audio.addEventListener("ended",()=>{$("audio-feedback").textContent="Clue finished. Phones can buzz before the replay/next popup."});
  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&access&&!mutation)pollState()});
 }
 async function boot(){
