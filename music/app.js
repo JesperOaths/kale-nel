@@ -1531,7 +1531,7 @@ function create(event){
  // must never silently poll the unhealthy cloud API. This link is a real
  // navigation so it also works when this legacy script fails to initialize.
  event?.preventDefault();
- window.location.assign("http://192.168.178.196:8798/?autocreate=1");
+ window.location.assign("https://jesper-hub.tail87c632.ts.net/?autocreate=1");
 }
 function finalScoreboard(state){
  if(!state||state.phase!=="finished")throw Error("Final results are not ready.");
@@ -1880,7 +1880,7 @@ function join(e){
  }
  // The homepage's original Join button must use the same S21 room backend
  // as Create lobby, not the retired Audius/Supabase lobby.
- const url=new URL("http://192.168.178.196:8798/");
+ const url=new URL("https://jesper-hub.tail87c632.ts.net/");
  url.searchParams.set("room",code);
  url.searchParams.set("name",name);
  url.searchParams.set("autojoin","1");

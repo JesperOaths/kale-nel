@@ -12,7 +12,7 @@ const LOCAL_DIRECT=(location.protocol==="http:"&&location.port==="8798")||
  (location.protocol==="https:"&&
   (/^[a-z0-9-]+\.trycloudflare\.com$/.test(location.hostname)||
    location.hostname==="jesper-hub.tail87c632.ts.net"));
-const S21_LAN_ORIGIN="http://192.168.178.196:8798";
+const PUBLIC_MULTIPLAYER_ORIGIN="https://jesper-hub.tail87c632.ts.net";
 const ROOM_ACCESS_PREFIX="tune-rush-s21-multi-room-v1:";
 const ROOM_PENDING_PREFIX="tune-rush-s21-multi-pending-v1:";
 const GENRES=[["pop","Pop"],["rock","Rock"],["hiphop","Hip-Hop"],["indie","Indie"],["rnb","R&B"],["dance","Dance"],["electronic","Electronic"],["disco","Disco"],["metal","Metal"],["dutch","Dutch"]];
@@ -115,7 +115,7 @@ function showJoinError(messageText){
  if(output){output.textContent=messageText;output.hidden=!messageText}
 }
 function localDestination({code,name,create=false}){
- const url=new URL(S21_LAN_ORIGIN+"/");
+ const url=new URL(PUBLIC_MULTIPLAYER_ORIGIN+"/");
  if(create)url.searchParams.set("autocreate","1");
  else{
   url.searchParams.set("room",code);

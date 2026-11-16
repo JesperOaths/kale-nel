@@ -1,5 +1,41 @@
 # Tune Rush multiplayer over 5G / external networks — 2026-11-13
 
+## Permanent Funnel activation — 16 November 2026
+
+The Tailscale tailnet **jesperoaths.github** now has HTTPS certificates
+and a node-specific Funnel grant for **jesper-hub**. The account already
+belongs to the host's local `docker` administration group. A one-time,
+isolated, network-disabled Docker utility applied the owner-authorized
+Tailscale `--operator=jespern` preference; no Home Assistant containers
+were changed. The normal unprivileged `jespern` systemd unit then
+successfully enabled Funnel.
+
+* Stable public address: **https://jesper-hub.tail87c632.ts.net/**
+* HTTPS port 443 tunnels exclusively to restricted C720P loopback gateway
+  `127.0.0.1:8806`
+* Service: `tunerush-multiplayer-tailnet-funnel.service` — active and
+  enabled to survive restarts
+* `tunerush-multiplayer-funnel-autostart.timer` rechecks authorization
+  every five minutes, fail-closed
+* Verified valid Let's Encrypt certificate issued 16 November 2026,
+  expiring 14 February 2027; Tailscale manages renewal
+
+The permanent homepage Create and Join controls now target this stable
+address. The gateway serves only pinned local HTML, JS and CSS, allowing
+the page to load and report a truthful disconnected S21 state while the
+phone is offline. Game API and health responses still come from the S21;
+no multiplayer engine, scoring logic or MP3 files moved.
+
+**Remaining runtime blocker:** As of the last check on 16 November the
+S21 is not reachable on its former `192.168.178.196` address, and
+wireless-debugging mDNS does not advertise it. The C720P recovery timer
+continues probing without affecting existing unrelated services. Until
+the S21 reconnects to the same LAN, game API endpoints correctly return
+`502 s21_unavailable`. Do not claim 5G gameplay is functional until a
+real complete two-device acceptance succeeds against the stable URL.
+
+## Earlier temporary setup
+
 ## What now works
 
 A separate C720P loopback gateway on port **8806** forwards only

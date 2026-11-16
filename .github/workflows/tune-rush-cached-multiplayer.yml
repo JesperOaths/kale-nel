@@ -2,6 +2,8 @@ name: Tune Rush S21 cached multiplayer
 on:
   pull_request:
     paths:
+      - 'music/index.html'
+      - 'music/app.js'
       - 'music/multi/**'
       - 'music/solo-s21/multiplayer.py'
       - 'music/solo-s21/multiplayer_service.py'
