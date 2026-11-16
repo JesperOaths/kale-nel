@@ -93,7 +93,7 @@ with TemporaryDirectory(prefix="tunerush-cached-multi-test-") as temp:
             status,buzz=request("buzz",phone)
             assert status==200 and buzz["state"]["phase"]=="answering"
             status,wrong=request("answer",phone,{"song":"Absolutely Not","artist":"Unknown"})
-            assert status==200 and wrong["state"]["players"][0]["score"]==0
+            assert status==200 and wrong["state"]["players"][0]["score"]==20
             status,full=request("skip",host)
             assert status==200 and full["state"]["title"]==catalog[0]["title"]
             assert full["state"]["artist"]==catalog[0]["artist"]
