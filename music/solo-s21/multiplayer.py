@@ -30,6 +30,7 @@ GENRES = frozenset(("demo", "pop", "rock", "hiphop", "electronic",
                     "indie", "dutch", "disco", "rnb", "metal", "dance"))
 DECADES = frozenset(("1960", "1970", "1980", "1990", "2000", "2010", "2020"))
 CLUES = (500, 1500, 3000, 5000, 8000, 12000, 20000)
+NO_BUZZ_GRACE_SECONDS = 3.5  # Everyone gets a short buzz window after the clue finishes.
 CODE_PATTERN = re.compile(r"^[A-HJ-NP-Z2-9]{6}$")
 HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 PLAYER_PATTERN = re.compile(r"^[\w .-]{1,20}$", re.UNICODE)
@@ -101,6 +102,7 @@ def visible(room: dict, credential: str) -> dict:
         "players": [{"id": p["id"], "name": p["name"], "score": p["score"]} for p in rank],
         "phase": phase, "mode": room["mode"], "genres": room["genres"],
         "decades": room["decades"], "round": room["round"], "step": room["step"],
+        "pendingClue": room.get("pendingClue"),
         "firstAnswered": room["firstAnswered"], "stealTurn": room["stealTurn"],
         "clipMs": CLUES[room["step"]] if 0 <= room["step"] <= 6 else 0,
         "lockedPlayer": room["lockedPlayer"], "answerExpiresAt": room["answerExpiresAt"],
@@ -165,6 +167,24 @@ class MultiplayerEngine:
                     stealTurn=False, answerExpiresAt=None)
         return True
 
+    @staticmethod
+    def _expire_unanswered_clue(room: dict) -> bool:
+        """S21-authoritative no-buzz prompt, triggered by any authorized poll.
+
+        The host, not a guest browser clock, determines the clue start.
+        Existing rooms without a recorded start remain unaffected.
+        """
+        step = room.get("step", -1)
+        started = room.get("clueStartedAt")
+        if (room.get("phase") != "playing" or room.get("firstAnswered") or
+            room.get("lockedPlayer") is not None or
+            type(step) is not int or not 0 <= step < len(CLUES) or
+            type(started) not in (int, float) or started <= 0 or
+            time.time() < started + CLUES[step] / 1000 + NO_BUZZ_GRACE_SECONDS):
+            return False
+        room.update(phase="decision", clueStartedAt=None, pendingClue=None)
+        return True
+
     def call(self, action: str, code: str, credential: str, data: dict | None = None) -> dict:
         if not isinstance(action, str):
             raise GameError("unknown_action")
@@ -178,7 +198,7 @@ class MultiplayerEngine:
             if action == "state":
                 room = self.read(code)
                 visible(room, credential)  # authorize BEFORE any state change
-                if self._expire_overdue_answer(room):
+                if self._expire_overdue_answer(room) or self._expire_unanswered_clue(room):
                     self.db.execute("begin immediate")
                     try:
                         self.db.execute(
@@ -203,7 +223,7 @@ class MultiplayerEngine:
                     time.time() > room["answerExpiresAt"]):
                     visible(room, credential)  # never reveal timeout state to strangers
                     raise GameError("answer_time_expired")
-                expired = self._expire_overdue_answer(room)
+                expired = self._expire_overdue_answer(room) or self._expire_unanswered_clue(room)
                 if expired and action == "expire":
                     result = visible(room, credential)
                 else:
@@ -229,6 +249,7 @@ class MultiplayerEngine:
             "lockedPlayer": None, "answerExpiresAt": None,
             "titleDone": False, "artistDone": False, "song": None,
             "winner": None, "usedMusicIds": [],
+            "clueStartedAt": None, "pendingClue": None,
         }
         try:
             self.db.execute("insert into rooms(code,expires,data) values(?,?,?)",
@@ -324,6 +345,7 @@ class MultiplayerEngine:
                 "lockedPlayer": None, "answerExpiresAt": None,
                 "firstAnswered": False, "stealTurn": False,
                 "titleDone": False, "artistDone": False,
+                "clueStartedAt": None, "pendingClue": None,
             })
             for p in room["players"]:
                 p["blockedStep"] = -99
@@ -332,16 +354,41 @@ class MultiplayerEngine:
         elif action == "play":
             if not host or phase != "paused" or room["lockedPlayer"] is not None:
                 raise GameError("not_ready_for_clip")
-            if room["step"] >= 6:
+            # A participant's replay decision reuses the same denomination;
+            # an advance decision (or ordinary host play) uses the next one.
+            replay_selected = room.get("pendingClue") == "replay"
+            if room["step"] >= len(CLUES) - 1 and not replay_selected:
                 raise GameError("all_hints_used")
-            room["step"] += 1
-            room.update(phase="playing", firstAnswered=False, stealTurn=False)
+            if not replay_selected:
+                room["step"] += 1
+            room.update(phase="playing", firstAnswered=False, stealTurn=False,
+                        clueStartedAt=time.time(), pendingClue=None)
         elif action == "replay":
-            if not host or phase not in ("paused", "playing") or room["lockedPlayer"] is not None or room["firstAnswered"] or not 0 <= room["step"] <= 6:
+            if (not host or phase not in ("paused", "playing", "decision") or
+                room["lockedPlayer"] is not None or room["firstAnswered"] or
+                not 0 <= room["step"] < len(CLUES)):
                 raise GameError("replay_unavailable")
             if data.get("expectedRound") != room["round"] or data.get("expectedStep") != room["step"]:
                 raise GameError("stale_clue")
-            room["phase"] = "playing"
+            room.update(phase="playing", clueStartedAt=time.time(), pendingClue=None)
+        elif action == "clue_choice":
+            # FIRST eligible phone vote wins. Concurrent/stale choices fail
+            # inside the same SQLite transaction; the tablet owns audio.
+            if host or player is None or phase != "decision":
+                raise GameError("clue_choice_closed")
+            if (type(data.get("expectedRound")) is not int or
+                type(data.get("expectedStep")) is not int or
+                data["expectedRound"] != room["round"] or
+                data["expectedStep"] != room["step"]):
+                raise GameError("stale_clue")
+            choice = data.get("choice")
+            if choice == "replay" or (choice == "next" and room["step"] < len(CLUES) - 1):
+                room.update(phase="paused", pendingClue=choice, clueStartedAt=None)
+            elif choice == "reveal" and room["step"] == len(CLUES) - 1:
+                room.update(phase="solved", titleDone=True, artistDone=True,
+                            pendingClue=None, clueStartedAt=None)
+            else:
+                raise GameError("invalid_clue_choice")
         elif action == "pause":
             if not host:
                 raise GameError("host_only")
@@ -409,10 +456,11 @@ class MultiplayerEngine:
                 winner=player["id"] if winner else room["winner"],
             )
         elif action == "skip":
-            if not host or phase not in ("paused", "playing", "holding"):
+            if not host or phase not in ("paused", "playing", "decision", "holding"):
                 raise GameError("skip_unavailable")
             room.update(phase="solved", titleDone=True, artistDone=True,
-                        lockedPlayer=None, answerExpiresAt=None)
+                        lockedPlayer=None, answerExpiresAt=None,
+                        pendingClue=None, clueStartedAt=None)
         elif action == "finish":
             if not host or phase == "lobby":
                 raise GameError("host_only")
