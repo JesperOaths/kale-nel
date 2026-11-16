@@ -424,7 +424,7 @@ function renderNoBuzz(){
   state.firstAnswered===false&&state.step>=0;
  dialog.hidden=!eligible;
  if(!eligible)return;
- const current=fmt(DURATIONS[state.step]);
+ const current=state.step===0?"0.5s":fmt(DURATIONS[state.step]);
  const final=state.step===DURATIONS.length-1;
  $("no-buzz-current").textContent="Nobody buzzed after the "+current+" clue.";
  $("no-buzz-replay").textContent="↺ Replay "+current;
