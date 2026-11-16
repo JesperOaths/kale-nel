@@ -31,3 +31,15 @@
 /* Joined-room rejection stays next to the input on small phone screens. */
 .join-error{margin:10px 0 0;padding:12px 13px;border-radius:9px;border:1px solid #a66360;background:#392522;color:#ffe1df;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
 .join-error[hidden]{display:none!important}
+
+/* S21-authoritative no-buzz choice: visible ONLY to joined phone players. */
+.no-buzz-overlay[hidden]{display:none!important}
+.no-buzz-overlay{position:fixed;inset:0;z-index:990;display:flex;align-items:center;justify-content:center;padding:clamp(14px,4vw,32px);background:rgba(6,11,7,.87);backdrop-filter:blur(7px)}
+.no-buzz-card{width:min(490px,100%);padding:clamp(23px,6vw,37px);background:linear-gradient(145deg,#253723,#131d13);border:1px solid #819e58;border-radius:22px;box-shadow:0 22px 70px #000b;text-align:center}
+.no-buzz-card h2{font-size:clamp(29px,7.5vw,40px);line-height:1.15;margin:12px 0;color:#f2fbe9}
+.no-buzz-card>p{line-height:1.45;color:#d2e1cc}
+.no-buzz-actions{display:grid;gap:12px;margin:24px 0 18px}
+.no-buzz-actions button{width:100%;min-height:60px;font-size:18px;font-weight:850;border-radius:13px}
+.no-buzz-actions button:focus-visible{outline:3px solid #edffa5;outline-offset:3px}
+.no-buzz-card .no-buzz-note{font-size:12px;color:#b8cbb0;margin-bottom:0}
+@media (max-width:430px){.no-buzz-overlay{padding:12px}.no-buzz-card{max-height:calc(100dvh - 24px);overflow-y:auto}.no-buzz-actions button{min-height:64px}}
