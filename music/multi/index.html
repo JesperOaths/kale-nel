@@ -111,12 +111,12 @@
       <div class="share-box"><span class="eyebrow">INVITE A FRIEND</span><strong>One code. Every device.</strong><p>Copy this link to your phone, or share the room code above. Use the HTTPS invite link from any mobile or Wi-Fi network, as long as the S21 game server is connected at home.</p><label for="invite-link" class="invite-link-label">Phone invite link</label><input id="invite-link" class="invite-link-input" type="text" readonly aria-label="Selectable phone invite link" spellcheck="false"><button id="share-invite" class="secondary" type="button">Copy phone invite</button></div>
       <div class="tablet-box"><div><span class="eyebrow">TWO-DEVICE TEST</span><strong>Tablet + phone</strong><p>Let this tablet compete as a second player while it hosts the music.</p></div><button id="tablet-toggle" class="secondary" type="button">Join as Tablet Player</button></div>
      </div>
-     <div class="guide"><span class="eyebrow">HOW IT WORKS</span><p>Play a clue from the tablet. Buzz to guess, or choose replay/longer clue on your phone when nobody buzzes. The S21 locks turns and tracks scores.</p></div>
+     <div class="guide"><span class="eyebrow">HOW IT WORKS</span><p>Everyone starts at <b>20 points</b>. The 0.5s, 1.5s and 3s clues are free. Each playback at 5s, 8s, 12s or 20s costs every active player <b>0.5 points</b>; opt out before playback to avoid the cost. A correct artist OR song title earns <b>5 points</b>; both correct in one guess earn <b>12 points</b>. Wrong guesses add no points. Highest score when the host ends the game wins (ties are shared).</p></div>
     </aside>
    </div>
   </section>
  </main>
- <footer class="app-footer">TUNE RUSH <span>•</span> PRIVATE S21 MUSIC LIBRARY <span>•</span> GAMEPLAY AND SCORES ON THE PHONE <span>•</span> v817 - Made by Bruis</footer>
+ <footer class="app-footer">TUNE RUSH <span>•</span> PRIVATE S21 MUSIC LIBRARY <span>•</span> GAMEPLAY AND SCORES ON THE PHONE <span>•</span> v818 - Made by Bruis</footer>
 </div>
 <aside id="tablet-panel" class="tablet-panel" hidden role="dialog" aria-modal="false" aria-label="Tablet test player">
  <div class="tablet-panel-head"><div><strong>Tablet player</strong><small>Separate participant · same room</small></div><button id="tablet-close" type="button" class="quiet" aria-label="Close tablet player">✕</button></div>
@@ -130,8 +130,9 @@
   <div class="no-buzz-actions">
    <button id="no-buzz-replay" class="secondary" type="button">↺ Replay clue</button>
    <button id="no-buzz-next" class="primary" type="button">▶ Longer clue</button>
+   <button id="no-buzz-optout" class="secondary optout" type="button">✋ I don’t know — opt out</button>
   </div>
-  <p class="no-buzz-note">All players see this choice. The first selection controls the room, and music plays on the host device only.</p>
+  <p class="no-buzz-note">Replay/longer clue: first vote controls the room. “I don’t know” opts only you out of this song; you cannot guess again until the next song and avoid later playback charges.</p>
  </div>
 </section>
 <audio id="clip-audio" preload="none"></audio>
