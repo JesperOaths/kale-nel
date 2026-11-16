@@ -15,10 +15,10 @@ try{
  const createLink=homepage.locator("#create");
  assert.equal(await createLink.evaluate(el=>el.tagName),"A");
  assert.equal(await createLink.getAttribute("href"),
-  "http://192.168.178.196:8798/?autocreate=1");
+  "https://jesper-hub.tail87c632.ts.net/?autocreate=1");
  const nativeJoin=homepage.locator("#join-form");
  assert.equal(await nativeJoin.getAttribute("method"),"get");
- assert.equal(await nativeJoin.getAttribute("action"),"http://192.168.178.196:8798/");
+ assert.equal(await nativeJoin.getAttribute("action"),"https://jesper-hub.tail87c632.ts.net/");
  assert.equal(await homepage.locator("#join-code").getAttribute("name"),"room");
  assert.equal(await homepage.locator("#nickname").getAttribute("name"),"name");
  assert.equal(await nativeJoin.locator("input[name=autojoin]").inputValue(),"1");
