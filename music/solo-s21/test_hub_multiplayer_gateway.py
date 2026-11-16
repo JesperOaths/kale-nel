@@ -4,6 +4,7 @@ import importlib.util
 import json
 import secrets
 import threading
+from tempfile import TemporaryDirectory
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -38,7 +39,17 @@ def test():
     fake=ThreadingHTTPServer(("127.0.0.1",0),FakeS21)
     fake.daemon_threads=True
     threading.Thread(target=fake.serve_forever,daemon=True).start()
-    old=g.UPSTREAM;g.UPSTREAM="http://127.0.0.1:"+str(fake.server_address[1])
+    old=g.UPSTREAM
+    old_static=g.STATIC_ROOT
+    tmp=TemporaryDirectory(prefix="tunerush-static-test-")
+    g.STATIC_ROOT=Path(tmp.name)
+    for name,data in {
+      "index.html":b"<html>Offline-ready Tune Rush page</html>",
+      "app.js":b"const game = 'remote';",
+      "style.css":b"body{color:white}"
+    }.items():
+        (g.STATIC_ROOT/name).write_bytes(data)
+    g.UPSTREAM="http://127.0.0.1:"+str(fake.server_address[1])
     proxy=ThreadingHTTPServer(("127.0.0.1",0),g.Handler)
     proxy.daemon_threads=True
     threading.Thread(target=proxy.serve_forever,daemon=True).start()
@@ -55,9 +66,15 @@ def test():
         except urllib.error.HTTPError as e:return e.code,e.read()
     try:
         assert fetch("/")[0]==200
+        assert b"Offline-ready" in fetch("/")[1]
         assert fetch("/index.html?room=ABC234")[0]==200
         assert fetch("/app.js?v=20261113online5g1")[0]==200
         assert fetch("/style.css?v=latest")[0]==200
+        # Static interface stays reachable while S21 music engine is offline.
+        g.UPSTREAM="http://127.0.0.1:1"
+        assert fetch("/")[0]==200
+        assert fetch("/api/health")[0]==502
+        g.UPSTREAM="http://127.0.0.1:"+str(fake.server_address[1])
         for path in ("/etc/passwd","/api/music-library/health","/api/action",
                      "/app.js?upstream=http://evil","/style.css?bad=1"):
             assert fetch(path)[0]==404,path
@@ -76,8 +93,10 @@ def test():
         print("S21_INTERNET_MULTIPLAYER_GATEWAY_PASS",{
          "allowlistedAssets":True,"queryCacheKeys":True,"privateRoutesBlocked":True,
          "crossOriginRejected":True,"invalidCredentialsRejected":True,
-         "guestAudioLeakBlocked":True})
+         "guestAudioLeakBlocked":True,"offlineStaticServed":True})
     finally:
         proxy.shutdown();proxy.server_close();fake.shutdown();fake.server_close()
         g.UPSTREAM=old
+        g.STATIC_ROOT=old_static
+        tmp.cleanup()
 if __name__=="__main__":test()
