@@ -399,7 +399,7 @@ class MultiplayerEngine:
                 raise GameError("resume_unavailable")
             room["phase"] = "paused"
         elif action == "buzz":
-            if host or phase not in ("playing", "paused") or room["step"] < 0 or room["firstAnswered"]:
+            if host or phase not in ("playing", "paused") or room["step"] < 0 or room["firstAnswered"] or room.get("pendingClue"):
                 raise GameError("buzz_closed")
             if player["blockedStep"] == room["step"]:
                 raise GameError("already_tried_this_clip")
