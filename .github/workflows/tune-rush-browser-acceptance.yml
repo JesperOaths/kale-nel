@@ -12,6 +12,8 @@ on:
       - 'supabase/migrations/*musicquiz*'
       - 'scripts/tune-rush-browser-acceptance.mjs'
       - 'scripts/tune-rush-two-device-acceptance.mjs'
+      - 'scripts/tune-rush-cached-multi-browser.mjs'
+      - 'scripts/tune-rush-cached-multi-local-browser.mjs'
       - '.github/workflows/tune-rush-browser-acceptance.yml'
   workflow_dispatch:
 permissions:
@@ -34,18 +36,19 @@ jobs:
           node-version: '24'
       - name: Install test-only Playwright
         run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1
-      - name: Verify two-device tablet host/player and phone without live service
+      - name: Verify current cached S21 tablet and phone browser clients without live service
         run: |
           set -euo pipefail
-          node --check scripts/tune-rush-two-device-acceptance.mjs
-          python3 -m http.server 8080 --bind 127.0.0.1 --directory . >/tmp/tunerush-two-device-http.log 2>&1 &
+          node --check scripts/tune-rush-cached-multi-local-browser.mjs
+          python3 -m http.server 8798 --bind 127.0.0.1 --directory music/multi >/tmp/tunerush-two-device-http.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for try in {1..30}; do
-            if curl -fsS http://127.0.0.1:8080/music/ >/dev/null; then break; fi
+            if curl -fsS http://127.0.0.1:8798/ >/dev/null; then break; fi
             sleep 0.2
           done
-          TUNE_RUSH_BASE="http://127.0.0.1:8080/music/?qa=two-devices" node scripts/tune-rush-two-device-acceptance.mjs
+          node scripts/tune-rush-cached-multi-local-browser.mjs
+          TUNERUSH_REMOTE_TEST=1 node scripts/tune-rush-cached-multi-local-browser.mjs
   real-browser:
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -59,7 +62,9 @@ jobs:
       - name: Install test-only Playwright controller
         run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1 @electric-sql/pglite@0.5.11
       - name: Verify browser source syntax
-        run: node --check scripts/tune-rush-browser-acceptance.mjs
+        run: |
+          node --check scripts/tune-rush-browser-acceptance.mjs
+          node --check scripts/tune-rush-cached-multi-browser.mjs
       - name: Verify Audius-only buffering and playback recovery
         run: node scripts/test-tune-rush-playback.mjs
       - name: Verify Audius HTTPS streaming selection and safe metadata filters
@@ -70,7 +75,7 @@ jobs:
         run: node scripts/test-tune-rush-replay-db.mjs
       - name: Allow the short network-smoke job to finish first
         run: sleep 12
-      - name: Run Audius-only host and guest browser acceptance against game database
+      - name: Run current cached S21 host and guest browser acceptance
         run: |
           set -euo pipefail
           echo "Using browser binary:"
@@ -82,4 +87,4 @@ jobs:
             if curl -fsS http://127.0.0.1:8080/music/ >/dev/null; then break; fi
             sleep 0.2
           done
-          TUNE_RUSH_BASE="http://127.0.0.1:8080/music/?qa=candidate" node scripts/tune-rush-browser-acceptance.mjs
+          TUNERUSH_CACHED_BASE="http://127.0.0.1:8080/music/multi/" node scripts/tune-rush-cached-multi-browser.mjs
