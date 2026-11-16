@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 from collections import defaultdict, deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import urlsplit
 
 UPSTREAM = os.environ.get("TUNERUSH_S21_MULTIPLAYER_UPSTREAM",
@@ -23,6 +24,13 @@ HOST, PORT = "127.0.0.1", int(os.environ.get("TUNERUSH_REMOTE_GATEWAY_PORT", "88
 MAX_REQUEST = 4096
 MAX_AUDIO_REPLY = 1_950_000
 MAX_STATIC_REPLY = 256_000
+# Public page assets are served locally even if the S21 is asleep/offline.
+# Only game data and health requests are proxied to the S21.
+STATIC_ROOT = Path(os.environ.get(
+    "TUNERUSH_PUBLIC_MULTIPLAYER_ASSETS",
+    "/home/jespern/tunerush-internet-bridge/public"))
+STATIC_FILES = {"/": "index.html", "/index.html": "index.html",
+                "/app.js": "app.js", "/style.css": "style.css"}
 ROUTES = {"/": "text/html; charset=utf-8",
           "/index.html": "text/html; charset=utf-8",
           "/app.js": "application/javascript; charset=utf-8",
@@ -144,7 +152,25 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(404, {"error": "not_found"})
         elif parts.query and parts.path not in ("/", "/index.html"):
             return self.reply(404, {"error": "not_found"})
+        if parts.path in STATIC_FILES:
+            return self.serve_static(parts.path)
         return self.forward(parts.path, None)
+
+    def serve_static(self, path):
+        try:
+            if not STATIC_ROOT.is_dir() or STATIC_ROOT.is_symlink():
+                raise OSError("no_static_directory")
+            asset = STATIC_ROOT / STATIC_FILES[path]
+            if not asset.is_file() or asset.is_symlink():
+                raise OSError("missing_asset")
+            if not 0 < asset.stat().st_size <= MAX_STATIC_REPLY:
+                raise OSError("bad_asset_size")
+            contents = asset.read_bytes()
+            if len(contents) > MAX_STATIC_REPLY:
+                raise OSError("large_asset")
+            return self.reply(200, contents, ROUTES[path])
+        except OSError:
+            return self.reply(503, {"error": "public_assets_unavailable"})
 
     def do_POST(self):
         self.connection.settimeout(18)
@@ -225,6 +251,12 @@ def main():
         raise SystemExit("Refusing unexpected S21 upstream")
     if PORT not in (8806, 8807):
         raise SystemExit("Refusing unexpected local bind port")
+    if STATIC_ROOT.is_symlink() or not STATIC_ROOT.is_dir():
+        raise SystemExit("Refusing missing or linked public asset directory")
+    for name in set(STATIC_FILES.values()):
+        item = STATIC_ROOT / name
+        if not item.is_file() or item.is_symlink() or not 0 < item.stat().st_size <= MAX_STATIC_REPLY:
+            raise SystemExit("Refusing missing or oversized public asset: " + name)
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
 
 
