@@ -433,7 +433,7 @@ function renderNoBuzz(){
  const final=state.step===DURATIONS.length-1;
  const nextCost=state.step+1>=3?" · −0.5 pts per active player":" · free";
  $("no-buzz-current").textContent="Nobody buzzed after the "+current+" clue. You can opt out of this song to avoid future paid clues.";
- $("no-buzz-replay").textContent="↺ Replay "+current;
+ $("no-buzz-replay").textContent="↺ Replay "+current+(state.step>=3?" · −0.5 pts":" · free");
  $("no-buzz-next").textContent=final?"Reveal song":"▶ Try "+fmt(DURATIONS[state.step+1])+nextCost;
  $("no-buzz-next").disabled=mutation;
  $("no-buzz-replay").disabled=mutation;
