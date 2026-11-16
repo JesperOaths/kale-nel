@@ -10,7 +10,7 @@ assert.ok(browserPath,"Chromium required");
 const browser=await chromium.launch({headless:true,executablePath:browserPath,
  args:["--no-sandbox","--disable-dev-shm-usage"]});
 const REMOTE_TEST=process.env.TUNERUSH_REMOTE_TEST==="1";
-const REMOTE_ORIGIN="https://online-test.trycloudflare.com";
+const REMOTE_ORIGIN="https://jesper-hub.tail87c632.ts.net";
 let game=null,cloudRequests=0;
 const errors=[],actions=[];
 function view(hash,action){
