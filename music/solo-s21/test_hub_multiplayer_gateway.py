@@ -14,6 +14,18 @@ here=Path(__file__).resolve().parent
 spec=importlib.util.spec_from_file_location("game_gateway",here/"hub_multiplayer_gateway.py")
 g=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(g)
+def test_trusted_dynamic_phone():
+    proof={"ip":"192.168.178.217","model":"SM-G991B","serial":"TEST-SERIAL-42"}
+    assert g.valid_s21_upstream("http://192.168.178.217:8798",proof)
+    for invalid in (
+        "http://192.168.178.196:8798", "http://192.168.178.217:8797",
+        "http://192.168.178.217:8123", "http://192.168.178.1:8798",
+        "http://192.168.177.217:8798", "http://example.com:8798",
+        "http://192.168.178.217:8798/etc/passwd",
+        "http://192.168.178.217:8798?x=1"):
+        assert not g.valid_s21_upstream(invalid,proof),invalid
+    assert not g.valid_s21_upstream("http://192.168.178.217:8798",dict(proof,model="Other"))
+    assert not g.valid_s21_upstream("http://192.168.178.217:8798",dict(proof,serial=""))
 class FakeS21(BaseHTTPRequestHandler):
     def log_message(self,*args):pass
     def do_GET(self):
@@ -36,6 +48,7 @@ class FakeS21(BaseHTTPRequestHandler):
         self.end_headers();self.wfile.write(content)
 
 def test():
+    test_trusted_dynamic_phone()
     fake=ThreadingHTTPServer(("127.0.0.1",0),FakeS21)
     fake.daemon_threads=True
     threading.Thread(target=fake.serve_forever,daemon=True).start()
