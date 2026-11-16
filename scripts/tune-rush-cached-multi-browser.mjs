@@ -29,6 +29,13 @@ try{
  assert.ok(await host.locator("#cloud-notice").isVisible(),
   "Cloud mode should advertise the working local fallback before RPC activation");
  assert.match(await host.locator("#status").innerText(),/Cloud mode not activated/);
+ assert.equal(await host.evaluate(()=>localDestination({create:true})),
+  "https://jesper-hub.tail87c632.ts.net/?autocreate=1",
+  "Old public multiplayer Create must open the stable HTTPS gateway, never LAN-only.");
+ assert.equal(new URL(await host.evaluate(()=>localDestination({
+  code:"ABC234",name:"Test Player"}))).origin,
+  "https://jesper-hub.tail87c632.ts.net",
+  "Old public multiplayer Join must share the same secure gateway.");
  const bodyBackground=await host.locator("body").evaluate(e=>getComputedStyle(e).backgroundColor);
  assert.equal(bodyBackground,"rgb(16, 19, 15)","multiplayer must use Solo's forest-dark palette");
  assert.ok(await host.locator("#create").isVisible());
