@@ -22,6 +22,7 @@ function view(hash,action){
   genres:game.genres,decades:game.decades,round:game.round,step:game.step,
   firstAnswered:game.firstAnswered,stealTurn:false,titleDone:game.titleDone,
   artistDone:game.artistDone,lockedPlayer:game.lockedPlayer,winner:game.winner,
+  pendingClue:game.pendingClue||null,
   title:game.phase==="solved"||game.phase==="finished"?"Testing Song":null,
   artist:game.phase==="solved"||game.phase==="finished"?"Testing Artist":null,
   audio:host&&game.phase==="playing"?{source:"cached:"+game.round,cueMs:7000}:null,
@@ -37,7 +38,7 @@ async function handle(route){
  if(action==="create"&&!game)
   game={code,host:hash,phase:"lobby",players:[],genres:["pop","rock"],decades:[],
    round:0,step:-1,firstAnswered:false,titleDone:false,artistDone:false,
-   lockedPlayer:null,winner:null};
+   lockedPlayer:null,winner:null,pendingClue:null};
  let error="";
  if(!game||code!==game.code)error="room_not_found";
  else if(action==="join"){
@@ -53,7 +54,19 @@ async function handle(route){
   else{game.phase="paused";game.round=1;game.step=-1;}
  }else if(action==="play"){
   if(hash!==game.host||game.phase!=="paused")error="not_ready_for_clip";
-  else{game.phase="playing";game.step++;}
+  else{
+   game.phase="playing";
+   if(game.pendingClue!=="replay")game.step++;
+   game.pendingClue=null;
+  }
+ }else if(action==="clue_choice"){
+  if(hash===game.host||game.phase!=="decision")error="clue_choice_closed";
+  else if(data.expectedRound!==game.round||data.expectedStep!==game.step)error="stale_clue";
+  else if(data.choice==="replay"||(data.choice==="next"&&game.step<6)){
+   game.phase="paused";game.pendingClue=data.choice;
+  }else if(data.choice==="reveal"&&game.step===6){
+   game.phase="solved";game.titleDone=true;game.artistDone=true;game.pendingClue=null;
+  }else error="invalid_clue_choice";
  }else if(action==="buzz"){
   if(hash===game.host||game.phase!=="playing")error="buzz_closed";
   else{game.phase="answering";game.lockedPlayer=game.players.find(x=>x.hash===hash).id;}
@@ -222,6 +235,26 @@ try{
  await tablet.waitForFunction(()=>state?.phase==="playing");
  await phone.waitForFunction(()=>state?.phase==="playing",null,{timeout:10000});
  assert.equal(await phone.locator("#buzz").isVisible(),true);
+ assert.equal(await phone.locator("#no-buzz-dialog").isVisible(),false);
+ // S21 decides the no-buzz deadline; engine tests verify every duration.
+ game.phase="decision";
+ await phone.locator("#no-buzz-dialog").waitFor({state:"visible",timeout:11000});
+ await embedded.locator("#no-buzz-dialog").waitFor({state:"visible",timeout:11000});
+ assert.equal(await tablet.locator("#no-buzz-dialog").isVisible(),false);
+ assert.match(await phone.locator("#no-buzz-replay").innerText(),/0.5s/);
+ assert.match(await phone.locator("#no-buzz-next").innerText(),/1.5s/);
+ await phone.locator("#no-buzz-replay").click();
+ await phone.locator("#no-buzz-dialog").waitFor({state:"hidden",timeout:12000});
+ await tablet.waitForFunction(()=>state?.phase==="playing"&&state.step===0,null,{timeout:12000});
+ assert.equal(game.step,0,"replay must retain 0.5s denomination");
+ assert.equal(await embedded.locator("#no-buzz-dialog").isVisible(),false);
+ game.phase="decision";
+ await embedded.locator("#no-buzz-dialog").waitFor({state:"visible",timeout:11000});
+ await embedded.locator("#no-buzz-next").click();
+ await tablet.waitForFunction(()=>state?.phase==="playing"&&state.step===1,null,{timeout:12000});
+ await phone.waitForFunction(()=>state?.phase==="playing"&&state.step===1,null,{timeout:12000});
+ assert.equal(game.step,1,"next from 0.5s advances to 1.5s exactly once");
+ assert.equal(await phone.locator("#no-buzz-dialog").isVisible(),false);
  await phone.locator("#buzz").click();
  await phone.waitForFunction(()=>state?.phase==="answering");
  await phone.locator("#guess-title").fill("Testing Song");
@@ -233,6 +266,13 @@ try{
  await tablet.locator("#next").click();
  await tablet.waitForFunction(()=>state?.round===2);
  assert.equal(game.round,2);
+ // Final 20s clue: no nonexistent "next 30s" option.
+ game.phase="decision";game.step=6;
+ await phone.locator("#no-buzz-dialog").waitFor({state:"visible",timeout:11000});
+ assert.match(await phone.locator("#no-buzz-next").innerText(),/Reveal song/);
+ await phone.locator("#no-buzz-next").click();
+ await tablet.waitForFunction(()=>state?.phase==="solved",null,{timeout:11000});
+ assert.equal(game.phase,"solved");
  tablet.once("dialog",dialog=>dialog.accept());
  await tablet.locator("#finish").click();
  await tablet.waitForFunction(()=>state?.phase==="finished");
@@ -242,6 +282,8 @@ try{
  console.log(REMOTE_TEST?"TUNERUSH_REMOTE_HTTPS_TWO_DEVICE_PASS":"TUNERUSH_DIRECT_S21_TWO_DEVICE_PASS",JSON.stringify({
    simulatedDevices:2,tabletHostAndPlayer:true,phoneJoined:true,
    sameOriginS21:true,backendMusicMode:"persistent-library",
-   scoredGuess:true,roundAdvance:true,cloudRequests:0,uniquePlayerTokens:true
+   scoredGuess:true,roundAdvance:true,noBuzzPhonePopup:true,
+   firstGuestReplaySameClue:true,secondGuestAdvancesOnce:true,
+   lastClueReveals:true,cloudRequests:0,uniquePlayerTokens:true
  }));
 }finally{await browser.close()}
