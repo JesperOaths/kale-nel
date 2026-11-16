@@ -42,7 +42,7 @@ TUNNEL_HOST = re.compile(r"[a-z0-9-]+\.trycloudflare\.com\Z")
 ALLOWED_ACTIONS = frozenset((
     "create", "join", "state", "settings", "start", "play", "buzz", "answer",
     "forfeit", "steal", "skip", "next", "finish", "expire", "clue_choice",
-    "replay", "pause", "resume"))
+    "replay", "pause", "resume", "opt_out"))
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 SLOTS = threading.BoundedSemaphore(8)
 LOCK = threading.Lock()

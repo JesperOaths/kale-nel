@@ -81,7 +81,7 @@ with TemporaryDirectory(prefix="tunerush-no-buzz-") as temp:
             assert revealed["title"]=="Keep It Secret"
             assert revealed["artist"]=="Sample Composer"
             assert engine.call("state",room,alice)["phase"]=="solved"
-    assert all(p["score"]==0 for p in engine.read(room)["players"])
+    assert all(p["score"]==16 and p["spent"]==4 for p in engine.read(room)["players"])
     # Once a player buzzes, a no-buzz popup must never override their turn.
     engine.call("next",room,host,{"mode":"local","song":"Another Mystery",
         "artist":"Sample Composer","fileIndex":2,"durationMs":85000,"cueMs":15000})
@@ -98,4 +98,4 @@ with TemporaryDirectory(prefix="tunerush-no-buzz-") as temp:
         {"durationsMs":list(CLUES),"phoneFirstChoiceWins":True,
          "noGuestAudioOrAnswers":True,"replayDoesNotAdvance":True,
          "nextAdvancesOnce":True,"finalReveals":True,
-         "buzzOverridesPrompt":True,"scoreUnchanged":True})
+         "buzzOverridesPrompt":True,"paidPlaybackDebitsVerified":True})

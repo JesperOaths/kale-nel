@@ -67,7 +67,8 @@ function message(error){
   The_network_request_timed_out:"The S21 game connection timed out. State may have changed; refresh the room before retrying.",
   clue_choice_closed:"Another player already selected a clue. The room is updating.",
   invalid_clue_choice:"This clue option is unavailable.",
-  stale_clue:"The room already advanced. Your choice was not applied."
+  stale_clue:"The room already advanced. Your choice was not applied.",
+  opt_out_unavailable:"You cannot opt out at this stage of the round."
  };
  return map[v]||v.replaceAll("_"," ").replace(/^./,s=>s.toUpperCase());
 }
@@ -379,7 +380,11 @@ function renderRoster(){
   players.forEach((player,i)=>{
    const row=document.createElement("div");row.className="roster-entry";
    const avatar=document.createElement("span");avatar.className="avatar";avatar.textContent=player.name?.[0]?.toUpperCase()||"♪";
-   const name=document.createElement("span");name.className="player-name";name.textContent=player.name+(player.id===state.me?" · You":"");
+   const name=document.createElement("span");name.className="player-name";
+   name.textContent=player.name+(player.id===state.me?" · You":"")+(player.optedOut?" · Opted out":"");
+   const summary=document.createElement("small");summary.className="score-detail";
+   summary.textContent="+"+num(player.earned).toFixed(1)+" earned · −"+num(player.spent).toFixed(1)+" clues";
+   name.append(summary);
    const pts=document.createElement("span");pts.className="points";pts.textContent=Number(player.score).toFixed(1);
    row.append(avatar,name,pts);roster.append(row);
   });
@@ -411,9 +416,9 @@ function renderButtons(){
  $("next").disabled=mutation||!host||phase!=="solved";
  $("finish").disabled=mutation||!host||phase==="finished";
  $("buzz").disabled=mutation||state?.role!=="player"||!["playing","paused"].includes(phase)||
-  state?.step<0||state?.firstAnswered||state?.myBlockedStep===state.step;
+  state?.step<0||state?.firstAnswered||state?.myBlockedStep===state.step||state?.myOptedOut;
  $("steal").disabled=mutation||state?.role!=="player"||phase!=="holding"||
-  !state?.firstAnswered||state?.myBlockedStep===state.step;
+  !state?.firstAnswered||state?.myBlockedStep===state.step||state?.myOptedOut;
  $("answer-form").querySelector("button").disabled=mutation||phase!=="answering"||
    state?.lockedPlayer!==state?.me;
  $("forfeit").disabled=mutation||phase!=="answering"||state?.lockedPlayer!==state?.me;
@@ -421,16 +426,24 @@ function renderButtons(){
 function renderNoBuzz(){
  const dialog=$("no-buzz-dialog");
  const eligible=!!state&&state.role==="player"&&state.phase==="decision"&&
-  state.firstAnswered===false&&state.step>=0;
+  state.firstAnswered===false&&state.step>=0&&!state.myOptedOut;
  dialog.hidden=!eligible;
  if(!eligible)return;
  const current=state.step===0?"0.5s":fmt(DURATIONS[state.step]);
  const final=state.step===DURATIONS.length-1;
- $("no-buzz-current").textContent="Nobody buzzed after the "+current+" clue.";
+ const nextCost=state.step+1>=3?" · −0.5 pts per active player":" · free";
+ $("no-buzz-current").textContent="Nobody buzzed after the "+current+" clue. You can opt out of this song to avoid future paid clues.";
  $("no-buzz-replay").textContent="↺ Replay "+current;
- $("no-buzz-next").textContent=final?"Reveal song":"▶ Try "+fmt(DURATIONS[state.step+1]);
+ $("no-buzz-next").textContent=final?"Reveal song":"▶ Try "+fmt(DURATIONS[state.step+1])+nextCost;
  $("no-buzz-next").disabled=mutation;
  $("no-buzz-replay").disabled=mutation;
+ $("no-buzz-optout").disabled=mutation;
+}
+async function optOutOfSong(){
+ if(mutation||!state||state.role!=="player"||state.phase!=="decision"||state.myOptedOut)return;
+ const result=await mutate("opt_out",{expectedRound:state.round,expectedStep:state.step});
+ if(result)alertUser("Opted out of this song. No future clue charges.");
+ else if(access)await pollState();
 }
 async function chooseNoBuzz(choice){
  if(mutation||!state||state.role!=="player"||state.phase!=="decision")return;
@@ -508,7 +521,8 @@ function render(){
  $("guest-hint").textContent=answering?"It's your turn. You have 25 seconds.":state.phase==="answering"?
   "Someone else buzzed first. Watch the scoreboard.":
   state.phase==="holding"?"Use Steal if you know the remaining answer.":
-  state.phase==="decision"?"Nobody buzzed. Choose whether to replay or hear more.":
+  state.myOptedOut?"You opted out of this song. You will not be charged for future clues.":
+  state.phase==="decision"?"Nobody buzzed. Replay, hear more or opt out.":
   state.myBlockedStep===state.step?"Your attempt is used for this clue. Wait for the next.":
   "Listen to the tablet and buzz when you recognize it.";
  if(finished){
@@ -683,6 +697,7 @@ function wire(){
  $("buzz").addEventListener("click",()=>doAction("buzz"));
  $("no-buzz-replay").addEventListener("click",()=>chooseNoBuzz("replay"));
  $("no-buzz-next").addEventListener("click",()=>chooseNoBuzz("next"));
+ $("no-buzz-optout").addEventListener("click",optOutOfSong);
  $("steal").addEventListener("click",()=>doAction("steal"));
  $("forfeit").addEventListener("click",()=>doAction("forfeit"));
  $("answer-form").addEventListener("submit",e=>{
