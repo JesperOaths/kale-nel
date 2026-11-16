@@ -235,6 +235,10 @@ try{
  await tablet.waitForFunction(()=>state?.phase==="playing");
  await phone.waitForFunction(()=>state?.phase==="playing",null,{timeout:10000});
  assert.equal(await phone.locator("#buzz").isVisible(),true);
+ // Re-open the deliberately hidden embedded tablet player so its
+ // modal visibility can be checked in a genuinely visible viewport.
+ await tablet.locator("#tablet-toggle").click();
+ await embedded.locator("#room").waitFor({state:"visible",timeout:10000});
  assert.equal(await phone.locator("#no-buzz-dialog").isVisible(),false);
  // S21 decides the no-buzz deadline; engine tests verify every duration.
  game.phase="decision";
@@ -255,6 +259,7 @@ try{
  await phone.waitForFunction(()=>state?.phase==="playing"&&state.step===1,null,{timeout:12000});
  assert.equal(game.step,1,"next from 0.5s advances to 1.5s exactly once");
  assert.equal(await phone.locator("#no-buzz-dialog").isVisible(),false);
+ await tablet.locator("#tablet-close").click();
  await phone.locator("#buzz").click();
  await phone.waitForFunction(()=>state?.phase==="answering");
  await phone.locator("#guess-title").fill("Testing Song");
