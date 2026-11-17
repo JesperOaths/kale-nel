@@ -34,6 +34,13 @@
     @media(max-width:760px){.wrap{padding:8px}.shell{padding:12px}.top-actions{width:100%}.home-help{grid-template-columns:1fr}.setup-row>*{flex:1}.room-card{grid-template-columns:1fr}.room-card .room-actions{display:grid;grid-template-columns:1fr 1fr}.roombar{grid-template-columns:1fr 1fr}.lobby-seat-grid{grid-template-columns:1fr 1fr}.table{min-height:820px;border-width:10px}.seat{width:142px}.seat.s1{right:1%;top:42%}.seat.s3{left:1%;top:42%}.center{top:50%;width:calc(100% - 22px)}.card{width:68px;height:96px;font-size:22px}.card span{font-size:30px}.mini-card{width:34px;height:48px;font-size:13px}.hand{gap:8px;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:6px}.hand-wrap{bottom:0;border-radius:18px}.side{grid-template-columns:1fr}.bot-builder,.bot-slots{width:100%}}
     body .site-credit-watermark{position:static!important;transform:none!important;width:max-content;max-width:calc(100vw - 32px);margin:18px auto 0}
   .guest-label{display:grid;gap:6px;margin-top:14px;font-size:13px;font-weight:800;color:#6c543b}.guest-label input{width:100%;min-height:45px;border:1px solid #c6b9a5;border-radius:13px;padding:11px 13px;background:#fff;color:#19130f;font:700 15px/1.3 inherit}.guest-label input:focus{outline:3px solid #d7ad58}.home-panel .muted{line-height:1.5}
+
+    .custom-room-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0}
+    .custom-room-inputs .guest-label{margin-top:0}
+    .guest-label small{font-weight:500;color:#867762}
+    .room-hint{margin:7px 0 11px;font-size:12px;line-height:1.4;color:#675841}
+    .table-name{font-size:14px;color:#1f3d30;display:block;margin-bottom:3px}
+    @media(max-width:560px){.custom-room-inputs{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -51,6 +58,11 @@
         <h2>Tafel starten</h2>
         <div class="muted">Maak een tafel of join met een roomcode. Geen account nodig. Speel ook via 5G of een ander wifi-netwerk.</div>
         <label class="guest-label" for="guestName"><span>Jouw spelersnaam</span><input id="guestName" type="text" maxlength="30" autocomplete="nickname" placeholder="Bijvoorbeeld Bruis" required /></label>
+        <div class="custom-room-inputs">
+          <label class="guest-label" for="customRoomCode"><span>Je eigen roomcode <small>(optioneel)</small></span><input id="customRoomCode" type="text" maxlength="12" pattern="[A-Za-z0-9]{4,12}" placeholder="Bijvoorbeeld BRUIS of KLAVER2026" autocapitalize="characters" autocomplete="off" spellcheck="false" /></label>
+          <label class="guest-label" for="customRoomTitle"><span>Naam van je tafel <small>(optioneel)</small></span><input id="customRoomTitle" type="text" maxlength="50" placeholder="Bijvoorbeeld Klaveravond" autocomplete="off" /></label>
+        </div>
+        <p class="room-hint">Geen code ingevuld? Dan krijg je automatisch een willekeurige code. Bestaande tafels blijven zeven dagen na de laatste zet hervatbaar.</p>
         <div class="setup-row">
         <select id="finishMode" aria-label="Eindmodus"><option value="fixed_rounds">16 rondes</option><option value="first_to_162">Eerste tot 162</option></select>
           <button id="createBtn" class="btn gold" type="button">Maak tafel</button>
@@ -69,12 +81,12 @@
       </section>
       <section class="home-panel">
         <h2>Open tafels</h2>
-        <div class="muted">Gebruik een code of kies direct een tafel. Hosts kunnen hun eigen tafels sluiten.</div>
+        <div class="muted">Open een wachtende tafel of hervat een spel uit je eerdere sessies. De zeven dagen tellen vanaf de laatste zet.</div>
         <div class="join-row">
         <input id="codeInput" aria-label="Roomcode" placeholder="Roomcode" style="text-transform:uppercase">
           <button id="joinBtn" class="btn" type="button">Open</button>
         </div>
-        <h3>Lobbylijst</h3>
+        <h3>Beschikbare tafels en je lopende spellen</h3>
         <section class="rooms" id="rooms"></section>
       </section>
     </section>
@@ -322,7 +334,10 @@
     }
     async function createGame(){
       if(hasActiveRoom()) return setStatus('Je zit al aan een actieve tafel. Open, verlaat of sluit die eerst.');
-      try { UI.remote = await K.rpc('klaverjas_online_create', { session_token: K.sessionToken(), site_scope_input: K.currentScope(), settings_input: { finish_mode: $('finishMode').value || 'fixed_rounds', bot_roster: UI.botRoster, bot_count: UI.botRoster.length } }); UI.gameId = game().id; UI.lobbyCode = game().lobby_code; localStorage.setItem('kalenel_klaverjassen_guest_room_v1', UI.lobbyCode); location.assign(roomUrl(UI.gameId, UI.lobbyCode)); } catch(err){ setStatus(err.message); }
+      const customCode=$('customRoomCode').value.trim().toUpperCase();
+      const roomTitle=$('customRoomTitle').value.trim();
+      if(customCode&&!/^[A-Z0-9]{4,12}$/.test(customCode))return setStatus('Een eigen code heeft 4 tot 12 letters of cijfers (zonder spaties).');
+      try { UI.remote = await K.rpc('klaverjas_online_create', { session_token: K.sessionToken(), site_scope_input: K.currentScope(), settings_input: { finish_mode: $('finishMode').value || 'fixed_rounds', bot_roster: UI.botRoster, bot_count: UI.botRoster.length, lobby_code:customCode, room_title:roomTitle } }); UI.gameId = game().id; UI.lobbyCode = game().lobby_code; localStorage.setItem('kalenel_klaverjassen_guest_room_v1', UI.lobbyCode); location.assign(roomUrl(UI.gameId, UI.lobbyCode)); } catch(err){ setStatus(err.message); }
     }
     async function joinGame(){
       const targetCode = ($('codeInput').value || UI.lobbyCode || '').trim().toUpperCase();
@@ -361,7 +376,39 @@
     function applyCollect(st){ const winner = st.pending_trick?.winner; if(winner == null) return false; const roem = Number(st.pending_trick.roem?.points || 0); if(roem && !st.pending_trick.klopped) { st.roem_by_team[K.TEAM_OF[winner]-1] += roem; st.pending_trick.klopped = true; } st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)){ const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); } } st.action_deadline_at=K.actionDeadline(); return true; }
     function queueBotTurns(){ if(UI.busy || UI.botTimer) return; const st = state(); if(!K.hasBots(st) || st.phase === 'finished' || st.phase === 'roundOver') return; if((st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)) || (st.phase === 'playing' && ((st.pending_trick && isBotSeat(st, st.pending_trick.winner)) || (!st.pending_trick && isBotSeat(st, st.turn))))){ UI.botTimer = setTimeout(() => { UI.botTimer = null; runBotTurns().catch((err)=>setStatus(err?.message || 'Botzet kon niet worden opgeslagen.')); }, 950); } }
     async function runBotTurns(){ if(UI.busy) return; let st = structuredClone(state()); if(!K.hasBots(st)) return; let changed = false; UI.busy = true; try{ for(let guard=0; guard<80; guard++){ await wait(360); if(st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)){ applyBid(st, st.bidder_turn, K.botBid(st, st.bidder_turn)); changed = true; continue; } if(st.phase === 'playing' && st.pending_trick && isBotSeat(st, st.pending_trick.winner)){ await wait(600); if(!applyCollect(st)) break; changed = true; if(st.phase !== 'playing') break; continue; } if(st.phase === 'playing' && !st.pending_trick && isBotSeat(st, st.turn)){ if(!applyBotCard(st, st.turn)) break; changed = true; continue; } break; } if(changed) await save(st, true, 'bot_turns'); } finally { UI.busy = false; } }
-    async function loadRooms(){ try{ const data = await K.rpc('klaverjas_online_list_open', { session_token: K.sessionToken(), site_scope_input: K.currentScope() }); const rows = Array.isArray(data) ? data : []; $('rooms').innerHTML = rows.length ? rows.map(r => `<article class="room-card ${r.has_me ? 'mine' : ''}"><strong class="room-code">${esc(r.lobby_code)}</strong><div class="room-summary"><div class="muted">${esc(r.status)} · host ${esc(r.created_by_player_name || '-')}</div><div class="room-meta"><span class="room-pill">${esc(r.player_count)}/4 stoelen</span><span class="room-pill">${esc(r.human_count || 0)} mensen</span><span class="room-pill">${esc(r.bot_count || 0)} bots</span>${r.has_me ? '<span class="room-pill">jouw tafel</span>' : ''}${r.is_host ? '<span class="room-pill">host</span>' : ''}</div></div><div class="room-actions"><button class="btn secondary" data-room="${esc(r.lobby_code)}" type="button">${r.has_me ? 'Verder spelen' : 'Open tafel'}</button>${r.is_host ? `<button class="btn danger" data-delete-room="${esc(r.lobby_code)}" data-delete-id="${esc(r.id)}" type="button">Verwijder</button>` : ''}</div></article>`).join('') : '<div class="muted">Geen open tafels. Maak links een nieuwe tafel.</div>'; $('rooms').querySelectorAll('[data-room]').forEach(btn => btn.onclick = () => { $('codeInput').value = btn.dataset.room; runAction(joinGame); }); $('rooms').querySelectorAll('[data-delete-room]').forEach(btn => btn.onclick = () => deleteRoom(btn.dataset.deleteId || null, btn.dataset.deleteRoom || null)); }catch(_){ $('rooms').innerHTML = '<div class="muted">Open tafels laden lukte niet.</div>'; } }
+    function resumeDate(value){
+      const d=new Date(value||'');
+      return Number.isFinite(d.getTime())?d.toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'onbekend';
+    }
+    async function loadRooms(){
+      try{
+        const data=await K.rpc('klaverjas_online_list_open',{session_token:K.sessionToken(),site_scope_input:K.currentScope()});
+        const rows=Array.isArray(data)?data:[];
+        $('rooms').innerHTML=rows.length?rows.map(r=>{
+          const playing=r.status==='playing';
+          const title=r.room_title||r.created_by_player_name||'Klaverjastafel';
+          return `<article class="room-card ${r.has_me?'mine':''}">
+            <strong class="room-code">${esc(r.lobby_code)}</strong>
+            <div class="room-summary">
+              <strong class="table-name">${esc(title)}</strong>
+              <div class="muted">${playing?'Aan de gang':'Lobby'} · host ${esc(r.created_by_player_name||'-')}</div>
+              <div class="room-meta"><span class="room-pill">${esc(r.player_count)}/4 stoelen</span>
+                <span class="room-pill">${esc(r.human_count||0)} mensen</span>
+                <span class="room-pill">${esc(r.bot_count||0)} bots</span>
+                ${r.has_me?'<span class="room-pill">Jouw tafel</span>':''}
+                ${r.is_host?'<span class="room-pill">Host</span>':''}
+                ${r.resume_until?`<span class="room-pill">Hervatten tot ${esc(resumeDate(r.resume_until))}</span>`:''}
+              </div>
+            </div>
+            <div class="room-actions">
+              <button class="btn secondary" data-room="${esc(r.lobby_code)}" type="button">${r.has_me?'Verder spelen':(playing?'Bekijk tafel':'Schuif aan')}</button>
+              ${r.is_host?`<button class="btn danger" data-delete-room="${esc(r.lobby_code)}" data-delete-id="${esc(r.id)}" type="button">Verwijder</button>`:''}
+            </div></article>`;
+        }).join(''):'<div class="muted">Geen beschikbare tafels gevonden. Maak een nieuwe tafel of voer een roomcode in.</div>';
+        $('rooms').querySelectorAll('[data-room]').forEach(btn=>btn.onclick=()=>{$('codeInput').value=btn.dataset.room;runAction(joinGame);});
+        $('rooms').querySelectorAll('[data-delete-room]').forEach(btn=>btn.onclick=()=>deleteRoom(btn.dataset.deleteId||null,btn.dataset.deleteRoom||null));
+      }catch(_){$('rooms').innerHTML='<div class="muted">Tafels laden lukte niet.</div>';}
+    }
     $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; $('leaveBtn').onclick = leaveTable; $('deleteRoomBtnTop').onclick = () => deleteRoom(); $('addEasyBotBtn').onclick = () => addBotDraft('easy'); $('addHardBotBtn').onclick = () => addBotDraft('hard'); $('clearBotsBtn').onclick = clearBotDraft; renderBotSlots(); if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); loadRooms(); UI.poll = setInterval(() => { if(!document.hidden) { load(); loadRooms(); } }, 15000);
   })();
   </script>

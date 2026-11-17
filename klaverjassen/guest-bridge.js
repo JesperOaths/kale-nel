@@ -12,7 +12,7 @@
   const NICK_KEY='kalenel_klaverjassen_guest_nickname_v1';
   const ROOM_KEY='kalenel_klaverjassen_guest_room_v1';
   const revisions=Object.create(null);
-  const validCode=c=>/^[A-HJ-NP-Z2-9]{6}$/.test(String(c||'').toUpperCase());
+  const validCode=c=>/^[A-Z0-9]{4,12}$/.test(String(c||'').toUpperCase());
   const store=global.localStorage;
   function activeCode(){
     const query=new URLSearchParams(global.location.search);
@@ -30,6 +30,43 @@
     store.setItem(PREFIX+code,JSON.stringify({token,name,updatedAt:Date.now()}));
     store.setItem(NICK_KEY,name);
     store.setItem(ROOM_KEY,code);
+  }
+  function knownCodes(){
+    const out=[];
+    try{
+      for(let i=0;i<store.length&&out.length<30;i++){
+        const key=store.key(i);
+        if(!key?.startsWith(PREFIX))continue;
+        const code=key.slice(PREFIX.length);
+        if(validCode(code)&&stored(code))out.push(code);
+      }
+    }catch(_){}
+    return out.slice(0,15);
+  }
+  async function listAccessible(){
+    const publicRooms=await request('list',null,stored(activeCode())?.token||null,null,{});
+    const myCodes=knownCodes();
+    const owned=await Promise.all(myCodes.map(async code=>{
+      try{
+        const credential=stored(code),room=await request('state',code,credential.token,null,{});
+        const g=room.game||{},members=g.state?.players||[];
+        if(!['lobby','playing'].includes(g.status))return null;
+        return {
+          id:g.id,lobby_code:g.lobby_code,room_title:g.room_title,
+          status:g.status,created_by_player_name:g.created_by_player_name,
+          resume_until:g.resume_until,player_count:members.length,
+          human_count:members.filter(p=>!p.is_bot).length,
+          bot_count:members.filter(p=>p.is_bot).length,
+          has_me:true,is_host:!!room.viewer?.is_host
+        };
+      }catch(_){return null;}
+    }));
+    const byCode=new Map();
+    for(const row of publicRooms||[])byCode.set(row.lobby_code,row);
+    for(const row of owned)if(row)byCode.set(row.lobby_code,row);
+    return [...byCode.values()].sort((a,b)=>
+      Number(Boolean(b.has_me))-Number(Boolean(a.has_me)) ||
+      Number(b.status==='playing')-Number(a.status==='playing'));
   }
   function randomToken(){
     const a=new Uint8Array(32);
@@ -77,7 +114,7 @@
         return response;
       }
       case 'klaverjas_online_join': {
-        if(!validCode(code)) throw Error('Vul een roomcode met zes tekens in');
+        if(!validCode(code)) throw Error('Vul een roomcode in (4 tot 12 letters of cijfers)');
         const old=stored(code),token=old?.token||randomToken();
         const person=old?.name||nickname();
         const response=await request('join',code,token,person);
@@ -85,7 +122,7 @@
         return response;
       }
       case 'klaverjas_online_list_open': {
-        return request('list',null,stored(code)?.token||null,null,{});
+        return listAccessible();
       }
       case 'klaverjas_online_get_state': {
         const credential=stored(code);
