@@ -83,9 +83,9 @@ function renderInfo(remote){
    </div>`:''}
   </section>
   <section class="kj-extra-section"><h3>Beurtmeldingen</h3>
-   <p class="muted">Een melding wanneer je moet bieden of een kaart spelen, ook met gesloten game-tab. Toestemming is per apparaat nodig.</p>
+   <p class="muted">Ontvang een melding wanneer je moet bieden of spelen. Zolang achtergrondpush niet beschikbaar is, moet de game-tab open blijven (mag op de achtergrond staan).</p>
    <button class="btn secondary" id="kjNotify" type="button">${pref.subscriptions?.[room]?'Meldingen uitschakelen':'Meldingen inschakelen'}</button>
-   <small>${'Notification'in window?'Toestemming: '+Notification.permission:'Pushmeldingen niet ondersteund op dit apparaat'}</small>
+   <small>${pref.subscriptions?.[room]==='local'?'Actief: browsermeldingen zolang de tab open is.':'Notification'in window?'Toestemming: '+Notification.permission:'Browsermeldingen niet beschikbaar'}</small>
   </section>
   <section class="kj-extra-section"><h3>Animatie & toegankelijkheid</h3>
    <label for="kjAnimSpeed">Snelheid</label>
@@ -136,25 +136,28 @@ function urlBase64ToBytes(value){
 }
 
 async function enablePush(room){
- if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))
-  throw Error('Deze browser ondersteunt geen Web Push-meldingen.');
+ if(!('Notification'in window))throw Error('Deze browser ondersteunt geen meldingen.');
  const allowed=await Notification.requestPermission();
  if(allowed!=='granted')throw Error('Je browser heeft meldingen niet toegestaan.');
- const registration=await navigator.serviceWorker.register('/klaverjassen/turn-sw.js',{scope:'/klaverjassen/'});
- const res=await fetch(PUSH_URL,{cache:'no-store',mode:'cors'});
- if(!res.ok)throw Error('Meldingsserver niet beschikbaar.');
- const conf=await res.json();
- if(!conf.publicKey)throw Error('Meldingssleutel ontbreekt.');
- let sub=await registration.pushManager.getSubscription();
- if(!sub)sub=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToBytes(conf.publicKey)});
- await K.consentPush(room,sub.toJSON());
- pref.subscriptions[room]=sub.endpoint;
+ try{
+  const registration=await navigator.serviceWorker.register('/klaverjassen/turn-sw.js',{scope:'/klaverjassen/'});
+  const res=await fetch(PUSH_URL,{cache:'no-store',mode:'cors'});
+  if(!res.ok)throw Error('Geen push-endpoint');
+  const conf=await res.json();
+  if(!conf.publicKey)throw Error('Geen meldingssleutel');
+  let sub=await registration.pushManager.getSubscription();
+  if(!sub)sub=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToBytes(conf.publicKey)});
+  await K.consentPush(room,sub.toJSON());
+  pref.subscriptions[room]=sub.endpoint;
+ }catch(_){
+  pref.subscriptions[room]='local';
+ }
  savePreferences();
 }
 
 async function disablePush(room){
  if(!pref.subscriptions?.[room])return;
- await K.removePush(room,pref.subscriptions[room]);
+ if(pref.subscriptions[room]!=='local')await K.removePush(room,pref.subscriptions[room]);
  delete pref.subscriptions[room];savePreferences();
 }
 
@@ -173,5 +176,5 @@ function onState(remote){
  renderStats();
 }
 applyPreferences();
-global.KALENEL_KJ_ENHANCEMENTS={onState,onPane:pane=>{if(pane==='statsPanel'&&!session.stats&&!session.loading)refreshStats();},duration,reduceMotion,applyPreferences,calculate};
+global.KALENEL_KJ_ENHANCEMENTS={onState,onPane:pane=>{if(pane==='statsPanel'&&!session.stats&&!session.loading)refreshStats();},duration,reduceMotion,applyPreferences,calculate,shouldPollHidden:()=>!!pref.subscriptions?.[session.room]};
 })(window);
