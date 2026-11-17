@@ -10,6 +10,7 @@
 
 
   <script src="../gejast-klaverjas-online.js?v817"></script>
+  <script src="./guest-rules.js?v=20261118-1"></script>
   <script src="./guest-bridge.js?v=20261117-2"></script>
   <script src="./guest-enhancements.js?v=20261117-1"></script>
   <style>
@@ -470,6 +471,27 @@
     @media(max-width:760px){.kj-stats-grid{gap:6px}.kj-stats-cell strong{font-size:19px}
       .side-tabs{padding:5px}.side-tabs button{font-size:10px;min-height:36px}}
 
+
+    /* The next numerical seat sits clockwise (to the viewer's left). */
+    .seat.position-bottom{left:50%;right:auto;top:auto;bottom:5%;transform:translate(-50%,0)}
+    .seat.position-left{left:4%;right:auto;top:50%;bottom:auto;transform:translate(0,-50%)}
+    .seat.position-top{left:50%;right:auto;top:5%;bottom:auto;transform:translate(-50%,0)}
+    .seat.position-right{left:auto;right:4%;top:50%;bottom:auto;transform:translate(0,-50%)}
+    .forehand-chip{background:#def6e6;color:#18563a;border:1px solid #98c6aa}
+    .legal-cue{font-size:11px;line-height:1.2;margin:3px 0 6px;padding:4px 7px;
+      background:#efebe2;color:#443d30;border-radius:8px;max-width:100%;font-weight:700}
+    .legal-cue.is-my-turn{background:#d9f5df;color:#164d31;box-shadow:inset 0 0 0 1px #7abb8a}
+    .hand button.card.legal-card:not(:disabled){outline:3px solid #1e9d55;
+      box-shadow:0 0 0 2px #fff,0 0 12px rgba(27,142,70,.36);opacity:1}
+    .hand button.card.blocked-card:disabled{opacity:.38;filter:grayscale(.85);cursor:not-allowed}
+    .hand button.card.blocked-card:disabled:after{content:'×';position:absolute;top:1px;right:4px;
+      background:#5b5452;color:white;border-radius:100%;height:14px;width:14px;
+      display:grid;place-items:center;font:bold 12px/1 system-ui}
+    @media(max-width:760px){
+      .legal-cue{font-size:10px;margin:1px 0 4px;padding:3px 5px;line-height:1.15}
+      .hand button.card.blocked-card:disabled:after{width:12px;height:12px;font-size:10px}
+    }
+
   </style>
 </head>
 <body>
@@ -534,7 +556,7 @@
         <div class="table-announcement" id="eventBanner" aria-live="polite"></div>
         <div class="flight-layer" id="flightLayer" aria-hidden="true"></div>
     <section class="hand-wrap">
-      <div class="hand-title"><span>Jouw hand · gesorteerd op troef en kleur</span><span id="handHint">Harten → Schoppen → Ruiten → Klaver</span></div>
+      <div class="hand-title"><span>Jouw hand · <strong>groen = mag</strong>, grijs = niet toegestaan</span><span id="handHint">Harten → Schoppen → Ruiten → Klaver</span></div><div class="legal-cue" id="legalCue" role="status" aria-live="polite">Wachten op het spel.</div>
       <section class="hand" id="hand"></section>
     </section>
       </section>
@@ -846,7 +868,8 @@
       const bySeat=new Map((plays||[]).map(play=>[Number(play.player),play]));
       const first=plays?.[0]||null;
       const winner=K.currentWinner(plays||[],trumpSuit);
-      const directions=[{seat:2,name:'boven'},{seat:1,name:'rechts'},{seat:0,name:'onder'},{seat:3,name:'links'}];
+      const directionNames={top:'boven',right:'rechts',bottom:'onder',left:'links'};
+      const directions=[0,1,2,3].map(i=>({seat:i,name:directionNames[K.guestSeatPosition(i,seat())]}));
       const slots=directions.map(({seat,name})=>{
         const play=bySeat.get(seat);
         const label=player(seat)?.name||`Stoel ${seat+1}`;
@@ -904,7 +927,7 @@
       $('seats').innerHTML = [0,1,2,3].map(i => {
         const p = players[i] || {};
         const turn = i === st.turn || i === st.bidder_turn || (st.pending_trick && i === st.pending_trick.winner);
-        return `<div class="seat s${i}"><div class="seat-card p${i} ${turn?'turn':''}">${bidBadge(st,i)}<strong>${esc(p.name || `Stoel ${i+1}`)}</strong><span class="tag">Team ${K.TEAM_OF[i]}</span>${K.isBotPlayer(p)?'<span class="tag bot">Bot</span>':''}${i===st.dealer?'<span class="tag dealer-chip">Deler ↻</span>':''}${i===me?'<span class="tag">Jij</span>':''}</div></div>`;
+        return `<div class="seat s${i} position-${K.guestSeatPosition(i,me)}"><div class="seat-card p${i} ${turn?'turn':''}">${bidBadge(st,i)}<strong>${esc(p.name || `Stoel ${i+1}`)}</strong><span class="tag">Team ${K.TEAM_OF[i]}</span>${K.isBotPlayer(p)?'<span class="tag bot">Bot</span>':''}${i===st.dealer?'<span class="tag dealer-chip" title="De volgende deler zit links van deze speler">DELER</span>':''}${i===K.guestClockwiseNext(st.dealer)?'<span class="tag forehand-chip" title="Links van de deler: begint met bieden en speelt de eerste kaart">Voorhand · links</span>':''}${i===me?'<span class="tag">Jij</span>':''}</div></div>`;
       }).join('');
       const shownTrick = st.pending_trick?.cards || st.trick || [];
       renderTrickView(UI.playbackActive ? UI.playbackTrick : shownTrick,st,UI.playbackActive);renderContractRibbon(st);
@@ -1005,13 +1028,32 @@
       if (st.phase === 'roundOver') { const done = K.shouldFinishGame(st); panel.innerHTML = done ? '<button class="btn gold" id="finishBtn" type="button">Potje opslaan</button>' : '<button class="btn gold" id="nextBtn" type="button">Volgende ronde</button><button class="btn secondary" id="finishBtn" type="button" style="margin-left:8px">Nu opslaan</button>'; if($('nextBtn')) $('nextBtn').onclick = () => runAction(nextRound); $('finishBtn').onclick = () => runAction(() => finishGame()); return; }
       panel.innerHTML = '<h2>Actie</h2><div class="muted">Wachten.</div>';
     }
-    function renderHand(st, me){
-      const hand = me >= 0 ? K.sortHandForBid(st.hands?.[me] || [], st.accepted_bid?.suit || null) : [];
-      const legal = new Set(me === st.turn && st.phase === 'playing' && !st.pending_trick ? K.legalCards(hand, st.trick || [], me, st.accepted_bid?.suit).map(c => c.id) : []);
-      $('handHint').textContent = st.accepted_bid?.suit && st.accepted_bid.suit !== 'sans' ? `Troef vooraan: ${K.SUIT_LABELS[st.accepted_bid.suit]}` : 'Harten → Schoppen → Ruiten → Klaver';
-      $('hand').innerHTML = hand.map(card => cardHtml(card, legal.has(card.id))).join('');
-      $('hand').querySelectorAll('[data-card]').forEach(btn => btn.onclick = () => runAction(() => playCard(btn.dataset.card), 240));
-    }
+    function renderHand(st,me){
+  const hand=me>=0?K.sortHandForBid(st.hands?.[me]||[],st.accepted_bid?.suit||null):[];
+  const yourTurn=st.phase==='playing'&&!st.pending_trick&&me===st.turn;
+  const analysis=K.guestAnalyzeHand(hand,st.trick||[],me,st.accepted_bid?.suit);
+  const legal=new Set(yourTurn?analysis.cards.map(c=>c.id):[]);
+  const leadMark=analysis.leadSuit?K.SUIT_SYMBOLS[analysis.leadSuit]||'':'';
+  let cue='';
+  if(yourTurn)cue=(leadMark?leadMark+' ':'')+analysis.message+' · '+legal.size+' van '+hand.length+' kaarten toegestaan.';
+  else if(st.phase==='bidding')cue=me===st.bidder_turn?'Je bent aan de beurt om te bieden.':'Bieden: wacht tot je aan de beurt bent.';
+  else if(st.pending_trick)cue='De slag wordt afgerond. Wacht op de volgende uitkomst.';
+  else if(st.phase==='playing')cue='Wacht op '+(player(st.turn)?.name||'de volgende speler')+' · daarna draait de beurt met de klok mee.';
+  else cue='De volgende deler zit steeds links van de vorige deler.';
+  $('legalCue').textContent=cue;
+  $('legalCue').className='legal-cue'+(yourTurn?' is-my-turn':'');
+  $('handHint').textContent=yourTurn?(analysis.rule==='overtrump'?'OVERTROEVEN':analysis.rule==='trump'?'TROEVEN':analysis.rule==='follow'?'BEKENNEN':analysis.rule==='no-undertrump'?'AFGOOIEN':'JE BENT AAN ZET')
+    :(st.accepted_bid?.suit&&st.accepted_bid.suit!=='sans'?'Troef: '+K.SUIT_LABELS[st.accepted_bid.suit]:'Amsterdamse regels');
+  $('hand').innerHTML=hand.map(card=>{
+    const allowed=legal.has(card.id);
+    const blocked=yourTurn&&!allowed;
+    const reason=yourTurn?(allowed?'Toegestaan: '+analysis.message:'Niet toegestaan: '+analysis.message):'Wacht tot je aan de beurt bent';
+    return `<button class="${cardClass(card)} ${allowed?'legal-card':blocked?'blocked-card':''}" data-card="${esc(card.id)}"
+      title="${esc(reason)}" aria-label="${esc(card.rank+' '+(K.SUIT_LABELS[card.suit]||card.suit)+'. '+reason)}"
+      ${allowed?'':'disabled'}>${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit]}</span></button>`;
+  }).join('');
+  $('hand').querySelectorAll('[data-card]').forEach(btn=>btn.onclick=()=>runAction(()=>playCard(btn.dataset.card),240));
+}
     function lastRound(st){ return (st.rounds || [])[Math.max(0,(st.rounds||[]).length-1)] || null; }
     function dangerLabel(st){
       const total = Number(st.totals?.[0]||0) + Number(st.totals?.[1]||0);
@@ -1139,7 +1181,7 @@
     async function startRound(){ $('shuffleNote').style.display='block'; await wait(650); const players = (UI.remote.players || state().players || []).map(p => ({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); await save(K.newClientState(players, Number(state().dealer ?? game().dealer_index ?? 0), state(), { finish_mode: $('finishMode').value || 'fixed_rounds', bot_count: players.filter(p=>p.is_bot).length }), true, 'start_round'); $('shuffleNote').style.display='none'; }
     function resetDealAfterFourPasses(st){ const players = (st.players||[]).map(p=>({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); const fresh = K.newClientState(players, st.dealer || 0, { ...st, rounds: st.rounds||[], totals: st.totals||[0,0], ai_mmr:st.ai_mmr||{} }, st.settings || { finish_mode:$('finishMode').value||'fixed_rounds' }); fresh.redeal_count = Number(st.redeal_count||0)+1; fresh.last_redeal_reason = 'four_passes_same_dealer'; fresh.rounds = st.rounds || []; fresh.totals = st.totals || [0,0]; return fresh; }
     async function placeBid(bid){ let st = structuredClone(state()); if(!K.isValidBid(bid, st.current_bid)) return setStatus('Ongeldig bod.'); recordBid(st,seat(),bid); if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ $('shuffleNote').style.display='block'; await wait(700); st = resetDealAfterFourPasses(st); $('shuffleNote').style.display='none'; } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seat(), team: K.TEAM_OF[seat()] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'bid'); }
-    async function playCard(cardId){ const st = structuredClone(state()); const me = seat(); const hand = st.hands[me] || []; const card = hand.find(c => c.id === cardId); if(!card) return; const legal = new Set(K.legalCards(hand, st.trick || [], me, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return setStatus('Die kaart mag niet volgens de Amsterdamse regels.'); const ai = K.aiChoice(hand, st.trick || [], me, st.accepted_bid?.suit, st); st.hands[me] = hand.filter(c => c.id !== card.id); st.trick.push({ player: me, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: me, player_name: player(me)?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (me + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'play_card'); }
+    async function playCard(cardId){ const st = structuredClone(state()); const me = seat(); const hand = st.hands[me] || []; const card = hand.find(c => c.id === cardId); if(!card) return; const legal = new Set(K.guestLegalCards(hand, st.trick || [], me, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return setStatus('Die kaart mag niet volgens de Amsterdamse regels.'); const ai = K.aiChoice(hand, st.trick || [], me, st.accepted_bid?.suit, st); st.hands[me] = hand.filter(c => c.id !== card.id); st.trick.push({ player: me, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: me, player_name: player(me)?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (me + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'play_card'); }
     async function klop(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner] || st.pending_trick.klopped) return; st.roem_by_team[K.TEAM_OF[me]-1] += Number(st.pending_trick.roem?.points || 0); st.pending_trick.klopped = true; recordKlop(st,me,false); await save(st, true, 'klop_roem'); }
 
     function renderContractRibbon(st){
@@ -1217,7 +1259,7 @@
     async function finishGame(existing){ const st = existing || structuredClone(state()); const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); st.action_needed_seat=null; await save(st, true, 'finish_game'); setStatus(K.hasBots(st) ? 'Botpotje afgerond. De uitslag blijft in deze gastentafel.' : 'Uitslag bewaard in deze gastentafel.', true); loadRooms(); }
     function isBotSeat(st, seatNo){ return K.isBotPlayer((st.players || [])[seatNo]); }
     function applyBid(st, seatNo, bid){ if(!K.isValidBid(bid, st.current_bid)) bid = { action:'pass' }; recordBid(st,seatNo,bid); if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ const players = (st.players||[]).map(p=>({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); const fresh = K.newClientState(players, st.dealer || 0, st, st.settings); Object.assign(st, fresh, { redeal_count:Number(st.redeal_count||0)+1, last_redeal_reason:'four_passes_same_dealer' }); } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seatNo, team: K.TEAM_OF[seatNo] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); }
-    function applyBotCard(st, seatNo){ const hand = st.hands?.[seatNo] || []; const card = K.aiChoice(hand, st.trick || [], seatNo, st.accepted_bid?.suit, st, K.botDifficulty ? K.botDifficulty(st.players?.[seatNo]) : undefined); if(!card) return false; const legal = new Set(K.legalCards(hand, st.trick || [], seatNo, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return false; const ai = K.aiChoice(hand, st.trick || [], seatNo, st.accepted_bid?.suit, st, 'hard'); st.hands[seatNo] = hand.filter(c => c.id !== card.id); st.trick.push({ player: seatNo, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: seatNo, player_name: (st.players||[])[seatNo]?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (seatNo + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); return true; }
+    function applyBotCard(st, seatNo){ const hand = st.hands?.[seatNo] || []; const eligible=K.guestLegalCards(hand,st.trick||[],seatNo,st.accepted_bid?.suit); if(!eligible.length)return false; const card=K.aiChoice(eligible,st.trick||[],seatNo,st.accepted_bid?.suit,st,K.botDifficulty?K.botDifficulty(st.players?.[seatNo]):undefined)||eligible[0]; if(!card)return false; const legal=new Set(eligible.map(c=>c.id)); if(!legal.has(card.id))return false; const ai=K.aiChoice(eligible,st.trick||[],seatNo,st.accepted_bid?.suit,st,'hard')||card; st.hands[seatNo] = hand.filter(c => c.id !== card.id); st.trick.push({ player: seatNo, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: seatNo, player_name: (st.players||[])[seatNo]?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (seatNo + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); return true; }
     function applyCollect(st){ const winner = st.pending_trick?.winner; if(winner == null) return false; const roem = Number(st.pending_trick.roem?.points || 0); if(roem && !st.pending_trick.klopped) { st.roem_by_team[K.TEAM_OF[winner]-1] += roem; st.pending_trick.klopped = true; recordKlop(st,winner,true); } st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], bid_history: (st.bid_history || []).slice(-20), klop_events:(st.klop_events||[]).slice(-14), saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)){ const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); } } st.action_deadline_at=K.actionDeadline(); return true; }
     function queueBotTurns(){if(UI.busy||UI.botTimer)return;const st=state();if(!K.hasBots(st)||st.pending_trick||['finished','roundOver'].includes(st.phase))return;if((st.phase==='bidding'&&isBotSeat(st,st.bidder_turn))||(st.phase==='playing'&&isBotSeat(st,st.turn))){UI.botTimer=setTimeout(()=>{UI.botTimer=null;runBotTurns().catch(err=>setStatus(err?.message||'Botzet kon niet worden opgeslagen.'));},950);}}
     async function runBotTurns(){ if(UI.busy) return; let st = structuredClone(state()); if(!K.hasBots(st)) return; let changed = false; UI.busy = true; try{ for(let guard=0; guard<80; guard++){ await wait(360); if(st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)){ applyBid(st, st.bidder_turn, K.botBid(st, st.bidder_turn)); changed = true; continue; } if(st.phase==='playing'&&st.pending_trick)break; if(st.phase === 'playing' && !st.pending_trick && isBotSeat(st, st.turn)){ if(!applyBotCard(st, st.turn)) break; changed = true; continue; } break; } if(changed) await save(st, true, 'bot_turns'); } finally { UI.busy = false; } }
