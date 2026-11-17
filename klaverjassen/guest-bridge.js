@@ -7,6 +7,8 @@
   const K=global.GEJAST_KLAVERJAS_ONLINE;
   if(!K) throw Error('Klaverjas game core ontbreekt');
   const ENDPOINT='https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/klaverjassen_guest_v1';
+  const EXTRA_ENDPOINT='https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/rpc/klaverjassen_guest_extra_v1';
+  const PROFILE_KEY='kalenel_kj_guest_profile_secret_v1';
   const PUBLISHABLE_KEY='sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
   const PREFIX='kalenel_klaverjassen_guest_cap_v1_';
   const NICK_KEY='kalenel_klaverjassen_guest_nickname_v1';
@@ -102,6 +104,60 @@
     if(data?.game?.lobby_code) revisions[data.game.lobby_code]=Number(data.game.revision);
     return data;
   }
+
+  function profileKey(){
+    let key=store.getItem(PROFILE_KEY);
+    if(!/^[0-9a-f]{64}$/.test(key||'')){key=randomToken();store.setItem(PROFILE_KEY,key);}
+    return key;
+  }
+  async function extra(action,code,payload={},token=null){
+    const credential=token||stored(code)?.token;
+    if(!validCode(code)||!/^[0-9a-f]{64}$/.test(credential||''))throw Error('Open eerst je eigen tafel.');
+    let response;
+    try{response=await fetch(EXTRA_ENDPOINT,{
+      method:'POST',mode:'cors',cache:'no-store',
+      headers:{'Content-Type':'application/json',apikey:PUBLISHABLE_KEY},
+      body:JSON.stringify({action_input:action,room_input:code,
+        token_input:credential,payload_input:payload})
+    });}catch(_){throw Error('Geen verbinding met de spelserver.');}
+    const data=await response.json().catch(()=>null);
+    if(!response.ok)throw Error(data?.message||data?.error||'Extra functie niet beschikbaar: HTTP '+response.status);
+    if(data?.game?.lobby_code)revisions[data.game.lobby_code]=Number(data.game.revision);
+    return data;
+  }
+  async function transferStart(code=activeCode()){
+    const res=await extra('transfer_start',code);
+    const url=global.location.origin+'/klaverjassen/?room='+encodeURIComponent(code)+
+      '#recover='+res.claim+'&profile='+profileKey();
+    return {url,expiresAt:res.expires_at,code:res.claim};
+  }
+  async function transferClaim(code,claim,profile=null){
+    if(!/^[0-9A-F]{32}$/.test(claim||''))throw Error('De overdrachtscode is ongeldig');
+    // Never reuse a seat token. The backend atomically revokes the old one.
+    const fresh=randomToken();
+    const response=await extra('transfer_claim',code,{claim},fresh);
+    if(!response?.viewer||!response?.game)throw Error('Onvolledige overdrachtsbevestiging');
+    if(/^[0-9a-f]{64}$/.test(profile||''))store.setItem(PROFILE_KEY,profile);
+    remember(code,fresh,response.viewer.name);
+    try{await extra('profile_link',code,{profile_key:profileKey()},fresh);}catch(_){}
+    return response;
+  }
+  async function getPlayerStats(code=activeCode()){
+    const identity=profileKey();
+    const rooms=knownCodes();
+    if(!rooms.includes(code)&&validCode(code))rooms.unshift(code);
+    await Promise.all(rooms.map(async room=>{
+      try{await extra('profile_link',room,{profile_key:identity});}catch(_){}
+    }));
+    return extra('profile_stats',code,{profile_key:identity});
+  }
+  async function consentPush(code,subscription){
+    return extra('push_subscribe',code,{subscription});
+  }
+  async function removePush(code,endpoint){
+    return extra('push_unsubscribe',code,{endpoint});
+  }
+
   K.sessionToken=()=>stored(activeCode())?.token||'';
   K.currentScope=()=> 'friends';
   K.rpc=async function(name,params={}){
@@ -149,7 +205,15 @@
   global.KALENEL_KJ_GUEST={
     hasToken:code=>!!stored(String(code||'').toUpperCase()),
     roomLink:code=>global.location.origin+'/klaverjassen/?room='+encodeURIComponent(code),
-    nickname
+    nickname,
+    activeCode,knownCodes,profileKey,
+    transferStart,transferClaim,
+    handover:(code,targetSeat)=>extra('host_handover',code,{seat:targetSeat}),
+    delegateSet:(code,targetSeat)=>extra('delegate_set',code,{seat:targetSeat}),
+    delegateTakeover:(code)=>extra('delegate_takeover',code),
+    pingHost:(code)=>extra('host_ping',code),
+    getPlayerStats,consentPush,removePush,
+    cancelTransfer:(code)=>extra('transfer_cancel',code)
   };
   function setup(){
     const field=document.getElementById('guestName');
@@ -157,6 +221,37 @@
     const roomField=document.getElementById('codeInput');
     const invitation=new URLSearchParams(global.location.search).get('room');
     if(roomField&&validCode(invitation)) roomField.value=invitation.toUpperCase();
+
+    if(roomField&&validCode(invitation)){
+      const hash=new URLSearchParams(global.location.hash.replace(/^#/,''));
+      const claim=hash.get('recover'),profile=hash.get('profile');
+      if(/^[0-9A-F]{32}$/.test(claim||'')){
+        const container=roomField.closest('.home-panel')||roomField.parentElement;
+        const panel=document.createElement('section');
+        panel.className='transfer-recovery';
+        panel.style.cssText='padding:14px;margin:12px 0;border:2px solid #bc923e;border-radius:14px;background:#fff7e0;color:#262018;';
+        const title=document.createElement('strong');
+        title.textContent='Neem je bestaande spelersstoel veilig over';
+        const message=document.createElement('p');
+        message.textContent='Room '+invitation.toUpperCase()+
+          ' · Met deze eenmalige link wordt je vorige apparaat afgemeld. De code verloopt na 10 minuten.';
+        const button=document.createElement('button');
+        button.type='button';button.className='btn gold';button.textContent='Neem mijn stoel over';
+        const feedback=document.createElement('div');feedback.setAttribute('role','status');
+        feedback.style.marginTop='8px';
+        button.addEventListener('click',async()=>{
+          button.disabled=true;feedback.textContent='Bezig met veilige overdracht...';
+          try{
+            await transferClaim(invitation.toUpperCase(),claim,profile);
+            global.history.replaceState(null,'',global.location.pathname+'?room='+encodeURIComponent(invitation.toUpperCase()));
+            global.location.replace('room.html?room='+encodeURIComponent(invitation.toUpperCase()));
+          }catch(error){feedback.textContent=error?.message||'Overdracht mislukt.';button.disabled=false;}
+        });
+        panel.append(title,message,button,feedback);
+        container.prepend(panel);
+      }
+    }
+
     const actions=document.querySelector('.top-actions');
     if(actions&&global.location.pathname.endsWith('/room.html')){
       const share=document.createElement('button');

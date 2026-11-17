@@ -10,7 +10,7 @@
 
 
   <script src="../gejast-klaverjas-online.js?v817"></script>
-  <script src="./guest-bridge.js?v=20261117-1"></script>
+  <script src="./guest-bridge.js?v=20261117-2"></script>
   <style>
     :root{--felt:#104d38;--felt2:#082d24;--rail:#8a5d1f;--paper:#fffaf3;--ink:#19130f;--muted:#756b5e;--line:rgba(0,0,0,.1);--gold:#d7ad58;--red:#a7192b;--p0:#d7ad58;--p1:#60a5fa;--p2:#fb7185;--p3:#34d399}
     *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,229,219,.9),rgba(236,229,219,.94)),url('../site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
@@ -136,7 +136,7 @@
       if(K.currentScope()==='family') url.searchParams.set('scope','family');
       return url.pathname.split('/').pop() + url.search;
     }
-    if (incomingRoom && window.KALENEL_KJ_GUEST.hasToken(incomingRoom)) {
+    if (!location.hash.includes('recover=') && incomingRoom && window.KALENEL_KJ_GUEST.hasToken(incomingRoom)) {
       location.replace(roomUrl(incomingGame, incomingRoom));
       return;
     }

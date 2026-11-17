@@ -10,7 +10,8 @@
 
 
   <script src="../gejast-klaverjas-online.js?v817"></script>
-  <script src="./guest-bridge.js?v=20261117-1"></script>
+  <script src="./guest-bridge.js?v=20261117-2"></script>
+  <script src="./guest-enhancements.js?v=20261117-1"></script>
   <style>
     :root{--felt:#104d38;--felt2:#082d24;--rail:#8a5d1f;--paper:#fffaf3;--ink:#19130f;--muted:#756b5e;--line:rgba(0,0,0,.1);--gold:#d7ad58;--red:#a7192b;--p0:#d7ad58;--p1:#60a5fa;--p2:#fb7185;--p3:#34d399}
     *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,229,219,.9),rgba(236,229,219,.94)),url('../site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
@@ -430,6 +431,45 @@
       .klop-pulse,.trick-slot.is-arriving{animation:none!important}
     }
 
+
+    .side-tabs{grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+    .side-tabs button{font-size:11px;padding:4px 2px}
+    .kj-extra-section{padding:12px 9px;margin:10px 0;border:1px solid #decaa4;
+      border-radius:12px;background:#fffaf2;display:grid;gap:9px;color:#3e3325}
+    .kj-extra-section h3{font-size:15px;margin:0;color:#294b35}
+    .kj-extra-section p{margin:0;line-height:1.4}
+    .kj-extra-section select,.kj-extra-section input[readonly]{width:100%;max-width:100%;
+      padding:7px 9px;border:1px solid #bdad94;border-radius:9px;background:#fff}
+    .kj-extra-section button{justify-self:start}
+    .kj-extra-section small{font-size:11px;line-height:1.4;color:#645843}
+    .kj-share,.kj-handover{display:grid;gap:9px;margin-top:5px}
+    .kj-share input{font-size:11px}
+    .kj-opt{display:flex;gap:10px;align-items:start;line-height:1.35;font-weight:600;font-size:12px}
+    .kj-opt input{flex:none;margin-top:3px}
+    .kj-extra-status{font-size:11px;line-height:1.4;min-height:14px;color:#42563e}
+    .kj-stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:10px 0}
+    .kj-stats-cell{padding:9px;border-radius:12px;background:#f4eee1;border:1px solid #ddd0bd;
+      display:flex;flex-direction:column;gap:4px}
+    .kj-stats-cell span{font-weight:700;font-size:11px;color:#68563e}
+    .kj-stats-cell strong{font-size:23px;font-weight:1000;color:#254b35;font-variant-numeric:tabular-nums}
+    .flying-card{animation-duration:var(--kj-flight-duration,780ms)}
+    .kj-colorblind .trick-slot.p0{background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 2px,transparent 2px 13px)}
+    .kj-colorblind .trick-slot.p1{background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.11) 0 2px,transparent 2px 13px)}
+    .kj-colorblind .trick-slot.p2{background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.12) 0 2px,transparent 2px 12px)}
+    .kj-colorblind .trick-slot.p3{background-image:radial-gradient(rgba(0,0,0,.16) 1px,transparent 2px);
+      background-size:10px 10px}
+    .kj-colorblind .seat-card.p0:after{content:'● S1';}
+    .kj-colorblind .seat-card.p1:after{content:'■ S2';}
+    .kj-colorblind .seat-card.p2:after{content:'▲ S3';}
+    .kj-colorblind .seat-card.p3:after{content:'◆ S4';}
+    .kj-colorblind .seat-card:after{font:900 10px Inter,system-ui,sans-serif;
+      background:#1e3833;color:#fff;border-radius:8px;padding:3px 6px}
+    .kj-reduced-motion .flying-card,.kj-reduced-motion .klop-pulse,
+    .kj-reduced-motion .trick-slot.is-arriving{animation:none!important}
+    .kj-reduced-motion .trick-slot,.kj-reduced-motion .card{transition:none!important}
+    @media(max-width:760px){.kj-stats-grid{gap:6px}.kj-stats-cell strong{font-size:19px}
+      .side-tabs{padding:5px}.side-tabs button{font-size:10px;min-height:36px}}
+
   </style>
 </head>
 <body>
@@ -504,11 +544,13 @@
           <button type="button" data-pane="roundPanel" aria-selected="false">Rondes</button>
           <button type="button" data-pane="log" aria-selected="false">Acties</button>
           <button type="button" data-pane="memoryPanel" aria-selected="false">Info</button>
+          <button type="button" data-pane="statsPanel" aria-selected="false">Stats</button>
         </nav>
         <section class="score-form side-pane is-active" id="scorePanel"></section>
         <section class="score-form side-pane" id="roundPanel"></section>
         <section class="score-form side-pane" id="log"></section>
         <section class="score-form side-pane" id="memoryPanel"></section>
+        <section class="score-form side-pane" id="statsPanel"></section>
       </aside>
     </section>
 
@@ -630,7 +672,7 @@
     trick_no:(st.taken||[]).length+1}].slice(-14);
 }
     function setPane(pane){
-  const names=['scorePanel','roundPanel','log','memoryPanel'];
+  const names=['scorePanel','roundPanel','log','memoryPanel','statsPanel'];
   if(!names.includes(pane))return;
   UI.activePane=pane;
   document.querySelectorAll('.side-tabs [data-pane]').forEach(button=>{
@@ -639,6 +681,7 @@
     button.setAttribute('aria-selected',String(selected));
   });
   document.querySelectorAll('.side-pane').forEach(panel=>panel.classList.toggle('is-active',panel.id===pane));
+  window.KALENEL_KJ_ENHANCEMENTS?.onPane(pane);
 }
     function toast(message,kind='normal'){
       if(!message)return;
@@ -668,7 +711,7 @@
   const to=stage?.querySelector(`.trick-slot[data-slot-seat="${seatNo}"]`);
   const card=play?.card;
   if(!stage||!layer||!from||!to||!card||to.dataset.cardId!==card.id)return;
-  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+  if(window.KALENEL_KJ_ENHANCEMENTS?.reduceMotion()||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
   const root=stage.getBoundingClientRect(),start=from.getBoundingClientRect(),end=to.getBoundingClientRect();
   const sx=start.left+start.width/2-root.left,sy=start.top+start.height/2-root.top;
   const ex=end.left+end.width/2-root.left,ey=end.top+end.height/2-root.top;
@@ -682,7 +725,7 @@
   ghost.style.setProperty('--dy',`${ey-sy}px`);
   to.classList.add('is-arriving');
   layer.appendChild(ghost);
-  setTimeout(()=>{ghost.remove();to.classList.remove('is-arriving');},870);
+  setTimeout(()=>{ghost.remove();to.classList.remove('is-arriving');},window.KALENEL_KJ_ENHANCEMENTS?.duration(870)??870);
 }
     function cancelTrickPlayback(){
       if(UI.playbackTimer)clearTimeout(UI.playbackTimer);
@@ -714,8 +757,8 @@
       UI.playbackTrick.push({player:item.player,card:item.card});
       renderTrickView(UI.playbackTrick,state(),true);
       flightCard(item);
-      const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      UI.playbackTimer=setTimeout(playbackTick,reduced?110:1050);
+      const nextDelay=window.KALENEL_KJ_ENHANCEMENTS?.duration(1050)??(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?110:1050);
+      UI.playbackTimer=setTimeout(playbackTick,nextDelay);
     }
     function visualizeEvents(st){
       const rounds=st.rounds||[];
@@ -872,6 +915,7 @@
       renderPanels(st, me);
       renderLog(st);
       renderAnnouncement(st);
+      window.KALENEL_KJ_ENHANCEMENTS?.onState(UI.remote);
       setPane(UI.activePane);
       visualizeEvents(st);
       queueBotTurns();
@@ -1146,7 +1190,7 @@
       },Math.min(delay,2147483647));
     }
     async function animateTrickCollection(trick){
-      if(!trick||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+      if(!trick||window.KALENEL_KJ_ENHANCEMENTS?.reduceMotion()||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
       const board=$('table'),layer=$('flightLayer'),start=board?.querySelector('.trick-middle');
       const target=board?.querySelector(`.seat.s${trick.winner} .seat-card`);
       if(!board||!layer||!start||!target)return;
@@ -1164,8 +1208,8 @@
         {opacity:0,transform:'scale(.75) translateY(0)'},
         {opacity:1,transform:'scale(1.3) translateY(-22px)',offset:.3},
         {opacity:0,transform:`translate(${dx}px,${dy}px) scale(.7)`}
-      ],{duration:780,easing:'cubic-bezier(.22,.73,.24,1)'});
-      await wait(800);
+      ],{duration:window.KALENEL_KJ_ENHANCEMENTS?.duration(780)??780,easing:'cubic-bezier(.22,.73,.24,1)'});
+      await wait(window.KALENEL_KJ_ENHANCEMENTS?.duration(800)??800);
       mark.remove();
     }
     async function collect(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || !(UI.remote?.viewer?.is_host||(me>=0&&K.TEAM_OF[me]===K.TEAM_OF[st.pending_trick.winner]))) return; st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = st.pending_trick.winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], bid_history: (st.bid_history || []).slice(-20), klop_events:(st.klop_events||[]).slice(-14), saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)){const wt=K.winnerTeam(st);if(wt)st.kruip=K.kruipLabel(st.totals[wt-1]||0,st.totals[wt===1?1:0]||0);st.phase='finished';st.finished_at=new Date().toISOString();} await save(st,true,'auto_collect'); return; } st.action_deadline_at=K.actionDeadline(); await save(st,true,'auto_collect'); }
@@ -1178,7 +1222,7 @@
     function queueBotTurns(){if(UI.busy||UI.botTimer)return;const st=state();if(!K.hasBots(st)||st.pending_trick||['finished','roundOver'].includes(st.phase))return;if((st.phase==='bidding'&&isBotSeat(st,st.bidder_turn))||(st.phase==='playing'&&isBotSeat(st,st.turn))){UI.botTimer=setTimeout(()=>{UI.botTimer=null;runBotTurns().catch(err=>setStatus(err?.message||'Botzet kon niet worden opgeslagen.'));},950);}}
     async function runBotTurns(){ if(UI.busy) return; let st = structuredClone(state()); if(!K.hasBots(st)) return; let changed = false; UI.busy = true; try{ for(let guard=0; guard<80; guard++){ await wait(360); if(st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)){ applyBid(st, st.bidder_turn, K.botBid(st, st.bidder_turn)); changed = true; continue; } if(st.phase==='playing'&&st.pending_trick)break; if(st.phase === 'playing' && !st.pending_trick && isBotSeat(st, st.turn)){ if(!applyBotCard(st, st.turn)) break; changed = true; continue; } break; } if(changed) await save(st, true, 'bot_turns'); } finally { UI.busy = false; } }
     async function loadRooms(){ try{ const data = await K.rpc('klaverjas_online_list_open', { session_token: K.sessionToken(), site_scope_input: K.currentScope() }); const rows = Array.isArray(data) ? data : []; $('rooms').innerHTML = rows.length ? rows.map(r => `<article class="room-card ${r.has_me ? 'mine' : ''}"><strong>${esc(r.lobby_code)}</strong><div class="muted">${esc(r.status)} · host ${esc(r.created_by_player_name || '-')}</div><div class="room-meta"><span class="room-pill">${esc(r.player_count)}/4 stoelen</span><span class="room-pill">${esc(r.human_count || 0)} mensen</span><span class="room-pill">${esc(r.bot_count || 0)} bots</span>${r.has_me ? '<span class="room-pill">jouw tafel</span>' : ''}</div><div class="room-actions"><button class="btn secondary" data-room="${esc(r.lobby_code)}" type="button">Open</button>${r.is_host ? `<button class="btn danger" data-delete-room="${esc(r.lobby_code)}" data-delete-id="${esc(r.id)}" type="button">Sluit</button>` : ''}</div></article>`).join('') : '<div class="muted">Geen open tafels. Maak links een nieuwe tafel.</div>'; $('rooms').querySelectorAll('[data-room]').forEach(btn => btn.onclick = () => { $('codeInput').value = btn.dataset.room; runAction(joinGame); }); $('rooms').querySelectorAll('[data-delete-room]').forEach(btn => btn.onclick = () => deleteRoom(btn.dataset.deleteId || null, btn.dataset.deleteRoom || null)); }catch(_){ $('rooms').innerHTML = '<div class="muted">Open tafels laden lukte niet.</div>'; } }
-    document.querySelectorAll('.side-tabs [data-pane]').forEach(btn=>btn.addEventListener('click',()=>setPane(btn.dataset.pane))); $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; $('leaveBtn').onclick = leaveTable; $('deleteRoomBtnTop').onclick = () => deleteRoom(); $('addEasyBotBtn').onclick = () => addBotDraft('easy'); $('addHardBotBtn').onclick = () => addBotDraft('hard'); $('clearBotsBtn').onclick = clearBotDraft; renderBotSlots(); if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); UI.poll = setInterval(() => { if(!document.hidden) load(); }, 15000);
+    document.querySelectorAll('.side-tabs [data-pane]').forEach(btn=>btn.addEventListener('click',()=>setPane(btn.dataset.pane))); $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; $('leaveBtn').onclick = leaveTable; $('deleteRoomBtnTop').onclick = () => deleteRoom(); $('addEasyBotBtn').onclick = () => addBotDraft('easy'); $('addHardBotBtn').onclick = () => addBotDraft('hard'); $('clearBotsBtn').onclick = clearBotDraft; renderBotSlots(); if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); UI.poll = setInterval(() => { if(!document.hidden||window.KALENEL_KJ_ENHANCEMENTS?.shouldPollHidden()) load(); }, 15000);
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
