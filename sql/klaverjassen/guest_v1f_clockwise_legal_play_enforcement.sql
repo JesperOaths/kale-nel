@@ -248,5 +248,52 @@ begin
        raise exception 'Tijdens de acht slagen blijft de deler ongewijzigd';
      end if;
    end if;$new$);
+ -- Preserve the dealer throughout ordinary bids, human/bot cards, and Klop.
+ if position($old$ reason := coalesce(incoming->>'last_progress_reason','');
+ old_players := coalesce(s->'players','[]'::jsonb);$old$ in f)=0 then
+   raise exception 'Expected dealer invariance anchor is missing';
+ end if;
+ f:=replace(f,$old$ reason := coalesce(incoming->>'last_progress_reason','');
+ old_players := coalesce(s->'players','[]'::jsonb);$old$,
+ $new$ reason := coalesce(incoming->>'last_progress_reason','');
+ if reason in ('bid','play_card','bot_turns','klop_roem') and
+    (incoming->'dealer') is distinct from (s->'dealer') then
+   raise exception 'De deler kan niet midden in een ronde veranderen';
+ end if;
+ old_players := coalesce(s->'players','[]'::jsonb);$new$);
+ if position($old$ elsif reason='bid' then
+  if s->>'phase'<>'bidding' or (s->>'bidder_turn')::integer<>viewer_seat
+    or incoming->'totals'<>s->'totals' then raise exception 'Je bent niet aan de beurt om te bieden'; end if;
+ elsif reason='play_card' then$old$ in f)=0 then
+   raise exception 'Expected bid clockwise progression anchor is missing';
+ end if;
+ f:=replace(f,$old$ elsif reason='bid' then
+  if s->>'phase'<>'bidding' or (s->>'bidder_turn')::integer<>viewer_seat
+    or incoming->'totals'<>s->'totals' then raise exception 'Je bent niet aan de beurt om te bieden'; end if;
+ elsif reason='play_card' then$old$,
+ $new$ elsif reason='bid' then
+  if s->>'phase'<>'bidding' or (s->>'bidder_turn')::integer<>viewer_seat
+    or incoming->'totals'<>s->'totals' then raise exception 'Je bent niet aan de beurt om te bieden'; end if;
+  if incoming->>'phase'='bidding' then
+    if (incoming->>'deal_nonce') is distinct from (s->>'deal_nonce') then
+      if (incoming->>'bidder_turn')::integer is distinct from
+          ((coalesce((s->>'dealer')::integer,0)+1)%4) then
+        raise exception 'Na opnieuw delen begint voorhand links van de deler';
+      end if;
+    else
+      if (incoming->>'bidder_turn')::integer is distinct from ((viewer_seat+1)%4) then
+        raise exception 'De biedbeurt moet met de klok mee naar links';
+      end if;
+    end if;
+  elsif incoming->>'phase'='playing' then
+    if (incoming->>'turn')::integer is distinct from
+        ((coalesce((s->>'dealer')::integer,0)+1)%4) or
+       (incoming->'accepted_bid' is null or incoming->'accepted_bid'='null'::jsonb) then
+      raise exception 'De eerste slag begint bij de speler links van de deler';
+    end if;
+  else
+    raise exception 'Ongeldige fase na een bod';
+  end if;
+ elsif reason='play_card' then$new$);
  execute f || ';';
 end $patch$;
