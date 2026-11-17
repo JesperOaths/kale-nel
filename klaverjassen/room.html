@@ -33,6 +33,74 @@
     @media(max-width:1100px){.lobby-home,.game-layout{grid-template-columns:1fr}.side{position:relative;top:auto;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}.roombar{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media(max-width:760px){.wrap{padding:8px}.shell{padding:12px}.top-actions{width:100%}.home-help{grid-template-columns:1fr}.setup-row>*{flex:1}.roombar{grid-template-columns:1fr 1fr}.lobby-seat-grid{grid-template-columns:1fr 1fr}.table{min-height:820px;border-width:10px}.seat{width:142px}.seat.s1{right:1%;top:42%}.seat.s3{left:1%;top:42%}.center{top:50%;width:calc(100% - 22px)}.card{width:68px;height:96px;font-size:22px}.card span{font-size:30px}.mini-card{width:34px;height:48px;font-size:13px}.hand{gap:8px;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:6px}.hand-wrap{bottom:0;border-radius:18px}.side{grid-template-columns:1fr}.bot-builder,.bot-slots{width:100%}}
     body .site-credit-watermark{position:static!important;transform:none!important;width:max-content;max-width:calc(100vw - 32px);margin:18px auto 0}
+
+
+    /* Standalone Klaverjassen Live visual language: cream scorecards, legible gold controls. */
+    .shell{background:rgba(255,250,243,.96)}
+    .stat,.score-form{border-color:rgba(154,130,65,.2);box-shadow:0 9px 24px rgba(25,19,15,.05)}
+    .stat strong{color:#17130f}
+    .score-grid>.score-cell{background:#fbfaf6;padding:13px}
+    .score-grid>.score-cell strong{font-size:clamp(2rem,3vw,2.65rem);line-height:1}
+    .top-actions .btn{border-radius:999px}
+    /* Bids never extend past the felt or hide underneath the sticky hand. */
+    .shell.bidding-turn .hand-wrap{position:relative;bottom:auto;z-index:1}
+    .table.bidding-turn .center{top:50%;width:min(592px,calc(100% - 32px));max-height:calc(100% - 30px);overflow-x:hidden;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#bda57e transparent}
+    .table.bidding-turn .center>.panel:first-child{padding:9px 14px}
+    .table.bidding-turn .center>.panel:first-child h2{font-size:16px;margin:0 0 4px}
+    .table.bidding-turn .trick{display:none}
+    .table.bidding-turn #centerCopy{font-size:12px;line-height:1.35}
+    .table.bidding-turn #actionPanel{padding:14px}
+    .bid-composer{display:grid;gap:10px;min-width:0}
+    .bid-topline{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .bid-topline h2{font-size:24px!important;margin:0 0 4px!important;letter-spacing:-.035em}
+    .bid-current{font-size:13px;color:#6d6256}
+    .bid-current strong{color:#17130f}
+    .btn.bid-pass{min-width:90px;min-height:47px;background:#fff1ed;color:#8b2d20;border:1px solid #d9a49d;font-size:16px}
+    .btn.bid-pass:hover{background:#ffe5df}
+    .bid-group-label{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#806b43}
+    .bid-categories{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+    .bid-category{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:0;min-height:64px;padding:6px 3px;border:2px solid #dfd6c7;border-radius:14px;background:#fffaf3;color:#17130f;font:900 12px/1.2 Inter,system-ui,sans-serif;cursor:pointer}
+    .bid-category .bid-symbol{font-size:26px;line-height:1.05}
+    .bid-category.red .bid-symbol{color:#a7192b}
+    .bid-category.is-active{border-color:#9a8241;background:#fff1ce;box-shadow:0 0 0 2px rgba(154,130,65,.13)}
+    .bid-category:disabled{opacity:.38;cursor:not-allowed}
+    .bid-category:not(:disabled):hover{background:#fff4db}
+    .bid-value-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
+    .bid-value-heading strong{font-weight:900}
+    .bid-value-heading>span{font-size:12px;color:#756b5e;white-space:nowrap}
+    .bid-values{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+    .bid-value{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:49px;padding:7px;border:1px solid #dcd1be;border-radius:13px;background:#fff;color:#17130f;font:900 17px/1.15 Inter,system-ui,sans-serif;cursor:pointer}
+    .bid-value strong{font-size:17px}
+    .bid-value small{margin-top:2px;font-size:10px;font-weight:800;color:#796343}
+    .bid-value:hover{background:#fff0ce;border-color:#9a8241}
+    .bid-category:focus-visible,.bid-value:focus-visible,.btn.bid-pass:focus-visible{outline:3px solid #275a43;outline-offset:2px}
+    .bid-note{font-size:11px;color:#756b5e;line-height:1.35;margin:0}
+    @media(max-width:760px){
+      .table.bidding-turn{min-height:690px}
+      .table.bidding-turn .center{top:51%;width:calc(100% - 16px);max-height:calc(100% - 20px);gap:6px}
+      .table.bidding-turn .seat{width:115px}
+      .table.bidding-turn .seat.s0{bottom:1%}
+      .table.bidding-turn .seat.s2{top:1%}
+      .table.bidding-turn .seat.s1,.table.bidding-turn .seat.s3{top:13%}
+      .table.bidding-turn #actionPanel{padding:10px}
+      .bid-composer{gap:8px}
+      .bid-category{min-height:53px}
+      .bid-category .bid-symbol{font-size:22px}
+      .bid-value{min-height:46px}
+    }
+    @media(max-width:460px){
+      .bid-categories{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+      .bid-category{flex-direction:row;min-height:43px;gap:5px;font-size:12px}
+      .bid-category .bid-symbol{font-size:19px}
+      .bid-values{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+      .bid-value{min-height:43px;font-size:16px}
+      .bid-topline h2{font-size:21px!important}
+      .bid-current{font-size:12px}
+      .btn.bid-pass{min-height:42px}
+      .bid-note{font-size:10px}
+      .table.bidding-turn{min-height:710px}
+    }
+
   </style>
 </head>
 <body>
@@ -113,7 +181,7 @@
     const K = window.GEJAST_KLAVERJAS_ONLINE;
     const $ = (id) => document.getElementById(id);
     const qs = new URLSearchParams(location.search);
-    const UI = { gameId: qs.get('game_id') || '', lobbyCode: (qs.get('room') || localStorage.getItem('kalenel_klaverjassen_guest_room_v1') || '').toUpperCase(), remote: null, busy: false, actionBusy: false, saving: false, botTimer: null, poll: null, animating:false, botRoster: [] };
+    const UI = { gameId: qs.get('game_id') || '', lobbyCode: (qs.get('room') || localStorage.getItem('kalenel_klaverjassen_guest_room_v1') || '').toUpperCase(), remote: null, busy: false, actionBusy: false, saving: false, botTimer: null, poll: null, animating:false, botRoster: [], bidSuit: 'hearts' };
     if (UI.lobbyCode && !window.KALENEL_KJ_GUEST.hasToken(UI.lobbyCode)) { location.replace('./?room='+encodeURIComponent(UI.lobbyCode)); return; }
     if (!UI.gameId && !UI.lobbyCode) {
       location.replace('./index.html' + (K.currentScope()==='family'?'?scope=family':''));
@@ -195,6 +263,9 @@
     function render(){
       const st = state(); const me = seat(); const players = st.players || UI.remote?.players || [];
       document.querySelector('.shell')?.classList.toggle('no-active-game', !game().id || roomClosed());
+      const ownBidTurn = st.phase === 'bidding' && me === st.bidder_turn;
+      document.querySelector('.shell')?.classList.toggle('bidding-turn', ownBidTurn);
+      $('table').classList.toggle('bidding-turn', ownBidTurn);
       $('leaveBtn').style.display = game().id ? 'inline-flex' : 'none';
       $('deleteRoomBtnTop').style.display = isHost() && hasActiveRoom() ? 'inline-flex' : 'none';
       $('roomStat').textContent = game().lobby_code || UI.lobbyCode || '-';
@@ -224,18 +295,40 @@
       queueBotTurns();
     }
     function titleFor(st){ if(!game().id) return 'Maak of join een tafel'; if(st.phase==='bidding') return `Bieden: ${player(st.bidder_turn).name || '-'}`; if(st.pending_trick) return `Slag voor ${player(st.pending_trick.winner).name || '-'}`; if(st.phase==='playing') return `Beurt: ${player(st.turn).name || '-'}`; if(st.phase==='roundOver') return 'Ronde klaar'; if(st.phase==='finished') return 'Potje opgeslagen'; return 'Lobby'; }
-    function copyFor(st, me){ if(!game().id) return 'Maak een tafel of join met een roomcode. Open tafels blijven rejoinbaar.'; if((st.players||[]).length<4) return 'Wachten op vier geregistreerde spelers of maak een testtafel met bots.'; if(st.phase==='bidding') return K.isBotPlayer(player(st.bidder_turn)) ? 'Bot denkt na over bod, kleur, roem en risico.' : 'Pas of bied hoger. Vier passen zonder bod betekent: opnieuw schudden en delen.'; if(st.phase==='playing') return me===st.turn?'Speel een geldige kaart. Roem, troef en kaarttelling worden meegewogen door de bots.':'Wachten op de speler die aan de beurt is.'; if(st.pending_trick) return 'Klop voor roem voordat de slag wordt gepakt.'; if(st.phase==='roundOver') return 'Rondepunten, roem en nat-status staan rechts in het scorepaneel.'; return ''; }
-    function groupedBidsMarkup(bids){
-      const groups = [
-        ['pass','Pas', bids.filter(b=>b.action==='pass')],
-        ['sans','Sans', bids.filter(b=>b.mode==='sans')],
-        ['hearts','Harten', bids.filter(b=>b.suit==='hearts')],
-        ['spades','Schoppen', bids.filter(b=>b.suit==='spades')],
-        ['diamonds','Ruiten', bids.filter(b=>b.suit==='diamonds')],
-        ['clubs','Klaver', bids.filter(b=>b.suit==='clubs')]
-      ].filter(([, , list])=>list.length);
-      return groups.map(([key,label,list])=>`<section class="bid-section"><h3>${esc(label)}</h3><div class="bid-grid">${list.map((b)=>`<button class="btn secondary" data-bid-id="${esc(b._id)}" type="button">${esc(b.label)}</button>`).join('')}</div></section>`).join('');
-    }
+    function copyFor(st, me){ if(!game().id) return 'Maak een tafel of join met een roomcode. Open tafels blijven rejoinbaar.'; if((st.players||[]).length<4) return 'Wachten op vier spelers, of vul de tafel met bots.'; if(st.phase==='bidding') return K.isBotPlayer(player(st.bidder_turn)) ? 'Bot denkt na over bod, kleur, roem en risico.' : 'Pas of bied hoger. Vier passen zonder bod betekent: opnieuw schudden en delen.'; if(st.phase==='playing') return me===st.turn?'Speel een geldige kaart. Roem, troef en kaarttelling worden meegewogen door de bots.':'Wachten op de speler die aan de beurt is.'; if(st.pending_trick) return 'Klop voor roem voordat de slag wordt gepakt.'; if(st.phase==='roundOver') return 'Rondepunten, roem en nat-status staan rechts in het scorepaneel.'; return ''; }
+    function groupedBidsMarkup(bids) {
+  const categoryDefs = [
+    {key:'hearts',label:'Harten',symbol:'♥',red:true},
+    {key:'spades',label:'Schoppen',symbol:'♠',red:false},
+    {key:'diamonds',label:'Ruiten',symbol:'♦',red:true},
+    {key:'clubs',label:'Klaver',symbol:'♣',red:false},
+    {key:'sans',label:'Sans',symbol:'SA',red:false}
+  ];
+  const categories = categoryDefs.map(group=>({
+    ...group,
+    choices:bids.filter(b=>group.key==='sans'?b.mode==='sans':b.mode==='suit'&&b.suit===group.key)
+  }));
+  const active = categories.find(g=>g.key===UI.bidSuit&&g.choices.length) ||
+                 categories.find(g=>g.choices.length);
+  UI.bidSuit = active?.key || 'hearts';
+  const pass = bids.find(b=>b.action==='pass');
+  const current = state().current_bid;
+  return `<div class="bid-composer">
+    <div class="bid-topline">
+      <div><h2>Bieden</h2><div class="bid-current">Huidig bod: <strong>${esc(K.bidLabel(current))}</strong></div></div>
+      ${pass?`<button type="button" class="btn bid-pass" data-bid-id="${esc(pass._id)}">Pas</button>`:''}
+    </div>
+    <div class="bid-group-label">1. Kies je kleur of sans</div>
+    <div class="bid-categories" role="group" aria-label="Biedcategorie">
+      ${categories.map(g=>`<button type="button" class="bid-category ${g.red?'red':''} ${g.key===UI.bidSuit?'is-active':''}" data-bid-category="${esc(g.key)}" aria-pressed="${g.key===UI.bidSuit}" ${!g.choices.length?'disabled':''}><span class="bid-symbol" aria-hidden="true">${g.symbol}</span><span>${esc(g.label)}</span></button>`).join('')}
+    </div>
+    <div class="bid-value-heading"><strong>2. Kies punten: ${esc(active?.label||'')}</strong><span>${active?.choices.length||0} opties</span></div>
+    <div class="bid-values" role="group" aria-label="Beschikbare biedingen ${esc(active?.label||'')}">
+      ${(active?.choices||[]).map(b=>`<button class="bid-value" type="button" data-bid-id="${esc(b._id)}" aria-label="${esc(b.label)}"><strong>${esc(b.points)}</strong>${b.kind==='pit'?'<small>Sans pit</small>':b.points===80?'<small>82 halen</small>':''}</button>`).join('')}
+    </div>
+    <p class="bid-note">Alleen geldige biedingen zijn aanklikbaar. Bij 80 kleur moet je 82 kaartpunten halen; roem telt daarvoor niet mee.</p>
+  </div>`;
+}
     function renderActions(st, me){
       const panel = $('actionPanel');
       if (!game().id) { panel.innerHTML = '<h2>Online</h2><div class="muted">Gebruik Nieuwe tafel of Join.</div>'; return; }
@@ -249,13 +342,18 @@
       }
       if (st.phase === 'lobby') {
         const botCount = (st.players || []).filter(K.isBotPlayer).length;
-        panel.innerHTML = `<h2>${botCount ? 'Bottafel klaar' : 'Tafel klaar'}</h2>${seatListMarkup(st.players || [])}<div class="muted">${botCount ? `${botCount} bots spelen automatisch door. Botpotten blijven testpotten en gaan niet naar scoreformulieren of stats.` : 'Alle stoelen zijn bezet.'}</div>${me === 0 ? '<button class="btn gold" id="startBtn" type="button" style="margin-top:10px">Start schudden, delen en bieden</button>' : '<div class="muted" style="margin-top:10px">Wachten tot de maker start.</div>'}`;
+        panel.innerHTML = `<h2>${botCount ? 'Bottafel klaar' : 'Tafel klaar'}</h2>${seatListMarkup(st.players || [])}<div class="muted">${botCount ? `${botCount} bots spelen automatisch door. Botten spelen automatisch. De uitslag blijft bij deze gastentafel.` : 'Alle stoelen zijn bezet.'}</div>${me === 0 ? '<button class="btn gold" id="startBtn" type="button" style="margin-top:10px">Start schudden, delen en bieden</button>' : '<div class="muted" style="margin-top:10px">Wachten tot de maker start.</div>'}`;
         if($('startBtn')) $('startBtn').onclick = () => runAction(startRound);
         return;
       }
       if (st.phase === 'bidding' && me === st.bidder_turn) {
         const bids = K.availableBids(st.current_bid).map((b,i)=>({ ...b, _id:String(i) }));
-        panel.innerHTML = `<h2>Scoreformulier-bod</h2><div class="muted" style="margin-bottom:8px">80 kleur betekent 82 kaartpunten halen. Roem telt niet mee voor halen.</div>${groupedBidsMarkup(bids)}`;
+        panel.innerHTML = groupedBidsMarkup(bids);
+        panel.querySelectorAll('[data-bid-category]').forEach(btn => btn.onclick = () => {
+          UI.bidSuit = btn.dataset.bidCategory;
+          renderActions(st, me);
+          panel.querySelector('[data-bid-category="' + UI.bidSuit + '"]')?.focus({preventScroll:true});
+        });
         panel.querySelectorAll('[data-bid-id]').forEach(btn => btn.onclick = () => runAction(() => placeBid(bids[Number(btn.dataset.bidId)])));
         return;
       }
@@ -290,7 +388,7 @@
     function renderPanels(st, me){
       const players = st.players || [];
       const d = dangerLabel(st);
-      $('scorePanel').innerHTML = `<h2>Scoreformulier</h2><div class="score-grid"><div class="score-cell"><span>Team 1</span><strong>${st.totals?.[0]||0}</strong><div class="muted">${players.filter(p=>p.team===1).map(p=>esc(p.name)).join(' + ') || '-'}</div></div><div class="score-cell"><span>Team 2</span><strong>${st.totals?.[1]||0}</strong><div class="muted">${players.filter(p=>p.team===2).map(p=>esc(p.name)).join(' + ') || '-'}</div></div></div><div class="roem-tally"><div class="score-cell"><span>Roem T1 ronde</span><strong>${st.roem_by_team?.[0]||0}</strong></div><div class="score-cell"><span>Roem T2 ronde</span><strong>${st.roem_by_team?.[1]||0}</strong></div></div><div class="score-cell danger-zone ${d.cls}" style="margin-top:8px"><span>Kruipmeter</span><div class="danger-icon">${d.icon}</div><strong style="font-size:16px">${esc(d.label)}</strong><div class="muted">Indicator gebruikt tekst/emoji; geen vaste kruip-afbeelding gevonden in de repo.</div></div>`;
+      $('scorePanel').innerHTML = `<h2>Scoreformulier</h2><div class="score-grid"><div class="score-cell"><span>Team 1</span><strong>${st.totals?.[0]||0}</strong><div class="muted">${players.filter(p=>p.team===1).map(p=>esc(p.name)).join(' + ') || '-'}</div></div><div class="score-cell"><span>Team 2</span><strong>${st.totals?.[1]||0}</strong><div class="muted">${players.filter(p=>p.team===2).map(p=>esc(p.name)).join(' + ') || '-'}</div></div></div><div class="roem-tally"><div class="score-cell"><span>Roem T1 ronde</span><strong>${st.roem_by_team?.[0]||0}</strong></div><div class="score-cell"><span>Roem T2 ronde</span><strong>${st.roem_by_team?.[1]||0}</strong></div></div><div class="score-cell danger-zone ${d.cls}" style="margin-top:8px"><span>Kruipmeter</span><div class="danger-icon">${d.icon}</div><strong style="font-size:16px">${esc(d.label)}</strong><div class="muted">Inschatting op basis van de huidige tussenstand.</div></div>`;
       const trump = st.accepted_bid?.suit || null;
       const trumpCards = trump && trump !== 'sans' ? [{rank:'J',suit:trump,id:`${trump}-J`},{rank:'9',suit:trump,id:`${trump}-9`}] : [{rank:'S',suit:'sans',id:'sans-1'},{rank:'A',suit:'sans',id:'sans-2'}];
       const last = st.last_trick || (st.taken || [])[Math.max(0,(st.taken||[]).length-1)] || null;
