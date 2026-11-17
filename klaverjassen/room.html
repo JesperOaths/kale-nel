@@ -288,6 +288,64 @@
       .flying-card,.event-toast,.trick .play-card{animation-duration:.01ms!important}
     }
 
+
+    /* Four fixed, seat-oriented slots in a compact cross at the felt centre.
+       North = seat 3, east = seat 2, south = seat 1, west = seat 4.
+       The slots remain stationary regardless of playing order. */
+    .table .center .trick.has-slots{
+      display:grid;grid-template-columns:minmax(58px,1fr) 72px minmax(58px,1fr);
+      grid-template-rows:repeat(3,82px);column-gap:7px;row-gap:1px;
+      width:100%;min-height:0;max-width:480px;margin:0 auto;
+      align-items:center;justify-items:center;overflow:visible;
+    }
+    .trick-slot{position:relative;width:73px;height:79px;
+      border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      border:2px dashed var(--seat-color,#d7ad58);
+      background:rgba(255,250,243,.58);box-shadow:inset 0 0 0 1px rgba(255,255,255,.32);
+      transition:background .15s,border-style .15s;min-width:0;min-height:0;
+    }
+    .trick-slot.p0{--seat-color:var(--p0)}
+    .trick-slot.p1{--seat-color:var(--p1)}
+    .trick-slot.p2{--seat-color:var(--p2)}
+    .trick-slot.p3{--seat-color:var(--p3)}
+    .trick-slot.occupied{background:rgba(255,250,243,.91);border-style:solid}
+    .trick-slot.slot-boven{grid-column:2;grid-row:1}
+    .trick-slot.slot-rechts{grid-column:3;grid-row:2;justify-self:end}
+    .trick-slot.slot-onder{grid-column:2;grid-row:3}
+    .trick-slot.slot-links{grid-column:1;grid-row:2;justify-self:start}
+    .trick-slot .play-card{width:100%;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:1px}
+    .trick-slot .play-card .card{width:48px;height:58px;font-size:17px;
+      border-width:3px;border-radius:8px;margin:0;box-shadow:0 4px 9px rgba(0,0,0,.16)}
+    .trick-slot .play-card .card span{font-size:23px}
+    .trick-slot .play-card .muted,
+    .trick-slot .slot-player{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      max-width:65px;width:100%;font-size:9px!important;line-height:1.15;
+      text-align:center;margin:1px 0 0!important;font-weight:800;color:#574837}
+    .trick-slot .slot-placeholder{height:45px;display:grid;place-items:center;
+      color:var(--seat-color);font-size:22px;opacity:.7}
+    .trick-slot.is-arriving .play-card{opacity:0}
+    .trick-middle{grid-column:2;grid-row:2;border-radius:50%;width:61px;height:61px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      border:1px solid rgba(215,173,88,.7);color:#fff;background:rgba(8,45,36,.89);
+      pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.16)}
+    .trick-middle strong{font-size:19px;line-height:1.15}
+    .trick-middle span{font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+    @media(max-width:760px){
+      .table .center .trick.has-slots{
+        grid-template-columns:minmax(48px,1fr) 58px minmax(48px,1fr);
+        grid-template-rows:repeat(3,65px);column-gap:3px;row-gap:1px;
+      }
+      .trick-slot{width:60px;height:62px;border-radius:10px}
+      .trick-slot .play-card .card{width:39px;height:46px;font-size:14px;border-width:2px}
+      .trick-slot .play-card .card span{font-size:19px}
+      .trick-slot .play-card .muted,.trick-slot .slot-player{font-size:8px!important;max-width:53px}
+      .trick-slot .slot-placeholder{height:35px;font-size:18px}
+      .trick-middle{width:49px;height:49px}
+      .trick-middle strong{font-size:16px}
+      .trick-middle span{font-size:8px}
+    }
+
   </style>
 </head>
 <body>
@@ -510,9 +568,9 @@
   const stage=$('table'),layer=$('flightLayer');
   const seatNo=Number(play?.player);
   const from=stage?.querySelector(`.seat.s${seatNo} .seat-card`);
-  const to=$('trick');
+  const to=stage?.querySelector(`.trick-slot[data-slot-seat="${seatNo}"]`);
   const card=play?.card;
-  if(!stage||!layer||!from||!to||!card)return;
+  if(!stage||!layer||!from||!to||!card||to.dataset.cardId!==card.id)return;
   if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
   const root=stage.getBoundingClientRect(),start=from.getBoundingClientRect(),end=to.getBoundingClientRect();
   const sx=start.left+start.width/2-root.left,sy=start.top+start.height/2-root.top;
@@ -523,8 +581,9 @@
   ghost.style.left=`${sx-27}px`;ghost.style.top=`${sy-38}px`;
   ghost.style.setProperty('--dx',`${ex-sx}px`);
   ghost.style.setProperty('--dy',`${ey-sy}px`);
+  to.classList.add('is-arriving');
   layer.appendChild(ghost);
-  setTimeout(()=>ghost.remove(),870);
+  setTimeout(()=>{ghost.remove();to.classList.remove('is-arriving');},870);
 }
     function visualizeEvents(st){
   const rounds=st.rounds||[];
@@ -584,6 +643,21 @@
     banner.innerHTML=`<strong>♣ Roem geklopt!</strong>Team ${K.TEAM_OF[st.pending_trick.winner]} +${esc(st.pending_trick.roem.points)} punten`;
   }else banner.textContent='';
 }
+
+    function trickSlotsMarkup(plays){
+      const bySeat=new Map((plays||[]).map(play=>[Number(play.player),play]));
+      const directions=[{seat:2,name:'boven'},{seat:1,name:'rechts'},{seat:0,name:'onder'},{seat:3,name:'links'}];
+      const slots=directions.map(({seat,name})=>{
+        const play=bySeat.get(seat);
+        const label=player(seat)?.name||`Stoel ${seat+1}`;
+        return `<div class="trick-slot slot-${name} p${seat} ${play?'occupied':'empty'}"
+          data-slot-seat="${seat}" data-card-id="${esc(play?.card?.id||'')}"
+          role="group" aria-label="Kaartplek van ${esc(label)}">
+          ${play?playedCardHtml(play):`<div class="slot-placeholder" aria-hidden="true">✦</div><span class="slot-player">${esc(label)}</span>`}
+        </div>`;
+      }).join('');
+      return `${slots}<div class="trick-middle" aria-label="${bySeat.size} van 4 kaarten gespeeld"><strong>${bySeat.size}/4</strong><span>slag</span></div>`;
+    }
     function render(){
       const st = state(); const me = seat(); const players = st.players || UI.remote?.players || [];
       document.querySelector('.shell')?.classList.toggle('no-active-game', !game().id);
@@ -609,7 +683,11 @@
         return `<div class="seat s${i}"><div class="seat-card p${i} ${turn?'turn':''}">${bidBadge(st,i)}<strong>${esc(p.name || `Stoel ${i+1}`)}</strong><span class="tag">Team ${K.TEAM_OF[i]}</span>${K.isBotPlayer(p)?'<span class="tag bot">Bot</span>':''}${i===st.dealer?'<span class="tag dealer-chip">Deler ↻</span>':''}${i===me?'<span class="tag">Jij</span>':''}</div></div>`;
       }).join('');
       const shownTrick = st.pending_trick?.cards || st.trick || [];
-      $('trick').innerHTML = shownTrick.length ? shownTrick.map(playedCardHtml).join('') : '<div class="muted">Nog geen kaarten op tafel.</div>';
+      const showCardSlots = st.phase === 'playing' || !!st.pending_trick;
+      $('trick').classList.toggle('has-slots',showCardSlots);
+      $('trick').innerHTML = showCardSlots
+        ? trickSlotsMarkup(shownTrick)
+        : (shownTrick.length ? shownTrick.map(playedCardHtml).join('') : '<div class="muted">Nog geen kaarten op tafel.</div>');
       $('centerTitle').textContent = titleFor(st);
       $('centerCopy').textContent = copyFor(st, me);
       renderActions(st, me);
