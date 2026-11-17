@@ -136,7 +136,7 @@
       if(K.currentScope()==='family') url.searchParams.set('scope','family');
       return url.pathname.split('/').pop() + url.search;
     }
-    if (incomingRoom && window.KALENEL_KJ_GUEST.hasToken(incomingRoom)) {
+    if (!location.hash.includes('recover=') && incomingRoom && window.KALENEL_KJ_GUEST.hasToken(incomingRoom)) {
       location.replace(roomUrl(incomingGame, incomingRoom));
       return;
     }
