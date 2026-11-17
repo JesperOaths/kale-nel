@@ -235,14 +235,18 @@ begin
  $new$   if (incoming->'taken') IS DISTINCT FROM (coalesce(s->'taken','[]'::jsonb) || jsonb_build_array(s->'pending_trick')) then
     raise exception 'De slaglijst moet exact één gewonnen slag toevoegen';
    end if;
-   if (incoming->>'dealer')::integer is distinct from
-       ((coalesce((s->>'dealer')::integer,0)+case when jsonb_array_length(incoming->'taken')=8 then 1 else 0 end)%4) then
-     raise exception 'Na acht slagen gaat de deler één plaats naar links';
-   end if;
-   if jsonb_array_length(coalesce(incoming->'rounds','[]'::jsonb)) <>
-       jsonb_array_length(coalesce(s->'rounds','[]'::jsonb)) +
-         case when jsonb_array_length(incoming->'taken')=8 then 1 else 0 end then
-     raise exception 'De rondehistorie moet exact één ronde aanvullen';
+   if jsonb_array_length(incoming->'taken')=8 then
+     if (incoming->>'dealer')::integer is distinct from ((coalesce((s->>'dealer')::integer,0)+1)%4) or
+        jsonb_array_length(coalesce(incoming->'rounds','[]'::jsonb)) <>
+          jsonb_array_length(coalesce(s->'rounds','[]'::jsonb))+1 then
+       raise exception 'Na acht slagen gaat de deler één plaats naar links en volgt een ronde';
+     end if;
+   else
+     if (incoming->>'dealer')::integer is distinct from (s->>'dealer')::integer or
+        jsonb_array_length(coalesce(incoming->'rounds','[]'::jsonb)) <>
+          jsonb_array_length(coalesce(s->'rounds','[]'::jsonb)) then
+       raise exception 'Tijdens de acht slagen blijft de deler ongewijzigd';
+     end if;
    end if;$new$);
  execute f || ';';
 end $patch$;
