@@ -46,7 +46,7 @@ declare
  room_rec public.kalenel_klaverjassen_guest_rooms%rowtype;
  seat_rec public.kalenel_klaverjassen_guest_seats%rowtype;
  target public.kalenel_klaverjassen_guest_seats%rowtype;
- code text := upper(btrim(coalesce(room_input,'')));
+ room_code text := upper(btrim(coalesce(room_input,'')));
  action text := lower(btrim(coalesce(action_input,'')));
  viewer_hash text;
  claim text;
@@ -59,7 +59,7 @@ declare
  endpoint_text text;
  keys jsonb;
 begin
- if code !~ '^[A-Z0-9]{4,12}$' then
+ if room_code !~ '^[A-Z0-9]{4,12}$' then
    raise exception 'Ongeldige klaverjas-roomcode';
  end if;
  if token_input is null or token_input !~ '^[0-9a-f]{64}$' then
@@ -67,7 +67,7 @@ begin
  end if;
  viewer_hash:=encode(digest(token_input,'sha256'),'hex');
  select * into room_rec from public.kalenel_klaverjassen_guest_rooms
-  where code=code for update;
+  where code=room_code for update;
  if not found then raise exception 'Tafel niet gevonden'; end if;
  if room_rec.status in ('playing','lobby') and room_rec.resume_until<now() then
    raise exception 'De tafel is verlopen';
