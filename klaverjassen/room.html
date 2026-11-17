@@ -1043,7 +1043,78 @@
     async function placeBid(bid){ let st = structuredClone(state()); if(!K.isValidBid(bid, st.current_bid)) return setStatus('Ongeldig bod.'); recordBid(st,seat(),bid); if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ $('shuffleNote').style.display='block'; await wait(700); st = resetDealAfterFourPasses(st); $('shuffleNote').style.display='none'; } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seat(), team: K.TEAM_OF[seat()] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'bid'); }
     async function playCard(cardId){ const st = structuredClone(state()); const me = seat(); const hand = st.hands[me] || []; const card = hand.find(c => c.id === cardId); if(!card) return; const legal = new Set(K.legalCards(hand, st.trick || [], me, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return setStatus('Die kaart mag niet volgens de Amsterdamse regels.'); const ai = K.aiChoice(hand, st.trick || [], me, st.accepted_bid?.suit, st); st.hands[me] = hand.filter(c => c.id !== card.id); st.trick.push({ player: me, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: me, player_name: player(me)?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (me + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'play_card'); }
     async function klop(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner] || st.pending_trick.klopped) return; st.roem_by_team[K.TEAM_OF[me]-1] += Number(st.pending_trick.roem?.points || 0); st.pending_trick.klopped = true; recordKlop(st,me,false); await save(st, true, 'klop_roem'); }
-    async function collect(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner]) return; st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = st.pending_trick.winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], bid_history: (st.bid_history || []).slice(-20), klop_events:(st.klop_events||[]).slice(-14), saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)) await finishGame(st); else await save(st, true, 'round_over'); return; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'collect_trick'); }
+
+    function renderContractRibbon(st){
+      const el=$('contractRibbon'),bid=st.accepted_bid||st.current_bid;
+      if(!bid||st.phase==='lobby'||st.phase==='closed'){el.hidden=true;el.textContent='';return;}
+      const suit=bid.mode==='sans'?'sans':bid.suit;
+      const sign=K.SUIT_SYMBOLS[suit]||'♣';
+      const label=suit==='sans'?'Sans':K.SUIT_LABELS[suit]||'Troef';
+      const team=Number(bid.team|| (Number.isInteger(bid.player)?K.TEAM_OF[bid.player]:0));
+      el.hidden=false;
+      el.className='contract-ribbon '+(['hearts','diamonds'].includes(suit)?'red':'');
+      el.innerHTML=`<span class="contract-symbol" aria-hidden="true">${esc(sign)}</span><span class="contract-description"><small>${st.phase==='bidding'?'HUIDIG BOD':'TROEF · HUIDIG BOD'}</small><strong>${esc(label)} · ${esc(K.bidLabel(bid))}</strong></span><span class="contract-team">${team?'Team '+team:''}</span>`;
+    }
+    function collectDue(st){
+      const completed=Date.parse(game().trick_completed_at||'');
+      if(!Number.isFinite(completed))return Date.now()+5000;
+      return completed+(Number(st.pending_trick?.roem?.points||0)>0&&!st.pending_trick?.klopped?5000:1000);
+    }
+    function queueAutoCollect(st){
+      const canCollect=!!UI.remote?.viewer?.is_host ||
+        (seat()>=0&&K.TEAM_OF[seat()]===K.TEAM_OF[st.pending_trick?.winner]);
+      if(st.phase!=='playing'||!st.pending_trick||!canCollect){
+        clearTimeout(UI.collectTimer);UI.collectTimer=null;UI.collectKey='';return;
+      }
+      const key=`${game().id}:${game().revision}:${(st.taken||[]).length}:${st.pending_trick.winner}:${st.pending_trick.klopped}`;
+      if(key===UI.collectKey&&UI.collectTimer)return;
+      clearTimeout(UI.collectTimer);UI.collectKey=key;
+      const delay=Math.max(100,collectDue(st)-Date.now()+170);
+      UI.collectTimer=setTimeout(async()=>{
+        UI.collectTimer=null;
+        if(!state().pending_trick||UI.collectBusy)return;
+        if(UI.playbackActive||UI.saving||UI.actionBusy||UI.busy){
+          UI.collectKey='';
+          UI.collectTimer=setTimeout(()=>{UI.collectTimer=null;queueAutoCollect(state());},450);
+          return;
+        }
+        UI.collectBusy=true;
+        try{
+          await animateTrickCollection(state().pending_trick);
+          await collect();
+        }catch(error){
+          setStatus(error?.message||'De slag wordt opnieuw geladen.');
+          await load(true);
+        }finally{
+          UI.collectBusy=false;
+          if(state().pending_trick){UI.collectKey='';queueAutoCollect(state());}
+        }
+      },Math.min(delay,2147483647));
+    }
+    async function animateTrickCollection(trick){
+      if(!trick||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+      const board=$('table'),layer=$('flightLayer'),start=board?.querySelector('.trick-middle');
+      const target=board?.querySelector(`.seat.s${trick.winner} .seat-card`);
+      if(!board||!layer||!start||!target)return;
+      const a=start.getBoundingClientRect(),b=target.getBoundingClientRect();
+      const dx=(b.left+b.width/2)-(a.left+a.width/2);
+      const dy=(b.top+b.height/2)-(a.top+a.height/2);
+      const mark=document.createElement('div');
+      mark.className=`trick-award p${trick.winner}`;
+      mark.textContent='✦ SLAG!';
+      const rect=board.getBoundingClientRect();
+      mark.style.left=(a.left+a.width/2-rect.left-39)+'px';
+      mark.style.top=(a.top+a.height/2-rect.top-20)+'px';
+      layer.appendChild(mark);
+      mark.animate([
+        {opacity:0,transform:'scale(.75) translateY(0)'},
+        {opacity:1,transform:'scale(1.3) translateY(-22px)',offset:.3},
+        {opacity:0,transform:`translate(${dx}px,${dy}px) scale(.7)`}
+      ],{duration:780,easing:'cubic-bezier(.22,.73,.24,1)'});
+      await wait(800);
+      mark.remove();
+    }
+    async function collect(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || !(UI.remote?.viewer?.is_host||(me>=0&&K.TEAM_OF[me]===K.TEAM_OF[st.pending_trick.winner]))) return; st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = st.pending_trick.winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], bid_history: (st.bid_history || []).slice(-20), klop_events:(st.klop_events||[]).slice(-14), saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)){const wt=K.winnerTeam(st);if(wt)st.kruip=K.kruipLabel(st.totals[wt-1]||0,st.totals[wt===1?1:0]||0);st.phase='finished';st.finished_at=new Date().toISOString();} await save(st,true,'auto_collect'); return; } st.action_deadline_at=K.actionDeadline(); await save(st,true,'auto_collect'); }
     async function nextRound(){ $('shuffleNote').style.display='block'; await wait(650); const st = K.newClientState((state().players||[]).map(p => ({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })), state().dealer || 0, state(), state().settings || { finish_mode:$('finishMode').value || 'fixed_rounds' }); await save(st, true, 'next_round'); $('shuffleNote').style.display='none'; }
     async function finishGame(existing){ const st = existing || structuredClone(state()); const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); st.action_needed_seat=null; await save(st, true, 'finish_game'); setStatus(K.hasBots(st) ? 'Botpotje afgerond. De uitslag blijft in deze gastentafel.' : 'Uitslag bewaard in deze gastentafel.', true); loadRooms(); }
     function isBotSeat(st, seatNo){ return K.isBotPlayer((st.players || [])[seatNo]); }
