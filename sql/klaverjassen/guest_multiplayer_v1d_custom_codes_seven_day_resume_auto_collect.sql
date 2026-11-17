@@ -128,7 +128,7 @@ begin
    if incoming->'pending_trick' is not null and incoming->'pending_trick'<>'null'::jsonb then
     raise exception 'Automatisch ophalen moet de afgesloten slag verwijderen';
    end if;
-   if incoming->'taken' <> coalesce(s->'taken','[]'::jsonb) || jsonb_build_array(s->'pending_trick') then
+   if (incoming->'taken') IS DISTINCT FROM (coalesce(s->'taken','[]'::jsonb) || jsonb_build_array(s->'pending_trick')) then
     raise exception 'De slaglijst moet exact één gewonnen slag toevoegen';
    end if;
   end if;$kj_fragment$);
