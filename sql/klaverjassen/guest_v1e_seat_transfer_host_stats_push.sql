@@ -48,7 +48,7 @@ declare
  target public.kalenel_klaverjassen_guest_seats%rowtype;
  code text := upper(btrim(coalesce(room_input,'')));
  action text := lower(btrim(coalesce(action_input,'')));
- token_hash text;
+ viewer_hash text;
  claim text;
  claim_row public.kalenel_kj_guest_transfers%rowtype;
  target_seat integer;
@@ -65,7 +65,7 @@ begin
  if token_input is null or token_input !~ '^[0-9a-f]{64}$' then
    raise exception 'Ongeldige spelerssleutel';
  end if;
- token_hash:=encode(digest(token_input,'sha256'),'hex');
+ viewer_hash:=encode(digest(token_input,'sha256'),'hex');
  select * into room_rec from public.kalenel_klaverjassen_guest_rooms
   where code=code for update;
  if not found then raise exception 'Tafel niet gevonden'; end if;
@@ -85,27 +85,27 @@ begin
    select * into seat_rec from public.kalenel_klaverjassen_guest_seats
     where room_id=room_rec.id and seat=claim_row.seat for update;
    if not found then raise exception 'Spelersstoel ontbreekt'; end if;
-   if seat_rec.token_hash=token_hash then raise exception 'Deze stoel staat al op dit apparaat'; end if;
+   if seat_rec.token_hash=viewer_hash then raise exception 'Deze stoel staat al op dit apparaat'; end if;
    if exists(select 1 from public.kalenel_klaverjassen_guest_seats
-      where room_id=room_rec.id and token_hash=token_hash) then
+      where room_id=room_rec.id and token_hash=viewer_hash) then
      raise exception 'Gebruik een nieuwe privésleutel voor de overdracht';
    end if;
    update public.kalenel_klaverjassen_guest_seats
-     set token_hash=token_hash where room_id=room_rec.id and seat=seat_rec.seat;
+     set token_hash=viewer_hash where room_id=room_rec.id and seat=seat_rec.seat;
    delete from public.kalenel_kj_guest_transfers
     where room_id=room_rec.id and seat=seat_rec.seat;
    delete from public.kalenel_kj_push_subscriptions
     where room_id=room_rec.id and seat=seat_rec.seat;
    update public.kalenel_klaverjassen_guest_rooms
-     set host_hash=case when host_hash=seat_rec.token_hash then token_hash else host_hash end,
+     set host_hash=case when host_hash=seat_rec.token_hash then viewer_hash else host_hash end,
          revision=revision+1
      where id=room_rec.id returning * into room_rec;
    return public._kalenel_kj_guest_view(room_rec,seat_rec.seat,seat_rec.name,
-      room_rec.host_hash=token_hash);
+      room_rec.host_hash=viewer_hash);
  end if;
 
  select * into seat_rec from public.kalenel_klaverjassen_guest_seats
-  where room_id=room_rec.id and token_hash=token_hash;
+  where room_id=room_rec.id and token_hash=viewer_hash;
  if not found then raise exception 'Je bent niet op deze tafel aangemeld'; end if;
  if action='transfer_start' then
    if room_rec.status not in ('lobby','playing') then
@@ -125,7 +125,7 @@ begin
     where room_id=room_rec.id and seat=seat_rec.seat;
    return jsonb_build_object('ok',true);
  elsif action='host_handover' then
-   if room_rec.host_hash<>token_hash then raise exception 'Alleen de host kan het beheer overdragen'; end if;
+   if room_rec.host_hash<>viewer_hash then raise exception 'Alleen de host kan het beheer overdragen'; end if;
    if room_rec.status not in ('lobby','playing') then raise exception 'Deze tafel is afgesloten'; end if;
    if coalesce(payload_input->>'seat','') !~ '^[0-3]$' then raise exception 'Kies een geldige speler'; end if;
    target_seat:=(payload_input->>'seat')::int;
