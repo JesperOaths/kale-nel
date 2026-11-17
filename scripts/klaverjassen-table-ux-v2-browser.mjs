@@ -44,7 +44,7 @@ function stateFor(phase){
 }
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
 const sizes=[{width:1478,height:880},{width:390,height:780},{width:320,height:640}];
-async function setup(width,height,phase){
+async function setup(width,height,phase,options={}){
  const context=await browser.newContext({viewport:{width,height},reducedMotion:'no-preference'});
  const page=await context.newPage(),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
@@ -59,6 +59,18 @@ async function setup(width,height,phase){
   const data=JSON.parse(route.request().postData()||'{}');
   if(data.action_input==='save'){
    remote.game.state=clone(data.payload_input.state);
+   if(options.botBurst){
+     const first=remote.game.state.plays.at(-1);
+     const second={trick_no:first.trick_no,player:1,player_name:players[1].name,
+       card:cards[1]};
+     const third={trick_no:first.trick_no,player:2,player_name:players[2].name,
+       card:{suit:'diamonds',rank:'J',id:'diamonds-J'}};
+     remote.game.state.trick=[{player:0,card:first.card},
+       {player:1,card:second.card},{player:2,card:third.card}];
+     remote.game.state.plays=[first,second,third];
+     remote.game.state.turn=3;
+     remote.game.state.players[3].is_bot=false; // no automated extra bot move in this mocked scenario
+   }
    remote.game.revision++;
   }
   await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},
@@ -172,6 +184,53 @@ try{
    assert.equal(errors.length,0,'four-card slot JS errors: '+errors.join('; '));
    console.log('KLAVERJASSEN_FOUR_SLOT_TRICK_PASS','allCardsVisible=true',
       'northEastSouthWest=true','seatColorOutlines=true');
+  }finally{await context.close();}
+ }
+ // Multiple bot plays bundled into one response must *not* animate in parallel.
+ // Assert DOM flights, elapsed time, and starting/current-winning cards after each arrival.
+ {
+  const {context,page,errors}=await setup(1478,880,'playing',{botBurst:true});
+  try{
+   await page.evaluate(()=>{
+     window.__flightSequence=[];
+     const layer=document.querySelector('#flightLayer');
+     new MutationObserver(records=>{
+       for(const record of records)for(const element of record.addedNodes){
+         if(element.nodeType!==1||!element.classList.contains('flying-card'))continue;
+         const started=document.querySelector('#trick .trick-slot.is-starting');
+         const leading=document.querySelector('#trick .trick-slot.is-winning');
+         window.__flightSequence.push({
+           at:performance.now(),
+           seat:Number(element.dataset.flightSeat),
+           start:Number(started?.dataset.slotSeat),
+           winning:Number(leading?.dataset.slotSeat),
+           played:Number(document.querySelector('#trick .trick-middle strong')?.textContent?.split('/')[0]||0)
+         });
+       }
+     }).observe(layer,{childList:true});
+   });
+   await page.locator('#hand [data-card="hearts-A"]').click({timeout:6000});
+   await page.waitForFunction(()=>window.__flightSequence?.length===3,{timeout:9000});
+   const sequence=await page.evaluate(()=>window.__flightSequence);
+   assert.deepEqual(sequence.map(x=>x.seat),[0,1,2],'cards must animate in actual playing order');
+   assert.deepEqual(sequence.map(x=>x.start),[0,0,0],'first played card must stay the opening card');
+   assert.deepEqual(sequence.map(x=>x.winning),[0,0,2],
+     'non-trump ace leads until the diamond trump jack is played');
+   assert.deepEqual(sequence.map(x=>x.played),[1,2,3],'table should reveal one card at a time');
+   assert(sequence[1].at-sequence[0].at>=850&&sequence[2].at-sequence[1].at>=850,
+     'animation overlap: '+JSON.stringify(sequence));
+   await page.locator('#trick .trick-slot.is-arriving').first().waitFor({state:'hidden',timeout:4500});
+   const current=await page.locator('#trickStatus').innerText();
+   assert(current.includes('Start:')&&current.includes('Bruis')&&current.includes('A♥'),
+     'starting card and its player must be displayed: '+current);
+   assert(current.includes('Aan kop:')&&current.includes('Leerling Harten')&&current.includes('J♦'),
+     'winning card must reflect the trump card: '+current);
+   assert.equal(await page.locator('#trick .start-flag').count(),1);
+   assert.equal(await page.locator('#trick .win-flag').count(),1);
+   assert.equal(await page.locator('#trick .trick-slot.occupied').count(),3);
+   assert.equal(errors.length,0,'sequential browser runtime errors: '+errors.join('; '));
+   console.log('KLAVERJASSEN_SEQUENTIAL_BOT_BURST_PASS',
+     'order=0-1-2','overlap=false','starter=0','winnerAfterEach=0-0-2','trump=diamonds');
   }finally{await context.close();}
  }
  // A human clicks Klop: roem is persisted, announced and attributed to the proper team.
