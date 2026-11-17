@@ -711,25 +711,94 @@
       if(high >= total*(2/3)) return { label:'Kruip gevaar', cls:'', icon:'⚠️' };
       return { label:'Nog veilig', cls:'', icon:'♣' };
     }
+    function scoreBar(team,cardPoints,roem,awarded,roundTricks){
+  const numeric=Math.max(0,Number(cardPoints||0));
+  const percent=Math.min(100,Math.round(numeric/162*100));
+  return `<div class="round-score-row team${team}">
+    <div><strong>Team ${team} · +${esc(awarded||0)} punten</strong><span>${esc(roundTricks||0)} slagen</span></div>
+    <div class="round-bar" role="meter" aria-label="Team ${team} kaartpunten" aria-valuemin="0" aria-valuemax="162" aria-valuenow="${esc(numeric)}"><div class="round-fill" style="width:${percent}%"></div></div>
+    <div class="round-score-metadata">${esc(numeric)} kaartpunten · ${esc(roem||0)} roem · ${esc(awarded||0)} toegekend</div>
+  </div>`;
+}
+    function roundCard(round,open=false){
+  const result=round?.result||{},scores=result.scores||[0,0],cards=result.cardScores||[0,0],
+    roem=round?.roem_by_team||[0,0],tricks=result.trickCounts||[0,0];
+  const nat=!!result.nat,bidTeam=Number(round.bidder_team||round.bid?.team||1);
+  const bid=K.bidLabel(round.bid);
+  const detail=nat
+    ?`Team ${bidTeam} ging nat: ${esc(cards[bidTeam-1]||0)} van ${esc(result.target||0)} benodigde kaartpunten. De tegenpartij ontvangt 162 kaartpunten plus alle roem.`
+    :`Team ${bidTeam} haalde het bod: ${esc(cards[bidTeam-1]||0)} / ${esc(result.target||0)} kaartpunten.`;
+  return `<details class="round-detail" ${open?'open':''}>
+    <summary><strong>Ronde ${esc(round.round||'?')} · ${esc(bid)}</strong><span class="${nat?'nat-label':'made-label'}">${nat?'NAT':'Gehaald'} · ${esc(scores[0]||0)}–${esc(scores[1]||0)}</span></summary>
+    <div>
+      <div class="round-result-head ${nat?'nat':''}"><strong>${nat?'❗ NAT · bod niet gehaald':'✓ Bod gehaald'}</strong><small>${detail}</small></div>
+      ${scoreBar(1,cards[0],roem[0],scores[0],tricks[0])}
+      ${scoreBar(2,cards[1],roem[1],scores[1],tricks[1])}
+      <div class="event-line">Tussenstand na deze ronde: <strong>${esc(round.totals?.[0]||0)} – ${esc(round.totals?.[1]||0)}</strong></div>
+      ${round.bid_history?.length?`<div class="round-event-list"><strong>Biedverloop</strong>${round.bid_history.map(b=>`<div class="event-line">Stoel ${esc(Number(b.seat)+1)} · ${esc(K.bidLabel(b))}</div>`).join('')}</div>`:''}
+      ${round.klop_events?.length?`<div class="round-event-list"><strong>Roem geklopt</strong>${round.klop_events.map(e=>`<div class="event-line roem">♣ ${esc(e.automatic?'Automatisch':'Klop')} · ${esc(e.points)} punten voor Team ${esc(e.team)} · ${esc(e.labels?.join(', ')||'Roem')}</div>`).join('')}</div>`:''}
+    </div>
+  </details>`;
+}
     function renderPanels(st, me){
-      const players = st.players || [];
-      const d = dangerLabel(st);
-      $('scorePanel').innerHTML = `<h2>Scoreformulier</h2><div class="score-grid"><div class="score-cell"><span>Team 1</span><strong>${st.totals?.[0]||0}</strong><div class="muted">${players.filter(p=>p.team===1).map(p=>esc(p.name)).join(' + ') || '-'}</div></div><div class="score-cell"><span>Team 2</span><strong>${st.totals?.[1]||0}</strong><div class="muted">${players.filter(p=>p.team===2).map(p=>esc(p.name)).join(' + ') || '-'}</div></div></div><div class="roem-tally"><div class="score-cell"><span>Roem T1 ronde</span><strong>${st.roem_by_team?.[0]||0}</strong></div><div class="score-cell"><span>Roem T2 ronde</span><strong>${st.roem_by_team?.[1]||0}</strong></div></div><div class="score-cell danger-zone ${d.cls}" style="margin-top:8px"><span>Kruipmeter</span><div class="danger-icon">${d.icon}</div><strong style="font-size:16px">${esc(d.label)}</strong><div class="muted">Inschatting op basis van de huidige tussenstand.</div></div>`;
-      const trump = st.accepted_bid?.suit || null;
-      const trumpCards = trump && trump !== 'sans' ? [{rank:'J',suit:trump,id:`${trump}-J`},{rank:'9',suit:trump,id:`${trump}-9`}] : [{rank:'S',suit:'sans',id:'sans-1'},{rank:'A',suit:'sans',id:'sans-2'}];
-      const last = st.last_trick || (st.taken || [])[Math.max(0,(st.taken||[]).length-1)] || null;
-      const signalRows = Object.values(K.signalMemory ? K.signalMemory(st) : {});
-      $('memoryPanel').innerHTML = `<h2>Geheugensteun</h2><div class="trump-memory"><strong>Troef</strong>${trumpCards.map(c=>trump==='sans'?`<div class="card mini-card"><span>Sans</span></div>`:staticCardHtml(c,'mini-card')).join('')}</div><div class="round-card"><strong>Laatste slag</strong><div class="last-trick-mini">${last?.cards?.length ? last.cards.map(p=>staticCardHtml(p.card,`mini-card p${p.player}`)).join('') : '<span class="muted">Nog geen slag.</span>'}</div></div><div class="round-card"><strong>Aan/afseinen</strong><div class="muted">${signalRows.length ? signalRows.slice(-4).map(sig => `${esc(player(sig.player).name || 'Partner')} ${sig.type} ${esc(K.SUIT_LABELS[sig.suit] || sig.suit)}`).join('<br>') : 'Nog geen signalen gezien.'}</div></div>`;
-      const r = lastRound(st);
-      const nat = r?.result?.nat;
-      const mmrRows = Object.entries(st.ai_mmr || {});
-      $('roundPanel').innerHTML = `<h2>Ronde-einde</h2>${r ? `<div class="round-card ${nat?'nat':''}"><strong>Ronde ${esc(r.round)}</strong><div class="score-grid" style="margin-top:8px"><div class="score-cell"><span>Team 1 kreeg</span><strong>${r.result?.scores?.[0]||0}</strong><div class="muted">Kaartpunten: ${r.result?.cardScores?.[0]||0} · Roem: ${r.roem_by_team?.[0]||0}</div></div><div class="score-cell"><span>Team 2 kreeg</span><strong>${r.result?.scores?.[1]||0}</strong><div class="muted">Kaartpunten: ${r.result?.cardScores?.[1]||0} · Roem: ${r.roem_by_team?.[1]||0}</div></div></div><div class="muted" style="margin-top:8px">${nat ? `NAT: Team ${r.bidder_team} haalde ${r.result?.cardScores?.[r.bidder_team-1]||0} kaartpunten voor ${r.result?.target||82}. Alle punten en roem naar de tegenpartij.` : `Gehaald: Team ${r.bidder_team} haalde ${r.result?.cardScores?.[r.bidder_team-1]||0} kaartpunten voor ${r.result?.target||82}.`}</div></div>` : '<div class="muted">Nog geen ronde afgerond.</div>'}`;
-      if (mmrRows.length) $('roundPanel').insertAdjacentHTML('beforeend', `<div class="round-card"><strong>AI MMR</strong><div class="mmr-list">${mmrRows.map(([name,row])=>`<div class="mmr-pill">${esc(name)}<br><strong>${Number(row.rating || 1200)}</strong> <span class="muted">${Number(row.last_change||0)>=0?'+':''}${Number(row.last_change||0)}</span></div>`).join('')}</div></div>`);
-    }
+  const players=st.players||[];
+  const totals=st.totals||[0,0],roem=st.roem_by_team||[0,0];
+  const winner=K.winnerTeam(st);
+  const finished=st.phase==='finished';
+  const names=team=>players.filter(p=>p.team===team).map(p=>esc(p.name)).join(' + ')||'-';
+  const d=dangerLabel(st);
+  const recent=(st.rounds||[]).at(-1);
+  const nat=recent?.result?.nat;
+  const pending=st.pending_trick;
+  const roemHint=pending?.roem?.points
+    ?`<div class="event-line roem">♣ ${pending.klopped?'Roem geklopt':'Roem mogelijk'} · Team ${K.TEAM_OF[pending.winner]} · ${esc(pending.roem.points)} punten ${pending.roem.items?.map(i=>esc(i.label)).join(', ')||''}</div>`
+    :'';
+  $('scorePanel').innerHTML=`<h2>${finished?'Eindstand':'Stand'}</h2>
+    ${finished?`<div class="round-result-head"><strong>${winner?'🏆 Team '+winner+' wint!':'Gelijkspel'}</strong><small>Definitieve score · ${esc(totals[0])} – ${esc(totals[1])}</small></div>`:''}
+    <div class="score-grid">
+      <div class="score-cell"><span>Team 1</span><strong>${esc(totals[0])}</strong><div class="muted">${names(1)}</div></div>
+      <div class="score-cell"><span>Team 2</span><strong>${esc(totals[1])}</strong><div class="muted">${names(2)}</div></div>
+    </div>
+    <div class="roem-tally"><div class="score-cell"><span>Roem team 1</span><strong>${esc(roem[0])}</strong></div><div class="score-cell"><span>Roem team 2</span><strong>${esc(roem[1])}</strong></div></div>
+    ${roemHint}
+    ${recent?`<div class="round-card ${nat?'nat':''}"><strong>Laatste ronde ${esc(recent.round)}: ${nat?'NAT':'gehaald'}</strong><div class="muted">Team 1 +${esc(recent.result?.scores?.[0]||0)} · Team 2 +${esc(recent.result?.scores?.[1]||0)}</div><button class="btn secondary" type="button" data-show-pane="roundPanel" style="margin-top:8px">Bekijk rondeverloop</button></div>`:''}
+    ${!finished&&(Number(totals[0]||0)+Number(totals[1]||0))>0?`<div class="event-line"><strong>${esc(d.icon)} ${esc(d.label)}</strong> · Kruipmeter</div>`:''}`;
+  const last=st.last_trick||(st.taken||[]).at(-1)||null;
+  const trump=st.accepted_bid?.suit||null;
+  const trumpCard=trump&&trump!=='sans'
+    ?[{rank:'J',suit:trump,id:`${trump}-J`},{rank:'9',suit:trump,id:`${trump}-9`}]
+    :[{rank:'S',suit:'sans',id:'sans-1'},{rank:'A',suit:'sans',id:'sans-2'}];
+  const signals=Object.values(K.signalMemory?K.signalMemory(st):{});
+  const mmr=Object.entries(st.ai_mmr||{});
+  $('memoryPanel').innerHTML=`<h2>Spelinformatie</h2>
+    <div class="trump-memory"><strong>${esc(K.bidLabel(st.accepted_bid||st.current_bid))}</strong>${trumpCard.map(c=>trump==='sans'||!trump?`<div class="card mini-card"><span>SA</span></div>`:staticCardHtml(c,'mini-card')).join('')}</div>
+    <div class="round-card"><strong>Laatste slag</strong><div class="last-trick-mini">${last?.cards?.length?last.cards.map(p=>staticCardHtml(p.card,`mini-card p${p.player}`)).join(''):'<span class="muted">Nog geen slag</span>'}</div>${last?.winner!==undefined?`<div class="muted">Gewonnen door ${esc(player(last.winner).name||'Speler')}</div>`:''}</div>
+    <div class="round-card"><strong>Aan-/afseinen</strong><div class="muted">${signals.length?signals.slice(-4).map(e=>`${esc(player(e.player).name||'Speler')}: ${esc(e.type)} ${esc(K.SUIT_LABELS[e.suit]||e.suit)}`).join(' · '):'Nog geen signalen'}</div></div>
+    ${mmr.length?`<div class="round-card"><strong>AI-prestatie</strong><div class="mmr-list">${mmr.map(([name,row])=>`<div class="mmr-pill">${esc(name)}: <strong>${esc(row.rating||1200)}</strong> (${Number(row.last_change||0)>0?'+':''}${esc(row.last_change||0)})</div>`).join('')}</div></div>`:''}`;
+  const rounds=st.rounds||[];
+  $('roundPanel').innerHTML=`<h2>Rondeoverzicht <span class="muted">${rounds.length} gespeeld</span></h2>
+    ${finished?`<div class="round-result-head"><strong>🏆 Eindstand ${esc(totals[0])} – ${esc(totals[1])}</strong><small>${winner?'Team '+winner+' wint':'Gelijkspel'} · ${esc(rounds.length)} rondes</small></div>`:''}
+    ${rounds.length?rounds.slice().reverse().map((r,i)=>roundCard(r,i===0)).join(''):'<p class="muted">De rondeuitslag verschijnt hier na acht slagen. Je ziet dan het bod, de kaartpunten, roem, NAT en de totale tussenstand.</p>'}
+    ${st.phase==='bidding'?`<div class="event-line">Ronde ${rounds.length+1}: bieden is bezig.</div>`:''}`;
+  $('scorePanel').querySelectorAll('[data-show-pane]').forEach(btn=>btn.onclick=()=>setPane(btn.dataset.showPane));
+}
     function renderLog(st){
-      const coach = (st.rounds || []).flatMap(r => r.coach_recap || []).slice(-8);
-      $('log').innerHTML = `${(game().log || []).slice(0,8).map(row => `<div>${esc(row.text || row)}</div>`).join('')}${coach.length ? `<section class="coach">${coach.map(c => `<div><strong>${esc(c.player_name || 'Speler')} slag ${esc(c.trick_no)}:</strong> ${esc(c.verdict)} <span class="coach-delta ${Number(c.delta||0)>=0?'good':'bad'}">${Number(c.delta||0)>=0?'+':''}${esc(c.delta||0)}</span><br>AI: ${esc(c.ai_card?.rank || '')}${esc(K.SUIT_SYMBOLS[c.ai_card?.suit] || '')}, gespeeld: ${esc(c.played?.rank || '')}${esc(K.SUIT_SYMBOLS[c.played?.suit] || '')}</div>`).join('')}</section>` : ''}`;
-    }
+  const currentBids=(st.bid_history||[]).slice(-12).reverse();
+  const currentKlops=(st.klop_events||[]).slice(-8).reverse();
+  const currentCards=(st.plays||[]).slice(-8).reverse();
+  const rounds=(st.rounds||[]).slice(-5).reverse();
+  const official=(game().log||[]).slice(0,8);
+  const coach=(st.rounds||[]).flatMap(r=>r.coach_recap||[]).slice(-4);
+  $('log').innerHTML=`<h2>Spelacties</h2>
+    ${st.phase==='finished'?`<div class="event-line"><strong>Eindstand: ${esc(st.totals?.[0]||0)} – ${esc(st.totals?.[1]||0)}</strong></div>`:''}
+    ${rounds.map(r=>`<div class="event-line ${r.result?.nat?'nat':''}"><strong>Ronde ${esc(r.round)}: ${r.result?.nat?'NAT':'gehaald'}</strong> · ${esc(K.bidLabel(r.bid))} · Team 1 +${esc(r.result?.scores?.[0]||0)} / Team 2 +${esc(r.result?.scores?.[1]||0)}</div>`).join('')}
+    ${currentKlops.map(e=>`<div class="event-line roem"><strong>♣ KLOP!</strong> ${esc(player(e.seat).name||'Speler')} · Team ${esc(e.team)} +${esc(e.points)} roem · ${esc(e.labels?.join(', ')||'Roem')}</div>`).join('')}
+    ${currentBids.map(b=>`<div class="event-line"><strong>${esc(player(b.seat).name||'Speler')}:</strong> ${esc(K.bidLabel(b))}</div>`).join('')}
+    ${currentCards.map(p=>`<div class="event-line"><strong>${esc(player(p.player).name||'Speler')}</strong> speelde ${esc(p.card?.rank||'')}${esc(K.SUIT_SYMBOLS[p.card?.suit]||'')}</div>`).join('')}
+    ${official.map(e=>`<div class="event-line">${esc(e.text||e)}</div>`).join('')}
+    ${coach.map(e=>`<div class="event-line">AI-tip · ${esc(e.player_name||'Speler')}: ${esc(e.verdict||'')}</div>`).join('')}
+    ${!(rounds.length+currentKlops.length+currentBids.length+currentCards.length+official.length+coach.length)?'<p class="muted">Nieuwe biedingen, gespeelde kaarten, roem en rondeuitslagen verschijnen hier.</p>':''}`;
+}
     async function createGame(){
       if(hasActiveRoom()) return setStatus('Je zit al aan een actieve tafel. Open, verlaat of sluit die eerst.');
       try { UI.remote = await K.rpc('klaverjas_online_create', { session_token: K.sessionToken(), site_scope_input: K.currentScope(), settings_input: { finish_mode: $('finishMode').value || 'fixed_rounds', bot_roster: UI.botRoster, bot_count: UI.botRoster.length } }); UI.gameId = game().id; UI.lobbyCode = game().lobby_code; localStorage.setItem('kalenel_klaverjassen_guest_room_v1', UI.lobbyCode); writeUrl(); render(); loadRooms(); const botCount = (state().players || []).filter(K.isBotPlayer).length; setStatus(botCount >= 3 ? 'Bottafel is vol en klaar om te starten.' : (botCount ? 'Bottafel gemaakt. Voeg nog bots toe of wacht op spelers.' : 'Tafel gemaakt.'), true); } catch(err){ setStatus(err.message); }
