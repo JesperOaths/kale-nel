@@ -1,6 +1,32 @@
 -- Standalone Klaverjassen guest additions (no scheduled jobs and no legacy-game changes).
 -- All cross-device transfers use a one-time 128-bit code. Each claimant rotates their
 -- existing 256-bit room bearer token, which immediately revokes the original device.
+
+-- The host may designate a backup. A backup can assume management only after
+-- the original host has been inactive for at least 15 minutes.
+alter table public.kalenel_klaverjassen_guest_rooms
+ add column if not exists host_seen_at timestamptz not null default now();
+alter table public.kalenel_klaverjassen_guest_rooms
+ add column if not exists deputy_seat smallint;
+alter table public.kalenel_klaverjassen_guest_rooms
+ drop constraint if exists kj_guest_deputy_seat_check;
+alter table public.kalenel_klaverjassen_guest_rooms
+ add constraint kj_guest_deputy_seat_check
+ check (deputy_seat is null or deputy_seat between 0 and 3);
+do $add_view$
+declare body text;
+begin
+ select pg_get_functiondef('public._kalenel_kj_guest_view(public.kalenel_klaverjassen_guest_rooms,integer,text,boolean)'::regprocedure)
+ into body;
+ if position($fragment$'trick_completed_at',r.trick_completed_at$fragment$ in body)=0 then
+   raise exception 'Guest-room view expected field not found';
+ end if;
+ body:=replace(body,
+   $fragment$'trick_completed_at',r.trick_completed_at$fragment$,
+   $fragment$'trick_completed_at',r.trick_completed_at,'host_seen_at',r.host_seen_at,'deputy_seat',r.deputy_seat$fragment$);
+ execute body;
+end $add_view$;
+
 create table if not exists public.kalenel_kj_guest_transfers(
  room_id uuid not null references public.kalenel_klaverjassen_guest_rooms(id) on delete cascade,
  seat smallint not null,
@@ -124,6 +150,49 @@ begin
    delete from public.kalenel_kj_guest_transfers
     where room_id=room_rec.id and seat=seat_rec.seat;
    return jsonb_build_object('ok',true);
+ elsif action='host_ping' then
+   if room_rec.host_hash<>viewer_hash then raise exception 'Alleen de host kan aanwezig melden'; end if;
+   if room_rec.status in ('lobby','playing') then
+     update public.kalenel_klaverjassen_guest_rooms
+       set host_seen_at=now() where id=room_rec.id;
+   end if;
+   return jsonb_build_object('ok',true);
+ elsif action='delegate_set' then
+   if room_rec.host_hash<>viewer_hash then raise exception 'Alleen de host kan een reservehost benoemen'; end if;
+   if room_rec.status not in ('lobby','playing') then raise exception 'Deze tafel is gesloten'; end if;
+   if payload_input->>'seat' is null then
+     update public.kalenel_klaverjassen_guest_rooms
+       set deputy_seat=null,host_seen_at=now(),revision=revision+1 where id=room_rec.id returning * into room_rec;
+   else
+     if coalesce(payload_input->>'seat','') !~ '^[0-3]$' then
+       raise exception 'Kies een geldige reservehost';
+     end if;
+     target_seat:=(payload_input->>'seat')::integer;
+     if target_seat=seat_rec.seat then raise exception 'Een reservehost moet een andere speler zijn'; end if;
+     if coalesce((room_rec.state->'players'->target_seat->>'is_bot')::boolean,true) then
+       raise exception 'Een bot kan geen reservehost worden';
+     end if;
+     if not exists(select 1 from public.kalenel_klaverjassen_guest_seats
+       where room_id=room_rec.id and seat=target_seat) then raise exception 'Geen menselijke speler op deze stoel'; end if;
+     update public.kalenel_klaverjassen_guest_rooms
+       set deputy_seat=target_seat,host_seen_at=now(),revision=revision+1
+       where id=room_rec.id returning * into room_rec;
+   end if;
+   return public._kalenel_kj_guest_view(room_rec,seat_rec.seat,seat_rec.name,true);
+ elsif action='delegate_takeover' then
+   if room_rec.deputy_seat is distinct from seat_rec.seat then
+     raise exception 'Je bent geen aangewezen reservehost';
+   end if;
+   if room_rec.status not in ('lobby','playing') then raise exception 'Deze tafel is gesloten'; end if;
+   if room_rec.host_seen_at>now()-interval '15 minutes' then
+     raise exception 'De host is nog actief. Overname kan na 15 minuten zonder activiteit';
+   end if;
+   update public.kalenel_klaverjassen_guest_rooms
+    set host_hash=viewer_hash,host_name=seat_rec.name,
+        deputy_seat=null,host_seen_at=now(),
+        revision=revision+1,updated_at=now(),resume_until=now()+interval '7 days'
+     where id=room_rec.id returning * into room_rec;
+   return public._kalenel_kj_guest_view(room_rec,seat_rec.seat,seat_rec.name,true);
  elsif action='host_handover' then
    if room_rec.host_hash<>viewer_hash then raise exception 'Alleen de host kan het beheer overdragen'; end if;
    if room_rec.status not in ('lobby','playing') then raise exception 'Deze tafel is afgesloten'; end if;
@@ -138,7 +207,7 @@ begin
    if not found then raise exception 'Deze stoel heeft geen menselijke speler'; end if;
    update public.kalenel_klaverjassen_guest_rooms
     set host_hash=target.token_hash,host_name=target.name,
-        revision=revision+1,updated_at=now(),resume_until=now()+interval '7 days'
+        deputy_seat=null,host_seen_at=now(),revision=revision+1,updated_at=now(),resume_until=now()+interval '7 days'
     where id=room_rec.id returning * into room_rec;
    return public._kalenel_kj_guest_view(room_rec,seat_rec.seat,seat_rec.name,false);
  elsif action='profile_link' then
