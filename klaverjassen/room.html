@@ -101,12 +101,198 @@
       .table.bidding-turn{min-height:710px}
     }
 
+
+
+    /* V2 table-first Klaverjassen cockpit: hand within felt, score panels in tabs. */
+    .shell{background:rgba(255,250,243,.97)}
+    .shell:not(.no-active-game) h1{font-size:clamp(21px,2.6vw,33px);margin:2px 0}
+    .shell:not(.no-active-game) .top{gap:7px}
+    .shell:not(.no-active-game) .top-actions{gap:6px}
+    .shell:not(.no-active-game) .top-actions>.btn{padding:8px 11px;font-size:12px}
+    .shell:not(.no-active-game) .status{font-size:12px;min-height:0;margin-top:2px}
+    .shell:not(.no-active-game) .roombar{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:8px 0}
+    .shell:not(.no-active-game) .stat{border-radius:13px;padding:6px 9px}
+    .shell:not(.no-active-game) .stat span{font-size:9px}
+    .shell:not(.no-active-game) .stat strong{font-size:clamp(12px,1.15vw,16px);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .game-layout{grid-template-columns:minmax(0,1fr) minmax(265px,310px);gap:10px;align-items:stretch}
+    .table{height:clamp(500px,calc(100dvh - 182px),820px);min-height:0;overflow:hidden;border-width:11px;border-radius:30px}
+    .table .center{top:44%;width:min(520px,calc(100% - 245px));max-height:calc(100% - 206px);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(215,173,88,.75) transparent;gap:7px}
+    .table .center>.panel:first-child{padding:10px}
+    .table .center .panel h2{font-size:15px;margin-bottom:5px}
+    .table .center .trick{min-height:110px;gap:6px;flex-wrap:wrap}
+    .table .center #centerCopy{font-size:12px}
+    .seat{width:clamp(112px,14vw,175px)}
+    .seat.s0{bottom:142px}
+    .seat.s2{top:2%}
+    .seat.s1{right:1%;top:42%}
+    .seat.s3{left:1%;top:42%}
+    .seat-card{position:relative;padding:8px;border-width:3px;border-radius:14px;min-height:62px}
+    .seat-card strong{font-size:clamp(11px,1vw,14px);line-height:1.15;overflow-wrap:anywhere}
+    .seat-card .tag{font-size:9px;margin:3px 1px 0;padding:3px 5px}
+    .seat-card.p0{border-color:var(--p0)}
+    .seat-card.p1{border-color:var(--p1)}
+    .seat-card.p2{border-color:var(--p2)}
+    .seat-card.p3{border-color:var(--p3)}
+    .seat-card.turn{outline:2px solid #fff;outline-offset:2px}
+    .seat-bid{position:absolute;left:50%;top:-22px;transform:translateX(-50%);z-index:8;
+      padding:3px 10px;border-radius:999px;min-width:54px;white-space:nowrap;
+      color:#17130f;background:#fff6d8;border:2px solid #bfa465;
+      box-shadow:0 4px 12px rgba(0,0,0,.18);font-weight:1000;font-size:12px}
+    .seat-bid.red{color:#a7192b}
+    .seat-bid.is-pass{background:#eee;color:#4f4f4f;border-color:#aaa}
+    .seat-bid.is-winning{background:#f3d682;border-color:#8a5d1f}
+    .play-card{text-align:center;min-width:0}
+    .play-card .card{width:58px;height:80px;font-size:19px;margin:auto;box-shadow:0 8px 12px rgba(0,0,0,.15)}
+    .play-card .card span{font-size:27px}
+    .play-card .muted{max-width:82px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:auto}
+    .play-card.p0 .card{border-color:var(--p0)}
+    .play-card.p1 .card{border-color:var(--p1)}
+    .play-card.p2 .card{border-color:var(--p2)}
+    .play-card.p3 .card{border-color:var(--p3)}
+    .hand-wrap{position:absolute!important;left:10px;right:10px;bottom:8px;z-index:20;
+      margin:0;padding:8px 10px 9px;border-radius:18px;
+      background:rgba(255,250,243,.96);backdrop-filter:blur(9px);
+      box-shadow:0 3px 16px rgba(0,0,0,.19)}
+    .hand-title{font-size:10px;margin-bottom:5px}
+    .hand{min-height:0;display:flex;gap:5px;align-items:center;justify-content:center;flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 4px}
+    .hand .card{flex:0 0 auto;width:clamp(41px,5.8vw,66px);height:clamp(66px,9vh,93px);font-size:clamp(17px,2vw,24px);border-width:2px;border-radius:10px}
+    .hand .card span{font-size:clamp(24px,2.6vw,33px)}
+    .hand button.card:not(:disabled){outline-width:2px}
+    .side{position:relative;top:auto;align-self:stretch;display:flex;flex-direction:column;
+      min-height:0;height:clamp(500px,calc(100dvh - 182px),820px);gap:0;overflow:hidden;
+      border:1px solid rgba(154,130,65,.2);border-radius:22px;background:#fff}
+    .side-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:8px;background:#f4eee4;border-bottom:1px solid var(--line)}
+    .side-tabs button{background:transparent;border:1px solid transparent;border-radius:10px;min-height:39px;
+      color:#6c6050;font:900 12px/1 Inter,system-ui,sans-serif;cursor:pointer}
+    .side-tabs button.is-active{background:#fff;color:#101812;border-color:#d7c7a5;box-shadow:0 3px 8px rgba(0,0,0,.05)}
+    .side-tabs button:focus-visible{outline:3px solid #217453;outline-offset:1px}
+    .side-pane{display:none;min-height:0;overflow-y:auto;flex:1;border:0;border-radius:0;padding:12px;box-shadow:none}
+    .side-pane.is-active{display:block}
+    .side-pane h2{font-size:17px;margin-bottom:10px}
+    .score-grid .score-cell{padding:9px}
+    .score-grid .score-cell strong{font-size:clamp(23px,2.8vw,33px)}
+    .score-cell .muted{font-size:12px;line-height:1.4}
+    .roem-tally{margin-top:7px}
+    .round-result-head{border-radius:15px;background:#eff7ee;padding:11px;margin:4px 0 12px}
+    .round-result-head.nat{background:#fff0eb;border:1px solid #cc7162}
+    .round-result-head strong{display:block;font-size:17px}
+    .round-result-head small{font-size:12px;line-height:1.6;color:#665d4f}
+    .round-detail{margin:7px 0;border:1px solid #ddcfb7;border-radius:13px;overflow:hidden}
+    .round-detail summary{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:10px;cursor:pointer;background:#fff9f1;font-size:12px}
+    .round-detail summary strong{font-size:13px}
+    .round-detail summary .nat-label{color:#a32720;font-weight:1000}
+    .round-detail summary .made-label{color:#217453;font-weight:900}
+    .round-detail[open] summary{background:#f5ead9}
+    .round-detail>div{padding:10px}
+    .round-score-row{margin:9px 0;font-size:12px}
+    .round-score-row>div:first-child{display:flex;justify-content:space-between;gap:5px}
+    .round-score-row strong{font-size:13px}
+    .round-bar{height:12px;border-radius:999px;overflow:hidden;background:#eee5d7;margin:4px 0}
+    .round-bar .round-fill{height:100%;border-radius:inherit;background:#c79b52}
+    .round-score-row.team2 .round-fill{background:#61a2e4}
+    .round-score-metadata{font-size:11px;color:#665d4f}
+    .round-event-list{display:grid;gap:6px;margin:9px 0}
+    .event-line{font-size:12px;line-height:1.5;padding:7px 9px;background:#f8f2e8;border-radius:10px}
+    .event-line.roem{background:#fef2cb}
+    .event-line.nat{background:#fff0eb;color:#8b2d20}
+    .table-announcement{position:absolute;right:13px;top:8px;z-index:22;max-width:min(350px,46%);
+      pointer-events:none;text-align:right}
+    .table-announcement:not(:empty){background:rgba(15,42,32,.88);color:#fff;padding:8px 12px;border:1px solid #d7ad58;
+      border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.2);font-size:12px;line-height:1.4}
+    .table-announcement strong{font-size:15px;display:block}
+    .table-announcement.nat{background:#63231c}
+    .flight-layer{position:absolute;inset:0;z-index:24;pointer-events:none;overflow:hidden}
+    .flying-card{position:absolute;display:flex;flex-direction:column;justify-content:center;align-items:center;
+      width:55px;height:76px;background:#fffaf3;border:4px solid var(--p0);border-radius:9px;
+      color:#17130f;font-weight:1000;font-size:18px;box-shadow:0 8px 25px rgba(0,0,0,.35);
+      animation:card-flight .78s cubic-bezier(.22,.72,.23,1) forwards}
+    .flying-card span{font-size:26px}
+    .flying-card.red{color:#a7192b}
+    .flying-card.p0{border-color:var(--p0)}.flying-card.p1{border-color:var(--p1)}
+    .flying-card.p2{border-color:var(--p2)}.flying-card.p3{border-color:var(--p3)}
+    @keyframes card-flight{
+      0%{opacity:.7;transform:translate(0,0) rotate(-20deg) scale(.78)}
+      30%{opacity:1;transform:translate(calc(var(--dx)*.26),calc(var(--dy)*.26 - 44px)) rotate(12deg) scale(1.2)}
+      100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(0deg) scale(.85)}
+    }
+    .event-toasts{position:fixed;z-index:150;pointer-events:none;left:50%;top:12%;
+      transform:translateX(-50%);display:grid;gap:7px;max-width:min(440px,90vw)}
+    .event-toast{background:rgba(16,77,56,.96);color:#fff;padding:11px 15px;border:1px solid #d7ad58;
+      border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);text-align:center;font:900 14px/1.35 Inter,system-ui,sans-serif;
+      animation:toast-in .3s ease-out}
+    .event-toast.nat{background:#86291d}.event-toast.roem{background:#7c5e16}
+    @keyframes toast-in{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+    @media(min-width:1101px) and (max-height:730px){
+      .table,.side{height:calc(100dvh - 153px);min-height:460px}
+      .table .center{top:43%;max-height:calc(100% - 187px)}
+      .table .trick{min-height:77px}
+      .seat.s0{bottom:125px}
+      .hand .card{height:66px;width:46px}
+      .hand .card span{font-size:23px}
+    }
+    @media(max-width:1100px){
+      .game-layout{grid-template-columns:minmax(0,1fr) 260px}
+      .shell:not(.no-active-game) .roombar{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .table .center{width:min(520px,calc(100% - 180px))}
+      .side{grid-template-columns:unset;display:flex}
+    }
+    @media(max-width:760px){
+      .wrap{padding:3px}
+      .shell{padding:8px;border-radius:14px}
+      .shell:not(.no-active-game) .top{gap:5px}
+      .shell:not(.no-active-game) .top-actions{gap:4px}
+      .shell:not(.no-active-game) .top-actions .btn{padding:7px 9px;font-size:11px}
+      .shell:not(.no-active-game) .roombar{grid-template-columns:repeat(4,minmax(0,1fr));margin:5px 0;gap:4px}
+      .shell:not(.no-active-game) .stat{padding:5px}
+      .shell:not(.no-active-game) .stat span{font-size:8px}
+      .shell:not(.no-active-game) .stat strong{font-size:11px}
+      .game-layout{grid-template-columns:minmax(0,1fr);gap:8px}
+      .table{height:calc(100dvh - 160px);min-height:440px;border-width:7px;border-radius:20px}
+      .table .center{width:calc(100% - 24px);top:39%;max-height:calc(100% - 160px)}
+      .table .center>.panel:first-child{padding:5px}
+      .table .center .trick{min-height:72px;gap:3px}
+      .table .center #actionPanel{padding:9px}
+      .table .center .play-card .card{width:40px;height:55px;font-size:14px}
+      .table .center .play-card .card span{font-size:19px}
+      .table .center .play-card .muted{font-size:9px!important;max-width:50px}
+      .seat{width:103px}
+      .seat-card{padding:5px;min-height:48px}
+      .seat-card strong{font-size:10px}
+      .seat-card .tag{font-size:8px}
+      .seat.s0{bottom:127px}.seat.s2{top:1%}
+      .seat.s1{right:0;top:18%}.seat.s3{left:0;top:18%}
+      .seat-bid{font-size:10px;top:-18px}
+      .hand-wrap{position:fixed!important;bottom:0;left:0;right:0;z-index:90;border-radius:15px 15px 0 0;
+        padding:7px 5px 8px;margin:0;box-shadow:0 -8px 28px rgba(0,0,0,.3)}
+      .hand-title{font-size:9px}
+      .hand .card{width:clamp(35px,10.8vw,53px);height:clamp(59px,17vw,79px);font-size:18px}
+      .hand .card span{font-size:24px}
+      .hand{gap:3px}
+      .side{height:auto;min-height:250px;max-height:520px;overflow:hidden}
+      .side-pane.is-active{max-height:450px}
+      .table-announcement{top:4px;right:5px;max-width:50%;font-size:10px}
+      .table-announcement strong{font-size:12px}
+      .table.bidding-turn .center{top:43%;max-height:calc(100% - 148px)}
+      .table.bidding-turn{height:calc(100dvh - 160px);min-height:470px}
+      .table.bidding-turn .seat.s0{bottom:130px}
+      .table.bidding-turn .seat.s1,.table.bidding-turn .seat.s3{top:14%}
+    }
+    @media(max-width:390px){
+      .hand .card{width:clamp(32px,10.4vw,41px);height:58px;font-size:16px}
+      .hand .card span{font-size:22px}
+      .seat{width:93px}.seat-card strong{font-size:9px}
+      .table .center{top:40%}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .flying-card,.event-toast,.trick .play-card{animation-duration:.01ms!important}
+    }
+
   </style>
 </head>
 <body>
   <div class="wrap"><main class="shell no-active-game">
     <div class="top">
-      <div><div class="muted">Kalenel online spelmodus</div><h1>Klaverjas tafel</h1><div id="status" class="status"></div></div>
+      <div><div class="muted">Kalenel · Klaverjassen</div><h1>Klaverjas tafel</h1><div id="status" class="status"></div></div>
       <div class="top-actions">
         <a class="btn secondary" href="./">Lobby</a>
         <a class="btn secondary" href="https://kalenel.nl/">Home</a>
@@ -162,18 +348,28 @@
           <div class="panel"><h2 id="centerTitle">Tafel</h2><div class="trick" id="trick"></div><div id="centerCopy" class="muted"></div></div>
           <div class="panel" id="actionPanel"></div>
         </div>
-      </section>
-      <aside class="side">
-        <section class="score-form" id="scorePanel"></section>
-        <section class="score-form" id="memoryPanel"></section>
-        <section class="score-form" id="roundPanel"></section>
-      </aside>
-    </section>
+        <div class="table-announcement" id="eventBanner" aria-live="polite"></div>
+        <div class="flight-layer" id="flightLayer" aria-hidden="true"></div>
     <section class="hand-wrap">
       <div class="hand-title"><span>Jouw hand · gesorteerd op troef en kleur</span><span id="handHint">Harten → Schoppen → Ruiten → Klaver</span></div>
       <section class="hand" id="hand"></section>
     </section>
-    <section class="log" id="log"></section>
+      </section>
+      <aside class="side" id="informationSide">
+        <nav class="side-tabs" aria-label="Speloverzicht">
+          <button type="button" data-pane="scorePanel" class="is-active" aria-selected="true">Stand</button>
+          <button type="button" data-pane="roundPanel" aria-selected="false">Rondes</button>
+          <button type="button" data-pane="log" aria-selected="false">Acties</button>
+          <button type="button" data-pane="memoryPanel" aria-selected="false">Info</button>
+        </nav>
+        <section class="score-form side-pane is-active" id="scorePanel"></section>
+        <section class="score-form side-pane" id="roundPanel"></section>
+        <section class="score-form side-pane" id="log"></section>
+        <section class="score-form side-pane" id="memoryPanel"></section>
+      </aside>
+    </section>
+
+    <div class="event-toasts" id="eventToasts" role="status" aria-live="polite" aria-atomic="false"></div>
   </main></div>
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
   <script>
