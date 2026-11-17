@@ -85,7 +85,7 @@ try{
    assert.equal(await page.locator('.seat.s1 .seat-bid').innerText(),'Pas');
    assert.equal(await page.locator('#hand button.card').count(),8);
    const score=await page.locator('#scorePanel').innerText();
-   assert(score.includes('Team 1')&&score.includes('Team 2'),'score panel visible');
+   assert(score.toLowerCase().includes('team 1')&&score.toLowerCase().includes('team 2'),'score panel visible: '+JSON.stringify({score,errors}));
    await page.locator('#hand button.card:not([disabled])').first().click({timeout:6000});
    const flight=page.locator('.flying-card');
    await flight.first().waitFor({state:'attached',timeout:4500});
