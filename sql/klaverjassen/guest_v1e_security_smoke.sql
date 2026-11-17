@@ -99,27 +99,27 @@ end $test$;
 reset role;
 do $deputy$
 declare a text:=repeat('1',64);b text:=repeat('2',64);
- code text:='QADEPUTY26'; r jsonb; old timestamptz;
+ room_code text:='QADEPUTY26'; r jsonb; old timestamptz;
 begin
  perform public.klaverjassen_guest_v1('create',null,a,'Host',
-   jsonb_build_object('settings',jsonb_build_object('lobby_code',code,
+   jsonb_build_object('settings',jsonb_build_object('lobby_code',room_code,
    'finish_mode','fixed_rounds')));
- perform public.klaverjassen_guest_v1('join',code,b,'Backup');
- r:=public.klaverjassen_guest_extra_v1('delegate_set',code,a,jsonb_build_object('seat',1));
+ perform public.klaverjassen_guest_v1('join',room_code,b,'Backup');
+ r:=public.klaverjassen_guest_extra_v1('delegate_set',room_code,a,jsonb_build_object('seat',1));
  if (r->'game'->>'deputy_seat')::int<>1 then raise exception 'Deputy assignment failed'; end if;
  begin
-  perform public.klaverjassen_guest_extra_v1('delegate_takeover',code,b);
+  perform public.klaverjassen_guest_extra_v1('delegate_takeover',room_code,b);
   raise exception 'EARLY_DEPUTY_ACCESS';
  exception when others then if sqlerrm='EARLY_DEPUTY_ACCESS' then raise;end if; end;
  -- Only this transactional regression changes the heartbeat.
  update public.kalenel_klaverjassen_guest_rooms
    set host_seen_at=now()-interval '16 minutes' where code='QADEPUTY26';
- r:=public.klaverjassen_guest_extra_v1('delegate_takeover',code,b);
+ r:=public.klaverjassen_guest_extra_v1('delegate_takeover',room_code,b);
  if not coalesce((r->'viewer'->>'is_host')::boolean,false) then
   raise exception 'Deputy could not take over abandoned room';
  end if;
  begin
-  perform public.klaverjassen_guest_extra_v1('host_ping',code,a);
+  perform public.klaverjassen_guest_extra_v1('host_ping',room_code,a);
   raise exception 'OLD_HOST_STILL_ACTIVE';
  exception when others then if sqlerrm='OLD_HOST_STILL_ACTIVE' then raise;end if; end;
 end $deputy$;
