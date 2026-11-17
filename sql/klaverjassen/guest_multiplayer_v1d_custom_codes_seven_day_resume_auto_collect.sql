@@ -119,11 +119,16 @@ begin
    raise exception 'Alleen de host of het winnende team mag de slag automatisch ophalen';
   end if;
   if reason='auto_collect' then
-   if r.trick_completed_at is null or now() < r.trick_completed_at +
-     case when coalesce((s->'pending_trick'->'roem'->>'points')::integer,0)>0
-            and coalesce((s->'pending_trick'->>'klopped')::boolean,false)=false
-       then interval '5 seconds' else interval '1 second' end then
-    raise exception 'De slag wacht nog op de roem-knop of de animatie';
+   if r.trick_completed_at is null then
+    raise exception 'Het einde van de slag is nog niet vastgelegd';
+   end if;
+   if now() < r.trick_completed_at + interval '1 second' then
+    raise exception 'De slaganimatie moet eerst klaar zijn';
+   end if;
+   if coalesce((s->'pending_trick'->'roem'->>'points')::integer,0)>0
+      and coalesce((s->'pending_trick'->>'klopped')::boolean,false)=false
+      and now() < r.trick_completed_at + interval '5 seconds' then
+    raise exception 'Wacht op de kans om roem te kloppen';
    end if;
    if incoming->'pending_trick' is not null and incoming->'pending_trick'<>'null'::jsonb then
     raise exception 'Automatisch ophalen moet de afgesloten slag verwijderen';
