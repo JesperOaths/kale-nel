@@ -128,7 +128,7 @@ try{
    await page.waitForTimeout(900);
    assert.equal(saved.filter(x=>x.reason==='auto_collect').length,0,'Auto collection before Klop window');
    await page.locator('#klopBtn').click();
-   await page.waitForFunction(()=>document.querySelector('#scorePanel')?.innerText?.includes('20'),{timeout:6000});
+   await page.waitForFunction(()=>document.querySelector('#roemStat')?.textContent?.trim().startsWith('20 - 0'),{timeout:6000});
    assert.equal(r.game.state.roem_by_team[0],20);
    await page.waitForFunction(()=>document.querySelector('#centerTitle')?.textContent?.includes('Beurt'),{timeout:9500});
    assert.deepEqual(saved.map(x=>x.reason),['klop_roem','auto_collect']);
