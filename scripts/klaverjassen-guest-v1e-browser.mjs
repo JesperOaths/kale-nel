@@ -39,6 +39,18 @@ function route(page,server){
     server.remote.game.revision++;
     out=server.remote;
   }
+  if(body.action_input==='delegate_set'){
+    server.remote.game.deputy_seat=body.payload_input.seat;
+    server.remote.game.host_seen_at=new Date().toISOString();
+    out=server.remote;
+  }
+  if(body.action_input==='delegate_takeover'){
+    server.remote.viewer.is_host=true;
+    server.remote.game.created_by_player_name='Rosalie';
+    server.remote.game.deputy_seat=null;
+    server.remote.game.host_seen_at=new Date().toISOString();
+    out=server.remote;
+  }
   if(body.action_input==='profile_stats')out={games:[
    {seat:0,team:1,finished:true,totals:[200,100],rounds:[
     {bid_player:0,made:true,nat:false,scores:[100,62],klops:[{seat:0,points:20}]}]},
@@ -109,6 +121,39 @@ try{
    assert(server.actions.includes('host_handover'));
    console.log('KLAVERJASSEN_HOST_HANDOVER_PASS','formerHostRightsRevoked=true');
   }finally{await ctx.close();}
+ }
+ // A host can pre-authorize a backup, and only that player can assume control
+ // after the server-confirmed 15-minute absence window.
+ {
+  const server={remote:makeRemote(),actions:[],claimed:false};
+  const hostContext=await browser.newContext(),host=await hostContext.newPage();
+  route(host,server);await credentials(host);
+  try{
+   await host.goto(BASE+'room.html?room='+CODE);
+   await host.locator('[data-pane="memoryPanel"]').click();
+   await host.locator('#kjHandoverSeat').selectOption('1');
+   await host.locator('#kjSetDeputy').click();
+   await host.waitForFunction(()=>document.querySelector('#deleteRoomBtnTop')?.style.display!=='none',{timeout:6000});
+   assert.equal(server.remote.game.deputy_seat,1);
+   assert(server.actions.includes('delegate_set'));
+  }finally{await hostContext.close();}
+  server.remote.viewer={seat:1,name:'Rosalie',is_host:false};
+  server.remote.game.host_seen_at=new Date(Date.now()-16*60000).toISOString();
+  const guestContext=await browser.newContext(),guest=await guestContext.newPage();
+  route(guest,server);await credentials(guest,'b'.repeat(64));
+  await guest.addInitScript(()=>window.confirm=()=>true);
+  try{
+   await guest.goto(BASE+'room.html?room='+CODE);
+   await guest.locator('[data-pane="memoryPanel"]').click();
+   const takeover=guest.locator('#kjTakeover');
+   await takeover.waitFor({state:'visible',timeout:8000});
+   assert(await takeover.isEnabled());
+   await takeover.click();
+   await guest.waitForFunction(()=>document.querySelector('#deleteRoomBtnTop')?.style.display!=='none',{timeout:9000});
+   assert(server.actions.includes('delegate_takeover'));
+   assert.equal(server.remote.game.created_by_player_name,'Rosalie');
+   console.log('KLAVERJASSEN_DEPUTY_OFFLINE_TAKEOVER_PASS','15minGuard=true','humanOnly=true');
+  }finally{await guestContext.close();}
  }
  // Transfer is initiated by the owner and redeemed once on a different browser.
  {
