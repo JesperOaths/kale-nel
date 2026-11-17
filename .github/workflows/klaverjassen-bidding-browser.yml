@@ -7,6 +7,8 @@ on:
       - 'scripts/klaverjassen-table-ux-v2-browser.mjs'
       - 'scripts/klaverjassen-guest-async-room-browser.mjs'
       - 'scripts/klaverjassen-guest-v1e-browser.mjs'
+      - 'scripts/klaverjassen-clockwise-rules-browser.mjs'
+      - 'klaverjassen/guest-rules.js'
       - 'klaverjassen/guest-enhancements.js'
       - 'klaverjassen/turn-sw.js'
       - 'klaverjassen/index.html'
@@ -38,6 +40,8 @@ jobs:
           node --check scripts/klaverjassen-table-ux-v2-browser.mjs
           node --check scripts/klaverjassen-guest-async-room-browser.mjs
           node --check scripts/klaverjassen-guest-v1e-browser.mjs
+          node --check scripts/klaverjassen-clockwise-rules-browser.mjs
+          node --check klaverjassen/guest-rules.js
           node --check klaverjassen/guest-bridge.js
           node --check klaverjassen/guest-enhancements.js
           node --check klaverjassen/turn-sw.js
@@ -53,3 +57,4 @@ jobs:
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-table-ux-v2-browser.mjs
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-guest-async-room-browser.mjs
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-guest-v1e-browser.mjs
+          CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-clockwise-rules-browser.mjs
