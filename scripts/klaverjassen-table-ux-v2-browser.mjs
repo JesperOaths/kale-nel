@@ -84,6 +84,30 @@ try{
    assert(badge.includes('90')&&badge.includes('♦'),'seat 2 shows floating 90 ♦ bid: '+badge);
    assert.equal(await page.locator('.seat.s1 .seat-bid').innerText(),'Pas');
    assert.equal(await page.locator('#hand button.card').count(),8);
+   // Exactly four fixed slots, arranged as a cross around the trick centre.
+   assert.equal(await page.locator('#trick .trick-slot').count(),4,'one slot per seat');
+   const layout=await page.evaluate(()=>{
+     const center=el=>{const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,top:r.top,bottom:r.bottom,left:r.left,right:r.right}};
+     const stage=center(document.querySelector('#table'));
+     const middle=center(document.querySelector('#trick .trick-middle'));
+     const slots={};
+     for(let seat=0;seat<4;seat++){
+       const el=document.querySelector('#trick .trick-slot[data-slot-seat="'+seat+'"]');
+       slots[seat]=center(el);
+       const plate=getComputedStyle(document.querySelector('.seat.s'+seat+' .seat-card')).borderTopColor;
+       const outline=getComputedStyle(el).borderTopColor;
+       if(plate!==outline)throw Error('Unmatched seat/slot outline '+seat+': '+plate+' vs '+outline);
+     }
+     return {stage,middle,slots};
+   });
+   const sl=layout.slots,mid=layout.middle;
+   assert(sl[2].y<mid.y-10 && sl[0].y>mid.y+10,'north and south slots are oriented to seat position: '+JSON.stringify(layout));
+   assert(sl[3].x<mid.x-10 && sl[1].x>mid.x+10,'west and east slots are oriented to seat position: '+JSON.stringify(layout));
+   assert(Math.abs(sl[2].x-mid.x)<3 && Math.abs(sl[0].x-mid.x)<3,'top/bottom slots are horizontally centred');
+   assert(Math.abs(sl[1].y-mid.y)<3 && Math.abs(sl[3].y-mid.y)<3,'left/right slots are vertically centred');
+   assert(Object.values(sl).every(p=>p.top>=measurements.table.top-3&&p.bottom<=measurements.table.bottom+3),
+     'all four slot cards must be inside the felt');
+
    const score=await page.locator('#scorePanel').innerText();
    assert(score.toLowerCase().includes('team 1')&&score.toLowerCase().includes('team 2'),'score panel visible: '+JSON.stringify({score,errors}));
    await page.locator('#hand button.card:not([disabled])').first().click({timeout:6000});
@@ -91,6 +115,20 @@ try{
    await flight.first().waitFor({state:'attached',timeout:4500});
    assert(await flight.first().evaluate(el=>getComputedStyle(el).getPropertyValue('--dx').includes('px')),
     'flight animation must travel from a seat nameplate');
+   const trajectory=await page.evaluate(()=>{
+     const middle=el=>{const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}};
+     const from=middle(document.querySelector('.seat.s0 .seat-card'));
+     const target=middle(document.querySelector('#trick .trick-slot[data-slot-seat="0"]'));
+     const ghost=document.querySelector('.flying-card');
+     return {expectedDx:target.x-from.x,expectedDy:target.y-from.y,
+       actualDx:parseFloat(ghost.style.getPropertyValue('--dx')),
+       actualDy:parseFloat(ghost.style.getPropertyValue('--dy'))};
+   });
+   assert(Math.abs(trajectory.actualDx-trajectory.expectedDx)<3&&
+     Math.abs(trajectory.actualDy-trajectory.expectedDy)<3,
+     'card animation must land in the throwing player own slot: '+JSON.stringify(trajectory));
+   assert.equal(await page.locator('#trick .trick-slot.occupied').count(),1,
+     'one card must occupy exactly one seat slot');
    const play=page.locator('#trick .play-card[data-play-seat="0"] .card');
    await play.waitFor({state:'visible',timeout:4000});
    const colors=await page.evaluate(()=>({
@@ -98,9 +136,42 @@ try{
     card:getComputedStyle(document.querySelector('#trick .play-card[data-play-seat="0"] .card')).borderTopColor
    }));
    assert.equal(colors.plate,colors.card,'card border color must match player nameplate');
+   assert.equal(await page.locator('#trick .trick-slot[data-slot-seat="0"] .play-card[data-play-seat="0"]').count(),1,
+     'south card must land in south slot, not a common central pile');
+   await page.waitForTimeout(900);
+   assert.equal(await page.locator('#trick .trick-slot.is-arriving').count(),0,
+     'newly thrown cards must become visible after their flight animation');
    assert.equal(errors.length,0,'browser runtime errors: '+errors.join('; '));
    console.log('KLAVERJASSEN_TABLE_HAND_FLIGHT_PASS',viewport.width+'x'+viewport.height,
      'handInViewport=true','bidBadge=true','flight=true','matchingBorder=true');
+  }finally{await context.close();}
+ }
+
+ // Four cards in arbitrary play order must retain their seat-specific positions.
+ {
+  const {context,page,remote,errors}=await setup(390,780,'playing');
+  try{
+   remote.game.state.pending_trick={
+     winner:1,
+     cards:[{player:3,card:cards[3]},{player:0,card:cards[0]},{player:2,card:cards[2]},{player:1,card:cards[1]}],
+     roem:{points:0,items:[]},klopped:false
+   };
+   await page.reload({waitUntil:'domcontentloaded'});
+   await page.locator('#trick .trick-slot.occupied').first().waitFor({state:'visible'});
+   assert.equal(await page.locator('#trick .trick-slot.occupied').count(),4,'all four slots hold one card');
+   for(let seat=0;seat<4;seat++){
+     const slot=page.locator('#trick .trick-slot[data-slot-seat="'+seat+'"]');
+     assert.equal(await slot.locator('.play-card[data-play-seat="'+seat+'"]').count(),1,
+       'wrong card in seat-specific slot '+seat);
+     const colors=await page.evaluate(i=>({
+       plate:getComputedStyle(document.querySelector('.seat.s'+i+' .seat-card')).borderTopColor,
+       border:getComputedStyle(document.querySelector('.trick-slot[data-slot-seat="'+i+'"] .card')).borderTopColor
+     }),seat);
+     assert.equal(colors.border,colors.plate,'card and plate highlights mismatch at seat '+seat);
+   }
+   assert.equal(errors.length,0,'four-card slot JS errors: '+errors.join('; '));
+   console.log('KLAVERJASSEN_FOUR_SLOT_TRICK_PASS','allCardsVisible=true',
+      'northEastSouthWest=true','seatColorOutlines=true');
   }finally{await context.close();}
  }
  // A human clicks Klop: roem is persisted, announced and attributed to the proper team.
