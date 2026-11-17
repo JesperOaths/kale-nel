@@ -332,7 +332,6 @@ begin
 end;
 $hook$;
 revoke all on function kalenel_internal.kj_turn_push_hook() from public,anon,authenticated;
-drop trigger if exists kalenel_kj_turn_push_trigger on public.kalenel_klaverjassen_guest_rooms;
-create trigger kalenel_kj_turn_push_trigger after update of state
-on public.kalenel_klaverjassen_guest_rooms
-for each row execute function kalenel_internal.kj_turn_push_hook();
+-- Web Push trigger deliberately NOT attached here: Supabase's 100-function
+-- project limit currently prevents deploying kalenel-kj-turn-push.
+-- See guest_v1e_push_enable_after_edge.sql after a safe sender is available.
