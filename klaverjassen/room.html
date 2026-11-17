@@ -101,12 +101,199 @@
       .table.bidding-turn{min-height:710px}
     }
 
+
+
+    /* V2 table-first Klaverjassen cockpit: hand within felt, score panels in tabs. */
+    .shell{background:rgba(255,250,243,.97)}
+    .shell:not(.no-active-game) h1{font-size:clamp(21px,2.6vw,33px);margin:2px 0}
+    .shell:not(.no-active-game) .top{gap:7px}
+    .shell:not(.no-active-game) .top-actions{gap:6px}
+    .shell:not(.no-active-game) .top-actions>.btn{padding:8px 11px;font-size:12px}
+    .shell:not(.no-active-game) .status{font-size:12px;min-height:0;margin-top:2px}
+    .shell:not(.no-active-game) .roombar{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:8px 0}
+    .shell:not(.no-active-game) .stat{border-radius:13px;padding:6px 9px}
+    .shell:not(.no-active-game) .stat span{font-size:9px}
+    .shell:not(.no-active-game) .stat strong{font-size:clamp(12px,1.15vw,16px);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .game-layout{grid-template-columns:minmax(0,1fr) minmax(265px,310px);gap:10px;align-items:stretch}
+    .table{height:clamp(500px,calc(100dvh - 182px),820px);min-height:0;overflow:hidden;border-width:11px;border-radius:30px}
+    .table .center{top:44%;width:min(520px,calc(100% - 245px));max-height:calc(100% - 206px);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(215,173,88,.75) transparent;gap:7px}
+    .table.bidding-turn .center{top:40%;width:min(565px,calc(100% - 210px));max-height:calc(100% - 190px)}
+    .table .center>.panel:first-child{padding:10px}
+    .table .center .panel h2{font-size:15px;margin-bottom:5px}
+    .table .center .trick{min-height:110px;gap:6px;flex-wrap:wrap}
+    .table .center #centerCopy{font-size:12px}
+    .seat{width:clamp(112px,14vw,175px)}
+    .seat.s0{bottom:142px}
+    .seat.s2{top:2%}
+    .seat.s1{right:1%;top:42%}
+    .seat.s3{left:1%;top:42%}
+    .seat-card{position:relative;padding:8px;border-width:3px;border-radius:14px;min-height:62px}
+    .seat-card strong{font-size:clamp(11px,1vw,14px);line-height:1.15;overflow-wrap:anywhere}
+    .seat-card .tag{font-size:9px;margin:3px 1px 0;padding:3px 5px}
+    .seat-card.p0{border-color:var(--p0)}
+    .seat-card.p1{border-color:var(--p1)}
+    .seat-card.p2{border-color:var(--p2)}
+    .seat-card.p3{border-color:var(--p3)}
+    .seat-card.turn{outline:2px solid #fff;outline-offset:2px}
+    .seat-bid{position:absolute;left:50%;top:-22px;transform:translateX(-50%);z-index:8;
+      padding:3px 10px;border-radius:999px;min-width:54px;white-space:nowrap;
+      color:#17130f;background:#fff6d8;border:2px solid #bfa465;
+      box-shadow:0 4px 12px rgba(0,0,0,.18);font-weight:1000;font-size:12px}
+    .seat-bid.red{color:#a7192b}
+    .seat-bid.is-pass{background:#eee;color:#4f4f4f;border-color:#aaa}
+    .seat-bid.is-winning{background:#f3d682;border-color:#8a5d1f}
+    .play-card{text-align:center;min-width:0}
+    .play-card .card{width:58px;height:80px;font-size:19px;margin:auto;box-shadow:0 8px 12px rgba(0,0,0,.15)}
+    .play-card .card span{font-size:27px}
+    .play-card .muted{max-width:82px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:auto}
+    .play-card.p0 .card{border-color:var(--p0)}
+    .play-card.p1 .card{border-color:var(--p1)}
+    .play-card.p2 .card{border-color:var(--p2)}
+    .play-card.p3 .card{border-color:var(--p3)}
+    .hand-wrap{position:absolute!important;left:10px;right:10px;bottom:8px;z-index:20;
+      margin:0;padding:8px 10px 9px;border-radius:18px;
+      background:rgba(255,250,243,.96);backdrop-filter:blur(9px);
+      box-shadow:0 3px 16px rgba(0,0,0,.19)}
+    .hand-title{font-size:10px;margin-bottom:5px}
+    .hand{min-height:0;display:flex;gap:5px;align-items:center;justify-content:center;flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 4px}
+    .hand .card{flex:0 0 auto;width:clamp(41px,5.8vw,66px);height:clamp(66px,9vh,93px);font-size:clamp(17px,2vw,24px);border-width:2px;border-radius:10px}
+    .hand .card span{font-size:clamp(24px,2.6vw,33px)}
+    .hand button.card:not(:disabled){outline-width:2px}
+    .side{position:relative;top:auto;align-self:stretch;display:flex;flex-direction:column;
+      min-height:0;height:clamp(500px,calc(100dvh - 182px),820px);gap:0;overflow:hidden;
+      border:1px solid rgba(154,130,65,.2);border-radius:22px;background:#fff}
+    .side-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:8px;background:#f4eee4;border-bottom:1px solid var(--line)}
+    .side-tabs button{background:transparent;border:1px solid transparent;border-radius:10px;min-height:39px;
+      color:#6c6050;font:900 12px/1 Inter,system-ui,sans-serif;cursor:pointer}
+    .side-tabs button.is-active{background:#fff;color:#101812;border-color:#d7c7a5;box-shadow:0 3px 8px rgba(0,0,0,.05)}
+    .side-tabs button:focus-visible{outline:3px solid #217453;outline-offset:1px}
+    .side-pane{display:none;min-height:0;overflow-y:auto;flex:1;border:0;border-radius:0;padding:12px;box-shadow:none}
+    .side-pane.is-active{display:block}
+    .side-pane h2{font-size:17px;margin-bottom:10px}
+    .score-grid .score-cell{padding:9px}
+    .score-grid .score-cell strong{font-size:clamp(23px,2.8vw,33px)}
+    .score-cell .muted{font-size:12px;line-height:1.4}
+    .roem-tally{margin-top:7px}
+    .round-result-head{border-radius:15px;background:#eff7ee;padding:11px;margin:4px 0 12px}
+    .round-result-head.nat{background:#fff0eb;border:1px solid #cc7162}
+    .round-result-head strong{display:block;font-size:17px}
+    .round-result-head small{font-size:12px;line-height:1.6;color:#665d4f}
+    .round-detail{margin:7px 0;border:1px solid #ddcfb7;border-radius:13px;overflow:hidden}
+    .round-detail summary{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:10px;cursor:pointer;background:#fff9f1;font-size:12px}
+    .round-detail summary strong{font-size:13px}
+    .round-detail summary .nat-label{color:#a32720;font-weight:1000}
+    .round-detail summary .made-label{color:#217453;font-weight:900}
+    .round-detail[open] summary{background:#f5ead9}
+    .round-detail>div{padding:10px}
+    .round-score-row{margin:9px 0;font-size:12px}
+    .round-score-row>div:first-child{display:flex;justify-content:space-between;gap:5px}
+    .round-score-row strong{font-size:13px}
+    .round-bar{height:12px;border-radius:999px;overflow:hidden;background:#eee5d7;margin:4px 0}
+    .round-bar .round-fill{height:100%;border-radius:inherit;background:#c79b52}
+    .round-score-row.team2 .round-fill{background:#61a2e4}
+    .round-score-metadata{font-size:11px;color:#665d4f}
+    .round-event-list{display:grid;gap:6px;margin:9px 0}
+    .event-line{font-size:12px;line-height:1.5;padding:7px 9px;background:#f8f2e8;border-radius:10px}
+    .event-line.roem{background:#fef2cb}
+    .event-line.nat{background:#fff0eb;color:#8b2d20}
+    .table-announcement{position:absolute;right:13px;top:8px;z-index:22;max-width:min(350px,46%);
+      pointer-events:none;text-align:right}
+    .table-announcement:not(:empty){background:rgba(15,42,32,.88);color:#fff;padding:8px 12px;border:1px solid #d7ad58;
+      border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.2);font-size:12px;line-height:1.4}
+    .table-announcement strong{font-size:15px;display:block}
+    .table-announcement.nat{background:#63231c}
+    .flight-layer{position:absolute;inset:0;z-index:24;pointer-events:none;overflow:hidden}
+    .flying-card{position:absolute;display:flex;flex-direction:column;justify-content:center;align-items:center;
+      width:55px;height:76px;background:#fffaf3;border:4px solid var(--p0);border-radius:9px;
+      color:#17130f;font-weight:1000;font-size:18px;box-shadow:0 8px 25px rgba(0,0,0,.35);
+      animation:card-flight .78s cubic-bezier(.22,.72,.23,1) forwards}
+    .flying-card span{font-size:26px}
+    .flying-card.red{color:#a7192b}
+    .flying-card.p0{border-color:var(--p0)}.flying-card.p1{border-color:var(--p1)}
+    .flying-card.p2{border-color:var(--p2)}.flying-card.p3{border-color:var(--p3)}
+    @keyframes card-flight{
+      0%{opacity:.7;transform:translate(0,0) rotate(-20deg) scale(.78)}
+      30%{opacity:1;transform:translate(calc(var(--dx)*.26),calc(var(--dy)*.26 - 44px)) rotate(12deg) scale(1.2)}
+      100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(0deg) scale(.85)}
+    }
+    .event-toasts{position:fixed;z-index:150;pointer-events:none;left:50%;top:12%;
+      transform:translateX(-50%);display:grid;gap:7px;max-width:min(440px,90vw)}
+    .event-toast{background:rgba(16,77,56,.96);color:#fff;padding:11px 15px;border:1px solid #d7ad58;
+      border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);text-align:center;font:900 14px/1.35 Inter,system-ui,sans-serif;
+      animation:toast-in .3s ease-out}
+    .event-toast.nat{background:#86291d}.event-toast.roem{background:#7c5e16}
+    @keyframes toast-in{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+    @media(min-width:1101px) and (max-height:730px){
+      .table,.side{height:calc(100dvh - 153px);min-height:460px}
+      .table .center{top:43%;max-height:calc(100% - 187px)}
+      .table .trick{min-height:77px}
+      .seat.s0{bottom:125px}
+      .hand .card{height:66px;width:46px}
+      .hand .card span{font-size:23px}
+    }
+    @media(max-width:1100px){
+      .game-layout{grid-template-columns:minmax(0,1fr) 260px}
+      .shell:not(.no-active-game) .roombar{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .table .center{width:min(520px,calc(100% - 180px))}
+      .side{grid-template-columns:unset;display:flex}
+    }
+    @media(max-width:760px){
+      .wrap{padding:3px}
+      .shell{padding:8px;border-radius:14px}
+      .shell:not(.no-active-game) .top{gap:5px}
+      .shell:not(.no-active-game) .top-actions{gap:4px}
+      .shell:not(.no-active-game) .top-actions .btn{padding:7px 9px;font-size:11px}
+      .shell:not(.no-active-game) .roombar{grid-template-columns:repeat(4,minmax(0,1fr));margin:5px 0;gap:4px}
+      .shell:not(.no-active-game) .stat{padding:5px}
+      .shell:not(.no-active-game) .stat span{font-size:8px}
+      .shell:not(.no-active-game) .stat strong{font-size:11px}
+      .game-layout{grid-template-columns:minmax(0,1fr);gap:8px}
+      .table{height:calc(100dvh - 160px);min-height:440px;border-width:7px;border-radius:20px}
+      .table .center{width:calc(100% - 24px);top:39%;max-height:calc(100% - 160px)}
+      .table .center>.panel:first-child{padding:5px}
+      .table .center .trick{min-height:72px;gap:3px}
+      .table .center #actionPanel{padding:9px}
+      .table .center .play-card .card{width:40px;height:55px;font-size:14px}
+      .table .center .play-card .card span{font-size:19px}
+      .table .center .play-card .muted{font-size:9px!important;max-width:50px}
+      .seat{width:103px}
+      .seat-card{padding:5px;min-height:48px}
+      .seat-card strong{font-size:10px}
+      .seat-card .tag{font-size:8px}
+      .seat.s0{bottom:127px}.seat.s2{top:1%}
+      .seat.s1{right:0;top:18%}.seat.s3{left:0;top:18%}
+      .seat-bid{font-size:10px;top:-18px}
+      .hand-wrap{position:fixed!important;bottom:0;left:0;right:0;z-index:90;border-radius:15px 15px 0 0;
+        padding:7px 5px 8px;margin:0;box-shadow:0 -8px 28px rgba(0,0,0,.3)}
+      .hand-title{font-size:9px}
+      .hand .card{width:clamp(35px,10.8vw,53px);height:clamp(59px,17vw,79px);font-size:18px}
+      .hand .card span{font-size:24px}
+      .hand{gap:3px}
+      .side{height:auto;min-height:250px;max-height:520px;overflow:hidden}
+      .side-pane.is-active{max-height:450px}
+      .table-announcement{top:4px;right:5px;max-width:50%;font-size:10px}
+      .table-announcement strong{font-size:12px}
+      .table.bidding-turn .center{top:43%;max-height:calc(100% - 148px)}
+      .table.bidding-turn{height:calc(100dvh - 160px);min-height:470px}
+      .table.bidding-turn .seat.s0{bottom:130px}
+      .table.bidding-turn .seat.s1,.table.bidding-turn .seat.s3{top:14%}
+    }
+    @media(max-width:390px){
+      .hand .card{width:clamp(32px,10.4vw,41px);height:58px;font-size:16px}
+      .hand .card span{font-size:22px}
+      .seat{width:93px}.seat-card strong{font-size:9px}
+      .table .center{top:40%}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .flying-card,.event-toast,.trick .play-card{animation-duration:.01ms!important}
+    }
+
   </style>
 </head>
 <body>
   <div class="wrap"><main class="shell no-active-game">
     <div class="top">
-      <div><div class="muted">Kalenel online spelmodus</div><h1>Klaverjas tafel</h1><div id="status" class="status"></div></div>
+      <div><div class="muted">Kalenel · Klaverjassen</div><h1>Klaverjas tafel</h1><div id="status" class="status"></div></div>
       <div class="top-actions">
         <a class="btn secondary" href="./">Lobby</a>
         <a class="btn secondary" href="https://kalenel.nl/">Home</a>
@@ -162,18 +349,28 @@
           <div class="panel"><h2 id="centerTitle">Tafel</h2><div class="trick" id="trick"></div><div id="centerCopy" class="muted"></div></div>
           <div class="panel" id="actionPanel"></div>
         </div>
-      </section>
-      <aside class="side">
-        <section class="score-form" id="scorePanel"></section>
-        <section class="score-form" id="memoryPanel"></section>
-        <section class="score-form" id="roundPanel"></section>
-      </aside>
-    </section>
+        <div class="table-announcement" id="eventBanner" aria-live="polite"></div>
+        <div class="flight-layer" id="flightLayer" aria-hidden="true"></div>
     <section class="hand-wrap">
       <div class="hand-title"><span>Jouw hand · gesorteerd op troef en kleur</span><span id="handHint">Harten → Schoppen → Ruiten → Klaver</span></div>
       <section class="hand" id="hand"></section>
     </section>
-    <section class="log" id="log"></section>
+      </section>
+      <aside class="side" id="informationSide">
+        <nav class="side-tabs" aria-label="Speloverzicht">
+          <button type="button" data-pane="scorePanel" class="is-active" aria-selected="true">Stand</button>
+          <button type="button" data-pane="roundPanel" aria-selected="false">Rondes</button>
+          <button type="button" data-pane="log" aria-selected="false">Acties</button>
+          <button type="button" data-pane="memoryPanel" aria-selected="false">Info</button>
+        </nav>
+        <section class="score-form side-pane is-active" id="scorePanel"></section>
+        <section class="score-form side-pane" id="roundPanel"></section>
+        <section class="score-form side-pane" id="log"></section>
+        <section class="score-form side-pane" id="memoryPanel"></section>
+      </aside>
+    </section>
+
+    <div class="event-toasts" id="eventToasts" role="status" aria-live="polite" aria-atomic="false"></div>
   </main></div>
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
   <script>
@@ -181,7 +378,7 @@
     const K = window.GEJAST_KLAVERJAS_ONLINE;
     const $ = (id) => document.getElementById(id);
     const qs = new URLSearchParams(location.search);
-    const UI = { gameId: qs.get('game_id') || '', lobbyCode: (qs.get('room') || localStorage.getItem('kalenel_klaverjassen_guest_room_v1') || '').toUpperCase(), remote: null, busy: false, actionBusy: false, saving: false, botTimer: null, poll: null, animating:false, botRoster: [], bidSuit: 'hearts' };
+    const UI = { gameId: qs.get('game_id') || '', lobbyCode: (qs.get('room') || localStorage.getItem('kalenel_klaverjassen_guest_room_v1') || '').toUpperCase(), remote: null, busy: false, actionBusy: false, saving: false, botTimer: null, poll: null, animating:false, botRoster: [], bidSuit: 'hearts', activePane:'scorePanel', visualPrimed:false, seenPlays:new Set(), seenKlops:new Set(), lastRoundCount:0, lastSession:'', lastVisualPhase:'' };
     if (UI.lobbyCode && !window.KALENEL_KJ_GUEST.hasToken(UI.lobbyCode)) { location.replace('./?room='+encodeURIComponent(UI.lobbyCode)); return; }
     if (!UI.gameId && !UI.lobbyCode) {
       location.replace('./index.html' + (K.currentScope()==='family'?'?scope=family':''));
@@ -200,7 +397,7 @@
     function cardClass(card, extra=''){ const red = card.suit === 'hearts' || card.suit === 'diamonds'; return `card ${red?'red':''} ${extra} ${state().accepted_bid?.suit===card.suit?'trump-card':''}`; }
     function cardHtml(card, playable=false){ return `<button class="${cardClass(card)}" data-card="${esc(card.id)}" ${playable?'':'disabled'}>${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit]}</span></button>`; }
     function staticCardHtml(card, cls=''){ return `<div class="${cardClass(card, cls)}">${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit] || ''}</span></div>`; }
-    function playedCardHtml(play){ const card = play.card; const name = (state().players || [])[play.player]?.name || `S${play.player+1}`; return `<div class="play-card">${staticCardHtml(card, `p${play.player}`)}<div class="muted" style="text-align:center;font-size:12px;margin-top:4px">${esc(name)}</div></div>`; }
+    function playedCardHtml(play){ const card = play.card; const name = (state().players || [])[play.player]?.name || `S${play.player+1}`; return `<div class="play-card p${play.player}" data-play-seat="${play.player}" data-card-id="${esc(card.id)}">${staticCardHtml(card, `p${play.player}`)}<div class="muted" style="text-align:center;font-size:12px;margin-top:4px">${esc(name)}</div></div>`; }
     function makeRecoverySnapshot(st, reason='save'){ return { reason, saved_at:new Date().toISOString(), deal_nonce:st.deal_nonce || null, phase:st.phase, dealer:st.dealer, bidder_turn:st.bidder_turn ?? null, turn:st.turn ?? null, action_needed_seat:st.action_needed_seat ?? null, hands:st.hands || [], trick:st.trick || [], pending_trick:st.pending_trick || null, taken:st.taken || [], roem_by_team:st.roem_by_team || [0,0], totals:st.totals || [0,0], rounds:st.rounds || [] }; }
     function markProgress(st, reason='save'){ st.progress_tick = Number(st.progress_tick || 0) + 1; st.last_saved_at = new Date().toISOString(); st.last_progress_reason = reason; st.recovery_snapshot = makeRecoverySnapshot(st, reason); try{ localStorage.setItem('kalenel_klaverjassen_guest_progress_v1', JSON.stringify({ game_id: game().id || UI.gameId, lobby_code: game().lobby_code || UI.lobbyCode, at: st.last_saved_at, tick: st.progress_tick, phase: st.phase, round_count: (st.rounds||[]).length, recovery_reason: reason })); }catch(_){} return st; }
     function renderBotSlots(){ const el = $('botSlots'); if(!el) return; const used = UI.botRoster.slice(0,3); el.innerHTML = [0,1,2].map(i => { const bot = used[i]; return `<span class="bot-slot ${bot?.bot_difficulty || 'empty'}">${bot ? `S${bot.seat+1} ${bot.bot_difficulty === 'easy' ? 'Easy' : 'Hard'}` : `Bot ${i+1}`}</span>`; }).join(''); }
@@ -260,9 +457,136 @@
       } catch (err) { setStatus(err.message || 'Laden mislukt.'); }
     }
     function player(i){ return (state().players || UI.remote?.players || [])[i] || {}; }
+    function recordBid(st, seatNo, bid) {
+  const entry={seat:seatNo,action:bid?.action||'pass',mode:bid?.mode||null,suit:bid?.suit||null,
+    points:Number(bid?.points||0),kind:bid?.kind||null};
+  st.bid_history=[...(st.bid_history||[]),entry].slice(-20);
+}
+    function bidBadge(st, seatNo) {
+  const history=st.bid_history||[];
+  const last=history.filter(e=>Number(e.seat)===seatNo).slice(-1)[0]
+    || (Number(st.current_bid?.player)===seatNo?st.current_bid:null);
+  if(!last)return '';
+  const pass=last.action==='pass';
+  const suit=last.mode==='sans'?'SA':K.SUIT_SYMBOLS[last.suit]||'';
+  const number=last.points||'';
+  const active=!pass&&Number(st.current_bid?.player)===seatNo;
+  const red=['hearts','diamonds'].includes(last.suit);
+  const cls=`seat-bid ${red?'red':''} ${pass?'is-pass':''} ${active?'is-winning':''}`;
+  const label=pass?'Pas':`${suit} ${number}${last.kind==='pit'?' PIT':''}`;
+  return `<span class="${cls}" role="note" aria-label="Laatste bod ${esc(player(seatNo).name||'speler')}: ${esc(K.bidLabel(last))}">${esc(label)}</span>`;
+}
+    function recordKlop(st, seatNo, automatic=false){
+  const trick=st.pending_trick;
+  const points=Number(trick?.roem?.points||0);
+  if(points<=0)return;
+  const keys=(trick.roem?.items||[]).map(i=>i.label);
+  st.klop_events=[...(st.klop_events||[]),{seat:seatNo,team:K.TEAM_OF[seatNo],
+    points,labels:keys,automatic,at:new Date().toISOString(),
+    trick_no:(st.taken||[]).length+1}].slice(-14);
+}
+    function setPane(pane){
+  const names=['scorePanel','roundPanel','log','memoryPanel'];
+  if(!names.includes(pane))return;
+  UI.activePane=pane;
+  document.querySelectorAll('.side-tabs [data-pane]').forEach(button=>{
+    const selected=button.dataset.pane===pane;
+    button.classList.toggle('is-active',selected);
+    button.setAttribute('aria-selected',String(selected));
+  });
+  document.querySelectorAll('.side-pane').forEach(panel=>panel.classList.toggle('is-active',panel.id===pane));
+}
+    function toast(message,kind='normal'){
+  const holder=$('eventToasts');
+  if(!holder||!message)return;
+  const item=document.createElement('div');
+  item.className=`event-toast ${kind}`;
+  item.textContent=message;
+  holder.prepend(item);
+  while(holder.children.length>3)holder.lastElementChild?.remove();
+  setTimeout(()=>item.remove(),4700);
+}
+    function flightCard(play){
+  const stage=$('table'),layer=$('flightLayer');
+  const seatNo=Number(play?.player);
+  const from=stage?.querySelector(`.seat.s${seatNo} .seat-card`);
+  const to=$('trick');
+  const card=play?.card;
+  if(!stage||!layer||!from||!to||!card)return;
+  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+  const root=stage.getBoundingClientRect(),start=from.getBoundingClientRect(),end=to.getBoundingClientRect();
+  const sx=start.left+start.width/2-root.left,sy=start.top+start.height/2-root.top;
+  const ex=end.left+end.width/2-root.left,ey=end.top+end.height/2-root.top;
+  const ghost=document.createElement('div');
+  ghost.className=`flying-card p${seatNo} ${['diamonds','hearts'].includes(card.suit)?'red':''}`;
+  ghost.innerHTML=`${esc(card.rank)}<span>${esc(K.SUIT_SYMBOLS[card.suit]||'')}</span>`;
+  ghost.style.left=`${sx-27}px`;ghost.style.top=`${sy-38}px`;
+  ghost.style.setProperty('--dx',`${ex-sx}px`);
+  ghost.style.setProperty('--dy',`${ey-sy}px`);
+  layer.appendChild(ghost);
+  setTimeout(()=>ghost.remove(),870);
+}
+    function visualizeEvents(st){
+  const rounds=st.rounds||[];
+  const session=`${game().id||UI.lobbyCode||''}:${st.deal_nonce||'lobby'}:${rounds.length}`;
+  const plays=st.plays||[];
+  const keys=plays.map(p=>`${p.trick_no}:${p.player}:${p.card?.id||''}`);
+  const roem=st.klop_events||[];
+  if(!UI.visualPrimed){
+    UI.visualPrimed=true;
+    UI.lastSession=session;
+    UI.seenPlays=new Set(keys);
+    UI.seenKlops=new Set(roem.map(e=>`${e.trick_no}:${e.team}:${e.points}`));
+    UI.lastRoundCount=rounds.length;
+    UI.lastVisualPhase=st.phase;
+    if(st.phase==='finished'||st.phase==='roundOver')setPane('roundPanel');
+    return;
+  }
+  if(UI.lastSession!==session){
+    UI.lastSession=session;
+    UI.seenPlays=new Set(keys);
+    UI.seenKlops=new Set(roem.map(e=>`${e.trick_no}:${e.team}:${e.points}`));
+  }else{
+    const newPlays=plays.filter((_,i)=>!UI.seenPlays.has(keys[i]));
+    newPlays.slice(-6).forEach((play,i)=>setTimeout(()=>flightCard(play),Math.min(i*145,700)));
+    keys.forEach(key=>UI.seenPlays.add(key));
+    for(const entry of roem){
+      const key=`${entry.trick_no}:${entry.team}:${entry.points}`;
+      if(!UI.seenKlops.has(key))toast(`ROEM GEKLOPT! Team ${entry.team} +${entry.points} · ${entry.labels?.join(', ')||'Roem'}`,'roem');
+      UI.seenKlops.add(key);
+    }
+  }
+  if(rounds.length>UI.lastRoundCount){
+    const r=rounds[rounds.length-1];
+    const s=r?.result?.scores||[0,0];
+    toast(r?.result?.nat?`NAT! Team ${r.bidder_team} niet gehaald · ${s[0]}–${s[1]}`:`Ronde ${r.round} klaar · Team 1 +${s[0]} / Team 2 +${s[1]}`,r?.result?.nat?'nat':'normal');
+    setPane('roundPanel');
+  }
+  if(st.phase==='finished'&&UI.lastVisualPhase!=='finished'){
+    const winner=K.winnerTeam(st);
+    toast(`EINDSTAND ${st.totals?.[0]||0}–${st.totals?.[1]||0} · ${winner?'Team '+winner+' wint':'Gelijkspel'}`,'normal');
+    setPane('roundPanel');
+  }
+  UI.lastRoundCount=rounds.length;
+  UI.lastVisualPhase=st.phase;
+}
+    function renderAnnouncement(st){
+  const banner=$('eventBanner');
+  const r=(st.rounds||[]).at(-1);
+  const nat=!!r?.result?.nat;
+  banner.classList.toggle('nat',nat);
+  if(st.phase==='finished'){
+    const winner=K.winnerTeam(st);
+    banner.innerHTML=`<strong>🏆 Eindstand ${esc(st.totals?.[0]||0)} – ${esc(st.totals?.[1]||0)}</strong>${winner?`Team ${winner} wint het potje`:'Gelijkspel'}${nat?' · laatste ronde NAT':''}`;
+  }else if(st.phase==='roundOver'&&r){
+    banner.innerHTML=`<strong>${nat?'NAT!':'Ronde '+esc(r.round)+' klaar'}</strong>${nat?`Team ${esc(r.bidder_team)} niet gehaald. `:''}Team 1 +${esc(r.result?.scores?.[0]||0)} · Team 2 +${esc(r.result?.scores?.[1]||0)}`;
+  }else if(st.pending_trick?.klopped&&st.pending_trick.roem?.points){
+    banner.innerHTML=`<strong>♣ Roem geklopt!</strong>Team ${K.TEAM_OF[st.pending_trick.winner]} +${esc(st.pending_trick.roem.points)} punten`;
+  }else banner.textContent='';
+}
     function render(){
       const st = state(); const me = seat(); const players = st.players || UI.remote?.players || [];
-      document.querySelector('.shell')?.classList.toggle('no-active-game', !game().id || roomClosed());
+      document.querySelector('.shell')?.classList.toggle('no-active-game', !game().id);
       const ownBidTurn = st.phase === 'bidding' && me === st.bidder_turn;
       document.querySelector('.shell')?.classList.toggle('bidding-turn', ownBidTurn);
       $('table').classList.toggle('bidding-turn', ownBidTurn);
@@ -282,7 +606,7 @@
       $('seats').innerHTML = [0,1,2,3].map(i => {
         const p = players[i] || {};
         const turn = i === st.turn || i === st.bidder_turn || (st.pending_trick && i === st.pending_trick.winner);
-        return `<div class="seat s${i}"><div class="seat-card p${i} ${turn?'turn':''}"><strong>${esc(p.name || `Stoel ${i+1}`)}</strong><span class="tag">Team ${K.TEAM_OF[i]}</span>${K.isBotPlayer(p)?'<span class="tag bot">Bot</span>':''}${i===st.dealer?'<span class="tag dealer-chip">Deler ↻</span>':''}${i===me?'<span class="tag">Jij</span>':''}</div></div>`;
+        return `<div class="seat s${i}"><div class="seat-card p${i} ${turn?'turn':''}">${bidBadge(st,i)}<strong>${esc(p.name || `Stoel ${i+1}`)}</strong><span class="tag">Team ${K.TEAM_OF[i]}</span>${K.isBotPlayer(p)?'<span class="tag bot">Bot</span>':''}${i===st.dealer?'<span class="tag dealer-chip">Deler ↻</span>':''}${i===me?'<span class="tag">Jij</span>':''}</div></div>`;
       }).join('');
       const shownTrick = st.pending_trick?.cards || st.trick || [];
       $('trick').innerHTML = shownTrick.length ? shownTrick.map(playedCardHtml).join('') : '<div class="muted">Nog geen kaarten op tafel.</div>';
@@ -292,6 +616,9 @@
       renderHand(st, me);
       renderPanels(st, me);
       renderLog(st);
+      renderAnnouncement(st);
+      setPane(UI.activePane);
+      visualizeEvents(st);
       queueBotTurns();
     }
     function titleFor(st){ if(!game().id) return 'Maak of join een tafel'; if(st.phase==='bidding') return `Bieden: ${player(st.bidder_turn).name || '-'}`; if(st.pending_trick) return `Slag voor ${player(st.pending_trick.winner).name || '-'}`; if(st.phase==='playing') return `Beurt: ${player(st.turn).name || '-'}`; if(st.phase==='roundOver') return 'Ronde klaar'; if(st.phase==='finished') return 'Potje opgeslagen'; return 'Lobby'; }
@@ -365,6 +692,12 @@
         if ($('collectBtn')) $('collectBtn').onclick = () => runAction(collect, 520);
         return;
       }
+      if (st.phase === 'finished') {
+        const scores=st.totals||[0,0], winner=K.winnerTeam(st);
+        panel.innerHTML=`<h2>🏆 Pot afgelopen</h2><div class="muted">Eindstand: <strong>${esc(scores[0])} – ${esc(scores[1])}</strong> · ${winner?'Team '+winner+' wint':'Gelijkspel'}</div><button class="btn gold" id="showFinalRounds" type="button" style="margin-top:9px">Bekijk alle rondes</button>`;
+        $('showFinalRounds').onclick=()=>setPane('roundPanel');
+        return;
+      }
       if (st.phase === 'roundOver') { const done = K.shouldFinishGame(st); panel.innerHTML = done ? '<button class="btn gold" id="finishBtn" type="button">Potje opslaan</button>' : '<button class="btn gold" id="nextBtn" type="button">Volgende ronde</button><button class="btn secondary" id="finishBtn" type="button" style="margin-left:8px">Nu opslaan</button>'; if($('nextBtn')) $('nextBtn').onclick = () => runAction(nextRound); $('finishBtn').onclick = () => runAction(() => finishGame()); return; }
       panel.innerHTML = '<h2>Actie</h2><div class="muted">Wachten.</div>';
     }
@@ -385,25 +718,94 @@
       if(high >= total*(2/3)) return { label:'Kruip gevaar', cls:'', icon:'⚠️' };
       return { label:'Nog veilig', cls:'', icon:'♣' };
     }
+    function scoreBar(team,cardPoints,roem,awarded,roundTricks){
+  const numeric=Math.max(0,Number(cardPoints||0));
+  const percent=Math.min(100,Math.round(numeric/162*100));
+  return `<div class="round-score-row team${team}">
+    <div><strong>Team ${team} · +${esc(awarded||0)} punten</strong><span>${esc(roundTricks||0)} slagen</span></div>
+    <div class="round-bar" role="meter" aria-label="Team ${team} kaartpunten" aria-valuemin="0" aria-valuemax="162" aria-valuenow="${esc(numeric)}"><div class="round-fill" style="width:${percent}%"></div></div>
+    <div class="round-score-metadata">${esc(numeric)} kaartpunten · ${esc(roem||0)} roem · ${esc(awarded||0)} toegekend</div>
+  </div>`;
+}
+    function roundCard(round,open=false){
+  const result=round?.result||{},scores=result.scores||[0,0],cards=result.cardScores||[0,0],
+    roem=round?.roem_by_team||[0,0],tricks=result.trickCounts||[0,0];
+  const nat=!!result.nat,bidTeam=Number(round.bidder_team||round.bid?.team||1);
+  const bid=K.bidLabel(round.bid);
+  const detail=nat
+    ?`Team ${bidTeam} ging nat: ${esc(cards[bidTeam-1]||0)} van ${esc(result.target||0)} benodigde kaartpunten. De tegenpartij ontvangt 162 kaartpunten plus alle roem.`
+    :`Team ${bidTeam} haalde het bod: ${esc(cards[bidTeam-1]||0)} / ${esc(result.target||0)} kaartpunten.`;
+  return `<details class="round-detail" ${open?'open':''}>
+    <summary><strong>Ronde ${esc(round.round||'?')} · ${esc(bid)}</strong><span class="${nat?'nat-label':'made-label'}">${nat?'NAT':'Gehaald'} · ${esc(scores[0]||0)}–${esc(scores[1]||0)}</span></summary>
+    <div>
+      <div class="round-result-head ${nat?'nat':''}"><strong>${nat?'❗ NAT · bod niet gehaald':'✓ Bod gehaald'}</strong><small>${detail}</small></div>
+      ${scoreBar(1,cards[0],roem[0],scores[0],tricks[0])}
+      ${scoreBar(2,cards[1],roem[1],scores[1],tricks[1])}
+      <div class="event-line">Tussenstand na deze ronde: <strong>${esc(round.totals?.[0]||0)} – ${esc(round.totals?.[1]||0)}</strong></div>
+      ${round.bid_history?.length?`<div class="round-event-list"><strong>Biedverloop</strong>${round.bid_history.map(b=>`<div class="event-line">Stoel ${esc(Number(b.seat)+1)} · ${esc(K.bidLabel(b))}</div>`).join('')}</div>`:''}
+      ${round.klop_events?.length?`<div class="round-event-list"><strong>Roem geklopt</strong>${round.klop_events.map(e=>`<div class="event-line roem">♣ ${esc(e.automatic?'Automatisch':'Klop')} · ${esc(e.points)} punten voor Team ${esc(e.team)} · ${esc(e.labels?.join(', ')||'Roem')}</div>`).join('')}</div>`:''}
+    </div>
+  </details>`;
+}
     function renderPanels(st, me){
-      const players = st.players || [];
-      const d = dangerLabel(st);
-      $('scorePanel').innerHTML = `<h2>Scoreformulier</h2><div class="score-grid"><div class="score-cell"><span>Team 1</span><strong>${st.totals?.[0]||0}</strong><div class="muted">${players.filter(p=>p.team===1).map(p=>esc(p.name)).join(' + ') || '-'}</div></div><div class="score-cell"><span>Team 2</span><strong>${st.totals?.[1]||0}</strong><div class="muted">${players.filter(p=>p.team===2).map(p=>esc(p.name)).join(' + ') || '-'}</div></div></div><div class="roem-tally"><div class="score-cell"><span>Roem T1 ronde</span><strong>${st.roem_by_team?.[0]||0}</strong></div><div class="score-cell"><span>Roem T2 ronde</span><strong>${st.roem_by_team?.[1]||0}</strong></div></div><div class="score-cell danger-zone ${d.cls}" style="margin-top:8px"><span>Kruipmeter</span><div class="danger-icon">${d.icon}</div><strong style="font-size:16px">${esc(d.label)}</strong><div class="muted">Inschatting op basis van de huidige tussenstand.</div></div>`;
-      const trump = st.accepted_bid?.suit || null;
-      const trumpCards = trump && trump !== 'sans' ? [{rank:'J',suit:trump,id:`${trump}-J`},{rank:'9',suit:trump,id:`${trump}-9`}] : [{rank:'S',suit:'sans',id:'sans-1'},{rank:'A',suit:'sans',id:'sans-2'}];
-      const last = st.last_trick || (st.taken || [])[Math.max(0,(st.taken||[]).length-1)] || null;
-      const signalRows = Object.values(K.signalMemory ? K.signalMemory(st) : {});
-      $('memoryPanel').innerHTML = `<h2>Geheugensteun</h2><div class="trump-memory"><strong>Troef</strong>${trumpCards.map(c=>trump==='sans'?`<div class="card mini-card"><span>Sans</span></div>`:staticCardHtml(c,'mini-card')).join('')}</div><div class="round-card"><strong>Laatste slag</strong><div class="last-trick-mini">${last?.cards?.length ? last.cards.map(p=>staticCardHtml(p.card,`mini-card p${p.player}`)).join('') : '<span class="muted">Nog geen slag.</span>'}</div></div><div class="round-card"><strong>Aan/afseinen</strong><div class="muted">${signalRows.length ? signalRows.slice(-4).map(sig => `${esc(player(sig.player).name || 'Partner')} ${sig.type} ${esc(K.SUIT_LABELS[sig.suit] || sig.suit)}`).join('<br>') : 'Nog geen signalen gezien.'}</div></div>`;
-      const r = lastRound(st);
-      const nat = r?.result?.nat;
-      const mmrRows = Object.entries(st.ai_mmr || {});
-      $('roundPanel').innerHTML = `<h2>Ronde-einde</h2>${r ? `<div class="round-card ${nat?'nat':''}"><strong>Ronde ${esc(r.round)}</strong><div class="score-grid" style="margin-top:8px"><div class="score-cell"><span>Team 1 kreeg</span><strong>${r.result?.scores?.[0]||0}</strong><div class="muted">Kaartpunten: ${r.result?.cardScores?.[0]||0} · Roem: ${r.roem_by_team?.[0]||0}</div></div><div class="score-cell"><span>Team 2 kreeg</span><strong>${r.result?.scores?.[1]||0}</strong><div class="muted">Kaartpunten: ${r.result?.cardScores?.[1]||0} · Roem: ${r.roem_by_team?.[1]||0}</div></div></div><div class="muted" style="margin-top:8px">${nat ? `NAT: Team ${r.bidder_team} haalde ${r.result?.cardScores?.[r.bidder_team-1]||0} kaartpunten voor ${r.result?.target||82}. Alle punten en roem naar de tegenpartij.` : `Gehaald: Team ${r.bidder_team} haalde ${r.result?.cardScores?.[r.bidder_team-1]||0} kaartpunten voor ${r.result?.target||82}.`}</div></div>` : '<div class="muted">Nog geen ronde afgerond.</div>'}`;
-      if (mmrRows.length) $('roundPanel').insertAdjacentHTML('beforeend', `<div class="round-card"><strong>AI MMR</strong><div class="mmr-list">${mmrRows.map(([name,row])=>`<div class="mmr-pill">${esc(name)}<br><strong>${Number(row.rating || 1200)}</strong> <span class="muted">${Number(row.last_change||0)>=0?'+':''}${Number(row.last_change||0)}</span></div>`).join('')}</div></div>`);
-    }
+  const players=st.players||[];
+  const totals=st.totals||[0,0],roem=st.roem_by_team||[0,0];
+  const winner=K.winnerTeam(st);
+  const finished=st.phase==='finished';
+  const names=team=>players.filter(p=>p.team===team).map(p=>esc(p.name)).join(' + ')||'-';
+  const d=dangerLabel(st);
+  const recent=(st.rounds||[]).at(-1);
+  const nat=recent?.result?.nat;
+  const pending=st.pending_trick;
+  const roemHint=pending?.roem?.points
+    ?`<div class="event-line roem">♣ ${pending.klopped?'Roem geklopt':'Roem mogelijk'} · Team ${K.TEAM_OF[pending.winner]} · ${esc(pending.roem.points)} punten ${pending.roem.items?.map(i=>esc(i.label)).join(', ')||''}</div>`
+    :'';
+  $('scorePanel').innerHTML=`<h2>${finished?'Eindstand':'Stand'}</h2>
+    ${finished?`<div class="round-result-head"><strong>${winner?'🏆 Team '+winner+' wint!':'Gelijkspel'}</strong><small>Definitieve score · ${esc(totals[0])} – ${esc(totals[1])}</small></div>`:''}
+    <div class="score-grid">
+      <div class="score-cell"><span>Team 1</span><strong>${esc(totals[0])}</strong><div class="muted">${names(1)}</div></div>
+      <div class="score-cell"><span>Team 2</span><strong>${esc(totals[1])}</strong><div class="muted">${names(2)}</div></div>
+    </div>
+    <div class="roem-tally"><div class="score-cell"><span>Roem team 1</span><strong>${esc(roem[0])}</strong></div><div class="score-cell"><span>Roem team 2</span><strong>${esc(roem[1])}</strong></div></div>
+    ${roemHint}
+    ${recent?`<div class="round-card ${nat?'nat':''}"><strong>Laatste ronde ${esc(recent.round)}: ${nat?'NAT':'gehaald'}</strong><div class="muted">Team 1 +${esc(recent.result?.scores?.[0]||0)} · Team 2 +${esc(recent.result?.scores?.[1]||0)}</div><button class="btn secondary" type="button" data-show-pane="roundPanel" style="margin-top:8px">Bekijk rondeverloop</button></div>`:''}
+    ${!finished&&(Number(totals[0]||0)+Number(totals[1]||0))>0?`<div class="event-line"><strong>${esc(d.icon)} ${esc(d.label)}</strong> · Kruipmeter</div>`:''}`;
+  const last=st.last_trick||(st.taken||[]).at(-1)||null;
+  const trump=st.accepted_bid?.suit||null;
+  const trumpCard=trump&&trump!=='sans'
+    ?[{rank:'J',suit:trump,id:`${trump}-J`},{rank:'9',suit:trump,id:`${trump}-9`}]
+    :[{rank:'S',suit:'sans',id:'sans-1'},{rank:'A',suit:'sans',id:'sans-2'}];
+  const signals=Object.values(K.signalMemory?K.signalMemory(st):{});
+  const mmr=Object.entries(st.ai_mmr||{});
+  $('memoryPanel').innerHTML=`<h2>Spelinformatie</h2>
+    <div class="trump-memory"><strong>${esc(K.bidLabel(st.accepted_bid||st.current_bid))}</strong>${trumpCard.map(c=>trump==='sans'||!trump?`<div class="card mini-card"><span>SA</span></div>`:staticCardHtml(c,'mini-card')).join('')}</div>
+    <div class="round-card"><strong>Laatste slag</strong><div class="last-trick-mini">${last?.cards?.length?last.cards.map(p=>staticCardHtml(p.card,`mini-card p${p.player}`)).join(''):'<span class="muted">Nog geen slag</span>'}</div>${last?.winner!==undefined?`<div class="muted">Gewonnen door ${esc(player(last.winner).name||'Speler')}</div>`:''}</div>
+    <div class="round-card"><strong>Aan-/afseinen</strong><div class="muted">${signals.length?signals.slice(-4).map(e=>`${esc(player(e.player).name||'Speler')}: ${esc(e.type)} ${esc(K.SUIT_LABELS[e.suit]||e.suit)}`).join(' · '):'Nog geen signalen'}</div></div>
+    ${mmr.length?`<div class="round-card"><strong>AI-prestatie</strong><div class="mmr-list">${mmr.map(([name,row])=>`<div class="mmr-pill">${esc(name)}: <strong>${esc(row.rating||1200)}</strong> (${Number(row.last_change||0)>0?'+':''}${esc(row.last_change||0)})</div>`).join('')}</div></div>`:''}`;
+  const rounds=st.rounds||[];
+  $('roundPanel').innerHTML=`<h2>Rondeoverzicht <span class="muted">${rounds.length} gespeeld</span></h2>
+    ${finished?`<div class="round-result-head"><strong>🏆 Eindstand ${esc(totals[0])} – ${esc(totals[1])}</strong><small>${winner?'Team '+winner+' wint':'Gelijkspel'} · ${esc(rounds.length)} rondes</small></div>`:''}
+    ${rounds.length?rounds.slice().reverse().map((r,i)=>roundCard(r,i===0)).join(''):'<p class="muted">De rondeuitslag verschijnt hier na acht slagen. Je ziet dan het bod, de kaartpunten, roem, NAT en de totale tussenstand.</p>'}
+    ${st.phase==='bidding'?`<div class="event-line">Ronde ${rounds.length+1}: bieden is bezig.</div>`:''}`;
+  $('scorePanel').querySelectorAll('[data-show-pane]').forEach(btn=>btn.onclick=()=>setPane(btn.dataset.showPane));
+}
     function renderLog(st){
-      const coach = (st.rounds || []).flatMap(r => r.coach_recap || []).slice(-8);
-      $('log').innerHTML = `${(game().log || []).slice(0,8).map(row => `<div>${esc(row.text || row)}</div>`).join('')}${coach.length ? `<section class="coach">${coach.map(c => `<div><strong>${esc(c.player_name || 'Speler')} slag ${esc(c.trick_no)}:</strong> ${esc(c.verdict)} <span class="coach-delta ${Number(c.delta||0)>=0?'good':'bad'}">${Number(c.delta||0)>=0?'+':''}${esc(c.delta||0)}</span><br>AI: ${esc(c.ai_card?.rank || '')}${esc(K.SUIT_SYMBOLS[c.ai_card?.suit] || '')}, gespeeld: ${esc(c.played?.rank || '')}${esc(K.SUIT_SYMBOLS[c.played?.suit] || '')}</div>`).join('')}</section>` : ''}`;
-    }
+  const currentBids=(st.bid_history||[]).slice(-12).reverse();
+  const currentKlops=(st.klop_events||[]).slice(-8).reverse();
+  const currentCards=(st.plays||[]).slice(-8).reverse();
+  const rounds=(st.rounds||[]).slice(-5).reverse();
+  const official=(game().log||[]).slice(0,8);
+  const coach=(st.rounds||[]).flatMap(r=>r.coach_recap||[]).slice(-4);
+  $('log').innerHTML=`<h2>Spelacties</h2>
+    ${st.phase==='finished'?`<div class="event-line"><strong>Eindstand: ${esc(st.totals?.[0]||0)} – ${esc(st.totals?.[1]||0)}</strong></div>`:''}
+    ${rounds.map(r=>`<div class="event-line ${r.result?.nat?'nat':''}"><strong>Ronde ${esc(r.round)}: ${r.result?.nat?'NAT':'gehaald'}</strong> · ${esc(K.bidLabel(r.bid))} · Team 1 +${esc(r.result?.scores?.[0]||0)} / Team 2 +${esc(r.result?.scores?.[1]||0)}</div>`).join('')}
+    ${currentKlops.map(e=>`<div class="event-line roem"><strong>♣ KLOP!</strong> ${esc(player(e.seat).name||'Speler')} · Team ${esc(e.team)} +${esc(e.points)} roem · ${esc(e.labels?.join(', ')||'Roem')}</div>`).join('')}
+    ${currentBids.map(b=>`<div class="event-line"><strong>${esc(player(b.seat).name||'Speler')}:</strong> ${esc(K.bidLabel(b))}</div>`).join('')}
+    ${currentCards.map(p=>`<div class="event-line"><strong>${esc(player(p.player).name||'Speler')}</strong> speelde ${esc(p.card?.rank||'')}${esc(K.SUIT_SYMBOLS[p.card?.suit]||'')}</div>`).join('')}
+    ${official.map(e=>`<div class="event-line">${esc(e.text||e)}</div>`).join('')}
+    ${coach.map(e=>`<div class="event-line">AI-tip · ${esc(e.player_name||'Speler')}: ${esc(e.verdict||'')}</div>`).join('')}
+    ${!(rounds.length+currentKlops.length+currentBids.length+currentCards.length+official.length+coach.length)?'<p class="muted">Nieuwe biedingen, gespeelde kaarten, roem en rondeuitslagen verschijnen hier.</p>':''}`;
+}
     async function createGame(){
       if(hasActiveRoom()) return setStatus('Je zit al aan een actieve tafel. Open, verlaat of sluit die eerst.');
       try { UI.remote = await K.rpc('klaverjas_online_create', { session_token: K.sessionToken(), site_scope_input: K.currentScope(), settings_input: { finish_mode: $('finishMode').value || 'fixed_rounds', bot_roster: UI.botRoster, bot_count: UI.botRoster.length } }); UI.gameId = game().id; UI.lobbyCode = game().lobby_code; localStorage.setItem('kalenel_klaverjassen_guest_room_v1', UI.lobbyCode); writeUrl(); render(); loadRooms(); const botCount = (state().players || []).filter(K.isBotPlayer).length; setStatus(botCount >= 3 ? 'Bottafel is vol en klaar om te starten.' : (botCount ? 'Bottafel gemaakt. Voeg nog bots toe of wacht op spelers.' : 'Tafel gemaakt.'), true); } catch(err){ setStatus(err.message); }
@@ -432,20 +834,20 @@
     async function addBotToLobby(difficulty){ const st = structuredClone(state()); if(!game().id || st.phase !== 'lobby') return setStatus('Bots kun je alleen in de lobby toevoegen.'); const seatNo = nextBotSeat(st.players || []); if(seatNo < 0) return setStatus('De tafel zit vol. Start de pot of maak een nieuwe tafel.'); st.players = [...(st.players || []), makeBot(seatNo, difficulty)].sort((a,b)=>a.seat-b.seat); st.settings = { ...(st.settings || {}), bot_count: st.players.filter(K.isBotPlayer).length }; await save(st, true, 'add_bot'); setStatus(st.players.length >= 4 ? 'Tafel vol. Start de botpot wanneer je klaar bent.' : `${difficulty === 'easy' ? 'Easy' : 'Hard'} bot toegevoegd.`, true); }
     async function startRound(){ $('shuffleNote').style.display='block'; await wait(650); const players = (UI.remote.players || state().players || []).map(p => ({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); await save(K.newClientState(players, Number(state().dealer ?? game().dealer_index ?? 0), state(), { finish_mode: $('finishMode').value || 'fixed_rounds', bot_count: players.filter(p=>p.is_bot).length }), true, 'start_round'); $('shuffleNote').style.display='none'; }
     function resetDealAfterFourPasses(st){ const players = (st.players||[]).map(p=>({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); const fresh = K.newClientState(players, st.dealer || 0, { ...st, rounds: st.rounds||[], totals: st.totals||[0,0], ai_mmr:st.ai_mmr||{} }, st.settings || { finish_mode:$('finishMode').value||'fixed_rounds' }); fresh.redeal_count = Number(st.redeal_count||0)+1; fresh.last_redeal_reason = 'four_passes_same_dealer'; fresh.rounds = st.rounds || []; fresh.totals = st.totals || [0,0]; return fresh; }
-    async function placeBid(bid){ let st = structuredClone(state()); if(!K.isValidBid(bid, st.current_bid)) return setStatus('Ongeldig bod.'); if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ $('shuffleNote').style.display='block'; await wait(700); st = resetDealAfterFourPasses(st); $('shuffleNote').style.display='none'; } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seat(), team: K.TEAM_OF[seat()] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'bid'); }
+    async function placeBid(bid){ let st = structuredClone(state()); if(!K.isValidBid(bid, st.current_bid)) return setStatus('Ongeldig bod.'); recordBid(st,seat(),bid); if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ $('shuffleNote').style.display='block'; await wait(700); st = resetDealAfterFourPasses(st); $('shuffleNote').style.display='none'; } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seat(), team: K.TEAM_OF[seat()] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'bid'); }
     async function playCard(cardId){ const st = structuredClone(state()); const me = seat(); const hand = st.hands[me] || []; const card = hand.find(c => c.id === cardId); if(!card) return; const legal = new Set(K.legalCards(hand, st.trick || [], me, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return setStatus('Die kaart mag niet volgens de Amsterdamse regels.'); const ai = K.aiChoice(hand, st.trick || [], me, st.accepted_bid?.suit, st); st.hands[me] = hand.filter(c => c.id !== card.id); st.trick.push({ player: me, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: me, player_name: player(me)?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (me + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'play_card'); }
-    async function klop(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner] || st.pending_trick.klopped) return; st.roem_by_team[K.TEAM_OF[me]-1] += Number(st.pending_trick.roem?.points || 0); st.pending_trick.klopped = true; await save(st, true, 'klop_roem'); }
-    async function collect(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner]) return; st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = st.pending_trick.winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)) await finishGame(st); else await save(st, true, 'round_over'); return; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'collect_trick'); }
+    async function klop(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner] || st.pending_trick.klopped) return; st.roem_by_team[K.TEAM_OF[me]-1] += Number(st.pending_trick.roem?.points || 0); st.pending_trick.klopped = true; recordKlop(st,me,false); await save(st, true, 'klop_roem'); }
+    async function collect(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner]) return; st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = st.pending_trick.winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], bid_history: (st.bid_history || []).slice(-20), klop_events:(st.klop_events||[]).slice(-14), saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)) await finishGame(st); else await save(st, true, 'round_over'); return; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'collect_trick'); }
     async function nextRound(){ $('shuffleNote').style.display='block'; await wait(650); const st = K.newClientState((state().players||[]).map(p => ({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })), state().dealer || 0, state(), state().settings || { finish_mode:$('finishMode').value || 'fixed_rounds' }); await save(st, true, 'next_round'); $('shuffleNote').style.display='none'; }
     async function finishGame(existing){ const st = existing || structuredClone(state()); const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); st.action_needed_seat=null; await save(st, true, 'finish_game'); setStatus(K.hasBots(st) ? 'Botpotje afgerond. De uitslag blijft in deze gastentafel.' : 'Uitslag bewaard in deze gastentafel.', true); loadRooms(); }
     function isBotSeat(st, seatNo){ return K.isBotPlayer((st.players || [])[seatNo]); }
-    function applyBid(st, seatNo, bid){ if(!K.isValidBid(bid, st.current_bid)) bid = { action:'pass' }; if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ const players = (st.players||[]).map(p=>({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); const fresh = K.newClientState(players, st.dealer || 0, st, st.settings); Object.assign(st, fresh, { redeal_count:Number(st.redeal_count||0)+1, last_redeal_reason:'four_passes_same_dealer' }); } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seatNo, team: K.TEAM_OF[seatNo] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); }
+    function applyBid(st, seatNo, bid){ if(!K.isValidBid(bid, st.current_bid)) bid = { action:'pass' }; recordBid(st,seatNo,bid); if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ const players = (st.players||[]).map(p=>({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); const fresh = K.newClientState(players, st.dealer || 0, st, st.settings); Object.assign(st, fresh, { redeal_count:Number(st.redeal_count||0)+1, last_redeal_reason:'four_passes_same_dealer' }); } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seatNo, team: K.TEAM_OF[seatNo] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); }
     function applyBotCard(st, seatNo){ const hand = st.hands?.[seatNo] || []; const card = K.aiChoice(hand, st.trick || [], seatNo, st.accepted_bid?.suit, st, K.botDifficulty ? K.botDifficulty(st.players?.[seatNo]) : undefined); if(!card) return false; const legal = new Set(K.legalCards(hand, st.trick || [], seatNo, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return false; const ai = K.aiChoice(hand, st.trick || [], seatNo, st.accepted_bid?.suit, st, 'hard'); st.hands[seatNo] = hand.filter(c => c.id !== card.id); st.trick.push({ player: seatNo, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: seatNo, player_name: (st.players||[])[seatNo]?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (seatNo + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); return true; }
-    function applyCollect(st){ const winner = st.pending_trick?.winner; if(winner == null) return false; const roem = Number(st.pending_trick.roem?.points || 0); if(roem && !st.pending_trick.klopped) { st.roem_by_team[K.TEAM_OF[winner]-1] += roem; st.pending_trick.klopped = true; } st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)){ const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); } } st.action_deadline_at=K.actionDeadline(); return true; }
+    function applyCollect(st){ const winner = st.pending_trick?.winner; if(winner == null) return false; const roem = Number(st.pending_trick.roem?.points || 0); if(roem && !st.pending_trick.klopped) { st.roem_by_team[K.TEAM_OF[winner]-1] += roem; st.pending_trick.klopped = true; recordKlop(st,winner,true); } st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], bid_history: (st.bid_history || []).slice(-20), klop_events:(st.klop_events||[]).slice(-14), saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)){ const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); } } st.action_deadline_at=K.actionDeadline(); return true; }
     function queueBotTurns(){ if(UI.busy || UI.botTimer) return; const st = state(); if(!K.hasBots(st) || st.phase === 'finished' || st.phase === 'roundOver') return; if((st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)) || (st.phase === 'playing' && ((st.pending_trick && isBotSeat(st, st.pending_trick.winner)) || (!st.pending_trick && isBotSeat(st, st.turn))))){ UI.botTimer = setTimeout(() => { UI.botTimer = null; runBotTurns().catch((err)=>setStatus(err?.message || 'Botzet kon niet worden opgeslagen.')); }, 950); } }
     async function runBotTurns(){ if(UI.busy) return; let st = structuredClone(state()); if(!K.hasBots(st)) return; let changed = false; UI.busy = true; try{ for(let guard=0; guard<80; guard++){ await wait(360); if(st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)){ applyBid(st, st.bidder_turn, K.botBid(st, st.bidder_turn)); changed = true; continue; } if(st.phase === 'playing' && st.pending_trick && isBotSeat(st, st.pending_trick.winner)){ await wait(600); if(!applyCollect(st)) break; changed = true; if(st.phase !== 'playing') break; continue; } if(st.phase === 'playing' && !st.pending_trick && isBotSeat(st, st.turn)){ if(!applyBotCard(st, st.turn)) break; changed = true; continue; } break; } if(changed) await save(st, true, 'bot_turns'); } finally { UI.busy = false; } }
     async function loadRooms(){ try{ const data = await K.rpc('klaverjas_online_list_open', { session_token: K.sessionToken(), site_scope_input: K.currentScope() }); const rows = Array.isArray(data) ? data : []; $('rooms').innerHTML = rows.length ? rows.map(r => `<article class="room-card ${r.has_me ? 'mine' : ''}"><strong>${esc(r.lobby_code)}</strong><div class="muted">${esc(r.status)} · host ${esc(r.created_by_player_name || '-')}</div><div class="room-meta"><span class="room-pill">${esc(r.player_count)}/4 stoelen</span><span class="room-pill">${esc(r.human_count || 0)} mensen</span><span class="room-pill">${esc(r.bot_count || 0)} bots</span>${r.has_me ? '<span class="room-pill">jouw tafel</span>' : ''}</div><div class="room-actions"><button class="btn secondary" data-room="${esc(r.lobby_code)}" type="button">Open</button>${r.is_host ? `<button class="btn danger" data-delete-room="${esc(r.lobby_code)}" data-delete-id="${esc(r.id)}" type="button">Sluit</button>` : ''}</div></article>`).join('') : '<div class="muted">Geen open tafels. Maak links een nieuwe tafel.</div>'; $('rooms').querySelectorAll('[data-room]').forEach(btn => btn.onclick = () => { $('codeInput').value = btn.dataset.room; runAction(joinGame); }); $('rooms').querySelectorAll('[data-delete-room]').forEach(btn => btn.onclick = () => deleteRoom(btn.dataset.deleteId || null, btn.dataset.deleteRoom || null)); }catch(_){ $('rooms').innerHTML = '<div class="muted">Open tafels laden lukte niet.</div>'; } }
-    $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; $('leaveBtn').onclick = leaveTable; $('deleteRoomBtnTop').onclick = () => deleteRoom(); $('addEasyBotBtn').onclick = () => addBotDraft('easy'); $('addHardBotBtn').onclick = () => addBotDraft('hard'); $('clearBotsBtn').onclick = clearBotDraft; renderBotSlots(); if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); UI.poll = setInterval(() => { if(!document.hidden) load(); }, 15000);
+    document.querySelectorAll('.side-tabs [data-pane]').forEach(btn=>btn.addEventListener('click',()=>setPane(btn.dataset.pane))); $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; $('leaveBtn').onclick = leaveTable; $('deleteRoomBtnTop').onclick = () => deleteRoom(); $('addEasyBotBtn').onclick = () => addBotDraft('easy'); $('addHardBotBtn').onclick = () => addBotDraft('hard'); $('clearBotsBtn').onclick = clearBotDraft; renderBotSlots(); if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); UI.poll = setInterval(() => { if(!document.hidden) load(); }, 15000);
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
