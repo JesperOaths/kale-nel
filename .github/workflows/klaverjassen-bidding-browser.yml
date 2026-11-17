@@ -6,6 +6,9 @@ on:
       - 'scripts/klaverjassen-guest-bidding-browser.mjs'
       - 'scripts/klaverjassen-table-ux-v2-browser.mjs'
       - 'scripts/klaverjassen-guest-async-room-browser.mjs'
+      - 'scripts/klaverjassen-guest-v1e-browser.mjs'
+      - 'klaverjassen/guest-enhancements.js'
+      - 'klaverjassen/turn-sw.js'
       - 'klaverjassen/index.html'
       - 'klaverjassen/guest-bridge.js'
       - '.github/workflows/klaverjassen-bidding-browser.yml'
@@ -34,6 +37,10 @@ jobs:
           node --check scripts/klaverjassen-guest-bidding-browser.mjs
           node --check scripts/klaverjassen-table-ux-v2-browser.mjs
           node --check scripts/klaverjassen-guest-async-room-browser.mjs
+          node --check scripts/klaverjassen-guest-v1e-browser.mjs
+          node --check klaverjassen/guest-bridge.js
+          node --check klaverjassen/guest-enhancements.js
+          node --check klaverjassen/turn-sw.js
           command -v google-chrome
           python3 -m http.server 8080 --bind 127.0.0.1 --directory . >/tmp/klaverjassen-bidding-test-http.log 2>&1 &
           server_pid=$!
@@ -45,3 +52,4 @@ jobs:
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-guest-bidding-browser.mjs
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-table-ux-v2-browser.mjs
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-guest-async-room-browser.mjs
+          CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-guest-v1e-browser.mjs
