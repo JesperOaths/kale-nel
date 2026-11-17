@@ -53,8 +53,7 @@
     try{
       response=await fetch(ENDPOINT,{
         method:'POST',mode:'cors',cache:'no-store',
-        headers:{'Content-Type':'application/json',apikey:PUBLISHABLE_KEY,
-          Authorization:'Bearer '+PUBLISHABLE_KEY},
+        headers:{'Content-Type':'application/json',apikey:PUBLISHABLE_KEY},
         body:JSON.stringify({action_input:action,room_input:room||null,token_input:token||null,
           name_input:name||null,payload_input:payload||{}})
       });
