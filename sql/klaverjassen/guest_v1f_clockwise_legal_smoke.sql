@@ -130,4 +130,76 @@ begin
     if sqlerrm='RENONCE_ACCEPTED' then raise; end if;
   end;
 end $test$;
+do $bots$
+declare
+ room_code text:='KJBOTFIX26';
+ host_token text:=repeat('e',64);
+ h_a jsonb:='{"id":"hearts-A","suit":"hearts","rank":"A"}';
+ h_k jsonb:='{"id":"hearts-K","suit":"hearts","rank":"K"}';
+ h_9 jsonb:='{"id":"hearts-9","suit":"hearts","rank":"9"}';
+ h_7 jsonb:='{"id":"hearts-7","suit":"hearts","rank":"7"}';
+ h_8 jsonb:='{"id":"hearts-8","suit":"hearts","rank":"8"}';
+ d_7 jsonb:='{"id":"diamonds-7","suit":"diamonds","rank":"7"}';
+ bid jsonb:='{"action":"bid","mode":"suit","suit":"diamonds","points":90,"team":1,"player":0}';
+ initial_trick jsonb;
+ full_trick jsonb;
+ old_state jsonb;
+ next_state jsonb;
+ revision_num bigint;
+ remote jsonb;
+begin
+ remote:=public.klaverjassen_guest_v1('create',null,host_token,'Bot QA Host',
+   jsonb_build_object('settings',jsonb_build_object(
+     'lobby_code',room_code,'finish_mode','fixed_rounds',
+     'bot_roster',jsonb_build_array(
+       jsonb_build_object('name','Bot One','bot_difficulty','easy'),
+       jsonb_build_object('name','Bot Two','bot_difficulty','easy'),
+       jsonb_build_object('name','Bot Three','bot_difficulty','hard')))));
+ initial_trick:=jsonb_build_array(jsonb_build_object('player',0,'card',h_a));
+ full_trick:=initial_trick||jsonb_build_array(
+   jsonb_build_object('player',1,'card',h_7),
+   jsonb_build_object('player',2,'card',h_k),
+   jsonb_build_object('player',3,'card',h_9));
+ select state,revision into old_state,revision_num
+ from public.kalenel_klaverjassen_guest_rooms where code=room_code;
+ old_state:=old_state||jsonb_build_object(
+   'phase','playing','dealer',3,'turn',1,'action_needed_seat',1,
+   'hands',jsonb_build_array(jsonb_build_array(h_8),
+      jsonb_build_array(h_7,d_7),jsonb_build_array(h_k),jsonb_build_array(h_9)),
+   'accepted_bid',bid,'current_bid',bid,'trick',initial_trick,
+   'plays',jsonb_build_array(jsonb_build_object('trick_no',1,'player',0,'card',h_a)),
+   'pending_trick',null,'taken','[]'::jsonb);
+ update public.kalenel_klaverjassen_guest_rooms
+    set state=old_state,status='playing' where code=room_code;
+ next_state:=jsonb_set(old_state,'{hands}',jsonb_build_array(
+   jsonb_build_array(h_8),jsonb_build_array(d_7),'[]'::jsonb,'[]'::jsonb),true);
+ next_state:=jsonb_set(next_state,'{plays}',old_state->'plays'||
+    jsonb_build_array(
+       jsonb_build_object('trick_no',1,'player',1,'card',h_7),
+       jsonb_build_object('trick_no',1,'player',2,'card',h_k),
+       jsonb_build_object('trick_no',1,'player',3,'card',h_9)),true);
+ next_state:=next_state||jsonb_build_object(
+   'trick','[]'::jsonb,'pending_trick',jsonb_build_object(
+      'winner',0,'cards',full_trick,'roem',jsonb_build_object(
+       'points',0,'items','[]'::jsonb),'klopped',false),
+   'turn',null,'action_needed_seat',0,'last_progress_reason','bot_turns');
+ begin
+  perform public.klaverjassen_guest_v1('save',room_code,host_token,null,
+    jsonb_build_object('revision',revision_num,
+    'state',jsonb_set(next_state,'{plays,1,card}',d_7,true)));
+  raise exception 'BOT_RENONCE_ACCEPTED';
+ exception when others then if sqlerrm='BOT_RENONCE_ACCEPTED' then raise;end if;end;
+ begin
+  perform public.klaverjassen_guest_v1('save',room_code,host_token,null,
+    jsonb_build_object('revision',revision_num,
+    'state',jsonb_set(next_state,'{plays,1,player}','2'::jsonb,true)));
+  raise exception 'BOT_OUT_OF_ORDER_ACCEPTED';
+ exception when others then if sqlerrm='BOT_OUT_OF_ORDER_ACCEPTED' then raise;end if;end;
+ remote:=public.klaverjassen_guest_v1('save',room_code,host_token,null,
+   jsonb_build_object('revision',revision_num,'state',next_state));
+ if (remote->'game'->'state'->'pending_trick'->>'winner')::integer<>0 then
+   raise exception 'Server did not validate four sequential bot/human cards';
+ end if;
+end $bots$;
+
 select 'KJ_CLOCKWISE_AMSTERDAM_SQL_PASS' as result;
