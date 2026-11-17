@@ -7,7 +7,7 @@ const defaults={speed:1,reduced:false,colorblind:false,subscriptions:{}};
 let pref;try{pref={...defaults,...JSON.parse(localStorage.getItem(PREF_KEY)||'{}')};}catch(_){pref={...defaults};}
 if(![.75,1,1.25,1.5,2].includes(Number(pref.speed)))pref.speed=1;
 if(!pref.subscriptions||typeof pref.subscriptions!=='object')pref.subscriptions={};
-const session={room:null,share:null,lastTurn:null,stats:null,loading:false,statsError:'',status:''};
+const session={room:null,share:null,lastTurn:null,lastPing:0,stats:null,loading:false,statsError:'',status:''};
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
 function reduceMotion(){return !!pref.reduced||!!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;}
@@ -79,8 +79,15 @@ function renderInfo(remote){
    <button class="btn secondary" id="kjTransfer" type="button" ${active?'':'disabled'}>Maak overdrachtslink</button>
    ${share?`<div class="kj-share"><input aria-label="Persoonlijke overdrachtslink" id="kjTransferUrl" value="${esc(share.url)}" readonly/><button class="btn secondary" id="kjCopyTransfer" type="button">Kopieer</button><small>Geldig tot ${esc(new Date(share.expiresAt).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}))}</small></div>`:''}
    ${host?`<div class="kj-handover"><h3>Host overdragen</h3><p class="muted">De nieuwe host mag de tafel beheren. Bots komen niet in aanmerking.</p>
-    ${humans.length?`<select id="kjHandoverSeat" aria-label="Nieuwe host">${humans.map(p=>`<option value="${p.seat}">${esc(p.name)} · stoel ${Number(p.seat)+1}</option>`).join('')}</select><button class="btn secondary" id="kjHandover" ${active?'':'disabled'} type="button">Draag host over</button>`:'<span class="muted">Nog geen andere menselijke speler.</span>'}
+    ${humans.length?`<select id="kjHandoverSeat" aria-label="Nieuwe host">${humans.map(p=>`<option value="${p.seat}">${esc(p.name)} · stoel ${Number(p.seat)+1}</option>`).join('')}</select><button class="btn secondary" id="kjHandover" ${active?'':'disabled'} type="button">Draag host direct over</button>
+     <button class="btn secondary" id="kjSetDeputy" ${active?'':'disabled'} type="button">Wijs reservehost aan</button>
+     <small>${remote.game.deputy_seat!==null&&remote.game.deputy_seat!==undefined?'Reservehost: '+esc((remote.game.state?.players||[])[remote.game.deputy_seat]?.name||'stoel '+(Number(remote.game.deputy_seat)+1)):'Nog geen reservehost. Deze mag na 15 min afwezigheid het beheer overnemen.'}</small>`:'<span class="muted">Nog geen andere menselijke speler.</span>'}
    </div>`:''}
+   ${!host&&Number(remote.game.deputy_seat)===me&&remote.game.deputy_seat!==null?
+      `<div class="kj-handover"><h3>Jij bent reservehost</h3>
+      <p class="muted">Je kunt het beheer overnemen wanneer de huidige host 15 minuten niet aanwezig is.</p>
+      <button class="btn gold" id="kjTakeover" type="button"
+       ${Date.now()-Date.parse(remote.game.host_seen_at||'')>=900000?'':'disabled'}>Neem host over</button></div>`:''}
   </section>
   <section class="kj-extra-section"><h3>Beurtmeldingen</h3>
    <p class="muted">Ontvang een melding wanneer je moet bieden of spelen. Zolang achtergrondpush niet beschikbaar is, moet de game-tab open blijven (mag op de achtergrond staan).</p>
@@ -110,6 +117,21 @@ function renderInfo(remote){
   if(!target||!window.confirm('Host overdragen aan '+target.name+'? Dit trekt jouw hostrechten in.'))return;
   try{await K.handover(room,seat);window.location.reload();}
   catch(e){currentStatus(e?.message||'Hostoverdracht mislukt');}
+ });
+ panel.querySelector('#kjSetDeputy')?.addEventListener('click',async()=>{
+  const seat=Number(document.getElementById('kjHandoverSeat')?.value);
+  const target=humans.find(p=>p.seat===seat);
+  if(!target)return;
+  try{
+   await K.delegateSet(room,seat);
+   currentStatus(target.name+' is reservehost. Overname mogelijk na 15 minuten afwezigheid.');
+   window.location.reload();
+  }catch(e){currentStatus(e?.message||'Reservehost instellen mislukt.');}
+ });
+ panel.querySelector('#kjTakeover')?.addEventListener('click',async()=>{
+  if(!window.confirm('Wil je de afwezige host vervangen? Je krijgt beheerrechten over deze tafel.'))return;
+  try{await K.delegateTakeover(room);window.location.reload();}
+  catch(e){currentStatus(e?.message||'Hostovername niet toegestaan.');}
  });
  panel.querySelector('#kjNotify').onclick=async()=>{
   currentStatus('Browsermeldingen instellen...');
@@ -168,10 +190,14 @@ function onState(remote){
  const actor=st.phase==='bidding'?st.bidder_turn:st.turn;
  const key=st.phase+':'+(st.taken||[]).length+':'+(st.rounds||[]).length+':'+actor;
  if(session.lastTurn!==null&&session.lastTurn!==key&&actor===seat&&
-   document.hidden&&pref.subscriptions?.[room]&&('Notification'in window)&&Notification.permission==='granted'){
+   document.hidden&&pref.subscriptions?.[room]==='local'&&('Notification'in window)&&Notification.permission==='granted'){
   try{new Notification('Klaverjassen · jouw beurt',{body:room+' · jouw zet is aan de beurt',tag:'kj-turn-'+room});}catch(_){}
  }
  session.lastTurn=key;
+ if(remote.viewer?.is_host&&['playing','lobby'].includes(remote.game.status)&&!document.hidden&&Date.now()-session.lastPing>60000){
+  session.lastPing=Date.now();
+  K.pingHost(room).catch(()=>{});
+ }
  renderInfo(remote);
  renderStats();
 }
