@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Speel Klaverjassen gratis online met vrienden, bots en een gedeelde roomcode. Geen account nodig; werkt via wifi en mobiel internet." />
+  <meta name="theme-color" content="#104d38" />
+  <title>Klaverjassen · Kalenel</title>
+  <script>window.GEJAST_PAGE_VERSION='klaverjassen-guest-v1';</script>
+
+
+  <script src="../gejast-klaverjas-online.js?v817"></script>
+  <script src="./guest-bridge.js?v=20261117-1"></script>
+  <style>
+    :root{--felt:#104d38;--felt2:#082d24;--rail:#8a5d1f;--paper:#fffaf3;--ink:#19130f;--muted:#756b5e;--line:rgba(0,0,0,.1);--gold:#d7ad58;--red:#a7192b;--p0:#d7ad58;--p1:#60a5fa;--p2:#fb7185;--p3:#34d399}
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,229,219,.9),rgba(236,229,219,.94)),url('../site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1580px;margin:0 auto;padding:14px}.shell{background:rgba(255,250,243,.86);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:18px;box-shadow:0 20px 46px rgba(0,0,0,.1)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.top-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:15px;background:#111;color:#fff;text-decoration:none;font:900 14px/1 Inter,system-ui,sans-serif;padding:11px 14px;cursor:pointer;transition:transform .18s ease,opacity .18s ease}.btn.secondary{background:#fff;color:#111}.btn.gold{background:var(--gold);color:#111}.btn.danger{background:#8b1e16;color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}.btn:not(:disabled):hover{transform:translateY(-1px)}
+    h1{margin:6px 0 2px;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em}.muted{color:var(--muted)}.status{min-height:22px;margin-top:8px;font-weight:800;color:#7b281e}
+    .lobby-home{display:grid;grid-column:1 / -1;min-width:0;grid-template-columns:360px minmax(0,1fr);gap:14px;margin-top:14px;align-items:start}.home-panel{min-width:0;background:#fff;border:1px solid rgba(154,130,65,.22);border-radius:20px;padding:16px;box-shadow:0 16px 34px rgba(0,0,0,.08)}.home-panel h2{margin:0 0 6px;font-size:20px}.home-panel h3{margin:14px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#8a724b}.setup-row,.join-row{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}.join-row input{width:100%;min-width:0}.home-help{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}.home-help div{background:#fffaf3;border:1px solid var(--line);border-radius:14px;padding:10px;font-size:13px}.shell:not(.no-active-game) .lobby-home{display:none}.shell.no-active-game .roombar,.shell.no-active-game #leaveBtn,.shell.no-active-game #deleteRoomBtnTop{display:none}
+    .roombar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin:14px 0}.stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:13px}.stat span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a724b;font-weight:900}.stat strong{display:block;margin-top:5px;font-size:18px}
+    .bot-builder{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.bot-builder.is-full [id^="add"]{display:none}.bot-slots{display:flex;gap:4px}.bot-slot{min-width:58px;border:1px solid rgba(0,0,0,.12);border-radius:14px;background:#fff;padding:8px 9px;font-size:12px;font-weight:900;text-align:center}.bot-slot.easy{background:#ecfdf5;color:#065f46}.bot-slot.hard{background:#eff6ff;color:#1d4ed8}.bot-slot.empty{color:#756b5e}.lobby-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.lobby-seat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}.lobby-seat{border:1px solid var(--line);border-radius:14px;background:#fff;padding:9px;min-height:72px}.lobby-seat span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a724b;font-weight:1000}.lobby-seat strong{display:block;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lobby-seat.bot{background:#eff6ff}.lobby-seat.empty{background:#fffaf3;color:#756b5e}.analysis-grid{display:grid;gap:8px}.analysis-card{border:1px solid rgba(215,173,88,.35);background:#fff8e8;border-radius:14px;padding:10px}.mmr-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.mmr-pill{border:1px solid var(--line);border-radius:14px;background:#fff;padding:9px}
+    .game-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:start}.table{position:relative;min-height:690px;border:14px solid var(--rail);border-radius:38px;background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.12),transparent 30%),linear-gradient(180deg,var(--felt),var(--felt2));box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 14px 28px rgba(0,0,0,.18);overflow:hidden}
+    .shell.no-active-game .game-layout,.shell.no-active-game .hand-wrap,.shell.no-active-game .log{display:none}
+    .seat{position:absolute;width:205px;display:grid;gap:7px;justify-items:center}.seat.s0{left:50%;bottom:5%;transform:translate(-50%,0)}.seat.s1{right:4%;top:50%;transform:translate(0,-50%)}.seat.s2{left:50%;top:5%;transform:translate(-50%,0)}.seat.s3{left:4%;top:50%;transform:translate(0,-50%)}.seat-card{width:100%;background:rgba(255,250,242,.92);border:3px solid rgba(255,255,255,.45);border-radius:18px;padding:12px;text-align:center;box-shadow:0 12px 22px rgba(0,0,0,.16);transition:transform .25s ease,box-shadow .25s ease}.seat-card.turn{animation:blinkTurn 1.05s ease-in-out infinite;box-shadow:0 0 0 5px rgba(215,173,88,.28),0 18px 30px rgba(0,0,0,.22)}.seat-card strong{display:block;font-size:16px}.tag{display:inline-flex;margin:6px 3px 0;padding:4px 8px;border-radius:999px;background:#efe2c0;font-size:11px;font-weight:900}.tag.bot{background:#dbeafe;color:#15345c}.dealer-chip{background:#111;color:#fff}
+    @keyframes blinkTurn{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+    .center{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);width:min(560px,82vw);display:grid;gap:10px}.panel{background:rgba(255,250,242,.94);border:1px solid rgba(0,0,0,.08);border-radius:20px;padding:14px;box-shadow:0 12px 22px rgba(0,0,0,.12)}.panel h2{margin:0 0 8px;font-size:18px}.trick{display:flex;gap:10px;justify-content:center;min-height:124px;align-items:center}.trick .play-card{animation:cardToTable .36s ease-out both}
+    @keyframes cardToTable{from{transform:translateY(36px) scale(.72);opacity:.35}to{transform:translateY(0) scale(1);opacity:1}}
+    .bid-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:7px;max-height:300px;overflow:auto}.bid-section{border:1px solid rgba(154,130,65,.22);background:#fff;border-radius:16px;padding:10px}.bid-section h3{margin:0 0 8px;font-size:13px;color:#8a724b;text-transform:uppercase;letter-spacing:.07em}.bid-section .bid-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:none}
+    .hand-wrap{position:sticky;bottom:0;z-index:30;margin-top:12px;padding:14px;border-radius:26px;background:linear-gradient(180deg,rgba(255,250,243,.84),rgba(255,250,243,.98));border:1px solid rgba(154,130,65,.24);box-shadow:0 -12px 34px rgba(0,0,0,.08);backdrop-filter:blur(12px)}.hand-title{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:1000;color:#8a724b;margin-bottom:9px}.hand{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;min-height:142px}.card{width:88px;height:124px;border:3px solid rgba(0,0,0,.14);border-radius:14px;background:#fffaf3;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:1000;font-size:29px;box-shadow:0 12px 22px rgba(0,0,0,.18);position:relative;transition:transform .18s ease,box-shadow .18s ease}.card span{font-size:39px}.card.red{color:var(--red)}.card.trump-card{background:linear-gradient(180deg,#fff8e1,#fff);border-color:var(--gold)}button.card:not(:disabled){outline:4px solid var(--gold);cursor:pointer}button.card:not(:disabled):hover{transform:translateY(-10px) rotate(-1deg);box-shadow:0 24px 34px rgba(0,0,0,.22)}button.card:disabled{opacity:.62}.card.p0{border-color:var(--p0)}.card.p1{border-color:var(--p1)}.card.p2{border-color:var(--p2)}.card.p3{border-color:var(--p3)}.mini-card{width:42px;height:58px;border-radius:8px;font-size:15px}.mini-card span{font-size:19px}
+    .side{display:grid;gap:12px;align-self:start;position:sticky;top:12px}.score-form{background:#fff;border:1px solid rgba(154,130,65,.22);border-radius:24px;padding:14px;box-shadow:0 16px 34px rgba(0,0,0,.08)}.score-form h2{margin:0 0 10px;font-size:19px;letter-spacing:-.03em}.score-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.score-cell{border:1px solid var(--line);border-radius:14px;padding:10px;background:#fffaf3}.score-cell span{display:block;font-size:11px;color:#8a724b;text-transform:uppercase;font-weight:1000;letter-spacing:.08em}.score-cell strong{display:block;font-size:24px;margin-top:4px}.danger-zone{border:2px solid rgba(139,30,22,.22);background:#fff4ec}.danger-zone.naakt{border-color:rgba(139,30,22,.55);background:#ffe8e8}.danger-icon{font-size:30px;line-height:1}.last-trick-mini{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}.trump-memory{display:flex;gap:8px;align-items:center;justify-content:center;padding:10px;border-radius:16px;background:#0e352b;color:#fff}.trump-memory .card{box-shadow:none}.round-card{border:1px solid rgba(0,0,0,.08);background:#fffaf3;border-radius:14px;padding:10px;margin-top:8px}.round-card.nat{background:#fff1f1;border-color:rgba(139,30,22,.3)}.roem-tally{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.log{display:grid;gap:6px;margin-top:12px}.log div{background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:14px;padding:9px 11px;color:#4b4137;font-size:13px}.rooms{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}.room-card{display:grid;grid-template-columns:minmax(86px,.35fr) minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--line);border-radius:14px;background:#fffaf3;padding:9px 10px;text-align:left}.room-card.mine{border-color:rgba(215,173,88,.7);background:#fff8e8}.room-code{display:block;font-size:18px;letter-spacing:.04em}.room-summary{min-width:0}.room-card .muted{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.room-card .room-actions{display:flex;gap:8px;flex-wrap:nowrap}.room-card .btn{min-width:96px;padding:9px 12px}.room-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}.room-pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;background:#fff;padding:3px 7px;font-size:12px;font-weight:900}.coach{display:grid;gap:8px;margin-top:12px}.coach div{border:1px solid rgba(215,173,88,.35);background:#fff8e8;border-radius:14px;padding:10px;font-size:13px}.coach-delta{font-weight:1000}.coach-delta.good{color:#176b33}.coach-delta.bad{color:#8b1e16}
+    select,input{height:42px;border-radius:14px;border:1px solid var(--line);padding:0 12px;font:inherit;background:#fff}.check{display:inline-flex;align-items:center;gap:7px;height:42px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:0 12px;font-weight:900}.check input{width:18px;height:18px}.shuffle-note{position:absolute;left:50%;top:24%;transform:translateX(-50%);background:rgba(17,17,17,.78);color:#fff;border-radius:999px;padding:9px 14px;font-weight:1000;letter-spacing:.02em}
+    @media(max-width:1100px){.lobby-home,.game-layout{grid-template-columns:1fr}.side{position:relative;top:auto;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}.roombar{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:760px){.wrap{padding:8px}.shell{padding:12px}.top-actions{width:100%}.home-help{grid-template-columns:1fr}.setup-row>*{flex:1}.room-card{grid-template-columns:1fr}.room-card .room-actions{display:grid;grid-template-columns:1fr 1fr}.roombar{grid-template-columns:1fr 1fr}.lobby-seat-grid{grid-template-columns:1fr 1fr}.table{min-height:820px;border-width:10px}.seat{width:142px}.seat.s1{right:1%;top:42%}.seat.s3{left:1%;top:42%}.center{top:50%;width:calc(100% - 22px)}.card{width:68px;height:96px;font-size:22px}.card span{font-size:30px}.mini-card{width:34px;height:48px;font-size:13px}.hand{gap:8px;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:6px}.hand-wrap{bottom:0;border-radius:18px}.side{grid-template-columns:1fr}.bot-builder,.bot-slots{width:100%}}
+    body .site-credit-watermark{position:static!important;transform:none!important;width:max-content;max-width:calc(100vw - 32px);margin:18px auto 0}
+  .guest-label{display:grid;gap:6px;margin-top:14px;font-size:13px;font-weight:800;color:#6c543b}.guest-label input{width:100%;min-height:45px;border:1px solid #c6b9a5;border-radius:13px;padding:11px 13px;background:#fff;color:#19130f;font:700 15px/1.3 inherit}.guest-label input:focus{outline:3px solid #d7ad58}.home-panel .muted{line-height:1.5}
+  </style>
+</head>
+<body>
+  <div class="wrap"><main class="shell no-active-game">
+    <div class="top">
+      <div><div class="muted">Kalenel online spelmodus</div><h1>Klaverjas lobby</h1><div id="status" class="status"></div></div>
+      <div class="top-actions">
+        <a class="btn secondary" href="https://kalenel.nl/">Home</a>
+        <button id="leaveBtn" class="btn danger" type="button">Tafel verlaten</button>
+        <button id="deleteRoomBtnTop" class="btn danger" type="button">Sluit tafel</button>
+      </div>
+    </div>
+    <section class="lobby-home" id="lobbyHome">
+      <section class="home-panel">
+        <h2>Tafel starten</h2>
+        <div class="muted">Maak een tafel of join met een roomcode. Geen account nodig. Speel ook via 5G of een ander wifi-netwerk.</div>
+        <label class="guest-label" for="guestName"><span>Jouw spelersnaam</span><input id="guestName" type="text" maxlength="30" autocomplete="nickname" placeholder="Bijvoorbeeld Bruis" required /></label>
+        <div class="setup-row">
+        <select id="finishMode" aria-label="Eindmodus"><option value="fixed_rounds">16 rondes</option><option value="first_to_162">Eerste tot 162</option></select>
+          <button id="createBtn" class="btn gold" type="button">Maak tafel</button>
+        </div>
+        <div class="bot-builder" id="botBuilder">
+          <button id="addEasyBotBtn" class="btn secondary" type="button">+ easy bot</button>
+          <button id="addHardBotBtn" class="btn secondary" type="button">+ hard bot</button>
+          <button id="clearBotsBtn" class="btn secondary" type="button">Wis bots</button>
+          <div class="bot-slots" id="botSlots"></div>
+        </div>
+        <div class="home-help">
+          <div><strong>1 tafel tegelijk</strong><br><span class="muted">Je kunt pas een tweede tafel openen als je huidige tafel klaar of gesloten is.</span></div>
+          <div><strong>Host beheert</strong><br><span class="muted">De maker kan open rooms sluiten vanuit de lijst of room.</span></div>
+          <div><strong>Bots zijn test</strong><br><span class="muted">Botpotten blijven buiten scoreformulieren en stats.</span></div>
+        </div>
+      </section>
+      <section class="home-panel">
+        <h2>Open tafels</h2>
+        <div class="muted">Gebruik een code of kies direct een tafel. Hosts kunnen hun eigen tafels sluiten.</div>
+        <div class="join-row">
+        <input id="codeInput" aria-label="Roomcode" placeholder="Roomcode" style="text-transform:uppercase">
+          <button id="joinBtn" class="btn" type="button">Open</button>
+        </div>
+        <h3>Lobbylijst</h3>
+        <section class="rooms" id="rooms"></section>
+      </section>
+    </section>
+    <section class="roombar">
+      <div class="stat"><span>Room</span><strong id="roomStat">-</strong></div>
+      <div class="stat"><span>Fase</span><strong id="phaseStat">-</strong></div>
+      <div class="stat"><span>Bod</span><strong id="bidStat">Geen bod</strong></div>
+      <div class="stat"><span>Stand</span><strong id="scoreStat">0 - 0</strong></div>
+      <div class="stat"><span>Roem ronde</span><strong id="roemStat">0 - 0</strong></div>
+      <div class="stat"><span>Deler</span><strong id="dealerStat">-</strong></div>
+      <div class="stat"><span>Tijd voor zet</span><strong id="deadlineStat">-</strong></div>
+    </section>
+    <section class="game-layout">
+      <section class="table" id="table">
+        <div id="shuffleNote" class="shuffle-note" style="display:none">Schudden en delen...</div>
+        <div id="seats"></div>
+        <div class="center">
+          <div class="panel"><h2 id="centerTitle">Tafel</h2><div class="trick" id="trick"></div><div id="centerCopy" class="muted"></div></div>
+          <div class="panel" id="actionPanel"></div>
+        </div>
+      </section>
+      <aside class="side">
+        <section class="score-form" id="scorePanel"></section>
+        <section class="score-form" id="memoryPanel"></section>
+        <section class="score-form" id="roundPanel"></section>
+      </aside>
+    </section>
+    <section class="hand-wrap">
+      <div class="hand-title"><span>Jouw hand · gesorteerd op troef en kleur</span><span id="handHint">Harten → Schoppen → Ruiten → Klaver</span></div>
+      <section class="hand" id="hand"></section>
+    </section>
+    <section class="log" id="log"></section>
+  </main></div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script>
+  (() => {
+    const K = window.GEJAST_KLAVERJAS_ONLINE;
+    const $ = (id) => document.getElementById(id);
+    const qs = new URLSearchParams(location.search);
+    const incomingGame = qs.get('game_id') || '';
+    const incomingRoom = (qs.get('room') || '').toUpperCase();
+    const storedRoom = (localStorage.getItem('kalenel_klaverjassen_guest_room_v1') || '').toUpperCase();
+    function roomUrl(gameId, lobbyCode){
+      const url = new URL('./room.html', location.href);
+      if(gameId) url.searchParams.set('game_id', gameId);
+      if(lobbyCode) url.searchParams.set('room', lobbyCode);
+      if(K.currentScope()==='family') url.searchParams.set('scope','family');
+      return url.pathname.split('/').pop() + url.search;
+    }
+    if (incomingRoom && window.KALENEL_KJ_GUEST.hasToken(incomingRoom)) {
+      location.replace(roomUrl(incomingGame, incomingRoom));
+      return;
+    }
+    if (storedRoom && !qs.get('left') && window.KALENEL_KJ_GUEST.hasToken(storedRoom) && !incomingRoom) {
+      location.replace(roomUrl('', storedRoom));
+      return;
+    }
+    const UI = { gameId: '', lobbyCode: incomingRoom, remote: null, busy: false, actionBusy: false, saving: false, botTimer: null, poll: null, animating:false, botRoster: [] };
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    function setStatus(msg, ok=false){ $('status').textContent = msg || ''; $('status').style.color = ok ? '#315f2a' : '#7b281e'; }
+    function seat(){ return K.viewerSeat(UI.remote); }
+    function state(){ return UI.remote?.game?.state || {}; }
+    function game(){ return UI.remote?.game || {}; }
+    function roomClosed(){ return ['closed','finished'].includes(String(game().status || '').toLowerCase()) || ['closed','finished'].includes(String(state().phase || '').toLowerCase()); }
+    function hasActiveRoom(){ return !!game().id && !roomClosed(); }
+    function isHost(){ const host = String(game().created_by_player_name || '').toLowerCase(); const viewer = String(UI.remote?.viewer?.name || '').toLowerCase(); return !!host && !!viewer && host === viewer; }
+    function esc(v){ return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function deadlineText(v){ if(!v) return '-'; const ms = new Date(v).getTime() - Date.now(); if(!Number.isFinite(ms)) return '-'; const days = Math.max(0, Math.ceil(ms / 86400000)); return days ? `${days} dagen` : 'vandaag'; }
+    function cardClass(card, extra=''){ const red = card.suit === 'hearts' || card.suit === 'diamonds'; return `card ${red?'red':''} ${extra} ${state().accepted_bid?.suit===card.suit?'trump-card':''}`; }
+    function cardHtml(card, playable=false){ return `<button class="${cardClass(card)}" data-card="${esc(card.id)}" ${playable?'':'disabled'}>${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit]}</span></button>`; }
+    function staticCardHtml(card, cls=''){ return `<div class="${cardClass(card, cls)}">${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit] || ''}</span></div>`; }
+    function playedCardHtml(play){ const card = play.card; const name = (state().players || [])[play.player]?.name || `S${play.player+1}`; return `<div class="play-card">${staticCardHtml(card, `p${play.player}`)}<div class="muted" style="text-align:center;font-size:12px;margin-top:4px">${esc(name)}</div></div>`; }
+    function makeRecoverySnapshot(st, reason='save'){ return { reason, saved_at:new Date().toISOString(), deal_nonce:st.deal_nonce || null, phase:st.phase, dealer:st.dealer, bidder_turn:st.bidder_turn ?? null, turn:st.turn ?? null, action_needed_seat:st.action_needed_seat ?? null, hands:st.hands || [], trick:st.trick || [], pending_trick:st.pending_trick || null, taken:st.taken || [], roem_by_team:st.roem_by_team || [0,0], totals:st.totals || [0,0], rounds:st.rounds || [] }; }
+    function markProgress(st, reason='save'){ st.progress_tick = Number(st.progress_tick || 0) + 1; st.last_saved_at = new Date().toISOString(); st.last_progress_reason = reason; st.recovery_snapshot = makeRecoverySnapshot(st, reason); try{ localStorage.setItem('kalenel_klaverjassen_guest_progress_v1', JSON.stringify({ game_id: game().id || UI.gameId, lobby_code: game().lobby_code || UI.lobbyCode, at: st.last_saved_at, tick: st.progress_tick, phase: st.phase, round_count: (st.rounds||[]).length, recovery_reason: reason })); }catch(_){} return st; }
+    function renderBotSlots(){ const el = $('botSlots'); if(!el) return; const used = UI.botRoster.slice(0,3); el.innerHTML = [0,1,2].map(i => { const bot = used[i]; return `<span class="bot-slot ${bot?.bot_difficulty || 'empty'}">${bot ? `S${bot.seat+1} ${bot.bot_difficulty === 'easy' ? 'Easy' : 'Hard'}` : `Bot ${i+1}`}</span>`; }).join(''); }
+    function seatListMarkup(players){
+      const bySeat = new Map((players || []).map((p) => [Number(p.seat), p]));
+      return `<div class="lobby-seat-grid">${[0,1,2,3].map((i) => {
+        const p = bySeat.get(i);
+        const bot = K.isBotPlayer(p);
+        const label = p ? (bot ? `${p.bot_difficulty === 'easy' ? 'Easy bot' : 'Hard bot'}` : 'Speler') : 'Vrij';
+        return `<div class="lobby-seat ${p ? (bot ? 'bot' : '') : 'empty'}"><span>Stoel ${i+1} · Team ${K.TEAM_OF[i]}</span><strong>${esc(p?.name || 'Open plek')}</strong><div class="muted">${esc(label)}</div></div>`;
+      }).join('')}</div>`;
+    }
+    function updateBotControls(players){
+      const livePlayers = players || state().players || [];
+      const freeSeat = game().id ? nextBotSeat(livePlayers) : nextBotSeat([{ seat:0 }, ...UI.botRoster]);
+      const full = freeSeat < 0;
+      const builder = $('botBuilder');
+      if(builder) builder.classList.toggle('is-full', full);
+      ['addEasyBotBtn','addHardBotBtn'].forEach((id) => { if($(id)) $(id).disabled = full; });
+      if($('clearBotsBtn')) $('clearBotsBtn').style.display = game().id ? 'none' : 'inline-flex';
+    }
+    function nextBotSeat(players){ const taken = new Set((players || []).map(p => Number(p.seat)).filter(Number.isInteger)); for(let i=0;i<4;i++){ if(!taken.has(i)) return i; } return -1; }
+    function makeBot(seatNo, difficulty='hard'){ return { seat:seatNo, name:K.botName ? K.botName(seatNo, difficulty) : `${difficulty} bot ${seatNo+1}`, team:K.TEAM_OF[seatNo], is_bot:true, player_type:'bot', bot_difficulty:difficulty }; }
+    function addBotDraft(difficulty){ if(game().id) return runAction(() => addBotToLobby(difficulty), 120); const seatNo = nextBotSeat([{ seat:0 }, ...UI.botRoster]); if(seatNo < 0) return setStatus('Alle stoelen zijn al gevuld.'); UI.botRoster.push(makeBot(seatNo, difficulty)); renderBotSlots(); setStatus(`${difficulty === 'easy' ? 'Easy' : 'Hard'} bot toegevoegd.`, true); }
+    function clearBotDraft(){ if(game().id) return setStatus('Bots in een bestaande tafel wis je door een nieuwe tafel te maken.'); UI.botRoster = []; renderBotSlots(); }
+    async function runAction(fn, delay=180){
+      if (UI.actionBusy) return;
+      UI.actionBusy = true;
+      try { await wait(delay); await fn(); }
+      catch (err) { setStatus(err?.message || 'Actie mislukt. De tafel wordt opnieuw geladen.'); try { await load(true); } catch (_) {} }
+      finally { UI.actionBusy = false; }
+    }
+    async function save(nextState, force=false, reason='save'){
+      if (UI.saving) throw new Error('De vorige zet wordt nog opgeslagen.');
+      UI.saving = true;
+      const st = markProgress(nextState, reason);
+      const g = game();
+      const hasBots = K.hasBots(st);
+      const payload = { session_token: K.sessionToken(), game_id_input: g.id || UI.gameId, state_input: st, summary_payload: hasBots ? null : K.publicSummary(st, g), final_jas_payload: st.finished_at && !hasBots ? K.finalJasPayload(st, g) : null };
+      try {
+        UI.remote = await K.rpc('klaverjas_online_save_state', payload);
+        render();
+        if (force && !hasBots && window.GEJAST_LIVE_SYNC) {
+          try { await window.GEJAST_LIVE_SYNC.writeSummary({ gameType:'klaverjas', clientMatchId:g.id || UI.gameId, summaryPayload:K.publicSummary(st, g), siteScope:K.currentScope(), force:true }); } catch(_) {}
+        }
+      } finally { UI.saving = false; }
+    }
+    async function load(force=false){
+      if (!UI.gameId && !UI.lobbyCode) return;
+      if (!force && (UI.saving || UI.actionBusy || UI.animating)) return;
+      try {
+        UI.remote = await K.rpc('klaverjas_online_get_state', { session_token: K.sessionToken(), game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: K.currentScope() });
+        UI.gameId = game().id || UI.gameId;
+        UI.lobbyCode = game().lobby_code || UI.lobbyCode;
+        if (UI.lobbyCode) localStorage.setItem('kalenel_klaverjassen_guest_room_v1', UI.lobbyCode);
+        render();
+      } catch (err) { setStatus(err.message || 'Laden mislukt.'); }
+    }
+    function player(i){ return (state().players || UI.remote?.players || [])[i] || {}; }
+    function render(){
+      const st = state(); const me = seat(); const players = st.players || UI.remote?.players || [];
+      document.querySelector('.shell')?.classList.toggle('no-active-game', !game().id || roomClosed());
+      $('leaveBtn').style.display = game().id ? 'inline-flex' : 'none';
+      $('deleteRoomBtnTop').style.display = isHost() && hasActiveRoom() ? 'inline-flex' : 'none';
+      $('roomStat').textContent = game().lobby_code || UI.lobbyCode || '-';
+      $('phaseStat').textContent = st.phase || game().status || 'lobby';
+      $('bidStat').textContent = K.bidLabel(st.accepted_bid || st.current_bid);
+      $('scoreStat').textContent = `${st.totals?.[0] || 0} - ${st.totals?.[1] || 0}`;
+      $('roemStat').textContent = `${st.roem_by_team?.[0] || 0} - ${st.roem_by_team?.[1] || 0}`;
+      $('dealerStat').textContent = players[st.dealer]?.name || '-';
+      $('deadlineStat').textContent = deadlineText(st.action_deadline_at);
+      $('finishMode').value = st.settings?.finish_mode || 'fixed_rounds';
+      $('finishMode').disabled = !!game().id && st.phase !== 'lobby';
+      renderBotSlots();
+      updateBotControls(players);
+      $('seats').innerHTML = [0,1,2,3].map(i => {
+        const p = players[i] || {};
+        const turn = i === st.turn || i === st.bidder_turn || (st.pending_trick && i === st.pending_trick.winner);
+        return `<div class="seat s${i}"><div class="seat-card p${i} ${turn?'turn':''}"><strong>${esc(p.name || `Stoel ${i+1}`)}</strong><span class="tag">Team ${K.TEAM_OF[i]}</span>${K.isBotPlayer(p)?'<span class="tag bot">Bot</span>':''}${i===st.dealer?'<span class="tag dealer-chip">Deler ↻</span>':''}${i===me?'<span class="tag">Jij</span>':''}</div></div>`;
+      }).join('');
+      const shownTrick = st.pending_trick?.cards || st.trick || [];
+      $('trick').innerHTML = shownTrick.length ? shownTrick.map(playedCardHtml).join('') : '<div class="muted">Nog geen kaarten op tafel.</div>';
+      $('centerTitle').textContent = titleFor(st);
+      $('centerCopy').textContent = copyFor(st, me);
+      renderActions(st, me);
+      renderHand(st, me);
+      renderPanels(st, me);
+      renderLog(st);
+      queueBotTurns();
+    }
+    function titleFor(st){ if(!game().id) return 'Maak of join een tafel'; if(st.phase==='bidding') return `Bieden: ${player(st.bidder_turn).name || '-'}`; if(st.pending_trick) return `Slag voor ${player(st.pending_trick.winner).name || '-'}`; if(st.phase==='playing') return `Beurt: ${player(st.turn).name || '-'}`; if(st.phase==='roundOver') return 'Ronde klaar'; if(st.phase==='finished') return 'Potje opgeslagen'; return 'Lobby'; }
+    function copyFor(st, me){ if(!game().id) return 'Maak een tafel of join met een roomcode. Open tafels blijven rejoinbaar.'; if((st.players||[]).length<4) return 'Wachten op vier geregistreerde spelers of maak een testtafel met bots.'; if(st.phase==='bidding') return K.isBotPlayer(player(st.bidder_turn)) ? 'Bot denkt na over bod, kleur, roem en risico.' : 'Pas of bied hoger. Vier passen zonder bod betekent: opnieuw schudden en delen.'; if(st.phase==='playing') return me===st.turn?'Speel een geldige kaart. Roem, troef en kaarttelling worden meegewogen door de bots.':'Wachten op de speler die aan de beurt is.'; if(st.pending_trick) return 'Klop voor roem voordat de slag wordt gepakt.'; if(st.phase==='roundOver') return 'Rondepunten, roem en nat-status staan rechts in het scorepaneel.'; return ''; }
+    function groupedBidsMarkup(bids){
+      const groups = [
+        ['pass','Pas', bids.filter(b=>b.action==='pass')],
+        ['sans','Sans', bids.filter(b=>b.mode==='sans')],
+        ['hearts','Harten', bids.filter(b=>b.suit==='hearts')],
+        ['spades','Schoppen', bids.filter(b=>b.suit==='spades')],
+        ['diamonds','Ruiten', bids.filter(b=>b.suit==='diamonds')],
+        ['clubs','Klaver', bids.filter(b=>b.suit==='clubs')]
+      ].filter(([, , list])=>list.length);
+      return groups.map(([key,label,list])=>`<section class="bid-section"><h3>${esc(label)}</h3><div class="bid-grid">${list.map((b)=>`<button class="btn secondary" data-bid-id="${esc(b._id)}" type="button">${esc(b.label)}</button>`).join('')}</div></section>`).join('');
+    }
+    function renderActions(st, me){
+      const panel = $('actionPanel');
+      if (!game().id) { panel.innerHTML = '<h2>Online</h2><div class="muted">Gebruik Nieuwe tafel of Join.</div>'; return; }
+      if ((st.players || []).length < 4) {
+        const canEdit = me >= 0;
+        const free = 4 - (st.players || []).length;
+        panel.innerHTML = `<h2>Lobby</h2><div class="muted">${(st.players||[]).length}/4 stoelen bezet. Roomcode ${esc(game().lobby_code || '')}</div>${seatListMarkup(st.players || [])}${canEdit ? `<div class="lobby-tools"><button class="btn secondary" id="lobbyEasyBot" type="button">+ easy bot</button><button class="btn secondary" id="lobbyHardBot" type="button">+ hard bot</button></div><div class="muted" style="margin-top:8px">${free} plek${free===1?'':'ken'} vrij. Vul met bots of wacht op spelers.</div>` : ''}`;
+        if($('lobbyEasyBot')) $('lobbyEasyBot').onclick = () => runAction(() => addBotToLobby('easy'), 120);
+        if($('lobbyHardBot')) $('lobbyHardBot').onclick = () => runAction(() => addBotToLobby('hard'), 120);
+        return;
+      }
+      if (st.phase === 'lobby') {
+        const botCount = (st.players || []).filter(K.isBotPlayer).length;
+        panel.innerHTML = `<h2>${botCount ? 'Bottafel klaar' : 'Tafel klaar'}</h2>${seatListMarkup(st.players || [])}<div class="muted">${botCount ? `${botCount} bots spelen automatisch door. Botpotten blijven testpotten en gaan niet naar scoreformulieren of stats.` : 'Alle stoelen zijn bezet.'}</div>${me === 0 ? '<button class="btn gold" id="startBtn" type="button" style="margin-top:10px">Start schudden, delen en bieden</button>' : '<div class="muted" style="margin-top:10px">Wachten tot de maker start.</div>'}`;
+        if($('startBtn')) $('startBtn').onclick = () => runAction(startRound);
+        return;
+      }
+      if (st.phase === 'bidding' && me === st.bidder_turn) {
+        const bids = K.availableBids(st.current_bid).map((b,i)=>({ ...b, _id:String(i) }));
+        panel.innerHTML = `<h2>Scoreformulier-bod</h2><div class="muted" style="margin-bottom:8px">80 kleur betekent 82 kaartpunten halen. Roem telt niet mee voor halen.</div>${groupedBidsMarkup(bids)}`;
+        panel.querySelectorAll('[data-bid-id]').forEach(btn => btn.onclick = () => runAction(() => placeBid(bids[Number(btn.dataset.bidId)])));
+        return;
+      }
+      if (st.pending_trick) {
+        const ownTeam = me >= 0 && K.TEAM_OF[me] === K.TEAM_OF[st.pending_trick.winner];
+        const roem = st.pending_trick.roem || { points:0, items:[] };
+        panel.innerHTML = `<h2>Slag</h2><div class="muted">${roem.points ? `${roem.points} roem: ${roem.items.map(i=>i.label).join(', ')}` : 'Geen roem.'}</div><div class="top-actions" style="margin-top:10px">${ownTeam && roem.points && !st.pending_trick.klopped ? '<button class="btn gold" id="klopBtn" type="button">Klop</button>' : ''}${ownTeam ? '<button class="btn" id="collectBtn" type="button">Pak slag rustig</button>' : ''}</div>`;
+        if ($('klopBtn')) $('klopBtn').onclick = () => runAction(klop, 260);
+        if ($('collectBtn')) $('collectBtn').onclick = () => runAction(collect, 520);
+        return;
+      }
+      if (st.phase === 'roundOver') { const done = K.shouldFinishGame(st); panel.innerHTML = done ? '<button class="btn gold" id="finishBtn" type="button">Potje opslaan</button>' : '<button class="btn gold" id="nextBtn" type="button">Volgende ronde</button><button class="btn secondary" id="finishBtn" type="button" style="margin-left:8px">Nu opslaan</button>'; if($('nextBtn')) $('nextBtn').onclick = () => runAction(nextRound); $('finishBtn').onclick = () => runAction(() => finishGame()); return; }
+      panel.innerHTML = '<h2>Actie</h2><div class="muted">Wachten.</div>';
+    }
+    function renderHand(st, me){
+      const hand = me >= 0 ? K.sortHandForBid(st.hands?.[me] || [], st.accepted_bid?.suit || null) : [];
+      const legal = new Set(me === st.turn && st.phase === 'playing' && !st.pending_trick ? K.legalCards(hand, st.trick || [], me, st.accepted_bid?.suit).map(c => c.id) : []);
+      $('handHint').textContent = st.accepted_bid?.suit && st.accepted_bid.suit !== 'sans' ? `Troef vooraan: ${K.SUIT_LABELS[st.accepted_bid.suit]}` : 'Harten → Schoppen → Ruiten → Klaver';
+      $('hand').innerHTML = hand.map(card => cardHtml(card, legal.has(card.id))).join('');
+      $('hand').querySelectorAll('[data-card]').forEach(btn => btn.onclick = () => runAction(() => playCard(btn.dataset.card), 240));
+    }
+    function lastRound(st){ return (st.rounds || [])[Math.max(0,(st.rounds||[]).length-1)] || null; }
+    function dangerLabel(st){
+      const total = Number(st.totals?.[0]||0) + Number(st.totals?.[1]||0);
+      if(!total) return { label:'Nog veilig', cls:'', icon:'♣' };
+      const low = Math.min(Number(st.totals?.[0]||0), Number(st.totals?.[1]||0));
+      const high = Math.max(Number(st.totals?.[0]||0), Number(st.totals?.[1]||0));
+      if(low <= high/2) return { label:'Naakt-kruip gevaar', cls:'naakt', icon:'🪦' };
+      if(high >= total*(2/3)) return { label:'Kruip gevaar', cls:'', icon:'⚠️' };
+      return { label:'Nog veilig', cls:'', icon:'♣' };
+    }
+    function renderPanels(st, me){
+      const players = st.players || [];
+      const d = dangerLabel(st);
+      $('scorePanel').innerHTML = `<h2>Scoreformulier</h2><div class="score-grid"><div class="score-cell"><span>Team 1</span><strong>${st.totals?.[0]||0}</strong><div class="muted">${players.filter(p=>p.team===1).map(p=>esc(p.name)).join(' + ') || '-'}</div></div><div class="score-cell"><span>Team 2</span><strong>${st.totals?.[1]||0}</strong><div class="muted">${players.filter(p=>p.team===2).map(p=>esc(p.name)).join(' + ') || '-'}</div></div></div><div class="roem-tally"><div class="score-cell"><span>Roem T1 ronde</span><strong>${st.roem_by_team?.[0]||0}</strong></div><div class="score-cell"><span>Roem T2 ronde</span><strong>${st.roem_by_team?.[1]||0}</strong></div></div><div class="score-cell danger-zone ${d.cls}" style="margin-top:8px"><span>Kruipmeter</span><div class="danger-icon">${d.icon}</div><strong style="font-size:16px">${esc(d.label)}</strong><div class="muted">Indicator gebruikt tekst/emoji; geen vaste kruip-afbeelding gevonden in de repo.</div></div>`;
+      const trump = st.accepted_bid?.suit || null;
+      const trumpCards = trump && trump !== 'sans' ? [{rank:'J',suit:trump,id:`${trump}-J`},{rank:'9',suit:trump,id:`${trump}-9`}] : [{rank:'S',suit:'sans',id:'sans-1'},{rank:'A',suit:'sans',id:'sans-2'}];
+      const last = st.last_trick || (st.taken || [])[Math.max(0,(st.taken||[]).length-1)] || null;
+      const signalRows = Object.values(K.signalMemory ? K.signalMemory(st) : {});
+      $('memoryPanel').innerHTML = `<h2>Geheugensteun</h2><div class="trump-memory"><strong>Troef</strong>${trumpCards.map(c=>trump==='sans'?`<div class="card mini-card"><span>Sans</span></div>`:staticCardHtml(c,'mini-card')).join('')}</div><div class="round-card"><strong>Laatste slag</strong><div class="last-trick-mini">${last?.cards?.length ? last.cards.map(p=>staticCardHtml(p.card,`mini-card p${p.player}`)).join('') : '<span class="muted">Nog geen slag.</span>'}</div></div><div class="round-card"><strong>Aan/afseinen</strong><div class="muted">${signalRows.length ? signalRows.slice(-4).map(sig => `${esc(player(sig.player).name || 'Partner')} ${sig.type} ${esc(K.SUIT_LABELS[sig.suit] || sig.suit)}`).join('<br>') : 'Nog geen signalen gezien.'}</div></div>`;
+      const r = lastRound(st);
+      const nat = r?.result?.nat;
+      const mmrRows = Object.entries(st.ai_mmr || {});
+      $('roundPanel').innerHTML = `<h2>Ronde-einde</h2>${r ? `<div class="round-card ${nat?'nat':''}"><strong>Ronde ${esc(r.round)}</strong><div class="score-grid" style="margin-top:8px"><div class="score-cell"><span>Team 1 kreeg</span><strong>${r.result?.scores?.[0]||0}</strong><div class="muted">Kaartpunten: ${r.result?.cardScores?.[0]||0} · Roem: ${r.roem_by_team?.[0]||0}</div></div><div class="score-cell"><span>Team 2 kreeg</span><strong>${r.result?.scores?.[1]||0}</strong><div class="muted">Kaartpunten: ${r.result?.cardScores?.[1]||0} · Roem: ${r.roem_by_team?.[1]||0}</div></div></div><div class="muted" style="margin-top:8px">${nat ? `NAT: Team ${r.bidder_team} haalde ${r.result?.cardScores?.[r.bidder_team-1]||0} kaartpunten voor ${r.result?.target||82}. Alle punten en roem naar de tegenpartij.` : `Gehaald: Team ${r.bidder_team} haalde ${r.result?.cardScores?.[r.bidder_team-1]||0} kaartpunten voor ${r.result?.target||82}.`}</div></div>` : '<div class="muted">Nog geen ronde afgerond.</div>'}`;
+      if (mmrRows.length) $('roundPanel').insertAdjacentHTML('beforeend', `<div class="round-card"><strong>AI MMR</strong><div class="mmr-list">${mmrRows.map(([name,row])=>`<div class="mmr-pill">${esc(name)}<br><strong>${Number(row.rating || 1200)}</strong> <span class="muted">${Number(row.last_change||0)>=0?'+':''}${Number(row.last_change||0)}</span></div>`).join('')}</div></div>`);
+    }
+    function renderLog(st){
+      const coach = (st.rounds || []).flatMap(r => r.coach_recap || []).slice(-8);
+      $('log').innerHTML = `${(game().log || []).slice(0,8).map(row => `<div>${esc(row.text || row)}</div>`).join('')}${coach.length ? `<section class="coach">${coach.map(c => `<div><strong>${esc(c.player_name || 'Speler')} slag ${esc(c.trick_no)}:</strong> ${esc(c.verdict)} <span class="coach-delta ${Number(c.delta||0)>=0?'good':'bad'}">${Number(c.delta||0)>=0?'+':''}${esc(c.delta||0)}</span><br>AI: ${esc(c.ai_card?.rank || '')}${esc(K.SUIT_SYMBOLS[c.ai_card?.suit] || '')}, gespeeld: ${esc(c.played?.rank || '')}${esc(K.SUIT_SYMBOLS[c.played?.suit] || '')}</div>`).join('')}</section>` : ''}`;
+    }
+    async function createGame(){
+      if(hasActiveRoom()) return setStatus('Je zit al aan een actieve tafel. Open, verlaat of sluit die eerst.');
+      try { UI.remote = await K.rpc('klaverjas_online_create', { session_token: K.sessionToken(), site_scope_input: K.currentScope(), settings_input: { finish_mode: $('finishMode').value || 'fixed_rounds', bot_roster: UI.botRoster, bot_count: UI.botRoster.length } }); UI.gameId = game().id; UI.lobbyCode = game().lobby_code; localStorage.setItem('kalenel_klaverjassen_guest_room_v1', UI.lobbyCode); location.assign(roomUrl(UI.gameId, UI.lobbyCode)); } catch(err){ setStatus(err.message); }
+    }
+    async function joinGame(){
+      const targetCode = ($('codeInput').value || UI.lobbyCode || '').trim().toUpperCase();
+      if(hasActiveRoom() && targetCode && targetCode !== String(game().lobby_code || '').toUpperCase()) return setStatus('Je zit al aan een actieve tafel. Sluit of verlaat die eerst.');
+      try { UI.lobbyCode = targetCode; UI.remote = await K.rpc('klaverjas_online_join', { session_token: K.sessionToken(), lobby_code_input: UI.lobbyCode, site_scope_input: K.currentScope() }); UI.gameId = game().id; UI.lobbyCode = game().lobby_code; localStorage.setItem('kalenel_klaverjassen_guest_room_v1', UI.lobbyCode); location.assign(roomUrl(UI.gameId, UI.lobbyCode)); } catch(err){ setStatus(err.message); }
+    }
+    function leaveTable(){
+      if(UI.botTimer) clearTimeout(UI.botTimer);
+      localStorage.removeItem('kalenel_klaverjassen_guest_room_v1');
+      UI.gameId=''; UI.lobbyCode=''; UI.remote=null; UI.busy=false; UI.actionBusy=false; UI.saving=false;
+      history.replaceState(null,'','index.html' + (K.currentScope()==='family'?'?scope=family':''));
+      $('codeInput').value=''; render(); loadRooms(); setStatus('Tafel verlaten. Je kunt nu opnieuw starten of joinen.', true);
+    }
+    async function deleteRoom(gameId=null, lobbyCode=null){
+      if(!confirm('Deze klaverjastafel sluiten? Spelers kunnen daarna niet meer joinen.')) return;
+      try {
+        await K.rpc('klaverjas_online_delete_room', { session_token: K.sessionToken(), game_id_input: gameId || game().id || null, lobby_code_input: lobbyCode || game().lobby_code || null, site_scope_input: K.currentScope() });
+        if(!gameId || gameId === game().id || lobbyCode === game().lobby_code) leaveTable();
+        await loadRooms();
+        setStatus('Tafel gesloten.', true);
+      } catch(err) { setStatus(err.message || 'Tafel sluiten mislukt.'); }
+    }
+    function writeUrl(){ const url = new URL(location.href); if(UI.gameId) url.searchParams.set('game_id', UI.gameId); if(UI.lobbyCode) url.searchParams.set('room', UI.lobbyCode); if(K.currentScope()==='family') url.searchParams.set('scope','family'); history.replaceState(null, '', url.pathname.split('/').pop() + url.search); }
+    async function addBotToLobby(difficulty){ const st = structuredClone(state()); if(!game().id || st.phase !== 'lobby') return setStatus('Bots kun je alleen in de lobby toevoegen.'); const seatNo = nextBotSeat(st.players || []); if(seatNo < 0) return setStatus('De tafel zit vol. Start de pot of maak een nieuwe tafel.'); st.players = [...(st.players || []), makeBot(seatNo, difficulty)].sort((a,b)=>a.seat-b.seat); st.settings = { ...(st.settings || {}), bot_count: st.players.filter(K.isBotPlayer).length }; await save(st, true, 'add_bot'); setStatus(st.players.length >= 4 ? 'Tafel vol. Start de botpot wanneer je klaar bent.' : `${difficulty === 'easy' ? 'Easy' : 'Hard'} bot toegevoegd.`, true); }
+    async function startRound(){ $('shuffleNote').style.display='block'; await wait(650); const players = (UI.remote.players || state().players || []).map(p => ({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); await save(K.newClientState(players, Number(state().dealer ?? game().dealer_index ?? 0), state(), { finish_mode: $('finishMode').value || 'fixed_rounds', bot_count: players.filter(p=>p.is_bot).length }), true, 'start_round'); $('shuffleNote').style.display='none'; }
+    function resetDealAfterFourPasses(st){ const players = (st.players||[]).map(p=>({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); const fresh = K.newClientState(players, st.dealer || 0, { ...st, rounds: st.rounds||[], totals: st.totals||[0,0], ai_mmr:st.ai_mmr||{} }, st.settings || { finish_mode:$('finishMode').value||'fixed_rounds' }); fresh.redeal_count = Number(st.redeal_count||0)+1; fresh.last_redeal_reason = 'four_passes_same_dealer'; fresh.rounds = st.rounds || []; fresh.totals = st.totals || [0,0]; return fresh; }
+    async function placeBid(bid){ let st = structuredClone(state()); if(!K.isValidBid(bid, st.current_bid)) return setStatus('Ongeldig bod.'); if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ $('shuffleNote').style.display='block'; await wait(700); st = resetDealAfterFourPasses(st); $('shuffleNote').style.display='none'; } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seat(), team: K.TEAM_OF[seat()] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'bid'); }
+    async function playCard(cardId){ const st = structuredClone(state()); const me = seat(); const hand = st.hands[me] || []; const card = hand.find(c => c.id === cardId); if(!card) return; const legal = new Set(K.legalCards(hand, st.trick || [], me, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return setStatus('Die kaart mag niet volgens de Amsterdamse regels.'); const ai = K.aiChoice(hand, st.trick || [], me, st.accepted_bid?.suit, st); st.hands[me] = hand.filter(c => c.id !== card.id); st.trick.push({ player: me, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: me, player_name: player(me)?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (me + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'play_card'); }
+    async function klop(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner] || st.pending_trick.klopped) return; st.roem_by_team[K.TEAM_OF[me]-1] += Number(st.pending_trick.roem?.points || 0); st.pending_trick.klopped = true; await save(st, true, 'klop_roem'); }
+    async function collect(){ const st = structuredClone(state()); const me = seat(); if(!st.pending_trick || K.TEAM_OF[me] !== K.TEAM_OF[st.pending_trick.winner]) return; st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = st.pending_trick.winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)) await finishGame(st); else await save(st, true, 'round_over'); return; } st.action_deadline_at=K.actionDeadline(); await save(st, true, 'collect_trick'); }
+    async function nextRound(){ $('shuffleNote').style.display='block'; await wait(650); const st = K.newClientState((state().players||[]).map(p => ({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })), state().dealer || 0, state(), state().settings || { finish_mode:$('finishMode').value || 'fixed_rounds' }); await save(st, true, 'next_round'); $('shuffleNote').style.display='none'; }
+    async function finishGame(existing){ const st = existing || structuredClone(state()); const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); st.action_needed_seat=null; await save(st, true, 'finish_game'); setStatus(K.hasBots(st) ? 'Bot-test klaar. Niet opgeslagen in scoreformulieren, logs of stats.' : 'Potje opgeslagen in de klaverjas-database.', true); loadRooms(); }
+    function isBotSeat(st, seatNo){ return K.isBotPlayer((st.players || [])[seatNo]); }
+    function applyBid(st, seatNo, bid){ if(!K.isValidBid(bid, st.current_bid)) bid = { action:'pass' }; if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(!st.current_bid && st.passes_since_bid >= 4){ const players = (st.players||[]).map(p=>({ name:p.name, is_bot: K.isBotPlayer(p), bot_difficulty:p.bot_difficulty || p.difficulty || null })); const fresh = K.newClientState(players, st.dealer || 0, st, st.settings); Object.assign(st, fresh, { redeal_count:Number(st.redeal_count||0)+1, last_redeal_reason:'four_passes_same_dealer' }); } else if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seatNo, team: K.TEAM_OF[seatNo] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } st.action_deadline_at=K.actionDeadline(); }
+    function applyBotCard(st, seatNo){ const hand = st.hands?.[seatNo] || []; const card = K.aiChoice(hand, st.trick || [], seatNo, st.accepted_bid?.suit, st, K.botDifficulty ? K.botDifficulty(st.players?.[seatNo]) : undefined); if(!card) return false; const legal = new Set(K.legalCards(hand, st.trick || [], seatNo, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return false; const ai = K.aiChoice(hand, st.trick || [], seatNo, st.accepted_bid?.suit, st, 'hard'); st.hands[seatNo] = hand.filter(c => c.id !== card.id); st.trick.push({ player: seatNo, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: seatNo, player_name: (st.players||[])[seatNo]?.name, card, ai_card: ai, delta: K.cardDelta(card, ai, st.accepted_bid?.suit) }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.last_trick = st.pending_trick; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (seatNo + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); return true; }
+    function applyCollect(st){ const winner = st.pending_trick?.winner; if(winner == null) return false; const roem = Number(st.pending_trick.roem?.points || 0); if(roem && !st.pending_trick.klopped) { st.roem_by_team[K.TEAM_OF[winner]-1] += roem; st.pending_trick.klopped = true; } st.taken.push(st.pending_trick); st.last_trick = st.pending_trick; st.turn = winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [], saved_at:new Date().toISOString(), dealer:st.dealer }; round.coach_recap = K.buildCoachRecap(round); if(K.updateAiMmr) K.updateAiMmr(st, round); round.ai_mmr_after = st.ai_mmr || {}; st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=K.nextDealer(st.dealer); if(K.shouldFinishGame(st)){ const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); } } st.action_deadline_at=K.actionDeadline(); return true; }
+    function queueBotTurns(){ if(UI.busy || UI.botTimer) return; const st = state(); if(!K.hasBots(st) || st.phase === 'finished' || st.phase === 'roundOver') return; if((st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)) || (st.phase === 'playing' && ((st.pending_trick && isBotSeat(st, st.pending_trick.winner)) || (!st.pending_trick && isBotSeat(st, st.turn))))){ UI.botTimer = setTimeout(() => { UI.botTimer = null; runBotTurns().catch((err)=>setStatus(err?.message || 'Botzet kon niet worden opgeslagen.')); }, 950); } }
+    async function runBotTurns(){ if(UI.busy) return; let st = structuredClone(state()); if(!K.hasBots(st)) return; let changed = false; UI.busy = true; try{ for(let guard=0; guard<80; guard++){ await wait(360); if(st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)){ applyBid(st, st.bidder_turn, K.botBid(st, st.bidder_turn)); changed = true; continue; } if(st.phase === 'playing' && st.pending_trick && isBotSeat(st, st.pending_trick.winner)){ await wait(600); if(!applyCollect(st)) break; changed = true; if(st.phase !== 'playing') break; continue; } if(st.phase === 'playing' && !st.pending_trick && isBotSeat(st, st.turn)){ if(!applyBotCard(st, st.turn)) break; changed = true; continue; } break; } if(changed) await save(st, true, 'bot_turns'); } finally { UI.busy = false; } }
+    async function loadRooms(){ try{ const data = await K.rpc('klaverjas_online_list_open', { session_token: K.sessionToken(), site_scope_input: K.currentScope() }); const rows = Array.isArray(data) ? data : []; $('rooms').innerHTML = rows.length ? rows.map(r => `<article class="room-card ${r.has_me ? 'mine' : ''}"><strong class="room-code">${esc(r.lobby_code)}</strong><div class="room-summary"><div class="muted">${esc(r.status)} · host ${esc(r.created_by_player_name || '-')}</div><div class="room-meta"><span class="room-pill">${esc(r.player_count)}/4 stoelen</span><span class="room-pill">${esc(r.human_count || 0)} mensen</span><span class="room-pill">${esc(r.bot_count || 0)} bots</span>${r.has_me ? '<span class="room-pill">jouw tafel</span>' : ''}${r.is_host ? '<span class="room-pill">host</span>' : ''}</div></div><div class="room-actions"><button class="btn secondary" data-room="${esc(r.lobby_code)}" type="button">${r.has_me ? 'Verder spelen' : 'Open tafel'}</button>${r.is_host ? `<button class="btn danger" data-delete-room="${esc(r.lobby_code)}" data-delete-id="${esc(r.id)}" type="button">Verwijder</button>` : ''}</div></article>`).join('') : '<div class="muted">Geen open tafels. Maak links een nieuwe tafel.</div>'; $('rooms').querySelectorAll('[data-room]').forEach(btn => btn.onclick = () => { $('codeInput').value = btn.dataset.room; runAction(joinGame); }); $('rooms').querySelectorAll('[data-delete-room]').forEach(btn => btn.onclick = () => deleteRoom(btn.dataset.deleteId || null, btn.dataset.deleteRoom || null)); }catch(_){ $('rooms').innerHTML = '<div class="muted">Open tafels laden lukte niet.</div>'; } }
+    $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; $('leaveBtn').onclick = leaveTable; $('deleteRoomBtnTop').onclick = () => deleteRoom(); $('addEasyBotBtn').onclick = () => addBotDraft('easy'); $('addHardBotBtn').onclick = () => addBotDraft('hard'); $('clearBotsBtn').onclick = clearBotDraft; renderBotSlots(); if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); loadRooms(); UI.poll = setInterval(() => { if(!document.hidden) { load(); loadRooms(); } }, 15000);
+  })();
+  </script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>
