@@ -202,4 +202,43 @@ begin
  end if;
 end $bots$;
 
+do $bidturn$
+declare
+ room_code text:='QABIDFIX26';host_token text:=repeat('7',64);
+ current_state jsonb;attempt jsonb;revision_num bigint;
+ bid jsonb:='{"action":"bid","mode":"suit","suit":"hearts","points":90,"team":1,"player":0}';
+begin
+ perform public.klaverjassen_guest_v1('create',null,host_token,'Bidding QA',
+  jsonb_build_object('settings',jsonb_build_object('lobby_code',room_code,
+     'finish_mode','fixed_rounds',
+     'bot_roster',jsonb_build_array(
+       jsonb_build_object('name','Bot B1','bot_difficulty','easy'),
+       jsonb_build_object('name','Bot B2','bot_difficulty','easy'),
+       jsonb_build_object('name','Bot B3','bot_difficulty','easy')))));
+ select state,revision into current_state,revision_num
+ from public.kalenel_klaverjassen_guest_rooms where code=room_code;
+ current_state:=current_state||jsonb_build_object(
+   'phase','bidding','dealer',3,'bidder_turn',0,'turn',null,'deal_nonce','test-bid-1',
+   'hands','[[],[],[],[]]'::jsonb,'current_bid',null,'accepted_bid',null);
+ update public.kalenel_klaverjassen_guest_rooms
+   set state=current_state,status='playing' where code=room_code;
+ attempt:=current_state||jsonb_build_object('last_progress_reason','bid','bidder_turn',2);
+ begin
+  perform public.klaverjassen_guest_v1('save',room_code,host_token,null,
+    jsonb_build_object('revision',revision_num,'state',attempt));
+  raise exception 'BIDDING_SKIP_ACCEPTED';
+ exception when others then if sqlerrm='BIDDING_SKIP_ACCEPTED' then raise; end if; end;
+ attempt:=current_state||jsonb_build_object(
+   'last_progress_reason','bid','phase','playing','current_bid',bid,'accepted_bid',bid,'turn',2,
+   'bidder_turn',null);
+ begin
+  perform public.klaverjassen_guest_v1('save',room_code,host_token,null,
+    jsonb_build_object('revision',revision_num,'state',attempt));
+  raise exception 'WRONG_FIRST_LEAD_ACCEPTED';
+ exception when others then if sqlerrm='WRONG_FIRST_LEAD_ACCEPTED' then raise; end if; end;
+ attempt:=current_state||jsonb_build_object('last_progress_reason','bid','bidder_turn',1);
+ perform public.klaverjassen_guest_v1('save',room_code,host_token,null,
+   jsonb_build_object('revision',revision_num,'state',attempt));
+end $bidturn$;
+
 select 'KJ_CLOCKWISE_AMSTERDAM_SQL_PASS' as result;
