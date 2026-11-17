@@ -311,20 +311,13 @@ let connectionFailures=0,connectionRetryAt=0;
 function setConnectionProblem(){
  if(!access)return;
  connectionFailures=Math.min(10,connectionFailures+1);
- // Poll normally at 550ms when healthy; an unavailable service gets a
- // bounded 2/4/8/16-second backoff instead of repeated requests.
+ // Keep bounded retry for legacy embedded rooms, but never display an
+ // obsolete Supabase connection banner on the S21 multiplayer homepage.
  const delay=Math.min(16000,2000*Math.pow(2,Math.min(connectionFailures-1,3)));
  connectionRetryAt=Date.now()+delay;
- const offline=typeof navigator!=="undefined"&&navigator.onLine===false;
- setText("connection-title",offline?"Your device is offline":"Reconnecting to your game…");
- setText("connection-detail",offline
-  ?"Check Wi-Fi or mobile data. Your current room stays on screen."
-  :"Unable to refresh room state. Scores and buzzers may be out of date.");
- $("connection-status").hidden=false;
 }
 function setConnectionHealthy(){
  connectionFailures=0;connectionRetryAt=0;
- $("connection-status").hidden=true;
 }
 
 const ERROR_TEXT={
@@ -2102,10 +2095,6 @@ for(const id of ["genre-options","decade-options"])$(id).addEventListener("chang
  $("soundtrack-reserve").hidden=true;$("live-reserve").hidden=true;
  setText("audius-availability","Filters changed. Check tracks to refresh availability.");
 });
-$("retry-connection").addEventListener("click",()=>{
- connectionRetryAt=0;
- if(access)refresh();
-});
 window.addEventListener("offline",()=>{if(access)setConnectionProblem()});
 window.addEventListener("online",()=>{
  if(!access)return;
@@ -2137,12 +2126,16 @@ initHostMixer();
 initPhoneHaptics();
 const fromUrl=new URLSearchParams(location.search).get("room");
 if(fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl))$("join-code").value=fromUrl.toUpperCase();
-try{
- const stored=JSON.parse(capabilityStorage().getItem(STORE)||"null");
- if(stored&&/^[A-HJ-NP-Z2-9]{6}$/.test(stored.code)&&/^[0-9a-f]{64}$/.test(stored.token)){
-  access=stored;refresh();
- }
-}catch{}
+// Real multiplayer resumes on the S21 HTTPS gateway, never via the retired
+// Supabase room API. Keep isolated embedded legacy test sessions only.
+if(TABLET_TEST_GUEST){
+ try{
+  const stored=JSON.parse(capabilityStorage().getItem(STORE)||"null");
+  if(stored&&/^[A-HJ-NP-Z2-9]{6}$/.test(stored.code)&&/^[0-9a-f]{64}$/.test(stored.token)){
+   access=stored;refresh();
+  }
+ }catch{}
+}
 if(TABLET_TEST_GUEST&&!access&&fromUrl&&/^[A-HJ-NP-Z2-9]{6}$/i.test(fromUrl)){
  // The host explicitly opened this player panel. Join with a new, distinct
  // player capability; never reuse or overwrite the saved host capability.
