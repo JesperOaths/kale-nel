@@ -38,7 +38,7 @@ begin
  select pg_get_functiondef('public._kalenel_kj_guest_view(public.kalenel_klaverjassen_guest_rooms,integer,text,boolean)'::regprocedure)
    into view_fn;
   if position($kj_fragment$'created_by_player_name',r.host_name)$kj_fragment$ in view_fn)=0 then raise exception 'Missing expected SQL patch fragment view_fn #1'; end if;
- view_fn:=replace(view_fn,$kj_fragment$'created_by_player_name',r.host_name)$kj_fragment$,$kj_fragment$'created_by_player_name',r.host_name,'room_title',r.room_title,'resume_until',r.resume_until)$kj_fragment$);
+ view_fn:=replace(view_fn,$kj_fragment$'created_by_player_name',r.host_name)$kj_fragment$,$kj_fragment$'created_by_player_name',r.host_name,'room_title',r.room_title,'resume_until',r.resume_until,'trick_completed_at',r.trick_completed_at)$kj_fragment$);
  view_fn:=replace(view_fn, E'\nend $function$', E'\nend; $function$');
  execute view_fn;
 
