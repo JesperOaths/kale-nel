@@ -244,5 +244,5 @@ begin
          case when jsonb_array_length(incoming->'taken')=8 then 1 else 0 end then
      raise exception 'De rondehistorie moet exact één ronde aanvullen';
    end if;$new$);
- execute f;
+ execute f || ';';
 end $patch$;
