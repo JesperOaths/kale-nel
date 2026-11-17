@@ -1,6 +1,5 @@
 -- Rollback-only regression for clockwise turns and Amsterdam card restrictions.
 -- Run inside BEGIN / ROLLBACK. No production game state is changed.
-set local role anon;
 do $test$
 declare
   host_key text:=repeat('a',64);
@@ -131,5 +130,4 @@ begin
     if sqlerrm='RENONCE_ACCEPTED' then raise; end if;
   end;
 end $test$;
-reset role;
 select 'KJ_CLOCKWISE_AMSTERDAM_SQL_PASS' as result;
