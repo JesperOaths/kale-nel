@@ -68,13 +68,16 @@ try{
     const rect=(selector)=>{const r=document.querySelector(selector).getBoundingClientRect();
       return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,height:r.height};};
     const table=rect('#table'),center=rect('#table .center'),hand=rect('.hand-wrap');
-    return {table,center,hand,scrollable:getComputedStyle(document.querySelector('#table .center')).overflowY};
+    return {table,center,hand,scrollable:getComputedStyle(document.querySelector('#table .center')).overflowY,viewportHeight:innerHeight};
    });
    assert(dimension.center.top>=dimension.table.top-3 &&
           dimension.center.bottom<=dimension.table.bottom+3,
           `${viewport.name}: bidding panel must fit within table: ${JSON.stringify(dimension)}`);
    assert.equal(dimension.scrollable,'auto',`${viewport.name}: fallback inner scrolling`);
-   assert(dimension.hand.top>=dimension.table.bottom-3,`${viewport.name}: hand may not cover selector`);
+   assert(dimension.hand.top>=0&&dimension.hand.bottom<=dimension.viewportHeight+4,
+     `${viewport.name}: hand must remain visible in the game viewport: ${JSON.stringify(dimension)}`);
+   assert(dimension.hand.bottom<=dimension.table.bottom+6,
+     `${viewport.name}: hand belongs inside or overlays the felt, not below it`);
    for(const [key,expected] of Object.entries(categoryGroups)){
     const button=page.locator('[data-bid-category="'+key+'"]');
     await button.click({timeout:3500});
