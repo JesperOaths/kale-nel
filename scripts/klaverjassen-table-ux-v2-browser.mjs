@@ -114,7 +114,7 @@ try{
    });
    const sl=layout.slots,mid=layout.middle;
    assert(sl[2].y<mid.y-10 && sl[0].y>mid.y+10,'north and south slots are oriented to seat position: '+JSON.stringify(layout));
-   assert(sl[3].x<mid.x-10 && sl[1].x>mid.x+10,'west and east slots are oriented to seat position: '+JSON.stringify(layout));
+   assert(sl[1].x<mid.x-10 && sl[3].x>mid.x+10,'clockwise play goes bottom → left → top → right: '+JSON.stringify(layout));
    assert(Math.abs(sl[2].x-mid.x)<3 && Math.abs(sl[0].x-mid.x)<3,'top/bottom slots are horizontally centred');
    assert(Math.abs(sl[1].y-mid.y)<3 && Math.abs(sl[3].y-mid.y)<3,'left/right slots are vertically centred');
    assert(Object.values(sl).every(p=>p.top>=measurements.table.top-3&&p.bottom<=measurements.table.bottom+3),
