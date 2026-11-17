@@ -346,6 +346,36 @@
       .trick-middle span{font-size:8px}
     }
 
+
+
+    /* Distinct starter and provisional winner without replacing any seat's original border color. */
+    .trick-slot.is-winning{
+      box-shadow:0 0 0 3px #ffe18b,0 0 22px rgba(255,210,80,.55),
+        inset 0 0 0 2px rgba(40,29,0,.23);
+      z-index:3;
+    }
+    .trick-slot.is-starting:not(.is-winning){box-shadow:0 0 0 2px rgba(238,249,244,.78)}
+    .trick-flag{
+      position:absolute;z-index:5;left:50%;transform:translateX(-50%);
+      font:900 9px/1.1 Inter,system-ui,sans-serif;
+      letter-spacing:.04em;white-space:nowrap;pointer-events:none;
+      padding:3px 6px;border-radius:7px;border:1px solid rgba(255,255,255,.65);
+      box-shadow:0 2px 5px rgba(0,0,0,.18);
+    }
+    .trick-flag.start-flag{top:-13px;background:#f3eee4;color:#584828}
+    .trick-flag.win-flag{bottom:-12px;background:#fce28f;color:#493100}
+    .trick-status{display:flex;justify-content:center;align-items:center;gap:7px;
+      flex-wrap:wrap;margin:5px auto 2px;width:100%;font-size:11px;line-height:1.3}
+    .trick-status[hidden]{display:none}
+    .trick-status>span{border-radius:8px;padding:5px 8px;background:rgba(248,247,241,.93);
+      color:#423d32;border:1px solid #d9d3c5;white-space:normal;max-width:100%}
+    .trick-status .trick-winning-info{background:#fff0c1;border-color:#bd983e;color:#4e380d}
+    .trick-status strong{font-weight:1000}
+    @media(max-width:760px){
+      .trick-flag{font-size:8px;padding:2px 4px}
+      .trick-status{gap:4px;margin:3px auto 0;font-size:10px}
+      .trick-status>span{padding:3px 5px}
+    }
   </style>
 </head>
 <body>
@@ -404,7 +434,7 @@
         <div id="shuffleNote" class="shuffle-note" style="display:none">Schudden en delen...</div>
         <div id="seats"></div>
         <div class="center">
-          <div class="panel"><h2 id="centerTitle">Tafel</h2><div class="trick" id="trick"></div><div id="centerCopy" class="muted"></div></div>
+          <div class="panel"><h2 id="centerTitle">Tafel</h2><div class="trick" id="trick"></div><div id="trickStatus" class="trick-status" aria-live="polite"></div><div id="centerCopy" class="muted"></div></div>
           <div class="panel" id="actionPanel"></div>
         </div>
         <div class="table-announcement" id="eventBanner" aria-live="polite"></div>
@@ -436,7 +466,9 @@
     const K = window.GEJAST_KLAVERJAS_ONLINE;
     const $ = (id) => document.getElementById(id);
     const qs = new URLSearchParams(location.search);
-    const UI = { gameId: qs.get('game_id') || '', lobbyCode: (qs.get('room') || localStorage.getItem('kalenel_klaverjassen_guest_room_v1') || '').toUpperCase(), remote: null, busy: false, actionBusy: false, saving: false, botTimer: null, poll: null, animating:false, botRoster: [], bidSuit: 'hearts', activePane:'scorePanel', visualPrimed:false, seenPlays:new Set(), seenKlops:new Set(), lastRoundCount:0, lastSession:'', lastVisualPhase:'' };
+    const UI = { gameId: qs.get('game_id') || '', lobbyCode: (qs.get('room') || localStorage.getItem('kalenel_klaverjassen_guest_room_v1') || '').toUpperCase(), remote: null, busy: false, actionBusy: false, saving: false, botTimer: null, poll: null, animating:false, botRoster: [], bidSuit: 'hearts', activePane:'scorePanel', visualPrimed:false, seenPlays:new Set(), seenKlops:new Set(), lastRoundCount:0, lastSession:'', lastVisualPhase:'',
+      playbackActive:false, playbackQueue:[], playbackTimer:null, playbackTrick:[], playbackTrickNo:1,
+      lastRenderedTrick:[], lastRenderedTrickNo:1, noticeQueue:[], noticeTimer:null };
     if (UI.lobbyCode && !window.KALENEL_KJ_GUEST.hasToken(UI.lobbyCode)) { location.replace('./?room='+encodeURIComponent(UI.lobbyCode)); return; }
     if (!UI.gameId && !UI.lobbyCode) {
       location.replace('./index.html' + (K.currentScope()==='family'?'?scope=family':''));
@@ -555,15 +587,26 @@
   document.querySelectorAll('.side-pane').forEach(panel=>panel.classList.toggle('is-active',panel.id===pane));
 }
     function toast(message,kind='normal'){
-  const holder=$('eventToasts');
-  if(!holder||!message)return;
-  const item=document.createElement('div');
-  item.className=`event-toast ${kind}`;
-  item.textContent=message;
-  holder.prepend(item);
-  while(holder.children.length>3)holder.lastElementChild?.remove();
-  setTimeout(()=>item.remove(),4700);
-}
+      if(!message)return;
+      UI.noticeQueue.push({message,kind});
+      drainNotices();
+    }
+    function drainNotices(){
+      if(UI.playbackActive || UI.noticeTimer || !UI.noticeQueue.length)return;
+      const holder=$('eventToasts');
+      if(!holder)return;
+      const {message,kind}=UI.noticeQueue.shift();
+      holder.replaceChildren();
+      const item=document.createElement('div');
+      item.className=`event-toast ${kind}`;
+      item.textContent=message;
+      holder.appendChild(item);
+      UI.noticeTimer=setTimeout(()=>{
+        item.remove();
+        UI.noticeTimer=null;
+        drainNotices();
+      },2500);
+    }
     function flightCard(play){
   const stage=$('table'),layer=$('flightLayer');
   const seatNo=Number(play?.player);
@@ -576,6 +619,8 @@
   const sx=start.left+start.width/2-root.left,sy=start.top+start.height/2-root.top;
   const ex=end.left+end.width/2-root.left,ey=end.top+end.height/2-root.top;
   const ghost=document.createElement('div');
+  ghost.dataset.flightSeat=String(seatNo);
+  ghost.dataset.flightCard=card.id;
   ghost.className=`flying-card p${seatNo} ${['diamonds','hearts'].includes(card.suit)?'red':''}`;
   ghost.innerHTML=`${esc(card.rank)}<span>${esc(K.SUIT_SYMBOLS[card.suit]||'')}</span>`;
   ghost.style.left=`${sx-27}px`;ghost.style.top=`${sy-38}px`;
@@ -585,50 +630,106 @@
   layer.appendChild(ghost);
   setTimeout(()=>{ghost.remove();to.classList.remove('is-arriving');},870);
 }
-    function visualizeEvents(st){
-  const rounds=st.rounds||[];
-  const session=`${game().id||UI.lobbyCode||''}:${st.deal_nonce||'lobby'}:${rounds.length}`;
-  const plays=st.plays||[];
-  const keys=plays.map(p=>`${p.trick_no}:${p.player}:${p.card?.id||''}`);
-  const roem=st.klop_events||[];
-  if(!UI.visualPrimed){
-    UI.visualPrimed=true;
-    UI.lastSession=session;
-    UI.seenPlays=new Set(keys);
-    UI.seenKlops=new Set(roem.map(e=>`${e.trick_no}:${e.team}:${e.points}`));
-    UI.lastRoundCount=rounds.length;
-    UI.lastVisualPhase=st.phase;
-    if(st.phase==='finished'||st.phase==='roundOver')setPane('roundPanel');
-    return;
-  }
-  if(UI.lastSession!==session){
-    UI.lastSession=session;
-    UI.seenPlays=new Set(keys);
-    UI.seenKlops=new Set(roem.map(e=>`${e.trick_no}:${e.team}:${e.points}`));
-  }else{
-    const newPlays=plays.filter((_,i)=>!UI.seenPlays.has(keys[i]));
-    newPlays.slice(-6).forEach((play,i)=>setTimeout(()=>flightCard(play),Math.min(i*145,700)));
-    keys.forEach(key=>UI.seenPlays.add(key));
-    for(const entry of roem){
-      const key=`${entry.trick_no}:${entry.team}:${entry.points}`;
-      if(!UI.seenKlops.has(key))toast(`ROEM GEKLOPT! Team ${entry.team} +${entry.points} · ${entry.labels?.join(', ')||'Roem'}`,'roem');
-      UI.seenKlops.add(key);
+    function cancelTrickPlayback(){
+      if(UI.playbackTimer)clearTimeout(UI.playbackTimer);
+      UI.playbackTimer=null;
+      UI.playbackActive=false;
+      UI.playbackQueue=[];
+      $('flightLayer')?.replaceChildren();
     }
-  }
-  if(rounds.length>UI.lastRoundCount){
-    const r=rounds[rounds.length-1];
-    const s=r?.result?.scores||[0,0];
-    toast(r?.result?.nat?`NAT! Team ${r.bidder_team} niet gehaald · ${s[0]}–${s[1]}`:`Ronde ${r.round} klaar · Team 1 +${s[0]} / Team 2 +${s[1]}`,r?.result?.nat?'nat':'normal');
-    setPane('roundPanel');
-  }
-  if(st.phase==='finished'&&UI.lastVisualPhase!=='finished'){
-    const winner=K.winnerTeam(st);
-    toast(`EINDSTAND ${st.totals?.[0]||0}–${st.totals?.[1]||0} · ${winner?'Team '+winner+' wint':'Gelijkspel'}`,'normal');
-    setPane('roundPanel');
-  }
-  UI.lastRoundCount=rounds.length;
-  UI.lastVisualPhase=st.phase;
-}
+    function playbackTick(){
+      if(!UI.playbackActive)return;
+      UI.playbackTimer=null;
+      const item=UI.playbackQueue.shift();
+      if(!item){
+        UI.playbackActive=false;
+        const st=state();
+        const authoritative=st.pending_trick?.cards || st.trick || [];
+        const number=Number(st.taken?.length||0)+1;
+        UI.lastRenderedTrick=authoritative.slice();
+        UI.lastRenderedTrickNo=number;
+        renderTrickView(authoritative,st);
+        drainNotices();
+        return;
+      }
+      const number=Number(item.trick_no || UI.playbackTrickNo);
+      if(number!==UI.playbackTrickNo){
+        UI.playbackTrick=[];
+        UI.playbackTrickNo=number;
+      }
+      UI.playbackTrick.push({player:item.player,card:item.card});
+      renderTrickView(UI.playbackTrick,state(),true);
+      flightCard(item);
+      const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      UI.playbackTimer=setTimeout(playbackTick,reduced?110:1050);
+    }
+    function visualizeEvents(st){
+      const rounds=st.rounds||[];
+      // The deal nonce changes on a redeal. A finished round keeps its actual
+      // final plays in the round record after st.plays has been cleared.
+      const session=`${game().id||UI.lobbyCode||''}:${st.deal_nonce||'lobby'}`;
+      const completed=st.phase==='roundOver'||st.phase==='finished';
+      const plays=(completed && rounds.length ? rounds.at(-1)?.plays : st.plays)||[];
+      const keys=plays.map(p=>`${p.trick_no}:${p.player}:${p.card?.id||''}`);
+      const roem=st.klop_events||[];
+      const authoritative=st.pending_trick?.cards || st.trick || [];
+      const number=Number(st.taken?.length||0)+1;
+      if(!UI.visualPrimed || UI.lastSession!==session){
+        if(UI.playbackActive)cancelTrickPlayback();
+        UI.visualPrimed=true;
+        UI.lastSession=session;
+        UI.seenPlays=new Set(keys);
+        UI.seenKlops=new Set(roem.map(e=>`${e.trick_no}:${e.team}:${e.points}`));
+        UI.lastRoundCount=rounds.length;
+        UI.lastVisualPhase=st.phase;
+        UI.lastRenderedTrick=authoritative.slice();
+        UI.lastRenderedTrickNo=number;
+        if(st.phase==='finished'||st.phase==='roundOver')setPane('roundPanel');
+        drainNotices();
+        return;
+      }
+      const added=plays.filter((_,i)=>!UI.seenPlays.has(keys[i]));
+      if(added.length){
+        if(!UI.playbackActive){
+          UI.playbackActive=true;
+          UI.playbackTrick=UI.lastRenderedTrick.slice();
+          UI.playbackTrickNo=UI.lastRenderedTrickNo;
+        }
+        UI.playbackQueue.push(...added);
+        // Render the previous visible trick before revealing the first new card.
+        renderTrickView(UI.playbackTrick,st,true);
+        if(!UI.playbackTimer)playbackTick();
+      }
+      keys.forEach(key=>UI.seenPlays.add(key));
+      for(const entry of roem){
+        const key=`${entry.trick_no}:${entry.team}:${entry.points}`;
+        if(!UI.seenKlops.has(key)){
+          toast(`ROEM GEKLOPT! Team ${entry.team} +${entry.points} · ${entry.labels?.join(', ')||'Roem'}`,'roem');
+        }
+        UI.seenKlops.add(key);
+      }
+      if(rounds.length>UI.lastRoundCount){
+        const r=rounds[rounds.length-1];
+        const scores=r?.result?.scores||[0,0];
+        toast(r?.result?.nat
+          ? `NAT! Team ${r.bidder_team} niet gehaald · ${scores[0]}–${scores[1]}`
+          : `Ronde ${r.round} klaar · Team 1 +${scores[0]} / Team 2 +${scores[1]}`,
+          r?.result?.nat?'nat':'normal');
+        setPane('roundPanel');
+      }
+      if(st.phase==='finished'&&UI.lastVisualPhase!=='finished'){
+        const winner=K.winnerTeam(st);
+        toast(`EINDSTAND ${st.totals?.[0]||0}–${st.totals?.[1]||0} · ${winner?'Team '+winner+' wint':'Gelijkspel'}`,'normal');
+        setPane('roundPanel');
+      }
+      UI.lastRoundCount=rounds.length;
+      UI.lastVisualPhase=st.phase;
+      if(!UI.playbackActive){
+        UI.lastRenderedTrick=authoritative.slice();
+        UI.lastRenderedTrickNo=number;
+        drainNotices();
+      }
+    }
     function renderAnnouncement(st){
   const banner=$('eventBanner');
   const r=(st.rounds||[]).at(-1);
@@ -644,19 +745,43 @@
   }else banner.textContent='';
 }
 
-    function trickSlotsMarkup(plays){
+    function trickSlotsMarkup(plays,trumpSuit){
       const bySeat=new Map((plays||[]).map(play=>[Number(play.player),play]));
+      const first=plays?.[0]||null;
+      const winner=K.currentWinner(plays||[],trumpSuit);
       const directions=[{seat:2,name:'boven'},{seat:1,name:'rechts'},{seat:0,name:'onder'},{seat:3,name:'links'}];
       const slots=directions.map(({seat,name})=>{
         const play=bySeat.get(seat);
         const label=player(seat)?.name||`Stoel ${seat+1}`;
-        return `<div class="trick-slot slot-${name} p${seat} ${play?'occupied':'empty'}"
-          data-slot-seat="${seat}" data-card-id="${esc(play?.card?.id||'')}"
-          role="group" aria-label="Kaartplek van ${esc(label)}">
+        const isStart=!!play && first?.player===seat;
+        const isWinning=!!play && winner?.player===seat;
+        return `<div class="trick-slot slot-${name} p${seat} ${play?'occupied':'empty'} ${isStart?'is-starting':''} ${isWinning?'is-winning':''}" data-slot-seat="${seat}" data-card-id="${esc(play?.card?.id||'')}" role="group" aria-label="Kaartplek van ${esc(label)}${isStart?', begon de slag':''}${isWinning?', voorlopig winnende kaart':''}">
           ${play?playedCardHtml(play):`<div class="slot-placeholder" aria-hidden="true">✦</div><span class="slot-player">${esc(label)}</span>`}
+          ${isStart?'<span class="trick-flag start-flag">START</span>':''}
+          ${isWinning?`<span class="trick-flag win-flag">${plays.length===4?'WINT':'LEIDT'}</span>`:''}
         </div>`;
       }).join('');
       return `${slots}<div class="trick-middle" aria-label="${bySeat.size} van 4 kaarten gespeeld"><strong>${bySeat.size}/4</strong><span>slag</span></div>`;
+    }
+    function renderTrickView(plays,st,forceSlots=false){
+      const show=forceSlots || st.phase==='playing' || !!st.pending_trick;
+      const trick=$('trick'),status=$('trickStatus');
+      trick.classList.toggle('has-slots',show);
+      const markup=show
+        ? trickSlotsMarkup(plays,st.accepted_bid?.suit||null)
+        : (plays.length?plays.map(playedCardHtml).join(''):'<div class=\"muted\">Nog geen kaarten op tafel.</div>');
+      if(trick.innerHTML!==markup)trick.innerHTML=markup;
+      let text='';
+      if(show){
+        const first=plays?.[0];
+        const winner=K.currentWinner(plays||[],st.accepted_bid?.suit||null);
+        const display=(p)=>`${esc(player(p.player)?.name||'Speler')} ${esc(p.card?.rank||'')}${esc(K.SUIT_SYMBOLS[p.card?.suit]||'')}`;
+        if(first&&winner){
+          text=`<span class="trick-start-info"><strong>Start:</strong> ${display(first)}</span><span class="trick-winning-info"><strong>${plays.length===4?'Wint slag':'Aan kop'}:</strong> ${display(winner)}</span>`;
+        }else text='<span class=\"trick-waiting-info\">Wachten op de eerste kaart van deze slag</span>';
+      }
+      if(status.innerHTML!==text)status.innerHTML=text;
+      status.hidden=!show;
     }
     function render(){
       const st = state(); const me = seat(); const players = st.players || UI.remote?.players || [];
@@ -683,11 +808,7 @@
         return `<div class="seat s${i}"><div class="seat-card p${i} ${turn?'turn':''}">${bidBadge(st,i)}<strong>${esc(p.name || `Stoel ${i+1}`)}</strong><span class="tag">Team ${K.TEAM_OF[i]}</span>${K.isBotPlayer(p)?'<span class="tag bot">Bot</span>':''}${i===st.dealer?'<span class="tag dealer-chip">Deler ↻</span>':''}${i===me?'<span class="tag">Jij</span>':''}</div></div>`;
       }).join('');
       const shownTrick = st.pending_trick?.cards || st.trick || [];
-      const showCardSlots = st.phase === 'playing' || !!st.pending_trick;
-      $('trick').classList.toggle('has-slots',showCardSlots);
-      $('trick').innerHTML = showCardSlots
-        ? trickSlotsMarkup(shownTrick)
-        : (shownTrick.length ? shownTrick.map(playedCardHtml).join('') : '<div class="muted">Nog geen kaarten op tafel.</div>');
+      renderTrickView(UI.playbackActive ? UI.playbackTrick : shownTrick,st,UI.playbackActive);
       $('centerTitle').textContent = titleFor(st);
       $('centerCopy').textContent = copyFor(st, me);
       renderActions(st, me);
