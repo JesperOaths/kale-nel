@@ -209,6 +209,9 @@
     activeCode,knownCodes,profileKey,
     transferStart,transferClaim,
     handover:(code,targetSeat)=>extra('host_handover',code,{seat:targetSeat}),
+    delegateSet:(code,targetSeat)=>extra('delegate_set',code,{seat:targetSeat}),
+    delegateTakeover:(code)=>extra('delegate_takeover',code),
+    pingHost:(code)=>extra('host_ping',code),
     getPlayerStats,consentPush,removePush,
     cancelTransfer:(code)=>extra('transfer_cancel',code)
   };
