@@ -1,0 +1,39 @@
+name: Standalone Klaverjassen bidding browser acceptance
+on:
+  pull_request:
+    paths:
+      - 'klaverjassen/room.html'
+      - 'scripts/klaverjassen-guest-bidding-browser.mjs'
+      - '.github/workflows/klaverjassen-bidding-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: klaverjassen-bidding-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  bidding-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out exact tested revision
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Setup Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - name: Install test-only browser controller
+        run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1
+      - name: Run visual and interaction checks across five viewport sizes
+        run: |
+          set -euo pipefail
+          node --check scripts/klaverjassen-guest-bidding-browser.mjs
+          command -v google-chrome
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory . >/tmp/klaverjassen-bidding-test-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for try in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/klaverjassen/room.html >/dev/null; then break; fi
+            sleep 0.2
+          done
+          CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-guest-bidding-browser.mjs
