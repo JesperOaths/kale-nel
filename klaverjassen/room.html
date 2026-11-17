@@ -585,7 +585,7 @@
 }
     function render(){
       const st = state(); const me = seat(); const players = st.players || UI.remote?.players || [];
-      document.querySelector('.shell')?.classList.toggle('no-active-game', !game().id || roomClosed());
+      document.querySelector('.shell')?.classList.toggle('no-active-game', !game().id);
       const ownBidTurn = st.phase === 'bidding' && me === st.bidder_turn;
       document.querySelector('.shell')?.classList.toggle('bidding-turn', ownBidTurn);
       $('table').classList.toggle('bidding-turn', ownBidTurn);
@@ -689,6 +689,12 @@
         panel.innerHTML = `<h2>Slag</h2><div class="muted">${roem.points ? `${roem.points} roem: ${roem.items.map(i=>i.label).join(', ')}` : 'Geen roem.'}</div><div class="top-actions" style="margin-top:10px">${ownTeam && roem.points && !st.pending_trick.klopped ? '<button class="btn gold" id="klopBtn" type="button">Klop</button>' : ''}${ownTeam ? '<button class="btn" id="collectBtn" type="button">Pak slag rustig</button>' : ''}</div>`;
         if ($('klopBtn')) $('klopBtn').onclick = () => runAction(klop, 260);
         if ($('collectBtn')) $('collectBtn').onclick = () => runAction(collect, 520);
+        return;
+      }
+      if (st.phase === 'finished') {
+        const scores=st.totals||[0,0], winner=K.winnerTeam(st);
+        panel.innerHTML=`<h2>🏆 Pot afgelopen</h2><div class="muted">Eindstand: <strong>${esc(scores[0])} – ${esc(scores[1])}</strong> · ${winner?'Team '+winner+' wint':'Gelijkspel'}</div><button class="btn gold" id="showFinalRounds" type="button" style="margin-top:9px">Bekijk alle rondes</button>`;
+        $('showFinalRounds').onclick=()=>setPane('roundPanel');
         return;
       }
       if (st.phase === 'roundOver') { const done = K.shouldFinishGame(st); panel.innerHTML = done ? '<button class="btn gold" id="finishBtn" type="button">Potje opslaan</button>' : '<button class="btn gold" id="nextBtn" type="button">Volgende ronde</button><button class="btn secondary" id="finishBtn" type="button" style="margin-left:8px">Nu opslaan</button>'; if($('nextBtn')) $('nextBtn').onclick = () => runAction(nextRound); $('finishBtn').onclick = () => runAction(() => finishGame()); return; }
