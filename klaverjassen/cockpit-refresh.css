@@ -258,6 +258,37 @@ body{
   outline:3px solid var(--kj-focus);outline-offset:2px;
 }
 
+
+/* Only the phone layout uses the overflow actions menu. */
+.mobile-more-actions{display:none;position:relative}
+.mobile-more-actions>summary{
+  list-style:none;display:flex;align-items:center;justify-content:center;
+  min-width:35px;min-height:35px;cursor:pointer;
+  border:1px solid #dce3da;border-radius:9px;background:#fff;
+  font:900 24px/1 system-ui;color:#234535;
+}
+.mobile-more-actions>summary::-webkit-details-marker{display:none}
+.mobile-more-actions[open]>summary{background:#e7f2e9}
+.mobile-menu-content{
+  position:absolute;right:0;top:calc(100% + 6px);z-index:200;
+  width:178px;padding:7px;
+  display:grid;gap:5px;
+  background:#fffdfa;border:1px solid #dfe7db;
+  border-radius:13px;box-shadow:0 12px 32px rgba(9,36,27,.25);
+}
+.mobile-menu-content button{
+  appearance:none;display:block;width:100%;text-align:left;
+  padding:12px 10px;min-height:44px;
+  font:800 12px/1.2 system-ui;color:#653e33;
+  border:1px solid #efded8;background:#fff6f3;border-radius:9px;
+  cursor:pointer;
+}
+.mobile-menu-content button[hidden]{display:none!important}
+.mobile-menu-content button:focus-visible,.mobile-more-actions summary:focus-visible{
+  outline:3px solid #208e64;outline-offset:2px;
+}
+.mobile-info-heading{display:none}
+
 /* Mobile-only match summary and quick-access sheet */
 .mobile-turn-strip,.close-mobile-info,.mobile-info-backdrop{display:none}
 .mobile-turn-strip{
@@ -340,6 +371,7 @@ body{
     display:none!important;
   }
   .mobile-turn-strip{display:flex}
+  .mobile-more-actions{display:block}
   .shell:not(.no-active-game) .roombar{
     grid-template-columns:repeat(4,minmax(0,1fr));
     gap:5px;margin:6px 0 0;
@@ -585,3 +617,5 @@ body{
   .table .center,.side{scroll-behavior:auto}
 }
 .kj-reduced-motion .seat-card.turn{animation:none;outline:3px solid #cfad63}
+
+.shell.no-active-game .mobile-turn-strip{display:none}
