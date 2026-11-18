@@ -45,7 +45,8 @@
     .score-grid>.score-cell strong{font-size:clamp(2rem,3vw,2.65rem);line-height:1}
     .top-actions .btn{border-radius:999px}
     /* Bids never extend past the felt or hide underneath the sticky hand. */
-    .shell.bidding-turn .hand-wrap{position:relative;bottom:auto;z-index:1}
+    /* Bid chooser scrolls separately; the hand must remain docked inside the felt. */
+    .shell.bidding-turn .hand-wrap{position:absolute!important;bottom:8px;z-index:30}
     .table.bidding-turn .center{top:50%;width:min(592px,calc(100% - 32px));max-height:calc(100% - 30px);overflow-x:hidden;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#bda57e transparent}
     .table.bidding-turn .center>.panel:first-child{padding:9px 14px}
     .table.bidding-turn .center>.panel:first-child h2{font-size:16px;margin:0 0 4px}
@@ -688,10 +689,29 @@
     points:Number(bid?.points||0),kind:bid?.kind||null};
   st.bid_history=[...(st.bid_history||[]),entry].slice(-20);
 }
+    function lastVisibleBid(st,seatNo){
+      const entries=Array.isArray(st.bid_history)?st.bid_history:[];
+      const latest=entries.filter(entry=>Number(entry.seat)===seatNo).at(-1);
+      return latest || (Number(st.current_bid?.player)===seatNo?st.current_bid:null);
+    }
+    function biddingPartnerStatus(st,me){
+      if(st.phase!=='bidding'||me<0||me>3)return '';
+      const mate=(me+2)%4,last=lastVisibleBid(st,mate),name=player(mate)?.name||('Speler '+(mate+1));
+      const symbol=last?.mode==='sans'?'SA':K.SUIT_SYMBOLS[last?.suit]||'';
+      const hasBid=last?.action==='bid',pass=last?.action==='pass';
+      const bidText=hasBid?`${symbol} ${Number(last.points)||''}${last.kind==='pit'?' PIT':''}`.trim():pass?'Pas':'Nog geen bod';
+      const highest=hasBid&&Number(st.current_bid?.player)===mate;
+      const red=['hearts','diamonds'].includes(last?.suit);
+      return `<div class="bid-partner-strip" role="status" aria-live="polite" aria-label="Biedoverzicht van je maat">
+        <span class="bid-partner-caption">JE MAAT <strong>${esc(name)}</strong></span>
+        <span class="bid-partner-amount ${red?'red':''} ${pass?'is-pass':''}" data-partner-bid-seat="${mate}"
+          aria-label="Laatste bod van ${esc(name)}: ${esc(last?K.bidLabel(last):'Nog geen bod')}">
+          ${esc(bidText)}</span>
+        ${highest?'<span class="bid-partner-leading">Hoogste bod</span>':''}
+      </div>`;
+    }
     function bidBadge(st, seatNo) {
-  const history=st.bid_history||[];
-  const last=history.filter(e=>Number(e.seat)===seatNo).slice(-1)[0]
-    || (Number(st.current_bid?.player)===seatNo?st.current_bid:null);
+  const last=lastVisibleBid(st,seatNo);
   if(!last)return '';
   const pass=last.action==='pass';
   const suit=last.mode==='sans'?'SA':K.SUIT_SYMBOLS[last.suit]||'';
@@ -927,6 +947,7 @@
       const ownBidTurn = st.phase === 'bidding' && me === st.bidder_turn;
       document.querySelector('.shell')?.classList.toggle('bidding-turn', ownBidTurn);
       $('table').classList.toggle('bidding-turn', ownBidTurn);
+      $('table').classList.toggle('phase-bidding', st.phase === 'bidding');
       $('leaveBtn').style.display = game().id ? 'inline-flex' : 'none';
       $('deleteRoomBtnTop').style.display = isHost() && hasActiveRoom() ? 'inline-flex' : 'none';
       $('roomStat').textContent = game().lobby_code || UI.lobbyCode || '-';
@@ -1033,6 +1054,7 @@
       <div><h2>Bieden</h2><div class="bid-current">Huidig bod: <strong>${esc(K.bidLabel(current))}</strong></div></div>
       ${pass?`<button type="button" class="btn bid-pass" data-bid-id="${esc(pass._id)}">Pas</button>`:''}
     </div>
+    ${biddingPartnerStatus(state(),seat())}
     <div class="bid-group-label">1. Kies je kleur of sans</div>
     <div class="bid-categories" role="group" aria-label="Biedcategorie">
       ${categories.map(g=>`<button type="button" class="bid-category ${g.red?'red':''} ${g.key===UI.bidSuit?'is-active':''}" data-bid-category="${esc(g.key)}" aria-pressed="${g.key===UI.bidSuit}" ${!g.choices.length?'disabled':''}><span class="bid-symbol" aria-hidden="true">${g.symbol}</span><span>${esc(g.label)}</span></button>`).join('')}
@@ -1059,6 +1081,12 @@
         const botCount = (st.players || []).filter(K.isBotPlayer).length;
         panel.innerHTML = `<h2>${botCount ? 'Bottafel klaar' : 'Tafel klaar'}</h2>${seatListMarkup(st.players || [])}<div class="muted">${botCount ? `${botCount} bots spelen automatisch door. Botten spelen automatisch. De uitslag blijft bij deze gastentafel.` : 'Alle stoelen zijn bezet.'}</div>${me === 0 ? '<button class="btn gold" id="startBtn" type="button" style="margin-top:10px">Start schudden, delen en bieden</button>' : '<div class="muted" style="margin-top:10px">Wachten tot de maker start.</div>'}`;
         if($('startBtn')) $('startBtn').onclick = () => runAction(startRound);
+        return;
+      }
+      if (st.phase === 'bidding' && me !== st.bidder_turn) {
+        panel.innerHTML = `${biddingPartnerStatus(st,me)}
+          <div class="bid-waiting-copy">Wachten op ${esc(player(st.bidder_turn)?.name||'de volgende speler')} om te bieden.
+            <span>Huidig bod: <strong>${esc(K.bidLabel(st.current_bid))}</strong></span></div>`;
         return;
       }
       if (st.phase === 'bidding' && me === st.bidder_turn) {
@@ -1101,7 +1129,7 @@
   const leadMark=analysis.leadSuit?K.SUIT_SYMBOLS[analysis.leadSuit]||'':'';
   let cue='';
   if(yourTurn)cue=(leadMark?leadMark+' ':'')+analysis.message+' · '+legal.size+' van '+hand.length+' kaarten toegestaan.';
-  else if(st.phase==='bidding')cue=me===st.bidder_turn?'Je bent aan de beurt om te bieden.':'Bieden: wacht tot je aan de beurt bent.';
+  else if(st.phase==='bidding')cue=me===st.bidder_turn?'Bekijk je 8 kaarten en kies een kleur en punten om te bieden.':'Bekijk je 8 kaarten; wacht tot je aan de beurt bent om te bieden.';
   else if(st.pending_trick)cue='De slag wordt afgerond. Wacht op de volgende uitkomst.';
   else if(st.phase==='playing')cue='Wacht op '+(player(st.turn)?.name||'de volgende speler')+' · daarna draait de beurt met de klok mee.';
   else cue='De volgende deler zit steeds links van de vorige deler.';

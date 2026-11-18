@@ -619,3 +619,70 @@ body{
 .kj-reduced-motion .seat-card.turn{animation:none;outline:3px solid #cfad63}
 
 .shell.no-active-game .mobile-turn-strip{display:none}
+
+/* Bid phase: all eight cards are references for the bid, not disabled-looking ghosts. */
+.shell.bidding-turn .hand button.card:disabled{
+  opacity:1;
+  filter:none;
+  box-shadow:0 5px 12px rgba(24,43,33,.16);
+}
+.shell.bidding-turn .hand-wrap{
+  border-color:#d6bf83;
+  box-shadow:0 0 0 1px rgba(249,229,162,.45),0 -6px 24px rgba(4,34,21,.3);
+}
+
+/* Bid phase: the public bid is always readable on the player's own plate,
+   and the partner's bid stays prominent by the bidding controls. */
+.table .seat .seat-card .seat-bid{font-variant-numeric:tabular-nums}
+.table.phase-bidding .seat-card .seat-bid{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  left:auto;top:auto;transform:none;min-height:23px;
+  margin:0 auto 4px;padding:2px 8px;
+  border-radius:8px;font-size:12px;line-height:1.2;
+  letter-spacing:-.02em;
+}
+.bid-partner-strip{
+  display:flex;align-items:center;gap:10px;min-width:0;
+  border:1px solid #acc8ae;border-left:5px solid #337c58;
+  border-radius:10px;background:linear-gradient(115deg,#e1f2df,#f5f8e9);
+  color:#20422f;padding:8px 10px;
+}
+.bid-partner-caption{
+  display:flex;align-items:center;gap:3px;flex-wrap:wrap;min-width:0;
+  color:#54755c;font-size:10px;font-weight:900;letter-spacing:.08em;
+}
+.bid-partner-caption strong{
+  color:#234b37;font-weight:850;font-size:12px;
+  letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.bid-partner-amount{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  min-width:68px;padding:5px 9px;
+  border:1px solid #a4bca3;border-radius:8px;background:#fff;
+  color:#1d4330;font-weight:1000;font-size:17px;
+  line-height:1.1;font-variant-numeric:tabular-nums;
+  box-shadow:0 2px 7px rgba(13,64,37,.09);
+}
+.bid-partner-amount.red{color:#b12b38}
+.bid-partner-amount.is-pass{font-size:13px;color:#6c6a61}
+.bid-partner-leading{
+  margin-left:auto;flex:none;border-radius:7px;padding:4px 6px;
+  color:#f8ead0;background:#24583c;
+  font-size:10px;font-weight:850;white-space:nowrap;
+}
+.bid-waiting-copy{display:grid;gap:5px;margin-top:8px;font-size:13px;color:#42574a}
+.bid-waiting-copy span{font-size:11px}
+@media(max-width:760px){
+  .table.phase-bidding .seat-card .seat-bid{min-height:18px;padding:2px 5px;font-size:10px;margin-bottom:2px}
+  .bid-partner-strip{padding:6px 8px;gap:6px;border-radius:8px}
+  .bid-partner-caption{font-size:9px;line-height:1.15}
+  .bid-partner-caption strong{font-size:10px;max-width:100px}
+  .bid-partner-amount{min-width:55px;padding:4px 7px;font-size:15px}
+  .bid-partner-leading{font-size:9px;padding:3px 5px}
+}
+@media(max-width:360px){
+  .bid-partner-caption strong{max-width:75px}
+  .bid-partner-strip{gap:4px}
+  .bid-partner-amount{font-size:13px;min-width:48px;padding:4px 5px}
+  .bid-partner-leading{font-size:8px}
+}

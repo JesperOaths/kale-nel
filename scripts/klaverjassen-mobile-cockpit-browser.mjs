@@ -164,6 +164,105 @@ try{
      'allSuitsAccessible=true','pointsScrollable=true');
   }finally{await context.close();}
  }
+ // Regression: when it is the player's turn to bid, the hand must remain
+ // visibly *inside* the felt and not disappear under the chooser, even after
+ // selecting a different suit or scrolling the list of legal bids.
+ const bidViewports=[
+  {width:320,height:640},{width:360,height:740},{width:390,height:780},
+  {width:430,height:932},{width:760,height:850},{width:768,height:820},
+  {width:1024,height:768},{width:1478,height:880}
+ ];
+ for(const size of bidViewports){
+  const {context,page,errors}=await setup(size.width,size.height,'bidding');
+  async function checkHand(stage){
+   const m=await page.evaluate(()=>{
+    const rect=el=>{const r=el.getBoundingClientRect();
+     return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};};
+    const felt=document.querySelector('#table'),hand=document.querySelector('.hand-wrap');
+    const cards=[...document.querySelectorAll('#hand button.card')];
+    const handRect=rect(hand),feltRect=rect(felt);
+    return {screen:{width:innerWidth,height:innerHeight},hand:handRect,felt:feltRect,
+      parent:hand.parentElement.id,position:getComputedStyle(hand).position,
+      cards:cards.map(el=>{
+       const r=rect(el),x=(r.left+r.right)/2,y=(r.top+r.bottom)/2;
+       const hit=document.elementFromPoint(x,y);
+       return {...r,opacity:Number(getComputedStyle(el).opacity),
+         disabled:el.disabled,
+         unobscured:!!hit?.closest('#hand button.card')&&hit.closest('#hand button.card')===el};
+      }),
+      instruction:document.querySelector('#legalCue').textContent,
+      pageWidth:document.documentElement.scrollWidth};
+   });
+   assert.equal(m.parent,'table',stage+': hand must be inside felt');
+   assert.equal(m.position,'absolute',stage+': bidding hand is undocked');
+   assert.equal(m.cards.length,8,stage+': expected all eight private cards');
+   assert(m.hand.top>=m.felt.top-3&&m.hand.bottom<=m.felt.bottom+3,
+     stage+': hand outside felt '+JSON.stringify(m));
+   assert(m.hand.top>=-2&&m.hand.bottom<=size.height+3,
+     stage+': hand outside screen '+JSON.stringify(m));
+   assert(m.cards.every(c=>c.width>19&&c.height>39&&c.left>=m.hand.left-3&&c.right<=m.hand.right+3
+     &&c.top>=m.hand.top-3&&c.bottom<=m.hand.bottom+3&&c.opacity>=.95
+     &&c.unobscured&&c.disabled),
+     stage+': a bidding card is clipped, faded, playable or obscured '+JSON.stringify(m));
+   assert(m.instruction.includes('Bekijk je 8 kaarten'),stage+': bidding hand guidance missing');
+   assert(m.pageWidth<=size.width+3,stage+': page horizontal overflow');
+  }
+  try{
+   await checkHand('initial '+size.width+'x'+size.height);
+   const clubs=page.locator('#actionPanel [data-bid-category="clubs"]');
+   await clubs.scrollIntoViewIfNeeded();
+   if(await clubs.isEnabled())await clubs.click();
+   await checkHand('after suit selection '+size.width+'x'+size.height);
+   const last=page.locator('#actionPanel .bid-value').last();
+   if(await last.count()){await last.scrollIntoViewIfNeeded();await checkHand('after bid scroll '+size.width+'x'+size.height);}
+   assert.equal(errors.length,0,errors.join('; '));
+   console.log('KJ_BIDDING_EIGHT_CARDS_VISIBLE_PASS',size.width+'x'+size.height,
+     'fullContrast=true','inViewport=true','notObscured=true','notPlayable=true');
+  }finally{await context.close();}
+ }
+ // Teammate's PUBLIC bid must be visible without opening the score panel,
+ // both when it is your turn and while you wait for other bids.
+ for(const size of [{width:320,height:640},{width:390,height:780},{width:768,height:820},{width:1478,height:880}]){
+  for(const waiting of [false,true]){
+   const {context,page,remote,errors}=await setup(size.width,size.height,'bidding');
+   try{
+    if(waiting){
+     // Freeze the next bidding seat as a real human to avoid a bot
+     // advancing this mocked room before the public mate bid is inspected.
+     remote.game.state.bidder_turn=1;
+     remote.game.state.players=remote.game.state.players.map((p,i)=>i===1?
+       {...p,is_bot:false,player_type:'human'}:p);
+     remote.players=remote.game.state.players;
+     await page.reload({waitUntil:'domcontentloaded'});
+    }
+    const partner=page.locator('#actionPanel .bid-partner-strip');
+    await partner.waitFor({state:'visible',timeout:6000});
+    const text=await partner.innerText();
+    assert(text.includes('JE MAAT')&&text.includes('Teamgenoot')&&text.includes('♦ 90'),
+      'Teammate suit/points not visible: '+text);
+    assert(text.includes('Hoogste bod'),'Leading bid indicator missing');
+    const seatBid=page.locator('#seats .seat.s2 .seat-bid');
+    assert(await seatBid.isVisible(),'Teammate nameplate bid missing');
+    assert((await seatBid.innerText()).includes('♦ 90'),'Player badge suit/points incorrect');
+    const visible=await page.evaluate(()=>{
+      const parent=document.querySelector('#actionPanel .bid-partner-strip');
+      const container=document.querySelector('#table');
+      const b=parent.getBoundingClientRect(),t=container.getBoundingClientRect();
+      return {bid:{top:b.top,bottom:b.bottom,left:b.left,right:b.right},
+       table:{top:t.top,bottom:t.bottom,left:t.left,right:t.right},
+       display:getComputedStyle(parent).display,
+       text:parent.textContent};
+    });
+    assert(visible.bid.top>=visible.table.top-3&&visible.bid.bottom<=visible.table.bottom+3,
+      'Teammate bid outside visible felt: '+JSON.stringify(visible));
+    assert(visible.bid.bottom<=size.height+3,
+      'Teammate bid offscreen: '+JSON.stringify(visible));
+    assert.equal(errors.length,0,errors.join('; '));
+    console.log('KJ_MATE_BID_VISIBLE_PASS',size.width+'x'+size.height,
+      waiting?'waiting=true':'ownTurn=true','suit=diamonds','points=90');
+   }finally{await context.close();}
+  }
+ }
  // The standalone lobby must be just as usable on small touch screens.
  for(const viewport of [{width:320,height:640},{width:390,height:780},{width:768,height:820}]){
   const context=await browser.newContext({viewport});
