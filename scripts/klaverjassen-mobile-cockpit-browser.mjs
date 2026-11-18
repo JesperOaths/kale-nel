@@ -164,5 +164,37 @@ try{
      'allSuitsAccessible=true','pointsScrollable=true');
   }finally{await context.close();}
  }
+ // The standalone lobby must be just as usable on small touch screens.
+ for(const viewport of [{width:320,height:640},{width:390,height:780},{width:768,height:820}]){
+  const context=await browser.newContext({viewport});
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/rest/v1/rpc/klaverjassen_guest_v1',async route=>
+   route.fulfill({status:200,contentType:'application/json',
+     headers:{'access-control-allow-origin':'*'},body:'[]'}));
+  try{
+   await page.goto(BASE+'index.html?left=1',{waitUntil:'domcontentloaded'});
+   await page.locator('#guestName').waitFor({state:'visible',timeout:8000});
+   for(const id of ['guestName','customRoomCode','customRoomTitle','finishMode','codeInput']){
+    assert(await page.locator('#'+id).isVisible(),id+' not visible in responsive lobby');
+   }
+   const sizes=await page.evaluate(()=>{
+    const width=innerWidth;
+    const selectors=['#createBtn','#joinBtn','#guestName','#customRoomCode','#customRoomTitle'];
+    const fields=selectors.map(s=>{
+     const el=document.querySelector(s),r=el.getBoundingClientRect();
+     return {id:s,left:r.left,right:r.right,height:r.height,width:r.width};
+    });
+    return {pageWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,width,fields};
+   });
+   assert(sizes.pageWidth<=viewport.width+3&&sizes.bodyWidth<=viewport.width+3,
+     'lobby horizontal overflow '+JSON.stringify(sizes));
+   assert(sizes.fields.every(f=>f.left>=0&&f.right<=viewport.width+3&&f.height>=40),
+     'lobby form clipped/too small '+JSON.stringify(sizes));
+   assert.equal(errors.length,0,'Lobby JS errors '+errors.join('; '));
+   console.log('KJ_PREMIUM_LOBBY_RESPONSIVE_PASS',viewport.width+'x'+viewport.height,
+     'allInputsVisible=true','touchTargets=true');
+  }finally{await context.close();}
+ }
  console.log('RESULT=KJ_PREMIUM_RESPONSIVE_COCKPIT_PASS');
 }finally{await browser.close();}
