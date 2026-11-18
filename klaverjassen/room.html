@@ -494,7 +494,7 @@
     }
 
   </style>
-  <link rel="stylesheet" href="./cockpit-refresh.css?v=20261118-2">
+  <link rel="stylesheet" href="./cockpit-refresh.css?v=20261118-3">
 </head>
 <body>
   <div class="wrap"><main class="shell no-active-game">
@@ -621,9 +621,12 @@
     function isHost(){ const host = String(game().created_by_player_name || '').toLowerCase(); const viewer = String(UI.remote?.viewer?.name || '').toLowerCase(); return !!host && !!viewer && host === viewer; }
     function esc(v){ return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
     function deadlineText(v){ if(!v) return '-'; const ms = new Date(v).getTime() - Date.now(); if(!Number.isFinite(ms)) return '-'; const days = Math.max(0, Math.ceil(ms / 86400000)); return days ? `${days} dagen` : 'vandaag'; }
-    function cardClass(card, extra=''){ const red = card.suit === 'hearts' || card.suit === 'diamonds'; return `card ${red?'red':''} ${extra} ${state().accepted_bid?.suit===card.suit?'trump-card':''}`; }
-    function cardHtml(card, playable=false){ return `<button class="${cardClass(card)}" data-card="${esc(card.id)}" ${playable?'':'disabled'}>${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit]}</span></button>`; }
-    function staticCardHtml(card, cls=''){ return `<div class="${cardClass(card, cls)}">${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit] || ''}</span></div>`; }
+    // Four independent suit cues: traditional glyph, high-contrast suit ink, and a Dutch initial.
+    const SUIT_INITIALS={hearts:'H',diamonds:'R',spades:'S',clubs:'K'};
+    function cardClass(card, extra=''){ const suit=['hearts','diamonds','spades','clubs'].includes(card.suit)?card.suit:'unknown'; const red = suit === 'hearts' || suit === 'diamonds'; return `card ${red?'red':''} suit-${suit} ${extra} ${state().accepted_bid?.suit===card.suit?'trump-card':''}`; }
+    function cardFaceHtml(card){ return `${esc(card.rank)}<span class="suit-glyph" aria-hidden="true">${esc(K.SUIT_SYMBOLS[card.suit]||'')}</span><small class="suit-key" aria-hidden="true">${SUIT_INITIALS[card.suit]||'?'}</small>`; }
+    function cardHtml(card, playable=false){ return `<button class="${cardClass(card)}" data-card="${esc(card.id)}" ${playable?'':'disabled'}>${cardFaceHtml(card)}</button>`; }
+    function staticCardHtml(card, cls=''){ return `<div class="${cardClass(card, cls)}" role="img" aria-label="${esc(card.rank+' '+(K.SUIT_LABELS[card.suit]||card.suit))}">${cardFaceHtml(card)}</div>`; }
     function playedCardHtml(play){ const card = play.card; const name = (state().players || [])[play.player]?.name || `S${play.player+1}`; return `<div class="play-card p${play.player}" data-play-seat="${play.player}" data-card-id="${esc(card.id)}">${staticCardHtml(card, `p${play.player}`)}<div class="muted" style="text-align:center;font-size:12px;margin-top:4px">${esc(name)}</div></div>`; }
     function makeRecoverySnapshot(st, reason='save'){ return { reason, saved_at:new Date().toISOString(), deal_nonce:st.deal_nonce || null, phase:st.phase, dealer:st.dealer, bidder_turn:st.bidder_turn ?? null, turn:st.turn ?? null, action_needed_seat:st.action_needed_seat ?? null, hands:st.hands || [], trick:st.trick || [], pending_trick:st.pending_trick || null, taken:st.taken || [], roem_by_team:st.roem_by_team || [0,0], totals:st.totals || [0,0], rounds:st.rounds || [] }; }
     function markProgress(st, reason='save'){ st.progress_tick = Number(st.progress_tick || 0) + 1; st.last_saved_at = new Date().toISOString(); st.last_progress_reason = reason; st.recovery_snapshot = makeRecoverySnapshot(st, reason); try{ localStorage.setItem('kalenel_klaverjassen_guest_progress_v1', JSON.stringify({ game_id: game().id || UI.gameId, lobby_code: game().lobby_code || UI.lobbyCode, at: st.last_saved_at, tick: st.progress_tick, phase: st.phase, round_count: (st.rounds||[]).length, recovery_reason: reason })); }catch(_){} return st; }
@@ -778,8 +781,8 @@
   const ghost=document.createElement('div');
   ghost.dataset.flightSeat=String(seatNo);
   ghost.dataset.flightCard=card.id;
-  ghost.className=`flying-card p${seatNo} ${['diamonds','hearts'].includes(card.suit)?'red':''}`;
-  ghost.innerHTML=`${esc(card.rank)}<span>${esc(K.SUIT_SYMBOLS[card.suit]||'')}</span>`;
+  ghost.className=`flying-card p${seatNo} suit-${card.suit} ${['diamonds','hearts'].includes(card.suit)?'red':''}`;
+  ghost.innerHTML=cardFaceHtml(card);
   ghost.style.left=`${sx-27}px`;ghost.style.top=`${sy-38}px`;
   ghost.style.setProperty('--dx',`${ex-sx}px`);
   ghost.style.setProperty('--dy',`${ey-sy}px`);
@@ -1144,7 +1147,7 @@
     const reason=yourTurn?(allowed?'Toegestaan: '+analysis.message:'Niet toegestaan: '+analysis.message):'Wacht tot je aan de beurt bent';
     return `<button class="${cardClass(card)} ${allowed?'legal-card':blocked?'blocked-card':''}" data-card="${esc(card.id)}"
       title="${esc(reason)}" aria-label="${esc(card.rank+' '+(K.SUIT_LABELS[card.suit]||card.suit)+'. '+reason)}"
-      ${allowed?'':'disabled'}>${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit]}</span></button>`;
+      ${allowed?'':'disabled'}>${cardFaceHtml(card)}</button>`;
   }).join('');
   $('hand').querySelectorAll('[data-card]').forEach(btn=>btn.onclick=()=>runAction(()=>playCard(btn.dataset.card),240));
 }
