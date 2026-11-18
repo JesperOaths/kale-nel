@@ -254,6 +254,62 @@ try{
    console.log('KLAVERJASSEN_ROEM_KLOP_PASS','awarded=20','seat=0','toast=true');
   }finally{await context.close();}
  }
+ // The last *completed* four-card trick stays on the felt after collection/reload.
+ // The pending/current trick must never masquerade as a completed trick.
+ for(const viewport of [{width:320,height:640},{width:390,height:780},
+                       {width:768,height:820},{width:1478,height:880}]){
+  const {context,page,remote,errors}=await setup(viewport.width,viewport.height,'playing');
+  try{
+   assert.equal(await page.locator('#lastTrickPreview:visible').count(),0,
+     'Do not show a previous trick before any completed trick exists');
+   const completed={
+     winner:2,
+     cards:[{player:1,card:{id:'spades-A',rank:'A',suit:'spades'}},
+       {player:2,card:{id:'diamonds-J',rank:'J',suit:'diamonds'}},
+       {player:3,card:{id:'hearts-8',rank:'8',suit:'hearts'}},
+       {player:0,card:{id:'clubs-10',rank:'10',suit:'clubs'}}],
+     roem:{points:0,items:[]},klopped:false
+   };
+   remote.game.state.taken=[completed];
+   remote.game.state.last_trick=completed;
+   remote.game.state.trick=[{player:0,card:cards[0]}]; // Separate, still-active trick.
+   await page.reload({waitUntil:'domcontentloaded'});
+   const preview=page.locator('#lastTrickPreview');
+   await preview.waitFor({state:'visible',timeout:9000});
+   assert.equal(await preview.locator('.last-trick-play').count(),4,
+     'Four actual cards must be shown on the felt');
+   assert.deepEqual(await preview.locator('.last-trick-play').evaluateAll(
+     nodes=>nodes.map(n=>Number(n.dataset.lastSeat))),[1,2,3,0],
+     'Preserve the actual play sequence');
+   assert((await preview.innerText()).includes('Leerling Harten'),
+     'Name the player who won the previous trick');
+   assert.equal(await preview.locator('.last-trick-play.is-winner').getAttribute('data-last-seat'),'2');
+   assert.equal(await page.locator('#trick .trick-slot.occupied').count(),1,
+     'The current trick must stay independent of the preview');
+   const bounds=await page.evaluate(()=>{
+     const el=document.querySelector('#lastTrickPreview'),felt=document.querySelector('#table');
+     const a=el.getBoundingClientRect(),b=felt.getBoundingClientRect();
+     return {visible:getComputedStyle(el).display!=='none',
+       top:a.top,bottom:a.bottom,left:a.left,right:a.right,
+       feltTop:b.top,feltBottom:b.bottom,feltLeft:b.left,feltRight:b.right,
+       viewportHeight:innerHeight};
+   });
+   assert(bounds.visible&&bounds.top>=bounds.feltTop-2&&bounds.bottom<=bounds.feltBottom+2&&
+     bounds.left>=bounds.feltLeft-2&&bounds.right<=bounds.feltRight+2&&
+     bounds.top>=-2&&bounds.bottom<=bounds.viewportHeight+2,
+     'Completed trick must be visible on felt: '+JSON.stringify({viewport,bounds}));
+   remote.game.state.phase='bidding';
+   remote.game.state.taken=[];
+   remote.game.state.last_trick=null;
+   remote.game.state.trick=[];
+   await page.reload({waitUntil:'domcontentloaded'});
+   assert.equal(await page.locator('#lastTrickPreview:visible').count(),0,
+     'New deal must not show stale previous-round cards');
+   assert.equal(errors.length,0,'Last-trick preview browser errors: '+errors.join('; '));
+   console.log('KLAVERJASSEN_LAST_TRICK_FELT_PASS',viewport.width+'x'+viewport.height,
+      'previousCards=4','winner=2','currentTrickIndependent=true','newDealCleared=true');
+  }finally{await context.close();}
+ }
  // Existing persisted results must be readable, even after the match is closed.
  for(const phase of ['roundOver','finished']){
   const {context,page,errors}=await setup(390,780,phase);
