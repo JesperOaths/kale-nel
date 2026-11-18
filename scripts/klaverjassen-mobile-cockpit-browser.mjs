@@ -227,7 +227,12 @@ try{
    const {context,page,remote,errors}=await setup(size.width,size.height,'bidding');
    try{
     if(waiting){
-     remote.game.state.bidder_turn=2; // teammate's own turn; must still see last bid
+     // Freeze the next bidding seat as a real human to avoid a bot
+     // advancing this mocked room before the public mate bid is inspected.
+     remote.game.state.bidder_turn=1;
+     remote.game.state.players=remote.game.state.players.map((p,i)=>i===1?
+       {...p,is_bot:false,player_type:'human'}:p);
+     remote.players=remote.game.state.players;
      await page.reload({waitUntil:'domcontentloaded'});
     }
     const partner=page.locator('#actionPanel .bid-partner-strip');
