@@ -947,6 +947,7 @@
       const ownBidTurn = st.phase === 'bidding' && me === st.bidder_turn;
       document.querySelector('.shell')?.classList.toggle('bidding-turn', ownBidTurn);
       $('table').classList.toggle('bidding-turn', ownBidTurn);
+      $('table').classList.toggle('phase-bidding', st.phase === 'bidding');
       $('leaveBtn').style.display = game().id ? 'inline-flex' : 'none';
       $('deleteRoomBtnTop').style.display = isHost() && hasActiveRoom() ? 'inline-flex' : 'none';
       $('roomStat').textContent = game().lobby_code || UI.lobbyCode || '-';
