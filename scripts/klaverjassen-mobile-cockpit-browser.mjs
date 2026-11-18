@@ -145,7 +145,7 @@ try{
    const categories=page.locator('#actionPanel .bid-category');
    assert.equal(await categories.count(),5,'Five suits/modes should be present');
    for(const value of ['hearts','spades','diamonds','clubs','sans']){
-    const category=page.locator('#actionPanel .bid-category[data-suit="'+value+'"]');
+    const category=page.locator('#actionPanel .bid-category[data-bid-category="'+value+'"]');
     assert.equal(await category.count(),1,'Missing category '+value);
     if(await category.isEnabled()){
      await category.scrollIntoViewIfNeeded();
