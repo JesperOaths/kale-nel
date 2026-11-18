@@ -619,3 +619,14 @@ body{
 .kj-reduced-motion .seat-card.turn{animation:none;outline:3px solid #cfad63}
 
 .shell.no-active-game .mobile-turn-strip{display:none}
+
+/* Bid phase: all eight cards are references for the bid, not disabled-looking ghosts. */
+.shell.bidding-turn .hand button.card:disabled{
+  opacity:1;
+  filter:none;
+  box-shadow:0 5px 12px rgba(24,43,33,.16);
+}
+.shell.bidding-turn .hand-wrap{
+  border-color:#d6bf83;
+  box-shadow:0 0 0 1px rgba(249,229,162,.45),0 -6px 24px rgba(4,34,21,.3);
+}
