@@ -220,6 +220,44 @@ try{
      'fullContrast=true','inViewport=true','notObscured=true','notPlayable=true');
   }finally{await context.close();}
  }
+ // Teammate's PUBLIC bid must be visible without opening the score panel,
+ // both when it is your turn and while you wait for other bids.
+ for(const size of [{width:320,height:640},{width:390,height:780},{width:768,height:820},{width:1478,height:880}]){
+  for(const waiting of [false,true]){
+   const {context,page,remote,errors}=await setup(size.width,size.height,'bidding');
+   try{
+    if(waiting){
+     remote.game.state.bidder_turn=2; // teammate's own turn; must still see last bid
+     await page.reload({waitUntil:'domcontentloaded'});
+    }
+    const partner=page.locator('#actionPanel .bid-partner-strip');
+    await partner.waitFor({state:'visible',timeout:6000});
+    const text=await partner.innerText();
+    assert(text.includes('JE MAAT')&&text.includes('Teamgenoot')&&text.includes('♦ 90'),
+      'Teammate suit/points not visible: '+text);
+    assert(text.includes('Hoogste bod'),'Leading bid indicator missing');
+    const seatBid=page.locator('#seats .seat.s2 .seat-bid');
+    assert(await seatBid.isVisible(),'Teammate nameplate bid missing');
+    assert((await seatBid.innerText()).includes('♦ 90'),'Player badge suit/points incorrect');
+    const visible=await page.evaluate(()=>{
+      const parent=document.querySelector('#actionPanel .bid-partner-strip');
+      const container=document.querySelector('#table');
+      const b=parent.getBoundingClientRect(),t=container.getBoundingClientRect();
+      return {bid:{top:b.top,bottom:b.bottom,left:b.left,right:b.right},
+       table:{top:t.top,bottom:t.bottom,left:t.left,right:t.right},
+       display:getComputedStyle(parent).display,
+       text:parent.textContent};
+    });
+    assert(visible.bid.top>=visible.table.top-3&&visible.bid.bottom<=visible.table.bottom+3,
+      'Teammate bid outside visible felt: '+JSON.stringify(visible));
+    assert(visible.bid.bottom<=size.height+3,
+      'Teammate bid offscreen: '+JSON.stringify(visible));
+    assert.equal(errors.length,0,errors.join('; '));
+    console.log('KJ_MATE_BID_VISIBLE_PASS',size.width+'x'+size.height,
+      waiting?'waiting=true':'ownTurn=true','suit=diamonds','points=90');
+   }finally{await context.close();}
+  }
+ }
  // The standalone lobby must be just as usable on small touch screens.
  for(const viewport of [{width:320,height:640},{width:390,height:780},{width:768,height:820}]){
   const context=await browser.newContext({viewport});
