@@ -494,7 +494,7 @@
     }
 
   </style>
-  <link rel="stylesheet" href="./cockpit-refresh.css?v=20261118-3">
+  <link rel="stylesheet" href="./cockpit-refresh.css?v=20261118-4">
 </head>
 <body>
   <div class="wrap"><main class="shell no-active-game">
@@ -564,7 +564,7 @@
         <div id="shuffleNote" class="shuffle-note" style="display:none">Schudden en delen...</div>
         <div id="seats"></div>
         <div class="center">
-          <div class="panel"><h2 id="centerTitle">Tafel</h2><div id="contractRibbon" class="contract-ribbon" hidden></div><div class="trick" id="trick"></div><div id="trickStatus" class="trick-status" aria-live="polite"></div><div id="centerCopy" class="muted"></div></div>
+          <div class="panel"><h2 id="centerTitle">Tafel</h2><div id="contractRibbon" class="contract-ribbon" hidden></div><section id="lastTrickPreview" class="last-trick-felt" aria-label="Laatste afgeronde slag" hidden></section><div class="trick" id="trick"></div><div id="trickStatus" class="trick-status" aria-live="polite"></div><div id="centerCopy" class="muted"></div></div>
           <div class="panel" id="actionPanel"></div>
         </div>
         <div class="table-announcement" id="eventBanner" aria-live="polite"></div>
@@ -924,6 +924,35 @@
       }).join('');
       return `${slots}<div class="trick-middle" aria-label="${bySeat.size} van 4 kaarten gespeeld"><strong>${bySeat.size}/4</strong><span>slag</span></div>`;
     }
+    // Read-only evidence from the last *collected* four-card trick.
+    // Never show the pending or partially played trick as if it were completed.
+    function renderLastTrickOnFelt(st){
+      const target=$('lastTrickPreview');
+      const last=(Array.isArray(st.taken)?st.taken.at(-1):null) || st.last_trick || null;
+      const cards=last?.cards;
+      const visible=['playing','roundOver','finished'].includes(st.phase)&&
+        Array.isArray(cards)&&cards.length===4&&cards.every(play=>play?.card&&Number.isInteger(Number(play.player)));
+      if(!visible){target.hidden=true;target.innerHTML='';return;}
+      const winner=Number(last.winner);
+      const number=Array.isArray(st.taken)&&st.taken.length?st.taken.length:null;
+      const who=Number.isInteger(winner)&&winner>=0&&winner<=3
+        ?player(winner)?.name||('Speler '+(winner+1)):'Onbekend';
+      const markup=`<div class="last-trick-top"><strong>LAATSTE SLAG${number?' · '+number:''}</strong><span>Gewonnen door <b>${esc(who)}</b></span></div>
+        <div class="last-trick-cards" role="list" aria-label="Vier kaarten van de vorige slag, op speelvolgorde">
+          ${cards.map((play,i)=>{
+            const pos=Number(play.player),name=player(pos)?.name||('Speler '+(pos+1));
+            const won=pos===winner;
+            return `<div class="last-trick-play ${won?'is-winner':''}" role="listitem" data-last-seat="${pos}"
+              aria-label="${esc(name)}, ${esc(play.card.rank)} ${esc(K.SUIT_LABELS[play.card.suit]||play.card.suit)}${won?', winnaar':''}">
+              ${staticCardHtml(play.card,`mini-card p${pos}`)}
+              <small>${i===0?'START · ':''}${esc(name)}</small>
+              ${won?'<span class="last-trick-winner">WINT</span>':''}
+            </div>`;
+          }).join('')}
+        </div>`;
+      if(target.innerHTML!==markup)target.innerHTML=markup;
+      target.hidden=false;
+    }
     function renderTrickView(plays,st,forceSlots=false){
       const show=forceSlots || st.phase==='playing' || !!st.pending_trick;
       const trick=$('trick'),status=$('trickStatus');
@@ -975,7 +1004,9 @@
         return `<div class="seat s${i} position-${K.guestSeatPosition(i,me)}"><div class="seat-card p${i} ${turn?'turn':''}">${bidBadge(st,i)}<strong>${esc(p.name || `Stoel ${i+1}`)}</strong><span class="tag">Team ${K.TEAM_OF[i]}</span>${K.isBotPlayer(p)?'<span class="tag bot">Bot</span>':''}${i===st.dealer?'<span class="tag dealer-chip" title="De volgende deler zit links van deze speler">DELER</span>':''}${i===K.guestClockwiseNext(st.dealer)?'<span class="tag forehand-chip" title="Links van de deler: begint met bieden en speelt de eerste kaart">Voorhand · links</span>':''}${i===me?'<span class="tag">Jij</span>':''}</div></div>`;
       }).join('');
       const shownTrick = st.pending_trick?.cards || st.trick || [];
-      renderTrickView(UI.playbackActive ? UI.playbackTrick : shownTrick,st,UI.playbackActive);renderContractRibbon(st);
+      renderTrickView(UI.playbackActive ? UI.playbackTrick : shownTrick,st,UI.playbackActive);
+      renderContractRibbon(st);
+      renderLastTrickOnFelt(st);
       $('centerTitle').textContent = titleFor(st);
       $('centerCopy').textContent = copyFor(st, me);
       renderActions(st, me);
