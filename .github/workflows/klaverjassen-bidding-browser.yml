@@ -8,6 +8,9 @@ on:
       - 'scripts/klaverjassen-guest-async-room-browser.mjs'
       - 'scripts/klaverjassen-guest-v1e-browser.mjs'
       - 'scripts/klaverjassen-clockwise-rules-browser.mjs'
+      - 'scripts/klaverjassen-mobile-cockpit-browser.mjs'
+      - 'klaverjassen/cockpit-refresh.css'
+      - 'klaverjassen/lobby-refresh.css'
       - 'klaverjassen/guest-rules.js'
       - 'klaverjassen/guest-enhancements.js'
       - 'klaverjassen/turn-sw.js'
@@ -41,6 +44,7 @@ jobs:
           node --check scripts/klaverjassen-guest-async-room-browser.mjs
           node --check scripts/klaverjassen-guest-v1e-browser.mjs
           node --check scripts/klaverjassen-clockwise-rules-browser.mjs
+          node --check scripts/klaverjassen-mobile-cockpit-browser.mjs
           node --check klaverjassen/guest-rules.js
           node --check klaverjassen/guest-bridge.js
           node --check klaverjassen/guest-enhancements.js
@@ -58,3 +62,4 @@ jobs:
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-guest-async-room-browser.mjs
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-guest-v1e-browser.mjs
           CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-clockwise-rules-browser.mjs
+          CHROME_BIN="$(command -v google-chrome)" node scripts/klaverjassen-mobile-cockpit-browser.mjs

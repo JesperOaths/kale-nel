@@ -493,16 +493,24 @@
     }
 
   </style>
+  <link rel="stylesheet" href="./cockpit-refresh.css?v=20261118-1">
 </head>
 <body>
   <div class="wrap"><main class="shell no-active-game">
     <div class="top">
-      <div><div class="muted">Kalenel · Klaverjassen</div><h1>Klaverjas tafel <span id="roomTitleLabel" class="room-title-label"></span></h1><div id="status" class="status"></div></div>
+      <div class="top-identity"><div class="muted">Kalenel · Klaverjassen</div><h1>Klaverjas tafel <span id="roomTitleLabel" class="room-title-label"></span></h1><div id="status" class="status"></div></div>
       <div class="top-actions">
         <a class="btn secondary" href="./">Lobby</a>
         <a class="btn secondary" href="https://kalenel.nl/">Home</a>
         <button id="leaveBtn" class="btn danger" type="button">Tafel verlaten</button>
         <button id="deleteRoomBtnTop" class="btn danger" type="button">Sluit tafel</button>
+        <details class="mobile-more-actions" id="mobileMoreActions">
+          <summary aria-label="Meer tafelacties" title="Meer tafelacties">⋯</summary>
+          <div class="mobile-menu-content">
+            <button id="mobileLeaveBtn" type="button">Tafel verlaten</button>
+            <button id="mobileCloseRoomBtn" type="button" hidden>Sluit tafel</button>
+          </div>
+        </details>
       </div>
     </div>
     <section class="lobby-home" id="lobbyHome">
@@ -545,6 +553,11 @@
       <div class="stat"><span>Deler</span><strong id="dealerStat">-</strong></div>
       <div class="stat"><span>Hervatten tot</span><strong id="deadlineStat">-</strong></div>
     </section>
+    <div class="mobile-turn-strip" id="mobileTurnStrip" data-my-turn="false">
+      <span id="mobileTurnMessage" class="mobile-turn-message">Spel wordt geladen...</span>
+      <button class="mobile-info-button" id="mobileInfoButton" type="button"
+        aria-controls="informationSide" aria-expanded="false">Overzicht</button>
+    </div>
     <section class="game-layout">
       <section class="table" id="table">
         <div id="shuffleNote" class="shuffle-note" style="display:none">Schudden en delen...</div>
@@ -560,7 +573,12 @@
       <section class="hand" id="hand"></section>
     </section>
       </section>
+      <button type="button" class="mobile-info-backdrop" id="mobileInfoBackdrop"
+        aria-label="Sluit speloverzicht" hidden></button>
       <aside class="side" id="informationSide">
+        <div class="mobile-info-heading"><strong>Speloverzicht</strong>
+          <button type="button" id="mobileCloseInfoButton" class="close-mobile-info" aria-label="Sluit overzicht">×</button>
+        </div>
         <nav class="side-tabs" aria-label="Speloverzicht">
           <button type="button" data-pane="scorePanel" class="is-active" aria-selected="true">Stand</button>
           <button type="button" data-pane="roundPanel" aria-selected="false">Rondes</button>
@@ -920,6 +938,8 @@
       $('deadlineStat').textContent=game().resume_until?new Date(game().resume_until).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}):deadlineText(st.action_deadline_at);
       $('deadlineStat').title=game().resume_until?'Hervatten tot '+new Date(game().resume_until).toLocaleString('nl-NL'):'';
       $('roomTitleLabel').textContent=game().room_title||'';
+      updateMobileTurnStrip(st,me);
+      $('mobileCloseRoomBtn').hidden=!isHost()||!hasActiveRoom();
       $('finishMode').value = st.settings?.finish_mode || 'fixed_rounds';
       $('finishMode').disabled = !!game().id && st.phase !== 'lobby';
       renderBotSlots();
@@ -943,6 +963,51 @@
       visualizeEvents(st);
       queueBotTurns();
       queueAutoCollect(st);
+    }
+
+    // Phone-only cockpit: essential status stays above the felt, full stats
+    // remain keyboard- and touch-accessible in a single information sheet.
+    function updateMobileTurnStrip(st,me){
+      const cue=$('mobileTurnStrip'),text=$('mobileTurnMessage');
+      if(!cue||!text)return;
+      let actor=null,label='';
+      if(st.phase==='lobby')label='Wacht op spelers · '+(st.players||[]).length+'/4';
+      else if(st.phase==='bidding'){
+        actor=st.bidder_turn;
+        label=(me===actor?'Jij biedt':'Bieden: '+(player(actor)?.name||'speler'));
+      }else if(st.pending_trick){
+        actor=st.pending_trick.winner;
+        label='Slag voor '+(player(actor)?.name||'speler');
+      }else if(st.phase==='playing'){
+        actor=st.turn;
+        label=(me===actor?'Jij bent aan zet':'Aan zet: '+(player(actor)?.name||'speler'));
+      }else if(st.phase==='roundOver')label='Ronde klaar · volgende ronde';
+      else if(st.phase==='finished')label='Potje afgelopen · bekijk de uitslag';
+      else label='Klaverjassen · tafel';
+      const bid=st.accepted_bid||st.current_bid;
+      const suit=bid?.mode==='sans'?'sans':bid?.suit;
+      if(suit&&bid?.action!=='pass')label+=' · '+(K.SUIT_SYMBOLS[suit]||'SA')+' '+(suit==='sans'?'Sans':K.SUIT_LABELS[suit]||'');
+      cue.dataset.myTurn=String(actor===me&&!st.pending_trick&&['playing','bidding'].includes(st.phase));
+      text.textContent=label;
+    }
+    function setMobileInfoOpen(open){
+      const side=$('informationSide'),backdrop=$('mobileInfoBackdrop'),button=$('mobileInfoButton');
+      const visible=!!open&&window.matchMedia('(max-width:760px)').matches;
+      side.classList.toggle('mobile-open',visible);
+      backdrop.hidden=!visible;
+      button.setAttribute('aria-expanded',String(visible));
+      if(visible){
+        side.setAttribute('role','dialog');
+        side.setAttribute('aria-modal','true');
+        side.setAttribute('aria-label','Speloverzicht');
+        document.documentElement.classList.add('kj-mobile-sheet-open');
+        $('mobileCloseInfoButton').focus({preventScroll:true});
+      }else{
+        side.removeAttribute('role');
+        side.removeAttribute('aria-modal');
+        side.removeAttribute('aria-label');
+        document.documentElement.classList.remove('kj-mobile-sheet-open');
+      }
     }
     function titleFor(st){ if(!game().id) return 'Maak of join een tafel'; if(st.phase==='bidding') return `Bieden: ${player(st.bidder_turn).name || '-'}`; if(st.pending_trick) return `Slag voor ${player(st.pending_trick.winner).name || '-'}`; if(st.phase==='playing') return `Beurt: ${player(st.turn).name || '-'}`; if(st.phase==='roundOver') return 'Ronde klaar'; if(st.phase==='finished') return 'Potje opgeslagen'; return 'Lobby'; }
     function copyFor(st, me){ if(!game().id) return 'Maak een tafel of join met een roomcode. Open tafels blijven rejoinbaar.'; if((st.players||[]).length<4) return 'Wachten op vier spelers, of vul de tafel met bots.'; if(st.phase==='bidding') return K.isBotPlayer(player(st.bidder_turn)) ? 'Bot denkt na over bod, kleur, roem en risico.' : 'Pas of bied hoger. Vier passen zonder bod betekent: opnieuw schudden en delen.'; if(st.phase==='playing') return me===st.turn?'Speel een geldige kaart. Roem, troef en kaarttelling worden meegewogen door de bots.':'Wachten op de speler die aan de beurt is.'; if(st.pending_trick) return 'Klop voor roem voordat de slag wordt gepakt.'; if(st.phase==='roundOver') return 'Rondepunten, roem en nat-status staan rechts in het scorepaneel.'; return ''; }
@@ -1264,7 +1329,18 @@
     function queueBotTurns(){if(UI.busy||UI.botTimer)return;const st=state();if(!K.hasBots(st)||st.pending_trick||['finished','roundOver'].includes(st.phase))return;if((st.phase==='bidding'&&isBotSeat(st,st.bidder_turn))||(st.phase==='playing'&&isBotSeat(st,st.turn))){UI.botTimer=setTimeout(()=>{UI.botTimer=null;runBotTurns().catch(err=>setStatus(err?.message||'Botzet kon niet worden opgeslagen.'));},950);}}
     async function runBotTurns(){ if(UI.busy) return; let st = structuredClone(state()); if(!K.hasBots(st)) return; let changed = false; UI.busy = true; try{ for(let guard=0; guard<80; guard++){ await wait(360); if(st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)){ applyBid(st, st.bidder_turn, K.botBid(st, st.bidder_turn)); changed = true; continue; } if(st.phase==='playing'&&st.pending_trick)break; if(st.phase === 'playing' && !st.pending_trick && isBotSeat(st, st.turn)){ if(!applyBotCard(st, st.turn)) break; changed = true; continue; } break; } if(changed) await save(st, true, 'bot_turns'); } finally { UI.busy = false; } }
     async function loadRooms(){ try{ const data = await K.rpc('klaverjas_online_list_open', { session_token: K.sessionToken(), site_scope_input: K.currentScope() }); const rows = Array.isArray(data) ? data : []; $('rooms').innerHTML = rows.length ? rows.map(r => `<article class="room-card ${r.has_me ? 'mine' : ''}"><strong>${esc(r.lobby_code)}</strong><div class="muted">${esc(r.status)} · host ${esc(r.created_by_player_name || '-')}</div><div class="room-meta"><span class="room-pill">${esc(r.player_count)}/4 stoelen</span><span class="room-pill">${esc(r.human_count || 0)} mensen</span><span class="room-pill">${esc(r.bot_count || 0)} bots</span>${r.has_me ? '<span class="room-pill">jouw tafel</span>' : ''}</div><div class="room-actions"><button class="btn secondary" data-room="${esc(r.lobby_code)}" type="button">Open</button>${r.is_host ? `<button class="btn danger" data-delete-room="${esc(r.lobby_code)}" data-delete-id="${esc(r.id)}" type="button">Sluit</button>` : ''}</div></article>`).join('') : '<div class="muted">Geen open tafels. Maak links een nieuwe tafel.</div>'; $('rooms').querySelectorAll('[data-room]').forEach(btn => btn.onclick = () => { $('codeInput').value = btn.dataset.room; runAction(joinGame); }); $('rooms').querySelectorAll('[data-delete-room]').forEach(btn => btn.onclick = () => deleteRoom(btn.dataset.deleteId || null, btn.dataset.deleteRoom || null)); }catch(_){ $('rooms').innerHTML = '<div class="muted">Open tafels laden lukte niet.</div>'; } }
-    document.querySelectorAll('.side-tabs [data-pane]').forEach(btn=>btn.addEventListener('click',()=>setPane(btn.dataset.pane))); $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; $('leaveBtn').onclick = leaveTable; $('deleteRoomBtnTop').onclick = () => deleteRoom(); $('addEasyBotBtn').onclick = () => addBotDraft('easy'); $('addHardBotBtn').onclick = () => addBotDraft('hard'); $('clearBotsBtn').onclick = clearBotDraft; renderBotSlots(); if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); UI.poll = setInterval(() => { if(!document.hidden||window.KALENEL_KJ_ENHANCEMENTS?.shouldPollHidden()) load(); }, 15000);
+    $('mobileInfoButton').addEventListener('click',()=>setMobileInfoOpen(true));
+    $('mobileCloseInfoButton').addEventListener('click',()=>{setMobileInfoOpen(false);$('mobileInfoButton').focus({preventScroll:true});});
+    $('mobileInfoBackdrop').addEventListener('click',()=>setMobileInfoOpen(false));
+    $('mobileLeaveBtn').addEventListener('click',()=>{$('mobileMoreActions').open=false;$('leaveBtn').click();});
+    $('mobileCloseRoomBtn').addEventListener('click',()=>{$('mobileMoreActions').open=false;$('deleteRoomBtnTop').click();});
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape'&&$('informationSide').classList.contains('mobile-open')){
+        e.preventDefault();setMobileInfoOpen(false);$('mobileInfoButton').focus({preventScroll:true});
+      }
+    });
+    window.matchMedia('(max-width:760px)').addEventListener?.('change',e=>{if(!e.matches)setMobileInfoOpen(false);});
+        document.querySelectorAll('.side-tabs [data-pane]').forEach(btn=>btn.addEventListener('click',()=>setPane(btn.dataset.pane))); $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; $('leaveBtn').onclick = leaveTable; $('deleteRoomBtnTop').onclick = () => deleteRoom(); $('addEasyBotBtn').onclick = () => addBotDraft('easy'); $('addHardBotBtn').onclick = () => addBotDraft('hard'); $('clearBotsBtn').onclick = clearBotDraft; renderBotSlots(); if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); UI.poll = setInterval(() => { if(!document.hidden||window.KALENEL_KJ_ENHANCEMENTS?.shouldPollHidden()) load(); }, 15000);
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
