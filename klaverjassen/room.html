@@ -1102,7 +1102,7 @@
   const leadMark=analysis.leadSuit?K.SUIT_SYMBOLS[analysis.leadSuit]||'':'';
   let cue='';
   if(yourTurn)cue=(leadMark?leadMark+' ':'')+analysis.message+' · '+legal.size+' van '+hand.length+' kaarten toegestaan.';
-  else if(st.phase==='bidding')cue=me===st.bidder_turn?'Je bent aan de beurt om te bieden.':'Bieden: wacht tot je aan de beurt bent.';
+  else if(st.phase==='bidding')cue=me===st.bidder_turn?'Bekijk je 8 kaarten en kies een kleur en punten om te bieden.':'Bekijk je 8 kaarten; wacht tot je aan de beurt bent om te bieden.';
   else if(st.pending_trick)cue='De slag wordt afgerond. Wacht op de volgende uitkomst.';
   else if(st.phase==='playing')cue='Wacht op '+(player(st.turn)?.name||'de volgende speler')+' · daarna draait de beurt met de klok mee.';
   else cue='De volgende deler zit steeds links van de vorige deler.';
