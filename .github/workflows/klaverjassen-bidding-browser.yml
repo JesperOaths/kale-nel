@@ -10,6 +10,7 @@ on:
       - 'scripts/klaverjassen-clockwise-rules-browser.mjs'
       - 'scripts/klaverjassen-mobile-cockpit-browser.mjs'
       - 'klaverjassen/cockpit-refresh.css'
+      - 'klaverjassen/lobby-refresh.css'
       - 'klaverjassen/guest-rules.js'
       - 'klaverjassen/guest-enhancements.js'
       - 'klaverjassen/turn-sw.js'
