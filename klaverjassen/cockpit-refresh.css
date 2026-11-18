@@ -686,3 +686,34 @@ body{
   .bid-partner-amount{font-size:13px;min-width:48px;padding:4px 5px}
   .bid-partner-leading{font-size:8px}
 }
+
+
+/* Four-suit readability. Color is an extra cue, never the only cue:
+   glyph shape and H/R/S/K Dutch initials remain legible on small cards. */
+.card.suit-hearts,.flying-card.suit-hearts{--kj-suit-ink:#ae2440;--kj-suit-tint:#ffedf2}
+.card.suit-diamonds,.flying-card.suit-diamonds{--kj-suit-ink:#a44c0d;--kj-suit-tint:#fff0df}
+.card.suit-spades,.flying-card.suit-spades{--kj-suit-ink:#253e68;--kj-suit-tint:#eaf0ff}
+.card.suit-clubs,.flying-card.suit-clubs{--kj-suit-ink:#19633e;--kj-suit-tint:#e6f4e9}
+.card[class*="suit-"],.flying-card[class*="suit-"],
+.hand .card[class*="suit-"]{color:var(--kj-suit-ink)}
+.card[class*="suit-"]{border-left-color:var(--kj-suit-ink);border-left-width:4px}
+.card .suit-glyph,.flying-card .suit-glyph{
+  font-family:Arial,"Segoe UI Symbol",sans-serif;
+  font-weight:900;line-height:1;
+}
+.card .suit-key,.flying-card .suit-key{
+  position:absolute;bottom:3px;right:3px;display:grid;place-items:center;
+  min-width:14px;height:14px;padding:0 2px;box-sizing:border-box;
+  border:1px solid currentColor;border-radius:4px;
+  background:var(--kj-suit-tint,#fff);color:var(--kj-suit-ink,#222);
+  font:900 10px/1 Arial,system-ui,sans-serif;
+  pointer-events:none;
+}
+.trick-slot .card .suit-key,.mini-card .suit-key{
+  bottom:1px;right:1px;min-width:10px;height:10px;
+  padding:0 1px;border-radius:2px;font-size:7px;
+}
+.flying-card .suit-key{min-width:12px;height:12px;font-size:8px}
+@media(max-width:390px){
+  .hand .card .suit-key{bottom:2px;right:2px;min-width:11px;height:11px;font-size:8px}
+}
