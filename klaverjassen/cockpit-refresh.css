@@ -771,8 +771,9 @@ body{
 .auto-collect-hint{font-size:13px;line-height:1.5}
 @media(min-width:761px) and (max-width:1100px){
   .game-layout{grid-template-columns:minmax(0,1fr) 255px}
+  .table{height:clamp(500px,calc(100dvh - 184px),900px)}
   .table .center{width:calc(100% - 173px)}
-  .side{height:clamp(500px,calc(100dvh - 158px),940px)}
+  .side{height:clamp(500px,calc(100dvh - 184px),900px)}
 }
 @media(max-width:760px){
   .wrap{padding:0}
