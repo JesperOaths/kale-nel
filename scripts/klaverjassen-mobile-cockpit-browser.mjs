@@ -85,13 +85,11 @@ try{
       cardBoxes:cardBtns.map(rect),
       cardCount:cardBtns.length,
       suitMarks:cardBtns.map(el=>{
-        const key=el.querySelector('.suit-key'),glyph=el.querySelector('.suit-glyph');
-        const label=key?.getBoundingClientRect(),bounds=el.getBoundingClientRect();
+        const glyph=el.querySelector('.suit-glyph');
         return {suit:[...el.classList].find(c=>c.startsWith('suit-'))?.slice(5)||'',
-          key:key?.textContent?.trim()||'',glyph:glyph?.textContent?.trim()||'',
-          ink:getComputedStyle(el).color,
-          labelInCard:!!label&&label.left>=bounds.left-1&&label.right<=bounds.right+1&&
-            label.top>=bounds.top-1&&label.bottom<=bounds.bottom+1};
+          glyph:glyph?.textContent?.trim()||'',
+          hasLetterBadge:!!el.querySelector('.suit-key'),
+          ink:getComputedStyle(el).color};
       }),
       stripVisible:strip.getBoundingClientRect().height>0&&getComputedStyle(strip).display!=='none',
       sideVisible:getComputedStyle(side).display!=='none',
@@ -100,16 +98,16 @@ try{
     };
    });
    assert.equal(metrics.cardCount,8);
-   const expectedSuits={hearts:['H','♥'],diamonds:['R','♦'],spades:['S','♠'],clubs:['K','♣']};
-   for(const [suit,[key,glyph]] of Object.entries(expectedSuits)){
+   const expectedSuits={hearts:'♥',diamonds:'♦',spades:'♠',clubs:'♣'};
+   for(const [suit,glyph] of Object.entries(expectedSuits)){
      const matching=metrics.suitMarks.filter(m=>m.suit===suit);
      assert(matching.length>0,'Missing '+suit+' suit on test hand');
-     assert(matching.every(m=>m.key===key&&m.glyph===glyph&&m.labelInCard),
-       suit+' must show its own visible suit shape and initial: '+JSON.stringify(matching));
+     assert(matching.every(m=>m.glyph===glyph&&!m.hasLetterBadge),
+       suit+' must show a clear traditional glyph but no H/R/C/D/S card badge: '+JSON.stringify(matching));
    }
    assert.equal(new Set(Object.keys(expectedSuits).map(s=>
      metrics.suitMarks.find(m=>m.suit===s)?.ink)).size,4,
-     'Hearts, diamonds, spades and clubs must each have distinct, legible colors');
+     'Four suit colors must remain distinguishable without suit-letter badges');
    assert.equal(metrics.handParent,'table','hand must stay inside felt');
    assert(metrics.docWidth<=size.width+3&&metrics.bodyWidth<=size.width+3,
      'horizontal page overflow: '+JSON.stringify(metrics));
