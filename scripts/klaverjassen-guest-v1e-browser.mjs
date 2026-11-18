@@ -85,6 +85,7 @@ try{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
    await page.goto(BASE+'room.html?room='+CODE);
+   await page.locator('#mobileInfoButton').click();
    await page.locator('[data-pane="memoryPanel"]').click();
    await page.locator('#kjAnimSpeed').selectOption('2');
    assert.equal(await page.evaluate(()=>window.KALENEL_KJ_ENHANCEMENTS.duration(1050)),525);
