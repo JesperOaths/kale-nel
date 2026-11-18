@@ -744,8 +744,8 @@ body{
 .wrap{max-width:1840px;padding:9px clamp(5px,.75vw,13px)}
 .shell{padding:clamp(8px,1vw,16px)}
 .game-layout{grid-template-columns:minmax(0,1fr) minmax(250px,282px);gap:9px}
-.table{height:clamp(630px,calc(100dvh - 158px),940px);border-width:9px}
-.side{height:clamp(630px,calc(100dvh - 158px),940px)}
+.table{height:clamp(500px,calc(100dvh - 158px),940px);border-width:9px}
+.side{height:clamp(500px,calc(100dvh - 158px),940px)}
 .shell:not(.no-active-game) .stat span{font-size:10px;letter-spacing:.04em}
 .shell:not(.no-active-game) .stat strong{font-size:clamp(14px,1.35vw,18px)}
 .seat-card strong{font-size:clamp(13px,1.2vw,17px)}
@@ -772,7 +772,7 @@ body{
 @media(min-width:761px) and (max-width:1100px){
   .game-layout{grid-template-columns:minmax(0,1fr) 255px}
   .table .center{width:calc(100% - 173px)}
-  .side{height:clamp(615px,calc(100dvh - 158px),940px)}
+  .side{height:clamp(500px,calc(100dvh - 158px),940px)}
 }
 @media(max-width:760px){
   .wrap{padding:0}
