@@ -45,7 +45,8 @@
     .score-grid>.score-cell strong{font-size:clamp(2rem,3vw,2.65rem);line-height:1}
     .top-actions .btn{border-radius:999px}
     /* Bids never extend past the felt or hide underneath the sticky hand. */
-    .shell.bidding-turn .hand-wrap{position:relative;bottom:auto;z-index:1}
+    /* Bid chooser scrolls separately; the hand must remain docked inside the felt. */
+    .shell.bidding-turn .hand-wrap{position:absolute!important;bottom:8px;z-index:30}
     .table.bidding-turn .center{top:50%;width:min(592px,calc(100% - 32px));max-height:calc(100% - 30px);overflow-x:hidden;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#bda57e transparent}
     .table.bidding-turn .center>.panel:first-child{padding:9px 14px}
     .table.bidding-turn .center>.panel:first-child h2{font-size:16px;margin:0 0 4px}
