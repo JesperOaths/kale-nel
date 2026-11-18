@@ -58,6 +58,13 @@ async function setup(width,height,phase,options={}){
  await page.route('**/rest/v1/rpc/klaverjassen_guest_v1',async route=>{
   const data=JSON.parse(route.request().postData()||'{}');
   if(data.action_input==='save'){
+   if(data.payload_input?.state?.last_progress_reason==='auto_collect'&&options.rejectCollectCount>0){
+     options.rejectCollectCount--;
+     options.failedCollects=(options.failedCollects||0)+1;
+     await route.fulfill({status:413,contentType:'application/json',
+       body:JSON.stringify({message:'Ongeldig of te groot speldocument'})});
+     return;
+   }
    remote.game.state=clone(data.payload_input.state);
    if(options.botBurst){
      const first=remote.game.state.plays.at(-1);
@@ -252,6 +259,105 @@ try{
    assert((await page.locator('#log').innerText()).includes('KLOP!'));
    assert.equal(errors.length,0,'Klop runtime errors: '+errors.join('; '));
    console.log('KLAVERJASSEN_ROEM_KLOP_PASS','awarded=20','seat=0','toast=true');
+  }finally{await context.close();}
+ }
+ // A human on the winning team has unlimited time to choose roem or decline it.
+ // Reaching the server-side collection time must NEVER decide the roem for them.
+ {
+  const {context,page,remote,errors}=await setup(390,780,'playing');
+  try{
+   const p={winner:2,cards:[{player:1,card:cards[3]},{player:2,card:cards[0]},
+     {player:3,card:cards[2]},{player:0,card:cards[1]}],
+     roem:{points:20,items:[{label:'Stuk',points:20}]},klopped:false};
+   remote.game.state.pending_trick=p;
+   remote.game.trick_completed_at=new Date(Date.now()-60000).toISOString();
+   await page.reload({waitUntil:'domcontentloaded'});
+   await page.locator('#declineRoemBtn').waitFor({state:'visible',timeout:8000});
+   assert(await page.locator('#klopBtn').isVisible(),'KLOP is present without countdown');
+   assert((await page.locator('#actionPanel').innerText()).includes('Geen tijdslimiet'));
+   await page.waitForTimeout(2100);
+   assert(remote.game.state.pending_trick&&!remote.game.state.pending_trick.klopped,
+     'Human roem is undecided and cannot be auto-collected');
+   assert.equal(remote.game.state.taken.length,0,'No trick collected before decision');
+   await page.locator('#declineRoemBtn').click();
+   await page.waitForTimeout(2200);
+   assert.equal(remote.game.state.pending_trick,null,'Declined roem should let collection proceed');
+   assert.equal(remote.game.state.taken.length,1);
+   assert.equal(remote.game.state.roem_by_team[0],0,'Declined roem is NOT awarded');
+   assert.equal(errors.length,0,'roem decision errors: '+errors.join('; '));
+   console.log('KLAVERJASSEN_UNTIMED_ROEM_DECISION_PASS','wait=unlimited','decline=true','awarded=0');
+  }finally{await context.close();}
+ }
+ // A bot-only winning team decides its own roem; human opponent is not blocked.
+ {
+  const {context,page,remote,errors}=await setup(390,780,'playing');
+  try{
+   remote.game.state.pending_trick={winner:1,cards:[
+     {player:1,card:cards[4]},{player:2,card:cards[1]},
+     {player:3,card:cards[2]},{player:0,card:cards[3]}],
+     roem:{points:20,items:[{label:'Stuk',points:20}]},klopped:false};
+   remote.game.trick_completed_at=new Date(Date.now()-60000).toISOString();
+   await page.reload({waitUntil:'domcontentloaded'});
+   await page.waitForTimeout(5000);
+   assert.equal(remote.game.state.pending_trick,null,'Bot roem decision must unblock collection');
+   assert.equal(remote.game.state.taken.length,1);
+   assert.equal(remote.game.state.roem_by_team[1],20,'Bot winning team should claim its roem');
+   assert.equal(remote.game.state.klop_events?.[0]?.automatic,true);
+   assert.equal(errors.length,0,'bot roem errors: '+errors.join('; '));
+   console.log('KLAVERJASSEN_BOT_ROEM_AUTOMATIC_PASS','botWinner=1','awarded=20');
+  }finally{await context.close();}
+ }
+ // Regression for a real fifth-round freeze: eighth trick won by a bot.
+ // Two rejected collection saves must not replay the collection animation forever.
+ {
+  const options={rejectCollectCount:2};
+  const {context,page,remote,errors}=await setup(390,780,'playing',options);
+  try{
+   const current=remote.game.state;
+   current.rounds=Array.from({length:4},(_,i)=>({round:i+1,plays:[],
+     result:{scores:[82,80],cardScores:[82,80],trickCounts:[4,4]},totals:[82*(i+1),80*(i+1)]}));
+   current.taken=Array.from({length:7},(_,i)=>({winner:i%4,cards:[
+     {player:0,card:cards[0]},{player:1,card:cards[1]},
+     {player:2,card:cards[2]},{player:3,card:cards[3]}],roem:{points:0,items:[]},klopped:false}));
+   current.pending_trick={winner:1,cards:[
+     {player:1,card:cards[4]},{player:2,card:cards[5]},
+     {player:3,card:cards[6]},{player:0,card:cards[7]}],
+     roem:{points:0,items:[]},klopped:false};
+   current.trick=[];current.turn=null;
+   current.action_needed_seat=1;
+   remote.game.trick_completed_at=new Date(Date.now()-60000).toISOString();
+   await page.reload({waitUntil:'domcontentloaded'});
+   await page.evaluate(()=>{
+     window.__collectAwards=0;
+     const layer=document.querySelector('#flightLayer');
+     new MutationObserver(records=>{
+       for(const record of records)for(const node of record.addedNodes){
+         if(node.nodeType===1&&node.classList.contains('trick-award'))window.__collectAwards++;
+       }
+     }).observe(layer,{childList:true});
+   });
+   await page.locator('#retryCollectBtn').waitFor({state:'visible',timeout:14000});
+   assert.equal(options.failedCollects,2,'Collection saves must stop after two failures');
+   const count=await page.evaluate(()=>window.__collectAwards);
+   assert(count<=1,'Repeated collection animation: '+count);
+   await page.waitForTimeout(1400);
+   assert.equal(options.failedCollects,2,'Collection must not keep retrying after the cap');
+   assert.equal(await page.evaluate(()=>window.__collectAwards),count,
+     'Collection animation must not replay while awaiting a manual retry');
+   await page.locator('#retryCollectBtn').click();
+   await page.waitForTimeout(2500);
+   assert.equal(remote.game.state.pending_trick,null,'Manual retry should finish last trick');
+   assert.equal(remote.game.state.taken.length,8);
+   assert.equal(remote.game.state.rounds.length,5,'Fifth completed round must be persisted');
+   assert.equal(remote.game.state.phase,'roundOver');
+   assert.equal(remote.game.state.dealer,1,'Dealer moves clockwise after eighth trick');
+   assert(!Object.hasOwn(remote.game.state.recovery_snapshot||{},'rounds'),
+     'Recovery snapshot must not double-store all historical rounds');
+   assert.equal(await page.evaluate(()=>window.__collectAwards),count,
+     'Successful retry does not replay the original collection animation');
+   assert.equal(errors.length,0,'final trick JS errors: '+errors.join('; '));
+   console.log('KLAVERJASSEN_BOT_FINAL_TRICK_RECOVERY_PASS',
+     'round=5','failuresCapped=2','animationsOnce=true','retrySuccessful=true');
   }finally{await context.close();}
  }
  // The last *completed* four-card trick stays on the felt after collection/reload.
