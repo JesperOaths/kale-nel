@@ -260,6 +260,7 @@ try{
   try{
    assert(await page.locator('#table').isVisible(),phase+': board hidden');
    assert((await page.locator('#eventBanner').innerText()).includes(phase==='finished'?'Eindstand':'NAT'));
+   await page.locator('#mobileInfoButton').click();
    await page.locator('[data-pane="roundPanel"]').click();
    assert((await page.locator('#roundPanel').innerText()).includes('NAT'));
    assert((await page.locator('#roundPanel').innerText()).includes('162 kaartpunten plus alle roem'));
