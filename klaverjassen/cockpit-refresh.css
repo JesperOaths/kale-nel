@@ -634,7 +634,7 @@ body{
 /* Bid phase: the public bid is always readable on the player's own plate,
    and the partner's bid stays prominent by the bidding controls. */
 .table .seat .seat-card .seat-bid{font-variant-numeric:tabular-nums}
-.table.bidding-turn .seat-card .seat-bid{
+.table.phase-bidding .seat-card .seat-bid{
   position:relative;display:inline-flex;align-items:center;justify-content:center;
   left:auto;top:auto;transform:none;min-height:23px;
   margin:0 auto 4px;padding:2px 8px;
@@ -673,7 +673,7 @@ body{
 .bid-waiting-copy{display:grid;gap:5px;margin-top:8px;font-size:13px;color:#42574a}
 .bid-waiting-copy span{font-size:11px}
 @media(max-width:760px){
-  .table.bidding-turn .seat-card .seat-bid{min-height:18px;padding:2px 5px;font-size:10px;margin-bottom:2px}
+  .table.phase-bidding .seat-card .seat-bid{min-height:18px;padding:2px 5px;font-size:10px;margin-bottom:2px}
   .bid-partner-strip{padding:6px 8px;gap:6px;border-radius:8px}
   .bid-partner-caption{font-size:9px;line-height:1.15}
   .bid-partner-caption strong{font-size:10px;max-width:100px}
