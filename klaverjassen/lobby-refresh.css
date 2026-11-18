@@ -1,0 +1,163 @@
+/* Standalone Klaverjassen lobby — matched to premium table cockpit. */
+:root{--kj-pine:#163f32;--kj-cream:#fbfaf6;--kj-green:#226246;--kj-gold:#dec18a}
+body{
+  margin:0;color:#203429;
+  font-family:Inter,system-ui,sans-serif;
+  background:
+    radial-gradient(ellipse at top center,rgba(56,103,76,.2),transparent 51%),
+    linear-gradient(145deg,#e8eee8 5%,#f6f2ea 65%,#ece5d8);
+  background-attachment:fixed;
+}
+.wrap{max-width:1280px;padding:clamp(8px,2vw,25px)}
+.shell{
+  padding:clamp(15px,2vw,28px);
+  background:linear-gradient(145deg,rgba(255,255,255,.98),#f9faf5);
+  border-radius:24px;border:1px solid #e0e6db;
+  box-shadow:0 25px 65px rgba(23,54,35,.12);
+}
+.top{align-items:center;padding:5px 1px 11px;border-bottom:1px solid #e3eae0}
+.top .top-identity .muted{
+  display:inline-flex;gap:7px;align-items:center;
+  color:#6c8274;text-transform:uppercase;letter-spacing:.15em;
+  font-size:11px;font-weight:900;
+}
+.top .top-identity .muted::before{
+  content:"♣";display:grid;place-items:center;
+  width:26px;height:26px;border-radius:8px;
+  background:#173e30;color:#e9d4a2;font-size:19px;letter-spacing:0;
+}
+h1{
+  font-size:clamp(28px,4vw,43px);line-height:1.1;
+  font-weight:900;color:#193f30;letter-spacing:-.06em;
+  margin:5px 0 0;
+}
+.top-actions .btn{
+  min-height:43px;background:#fff;color:#214e37;
+  border:1px solid #d1dfd3;border-radius:12px;
+  font-weight:800;
+}
+.top-actions .btn:hover{background:#f3f8f1}
+.status{min-height:0;color:#a43e36;line-height:1.35}
+.lobby-home{
+  display:grid;grid-template-columns:minmax(340px,.98fr) minmax(0,1.02fr);
+  align-items:start;gap:16px;margin-top:21px;
+}
+.home-panel{
+  min-width:0;padding:clamp(16px,2.2vw,25px);
+  border-radius:19px;border:1px solid #dae4d9;
+  background:linear-gradient(165deg,#fff,#fdfdf8);
+  box-shadow:0 12px 28px rgba(33,58,40,.06);
+}
+.home-panel h2{
+  margin:0 0 8px;color:#214a38;
+  font-size:clamp(21px,2.5vw,26px);font-weight:900;letter-spacing:-.045em;
+}
+.home-panel h3{
+  color:#70816d;letter-spacing:.07em;font-size:11px;
+}
+.home-panel .muted{font-size:13px;line-height:1.5;color:#6d7c6d}
+.guest-label{color:#3a624b;font-weight:850;gap:7px}
+.guest-label span{font-size:12px;letter-spacing:.01em}
+.guest-label small{color:#819181}
+.guest-label input,
+.home-panel select,
+#codeInput{
+  display:block;width:100%;height:47px;min-height:47px;
+  border:1px solid #ccd8ca;border-radius:11px;
+  background:#f9fbf7;color:#203e2e;padding:10px 13px;
+  font:700 15px/1.3 system-ui,sans-serif;
+  box-shadow:inset 0 1px 2px rgba(36,69,49,.045);
+}
+.guest-label input:focus,
+.home-panel input:focus,
+.home-panel select:focus{
+  outline:3px solid #67b390;outline-offset:1px;border-color:#27704f;
+}
+.room-hint{
+  background:#eef5eb;border:1px solid #d5e6d5;border-radius:10px;
+  color:#59735c;padding:10px 12px;font-size:12px;line-height:1.4;
+}
+.setup-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.85fr);gap:9px}
+.setup-row .btn.gold{
+  background:linear-gradient(145deg,#f3dda8,#d5b270);
+  color:#2b281e;font-size:15px;font-weight:900;
+  border:1px solid #c8a469;min-height:47px;border-radius:11px;
+}
+.home-panel .btn{min-height:43px;border-radius:10px;font-weight:820}
+.home-panel .btn.secondary{background:#eef4ee;color:#235b40;border:1px solid #d8e6d8}
+.home-panel .btn.secondary:hover{background:#deefde}
+.bot-builder{margin-top:11px;align-items:center;gap:6px}
+.bot-builder .btn{padding:11px}
+.bot-slots{margin-top:5px;gap:5px}
+.bot-slot{
+  border:1px solid #d5e3d7;background:#f8faf6;
+  color:#315a45;border-radius:10px;min-width:52px;
+}
+.bot-slot.easy{background:#e7f5ea;color:#246849}
+.bot-slot.hard{background:#e8f0f8;color:#285f88}
+.home-help{gap:8px}
+.home-help div{
+  background:#f4f7f1;border:1px solid #e0eadf;
+  border-radius:11px;font-size:12px;padding:11px;color:#2b4a38;
+}
+.home-help strong{color:#24523b}
+.home-help .muted{font-size:11px}
+.join-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.join-row .btn{padding:10px 18px;background:#194e36;color:#fff;font-weight:850}
+.rooms{min-width:0;gap:10px}
+.room-card{
+  min-width:0;border-radius:15px;border:1px solid #d9e5d6;
+  background:#f9fbf6;
+  padding:14px;box-shadow:0 4px 14px rgba(18,55,32,.06);
+}
+.room-card.mine{
+  background:#f1f7e7;border-color:#bad6b7;
+  box-shadow:inset 4px 0 0 #6eaa83,0 5px 15px rgba(17,72,43,.07);
+}
+.room-card .room-code{font-size:21px;color:#1c563b;font-weight:900}
+.room-card .muted{font-size:12px}
+.room-pill{
+  background:#edf3ea;color:#4d6b56;
+  border:1px solid #d4dfd3;font-size:11px;font-weight:800;
+}
+.room-card .btn{
+  border-radius:10px;min-height:42px;padding:8px 12px;
+}
+.room-card .btn.secondary{background:#e9f3e9}
+.room-card .btn.danger{background:#fff0eb;color:#9b362b;border:1px solid #edd2c9}
+.transfer-recovery{background:#fff8e5!important;border-color:#caad70!important}
+.transfer-recovery strong{color:#34543b}
+@media(max-width:1040px){
+  .lobby-home{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+@media(max-width:760px){
+  body{background:#f4f6f2;background-attachment:scroll}
+  .wrap{padding:0}
+  .shell{
+    border:0;box-shadow:none;border-radius:0;
+    min-height:100dvh;padding:14px 11px calc(18px + env(safe-area-inset-bottom));
+  }
+  .top{gap:6px;padding-bottom:13px;flex-wrap:nowrap}
+  .top .top-identity{min-width:0;flex:1}
+  .top .top-identity .muted{font-size:9px;letter-spacing:.06em}
+  .top .top-identity .muted::before{width:22px;height:22px;font-size:16px}
+  h1{font-size:clamp(24px,7vw,32px)}
+  .top-actions{width:auto}
+  .top-actions .btn{min-height:39px;padding:9px 12px;font-size:12px}
+  .lobby-home{grid-template-columns:1fr;gap:13px;margin-top:14px}
+  .home-panel{padding:16px 14px;border-radius:16px}
+  .home-panel h2{font-size:22px}
+  .custom-room-inputs{grid-template-columns:1fr;gap:12px}
+  .setup-row{grid-template-columns:minmax(0,1fr) minmax(120px,.85fr)}
+  .home-help{display:grid;grid-template-columns:1fr}
+  .room-card{padding:12px}
+  .room-card .room-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .room-card .room-actions .btn{width:100%;min-width:0}
+}
+@media(max-width:360px){
+  .shell{padding:11px 8px}
+  .home-panel{padding:13px 11px}
+  .home-help{gap:6px}
+  .bot-builder .btn{font-size:11px;padding:10px 7px;min-height:42px}
+  .room-pill{font-size:10px}
+}
