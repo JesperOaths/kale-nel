@@ -103,6 +103,19 @@ try{
    assert(badge.includes('90')&&badge.includes('♦'),'seat 2 shows floating 90 ♦ bid: '+badge);
    assert.equal(await page.locator('.seat.s1 .seat-bid').innerText(),'Pas');
    assert.equal(await page.locator('#hand button.card').count(),8);
+   assert.equal(await page.locator('.card .suit-key, .flying-card .suit-key').count(),0,
+     'Suit-letter markers must be removed from every card surface');
+   const typography=await page.evaluate(()=>{
+     const px=selector=>parseFloat(getComputedStyle(document.querySelector(selector)).fontSize);
+     const felt=document.querySelector('#table').getBoundingClientRect();
+     return {rank:px('#hand .card'),seat:px('.seat.s0 .seat-card strong'),
+       feltWidth:felt.width,feltRight:felt.right,viewportWidth:innerWidth};
+   });
+   assert(typography.rank>=17&&typography.seat>=11,
+     'Card and seat labels must be legible: '+JSON.stringify({viewport,typography}));
+   assert(typography.feltWidth>=viewport.width*(viewport.width<=760?.9:.5)&&
+          typography.feltRight<=viewport.width+3,
+     'The green felt should be prominent and stay inside the screen');
    // Exactly four fixed slots, arranged as a cross around the trick centre.
    assert.equal(await page.locator('#trick .trick-slot').count(),4,'one slot per seat');
    const layout=await page.evaluate(()=>{
