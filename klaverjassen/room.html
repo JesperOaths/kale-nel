@@ -944,10 +944,11 @@
     function render(){
       const st = state(); const me = seat(); const players = st.players || UI.remote?.players || [];
       document.querySelector('.shell')?.classList.toggle('no-active-game', !game().id);
-      const ownBidTurn = st.phase === 'bidding' && me === st.bidder_turn;
-      document.querySelector('.shell')?.classList.toggle('bidding-turn', ownBidTurn);
-      $('table').classList.toggle('bidding-turn', ownBidTurn);
-      $('table').classList.toggle('phase-bidding', st.phase === 'bidding');
+      // Keep the eight-card bid hand docked throughout bidding, including while waiting.
+      const isBidding = st.phase === 'bidding';
+      document.querySelector('.shell')?.classList.toggle('bidding-turn', isBidding);
+      $('table').classList.toggle('bidding-turn', isBidding);
+      $('table').classList.toggle('phase-bidding', isBidding);
       $('leaveBtn').style.display = game().id ? 'inline-flex' : 'none';
       $('deleteRoomBtnTop').style.display = isHost() && hasActiveRoom() ? 'inline-flex' : 'none';
       $('roomStat').textContent = game().lobby_code || UI.lobbyCode || '-';

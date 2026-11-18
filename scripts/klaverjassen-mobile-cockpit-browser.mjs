@@ -257,6 +257,43 @@ try{
       'Teammate bid outside visible felt: '+JSON.stringify(visible));
     assert(visible.bid.bottom<=size.height+3,
       'Teammate bid offscreen: '+JSON.stringify(visible));
+    // The 8-card hand must remain docked for the full bid phase,
+    // including when another human has the bidding turn.
+    const handGeometry=await page.evaluate(()=>{
+      const felt=document.querySelector('#table'),hand=document.querySelector('.hand-wrap');
+      const f=felt.getBoundingClientRect(),h=hand.getBoundingClientRect();
+      const cards=[...document.querySelectorAll('#hand button.card')];
+      return {position:getComputedStyle(hand).position,
+        hand:{top:h.top,bottom:h.bottom,left:h.left,right:h.right},
+        felt:{top:f.top,bottom:f.bottom,left:f.left,right:f.right},
+        cards:cards.map(card=>{
+          const r=card.getBoundingClientRect();
+          const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+          return {disabled:card.disabled,opacity:Number(getComputedStyle(card).opacity),
+            width:r.width,height:r.height,
+            visible:hit===card||card.contains(hit)};
+        })};
+    });
+    assert.equal(handGeometry.position,'absolute','Bid hand must be docked on every bidding turn');
+    assert.equal(handGeometry.cards.length,8,'All eight cards must be present while bidding');
+    assert(handGeometry.hand.top>=handGeometry.felt.top-3 &&
+      handGeometry.hand.bottom<=handGeometry.felt.bottom+3 &&
+      handGeometry.hand.left>=handGeometry.felt.left-3 &&
+      handGeometry.hand.right<=handGeometry.felt.right+3,
+      'Bid hand extends beyond the felt: '+JSON.stringify(handGeometry));
+    assert(handGeometry.hand.top>=-3&&handGeometry.hand.bottom<=size.height+3,
+      'Bid hand is offscreen: '+JSON.stringify(handGeometry));
+    assert(handGeometry.cards.every(c=>c.disabled&&c.opacity>=.95&&c.width>19&&c.height>39&&c.visible),
+      'Bidding cards are hidden, faded or interactive: '+JSON.stringify(handGeometry));
+    // The same badge must correctly reflect a later public pass.
+    remote.game.state.bid_history.push({seat:2,action:'pass',points:0});
+    remote.game.state.current_bid={action:'bid',mode:'suit',suit:'spades',points:100,player:1,team:2};
+    await page.reload({waitUntil:'domcontentloaded'});
+    const passed=page.locator('#actionPanel .bid-partner-strip');
+    await passed.waitFor({state:'visible',timeout:6000});
+    assert((await passed.innerText()).includes('Pas'),'Teammate pass is not visible');
+    assert((await page.locator('#seats .seat.s2 .seat-bid').innerText()).includes('Pas'),
+      'Teammate pass must appear in their player badge');
     assert.equal(errors.length,0,errors.join('; '));
     console.log('KJ_MATE_BID_VISIBLE_PASS',size.width+'x'+size.height,
       waiting?'waiting=true':'ownTurn=true','suit=diamonds','points=90');
