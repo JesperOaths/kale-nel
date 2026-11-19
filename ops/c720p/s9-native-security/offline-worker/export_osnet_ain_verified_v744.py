@@ -37,6 +37,8 @@ MODELS = {
     },
 }
 SOURCE = "https://huggingface.co/LibreYOLO/LibreReID-osnet"
+UPSTREAM_ARCHITECTURE_SHA256 = "a43b495866a4b1645cd134a30c3011592e8c6826ba4781955a135588cf46cd25"
+UPSTREAM_ARCHITECTURE_URL = "https://raw.githubusercontent.com/KaiyangZhou/deep-person-reid/master/torchreid/models/osnet_ain.py"
 SIZE = (1, 3, 256, 128)
 FEATURES = 512
 
@@ -107,13 +109,24 @@ def safe_tensor_state(torch, path):
         result[clean] = value
     return result
 
-def export(model_name, location, output):
+def export(model_name, location, output, architecture_source):
     meta = validate_source(model_name, location)
+    import importlib.util
     import numpy as np
     import onnx
     import onnxruntime as ort
     import torch
-    import torchreid
+
+    require(architecture_source is not None and architecture_source.is_file()
+            and not architecture_source.is_symlink(), "Pinned architecture source missing")
+    require(sha(architecture_source) == UPSTREAM_ARCHITECTURE_SHA256,
+            "Upstream OSNet-AIN source SHA-256 mismatch")
+    module_spec = importlib.util.spec_from_file_location("pinned_osnet_ain_r744",
+                                                        str(architecture_source))
+    require(module_spec is not None and module_spec.loader is not None,
+            "Cannot load pinned architecture module")
+    osnet_ain = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(osnet_ain)
 
     require(not output.exists() and not output.is_symlink(),
             "Refuse to overwrite existing ONNX export")
@@ -121,9 +134,8 @@ def export(model_name, location, output):
             not output.parent.is_symlink(), "Unsupported output destination")
     torch.set_num_threads(1)
     weights = safe_tensor_state(torch, location / MODELS[model_name]["name"])
-    model = torchreid.models.build_model(
-        name=model_name, num_classes=1000, loss="softmax",
-        pretrained=False, use_gpu=False).cpu().eval()
+    model = getattr(osnet_ain, model_name)(
+        num_classes=1000, loss="softmax", pretrained=False).cpu().eval()
     expected = model.state_dict()
     backbone = {k:v for k,v in expected.items() if not k.startswith("classifier.")}
     require(len(backbone)>300 and len(weights)>=len(backbone)-8,
@@ -186,6 +198,7 @@ def export(model_name, location, output):
         input_shape=["batch",3,256,128],output_shape=["batch",512],
         source_checkpoint_pytorch_only=True,
         model_human_reid_accuracy_verified=False,
+        upstream_architecture_sha256=UPSTREAM_ARCHITECTURE_SHA256,
         camera_frame_rate_verified_during_this_export=False,
         phone_compatibility_verified=False,
         torch_onnx_cosine_min=min(cosines),onnx_opset=17)
@@ -212,6 +225,7 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument("--variant",choices=sorted(MODELS),required=True)
     p.add_argument("--weights-dir",type=Path,required=True)
+    p.add_argument("--architecture-source",type=Path,default=None)
     action=p.add_mutually_exclusive_group(required=True)
     action.add_argument("--verify-only",action="store_true")
     action.add_argument("--export",type=Path,default=None)
@@ -221,7 +235,7 @@ def main():
                           **validate_source(a.variant,a.weights_dir)},
                          sort_keys=True))
         return
-    export(a.variant,a.weights_dir,a.export)
+    export(a.variant,a.weights_dir,a.export,a.architecture_source)
 
 if __name__=="__main__":
     main()
