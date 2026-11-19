@@ -425,3 +425,18 @@ that the actual frame-PTS of any of the 98 existing person crops is known;
 all previously audited reference/heldout sidecars still have
 `original_source_frame_PTS_independently_verified=false`.
 No automatic folder filing or identity-release gate is changed.
+
+
+### R744 follow-up: admitted single-input latency
+
+A separate additional `nice -n 15`, single-thread S9+ synthetic
+test using the new checksum-pinned OSNet-AIN x0.25 ONNX succeeded:
+- **Batch 1**, warmup **21.38 ms**;
+  two timed inferences **18.94 ms** / **18.75 ms**.
+- Camera PID unchanged; minimum sampled sensor rate **30.01 FPS**.
+- 29 new sensor frames, 14 new AVC preroll-encoded frames,
+  **0** new preroll drops.
+- Camera temperature after **31.5 C**, camera status eligible.
+- No real crop read, no source-frame PTS attestation, no person
+  classification or People-folder writes. This is **synthetic ONNX
+  runtime latency**, not end-to-end capture/crop/quality/matcher timing.
