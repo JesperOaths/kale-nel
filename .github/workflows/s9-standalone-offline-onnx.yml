@@ -78,6 +78,24 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py -q
           python3 -m py_compile "$area/s9_phone_gap_coordinator_v371.py" "$area/s9_phone_gap_runner_v371.py" ops/c720p/s9-native-security/s9_priority_rescan_feedback_v304.py
           echo 'S9_PHONE_GAP_SOURCE_ONLY_SYNTHETIC_PASS'
+      - name: S9 Re-ID research guards (synthetic-only, no camera access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          area='ops/c720p/s9-native-security/offline-worker'
+          python3 -m py_compile "$area/s9_reid_capture_admission_v742.py" \
+            "$area/s9_reid_open_set_release_gate_v743.py" \
+            "$area/export_osnet_ain_verified_v744.py"
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
+          python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
+          folder="$RUNNER_TEMP/s9-ort-validate"
+          test -s "$folder/ort.jar"
+          javac -source 8 -target 8 -cp "$folder/ort.jar" -d "$folder/classes" \
+            "$area/S9ReidSyntheticProbeV740.java"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9ReidSyntheticProbeV740.class"
+          echo 'S9_REID_GUARD_CI_SOURCE_SYNTHETIC_PASS'
+
       - name: Compile source-only phone-first original-4K probe (never run Android/inference)
         shell: bash
         run: |
