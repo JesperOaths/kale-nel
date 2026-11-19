@@ -224,3 +224,37 @@ OSNet x0.25 or AIN x1.0 ONNX experiments.
 This continuation created **no new timer, scheduled ChatGPT task, recurring
 job, Camera2 modification, production matcher change, or automatic identity
 assignment**.
+
+
+## R744: small model checkpoint artifacts and guarded exporter
+
+Source-only `export_osnet_ain_verified_v744.py` supports pinned
+`osnet_ain_x0_25` and `osnet_ain_x0_5` with two separate modes:
+- `--verify-only`: strict SHA-256, size, PyTorch ZIP structural checks and CRC
+  without loading pickle, image bytes or needing Torch.
+- `--export`: **not executed in this continuation**; requires a trusted,
+  adequately resourced build machine with Torchreid/PyTorch/ONNX Runtime.
+  The implementation refuses incomplete/unexpected backbone tensors,
+  uses `torch.load(weights_only=True)`, and requires ONNX shape/parity on
+  deterministic synthetic tensors before writing a new immutable ONNX file.
+
+Both publicly published checkpoint files have now actually been obtained and
+pinned in the separate restricted C720P research staging folder
+`staging/recognition-r744-ain-small-model-assets-20261120/`, **not installed
+on the phone**:
+- x0.25: **1,001,683 bytes**, SHA
+  `ce171fe160b3608f5e4c19489774991419be965b1d6f4bdccc4b4cfd2ef95347`
+- x0.5: **2,736,551 bytes**, SHA
+  `510bcebae21bd0c0fcc7df388e97d2f687a9ee4befa4394d6fb1fb19aac0bce2`
+
+Both archive checks passed. Each ZIP has 550 tensor data records, 1
+`data.pkl` and 0 unsafe archive paths. Pure `pickletools` inspection
+found tensor storage reconstruction opcodes and ordinary OSNet-style
+parameter keys, without calling pickle loaders. The new verification
+script passed both actual pinned checkpoints, **plus two negative tests**
+that rejected a deliberately corrupted staged copy and a missing asset.
+
+No model exports, new model inference, image/video work on C720P, camera
+changes, user confirmations, folder changes or auto assignments occurred.
+The converter still needs actual end-to-end execution and Torch/ONNX
+equivalence review; a script compiling is not a proven conversion.
