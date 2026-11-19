@@ -71,6 +71,12 @@ def evaluate(e):
     err=e["unknown_false_accepts"]
     if right+wrong>k or err>n:
         reasons.append("impossible_classification_counts")
+        return {"schema":"s9_reid_release_evidence_guard_v743",
+                "status":"REFUSE_AUTOMATION",
+                "reasons":sorted(set(reasons)),
+                "automation_authorized":False,
+                "model_activation_performed":False,
+                "folder_assignment_performed":False}
     if k<MIN_KNOWN_RECORDINGS:reasons.append("insufficient_known_source_bags")
     if e["known_distinct_people"]<MIN_KNOWN_PEOPLE:
         reasons.append("insufficient_distinct_known_people")
