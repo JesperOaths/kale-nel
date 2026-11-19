@@ -440,3 +440,22 @@ test using the new checksum-pinned OSNet-AIN x0.25 ONNX succeeded:
 - No real crop read, no source-frame PTS attestation, no person
   classification or People-folder writes. This is **synthetic ONNX
   runtime latency**, not end-to-end capture/crop/quality/matcher timing.
+
+
+### R749 additional independent geometry corroboration
+
+The metadata-only audit now checks a conservative research-only
+height-to-width candidate range **1.25–3.6**, *in addition* to the
+preexisting `strict_upright_crop_quality` flag. This is only a
+consistency check, not proof that a crop contains a complete person.
+One newly added synthetic negative case deliberately marks an invalid
+0.85-ratio crop as good and confirms the independent geometry rejects it.
+
+- Synthetic tests: **6** pass.
+- The existing **5** quality-failing reference rows are **exactly**
+  the 5 reference rows excluded by the independent geometric range.
+- **0** of the 59 holdout rows fail the independent geometry range.
+- **0** quality flag vs independent geometry disagreements in this set.
+- **0** reference crops become eligible with both geometry AND
+  independently attested frame PTS (the missing-PTS blocker persists).
+- No image processing, person identity evaluation or automatic assignment.
