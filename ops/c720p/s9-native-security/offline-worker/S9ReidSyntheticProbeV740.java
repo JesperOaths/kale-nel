@@ -78,7 +78,7 @@ public final class S9ReidSyntheticProbeV740 {
     return new double[]{min,max};
   }
 
-  static void probe(Path model,String expected)throws Exception {
+  static void probe(Path model,String expected,boolean requestBatch16)throws Exception {
     require(expected.matches("[a-f0-9]{64}"),"Missing pinned SHA-256");
     require(model.isAbsolute() && model.normalize().getParent().equals(ROOT),
         "Only isolated experiment model path allowed");
@@ -101,7 +101,7 @@ public final class S9ReidSyntheticProbeV740 {
         long[] shape=ti.getShape();
         require(shape.length==4 && shape[1]==3 && shape[2]==HEIGHT
             && shape[3]==WIDTH,"Unsupported ONNX input shape");
-        int batch=(shape[0]==-1)?1:Math.toIntExact(shape[0]);
+        int batch=(shape[0]==-1)?(requestBatch16?16:1):Math.toIntExact(shape[0]);
         require(batch>=1&&batch<=MAX_BATCH,"Unsupported ONNX batch size");
         long[] output=((TensorInfo)session.getOutputInfo().values()
             .iterator().next().getInfo()).getShape();
@@ -138,9 +138,10 @@ public final class S9ReidSyntheticProbeV740 {
   }
 
   public static void main(String[] args)throws Exception {
-    require(args.length==3&&"--synthetic".equals(args[0]),
-      "Usage: --synthetic /data/local/tmp/s9_reid_r740/model.onnx SHA256");
-    probe(Paths.get(args[1]),args[2]);
+    require((args.length==3||args.length==4)&&"--synthetic".equals(args[0])
+        &&(args.length==3||"--batch16".equals(args[3])), 
+      "Usage: --synthetic /data/local/tmp/s9_reid_r740/model.onnx SHA256 [--batch16]");
+    probe(Paths.get(args[1]),args[2],args.length==4);
     // Android 10 app_process/ORT JNI destructor may abort on JVM exit.
     Runtime.getRuntime().halt(0);
   }
