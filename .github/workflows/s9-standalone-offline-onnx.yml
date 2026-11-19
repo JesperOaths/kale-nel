@@ -116,8 +116,10 @@ jobs:
             "$area/S9YuNetNativeQualityDecoderV370Test.java" \
             "$area/S9Original4KTimedDecoderV371.java" \
             "$area/S9StandaloneDeadlineV374.java" \
-            "$area/S9Original4KGapAuditV370.java"
+            "$area/S9Original4KGapAuditV370.java" \
+            "$area/S9DiagnosticPtsInspectorV751.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPtsInspectorV751.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
           python3 - <<'PY'
           from pathlib import Path
@@ -138,6 +140,19 @@ jobs:
           for forbidden in ('pm install','am force-stop','CameraService.java',
                             'requestPermissions','--bulk','System.loadLibrary("camera'):
               assert forbidden not in source,forbidden
+          pts=Path('ops/c720p/s9-native-security/offline-worker/S9DiagnosticPtsInspectorV751.java').read_text()
+          for marker in ('EXPECTED_SHA','diagnostic_preroll_1795047726878.mp4',
+                         'getSampleTime()','getSampleTrackIndex()',
+                         'nonmonotonic_video_pts_count',
+                         'independent_person_crop_frame_pts_attested",false',
+                         'actual_person_clip_processed",false',
+                         'identity_data_read",false','images_decoded",0'):
+              assert marker in pts,marker
+          for forbidden in ('motion_*.mp4','am force-stop','pm install',
+                            'CameraService.java','getOutputImage(',
+                            'BitmapFactory','MediaMetadataRetriever'):
+              assert forbidden not in pts,forbidden
+          print('S9_DIAGNOSTIC_PTS_V751_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
           print('S9_PHONE_4K_V370_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
           PY
 
