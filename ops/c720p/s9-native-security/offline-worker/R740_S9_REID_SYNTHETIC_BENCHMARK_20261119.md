@@ -387,3 +387,41 @@ ChatGPT Task, no Camera2 restart/reconfiguration, no altered original
 recordings, no People-folder label changes, no auto-assignment activation.
 The PR remains draft and must not be treated as a production recognition
 deployment.
+
+
+## R751 — phone-native read-only H.264 source PTS integrity, 20 November 2026
+
+R751 validated a reproducible native 4K timestamp-inspection method
+**on a previously recorded diagnostic video only**, without loading any
+person-identified media, decoding images, comparing biometric embeddings,
+creating labels, or changing originals.
+
+- Source: existing native diagnostic MP4
+  `diagnostic_preroll_1795047726878.mp4` from the S9+ removable card.
+- Byte-size pin: **40,366,251**.
+- On-phone SHA-256 verified:
+  `04975e917bbb0671aef54e94e382141abd0f77fadb221f4122ef5e8bd1da9de2`.
+- The new source-only Java class
+  `S9DiagnosticPtsInspectorV751.java` was compiled with the Android
+  API jar, converted to an independent 4.8 KB DEX/JAR and staged in
+  `/data/local/tmp/s9_reid_r740/pts_r751.dex.jar`.
+- JAR SHA-256:
+  `04a297f99c076db907619a76b5ce8ad7f05c552d45400868e90d253666aa9b23`.
+- Physical camera-admission guard R742 returned
+  `PASS_OBSERVATION_ONLY`, stable sensor and preroll before execution.
+- Physical on-phone `MediaExtractor` timestamp-only inspection returned
+  **`SOURCE_PTS_TRACK_VERIFIED`** for the diagnostic source:
+  - H.264 AVC, **3840 × 2160**, duration **8961 ms**.
+  - **266** video samples; first PTS **0**, final PTS **8928.277 ms**.
+  - Median positive interval **33.31 ms**, average **29.681 FPS**.
+  - **0** nonmonotonic PTS, **1** interval >50ms.
+  - No decoded frames, image crops, identities, or People-folder changes.
+  - Camera process remained same PID, **7244**.
+
+The inspector is deliberately pinned to the diagnostic clip and cannot be
+used on arbitrary person recordings. This shows **the phone can inspect
+original MP4 media timestamp tracks correctly**. It **does not** imply
+that the actual frame-PTS of any of the 98 existing person crops is known;
+all previously audited reference/heldout sidecars still have
+`original_source_frame_PTS_independently_verified=false`.
+No automatic folder filing or identity-release gate is changed.
