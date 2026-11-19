@@ -69,6 +69,8 @@ def evaluate(e):
     k=e["known_original_bags"]; right=e["known_correct_accepts"]
     wrong=e["known_wrong_accepts"]; n=e["unknown_original_bags"]
     err=e["unknown_false_accepts"]
+    if k<MIN_KNOWN_RECORDINGS:
+        reasons.append("insufficient_known_source_bags")
     if right+wrong>k or err>n:
         reasons.append("impossible_classification_counts")
         return {"schema":"s9_reid_release_evidence_guard_v743",
@@ -77,7 +79,6 @@ def evaluate(e):
                 "automation_authorized":False,
                 "model_activation_performed":False,
                 "folder_assignment_performed":False}
-    if k<MIN_KNOWN_RECORDINGS:reasons.append("insufficient_known_source_bags")
     if e["known_distinct_people"]<MIN_KNOWN_PEOPLE:
         reasons.append("insufficient_distinct_known_people")
     if n<MIN_UNKNOWN_RECORDINGS:reasons.append("insufficient_independent_unknown_source_bags")
