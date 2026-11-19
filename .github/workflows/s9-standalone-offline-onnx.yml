@@ -138,3 +138,67 @@ jobs:
               assert forbidden not in source,forbidden
           print('S9_PHONE_4K_V370_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
           PY
+
+  export_small_ain:
+    name: Pinned small OSNet-AIN ONNX export (synthetic only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Install pinned CPU-only export dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --no-cache-dir --disable-pip-version-check \
+            --index-url https://download.pytorch.org/whl/cpu 'torch==2.6.0+cpu'
+          python3 -m pip install --no-cache-dir --disable-pip-version-check \
+            'numpy==1.26.4' 'onnx==1.17.0' 'onnxruntime==1.22.0'
+          python3 - <<'PY'
+          import torch,onnx,onnxruntime,numpy
+          assert not torch.cuda.is_available()
+          print('OSNET_AIN_CPU_EXPORT_PINNED_DEPENDENCIES',
+                torch.__version__,onnx.__version__,onnxruntime.__version__,numpy.__version__)
+          PY
+      - name: Verify pinned architecture and source weights, export and cross-check synthetic parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          area='ops/c720p/s9-native-security/offline-worker'
+          folder="$RUNNER_TEMP/s9_ain_export"
+          mkdir -m 700 -p "$folder"
+          curl --proto '=https' -fsSL --retry 2 --max-time 65 \
+            'https://raw.githubusercontent.com/KaiyangZhou/deep-person-reid/master/torchreid/models/osnet_ain.py' \
+            -o "$folder/osnet_ain_upstream.py"
+          echo "a43b495866a4b1645cd134a30c3011592e8c6826ba4781955a135588cf46cd25  $folder/osnet_ain_upstream.py" | sha256sum -c -
+          curl --proto '=https' -fsSL --retry 2 --max-time 90 \
+            'https://huggingface.co/LibreYOLO/LibreReID-osnet/resolve/main/osnet_ain_x0_25.pt' \
+            -o "$folder/osnet_ain_x0_25.pt"
+          curl --proto '=https' -fsSL --retry 2 --max-time 90 \
+            'https://huggingface.co/LibreYOLO/LibreReID-osnet/resolve/main/osnet_ain_x0_5.pt' \
+            -o "$folder/osnet_ain_x0_5.pt"
+          echo "ce171fe160b3608f5e4c19489774991419be965b1d6f4bdccc4b4cfd2ef95347  $folder/osnet_ain_x0_25.pt" | sha256sum -c -
+          echo "510bcebae21bd0c0fcc7df388e97d2f687a9ee4befa4394d6fb1fb19aac0bce2  $folder/osnet_ain_x0_5.pt" | sha256sum -c -
+          for variant in osnet_ain_x0_25 osnet_ain_x0_5; do
+            python3 "$area/export_osnet_ain_verified_v744.py" \
+              --variant "$variant" --weights-dir "$folder" --verify-only
+            python3 "$area/export_osnet_ain_verified_v744.py" \
+              --variant "$variant" --weights-dir "$folder" \
+              --architecture-source "$folder/osnet_ain_upstream.py" \
+              --export "$folder/$variant.onnx"
+          done
+          cd "$folder"
+          sha256sum *.onnx
+          test -s osnet_ain_x0_25.manifest.json
+          test -s osnet_ain_x0_5.manifest.json
+          echo 'S9_AIN_R744_SYNTHETIC_ONNX_EXPORT_BOTH_MODELS_PASS_NO_PERSON_DATA'
+      - name: Upload checksum-verified ONNX models for separate S9+ runtime checks
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: s9-ain-small-r744-synthetic-verified
+          path: |
+            ${{ runner.temp }}/s9_ain_export/*.onnx
+            ${{ runner.temp }}/s9_ain_export/*.manifest.json
+          if-no-files-found: error
+          retention-days: 5
