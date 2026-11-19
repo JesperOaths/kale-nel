@@ -155,6 +155,8 @@ def report(batches, sidecars):
     require(not sources["reference"] & sources["heldout"],
             "REFERENCE_HELDOUT_SOURCE_SHA_LEAKAGE")
     quality_bad = collections.Counter()
+    geometry_bad = collections.Counter()
+    self_flagged_geometry_mismatch = collections.Counter()
     pts_bad = collections.Counter()
     join_errors = []
     latency = []
@@ -167,12 +169,21 @@ def report(batches, sidecars):
                   ("crop_bytes", "source_crop_bytes"))
         if any(x[a] != sidecar[b] for a, b in fields):
             join_errors.append("crop_source_byte_or_name_mismatch")
+        # Independent, conservative full-body geometry corroboration.
+        # It is NOT a biometric identity decision or a substitute for pixels.
+        # A valid quality flag alone never overrides clearly sideways crops.
+        aspect = x["bounding_box_h_w_ratio"]
+        geometry_ok = 1.25 <= aspect <= 3.6
+        if not geometry_ok:
+            geometry_bad[x["role"]] += 1
         if not x["strict_upright_crop_quality"]:
             quality_bad[x["role"]] += 1
+        if x["strict_upright_crop_quality"] and not geometry_ok:
+            self_flagged_geometry_mismatch[x["role"]] += 1
         if not sidecar["original_source_frame_PTS_independently_verified"]:
             pts_bad[x["role"]] += 1
         if x["role"] == "reference" and x["strict_upright_crop_quality"] and (
-            sidecar["original_source_frame_PTS_independently_verified"]
+            geometry_ok and sidecar["original_source_frame_PTS_independently_verified"]
         ):
             eligible_reference_crops.add(x["crop_sha256"])
         latency.append(sidecar["embedding_inference_latency_ms"])
@@ -195,6 +206,11 @@ def report(batches, sidecars):
         "reference_heldout_original_source_sha_overlap": 0,
         "reference_rows_failing_strict_quality": quality_bad["reference"],
         "heldout_rows_failing_strict_quality": quality_bad["heldout"],
+        "reference_rows_failing_independent_geometry": geometry_bad["reference"],
+        "heldout_rows_failing_independent_geometry": geometry_bad["heldout"],
+        "reference_quality_flag_true_but_bad_geometry": self_flagged_geometry_mismatch["reference"],
+        "heldout_quality_flag_true_but_bad_geometry": self_flagged_geometry_mismatch["heldout"],
+        "research_only_geometry_height_width_range": [1.25, 3.6],
         "reference_rows_without_independent_frame_pts": pts_bad["reference"],
         "heldout_rows_without_independent_frame_pts": pts_bad["heldout"],
         "reference_crops_eligible_with_quality_and_pts": len(eligible_reference_crops),
@@ -255,6 +271,13 @@ def self_test():
     try:report([b,wrong],sides);raise AssertionError("mismatched_replay_should_refuse")
     except ValueError as e:assert "replay_is_not_identical" in str(e)
     assert good["reference_crops_eligible_with_quality_and_pts"]==0
+    assert good["reference_rows_failing_independent_geometry"]==0
+    # A falsely marked 'good upright' crop must also fail geometry.
+    ugly=dict(b, crops=[dict(b["crops"][0], bounding_box_h_w_ratio=0.85),
+                        b["crops"][1], b["crops"][2]])
+    ugly_report=report([ugly],sides)
+    assert ugly_report["reference_quality_flag_true_but_bad_geometry"]==1
+    assert ugly_report["reference_rows_failing_independent_geometry"]==1
     assert not good["production_auto_filing_authorized"]
     corrupt=dict(b, crops=[*b["crops"][:-1],crop("heldout",hash_a,hash_d)])
     try:report([corrupt],sides);raise AssertionError("source_overlap_should_refuse")
@@ -263,7 +286,7 @@ def self_test():
     try:report([b],[invalid,sides[1]]);raise AssertionError("model_mismatch_should_refuse")
     except ValueError as e:assert "model_provenance_mismatch" in str(e)
     print(json.dumps({"status":"R749_METADATA_ONLY_SYNTHETIC_TEST_PASS",
-                      "cases":5,"identities_read":0,"images_read":0,
+                      "cases":6,"identities_read":0,"images_read":0,
                       "embeddings_compared":0,"auto_filing_enabled":False}))
 
 if __name__=="__main__":
