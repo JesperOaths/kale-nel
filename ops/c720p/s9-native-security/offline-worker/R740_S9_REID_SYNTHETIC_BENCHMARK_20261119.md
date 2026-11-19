@@ -88,3 +88,42 @@ bag**, not multiple independent person confirmations.
 
 No scheduled ChatGPT task, new daemon, background service, or automatic
 source-label promotion was created.
+
+
+## Additional read-only inventory of another existing S9 TFLite research run
+
+At 2026-11-20 00:01–00:05 Europe/Amsterdam, a **separate, preexisting**
+research directory was inspected **read-only** on the phone:
+`/data/local/tmp/s9-osnet-qualcomm-reid-shadow/`. This is NOT the R740
+ONNX benchmark. It used a different model, indicated by schema
+`S9_REAL_OSNET_MARKET1501_SHA_EXACT_PERSON_CROP_RESEARCH_ONLY_V1`, with
+model SHA `5249d33bb1cd53e53c9096db9d6acf555b698a7f4561a2b3eb81df4fcbfaac5c`.
+
+- 18 source manifest batches, 99 crop-plan entries (40 reference and 59
+  held-out), 98 distinct 512D private vector sidecars. One repeated planned
+  crop explains the apparent one-entry discrepancy; no missing unique vectors.
+- On-phone sidecars link to the exact source/crop metadata across all 98
+  records, with 39 reference and 59 held-out unique sidecars.
+- **Zero source-SHA overlap** between reference and held-out roles; the
+  held-out crops represent 32 original recording source hashes.
+- The 40 planned reference crop SHA hashes matched the frozen approved R407
+  gallery source/crop authority exactly. But **five reference crop entries
+  failed the strict upright-quality gate**, and three frozen reference entries
+  had `frame_timing_verified=false`. An accuracy evaluation must filter these,
+  not treat them as equivalent clean identities.
+- The 98 existing sidecars report on-phone inference latency median **93.82
+  ms**, range **84.10–158.05 ms**, but these are a different TFLite model and
+  should NOT be compared as equivalent to the R740 ONNX runtime numbers.
+- All 98 sidecars report `original_source_frame_PTS_independently_verified=false`.
+  No held-out person labels were used by this existing embedding producer.
+  There are **zero automatic folder assignments** reported in these sidecars.
+- 30 of 32 held-out original source hashes intersect the **already-used**
+  private R714 retrospective owner-labelled recording-bag set. Such labels
+  are **not** independent unseen prospective validation and are recording-level,
+  not proof of which individual track depicts the named person.
+
+A metadata-only builder for a future blinded gallery was drafted but **its
+execution was denied by a tool safety check**, and its unexecuted source
+was removed from the branch. No alternative execution path was attempted.
+**No source-to-identity ranking or known/unknown calibration was run.**
+Do not promote a new matcher from these metadata counts.
