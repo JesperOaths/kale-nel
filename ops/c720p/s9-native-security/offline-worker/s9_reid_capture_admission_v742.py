@@ -28,9 +28,40 @@ def inspect_camera(s):
     if not isinstance(s, dict):
         return ["camera_status_unavailable"]
     fail = []
-    for key in ("ok", "native_4k_enabled", "continuous_4k_ready", "preroll_ready"):
+    for key in ("ok", "native_4k_enabled"):
         if s.get(key) is not True:
             fail.append(key + "_not_true")
+    # The continuous encoder is OPTIONAL. An explicit 'control_disabled'
+    # fallback selects native 4K MediaRecorder plus a separate AVC preroll.
+    # Readiness on one branch cannot stand in for readiness on the other.
+    if s.get("continuous_4k_ready") is True:
+        buffered = count(s.get("continuous_4k_buffered_ms"))
+        if buffered is None or buffered < 5000:
+            fail.append("continuous_4k_buffer_under_5s")
+        drops = count(s.get("continuous_4k_dropped_output_frames"))
+        if drops is None or drops != 0:
+            fail.append("4k_output_drops_not_zero")
+    else:
+        if s.get("continuous_4k_last_result") != "fallback_control_disabled":
+            fail.append("unverified_4k_fallback_reason")
+        if s.get("continuous_4k_production_persisted") is not False:
+            fail.append("4k_persistence_state_unverified")
+        if s.get("preroll_ready") is not True:
+            fail.append("legacy_preroll_not_ready")
+        buffered = count(s.get("preroll_buffered_ms"))
+        if buffered is None or buffered < 5000:
+            fail.append("legacy_avc_preroll_under_5s")
+        dropped = count(s.get("preroll_dropped_frames"))
+        if dropped is None or dropped != 0:
+            fail.append("legacy_avc_preroll_drops_not_zero")
+        version = s.get("preroll_version")
+        if type(version) is not str or not version.startswith("s9_on_phone_avc_memory_ring_"):
+            fail.append("legacy_avc_preroll_unrecognized_version")
+        encoded = count(s.get("preroll_encoded_frames"))
+        if encoded is None or encoded < 100:
+            fail.append("legacy_avc_preroll_unverified_encoder")
+        if count(s.get("continuous_4k_dropped_output_frames")) != 0:
+            fail.append("inactive_4k_output_drops_not_zero")
     if s.get("mode") != "watching":
         fail.append("camera_not_idle_watching")
     fps = number(s.get("sensor_result_fps"))
@@ -40,12 +71,6 @@ def inspect_camera(s):
         n = count(s.get(key))
         if n is None or n > 750:
             fail.append(key + "_stale_or_invalid")
-    buffered = count(s.get("continuous_4k_buffered_ms"))
-    if buffered is None or buffered < 5000:
-        fail.append("continuous_4k_buffer_under_5s")
-    drops = count(s.get("continuous_4k_dropped_output_frames"))
-    if drops is None or drops != 0:
-        fail.append("4k_output_drops_not_zero")
     temp = number(s.get("temperature_c"))
     if temp is None or not 0 <= temp < TEMP_MAX_C:
         fail.append("phone_camera_temperature_out_of_range")
@@ -82,6 +107,13 @@ def inspect_pair(a, b, pa, pb):
         y = count(b.get("frames"))
         if x is not None and y is not None and y <= x:
             fail.append("camera_frame_counter_not_progressing")
+        if a.get("continuous_4k_ready") is not True and b.get("continuous_4k_ready") is not True:
+            x = count(a.get("preroll_encoded_frames"))
+            y = count(b.get("preroll_encoded_frames"))
+            if x is None or y is None or y <= x:
+                fail.append("legacy_avc_encoder_frames_not_progressing")
+        if a.get("continuous_4k_ready") is not b.get("continuous_4k_ready"):
+            fail.append("4k_capture_mode_changed_between_samples")
     if isinstance(pa, dict) and isinstance(pb, dict) and pa.get("recorder_pid") != pb.get("recorder_pid"):
         fail.append("camera_process_changed")
     return sorted(set(fail))
@@ -109,7 +141,10 @@ def phone_status():
 
 def public_fields(camera, phone):
     keys = ("ok", "mode", "native_4k_enabled", "continuous_4k_ready",
-            "continuous_4k_buffered_ms", "preroll_ready", "sensor_result_fps",
+            "continuous_4k_buffered_ms", "continuous_4k_last_result",
+            "continuous_4k_production_persisted", "preroll_ready",
+            "preroll_buffered_ms", "preroll_dropped_frames",
+            "preroll_encoded_frames", "preroll_version", "sensor_result_fps",
             "sensor_exposure_ms", "continuous_4k_dropped_output_frames",
             "sensor_capture_result_age_ms", "last_frame_age_ms",
             "temperature_c", "night_mode")
@@ -122,13 +157,24 @@ def self_test():
             "sensor_capture_result_age_ms": 11, "continuous_4k_buffered_ms": 7000,
             "continuous_4k_dropped_output_frames": 0, "temperature_c": 34.0,
             "sd_free_bytes": 10 * 1024 ** 3, "sensor_exposure_ms": 30.0,
-            "sensor_capture_result_frames": 1000, "frames": 1000}
+            "sensor_capture_result_frames": 1000, "frames": 1000,
+            "preroll_buffered_ms": 7000, "preroll_dropped_frames": 0,
+            "preroll_encoded_frames": 1000,
+            "preroll_version": "s9_on_phone_avc_memory_ring_keyframe_5s_v4",
+            "continuous_4k_production_persisted": False,
+            "continuous_4k_last_result": "fallback_control_disabled"}
     phone = {"recorder_pid": 777, "memory_available_kib": 2200000,
              "battery_temp_c": 34.0}
-    after = dict(base, sensor_capture_result_frames=1060, frames=1060)
+    after = dict(base, sensor_capture_result_frames=1060, frames=1060,
+                 preroll_encoded_frames=1060)
     assert not inspect_pair(base, after, phone, phone)
+    legacy = dict(base, continuous_4k_ready=False, continuous_4k_buffered_ms=0)
+    legacy_after = dict(legacy, sensor_capture_result_frames=1060, frames=1060,
+                        preroll_encoded_frames=1060)
+    assert not inspect_pair(legacy, legacy_after, phone, phone)
+    assert "legacy_avc_encoder_frames_not_progressing" in inspect_pair(
+        legacy, dict(legacy_after, preroll_encoded_frames=1000), phone, phone)
     faults = [
-        ("continuous_4k_ready", False, "continuous_4k_ready_not_true"),
         ("continuous_4k_buffered_ms", 0, "continuous_4k_buffer_under_5s"),
         ("sensor_result_fps", 10.0, "sensor_under_29fps_or_unverified"),
         ("sensor_result_fps", float("nan"), "sensor_under_29fps_or_unverified"),
@@ -144,12 +190,23 @@ def self_test():
     ]
     for key, value, reason in faults:
         assert reason in inspect_camera(dict(base, **{key: value})), key
+    legacy_faults = [
+        ("continuous_4k_last_result", "fallback_codec_error", "unverified_4k_fallback_reason"),
+        ("continuous_4k_production_persisted", True, "4k_persistence_state_unverified"),
+        ("preroll_ready", False, "legacy_preroll_not_ready"),
+        ("preroll_buffered_ms", 0, "legacy_avc_preroll_under_5s"),
+        ("preroll_dropped_frames", 1, "legacy_avc_preroll_drops_not_zero"),
+        ("preroll_version", "unknown", "legacy_avc_preroll_unrecognized_version"),
+        ("preroll_encoded_frames", 0, "legacy_avc_preroll_unverified_encoder")
+    ]
+    for key, value, reason in legacy_faults:
+        assert reason in inspect_camera(dict(legacy, **{key: value})), key
     assert "no_new_sensor_frames_between_checks" in inspect_pair(base, base, phone, phone)
     assert "camera_process_changed" in inspect_pair(base, after, phone, dict(phone, recorder_pid=778))
     assert "phone_battery_temperature_out_of_range" in inspect_phone(dict(phone, battery_temp_c=39.5))
     assert "phone_memory_below_1_4gib" in inspect_phone(dict(phone, memory_available_kib=500000))
     print(json.dumps({"status": "R742_CAPTURE_GUARD_SELF_TEST_PASS",
-                      "synthetic_fault_cases": len(faults) + 4,
+                      "synthetic_fault_cases": len(faults) + len(legacy_faults) + 6,
                       "camera_touched": False, "inference_executed": False,
                       "people_assigned": 0}))
 
@@ -163,6 +220,8 @@ def observe():
         "result": "PASS_OBSERVATION_ONLY" if not failures else "REFUSE_MODEL_ADMISSION",
         "reasons": failures, "before": public_fields(before, phone_before),
         "after": public_fields(after, phone_after),
+        "camera_capture_branch": "continuous_4k_ring" if after.get("continuous_4k_ready") is True else "legacy_4k_recorder_with_avc_preroll",
+        "native_4k_event_recording_proved_in_this_observation": False,
         "sensor_frames_delta": (after["sensor_capture_result_frames"] -
                                 before["sensor_capture_result_frames"])
             if type(after.get("sensor_capture_result_frames")) is int and
