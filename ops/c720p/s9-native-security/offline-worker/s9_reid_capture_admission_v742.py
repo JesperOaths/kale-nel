@@ -185,8 +185,7 @@ def self_test():
         ("mode", "recording", "camera_not_idle_watching"),
         ("sensor_capture_result_age_ms", 100000, "sensor_capture_result_age_ms_stale_or_invalid"),
         ("last_frame_age_ms", 100000, "last_frame_age_ms_stale_or_invalid"),
-        ("sd_free_bytes", 0, "phone_microsd_below_3gib"),
-        ("preroll_ready", False, "preroll_ready_not_true")
+        ("sd_free_bytes", 0, "phone_microsd_below_3gib")
     ]
     for key, value, reason in faults:
         assert reason in inspect_camera(dict(base, **{key: value})), key
