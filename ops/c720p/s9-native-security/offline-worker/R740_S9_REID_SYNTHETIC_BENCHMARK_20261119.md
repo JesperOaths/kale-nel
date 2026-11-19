@@ -127,3 +127,100 @@ execution was denied by a tool safety check**, and its unexecuted source
 was removed from the branch. No alternative execution path was attempted.
 **No source-to-identity ranking or known/unknown calibration was run.**
 Do not promote a new matcher from these metadata counts.
+
+
+## R742/R743 continuation — 2026-11-20 00:12–00:20 CET
+
+### R742: strict, read-only camera admission
+
+New source `s9_reid_capture_admission_v742.py` remains separate from
+all live camera and recognition services; only `--self-test` and `--observe`
+are supported. Its 17 synthetic fault cases PASS. The actual S9+ admission
+sample over 2 seconds returned `REFUSE_MODEL_ADMISSION`, as designed.
+
+Observed safe camera fields:
+- S9 live recorder PID remained **7244**; sensor FPS **30.02**.
+- Sensor frames advanced by **65** across the observation.
+- Last frame ages 2 / 15 ms; source-capture result ages 30 / 12 ms.
+- Phone battery temperature 31.5 C; camera temperature 31.4 C.
+- 0 reported dropped 4K output frames; preroll_ready true.
+
+**Unresolved camera state:**
+- `continuous_4k_ready=false`;
+  `continuous_4k_buffered_ms=0`;
+  `continuous_4k_production_persisted=false`.
+- `continuous_4k_last_result=fallback_control_disabled`.
+- `native_4k_enabled=true` and independent memory-ring
+  `preroll_ready=true`, `preroll_buffered_ms≈6998`.
+- This is **not proof of a healthy continuous 4K output pipeline**.
+  Live 30 FPS sensor results and 4K-ready status must remain separate.
+- No attempts were made to enable, restart, or reconfigure the camera.
+- R742 deliberately refuses any proposed heavy model experiment until both
+  the independent 4K admission and a subsequent capture-under-load check pass.
+- R742 read-only output: `sensor_frames_delta=65`,
+  `reasons=['continuous_4k_buffer_under_5s',
+  'continuous_4k_ready_not_true']`.
+- S9 SD and phone memory/temperature observations pass their bounded checks.
+
+### R743: open-set automatic-filing release guard (purely synthetic test)
+
+New `s9_reid_open_set_release_gate_v743.py` evaluates only **external,
+independently attested aggregate summary counts and booleans**. It never
+opens actual identities, images, phone embeddings or private scoring files.
+- The first synthetic test discovered a math-domain issue for impossible
+  known counts. The implementation was fixed to **fail closed**, with an
+  explicit impossible-count reason. Subsequent test surfaced a missing
+  secondary rejection reason; that was fixed too.
+- Final result:
+  `R743_SYNTHETIC_RELEASE_GATE_TEST_PASS`,
+  **16 synthetic refusals checked**.
+- Provisional target: no observed false accepts in at least 600
+  independent unknown-source recording bags to demonstrate a 95% one-sided
+  FAR upper bound under 0.005 (exact binomial zero-event upper bound).
+- Also checks a 95% lower Wilson bound >=0.90 for known correct accepted
+  among all known source bags, minimum 100 known recording bags over at least
+  8 distinct known people, zero wrong known accepts, no unverified reference
+  propagation and independent source, day, outfit and model/camera proofs.
+- Passing all proposed numerical gates returns only
+  `CANDIDATE_FOR_INDEPENDENT_REVIEW_ONLY`;
+  `automation_authorized` is **always false**.
+- No actual independent prospective unknown test has yet been performed,
+  and these sample-size targets are **proposed release goals**, not
+  measured production performance or an owner approval.
+
+### Newly located compact OSNet-AIN Re-ID weights
+
+The [LibreYOLO/LibreReID-osnet model card](https://huggingface.co/LibreYOLO/LibreReID-osnet)
+publishes OSNet-AIN x0.25 and x0.5 weights **claimed to have been trained
+on multiple person-ReID datasets (MSMT17 / DukeMTMC-reID / CUHK03)**,
+as opposed to merely ImageNet-pretrained backbones:
+- `osnet_ain_x0_25.pt` — published SHA-256
+  `ce171fe160b3608f5e4c19489774991419be965b1d6f4bdccc4b4cfd2ef95347`
+- `osnet_ain_x0_5.pt` — published SHA-256
+  `510bcebae21bd0c0fcc7df388e97d2f687a9ee4befa4394d6fb1fb19aac0bce2`
+
+These are **PyTorch checkpoints**, not verified Android ONNX artifacts;
+the publisher's conversion and training claims have not independently
+been reproduced here. Neither small AIN model was installed, exported,
+or benchmarked in this continuation. Do not mistake them for the prior
+OSNet x0.25 or AIN x1.0 ONNX experiments.
+
+### Remaining release blockers
+
+1. Continuous 4K output is currently not ready despite 30 FPS sensor and
+   memory-ring preroll; investigate non-disruptively first.
+2. Independently verify source timestamp provenance, crop geometry, and
+   strict full-person reference quality; keep the 5 invalid reference crops
+   excluded from any clean benchmark.
+3. Convert/verify small multi-source-trained AIN x0.25 and x0.5 checkpoints
+   on a trusted build environment with source-to-ONNX numeric equivalence,
+   then benchmark on S9+ **when camera admission passes**.
+4. No identity-scoring data path was executed. The previous attempt to
+   run a source/owner-labelled blind-gallery builder was denied by a tool
+   safety check, and it was not rerouted.
+5. Prospective known/unknown false acceptance and different-day/outfit
+   discrimination remain unverified. Automatic People-folder filing OFF.
+
+This continuation created **no new timer, scheduled ChatGPT task, recurring
+job, Camera2 modification, production matcher change, or automatic identity
+assignment**.
