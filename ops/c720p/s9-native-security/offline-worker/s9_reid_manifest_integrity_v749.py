@@ -118,19 +118,28 @@ def report(batches, sidecars):
     indexed = {}
     ranges = []
     rows = []
+    positioned = {}
     for b in batches:
         plan, start, end, payload = extract_batch(b)
         plans.add(plan)
         ranges.append((start, end))
         rows.extend(payload)
+        for offset, crop in enumerate(payload):
+            position = start + offset
+            if position in positioned:
+                require(positioned[position] == crop,
+                        "overlapping_batch_replay_is_not_identical")
+            else:
+                positioned[position] = crop
     require(len(plans) == 1 and len(rows) > 0,
             "inconsistent_or_empty_batch_plans")
     require(sorted(ranges)[0][0] == 0, "batch_ranges_do_not_start_at_zero")
-    cursor = 0
-    for start, end in sorted(ranges):
-        require(start == cursor, "batch_ranges_overlap_or_have_gaps")
-        cursor = end
-    require(cursor == len(rows), "batch_count_total_mismatch")
+    # A previously verified one-row replay may overlap an original six-row
+    # batch: allow it ONLY if every overlapped row is byte-for-byte equal
+    # in the safe metadata fields. Arbitrary overlap, gaps and mismatches
+    # are rejected; do not treat a replay as a new independent crop.
+    require(sorted(positioned) == list(range(max(end for _,end in ranges))),
+            "batch_ranges_have_gap_or_invalid_position")
     for original in sidecars:
         v = extract_sidecar(original)
         key = v["source_crop_sha256"]
@@ -239,6 +248,12 @@ def self_test():
     sides=[side(b["crops"][0]),side(b["crops"][2])]
     good=report([b],sides)
     assert good["plan_rows"]==3 and good["repeat_plan_crop_rows"]==1
+    replay=dict(b, range_start=0, range_end=1, crops=[b["crops"][0]])
+    repeated=report([b,replay],sides)
+    assert repeated["plan_rows"]==4 and repeated["repeat_plan_crop_rows"]==2
+    wrong=dict(replay, crops=[dict(replay["crops"][0], crop_bytes=9999)])
+    try:report([b,wrong],sides);raise AssertionError("mismatched_replay_should_refuse")
+    except ValueError as e:assert "replay_is_not_identical" in str(e)
     assert good["reference_crops_eligible_with_quality_and_pts"]==0
     assert not good["production_auto_filing_authorized"]
     corrupt=dict(b, crops=[*b["crops"][:-1],crop("heldout",hash_a,hash_d)])
@@ -248,7 +263,7 @@ def self_test():
     try:report([b],[invalid,sides[1]]);raise AssertionError("model_mismatch_should_refuse")
     except ValueError as e:assert "model_provenance_mismatch" in str(e)
     print(json.dumps({"status":"R749_METADATA_ONLY_SYNTHETIC_TEST_PASS",
-                      "cases":3,"identities_read":0,"images_read":0,
+                      "cases":5,"identities_read":0,"images_read":0,
                       "embeddings_compared":0,"auto_filing_enabled":False}))
 
 if __name__=="__main__":
