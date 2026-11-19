@@ -258,3 +258,132 @@ No model exports, new model inference, image/video work on C720P, camera
 changes, user confirmations, folder changes or auto assignments occurred.
 The converter still needs actual end-to-end execution and Torch/ONNX
 equivalence review; a script compiling is not a proven conversion.
+
+
+## R742/R744/R749 completed continuation — 20 November 2026
+
+### Capture-path diagnosis and corrected guarded admission
+
+Investigated installed camera source
+`staging/s9-night-30fps-20261119/src/nl/kalenel/s9security/CameraService.java`.
+`fallback_control_disabled` is set by the explicit
+`continuous_4k_trial=disable` camera control, which invokes
+`restoreLegacy4K("control_disabled")`. This is **not** a codec crash.
+The established path records H.264 with `MediaRecorder` at **3840x2160,
+30 FPS, 36 Mbps**, with an independent Android AVC memory-ring preroll.
+The optional continuous encoder branch correctly reports
+`continuous_4k_ready=false` and `continuous_4k_buffered_ms=0`.
+
+R742 was corrected to admit **either**:
+1. A currently healthy continuous 4K ring, or
+2. The explicit disabled-by-control fallback with `native_4k_enabled`,
+   healthy independent preroll, sufficient encoded preroll duration,
+   progressing preroll encoder frames, no preroll drops, adequate storage
+   and memory, stable camera PID, >29 sensor FPS, <34 ms exposure, and
+   acceptable thermal headroom.
+
+It **never** equates sensor FPS with verified native 4K output during an
+event. Standalone R742 synthetic tests now pass **24 fault scenarios**.
+Physical two-second admission on S9+ returned
+`PASS_OBSERVATION_ONLY` with **66** newly captured sensor frames,
+healthy preroll, zero observed drops, 30.02 sensor FPS and unchanged
+recorder PID 7244. No camera control or capture change was performed.
+
+### R744 successful x0.25 and x0.5 ONNX exports
+
+Added isolated CPU-only GitHub CI export job (not a scheduled task,
+runtime service or C720P inferencer). The first attempt failed because
+the runner defaulted to Python 3.13 while the pinned Torch wheel was for
+Python 3.11; fixed by pinning Python 3.11. The corrected job
+`Isolated S9+ ONNX runtime and archive preservation contract`, run
+**44639502561**, completed **successfully**.
+
+Pinned PyTorch **2.6.0+cpu**, ONNX **1.17.0**,
+ONNX Runtime **1.22.0**, NumPy **1.26.4**, exact upstream
+`osnet_ain.py` SHA
+`a43b495866a4b1645cd134a30c3011592e8c6826ba4781955a135588cf46cd25`.
+Both publicly distributed checkpoint SHAs matched the R744 pins.
+Strict backbone-only state-dict loading, ONNX checker, dynamic batch shape
+validation, and **synthetic PyTorch/ONNX numeric parity** passed.
+Artifacts were fetched through GitHub, verified by SHA and staged on
+C720P, then copied into the existing S9+ research-only
+`/data/local/tmp/s9_reid_r740` directory. The production Camera2 APK,
+recognition labels and folders were untouched.
+
+| Model | ONNX SHA-256 | Size | Synthetic PyTorch↔ONNX min cosine |
+| --- | --- | ---: | ---: |
+| OSNet-AIN x0.25 | `e7adf72649332d97c613be93db17a047e526bf55fc8b7240f14a1da67390b7af` | 900,103 bytes | 0.9999999 |
+| OSNet-AIN x0.5 | `bc0e6c3819064b2c201716594ca83daad693fb5b8e8c0e4b41b2eebd99d27` | 2,603,447 bytes | 0.9999999 |
+
+These verify conversion consistency **only**. They do not measure
+real-person identification accuracy, known/unknown separation, or
+verified frame-PTS provenance.
+
+### R744 on-phone, guarded synthetic-only performance
+
+All probes ran with `nice -n 15`, one ORT thread and independent
+camera-state observations. 16 fake NCHW crops per batch unless noted.
+No real pictures, recordings, identity labels or private embedding
+vectors were processed.
+
+| Model | Timed phone inference | Outcome |
+| --- | --- | --- |
+| Previous OSNet x0.25 non-AIN, batch 16 | 369.29 / 360.41 ms | PASS |
+| New OSNet-AIN x0.25, batch 16 | **391.97 / 388.03 ms** | PASS |
+| New OSNet-AIN x0.5, batch 1 | No valid result | **Process SIGKILL/exit 137** |
+| Previous OSNet-AIN x1.0, batch 16 | No valid result on latest run | **Process SIGKILL/exit 137** |
+
+**No x0.5 batch-16 test was attempted after its one-crop failure**.
+Camera remained watching with unchanged PID, zero preroll drops and
+minimum observed sensor FPS >=30.01 in the completed probes. Phone
+reported `SwapTotal≈2.0GiB`, `SwapFree≈300MiB` after probes and
+`MemAvailable≈2.3GiB`: **memory pressure is plausible but not
+confirmed as the exact SIGKILL cause**. Do not retry a killed model
+automatically or enable large-model inference in production.
+
+AIN x0.25 is currently the only *new* AIN model with demonstrably
+successful on-phone runtime compatibility under live camera load.
+Successful runtime does not establish recognition quality.
+
+### R749 anonymous source/crop provenance audit
+
+Added `s9_reid_manifest_integrity_v749.py`. It only reads
+existing research **JSON metadata** via ADB and produces anonymous
+aggregate counts: no image/video decode, embedding comparison,
+identity lookup, or People-folder assignment. CI-compatible
+`--self-test` passed **5 synthetic integrity cases**, including
+source leakage, model SHA mismatch, benign exact replay, and refusal of
+mismatched overlap.
+
+Actual on-phone research manifest results:
+- **18** batch manifests, **99** plan rows, **98** distinct planned
+  crops and **98** vector sidecars, matching the model hash and
+  source/crop metadata exactly.
+- One duplicate plan row: an **identical** first-crop replay
+  `[0,1)` alongside the six-row `[0,6)` batch; not independent.
+- **40 reference rows** from **39 distinct original source hashes**;
+  **59 heldout rows** from **32 source hashes**. **0 source SHA
+  overlap** between the reference and heldout groups.
+- **5 reference rows fail the upright-crop-quality flag**;
+  their height/width ratios range **0.14–1.06**, versus **1.31–3.19**
+  for the 35 rows passing strict reference crop quality.
+- **40 reference and 59 heldout rows** all have
+  `original_source_frame_PTS_independently_verified=false`.
+- **0 reference crops** currently satisfy **both** the strict upright
+  crop-quality condition **and** independent frame-PTS attestation.
+- Median of the existing 98 phone TFLite runtime sidecars is **93.83 ms**
+  per crop (not a new AIN benchmark).
+
+**Gate implication:** 0 source overlap in the existing gallery/holdout
+is necessary but not sufficient: capture days, outfit episodes, exact
+source-frame PTS, independent identity labels and unknown-person
+false-accept rates remain unproven. Reject the five poor-quality
+reference crops as calibration inputs. Do not silently promote the
+source hash or SHA-exact crop alone into an independently timed or
+identity-verified reference.
+
+**Production invariant:** no new S9 service, no new recurring job or
+ChatGPT Task, no Camera2 restart/reconfiguration, no altered original
+recordings, no People-folder label changes, no auto-assignment activation.
+The PR remains draft and must not be treated as a production recognition
+deployment.
