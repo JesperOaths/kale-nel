@@ -40,6 +40,10 @@ public final class S9AnonymousSourceToAinBenchV757 {
       +"osnet_ain_x0_25_r744.onnx").toAbsolutePath();
   static final String MODEL_SHA=
       "e7adf72649332d97c613be93db17a047e526bf55fc8b7240f14a1da67390b7af";
+  static final Path MODEL_X05=Paths.get("/data/local/tmp/s9_reid_r740/"
+      +"osnet_ain_x0_5_r744.onnx").toAbsolutePath();
+  static final String MODEL_X05_SHA=
+      "bc0e6c3819064b2c201716594ca83daad693fb5b8e8c0e4b41b2eeb7ebd99d27";
   static final Pattern CLIP=Pattern.compile("motion_[0-9]{13}[.]mp4");
   static final Pattern SHA=Pattern.compile("[a-f0-9]{64}");
   static final Pattern NONCE=Pattern.compile("[a-f0-9]{32}");
@@ -99,7 +103,8 @@ public final class S9AnonymousSourceToAinBenchV757 {
   }
 
   static JSONObject run(String basename,String sourceSha,long bytes,
-                        long requestMs,String nonce)throws Exception {
+                        long requestMs,String nonce,boolean halfModel)
+      throws Exception {
     need(CLIP.matcher(basename).matches()&&
          SHA.matcher(sourceSha).matches()&&
          NONCE.matcher(nonce).matches(),
@@ -107,11 +112,14 @@ public final class S9AnonymousSourceToAinBenchV757 {
     need(bytes>=35_000_000L&&bytes<=110_000_000L,
          "original_size_outside_bounded_offline_benchmark");
     need(requestMs==2000L,"only_prevalidated_single_frame_offset");
-    need(Files.isRegularFile(MODEL,LinkOption.NOFOLLOW_LINKS)&&
-         Files.size(MODEL)==900103L,
+    Path selectedModel=halfModel?MODEL_X05:MODEL;
+    String selectedModelSha=halfModel?MODEL_X05_SHA:MODEL_SHA;
+    long selectedModelBytes=halfModel?2603447L:900103L;
+    need(Files.isRegularFile(selectedModel,LinkOption.NOFOLLOW_LINKS)&&
+         Files.size(selectedModel)==selectedModelBytes,
          "pinned_research_model_missing_or_changed");
     long deadline=System.nanoTime()+MAX_NS;
-    need(fileHash(MODEL,deadline).equals(MODEL_SHA),
+    need(fileHash(selectedModel,deadline).equals(selectedModelSha),
          "research_model_sha256_mismatch");
     Path original=MEDIA.resolve(basename).normalize();
     need(original.getParent().equals(MEDIA)&&
@@ -152,7 +160,7 @@ public final class S9AnonymousSourceToAinBenchV757 {
     String sourceToTensorTranscript=
         S9CropSourceProvenanceV768.transcript(
             sourceSha,bytes,frame.actualPtsUs,X0,Y0,X1,Y1,
-            pixelsSha,inputSha,MODEL_SHA);
+            pixelsSha,inputSha,selectedModelSha);
     long preprocessNs=System.nanoTime()-preprocessingStart;
     double firstNorm=0,lastNorm=0;
     long[] inferenceNs=new long[2];
@@ -160,7 +168,7 @@ public final class S9AnonymousSourceToAinBenchV757 {
     try(OrtSession.SessionOptions opt=new OrtSession.SessionOptions()){
       opt.setIntraOpNumThreads(1);
       opt.setInterOpNumThreads(1);
-      try(OrtSession session=env.createSession(MODEL.toString(),opt)){
+      try(OrtSession session=env.createSession(selectedModel.toString(),opt)){
         need(session.getInputNames().size()==1&&
              session.getOutputNames().size()==1,
              "unknown_ondevice_onnx_signature");
@@ -200,7 +208,7 @@ public final class S9AnonymousSourceToAinBenchV757 {
     quality.originalSha=sourceSha;
     quality.originalVersion=null; // No independently approved source-version receipt.
     quality.cropSha=pixelsSha;
-    quality.modelSha=MODEL_SHA;
+    quality.modelSha=selectedModelSha;
     quality.outputDimensions=512;
     quality.frameWidth=3840;
     quality.frameHeight=2160;
@@ -241,7 +249,9 @@ public final class S9AnonymousSourceToAinBenchV757 {
       .put("source_to_input_transcript_contains_identity",false)
       .put("roi_dimensions","128x256")
       .put("roi_anonymous_scene_only",true)
-      .put("model_sha256",MODEL_SHA)
+      .put("model_sha256",selectedModelSha)
+      .put("osnet_ain_model_variant",halfModel?"x0_5":"x0_25")
+      .put("research_model_not_proven_for_person_identity_accuracy",true)
       .put("output_feature_dimensions",512)
       .put("output_feature_norm_only",Math.round(lastNorm*1000.0)/1000.0)
       .put("decode_roi_ms",Math.round(decodeNs/1000000.0*100.0)/100.0)
@@ -260,11 +270,14 @@ public final class S9AnonymousSourceToAinBenchV757 {
       .put("automatic_people_folder_assignments",0);
   }
   public static void main(String[] args)throws Exception{
-    need(args.length==6&&"--research-anonymous-source".equals(args[0]),
+    need(args.length==6&&
+         ("--research-anonymous-source".equals(args[0])||
+          "--research-anonymous-source-x05".equals(args[0])),
          "standalone_one_source_only");
+    boolean halfModel="--research-anonymous-source-x05".equals(args[0]);
     JSONObject result=run(args[1],args[2],
                           Long.parseLong(args[3]),
-                          Long.parseLong(args[4]),args[5]);
+                          Long.parseLong(args[4]),args[5],halfModel);
     System.out.println("S9_ANON_SOURCE_TO_AIN_V757 "+result.toString());
     System.out.flush();
     Runtime.getRuntime().halt(0);
