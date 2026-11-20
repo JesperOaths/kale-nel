@@ -4,8 +4,10 @@
 This lightweight host-side orchestration only reads existing JSON metadata
 from S9+. It performs NO image/video/embedding computation, no person
 classification, no identity/folder mapping, and no phone or media writes.
-It intentionally discards the 512-float embedding field immediately after
-JSON parsing, and never outputs hashes, crop names, or track identifiers.
+The private 512-float embeddings are inspected only by the separate
+S9-native R752 Java projector; no raw vector elements ever traverse ADB.
+The host receives sanitized JSON metadata only, and its reports never
+output source/crop hashes, crop names or track identifiers.
 Run --self-test in CI; run --audit only against owner-authorized S9 via ADB.
 """
 from __future__ import annotations
@@ -112,7 +114,7 @@ def extract_sidecar(x):
     timing = x.get("embedding_inference_latency_ms")
     require(type(timing) in (float, int) and math.isfinite(timing) and
             0 < timing < 120_000, "sidecar_latency_invalid")
-    # Deliberately do not read/use/return x["L2_normalized_embedding_phone_private"].
+    # R752 omitted all 512 private float values before crossing ADB.
     return {k: x[k] for k in
             ("source_original_sha256", "source_crop_sha256", "source_version",
              "crop_name_sha256", "source_crop_bytes",
