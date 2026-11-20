@@ -496,3 +496,117 @@ and 59 heldout rows, 5 reference rows failing the independent geometry
 check and **all** 99 rows missing independently attested actual source
 frame PTS. Automatic filing remains prohibited. The new on-phone norm
 audit is numeric integrity, **not** proof of identity discrimination.
+
+
+## R753–R757: physical decoder PTS → anonymous crop → phone OSNet-AIN, 2026-11-20
+
+All activities below ran as isolated one-shot research actions. The
+existing Camera2 APK, verified originals, manual People-folder references,
+review decisions, online recognition and scheduled jobs remain unchanged.
+
+### R753 diagnostic-only *decoded* PTS and in-memory pixel digest
+
+- Reused the earlier physically grounded ROI-only
+  `S9Original4KTimedDecoderV410.java`, now preserved as separate source in
+  this draft PR. This obtains the **actual MediaCodec decoder OUTPUT**
+  `BufferInfo.presentationTimeUs`, never a guessed seek time.
+- `S9DiagnosticActualDecodedPtsV753.java` verifies both source file
+  SHA-256 before and after decode, has a fixed owner-created **diagnostic
+  recording only**, and hashes 128x256 ARGB pixel data without saving it.
+- Physical S9 result for requested **2000 ms**: actual decoded PTS
+  **2,031,822 µs**, ROI pixel SHA
+  `2caef9a5ae1062ee2c1a02415938a7ae9f1dc729badc2516724770ad5e10d1ea`.
+- Independent replay returned **exact same** timestamp and crop digest.
+  A 4000 ms request yielded **4,030,788 µs** and a different pixel SHA.
+- Live S9 camera PID **7244** stable; frame and AVC encoder counters
+  advanced; no new preroll drops.
+- Research APK/DEX staged separately; SHA:
+  `9a4c938d0408fe622a7af458fa23b6f11a638b9433fce7bbba4caf9be361132e`.
+
+### R754 strict replay contract
+
+`r754_diagnostic_pts_replay.py` provides `--self-test` and an explicit
+`--phone-verify` only. Pure Python tests reject **16 synthetic faults**:
+source substitution, wrong nonce/provenance flags, requested timestamp
+masquerading as physical PTS, wrong ROI, accidental People-folder writes,
+mismatched replay and identical data from different seeks. The real
+three-invocation S9 replay also **passed**, demonstrating unchanged
+physical PTS and pixel SHA on duplicate seek. These are **diagnostic-only
+claims**, not provenance for historical person crops.
+
+### R755 source-bound physical PTS on a verified real original
+
+`S9OriginalAnonymousPtsV755.java` decodes one tiny anonymous **center
+scene region** of a source named `motion_[13digit epoch].mp4` ONLY when
+the invocation provides the exact current owner-approved source SHA,
+size, requested time and a per-job nonce. It rehashes the original
+before/after decode, never saves a crop, and does not read person labels.
+
+For one current **18 November 2026** original of **40,358,988 bytes**:
+- The updated S9 standalone original catalog (**756** originals) and
+  independent original-hash ledger both agreed on the same version; the
+  model independently re-verified the original MP4 SHA on S9 twice.
+- SHA `b362b8eca96f81456329940b0fa32d6f1afd164315b65dafa375dc4be6456a20`.
+- Requested 2000 ms; actual decoded **2,009,033 µs**; ROI ARGB
+  SHA `d49b7b7f217cd24a29e4fdb10e57cfdf888eabdd7f50ed8c1c2adad74c7fad45`.
+- S9 recorder PID remained unchanged; sensor FPS ~30.02,
+  0 new preroll drops.
+- One-shot DEX SHA
+  `b18f1df682ab9ce2d3cefad5e3dabe01562a37a5535936a136085694ada87286`.
+
+### R756 independent-day anonymous original decoder replay
+
+`r756_anonymous_original_pts_replay.py` checks the fresh standalone
+source catalog, independent SHA ledger, fixed phone DEX digest, per-run
+nonces and camera-admission health. **17** synthetic bad receipts are
+rejected. One-shot physical inspection of two current verified
+**17 and 18 November** originals returned:
+
+- 17 November, 2000ms request: **2,020,111 µs** actual output PTS.
+- 18 November, 2000ms request twice: **2,009,033 µs**, same pixel digest.
+- 18 November, 4000ms request: **4,008,011 µs**, distinct pixel digest.
+- **4** phone decodes, all source SHA revalidated before and after,
+  no camera restart, ~30.01–30.02 FPS, zero new preroll drops.
+- These two days are **source dates only**, NOT source-day-disjoint
+  person identity labels or known/unknown recognition evaluation.
+
+### R757 anonymous real video frame → normalized ONNX input → AIN x0.25
+
+`S9AnonymousSourceToAinBenchV757.java` binds the actual V410 decoded
+frame PTS, on-phone pixel SHA and ImageNet-normalized NCHW
+float-input SHA to pinned on-phone OSNet-AIN x0.25 ONNX:
+`e7adf72649332d97c613be93db17a047e526bf55fc8b7240f14a1da67390b7af`.
+One ORT thread, `nice -n 15`, only batch-1, two passes,
+no output vector contents transferred and no person matching.
+No source media copied or changed; input is a **tiny center scene
+sample**, not a quality-approved person crop.
+
+Three actual phone runs completed:
+
+| Date | ROI-only 4K decode | RGB preprocess + input SHA | Timed 512D ONNX output | Source ROI PTS |
+| --- | ---: | ---: | ---: | ---: |
+| 18 Nov | 585.69ms | 29.35ms | **19.30ms** | 2,009,033 µs |
+| 18 Nov repeat | 535.23ms | 35.60ms | **14.76ms** | 2,009,033 µs |
+| 17 Nov | 503.80ms | 28.51ms | **18.86ms** | 2,020,111 µs |
+
+The November 18 repeat exactly matched BOTH the earlier pixel SHA
+`d49b7b7f217cd24a29e4fdb10e57cfdf888eabdd7f50ed8c1c2adad74c7fad45`
+and real normalized model-input SHA
+`9f27509b6f9a81b6e50626cb9cd732a4a1c329c855701bea28a40c499bba80d6`.
+November 17 yielded a **different** input hash, as expected.
+Each run had a stable camera PID, verified source SHA on S9 before and
+after decode, ~30 FPS, no new preroll drops and no folder assignments.
+Research-only phone DEX SHA:
+`c82f4dce5f47222efe69e60c45826559e9993812ff9ca3920c86cd11d1de187a`.
+
+**Critical distinction:** This is verified *technical* image
+provenance and phone runtime, NOT recognition accuracy. The 99 planned
+reference/holdout rows from R749 remain **without independently verified
+original-frame PTS**. The five quality-ineligible reference crops remain
+excluded, unknown-person FAR is not calibrated, and **automatic People
+filing is still OFF**. Moving from anonymous scene-ROI experiments to
+trusted person-crop PTS requires binding the actual specific owner-approved
+crop bytes to the physical decoded output frame in a separately verified
+capture/review flow; existing sidecars must not be upgraded retroactively
+by guessing timestamps. No gallery-builder or identity-label execution
+was attempted or rerouted after its prior safety denial.
