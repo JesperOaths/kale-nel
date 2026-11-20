@@ -34,7 +34,7 @@ QUALITY_METRICS = r758.STATE / "metrics" / "s9-recognition-quality-gate-v1.json"
 def need(ok,reason):
     if not ok:raise ValueError(reason)
 
-def readiness(integrity,days):
+def readiness(integrity,days,selection=None):
     need(type(integrity) is dict and type(days) is dict and
          integrity.get("schema")=="s9_r749_anonymous_reid_provenance_gate_v1" and
          days.get("schema")=="s9_r758_sha_verified_capture_day_split_audit_v1",
@@ -88,6 +88,38 @@ def readiness(integrity,days):
          days["source_SHA_ledger_rechecks_older_than_14_days"],
          "inconsistent_verified_source_counts")
 
+    # Historical raw inputs are still invalid. Only an independently
+    # recomputed metadata-only R763 mask can repair the *research selection*,
+    # never the raw historical data or production matcher. No identity claim.
+    mask_ok=False
+    if selection is not None:
+        need(type(selection) is dict and
+             selection.get("schema")==
+                 "s9_r763_anonymous_research_quality_selection_v1" and
+             selection.get("status")=="RESEARCH_MASK_ONLY_NOT_IDENTITY_EVALUATION" and
+             selection.get("production_automation_authorized") is False and
+             selection.get("real_person_crop_images_decoded")==0 and
+             selection.get("biometric_vectors_compared")==0 and
+             selection.get("identity_labels_read")==0,
+             "invalid_research_quality_mask_evidence")
+        need(selection.get("rejected_reference_crop_rows")==
+             integrity["reference_rows_failing_independent_geometry"] and
+             type(selection.get("quality_eligible_reference_crop_rows")) is int and
+             selection["quality_eligible_reference_crop_rows"]>0 and
+             type(selection.get("date_disjoint_holdout_crop_rows")) is int and
+             0<selection["date_disjoint_holdout_crop_rows"]<=
+                 days["holdout_rows_on_exclusive_days"] and
+             type(selection.get("date_disjoint_holdout_original_sources")) is int and
+             0<selection["date_disjoint_holdout_original_sources"]<=
+                 days["holdout_sources_on_exclusive_days"] and
+             selection.get("calibration_source_sha_and_day_overlaps")==0 and
+             selection.get("eligible_mask_source_originals_verified_against_current_ledger") is True and
+             selection.get("historical_exact_frame_PTS_proven_for_selected_crops") is False and
+             selection.get("independent_known_person_truth_proven") is False and
+             selection.get("independent_unknown_person_truth_proven") is False,
+             "unverified_filter_cannot_remove_raw_historical_blockers")
+        mask_ok=True
+
     # R743 demands evidence about independently known/unknown persons;
     # NONE can be inferred from anonymous crop/manifests. We do not fabricate
     # a 'correct' label count from 39 approved crops or 59 holdout rows.
@@ -106,8 +138,9 @@ def readiness(integrity,days):
         "heldout_original_sources_disjoint":
             days["reference_holdout_source_sha_overlap"]==0,
         "heldout_capture_days_disjoint":
-            days["shared_capture_days_local"]==0 and
-            days["shared_capture_days_utc"]==0,
+            mask_ok or (
+              days["shared_capture_days_local"]==0 and
+              days["shared_capture_days_utc"]==0),
         "heldout_outfit_episodes_disjoint":False,
         "heldout_known_and_unknown_labels_independent":False,
         "recordings_counted_as_bags_not_frames":False,
@@ -147,7 +180,7 @@ def readiness(integrity,days):
           "SOURCE_LEDGER_RECENCY",
           {"source_rechecks_older_than_14_days":
               days["source_SHA_ledger_rechecks_older_than_14_days"]})
-    block(integrity["reference_rows_failing_independent_geometry"]==0,
+    block(mask_ok or integrity["reference_rows_failing_independent_geometry"]==0,
           "STRICT_REFERENCE_CROP_GEOMETRY",
           {"bad_reference_rows":integrity["reference_rows_failing_independent_geometry"]})
     block(verifiable["source_frame_PTS_independently_verified"],
@@ -156,6 +189,17 @@ def readiness(integrity,days):
            "holdout_rows_unverified":integrity["heldout_rows_without_independent_frame_pts"]})
     # Missing independently approved identity truth is UNKNOWN, not zero
     # wrong assignments. Its absence is itself an absolute blocker.
+    if mask_ok and selection["date_disjoint_holdout_original_sources"]<
+        r743.MIN_KNOWN_RECORDINGS:
+        blockers.append({
+            "gate":"INDEPENDENT_ELIGIBLE_SOURCE_BAGS_UNDERPOWERED",
+            "observed":{
+                "research_date_disjoint_source_bags":
+                    selection["date_disjoint_holdout_original_sources"],
+                "minimum_known_independent_bags":r743.MIN_KNOWN_RECORDINGS,
+                "minimum_unknown_independent_bags":r743.MIN_UNKNOWN_RECORDINGS,
+                "verified_independent_person_labels":0,
+            }})
     blockers.append({"gate":"INDEPENDENT_KNOWN_PERSON_TRUTH_AND_OUTFITS",
                      "observed":"unproven; labels never loaded"})
     blockers.append({"gate":"INDEPENDENT_OPEN_SET_UNKNOWN_PERSON_TRUTH_AND_FAR",
@@ -175,6 +219,9 @@ def readiness(integrity,days):
         "blockers":blockers,
         "independent_original_source_disjointness_only":days["reference_holdout_source_sha_overlap"]==0,
         "heldout_source_day_disjointness":verifiable["heldout_capture_days_disjoint"],
+        "historical_raw_split_shared_capture_days":days["shared_capture_days_local"],
+        "research_filter_approved_for_metadata_only_split":mask_ok,
+        "research_raw_originals_and_crops_unchanged":True,
         "research_vector_model_matches_candidate_ain_x025":
             r749.MODEL_SHA==CANDIDATE_ONNX_SHA,
         "candidate_ain_x025_independent_recognition_accuracy_evaluated":False,
@@ -243,6 +290,41 @@ def test():
          "hypothetical_release_should_stay_blocked")
     need(real["heldout_rows_on_exclusive_capture_days"]==9,
          "source_capture_day_remainder_math_bad")
+    selection={
+        "schema":"s9_r763_anonymous_research_quality_selection_v1",
+        "status":"RESEARCH_MASK_ONLY_NOT_IDENTITY_EVALUATION",
+        "production_automation_authorized":False,
+        "real_person_crop_images_decoded":0,
+        "biometric_vectors_compared":0,"identity_labels_read":0,
+        "rejected_reference_crop_rows":5,
+        "quality_eligible_reference_crop_rows":34,
+        "date_disjoint_holdout_crop_rows":9,
+        "date_disjoint_holdout_original_sources":6,
+        "calibration_source_sha_and_day_overlaps":0,
+        "eligible_mask_source_originals_verified_against_current_ledger":True,
+        "historical_exact_frame_PTS_proven_for_selected_crops":False,
+        "independent_known_person_truth_proven":False,
+        "independent_unknown_person_truth_proven":False,
+    }
+    filtered=readiness(a,b,selection)
+    need(filtered["research_filter_approved_for_metadata_only_split"] is True and
+         filtered["heldout_source_day_disjointness"] is True and
+         filtered["historical_raw_split_shared_capture_days"]==5 and
+         filtered["blocker_count"]==real["blocker_count"]-1 and
+         any(x["gate"]=="INDEPENDENT_ELIGIBLE_SOURCE_BAGS_UNDERPOWERED"
+             for x in filtered["blockers"]),
+         "selection_filter_must_fix_only_quality_date_and_expose_low_power")
+    for key,bad in (
+        ("production_automation_authorized",True),
+        ("date_disjoint_holdout_crop_rows",60),
+        ("rejected_reference_crop_rows",0),
+        ("calibration_source_sha_and_day_overlaps",1),
+        ("independent_known_person_truth_proven",True),
+    ):
+        tampered={**selection,key:bad}
+        try:readiness(a,b,tampered)
+        except ValueError:pass
+        else:raise AssertionError("unsafe_research_mask_accepted_"+key)
     # Even with date and SHA blocks repaired, unknown/known independent
     # evaluation and 4K event output remain unknown, never inferred.
     other=dict(b,shared_capture_days_local=0,shared_capture_days_utc=0,
@@ -339,7 +421,7 @@ def run():
     need(frozen_cohort["historical_samples_are_prospective"] is False and
          frozen_cohort["prospective_independent_recordings_observed_at_cutoff"]==0,
          "old_recordings_must_not_be_promoted_to_prospective_labels")
-    output=readiness(integrity,day_audit)
+    output=readiness(integrity,day_audit,clean_mask)
     output.update(quality_summary(integrity,day_audit))
     output.update({
         "research_selection_filter_verified":True,
