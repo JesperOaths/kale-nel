@@ -1123,3 +1123,47 @@ identity-accuracy assessment on genuinely independent person trials.
 recognition identity gallery construction or source deletion.
 No previously denied source-to-identity gallery operation was
 repeated or worked around.**
+
+
+### R771: matched physical-frame OSNet-AIN x0.25 versus x0.5 S9 execution cost
+
+A narrow research-only extension to
+`S9AnonymousSourceToAinBenchV757.java` supports an explicit
+`--research-anonymous-source-x05` variant without altering the
+production app or the original x0.25 default. Both on-S9 models
+have exact pinned model file bytes/SHA-256 checks:
+
+| Trained checkpoint architecture | ONNX bytes | On-phone SHA-256 |
+| --- | ---: | --- |
+| OSNet-AIN x0.25 | 900,103 | `e7adf72649332d97c613be93db17a047e526bf55fc8b7240f14a1da67390b7af` |
+| OSNet-AIN x0.5 | 2,603,447 | `bc0e6c3819064b2c201716594ca83daad693fb5b8e8c0e4b41b2eeb7ebd99d27` |
+
+**Physical comparison performed on S9**: two runs of each model
+against the **exact same** 18 November SHA-backed original and
+physical MediaCodec output frame PTS `2,009,033 µs`. All four runs
+had identical exact ROI ARGB pixel SHA and normalized NCHW input
+SHA, and model-specific R768 provenance transcript SHA commitments.
+
+| Model | Timed inference #1 | Timed inference #2 |
+| --- | ---: | ---: |
+| x0.25 | **21.23ms** | **18.92ms** |
+| x0.5 | **43.40ms** | **44.55ms** |
+
+The larger model incurred ~**2.2x** latency in this bounded
+single-crop CPU/ONNX test. Camera sensor kept **30.02FPS**,
+original process PID unchanged, **zero new AVC preroll drops**,
+and both variants correctly **abstained** from identity matching
+via R765. No 512D output features exported, no crop files saved,
+no identity labels or People folders read/written.
+
+The larger architecture's potential accuracy gain is **unknown**:
+there is no independently labelled, source/day/outfit-disjoint
+test set for either new AIN model. The R769 calibration protocol
+remains locked specifically to x0.25. The alternate model is
+compatible for isolated research runtime only, never an
+automatically promoted production candidate.
+
+R771 two-model standalone DEX SHA
+`0fa67e437b4826c4c417429540037dbdec55fb0b7feda2c8238c492eacc23aac`.
+The existing CI now checks the alternate model SHA and explicit
+command-line selection without adding a new workflow or timer.
