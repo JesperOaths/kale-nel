@@ -2209,3 +2209,144 @@ zero errors, pinned original APK. R759 remains release
 blocked (seven blockers) including the natural-event
 proof/real person accuracy, even though the controlled
 diagnostic hardware concurrency is verified.
+
+
+## R806–R810: back-to-back natural motion capture, full native-4K face review and strict non-enrollment — 20 November 2026
+
+### R806 natural 4K event completion attribution
+
+The S9 camera may finish one naturally triggered event and begin
+another before the C720P helper observes the intermediate
+`watching` mode. The R798 natural-event proof was updated
+*without changing the production camera or recorder* to require,
+in either `watching` or immediate follow-on `recording` mode:
+exactly **one** newly completed native motion MP4 by recording
+counter and filename, original camera PID unchanged, continuous
+real ONNX **synthetic-only** inference during the first event,
+healthy sensor/preroll/frame/drop counters, an exact file SHA,
+independently checked source SHA before/after an on-phone
+MediaExtractor **3840×2160 H264 encoded sample PTS audit**,
+and no automatically enrolled identities.
+
+Its **12 unsafe-start plus nine deliberately corrupted
+back-to-back source-attribution cases PASS**. A live attempt
+that arrived after an event completed abstained safely
+(`NO_NATURAL_ACTIVE_4K_EVENT_NO_ACTION`). Prior hardware
+observation of **two ~19.9ms AIN x0.25 ONNX inferences**
+overlapping an actively recording *natural* 4K event and
+**24 advancing Camera2 sensor frames** was legitimate
+concurrency evidence. The natural clip's *exact finalized
+source hash/PTS under that inference* was NOT yet linked
+end-to-end. Strict first-frame startup-gap-free 30FPS
+remains unproven.
+
+### R807 anonymous face grid-score diagnosis
+
+The existing face candidate reviewer on a pinned owner-approved
+historical original was returning zero faces. Its original
+`FaceEyes` model prefilter was `score>=0.88`, stricter
+than one high grid response. The **isolated** R805/807
+corrected 320→640 full-input shadow revealed
+- A **0.8608 maximum** YuNet ONNX output score
+- **56** score cells ≥0.20, **37** ≥0.50, **27** ≥0.70,
+  **one** ≥0.85 across source windows
+- **zero** responses at ≥0.88, hence zero face proposals.
+
+No identity or threshold was changed in the production app.
+
+### R808 review-only score relaxation
+
+A separate phone-only, unapproved-shadow proposal workflow
+relaxed only the face candidate score gate to **0.82**
+(the baseline acceptance gate remains unchanged).
+On the same owner-approved original, **four** detector
+responses passed score prefilter, but ALL four were
+still rejected by the existing **18-pixel minimum eye
+separation**. Two other windows had no detection.
+Therefore a lower score threshold alone did not yield
+a defensible face reference.
+
+### R809 native original 4K pixels: two defensible *proposals*, not verified people
+
+The existing face reviewer first extracted a lower-resolution
+`1920x1080` frame from source video. R809 forked the shadow
+worker to decode only **two** temporal samples of a verified
+original 3840×2160 MP4 at its **actual full resolution**.
+All existing source SHA checks, capture-priority locks,
+phone-bound YuNet model, body ROI, score ≥0.82,
+eye spacing ≥18 px and head alignment rules stay in force.
+Its output is a **separate private S9 `/data/local/tmp`
+unapproved candidate directory**, with no gallery or
+People-folder changes.
+
+The original first sample source that yielded zero at
+1920×1080 now produced **two unapproved face proposals**
+from two genuine native-4K frame decode requests.
+The YuNet proposal scores are **0.83997 / 0.84623**
+and proposed eye distances **21.84 / 22.79 px**,
+both above the unchanged geometric minimum.
+This is an *improved candidate detection yield*, not
+an independent verified person-recognition accuracy,
+unknown-person false-accept estimate or authority to
+create gallery references.
+
+Both candidate receipts explicitly have:
+`owner_verified_identity_of_face=false`,
+`actual_decoded_video_pts_verified=false`, and
+`face_model_assigned_folder=false`.
+The original MP4 source can be SHA-verified while the
+specific frame requested through MediaMetadataRetriever
+still lacks independent exact decoded PTS attestation.
+**Do not erase that distinction.**
+
+A second R809 attempt on another separately approved
+source was correctly terminated by the already-existing
+capture guard with
+`original recorder regressed during inference`,
+because new real motion recordings changed the normal
+recording counter while that shadow experiment was active.
+Android camera PID **7091** remained unchanged; native
+camera was observed healthy again at **30.02 FPS**, no
+preroll drops, no recording failures. The interrupted
+run provides **no accepted face metrics or negative
+detection denominator**. The R809 one-shot wrapper
+has since been strengthened to require an additional
+**60-second quiet interval**, healthy camera under 35°C
+and 29–31FPS before heavy full-4K extraction, and
+to report known recorder interruptions as **ABSTAIN**
+instead of a Python traceback. The original baseline
+worker itself was not modified.
+
+### R810 release refusal for full-4K face candidates
+
+`r810_unapproved_native4k_face_truth_release_guard.py`
+validates strictly source-bound, private R809 receipts,
+the original SHA syntax and manifest binding,
+camera FPS/temperature evidence, max two source frames,
+review-only low confidence, zero gallery/People actions,
+minimum geometric quality and **both mandatory
+independent face-identity and exact-frame-PTS gaps**.
+
+It passes **11 adversarial synthetic refusal cases**;
+a live private-receipt audit confirms **one completed
+source receipt, two unapproved proposals, zero independently
+verified exact native decoded frame PTS, zero independently
+owner-certified identities, zero independent known or
+unknown validation episodes**. This gate never creates
+a People folder or enrolls a face automatically.
+
+The phone's prospective recording archive grew to
+**790 originals including 34 after the frozen cutoff**;
+at the check **22/34** post-freeze source records had
+finished SHA-ledger verification. The existing low-duty
+SHA timer preserves camera priority by refusing a busy
+decoder lock or active recording; no guard was bypassed
+or recurring job created. Recognition release remains
+blocked by the R759/R801 gates, and automatic
+People-folder filing remains **OFF**.
+
+**Research assets:** R809 isolated Java phone-worker
+source/one-shot wrapper and R810 strict standalone
+gate are staged in draft PR #1307; all source-level
+changes are isolated from the installed S9 camera APK,
+original photo gallery and protected recordings.
