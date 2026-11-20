@@ -2107,3 +2107,105 @@ the existing S9 offline GitHub workflow. R759's seven
 release blockers remain; automatic People-folder filing is
 OFF. No additional scheduled tasks, installations,
 user recordings or reference-folder modifications.
+
+
+## R800 forensic correction: the repeated native S9 camera stops were part of the staged one-shot controlled 4K/ONNX trial — 20 November 2026
+
+After R796 had correctly isolated Android shell-initiated camera
+package stops but could not prove the originating ADB client,
+a broader **owner staging directory source-code** search discovered:
+
+- `/home/jespern/c720p-home-hub/staging/s9-native4k-model-overlap-20261120/phase1.py`,
+  modified at **05:56:48 CET**, contains the exact
+  `am force-stop nl.kalenel.s9security` command at line 92,
+  followed by the existing CameraActivity restart.
+- The same staged trial's `controlled_retry.py`, modified at
+  **06:05:43 CET**, contains
+  `am start -S -n nl.kalenel.s9security/.CameraActivity` at
+  lines 45–47. Android `-S` stops an existing app before launch.
+- The trial's protected `one_shot_state.json` ended at
+  **`NATIVE_4K_MODEL_CONCURRENCY_SOURCE_ATTESTED`**, explicitly
+  recorded **four restart attempts**, first camera PID **31276**
+  and final restored PID **7091**.
+- The Android system log independently recorded **four**
+  package-stop actions at 05:57:00, 06:00:12, 06:03:48,
+  06:06:45 CET. Source file creation time precedes the
+  correlated earliest and last stops.
+- The trial's final source-bound receipt
+  `attested_concurrency_result.json` is independently SHA
+  **`6164dd5a81a614bba603267a333c4b5ed950bcdc4963e5548a42c153fa2cdb49`**,
+  declaring a completed controlled diagnostic 4K MP4 plus
+  low-priority **synthetic** model inference; the terminal
+  one-shot phase prevents a repeat without explicitly
+  rearming the trial.
+
+This is **strong source-level attribution to the staged,
+deliberate one-shot test workflow on C720P**, not evidence of
+spontaneous codec failure, a malicious remote client, or a
+broken periodic camera watcher. There is still no historical
+per-PID to exact host process/peer packet trace: the second
+live connected ADB peer `192.168.178.45` has **no
+independent causal link to these four stops**.
+
+The user-private mode-0600
+`r800_private_trial_origin_verified_20261120.json`
+contains an independently repeated audit of source code,
+source mtimes, Android log events, four restart attempts,
+terminal state and SHA-bound controlled proof. No scripts
+were reexecuted, no camera restart was issued and no
+additional scheduled job was created by this audit.
+
+### Controlled 4K/ONNX concurrency: success, but **not** a natural event
+
+The same already-completed one-shot diagnostic is real
+physical hardware evidence, rather than a synthetic-only
+claim or just a sensor-FPS sample:
+- Camera recording started **2026-11-20 05:07:49.983869 UTC**
+  (06:07:49.984 CET).
+- Synthetic ONNX inference ran on S9 between
+  **05:07:49.992630–05:07:50.884372 UTC**, before the
+  same recording completed at **05:08:00.672018 UTC**.
+- Same camera process **PID 7091** before, during, after.
+- Original owner camera APK SHA verified and unchanged.
+- Completed diagnostic **3840x2160** H264 MP4
+  SHA **`950025bb782a186b3af5ff952987d7299e63d7597398aafe7a7a08e68eee7336`**;
+  **40,272,118 bytes**, **264 encoded video samples**;
+  source SHA physically checked before/after
+  phone-only MediaExtractor PTS inspection.
+- Steady encoded output **30.015 FPS**, no new camera
+  capture faults or preroll drops. **163.644ms first-frame
+  startup interval still FAILS strict gap-free 30FPS**.
+- Companion preroll **821,382 bytes**, physical SHA
+  `2fe210f6842f87f76127b71cdf4eb1cf507d0a9c0c67ecc08aa21ed966415071`,
+  **78 encoded samples**.
+- The recording was **explicitly diagnostic**,
+  excluded from security archive, People folders and
+  prospective identity trials. **No real-person clips,
+  faces, crops or identity scores were processed during
+  the model concurrency experiment.**
+
+Therefore a meaningful **controlled phone 4K recording
+and model compute concurrency milestone is MET**. The
+separately demanded **naturally triggered motion MP4
+concurrent with model load is NOT MET**: neither R788
+nor R798 observed an active natural 4K event in their
+bounded one-shot checks. This distinction is permanent
+and must not be collapsed by a release gate.
+
+The owner-private follow-on face readiness report
+`s9-face-postattestation-20261120-v1.json` also notes
+**three verified original 4K sources inspected**, only
+**nine decoded frames / eighteen head regions** and
+**zero qualifying face references**. That zero yield
+neither proves the absence of people nor creates known/
+unknown-person truth. Separately, 11 clean historical
+manual references, zero independent future positives,
+and zero independently verified unknown subjects remain
+the real population-validation baseline.
+
+**Production S9** was observed back at **~30.02 FPS**,
+same final PID **7091**, ready 7sec AVC preroll,
+zero errors, pinned original APK. R759 remains release
+blocked (seven blockers) including the natural-event
+proof/real person accuracy, even though the controlled
+diagnostic hardware concurrency is verified.
