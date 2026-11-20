@@ -1763,3 +1763,130 @@ threshold**, actual independent person ground truth, nor
 permission for auto People-folder filing. The R759
 recognition release remains **BLOCKED**. No scheduled
 task, recording deletion or live S9 recorder change.
+
+
+## R792–R794: physical 4K first-interval fault isolation and a necessary rank-fusion open-set correction — 20 November 2026
+
+### R792: four independent double-SHA-verified 4K event sample timelines
+
+Three preexisting original **3840×2160** S9 clips (Nov 18–19)
+and the newly completed **Nov 20** 4K diagnostic clip
+were re-inspected with separate, phone-only
+`S9OriginalNative4KEventTimingV761` /
+`S9DiagnosticNative4KTimingV785` `MediaExtractor`
+operations. Every original was independently source-SHA
+checked **before and after** reading the encoded sample PTS,
+first eight sample flags and encoded dimensions; no video
+frames, pixels, person identities or folder labels were decoded
+or sent to C720P.
+
+| Independent original day | First PTS interval | First sample is sync frame | Subsequent steady encoded FPS | Later >100ms gaps |
+| --- | ---: | --- | ---: | ---: |
+| Nov 18 | **176.522ms** | Yes | **30.015** | **0** |
+| Nov 19 (A) | **125.233ms** | Yes | **30.015** | **0** |
+| Nov 19 (B) | **127.377ms** | Yes | **30.015** | **0** |
+| Nov 20 one-shot diagnostic | **178.277ms** | Yes | **30.015** | **0** |
+
+All four original sources have distinct SHA digests and were
+captured across **three** local calendar days. The maximum
+PTS interval is at source video frame index **0** in all four
+files; all first samples are H264 keyframes. The **median**
+first gap is **151.9495ms**. All next six sample steps in
+the first eight stay around the nominal **33.3ms**.
+This repeatable sample pattern is a *starting encoded-stream
+timing gap*; neither on-phone sensor frame loss nor a
+specific MediaRecorder/Camera2 root cause has been proved.
+The current 30-FPS steady state remains excellent.
+
+The standalone `r792_native_4k_startup_gap_audit.py`
+verifies strict filename, unique original SHA, 4K H.264
+geometry, source double-hash, keyframe flag, first-eight
+monotonic PTS, first-gap-only location, source-day
+independence and steady 30-FPS interval consistency.
+Its **17 adversarial synthetic refusal tests PASS** in the
+existing CI. The private owner-only JSON receipt containing
+real source SHA and initial sample PTS is mode 0600 on
+C720P, not committed to GitHub. No recorder startup order
+was changed blindly; production APK unchanged.
+
+**Engineering decision:** until a tested alternative 4K
+continuous encoder or source session is proved safe, do
+NOT treat an assumed 4-5 "missing" sensor frames as
+demonstrated actual frame drops, fabricate interpolated
+frames, hide the strict-full-event failure, or reorder the
+already-working MediaRecorder `start()` call under the
+same working camera. New eventual capture tests should
+report both start interval and steady-state frame timing.
+
+### R793: rank-only reciprocal-rank fusion falsely gives maximum confidence to unknowns
+
+A new `S9SyntheticRankFusionUnknownGuardV793.java`
+test constructed **only synthetic 512D vectors**:
+one well-matched known toy source and one completely
+orthogonal unknown toy source. On the S9+ itself,
+both CSLS+z ranking systems could agree on their
+respective top candidate, so BOTH top **RRF** scores
+were IDENTICALLY **0.032786885246 = 2/61**.
+
+By contrast, the absolute scores were starkly different:
+- Known toy query: CSLS **1.401653**,
+  template z **10.192146**.
+- Orthogonal unknown toy query: CSLS **0.0**,
+  template z **0.0**.
+
+Thus an RRF-only maximum score is inherently
+unsuitable for open-set known/unknown acceptance; it
+may rank the *least unsuitable* folder equally strongly
+for a stranger. The synthetic test also checks that a
+missing or nonfinite absolute threshold always causes
+ABSTAIN. The S9 phone ran this entire test in a
+sandbox `app_process`, low priority, with zero person
+data, active camera ~30.02FPS and 0 drops.
+No real-person accuracy or false-accept rate is claimed.
+
+### R794: immutable addendum, not retrospective editing of locked R769/R791
+
+The original R769 cosine protocol and R791 shadow
+three-arm protocol were NOT edited or unfrozen.
+`r794_shadow_rank_only_rejection_amendment.py` is
+a **separately frozen** owner-private method, SHA
+`d59b08fb88109ee5aa2069a016111eff96452215079176fd5a1877636c125581`,
+which is cryptographically bound to:
+
+- Original primary frozen R769:
+  `f9f8a840a8131e05d43d7ef9a2c0589f8c83ef1d740d7691dff132e6fa356d4b`
+- Original initial shadow R791:
+  `e58b5e17cbb5ab1b32ad62e9b8ea53081cefbe5509f3731e7024add7c3612375`
+
+It explicitly **supersedes the rank-only RRF score
+as an acceptance statistic** while preserving RRF
+only as a candidate ranking. For a future real
+unknown-person trial, freeze reference and background
+cohorts first; for each *independent unknown episode*,
+select its RRF-best candidate, then calibrate the
+**candidate-conditional absolute CSLS and z scores**
+independently on disjoint unknown calibration episodes.
+Only if **both absolute scores strictly exceed**
+their separately calibrated thresholds *and* all source
+provenance/release gates pass can a method ever be
+considered for supervised release evaluation. Any
+missing threshold, mixed source or nonfinite score =>
+ABSTAIN. The original conservative predeclared
+**599 independent unknown calibration episodes per
+shadow arm** is retained, along with final independent
+known/unknown sets and no final-test peeking.
+
+The addendum's **12 synthetic negative tests pass**;
+it was frozen before any post-cutoff new original
+source appeared in the SHA-backed archive. All three
+private method files are immutable, independently
+SHA-verifiable, and their contents remain separate
+from GitHub. No real unknown/known person labels
+or independently calibrated numeric thresholds yet
+exist. Production automatic People-folder filing
+remains **OFF**.
+
+R792, R793 and R794 compile/self-test in the
+**existing** S9 research GitHub workflow, without
+creating any new periodic job, camera APK, or identity
+collection pipeline.
