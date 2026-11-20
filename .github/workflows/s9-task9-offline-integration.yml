@@ -124,9 +124,25 @@ jobs:
           sdk_root="${ANDROID_SDK_ROOT:?Android SDK missing}"
           "$sdk_root/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
           aar="$RUNNER_TEMP/onnxruntime-android-1.22.0.aar"
-          curl --fail --silent --show-error --location --retry 2 --max-time 90 \
-            'https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar' --output "$aar"
-          echo "04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  $aar" | sha256sum --check --strict
+          pinned_sha='04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2'
+          pinned_path='com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar'
+          # Maven Central mirrors may transiently return HTTP 404/5xx.
+          # Never change the ONNX Android artifact version or expected hash.
+          verified=false
+          for mirror in \
+            'https://repo.maven.apache.org/maven2' \
+            'https://repo1.maven.org/maven2' \
+            'https://maven-central.storage-download.googleapis.com/maven2'; do
+            rm -f -- "$aar"
+            if curl --fail --silent --show-error --location --retry 1 --max-time 45 \
+              "$mirror/$pinned_path" --output "$aar" &&
+              echo "$pinned_sha  $aar" | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          test "$verified" = true
+          echo "$pinned_sha  $aar" | sha256sum --check --strict
           python3 "$worker/build-s9-4k-phone-jar-v371.py" \
             --output-dir "$RUNNER_TEMP/task9-android-build" --onnx-aar "$aar" \
             --android-jar "$sdk_root/platforms/android-36/android.jar" \
