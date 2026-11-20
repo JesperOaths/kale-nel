@@ -59,9 +59,23 @@ jobs:
           set -euo pipefail
           folder="$RUNNER_TEMP/s9-ort-validate"
           mkdir -p "$folder/classes"
-          url="https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar"
-          curl -fSsL --retry 2 --max-time 90 "$url" -o "$folder/ort.aar"
-          echo "04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  $folder/ort.aar" | sha256sum -c -
+          suffix='com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar'
+          expected='04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2'
+          downloaded=0
+          # Maven Central can transiently return 404 through a regional edge.
+          # All mirrors must produce the SAME SHA-pinned official AAR.
+          for base in 'https://repo.maven.apache.org/maven2' \
+                      'https://repo1.maven.org/maven2' \
+                      'https://maven-central.storage-download.googleapis.com/maven2'; do
+            if curl --proto '=https' -fLsS --retry 2 --retry-all-errors \
+                 --connect-timeout 10 --max-time 90 "$base/$suffix" -o "$folder/ort.aar"; then
+              if echo "$expected  $folder/ort.aar" | sha256sum -c -; then
+                downloaded=1
+                break
+              fi
+            fi
+          done
+          test "$downloaded" -eq 1
           unzip -p "$folder/ort.aar" classes.jar > "$folder/ort.jar"
           javac -source 8 -target 8 -cp "$folder/ort.jar" -d "$folder/classes" \
             ops/c720p/s9-native-security/offline-worker/S9OnnxRuntimeWorker.java
@@ -78,6 +92,93 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 ops/c720p/s9-native-security/test-s9-priority-rescan-feedback-v304.py -q
           python3 -m py_compile "$area/s9_phone_gap_coordinator_v371.py" "$area/s9_phone_gap_runner_v371.py" ops/c720p/s9-native-security/s9_priority_rescan_feedback_v304.py
           echo 'S9_PHONE_GAP_SOURCE_ONLY_SYNTHETIC_PASS'
+      - name: S9 Re-ID research guards (synthetic-only, no camera access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          area='ops/c720p/s9-native-security/offline-worker'
+          python3 -m py_compile "$area/s9_reid_capture_admission_v742.py" \
+            "$area/s9_reid_open_set_release_gate_v743.py" \
+            "$area/export_osnet_ain_verified_v744.py" \
+            "$area/s9_reid_manifest_integrity_v749.py" \
+            "$area/r754_diagnostic_pts_replay.py" \
+            "$area/r756_anonymous_original_pts_replay.py" \
+            "$area/r758_capture_day_leakage_audit.py" \
+            "$area/r759_release_readiness_from_provenance.py" \
+            "$area/r760_freeze_blind_capture_cohort.py" \
+            "$area/r762_reverify_reid_original_ledger.py" \
+            "$area/r763_research_quality_selection.py" \
+            "$area/r767_native4k_startup_regression.py" \
+            "$area/r769_predeclared_open_set_protocol.py" \
+            "$area/r770_prospective_original_intake_gate.py" \
+            "$area/r773_preroll_30fps_trial_contract.py" \
+            "$area/r779_installed_camera_abi_coverage_gate.py" \
+            "$area/r786_post_restart_4k_diagnostic_attestation.py" \
+            "$area/r788_natural_4k_model_overlap_once.py" \
+            "$area/r791_shadow_score_family_predeclaration.py" \
+            "$area/r792_native_4k_startup_gap_audit.py" \
+            "$area/r794_shadow_rank_only_rejection_amendment.py" \
+            "$area/r796_android_package_stop_provenance.py" \
+            "$area/r797_independent_truth_evidence_audit.py" \
+            "$area/r798_direct_natural_4k_single_event_probe.py" \
+            "$area/r799_reference_day_disjoint_source_pool.py" \
+            "$area/r810_unapproved_native4k_face_truth_release_guard.py" \
+            "$area/r809_true4k_face_pixel_candidate_shadow/shadow_phone_face_run_r809.py"
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r754_diagnostic_pts_replay.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r756_anonymous_original_pts_replay.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r758_capture_day_leakage_audit.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r759_release_readiness_from_provenance.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r760_freeze_blind_capture_cohort.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r762_reverify_reid_original_ledger.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r763_research_quality_selection.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r767_native4k_startup_regression.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r769_predeclared_open_set_protocol.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r770_prospective_original_intake_gate.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r773_preroll_30fps_trial_contract.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r779_installed_camera_abi_coverage_gate.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r786_post_restart_4k_diagnostic_attestation.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r788_natural_4k_model_overlap_once.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r791_shadow_score_family_predeclaration.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r792_native_4k_startup_gap_audit.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r794_shadow_rank_only_rejection_amendment.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r796_android_package_stop_provenance.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r797_independent_truth_evidence_audit.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r798_direct_natural_4k_single_event_probe.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r799_reference_day_disjoint_source_pool.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r810_unapproved_native4k_face_truth_release_guard.py" --self-test
+          # R809 only inspects an existing source on a live S9 with private
+          # ADB camera/decoder guards; CI must NOT connect to a real phone.
+          test -s "$area/r809_true4k_face_pixel_candidate_shadow/FaceEyes.java"
+          test -s "$area/r809_true4k_face_pixel_candidate_shadow/PhoneFaceCandidateV1.java"
+          python3 - "$area/r809_true4k_face_pixel_candidate_shadow/PhoneFaceCandidateV1.java" <<'PY_R809'
+          import pathlib,sys
+          text=pathlib.Path(sys.argv[1]).read_text()
+          assert "media.getFrameAtTime(" in text
+          assert 'sourceFrame.getWidth()==3840&&sourceFrame.getHeight()==2160' in text
+          assert "Math.min(ms.length(),2)" in text
+          assert 's9-face-candidate-r809' in text
+          assert 'automatic_folder_assignments' in text
+          print("R809_SOURCE_ONLY_FULL_4K_SHADOW_CONTRACT_PASS")
+          PY_R809
+          python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
+          folder="$RUNNER_TEMP/s9-ort-validate"
+          test -s "$folder/ort.jar"
+          javac -source 8 -target 8 -cp "$folder/ort.jar" -d "$folder/classes" \
+            "$area/S9ReidSyntheticProbeV740.java" \
+            "$area/S9SyntheticHubnessCalibrationV790.java" \
+            "$area/S9SyntheticRankFusionUnknownGuardV793.java" \
+            "$area/r805_shadow_face_geometry/S9FaceFallbackGeometryR805.java"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9ReidSyntheticProbeV740.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9SyntheticHubnessCalibrationV790.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9SyntheticRankFusionUnknownGuardV793.class"
+          java -cp "$folder/classes" nl.kalenel.s9offline.S9SyntheticHubnessCalibrationV790 --synthetic-only-self-test
+          java -cp "$folder/classes" nl.kalenel.s9offline.S9SyntheticRankFusionUnknownGuardV793 --synthetic-only
+          java -cp "$folder/classes" S9FaceFallbackGeometryR805 --synthetic-only
+          echo 'S9_REID_GUARD_CI_SOURCE_SYNTHETIC_PASS'
+
       - name: Compile source-only phone-first original-4K probe (never run Android/inference)
         shell: bash
         run: |
@@ -96,9 +197,35 @@ jobs:
             "$area/S9YuNetNativeQualityDecoderV370Test.java" \
             "$area/S9Original4KTimedDecoderV371.java" \
             "$area/S9StandaloneDeadlineV374.java" \
-            "$area/S9Original4KGapAuditV370.java"
+            "$area/S9Original4KGapAuditV370.java" \
+            "$area/S9DiagnosticPtsInspectorV751.java" \
+            "$area/S9ResearchVectorMetadataV752.java" \
+            "$area/S9Original4KTimedDecoderV410.java" \
+            "$area/S9DiagnosticActualDecodedPtsV753.java" \
+            "$area/S9OriginalAnonymousPtsV755.java" \
+            "$area/S9AnonymousSourceToAinBenchV757.java" \
+            "$area/S9OriginalNative4KEventTimingV761.java" \
+            "$area/S9PreMatchEvidenceGateV765.java" \
+            "$area/S9CropSourceProvenanceV768.java" \
+            "$area/S9PreRollCompanionTimingV772.java" \
+            "$area/S9DiagnosticNative4KTimingV785.java" \
+            "$area/S9DiagnosticPrerollTimingV785.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPtsInspectorV751.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9ResearchVectorMetadataV752.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KTimedDecoderV410.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticActualDecodedPtsV753.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9OriginalAnonymousPtsV755.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9AnonymousSourceToAinBenchV757.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9OriginalNative4KEventTimingV761.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9PreMatchEvidenceGateV765.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9CropSourceProvenanceV768.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9PreRollCompanionTimingV772.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticNative4KTimingV785.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPrerollTimingV785.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
+          java -cp "$folder/classes" nl.kalenel.s9offline.S9PreMatchEvidenceGateV765 --self-test
+          java -cp "$folder/classes" nl.kalenel.s9offline.S9CropSourceProvenanceV768 --self-test
           python3 - <<'PY'
           from pathlib import Path
           source=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KGapAuditV370.java').read_text()
@@ -118,5 +245,196 @@ jobs:
           for forbidden in ('pm install','am force-stop','CameraService.java',
                             'requestPermissions','--bulk','System.loadLibrary("camera'):
               assert forbidden not in source,forbidden
+          pts=Path('ops/c720p/s9-native-security/offline-worker/S9DiagnosticPtsInspectorV751.java').read_text()
+          for marker in ('EXPECTED_SHA','diagnostic_preroll_1795047726878.mp4',
+                         'getSampleTime()','getSampleTrackIndex()',
+                         'nonmonotonic_video_pts_count',
+                         'independent_person_crop_frame_pts_attested",false',
+                         'actual_person_clip_processed",false',
+                         'identity_data_read",false','images_decoded",0'):
+              assert marker in pts,marker
+          for forbidden in ('motion_*.mp4','am force-stop','pm install',
+                            'CameraService.java','getOutputImage(',
+                            'BitmapFactory','MediaMetadataRetriever'):
+              assert forbidden not in pts,forbidden
+          private=Path('ops/c720p/s9-native-security/offline-worker/S9ResearchVectorMetadataV752.java').read_text()
+          for marker in ('L2_normalized_embedding_phone_private',
+                         'vector_l2_norm_valid_on_s9','vector_component_count_on_s9',
+                         'raw_vector_elements_returned', 'identity_labels_read",false',
+                         'images_read",0','videos_decoded",0'):
+              assert marker in private,marker
+          assert 'result.put("L2_normalized_embedding_phone_private"' not in private
+          assert 'System.out.println("S9_REID_R752_METADATA_PROJECTION "' in private
+          decoder=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KTimedDecoderV410.java').read_text()
+          for marker in ('info.presentationTimeUs','return new Frame(copy,pts,durationUs)',
+                         'static Bitmap yuvCrop(','roiW*roiH',
+                         'getOutputImage(idx)'):
+              assert marker in decoder,marker
+          for name in ('S9DiagnosticActualDecodedPtsV753.java',
+                       'S9OriginalAnonymousPtsV755.java',
+                       'S9AnonymousSourceToAinBenchV757.java'):
+              actual=Path('ops/c720p/s9-native-security/offline-worker')/name
+              source=actual.read_text()
+              assert 'S9Original4KTimedDecoderV410.decodeCrop' in source,name
+              assert ('automatic_people_folder_assignments",0' in source or
+                      'automatic_person_folder_assignments",0' in source),name
+              assert 'PersonFolder' not in source,name
+              assert 'pm install' not in source,name
+              assert 'MediaMetadataRetriever' not in source,name
+          assert 'private_vector_values_exported",0' in Path(
+              'ops/c720p/s9-native-security/offline-worker/S9AnonymousSourceToAinBenchV757.java').read_text()
+          native_4k=Path('ops/c720p/s9-native-security/offline-worker/S9OriginalNative4KEventTimingV761.java').read_text()
+          for marker in ('"video/avc".equals(type)', 'MediaExtractor',
+                         'getSampleTime()', 'getSampleTrackIndex()',
+                         'steady_fps_after_first_ten_samples',
+                         'strict_full_event_30fps_gap_check',
+                         'startup_gap_requires_separate_capture_fix',
+                         'candidate_model_inference_concurrent_with_original_capture_proven",false',
+                         'identity_or_folder_labels_read",false',
+                         'original_video_modified",false'):
+              assert marker in native_4k,marker
+          for forbidden in ('MediaCodec.createDecoder','MediaMetadataRetriever',
+                            'pm install','am force-stop','CameraService.java',
+                            'personIdentity','PeopleFolder'):
+              assert forbidden not in native_4k,forbidden
+          safety=Path('ops/c720p/s9-native-security/offline-worker/S9PreMatchEvidenceGateV765.java').read_text()
+          for marker in ('"ABSTAIN_UNVERIFIED_SOURCE_OR_CROP"',
+                         'canAutomaticallyFilePeople=false',
+                         'actual_decoder_output_pts_and_pixel_region_unverified',
+                         'wrong_candidate_model_lineage',
+                         'single_person_and_detector_quality_not_independently_proven'):
+              assert marker in safety,marker
+          anonymous=Path('ops/c720p/s9-native-security/offline-worker/S9AnonymousSourceToAinBenchV757.java').read_text()
+          for marker in ('S9PreMatchEvidenceGateV765.inspect(quality)',
+                         'anonymous_scene_frame_improperly_admitted_to_person_scoring',
+                         '"phone_prematch_automatic_filing_authorized"'):
+              assert marker in anonymous,marker
+          transcript=Path('ops/c720p/s9-native-security/offline-worker/S9CropSourceProvenanceV768.java').read_text()
+          for marker in ('"s9_physical_decoder_roi_onnx_input_transcript_v1"',
+                         'original-argb8888-ordered-pixels-sha256',
+                         'exact-nchw-normalized-model-input-sha256',
+                         'decoded-output-pts-us',
+                         'no-identity-label=true'):
+              assert marker in transcript,marker
+          anonymous=Path('ops/c720p/s9-native-security/offline-worker/S9AnonymousSourceToAinBenchV757.java').read_text()
+          for marker in ('S9CropSourceProvenanceV768.transcript(',
+                         'physical_source_to_input_transcript_sha256',
+                         'source_to_input_transcript_is_signed_attestation",false',
+                         'phone_prematch_person_scoring_authorized',
+                         'MODEL_X05_SHA',
+                         'osnet_ain_x0_5_r744.onnx',
+                         '--research-anonymous-source-x05',
+                         'osnet_ain_model_variant'):
+              assert marker in anonymous,marker
+          native=Path('ops/c720p/s9-native-security/offline-worker/S9OriginalNative4KEventTimingV761.java').read_text()
+          for marker in ('first_eight_video_sample_pts_us',
+                         'first_eight_video_sample_sizes_bytes',
+                         'first_eight_video_sample_flags',
+                         'first_eight_sync_video_samples'):
+              assert marker in native,marker
+          companion=Path('ops/c720p/s9-native-security/offline-worker/S9PreRollCompanionTimingV772.java').read_text()
+          for marker in ('motion_[0-9]{13}[.]mp4[.]preroll[.]mp4',
+                         'preroll_sha256_verified_before_after_on_s9',
+                         'average_sample_fps','first_eight_pts_us',
+                         'preroll_and_native_4k_event_have_same_encoding_path_proven",false',
+                         'source_videos_modified",false'):
+              assert marker in companion,marker
+          camera=Path('ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java').read_text()
+          preroll=Path('ops/c720p/s9-native-security/src/nl/kalenel/s9security/GardenPreRoll.java').read_text()
+          for marker in ('getBoolean("preroll_30fps_trial_explicit",false)',
+                         'LEGACY_PREROLL_INTERVAL_MS=44L',
+                         'OPT_IN_PREROLL_INTERVAL_MS=30L',
+                         'TRIAL_PREROLL_FALLBACK_TEMP_TENTHS_C=400',
+                         'preroll_encoder_worker_busy_skips',
+                         'preroll_cadence_interval_skips'):
+              assert marker in camera,marker
+          for marker in ('public GardenPreRoll(){this(false);}',
+                         'static final int OPT_IN_FPS=30',
+                         'MediaFormat.KEY_FRAME_RATE,encoderConfiguredFps'):
+              assert marker in preroll,marker
+          native_diag=Path('ops/c720p/s9-native-security/offline-worker/S9DiagnosticNative4KTimingV785.java').read_text()
+          preroll_diag=Path('ops/c720p/s9-native-security/offline-worker/S9DiagnosticPrerollTimingV785.java').read_text()
+          for source in (native_diag,preroll_diag):
+              for required in ('diagnostic_preroll_[0-9]{13}',
+                               'security_archive_original_or_prospective_person_trial",false',
+                               'diagnostic_excluded_from_people_recognition",true'):
+                  assert required in source,required
+          assert '--diagnostic-native4k-only' in native_diag
+          assert '--read-diagnostic-preroll-only' in preroll_diag
+          print('S9_R785_DIAGNOSTIC_VIDEO_PHYSICAL_FILE_PROVENANCE_COMPILE_PASS')
+          print('S9_R772_R773_PREROLL_PHYSICAL_AUDIT_AND_DEFAULT_OFF_TRIAL_STATIC_PASS')
+          print('S9_R767_R768_NATIVE4K_AND_PHYSICAL_ROI_TRANSCRIPT_STATIC_PASS')
+          print('S9_R765_PHONE_PREMATCH_FAIL_CLOSED_NEGATIVE_GATE_PASS')
+          print('S9_R761_NON_BIOMETRIC_EVENT_SAMPLE_CONTINUITY_COMPILE_STATIC_PASS')
+          print('S9_R753_R755_R757_PHYSICAL_PTS_ROI_COMPILE_STATIC_PASS_NOT_EXECUTED')
+          print('S9_PRIVATE_VECTOR_PROJECTION_V752_COMPILE_STATIC_PASS_NOT_EXECUTED')
+          print('S9_DIAGNOSTIC_PTS_V751_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
           print('S9_PHONE_4K_V370_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
           PY
+
+  export_small_ain:
+    name: Pinned small OSNet-AIN ONNX export (synthetic only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Install pinned CPU-only export dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --no-cache-dir --disable-pip-version-check \
+            --index-url https://download.pytorch.org/whl/cpu 'torch==2.6.0+cpu'
+          python3 -m pip install --no-cache-dir --disable-pip-version-check \
+            'numpy==1.26.4' 'onnx==1.17.0' 'onnxruntime==1.22.0'
+          python3 - <<'PY'
+          import torch,onnx,onnxruntime,numpy
+          assert not torch.cuda.is_available()
+          print('OSNET_AIN_CPU_EXPORT_PINNED_DEPENDENCIES',
+                torch.__version__,onnx.__version__,onnxruntime.__version__,numpy.__version__)
+          PY
+      - name: Verify pinned architecture and source weights, export and cross-check synthetic parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          area='ops/c720p/s9-native-security/offline-worker'
+          folder="$RUNNER_TEMP/s9_ain_export"
+          mkdir -m 700 -p "$folder"
+          curl --proto '=https' -fsSL --retry 2 --max-time 65 \
+            'https://raw.githubusercontent.com/KaiyangZhou/deep-person-reid/master/torchreid/models/osnet_ain.py' \
+            -o "$folder/osnet_ain_upstream.py"
+          echo "a43b495866a4b1645cd134a30c3011592e8c6826ba4781955a135588cf46cd25  $folder/osnet_ain_upstream.py" | sha256sum -c -
+          curl --proto '=https' -fsSL --retry 2 --max-time 90 \
+            'https://huggingface.co/LibreYOLO/LibreReID-osnet/resolve/main/osnet_ain_x0_25.pt' \
+            -o "$folder/osnet_ain_x0_25.pt"
+          curl --proto '=https' -fsSL --retry 2 --max-time 90 \
+            'https://huggingface.co/LibreYOLO/LibreReID-osnet/resolve/main/osnet_ain_x0_5.pt' \
+            -o "$folder/osnet_ain_x0_5.pt"
+          echo "ce171fe160b3608f5e4c19489774991419be965b1d6f4bdccc4b4cfd2ef95347  $folder/osnet_ain_x0_25.pt" | sha256sum -c -
+          echo "510bcebae21bd0c0fcc7df388e97d2f687a9ee4befa4394d6fb1fb19aac0bce2  $folder/osnet_ain_x0_5.pt" | sha256sum -c -
+          for variant in osnet_ain_x0_25 osnet_ain_x0_5; do
+            python3 "$area/export_osnet_ain_verified_v744.py" \
+              --variant "$variant" --weights-dir "$folder" --verify-only
+            python3 "$area/export_osnet_ain_verified_v744.py" \
+              --variant "$variant" --weights-dir "$folder" \
+              --architecture-source "$folder/osnet_ain_upstream.py" \
+              --export "$folder/$variant.onnx"
+          done
+          cd "$folder"
+          sha256sum *.onnx
+          test -s osnet_ain_x0_25.manifest.json
+          test -s osnet_ain_x0_5.manifest.json
+          echo 'S9_AIN_R744_SYNTHETIC_ONNX_EXPORT_BOTH_MODELS_PASS_NO_PERSON_DATA'
+      - name: Upload checksum-verified ONNX models for separate S9+ runtime checks
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: s9-ain-small-r744-synthetic-verified
+          path: |
+            ${{ runner.temp }}/s9_ain_export/*.onnx
+            ${{ runner.temp }}/s9_ain_export/*.manifest.json
+          if-no-files-found: error
+          retention-days: 5

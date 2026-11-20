@@ -44,6 +44,9 @@ jobs:
           java -cp /tmp/s9-event nl.kalenel.s9security.CaptureContinuityTest
           java -cp /tmp/s9-event nl.kalenel.s9security.EventFrameRankerTest
           python3 "$P/test-recording-event-v3-contract.py"
+          javac -source 8 -target 8 -d /tmp/s9-event \
+            "$P/src/nl/kalenel/s9security/GardenPreRollBulkCopyV783.java"
+          java -cp /tmp/s9-event nl.kalenel.s9security.GardenPreRollBulkCopyV783 --self-test
   android-camera-compile:
     runs-on: ubuntu-latest
     timeout-minutes: 9
