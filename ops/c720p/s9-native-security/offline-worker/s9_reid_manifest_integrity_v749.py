@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import hashlib
 import json
 import math
 import re
@@ -98,8 +99,13 @@ def extract_sidecar(x):
             "PTS_attestation_not_boolean")
     for k in ("source_original_sha256", "source_crop_sha256", "source_version"):
         require(sha_valid(x.get(k)), "vector_" + k + "_invalid")
-    require(type(x.get("crop_name")) is str and x["crop_name"],
-            "sidecar_crop_name_missing")
+    require(sha_valid(x.get("crop_name_sha256")),
+            "sidecar_crop_name_hash_missing")
+    require(x.get("vector_l2_norm_valid_on_s9") is True,
+            "phone_vector_length_or_norm_invalid")
+    require(type(x.get("vector_component_count_on_s9")) is int and
+            x["vector_component_count_on_s9"] == 512,
+            "phone_vector_component_count_invalid")
     require(type(x.get("source_crop_bytes")) is int and
             0 < x["source_crop_bytes"] < 15_000_000,
             "sidecar_source_bytes_invalid")
@@ -109,7 +115,7 @@ def extract_sidecar(x):
     # Deliberately do not read/use/return x["L2_normalized_embedding_phone_private"].
     return {k: x[k] for k in
             ("source_original_sha256", "source_crop_sha256", "source_version",
-             "crop_name", "source_crop_bytes",
+             "crop_name_sha256", "source_crop_bytes",
              "original_source_frame_PTS_independently_verified",
              "embedding_inference_latency_ms")}
 
@@ -164,10 +170,11 @@ def report(batches, sidecars):
     for x in rows:
         sidecar = indexed[x["crop_sha256"]]
         fields = (("source_sha256", "source_original_sha256"),
-                  ("crop_name", "crop_name"),
                   ("source_version", "source_version"),
                   ("crop_bytes", "source_crop_bytes"))
-        if any(x[a] != sidecar[b] for a, b in fields):
+        name_digest = hashlib.sha256(x["crop_name"].encode("utf-8")).hexdigest()
+        if (any(x[a] != sidecar[b] for a, b in fields) or
+                name_digest != sidecar["crop_name_sha256"]):
             join_errors.append("crop_source_byte_or_name_mismatch")
         # Independent, conservative full-body geometry corroboration.
         # It is NOT a biometric identity decision or a substitute for pixels.
@@ -226,15 +233,53 @@ def report(batches, sidecars):
         "folder_assignments_performed": 0,
     }
 
+def phone_projected_vector_metadata():
+    # The 512D floats MUST NEVER traverse ADB. A pinned, S9-only Java
+    # inspector checks vector dimensions/norms on the handset, and emits
+    # only metadata and a digest of the crop filename, not private vectors.
+    command = ("CLASSPATH=/data/local/tmp/s9_reid_r740/meta_r752.dex.jar "
+               "nice -n 15 /system/bin/app_process /system/bin "
+               "nl.kalenel.s9offline.S9ResearchVectorMetadataV752 "
+               "--project-research-metadata")
+    p = subprocess.run(["adb", "-s", PHONE, "shell", command],
+                       capture_output=True, text=True, timeout=23, check=True)
+    prefix = "S9_REID_R752_METADATA_PROJECTION "
+    lines = [line[len(prefix):] for line in p.stdout.splitlines()
+             if line.startswith(prefix)]
+    require(len(lines) == 1 and len(lines[0]) < 1_000_000,
+            "phone_metadata_projection_missing_or_oversized")
+    obj = json.loads(lines[0])
+    require(type(obj) is dict and
+            obj.get("schema") == "s9_reid_private_vector_metadata_projection_v752" and
+            obj.get("result") == "PHONE_ONLY_VECTOR_INTEGRITY_INSPECTED",
+            "phone_metadata_projection_schema_invalid")
+    require(obj.get("raw_vector_elements_returned") == 0 and
+            type(obj.get("raw_vector_elements_returned")) is int,
+            "raw_phone_embedding_data_leakage")
+    require(obj.get("images_read") == 0 and obj.get("videos_decoded") == 0 and
+            obj.get("identity_labels_read") is False and
+            obj.get("automatic_people_assignments") == 0,
+            "phone_metadata_projection_exceeded_scope")
+    items = obj.get("projected_sidecars")
+    require(type(items) is list and
+            obj.get("sidecar_count") == len(items) and
+            0 < len(items) <= 1000,
+            "phone_metadata_projection_count_invalid")
+    require(obj.get("sidecars_with_bad_norm_or_dimension") == 0 and
+            type(obj.get("sidecars_with_bad_norm_or_dimension")) is int,
+            "invalid_private_phone_embedding_norms")
+    require(all(type(x) is dict and
+                "L2_normalized_embedding_phone_private" not in x and
+                "crop_name" not in x for x in items),
+            "phone_metadata_not_private_projection")
+    return items
+
 def audit():
     names = phone_listing(ROOT)
     batches = [phone_json(ROOT + "/" + n) for n in names
                if n.startswith("batch-") and n.endswith(".json")]
-    vector_files = [n for n in phone_listing(ROOT + "/vectors")
-                    if n.endswith(".json")]
-    require(0 < len(batches) <= 200 and 0 < len(vector_files) <= 1000,
-            "unexpected_number_of_research_manifests")
-    sidecars = [phone_json(ROOT + "/vectors/" + n) for n in vector_files]
+    require(0 < len(batches) <= 200, "unexpected_number_of_research_batches")
+    sidecars = phone_projected_vector_metadata()
     print(json.dumps(report(batches, sidecars), sort_keys=True, indent=2))
 
 def self_test():
@@ -255,7 +300,10 @@ def self_test():
                 "model_sha256":MODEL_SHA,"source_original_sha256":c["source_sha256"],
                 "source_crop_sha256":c["crop_sha256"],
                 "source_version":c["source_version"],
-                "crop_name":c["crop_name"],"source_crop_bytes":c["crop_bytes"],
+                "crop_name_sha256":hashlib.sha256(c["crop_name"].encode("utf-8")).hexdigest(),
+                "source_crop_bytes":c["crop_bytes"],
+                "vector_l2_norm_valid_on_s9":True,
+                "vector_component_count_on_s9":512,
                 "original_source_frame_PTS_independently_verified":pts,
                 "no_manual_label_used_during_embedding":True,
                 "automatic_identity_folder_assignments":0,
@@ -285,8 +333,11 @@ def self_test():
     invalid=dict(sides[0],model_sha256=hash_e)
     try:report([b],[invalid,sides[1]]);raise AssertionError("model_mismatch_should_refuse")
     except ValueError as e:assert "model_provenance_mismatch" in str(e)
+    invalidnorm=dict(sides[0], vector_l2_norm_valid_on_s9=False)
+    try:report([b],[invalidnorm,sides[1]]);raise AssertionError("bad_phone_norm_should_refuse")
+    except ValueError as e:assert "phone_vector_length_or_norm_invalid" in str(e)
     print(json.dumps({"status":"R749_METADATA_ONLY_SYNTHETIC_TEST_PASS",
-                      "cases":6,"identities_read":0,"images_read":0,
+                      "cases":7,"identities_read":0,"images_read":0,
                       "embeddings_compared":0,"auto_filing_enabled":False}))
 
 if __name__=="__main__":
