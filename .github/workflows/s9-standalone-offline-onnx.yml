@@ -151,7 +151,8 @@ jobs:
             "$area/S9DiagnosticActualDecodedPtsV753.java" \
             "$area/S9OriginalAnonymousPtsV755.java" \
             "$area/S9AnonymousSourceToAinBenchV757.java" \
-            "$area/S9OriginalNative4KEventTimingV761.java"
+            "$area/S9OriginalNative4KEventTimingV761.java" \
+            "$area/S9PreMatchEvidenceGateV765.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPtsInspectorV751.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9ResearchVectorMetadataV752.class"
@@ -160,7 +161,9 @@ jobs:
           test -f "$folder/classes/nl/kalenel/s9offline/S9OriginalAnonymousPtsV755.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9AnonymousSourceToAinBenchV757.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9OriginalNative4KEventTimingV761.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9PreMatchEvidenceGateV765.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
+          java -cp "$folder/classes" nl.kalenel.s9offline.S9PreMatchEvidenceGateV765 --self-test
           python3 - <<'PY'
           from pathlib import Path
           source=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KGapAuditV370.java').read_text()
@@ -232,6 +235,19 @@ jobs:
                             'pm install','am force-stop','CameraService.java',
                             'personIdentity','PeopleFolder'):
               assert forbidden not in native_4k,forbidden
+          safety=Path('ops/c720p/s9-native-security/offline-worker/S9PreMatchEvidenceGateV765.java').read_text()
+          for marker in ('"ABSTAIN_UNVERIFIED_SOURCE_OR_CROP"',
+                         'canAutomaticallyFilePeople=false',
+                         'actual_decoder_output_pts_and_pixel_region_unverified',
+                         'wrong_candidate_model_lineage',
+                         'single_person_and_detector_quality_not_independently_proven'):
+              assert marker in safety,marker
+          anonymous=Path('ops/c720p/s9-native-security/offline-worker/S9AnonymousSourceToAinBenchV757.java').read_text()
+          for marker in ('S9PreMatchEvidenceGateV765.inspect(quality)',
+                         'anonymous_scene_frame_improperly_admitted_to_person_scoring',
+                         '"phone_prematch_automatic_filing_authorized"'):
+              assert marker in anonymous,marker
+          print('S9_R765_PHONE_PREMATCH_FAIL_CLOSED_NEGATIVE_GATE_PASS')
           print('S9_R761_NON_BIOMETRIC_EVENT_SAMPLE_CONTINUITY_COMPILE_STATIC_PASS')
           print('S9_R753_R755_R757_PHYSICAL_PTS_ROI_COMPILE_STATIC_PASS_NOT_EXECUTED')
           print('S9_PRIVATE_VECTOR_PROJECTION_V752_COMPILE_STATIC_PASS_NOT_EXECUTED')
