@@ -33,7 +33,14 @@ def read_private_json(filename):
          "receipt_size_or_privacy_invalid")
     return json.loads(p.read_text(encoding="utf-8"))
 
-def parse_case(capture,ledger,now_ms):
+def parse_case(capture,ledger,pre,now_ms):
+    need(pre.get("original_camera_apk_sha256")==EXPECTED_ORIGINAL_APK_SHA and
+         pre.get("original_person_training_dataset_changed") is False and
+         str(pre.get("camera_pid","")).isdigit() and
+         pre.get("initial_status",{}).get("mode")=="watching" and
+         pre.get("initial_status",{}).get("preroll_diagnostic_used") is False and
+         pre.get("initial_status",{}).get("sensor_result_fps",0)>=29,
+         "pre_capture_process_baseline_not_verified")
     need(capture.get("schema")==
          "s9_r785_owner_one_shot_native_4k_post_restore_diagnostic_v1",
          "capture_receipt_wrong_schema")
@@ -110,8 +117,7 @@ def parse_case(capture,ledger,now_ms):
         "native4k_steady_fps":enc["steady_fps_after_first_ten_samples"],
         "preroll_average_fps":pc["average_sample_fps"],
         "max_native4k_startup_gap_ms":enc["max_sample_interval_ms"],
-        "original_capture_pid":str(capture.get("capturing_process_pid","")) if
-           capture.get("capturing_process_pid") is not None else None
+        "original_capture_pid":str(pre["camera_pid"])
     }
 
 def adb(*args,timeout=10):
@@ -145,8 +151,8 @@ def live_status_guard(s,clip):
          "camera_liveness_or_unverified_diagnostic_reset")
     return True
 
-def live(capture,ledger):
-    facts=parse_case(capture,ledger,int(time.time()*1000))
+def live(capture,ledger,pre):
+    facts=parse_case(capture,ledger,pre,int(time.time()*1000))
     old=live_status()
     live_status_guard(old,facts["clip"])
     package_path=adb("shell","pm path "+SERVICE,timeout=7)
@@ -158,7 +164,7 @@ def live(capture,ledger):
     need(package_sha==EXPECTED_ORIGINAL_APK_SHA,
          "running_camera_apk_is_not_pinned_original")
     pid=adb("shell","pidof "+SERVICE,timeout=8)
-    need(pid.isdigit() and pid==str(capture.get("camera_pid",pid)),
+    need(pid.isdigit() and pid==facts["original_capture_pid"],
          "phone_process_changed_since_diagnostic")
     # For this exact diagnostic prefix, do not broaden to ordinary motion
     # source names or any Person-folder reference material.
@@ -244,11 +250,16 @@ def self_test():
                               "video_samples":87,"duration_ms":5874.1,
                               "average_sample_fps":14.82}}]
     }
-    assert parse_case(d,record,now)["native4k_steady_fps"]==30.015
+    pre={"original_camera_apk_sha256":EXPECTED_ORIGINAL_APK_SHA,
+         "original_person_training_dataset_changed":False,
+         "camera_pid":"31276",
+         "initial_status":{"mode":"watching","preroll_diagnostic_used":False,
+                           "sensor_result_fps":30.02}}
+    assert parse_case(d,record,pre,now)["native4k_steady_fps"]==30.015
     negative=0
-    def refuses(c,l,t,why):
+    def refuses(c,l,pre,t,why):
         nonlocal negative
-        try:parse_case(c,l,t)
+        try:parse_case(c,l,pre,t)
         except ValueError as e:
             need(why in str(e),"wrong_refusal_"+str(e))
             negative+=1
@@ -275,9 +286,12 @@ def self_test():
     ]
     for error,mutate in fails:
         c=copy.deepcopy(d);l=copy.deepcopy(record)
-        mutate(c,l);refuses(c,l,now,error)
-    refuses(copy.deepcopy(d),copy.deepcopy(record),now+MAX_AGE_MS+1,
-            "stale_or_future_post_restart_diagnostic")
+        mutate(c,l);refuses(c,l,copy.deepcopy(pre),now,error)
+    refuses(copy.deepcopy(d),copy.deepcopy(record),copy.deepcopy(pre),
+            now+MAX_AGE_MS+1,"stale_or_future_post_restart_diagnostic")
+    wrongpre=copy.deepcopy(pre);wrongpre["camera_pid"]=""
+    refuses(copy.deepcopy(d),copy.deepcopy(record),wrongpre,now,
+            "pre_capture_process_baseline_not_verified")
     print(json.dumps({"result":"R786_CAPTURE_BASELINE_GATE_SYNTHETIC_PASS",
                       "negative_cases":negative,
                       "production_model_release_approved":False,
@@ -290,10 +304,13 @@ def main():
     modes.add_argument("--live",action="store_true")
     p.add_argument("--capture-status")
     p.add_argument("--timing-ledger")
+    p.add_argument("--pre-capture")
     a=p.parse_args()
     if a.self_test:return self_test()
-    need(a.capture_status and a.timing_ledger,"missing_capture_and_timing_receipts")
+    need(a.capture_status and a.timing_ledger and a.pre_capture,
+         "missing_pre_capture_or_timing_receipts")
     print(json.dumps(live(read_private_json(a.capture_status),
-                          read_private_json(a.timing_ledger)),sort_keys=True))
+                          read_private_json(a.timing_ledger),
+                          read_private_json(a.pre_capture)),sort_keys=True))
 
 if __name__=="__main__":main()
