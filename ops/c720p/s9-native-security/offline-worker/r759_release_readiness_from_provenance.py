@@ -23,6 +23,7 @@ import s9_reid_open_set_release_gate_v743 as r743
 import r760_freeze_blind_capture_cohort as r760
 import r763_research_quality_selection as r763
 import r769_predeclared_open_set_protocol as r769
+import r770_prospective_original_intake_gate as r770
 
 # Candidate R744 AIN x0.25 model does NOT equal the older TFLite model
 # that produced the existing 98 feature sidecars. Both happen to emit
@@ -415,6 +416,13 @@ def run():
     clean_mask=r763.select(rows,catalog,ledger,summary,now)
     frozen_cohort=r760.verify()
     frozen_method=r769.verify()
+    new_source_audit=r770.audit(
+        catalog,ledger,frozen_cohort["cutoff_epoch_ms"],now)
+    need(new_source_audit["eligible_independent_recognition_bags_count"]==0 and
+         new_source_audit["automatic_people_filing_authorized"] is False and
+         new_source_audit["independent_known_person_labels_count"]==0 and
+         new_source_audit["independent_unknown_person_labels_count"]==0,
+         "prospective_source_files_cannot_imply_person_truth")
     need(frozen_method["source_freeze_epoch_ms"]==
          frozen_cohort["cutoff_epoch_ms"] and
          r769.CANDIDATE_SHA==CANDIDATE_ONNX_SHA and
@@ -452,6 +460,12 @@ def run():
             frozen_method["private_method_commitment_sha256"],
         "future_unknown_calibration_episode_minimum":
             frozen_method["future_unknown_calibration_bags_minimum"],
+        "post_freeze_original_source_files_observed":
+            new_source_audit["post_freeze_new_originals_seen"],
+        "post_freeze_originals_with_current_sha_verification":
+            new_source_audit["post_freeze_new_originals_verified"],
+        "post_freeze_independent_known_person_labels_count":0,
+        "post_freeze_independent_unknown_person_labels_count":0,
         "real_person_score_threshold_currently_calibrated":False,
         "production_automatic_people_filing_enabled":False
     })
