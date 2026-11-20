@@ -66,6 +66,8 @@ def preflight(s,phone):
     check(s.get("recorder")=="camera2_3840x2160_h264","unexpected_camera_encoder")
     check(s.get("continuous_4k_trial_active") is False,
           "untested_experimental_continuous_encoder")
+    check(s.get("preroll_diagnostic_active") is False,
+          "diagnostic_or_forced_recorder_is_not_natural_event")
     check(s.get("failed")==0 and not s.get("last_error"),
           "existing_capture_error")
     check(type(s.get("recorded")) is int and s["recorded"]>=0,
@@ -80,11 +82,17 @@ def preflight(s,phone):
           s["temperature_c"]<38,"camera_too_hot_for_research")
     check(type(s.get("sensor_capture_result_frames")) is int,
           "sensor_frame_counter_invalid")
+    check(type(s.get("sensor_exposure_ms")) in (float,int) and
+          math.isfinite(s["sensor_exposure_ms"]) and
+          0<s["sensor_exposure_ms"]<=33.35,
+          "sensor_exposure_incompatible_with_30fps")
     check(type(s.get("last_frame_age_ms")) in (float,int) and
           0<=s["last_frame_age_ms"]<=350,
           "camera_preview_stale")
+    # The live recorder's own startRecording() requires at least
+    # 15 GiB free. Keep another GiB margin for the proof run.
     check(type(s.get("sd_free_bytes")) is int and
-          s["sd_free_bytes"]>4*1024**3,"not_enough_source_storage")
+          s["sd_free_bytes"]>16*1024**3,"not_enough_source_storage")
     check(type(phone.get("mem_kib")) is int and
           phone["mem_kib"]>=1_700_000,
           "model_memory_may_reduce_capture")
@@ -180,10 +188,13 @@ def self_test():
     s={"ok":True,"mode":"recording","native_4k_enabled":True,
        "recorder":"camera2_3840x2160_h264",
        "continuous_4k_trial_active":False,
+       "preroll_diagnostic_active":False,
        "failed":0,"last_error":"","recorded":5,"last_file":"motion_1234567890123.mp4",
        "preroll_dropped_frames":0,"sensor_result_fps":30.02,
        "temperature_c":32.8,"sensor_capture_result_frames":100,
-       "last_frame_age_ms":18,"sd_free_bytes":10*1024**3}
+       "last_frame_age_ms":18,
+       "sensor_exposure_ms":30.01,
+       "sd_free_bytes":18*1024**3}
     phone={"pid":"31276","mem_kib":2_400_000,"battery_temp_c":33.5}
     after=dict(s,sensor_capture_result_frames=112)
     need(not preflight(s,phone),"valid_natural_event_refused")
@@ -192,9 +203,12 @@ def self_test():
     for key,bad in [
         ("mode","watching"),("native_4k_enabled",False),
         ("recorder","unknown"),("continuous_4k_trial_active",True),
+        ("preroll_diagnostic_active",True),
         ("failed",1),("sensor_result_fps",15),
         ("temperature_c",40),("sensor_capture_result_frames",None),
         ("last_frame_age_ms",3000),("sd_free_bytes",0),
+        ("sd_free_bytes",15*1024**3),
+        ("sensor_exposure_ms",100),
         ("preroll_dropped_frames",1)]:
         v=dict(s,**{key:bad})
         need(preflight(v,phone),"unsafe_pre_capture_"+key+"_accepted");negative+=1
