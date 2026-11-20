@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse,datetime as dt,hashlib,json,os,pathlib,subprocess,time
 from collections import defaultdict
 import r758_capture_day_leakage_audit as split
+import r760_freeze_blind_capture_cohort as frozen
 
 PHONE=split.PHONE
 ROOT="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
@@ -28,10 +29,12 @@ APK="nl.kalenel.s9security"
 def need(ok,why):
     if not ok:raise ValueError(why)
 
-def pool(catalog,ledger,rows,by_source,now):
+def pool(catalog,ledger,rows,by_source,now,source_freeze_epoch_ms):
     need(type(catalog) is dict and type(ledger) is dict and
-         type(rows) is list and type(by_source) is dict,
-         "invalid_source_catalog_or_plan")
+         type(rows) is list and type(by_source) is dict and
+         type(source_freeze_epoch_ms) is int and
+         1_600_000_000_000 < source_freeze_epoch_ms < int(now*1000),
+         "invalid_source_catalog_or_frozen_cutoff")
     refs={r["source_sha256"] for r in rows if r.get("role")=="reference"}
     research={r["source_sha256"] for r in rows}
     need(refs and research and refs<=set(by_source),
@@ -39,6 +42,7 @@ def pool(catalog,ledger,rows,by_source,now):
     ref_days_l={by_source[s]["capture_day_local"] for s in refs}
     ref_days_u={by_source[s]["capture_day_utc"] for s in refs}
     selected=[];seen=set();excluded_research=0;excluded_days=0
+    post_freeze_excluded=0
     stale=0
     for name,rec in sorted(catalog["records"].items()):
         if not split.CLIP.fullmatch(name):continue
@@ -57,6 +61,12 @@ def pool(catalog,ledger,rows,by_source,now):
              "source_catalog_full4k_manifest_inconsistent")
         day_l=split.source_day(name,split.AMSTERDAM)
         day_u=split.source_day(name,split.UTC)
+        # Prospective originals after the locked research cutoff are NOT
+        # historical even if their source SHA and capture day are disjoint.
+        # They get an independent R770 prospective provenance audit.
+        if int(name[7:20])>source_freeze_epoch_ms:
+            post_freeze_excluded+=1
+            continue
         if day_l in ref_days_l or day_u in ref_days_u:
             excluded_days+=1;continue
         if sha in research:
@@ -83,6 +93,9 @@ def pool(catalog,ledger,rows,by_source,now):
     return {
         "schema":"s9_r799_historical_originals_day_disjoint_unlabelled_pool_v1",
         "total_current_catalog_originals":len(catalog["records"]),
+        "frozen_original_capture_cutoff_epoch_ms":source_freeze_epoch_ms,
+        "post_freeze_originals_explicitly_excluded_from_historical_pool":post_freeze_excluded,
+        "post_freeze_originals_must_follow_independent_R770_prospective_evidence_gate":True,
         "research_reference_original_sha_count":len(refs),
         "research_reference_capture_days_local":len(ref_days_l),
         "research_reference_capture_days_utc":len(ref_days_u),
@@ -171,8 +184,10 @@ def synth():
           {"role":"heldout","source_sha256":sha[1]}]
     by={sha[0]:{"capture_day_local":"2026-11-18",
                "capture_day_utc":"2026-11-18"}}
-    r=pool(catalog,ledger,rows,by,clock)
-    need(r["historical_source_day_disjoint_unlabelled_candidates"]==3
+    cutoff=int((t+dt.timedelta(days=5)).timestamp()*1000)
+    r=pool(catalog,ledger,rows,by,clock,cutoff)
+    need(r["post_freeze_originals_explicitly_excluded_from_historical_pool"]==0 and
+         r["historical_source_day_disjoint_unlabelled_candidates"]==3
          and r["excluded_research_originals_on_candidate_days"]==1
          and r["verified_known_person_test_labels"]==0,
          "cross_date_unlabelled_source_selection_wrong")
@@ -192,14 +207,31 @@ def synth():
     for name,mutate in variations:
         c,l=copy.deepcopy(catalog),copy.deepcopy(ledger)
         mutate(c,l)
-        try:pool(c,l,rows,by,clock)
+        try:pool(c,l,rows,by,clock,cutoff)
         except (ValueError,KeyError):rejected+=1
         else:raise AssertionError("unsafe_candidate_source_accepted_"+name)
     need(rejected==len(variations),"not_all_negative_cases_refused")
+    # A new, verified post-freeze original is a real prospect, never
+    # a 'historical' label even if unrelated to reference capture days.
+    newname="motion_"+str(int((t+dt.timedelta(days=6)).timestamp()*1000))+".mp4"
+    newsha="%064x"%9
+    extended=copy.deepcopy(catalog)
+    oldledger=copy.deepcopy(ledger)
+    extended["records"][newname]=record(newname,0)
+    extended["records"][newname]["version"]=newsha
+    extended["records"][newname]["manifest"]["sha256"]=newsha
+    oldledger["checks"][newname]={
+        "original_sha256_matches":True,
+        "catalog_version":newsha,"checked_epoch":clock-100}
+    x=pool(extended,oldledger,rows,by,clock,cutoff)
+    need(x["historical_source_day_disjoint_unlabelled_candidates"]==3 and
+         x["post_freeze_originals_explicitly_excluded_from_historical_pool"]==1,
+         "future_source_promoted_to_historical_research")
     print(json.dumps({
         "result":"R799_HISTORICAL_SOURCE_DAY_POOL_SYNTHETIC_PASS",
         "negative_cases":rejected,
         "source_capture_date_disjointness_local_and_utc_required":True,
+        "source_frozen_cutoff_and_prospective_separation_required":True,
         "existing_source_provenance_verified":True,
         "historical_source_labels_promoted":False,
         "new_scheduled_tasks_created":0,
@@ -212,7 +244,8 @@ def audit(n):
     ledger=split.load_json(split.LEDGER)
     rows=split.phone_rows()
     by=split.validate_catalog(cat,summary,ledger,rows,now)
-    doc=pool(cat,ledger,rows,by,now)
+    cutoff=frozen.verify()["cutoff_epoch_ms"]
+    doc=pool(cat,ledger,rows,by,now,cutoff)
     checked=spotcheck(doc,n)
     doc["phone_sha_spotchecks_current_camera_process"]=checked
     doc["source_only_curation_historical_not_prospective"]=True
