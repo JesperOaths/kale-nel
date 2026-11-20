@@ -37,6 +37,7 @@ AMSTERDAM = ZoneInfo("Europe/Amsterdam")
 UTC = dt.timezone.utc
 MAX_CATALOG_AGE_SEC = 3600
 MAX_LEDGER_SOURCE_AGE_SEC = 14 * 86400
+MAX_RESEARCH_LEDGER_AGE_SEC = 90 * 86400
 
 def need(ok,reason):
     if not ok:
@@ -102,12 +103,14 @@ def validate_catalog(catalog, summary, ledger, all_crop_rows, now=None):
         age=now-proof.get("checked_epoch",-1e20) if type(proof.get("checked_epoch")) in (float,int) else float("inf")
         need(proof.get("original_sha256_matches") is True and
              proof.get("catalog_version")==rec["version"] and
-             -120 <= age <= MAX_LEDGER_SOURCE_AGE_SEC,
+             -120 <= age <= MAX_RESEARCH_LEDGER_AGE_SEC,
              "source_SHA_ledger_missing_stale_or_wrong_version")
         by_source[source]={
             "version":rec["version"],
             "capture_day_local":source_day(name,AMSTERDAM),
-            "capture_day_utc":source_day(name,UTC)}
+            "capture_day_utc":source_day(name,UTC),
+            "ledger_verified_age_seconds":age,
+            "ledger_sha_recheck_within_14_days":age <= MAX_LEDGER_SOURCE_AGE_SEC}
     return by_source
 
 def audit_rows(rows,catalog,summary,ledger,now=None):
@@ -125,6 +128,8 @@ def audit_rows(rows,catalog,summary,ledger,now=None):
     shared_utc=(dayset(refs,"capture_day_utc") &
                 dayset(hold,"capture_day_utc"))
     source_leak=len(overlap)
+    current_checked=sum(bool(x["ledger_sha_recheck_within_14_days"])
+                        for x in by_source.values())
     bad_hold_sources=sum(by_source[s]["capture_day_local"] in shared_local for s in hold)
     good_hold_sources=len(hold)-bad_hold_sources
     bad_hold_rows=sum(r["role"]=="heldout" and
@@ -143,6 +148,9 @@ def audit_rows(rows,catalog,summary,ledger,now=None):
         "current_research_plan_rows":len(rows),
         "distinct_research_sources":len(by_source),
         "source_versions_verified_against_original_catalog_and_ledger":len(by_source),
+        "source_SHA_ledger_rechecks_within_14_days":current_checked,
+        "source_SHA_ledger_rechecks_older_than_14_days":len(by_source)-current_checked,
+        "all_source_SHA_rechecks_current":current_checked==len(by_source),
         "reference_distinct_sources":len(refs),
         "holdout_distinct_sources":len(hold),
         "reference_holdout_source_sha_overlap":source_leak,
@@ -160,6 +168,7 @@ def audit_rows(rows,catalog,summary,ledger,now=None):
                        "capture_day_local")),
         "source_capture_day_inferred_from_original_filename_epoch":True,
         "original_file_sha_still_reverified_for_each_historical_crop":False,
+        "model_identity_release_evidence_qualified":False,
         "historical_crop_PTS_independently_attested":False,
         "outfit_episodes_independently_disjoint":False,
         "independent_known_unknown_person_truth_evaluated":False,
@@ -270,6 +279,18 @@ def self_test():
         except ValueError as e:
             need(reason in str(e),"wrong_synthetic_catalog_refusal")
         faults+=1
+    stale_ledger={"schema_version":"s9-original-hash-ledger-v1",
+                  "checks":{n:{"original_sha256_matches":True,
+                               "catalog_version":rec["version"],
+                               "checked_epoch":now-20*86400}
+                           for n,rec in records.items()}}
+    stale=audit_rows([row("reference",ha),row("heldout",hb)],
+                     catalog,summary,stale_ledger,now)
+    need(stale["all_source_SHA_rechecks_current"] is False and
+         stale["source_SHA_ledger_rechecks_older_than_14_days"]==2 and
+         stale["result"]=="FAIL_CAPTURE_DAY_OR_SOURCE_DISJOINTNESS",
+         "stale_ledger_should_report_day_leak_without_fresh_claim")
+    faults+=1
     try:
         audit_rows([row("reference",ha),row("heldout",ha)],
                    catalog,summary,ledger,now)
