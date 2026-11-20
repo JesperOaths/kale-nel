@@ -123,8 +123,6 @@ jobs:
             "$area/r798_direct_natural_4k_single_event_probe.py" \
             "$area/r799_reference_day_disjoint_source_pool.py" \
             "$area/r810_unapproved_native4k_face_truth_release_guard.py" \
-            "$area/r809_true4k_face_pixel_candidate_shadow/FaceEyes.java" \
-            "$area/r809_true4k_face_pixel_candidate_shadow/PhoneFaceCandidateV1.java" \
             "$area/r809_true4k_face_pixel_candidate_shadow/shadow_phone_face_run_r809.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
@@ -153,6 +151,8 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r810_unapproved_native4k_face_truth_release_guard.py" --self-test
           # R809 only inspects an existing source on a live S9 with private
           # ADB camera/decoder guards; CI must NOT connect to a real phone.
+          test -s "$area/r809_true4k_face_pixel_candidate_shadow/FaceEyes.java"
+          test -s "$area/r809_true4k_face_pixel_candidate_shadow/PhoneFaceCandidateV1.java"
           python3 - "$area/r809_true4k_face_pixel_candidate_shadow/PhoneFaceCandidateV1.java" <<'PY_R809'
           import pathlib,sys
           text=pathlib.Path(sys.argv[1]).read_text()
