@@ -1890,3 +1890,85 @@ R792, R793 and R794 compile/self-test in the
 **existing** S9 research GitHub workflow, without
 creating any new periodic job, camera APK, or identity
 collection pipeline.
+
+
+## R795: production S9 Android package-stop incident, live service restoration and process-bound stale-evidence guard — 20 November 2026, 05:57–06:13 CET
+
+An unexpected **production camera interruption** was independently detected
+after the R792–R794 synthetic tests and GitHub CI, rather than assuming the
+previously healthy camera process had remained continuous. Status over the
+existing ADB localhost relay returned `RemoteDisconnected`. Phone inspection
+showed the original native camera APK SHA
+`9aca447ce5e3e34a2d8360f9c40d9c4631c130b7fdc50fda9aeac931e9ad77da`
+unchanged, but the camera app process had changed and the
+foreground `CameraService` was absent.
+
+The **Android ActivityManager event log** contains exact, repeated
+package-stop actions, NOT evidenced by an app Java crash or
+native encoder format exception:
+
+| Local time | Old camera app PID | Android event | Outcome |
+| --- | ---: | --- | --- |
+| 05:57:00 | 31276 | `am_kill … stop nl.kalenel.s9security` | foreground recorder disappeared, one Android scheduled restart canceled |
+| 06:00:12 | 2604 | `am_kill … stop nl.kalenel.s9security` | activity process replaced by 4395 |
+| 06:03:48 | 4395 | `am_kill … stop nl.kalenel.s9security` | activity process replaced by 5653 |
+| 06:06:45 | 5653 | `am_kill … stop nl.kalenel.s9security` | activity process replaced by 7091 |
+
+These exact `am_kill … stop <package>` records and canceled
+service restart are consistent with a **package force-stop or
+equivalent external stop**, not a normal OOM kill. The
+actor/caller causing those actions is **not yet identified**:
+do NOT claim an existing service or the camera's inference
+model was definitely responsible without process attribution.
+
+The existing owner C720P unit
+`c720p-s9-native-camera-continuity-v1.service` was audited:
+its user journal shows HEALTHY at 05:56, then missed live
+status at 05:57 and 05:58, a guarded missing-service
+start attempt at 05:59 (incomplete), cooldown at 06:00
+and normal HEALTHY at 06:01. It was HEALTHY at 06:03:32,
+06:04:49, 06:05:27 and 06:07:05, **without logging an
+intentional force-stop**. Do not misattribute the external
+package-stop actions to this existing useful unit or
+disable it without evidence. Other timers and battery
+supervisors were inspected; the battery guard's force-stop
+package is the old IP Webcam `com.pas.webcam.pro`,
+not the active native `nl.kalenel.s9security`. No
+new timer, watchdog or service was created.
+
+The existing nonexported camera service was restored
+through the app's existing authorized
+`CameraActivity --ez enable_native_camera true` startup
+contract. One early status poll timed out, but a subsequent
+independent validation confirmed the live native
+CameraService foreground again, original APK checksum,
+`watching` at **30.01–30.02FPS**, 7sec ready preroll,
+0 reported drops and failures. At **06:12:54 CET** the
+process remained PID **7091** with no *new* recorded
+package-stop event since 06:06:45, but this short
+observation cannot prove the stop source is fixed.
+
+Critically, the older R785/R786 verified 4K diagnostic
+was produced in camera process **PID 31276** and **MUST
+NOT be reused** to authorize real model load after any
+Android process restart. R788 was narrowly hardened
+(`verify_current_process_4k_attestation` and private
+mode-0600 receipt check) to reject mismatched camera PID,
+wrong original APK SHA, missing physical video checks,
+missing advancing sensor frames, and any attempted
+automatic People-folder release. This increased its
+synthetic refusal tests from 32 to **38, all PASS**.
+The immediate live one-shot still abstained since no
+natural 4K recording was occurring. We did NOT start
+or recreate the one-shot diagnostic on the restarted app
+in this investigation.
+
+**Unresolved work**: identify the exact authorized
+external caller producing those `am_kill … stop`
+events, preserve device-native capture across app
+startup while avoiding competing force-restart loops,
+and re-attest a completed live native-4K event in
+the *current* process before any model/active-capture
+concurrency test. No recording or reference was deleted;
+no camera APK, thermal policy, or People-folder ID
+algorithm was installed in production.
