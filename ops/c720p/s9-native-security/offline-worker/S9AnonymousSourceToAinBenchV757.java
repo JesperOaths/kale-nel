@@ -185,6 +185,35 @@ public final class S9AnonymousSourceToAinBenchV757 {
          fileHash(original,deadline).equals(sourceSha),
          "source_sha_modified_during_benchmark");
     need(System.nanoTime()<deadline,"overall_bounded_runtime_exceeded");
+    // Physical source and ONNX execution alone never demonstrate that a
+    // center-scene ROI contains an unambiguous single person. Enforce the
+    // *negative-only* pre-match boundary on the exact real ROI receipt.
+    S9PreMatchEvidenceGateV765.Evidence quality=
+        new S9PreMatchEvidenceGateV765.Evidence();
+    quality.originalSha=sourceSha;
+    quality.originalVersion=null; // No independently approved source-version receipt.
+    quality.cropSha=pixelsSha;
+    quality.modelSha=MODEL_SHA;
+    quality.outputDimensions=512;
+    quality.frameWidth=3840;
+    quality.frameHeight=2160;
+    quality.x0=X0;quality.y0=Y0;quality.x1=X1;quality.y1=Y1;
+    quality.decodedPtsUs=frame.actualPtsUs;
+    quality.requestedSeekUs=requestMs*1000L;
+    quality.sourceVerifiedBeforeAndAfterOnS9=true;
+    quality.exactPixelRegionBoundToActualPts=true;
+    quality.modelInputTensorShaVerifiedOnS9=true;
+    quality.strictUprightCropQuality=false; // No independently attested person ROI.
+    quality.personsInsideCrop=0; // Not independently established; never assume one.
+    quality.singleUnambiguousTrack=false;
+    quality.sourceVersionCurrentInLedger=false;
+    quality.personDetectorConfidence=Double.NaN;
+    S9PreMatchEvidenceGateV765.Verdict gate=
+        S9PreMatchEvidenceGateV765.inspect(quality);
+    need(!gate.canScoreForIndependentResearch &&
+         !gate.canAutomaticallyFilePeople &&
+         "ABSTAIN_UNVERIFIED_SOURCE_OR_CROP".equals(gate.status),
+         "anonymous_scene_frame_improperly_admitted_to_person_scoring");
     return new JSONObject()
       .put("schema","s9_r757_anonymous_original_to_ain_x025_pipeline")
       .put("status","ANONYMOUS_ORIGINAL_FRAME_TO_ONNX_PIPELINE_PASS")
@@ -206,6 +235,10 @@ public final class S9AnonymousSourceToAinBenchV757 {
       .put("rgb_preprocessing_ms",Math.round(preprocessNs/1000000.0*100.0)/100.0)
       .put("onnx_warmup_ms",Math.round(inferenceNs[0]/1000000.0*100.0)/100.0)
       .put("onnx_timed_ms",Math.round(inferenceNs[1]/1000000.0*100.0)/100.0)
+      .put("phone_prematch_evidence_status",gate.status)
+      .put("phone_prematch_abstention_reason_count",gate.reasons.length)
+      .put("phone_prematch_person_scoring_authorized",gate.canScoreForIndependentResearch)
+      .put("phone_prematch_automatic_filing_authorized",gate.canAutomaticallyFilePeople)
       .put("people_identity_scoring_performed",false)
       .put("private_vector_values_exported",0)
       .put("real_image_copied_to_hub",false)
