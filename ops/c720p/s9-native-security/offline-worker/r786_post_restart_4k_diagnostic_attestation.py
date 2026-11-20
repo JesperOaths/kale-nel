@@ -266,7 +266,7 @@ def self_test():
         else:raise AssertionError("unsafe_diagnostic_baseline_accepted_"+why)
     import copy
     fails=[
-        ("camera_process_changed",lambda c,l:c.update(capturing_process_pid_stable=False)),
+        ("diagnostic_process_changed",lambda c,l:c.update(capturing_process_pid_stable=False)),
         ("source_timing_ledger_wrong_schema",lambda c,l:l.update(schema="wrong")),
         ("diagnostic_result_and_video_mismatch",lambda c,l:c["post_status"].update(
             preroll_diagnostic_clip="other")),
