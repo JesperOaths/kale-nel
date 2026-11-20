@@ -21,6 +21,14 @@ import s9_reid_manifest_integrity_v749 as r749
 import r758_capture_day_leakage_audit as r758
 import s9_reid_open_set_release_gate_v743 as r743
 
+# Candidate R744 AIN x0.25 model does NOT equal the older TFLite model
+# that produced the existing 98 feature sidecars. Both happen to emit
+# 512D floats; identical dimensions NEVER imply interchangeable weights.
+CANDIDATE_ONNX_SHA = (
+    "e7adf72649332d97c613be93db17a047e526bf55fc8b7240f14a1da67390b7af"
+)
+QUALITY_METRICS = r758.STATE / "metrics" / "s9-recognition-quality-gate-v1.json"
+
 def need(ok,reason):
     if not ok:raise ValueError(reason)
 
@@ -154,6 +162,9 @@ def readiness(integrity,days):
                      "observed":"not established by sensor FPS alone"})
     blockers.append({"gate":"PROSPECTIVE_PREDECLARED_THRESHOLDS",
                      "observed":"not proven by the research manifests"})
+    blockers.append({"gate":"CANDIDATE_MODEL_HAS_NO_IDENTICAL_VERSION_RECOGNITION_EVALUATION",
+                     "observed":"98 sidecars have legacy TFLite feature-model SHA; candidate OSNet-AIN x0.25 ONNX SHA differs"})
+
 
     return {
         "schema":"s9_r759_independent_release_evidence_readiness_v1",
@@ -162,6 +173,9 @@ def readiness(integrity,days):
         "blockers":blockers,
         "independent_original_source_disjointness_only":days["reference_holdout_source_sha_overlap"]==0,
         "heldout_source_day_disjointness":verifiable["heldout_capture_days_disjoint"],
+        "research_vector_model_matches_candidate_ain_x025":
+            r749.MODEL_SHA==CANDIDATE_ONNX_SHA,
+        "candidate_ain_x025_independent_recognition_accuracy_evaluated":False,
         "heldout_rows_on_exclusive_capture_days":days["holdout_rows_on_exclusive_days"],
         "holdout_source_bags_on_exclusive_capture_days":
             days["holdout_sources_on_exclusive_days"],
@@ -221,7 +235,8 @@ def test():
     }
     real=readiness(a,b)
     need(real["status"]=="RECOGNITION_RELEASE_BLOCKED" and
-         real["blocker_count"]>=8 and
+         real["blocker_count"]>=9 and
+         real["research_vector_model_matches_candidate_ain_x025"] is False and
          real["automatic_filing_authorized"] is False,
          "hypothetical_release_should_stay_blocked")
     need(real["heldout_rows_on_exclusive_capture_days"]==9,
@@ -258,6 +273,35 @@ def test():
         "automatic_filing_authorized":False
     },sort_keys=True))
 
+def quality_summary(metadata, days):
+    """Read ONLY approved aggregate keys of the existing live quality gate."""
+    proof=r758.load_json(QUALITY_METRICS)
+    need(proof.get("schema")=="s9_source_verified_recognition_quality_gate_v1",
+         "unrecognized_quality_gate_report")
+    need(proof.get("native_original_count")==days["current_catalog_originals"] and
+         proof.get("source_model_originals_sha_verified") is True,
+         "quality_gate_does_not_match_current_archive")
+    total=proof.get("assessable_leave_one_original_out")
+    correct=proof.get("deployed_holdout_correct")
+    need(type(total) is int and total>=0 and
+         type(correct) is int and 0<=correct<=total,
+         "historical_recognition_trial_counts_inconsistent")
+    gates=proof.get("read_only_deployment_gates",{})
+    need(type(gates) is dict and
+         gates.get("automatic_people_filing_authorized") is False and
+         proof.get("independent_known_positive_validated") is False and
+         proof.get("independent_unknown_FAR_validated") is False and
+         proof.get("unknown_person_human_labels")==0,
+         "quality_gate_production_assumptions_changed")
+    return {
+        "historical_source_separated_assessable_recordings":total,
+        "historical_correct_assessable_recordings":correct,
+        "historical_accuracy_descriptive_only":round(correct/total,4) if total else None,
+        "historical_trial_is_not_independent_prospective_evidence":True,
+        "independent_unknown_person_ground_truth_count":0,
+        "production_people_filing_authorized_by_live_quality_gate":False
+    }
+
 def run():
     now=time.time()
     catalog=r758.load_json(r758.CATALOG,now,r758.MAX_CATALOG_AGE_SEC)
@@ -283,7 +327,9 @@ def run():
     day_audit=r758.audit_rows(
         [positioned[i] for i in sorted(positioned)],
         catalog,summary,ledger,now)
-    print(json.dumps(readiness(integrity,day_audit),sort_keys=True,indent=2))
+    output=readiness(integrity,day_audit)
+    output.update(quality_summary(integrity,day_audit))
+    print(json.dumps(output,sort_keys=True,indent=2))
 
 def main():
     p=argparse.ArgumentParser()
