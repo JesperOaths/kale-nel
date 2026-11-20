@@ -91,12 +91,12 @@ public final class GardenPreRoll {
    int pitch=dest[p].getRowStride(),step=dest[p].getPixelStride();
    int srcPitch=s.rowStrides[p],srcStep=s.pixelStrides[p];
    byte[] bytes=s.planes[p];
-   for(int y=0;y<height;y++)for(int x=0;x<width;x++){
-    int from=y*srcPitch+x*srcStep,to=y*pitch+x*step;
-    if(from<0||from>=bytes.length||to<0||to>=target.limit())
-     throw new IllegalArgumentException("preroll_YUV_stride");
-    target.put(to,bytes[from]);
-   }
+   // Row-wise direct ByteBuffer bulk copy for packed planes; exact
+   // legacy pixel-indexed copying for padded/interleaved chroma planes.
+   // This changes no source geometry, model evidence, recording FPS,
+   // MediaCodec queueing or Camera2 main capture configuration.
+   GardenPreRollBulkCopyV783.copy(target,pitch,step,bytes,
+                                 srcPitch,srcStep,width,height);
   }
  }
  private void encode(PreviewJpeg.Snapshot frame,long ptsUs)throws Exception{
