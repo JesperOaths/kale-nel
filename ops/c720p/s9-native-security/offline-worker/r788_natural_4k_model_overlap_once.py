@@ -138,6 +138,40 @@ def verify_model_receipt(obj):
              0<x<2000 for x in obj["timed_ms"]),
          "invalid_or_biometric_model_probe_receipt")
 
+
+
+def verify_current_process_4k_attestation(baseline, current_pid):
+    """Never let pre-restart camera evidence authorize new-process compute.
+
+    A complete R786 result must be bound to the same currently recording
+    camera PID; 4K files from a previous Android process cannot qualify.
+    A verified 4K baseline is not itself proof of 4K under concurrent load.
+    """
+    need(type(baseline) is dict and
+         baseline.get("schema")==
+             "s9_r786_post_restart_completed_4k_capture_attestation_v1" and
+         baseline.get("result")==
+             "PASS_COMPLETED_NATIVE_4K_CAPTURE_BASELINE_FOR_SYNTHETIC_ONLY" and
+         baseline.get("original_production_apk_sha256")==ORIGINAL_APK_SHA and
+         str(baseline.get("same_phone_camera_pid"))==str(current_pid) and
+         str(current_pid).isdigit() and
+         baseline.get("phone_video_sha256_independently_rechecked") is True and
+         type(baseline.get("new_sensor_frames")) is int and
+         baseline["new_sensor_frames"]>0 and
+         29<=baseline.get("native4k_steady_fps",-1)<=31 and
+         baseline.get("native4k_event_during_concurrent_model_inference_proven") is False and
+         baseline.get("automated_people_folder_filing_authorized") is False,
+         "missing_or_stale_current_process_completed_4k_baseline")
+    return True
+
+def read_attestation_once(path):
+    p=pathlib.Path(path)
+    need(p.is_file() and not p.is_symlink() and
+         100<p.stat().st_size<16000 and p.stat().st_mode&0o077==0 and
+         0<=time.time()-p.stat().st_mtime<=48*3600,
+         "4k_baseline_private_file_missing_or_stale")
+    return json.loads(p.read_text(encoding="utf-8"))
+
 def check_final(before,after,finish,phone0,phone1,source,pts):
     # Strictly require a *new* completed normal event after the exact
     # successful in-recording model probe; never attribute an older file.
@@ -199,7 +233,32 @@ def self_test():
     after=dict(s,sensor_capture_result_frames=112)
     need(not preflight(s,phone),"valid_natural_event_refused")
     need(not continuity(s,after,phone,phone),"valid_same_event_overlap_refused")
-    negative=0
+    proof={"schema":"s9_r786_post_restart_completed_4k_capture_attestation_v1",
+           "result":"PASS_COMPLETED_NATIVE_4K_CAPTURE_BASELINE_FOR_SYNTHETIC_ONLY",
+           "original_production_apk_sha256":ORIGINAL_APK_SHA,
+           "same_phone_camera_pid":phone["pid"],
+           "phone_video_sha256_independently_rechecked":True,
+           "new_sensor_frames":118,"native4k_steady_fps":30.015,
+           "native4k_event_during_concurrent_model_inference_proven":False,
+           "automated_people_folder_filing_authorized":False}
+    need(verify_current_process_4k_attestation(proof,phone["pid"]),
+         "valid_current_process_4k_evidence_was_refused")
+    from copy import deepcopy
+    stale_negatives=0
+    for key,bad in [
+        ("same_phone_camera_pid","5653"),
+        ("original_production_apk_sha256","0"*64),
+        ("new_sensor_frames",0),
+        ("automated_people_folder_filing_authorized",True),
+        ("phone_video_sha256_independently_rechecked",False),
+        ("native4k_steady_fps",10),
+    ]:
+        altered=deepcopy(proof);altered[key]=bad
+        try:verify_current_process_4k_attestation(altered,phone["pid"])
+        except ValueError:stale_negatives+=1
+        else:raise AssertionError("stale_or_unverified_4k_process_accepted_"+key)
+    need(stale_negatives==6,"current_process_proof_negative_cases_wrong")
+    negative=stale_negatives
     for key,bad in [
         ("mode","watching"),("native_4k_enabled",False),
         ("recorder","unknown"),("continuous_4k_trial_active",True),
@@ -270,7 +329,7 @@ def self_test():
         "production_people_auto_filing_authorized":False
     },sort_keys=True))
 
-def live_once(seconds:int):
+def live_once(seconds:int, attestation_path):
     need(type(seconds) is int and 0<=seconds<=20,"one_shot_wait_out_of_bounds")
     def outcome(message,**kwargs):
         print(json.dumps({"schema":"s9_r788_natural_4k_overlap_v1",
@@ -291,6 +350,12 @@ def live_once(seconds:int):
                        last_seen_camera_mode=old.get("mode"))
     reasons=preflight(old,phone)
     if reasons:return outcome("REFUSED_UNSAFE_IN_RECORDING_PROBE",reasons=reasons)
+    try:
+        attestation=read_attestation_once(attestation_path)
+        verify_current_process_4k_attestation(attestation,phone["pid"])
+    except (ValueError,OSError,TypeError,AttributeError) as e:
+        return outcome("REFUSED_STALE_OR_MISSING_4K_PROCESS_ATTESTATION",
+                       reason=type(e).__name__)
     sha=adb("shell","F=$(pm path "+PACKAGE+" | sed -n '1s/^package://p');sha256sum \"$F\"",timeout=12).split()[0]
     if sha!=ORIGINAL_APK_SHA:
         return outcome("REFUSED_CAMERAPK_NOT_PINNED_ORIGINAL")
@@ -403,9 +468,13 @@ def main():
     mode.add_argument("--self-test",action="store_true")
     mode.add_argument("--live-once",action="store_true")
     p.add_argument("--wait-seconds",type=int,default=0)
+    p.add_argument("--baseline-receipt",default=(
+        "/home/jespern/c720p-home-hub/staging/"
+        "recognition-r744-ain-small-model-assets-20261120/"
+        "r785_native4k_post_restore_diagnostic/post_restart_attestation.json"))
     a=p.parse_args()
     if a.self_test:return self_test()
-    live_once(a.wait_seconds)
+    live_once(a.wait_seconds,a.baseline_receipt)
 
 if __name__=="__main__":
     try:main()
