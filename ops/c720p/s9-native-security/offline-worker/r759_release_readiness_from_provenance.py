@@ -20,6 +20,8 @@ import time
 import s9_reid_manifest_integrity_v749 as r749
 import r758_capture_day_leakage_audit as r758
 import s9_reid_open_set_release_gate_v743 as r743
+import r760_freeze_blind_capture_cohort as r760
+import r763_research_quality_selection as r763
 
 # Candidate R744 AIN x0.25 model does NOT equal the older TFLite model
 # that produced the existing 98 feature sidecars. Both happen to emit
@@ -324,11 +326,38 @@ def run():
             else:positioned[pos]=row
     need(sorted(positioned)==list(range(len(positioned))),
          "research_manifest_rows_not_complete")
-    day_audit=r758.audit_rows(
-        [positioned[i] for i in sorted(positioned)],
-        catalog,summary,ledger,now)
+    rows=[positioned[i] for i in sorted(positioned)]
+    day_audit=r758.audit_rows(rows,catalog,summary,ledger,now)
+    clean_mask=r763.select(rows,catalog,ledger,summary,now)
+    frozen_cohort=r760.verify()
+    need(clean_mask["rejected_reference_crop_rows"]==
+         integrity["reference_rows_failing_independent_geometry"],
+         "research_quality_selector_does_not_exclude_all_bad_references")
+    need(clean_mask["date_disjoint_holdout_crop_rows"]==
+         day_audit["holdout_rows_on_exclusive_days"],
+         "reference_quality_mask_and_day_exclusions_disagree")
+    need(frozen_cohort["historical_samples_are_prospective"] is False and
+         frozen_cohort["prospective_independent_recordings_observed_at_cutoff"]==0,
+         "old_recordings_must_not_be_promoted_to_prospective_labels")
     output=readiness(integrity,day_audit)
     output.update(quality_summary(integrity,day_audit))
+    output.update({
+        "research_selection_filter_verified":True,
+        "excluded_bad_reference_crops_from_research_selection":
+            clean_mask["rejected_reference_crop_rows"],
+        "research_quality_eligible_reference_crops":
+            clean_mask["quality_eligible_reference_crop_rows"],
+        "research_date_disjoint_holdout_crop_rows":
+            clean_mask["date_disjoint_holdout_crop_rows"],
+        "research_selection_mask_commitment_sha256":
+            clean_mask["eligible_ref_holdout_crop_mask_commitment_sha256"],
+        "historical_anonymous_candidate_cohort_frozen":True,
+        "historical_anonymous_candidates":
+            frozen_cohort["historical_exploratory_candidates"],
+        "historical_candidates_are_valid_identity_accuracy_trial":False,
+        "future_prospective_identity_trials_available_at_cutoff":0,
+        "production_automatic_people_filing_enabled":False
+    })
     print(json.dumps(output,sort_keys=True,indent=2))
 
 def main():
