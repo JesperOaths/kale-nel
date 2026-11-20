@@ -81,7 +81,8 @@ def source_guards():
         'static final int OPT_IN_FPS=30',
         'public GardenPreRoll(){this(false);}',
         'encoderConfiguredFps=explicit30fpsTrial?OPT_IN_FPS:FPS',
-        'MediaFormat.KEY_FRAME_RATE,encoderConfiguredFps'
+        'MediaFormat.KEY_FRAME_RATE,encoderConfiguredFps',
+        'GardenPreRollBulkCopyV783.copy(target,pitch,step,bytes,'
     ):
         need(marker in p,"encoder_default_compatibility_regression_"+marker)
     # Do not change recorder format, process, trigger or storage.
