@@ -97,10 +97,16 @@ def parse_case(capture,ledger,pre,now_ms):
          enc.get("nonmonotonic_pts")==0 and
          8_000<=enc.get("duration_ms",-1)<=12_000 and
          enc.get("encoded_video_sample_count",0)>=230 and
-         str(enc.get("result","")).startswith("STEADY_NATIVE_4K_TIMING_PASS"),
+         enc.get("result") in (
+             "STEADY_NATIVE_4K_TIMING_PASS_WITH_STARTUP_GAP",
+             "NATIVE_4K_EVENT_SOURCE_SAMPLE_TIMING_PASS"),
          "verified_full_4k_stable_30fps_not_proven")
-    need(enc.get("startup_gap_requires_separate_capture_fix") is True and
-         enc.get("strict_full_event_30fps_gap_check") is False,
+    strict=enc.get("strict_full_event_30fps_gap_check")
+    startup=enc.get("startup_gap_requires_separate_capture_fix")
+    need((strict is True and startup is False and
+          enc.get("result")=="NATIVE_4K_EVENT_SOURCE_SAMPLE_TIMING_PASS") or
+         (strict is False and startup is True and
+          enc.get("result")=="STEADY_NATIVE_4K_TIMING_PASS_WITH_STARTUP_GAP"),
          "startup_gap_must_remain_explicit_nonpass")
     preroll=indexed["preroll"];pc=preroll.get("evidence",{})
     need(pc.get("nonmonotonic_pts_count")==0 and
@@ -117,6 +123,8 @@ def parse_case(capture,ledger,pre,now_ms):
         "native4k_steady_fps":enc["steady_fps_after_first_ten_samples"],
         "preroll_average_fps":pc["average_sample_fps"],
         "max_native4k_startup_gap_ms":enc["max_sample_interval_ms"],
+        "strict_full_event_30fps_gap_check":strict,
+        "startup_gap_present":startup,
         "original_capture_pid":str(pre["camera_pid"])
     }
 
@@ -202,8 +210,10 @@ def live(capture,ledger,pre):
         "paired_preroll_fps":facts["preroll_average_fps"],
         "max_native4k_startup_interval_ms":
             facts["max_native4k_startup_gap_ms"],
-        "strict_gap_free_4k_output_proven":False,
-        "separate_4k_startup_gap_fix_still_needed":True,
+        "strict_gap_free_4k_output_proven":
+            facts["strict_full_event_30fps_gap_check"],
+        "separate_4k_startup_gap_fix_still_needed":
+            facts["startup_gap_present"],
         "phone_video_sha256_independently_rechecked":True,
         "native4k_event_during_concurrent_model_inference_proven":False,
         "person_identity_recognition_accuracy_proven":False,
@@ -256,6 +266,14 @@ def self_test():
          "initial_status":{"mode":"watching","preroll_diagnostic_used":False,
                            "sensor_result_fps":30.02}}
     assert parse_case(d,record,pre,now)["native4k_steady_fps"]==30.015
+    import copy
+    gapfree=copy.deepcopy(record)
+    gapfree["files"][0]["evidence"].update(
+        result="NATIVE_4K_EVENT_SOURCE_SAMPLE_TIMING_PASS",
+        startup_gap_requires_separate_capture_fix=False,
+        strict_full_event_30fps_gap_check=True,
+        max_sample_interval_ms=33.5)
+    assert parse_case(d,gapfree,pre,now)["strict_full_event_30fps_gap_check"] is True
     negative=0
     def refuses(c,l,pre,t,why):
         nonlocal negative
@@ -264,7 +282,6 @@ def self_test():
             need(why in str(e),"wrong_refusal_"+str(e))
             negative+=1
         else:raise AssertionError("unsafe_diagnostic_baseline_accepted_"+why)
-    import copy
     fails=[
         ("diagnostic_process_changed",lambda c,l:c.update(capturing_process_pid_stable=False)),
         ("source_timing_ledger_wrong_schema",lambda c,l:l.update(schema="wrong")),
