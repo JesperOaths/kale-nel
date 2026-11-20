@@ -610,3 +610,135 @@ crop bytes to the physical decoded output frame in a separately verified
 capture/review flow; existing sidecars must not be upgraded retroactively
 by guessing timestamps. No gallery-builder or identity-label execution
 was attempted or rerouted after its prior safety denial.
+
+
+## R758/R759 independent recognition validation — 20 November 2026
+
+This stage tests whether the actual historical person-ReID research
+manifests could support a **scientifically independent recognition
+accuracy or open-set false-accept claim**. It **does not** create
+identity-labelled galleries, compare feature vectors, process person
+identities, auto-assign folders, restart Camera2 or alter originals.
+
+### R758 — Real SHA-bound capture-day split leakage
+
+`r758_capture_day_leakage_audit.py` joins **only** existing role/source
+metadata from 18 S9 batch manifests to the current standalone phone
+catalog and independent on-phone SHA-verification ledger. It refuses
+source/crop manifest version mismatches and produces anonymous counts
+only, never names or SHA values in its report. Both UTC and
+Europe/Amsterdam capture-date overlaps are checked from the original
+filename epoch. Synthetic adversarial tests: **9 passed**.
+
+**Actual audit outcome: `FAIL_CAPTURE_DAY_OR_SOURCE_DISJOINTNESS`.**
+
+| Evidence | Measured |
+| --- | ---: |
+| Current recorded original files | **756** |
+| Research distinct original source SHA-256 entries | **71** |
+| Reference recordings | **39** from **17** distinct local dates |
+| Holdout recordings | **32** from **8** distinct local dates |
+| Reference/holdout identical original SHA overlap | **0** |
+| Shared capture dates (UTC and local) | **5** |
+| Holdout recording sources on shared dates | **26/32** |
+| Holdout rows on shared dates | **50/59** |
+| Holdout rows left on exclusive local dates | **9** |
+| Exclusive-day holdout distinct original source bags | **6** |
+| Exclusive-day holdout distinct dates | **3** |
+| Research source hashes matching current catalog versions & ledger | **71/71** |
+| Source SHA ledger byte checks older than 14 days | **64/71** |
+| Within 14 days (from prior ledger, not per-crop PTS) | **7/71** |
+
+Historical verification that remains tied to an unchanged catalog
+version is valuable **metadata provenance**, but should NOT be
+represented as a fresh byte-level hash check. R758 therefore
+distinguishes `source_versions_verified_against_original_catalog_and_ledger`
+from `all_source_SHA_rechecks_current=false`. It does not alter the
+integrity ledger. The one repeated plan crop from R749 is accepted only
+as an identical replay, never as an independent source/bag.
+
+A conservative day filter therefore leaves **only 6 source bags**
+across 3 days (9 crop rows). They are not identity-labelled known or
+unknown evidence; no capture-day-independent recognition rate can be
+computed from these counts. Outfit-episode disjointness also remains
+unverified, and all R749 crops still lack exact physical source-frame PTS.
+
+### R759 — Fail-closed independent release evidence compiler
+
+`r759_release_readiness_from_provenance.py` aggregates the existing
+R749 on-S9 vector-integrity projection, real R758 capture-day audit,
+and the R743 open-set statistical release guard. No embeddings, image
+bytes, original video or person labels leave S9; no identity scoring is
+performed. Its adversarial tests reject **5** malformed/optimistic
+inputs and verify that fixing source integrity **alone** cannot
+authorize an identity release.
+
+Actual result: **`RECOGNITION_RELEASE_BLOCKED`**, with **9 blockers**:
+capture-day overlap, stale source SHA rechecks, five geometrically
+invalid reference rows, 40 reference and 59 holdout rows without
+independent physical source-frame PTS, absent independently known
+person/outfit truth, absent independent unknown-person FAR, absence
+of end-to-end completed native4K event-file proof under model load,
+unproven prospective predeclared thresholds, and **model-version
+mismatch** between old Market1501/TFLite vectors and candidate AIN.
+
+Crucially, the **98** existing Market1501 TFLite research embeddings
+have model SHA
+`5249d33bb1cd53e53c9096db9d6acf555b698a7f4561a2b3eb81df4fcbfaac5c`,
+while the NEW OSNet-AIN x0.25 ONNX model has SHA
+`e7adf72649332d97c613be93db17a047e526bf55fc8b7240f14a1da67390b7af`.
+The vectors are both 512D but **are not interchangeable models**,
+and a comparison of those old vectors would not validate AIN x0.25.
+
+The existing independent production-quality metrics still report
+**1 correct out of 9 assessable source-separated historical
+recordings (11.1%)**, **0 independently verified unknown-person
+ground-truth labels**, no calibrated independent FAR, and automatic
+People-folder filing authorization **false**. Do not relabel this as
+a new AIN accuracy estimate.
+
+The numerical release contract requires at least **100** genuinely
+independent known bags representing **8** distinct known people,
+**600** genuinely independent unknown-person bags, and conservative
+confidence bounds. For *zero* unknown false accepts in 600 truly
+independent bags, the one-sided 95% upper FAR limit is **0.00498**.
+Actual independently known/unknown scored counts are **not known**;
+do not substitute 32 source-separated retrospective recordings for
+qualified unknown test labels.
+
+### Six phone-side recent source SHA spot checks
+
+To demonstrate cautious future retesting rather than assume old ledger
+proofs are fresh, one-shot `nice -n 19 sha256sum` was run directly on
+the S9+ against **all six** metadata-selected holdout originals whose
+capture dates do not overlap reference dates. Each file was compared to
+the current original catalog SHA with live Camera2 admission checked
+before, during and after. **6/6 passed**, about **314 MB** total source
+bytes read (never transferred to C720P), including **5** sources whose
+prior ledger checks were >14 days old. The camera stayed near 30.02 FPS,
+the AVC ring advanced, PID remained the same, and **zero new preroll
+drops** were reported.
+
+These were **read-only spot checks**, not a bulk rehash and not a
+persistent update of the independent production SHA ledger. R758/R759
+continue to accurately report 64 ledger entries older than 14 days.
+Do not use these checks to claim person-identity accuracy, verified
+historic crop PTS, outfit independence, or valid unknown FAR.
+
+### R743 semantics correction
+
+The optional `continuous_4k_ready` experimental encoder is not
+mandatory: the normal 3840x2160 MediaRecorder + AVC preroll remains
+the supported production capture path. R743 now requires
+`native_4k_event_file_30fps_verified_under_model_load` rather than
+misidentifying a deliberately disabled optional encoder as a failed
+production camera. Physical 30FPS **sensor** rate and a healthy preroll
+are not enough to assert independently measured 30FPS **completed
+4K event file** output while inference runs. All **16** synthetic
+R743 release-gate refusal tests pass.
+
+**Deployment invariant:** Draft research branch only. No source
+deletion, no refreshed person labels, no population of an identity
+gallery, no automatic People-folder filing and no newly created timer
+or ChatGPT scheduled task. This stage did not attempt to rerun or
+circumvent the earlier safety-denied identity-gallery builder.
