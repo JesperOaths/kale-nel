@@ -3,6 +3,7 @@ package nl.kalenel.s9offline;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -81,6 +82,11 @@ public final class S9OriginalNative4KEventTimingV761 {
     int videoIndex=-1,tracks=0;
     long durationUs=0;
     String mime="";
+    JSONArray initialPtsUs=new JSONArray();
+    JSONArray initialSampleSizes=new JSONArray();
+    JSONArray initialSampleFlags=new JSONArray();
+    int initialSyncSamples=0;
+    int encoderProfile=-1,encoderLevel=-1;
     try{
       extractor.setDataSource(path.toString());
       tracks=extractor.getTrackCount();
@@ -98,6 +104,10 @@ public final class S9OriginalNative4KEventTimingV761 {
           need(durationUs>=3_000_000L&&durationUs<=180_000_000L,
                "original_event_duration_outside_bounded_window");
           mime=type;
+          if(fmt.containsKey(MediaFormat.KEY_PROFILE))
+            encoderProfile=fmt.getInteger(MediaFormat.KEY_PROFILE);
+          if(fmt.containsKey(MediaFormat.KEY_LEVEL))
+            encoderLevel=fmt.getInteger(MediaFormat.KEY_LEVEL);
         }
       }
       need(videoIndex>=0,"missing_video_track");
@@ -112,6 +122,13 @@ public final class S9OriginalNative4KEventTimingV761 {
         need(count<MAX_SAMPLE_COUNT,"too_many_video_samples");
         need(pts>=0&&pts<=durationUs+100_000L,
              "sample_pts_outside_valid_track_duration");
+        if(count<8){
+          initialPtsUs.put(pts);
+          initialSampleSizes.put(extractor.getSampleSize());
+          int flags=extractor.getSampleFlags();
+          initialSampleFlags.put(flags);
+          if((flags&MediaExtractor.SAMPLE_FLAG_SYNC)!=0)initialSyncSamples++;
+        }
         if(firstPts<0)firstPts=pts;
         if(count==10)tenthSamplePtsUs=pts;
         if(lastPts>=0){
@@ -175,6 +192,13 @@ public final class S9OriginalNative4KEventTimingV761 {
       .put("resolution_width",3840)
       .put("resolution_height",2160)
       .put("track_count",tracks)
+      .put("video_codec_profile",encoderProfile)
+      .put("video_codec_level",encoderLevel)
+      .put("first_eight_video_sample_pts_us",initialPtsUs)
+      .put("first_eight_video_sample_sizes_bytes",initialSampleSizes)
+      .put("first_eight_video_sample_flags",initialSampleFlags)
+      .put("first_eight_sync_video_samples",initialSyncSamples)
+      .put("only_first_eight_sample_metadata_exported",true)
       .put("duration_ms",durationUs/1000.0)
       .put("encoded_video_sample_count",count)
       .put("first_pts_ms",firstPts/1000.0)
