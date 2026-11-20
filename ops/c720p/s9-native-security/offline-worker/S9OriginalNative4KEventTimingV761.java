@@ -74,6 +74,7 @@ public final class S9OriginalNative4KEventTimingV761 {
     MediaExtractor extractor=new MediaExtractor();
     long count=0,firstPts=-1,lastPts=-1,nonmonotonic=0;
     long maxStep=0,stepsOver50ms=0,stepsOver100ms=0;
+    long maxGapPrecedingIndex=-1,maxGapPrecedingPtsUs=-1;
     double medianMs=Double.NaN,avgFps=Double.NaN;
     int videoIndex=-1,tracks=0;
     long durationUs=0;
@@ -115,7 +116,11 @@ public final class S9OriginalNative4KEventTimingV761 {
           if(delta<=0)nonmonotonic++;
           else{
             positiveSteps.add(delta);
-            if(delta>maxStep)maxStep=delta;
+            if(delta>maxStep){
+              maxStep=delta;
+              maxGapPrecedingIndex=count-1;
+              maxGapPrecedingPtsUs=lastPts;
+            }
             if(delta>50000L)stepsOver50ms++;
             if(delta>100000L)stepsOver100ms++;
           }
@@ -159,6 +164,10 @@ public final class S9OriginalNative4KEventTimingV761 {
       .put("average_encoded_sample_fps",Math.round(avgFps*1000)/1000.0)
       .put("nonmonotonic_pts",nonmonotonic)
       .put("max_sample_interval_ms",maxStep/1000.0)
+      .put("max_interval_start_time_ms",maxGapPrecedingPtsUs/1000.0)
+      .put("max_interval_sample_position",maxGapPrecedingIndex)
+      .put("max_interval_is_in_first_or_last_10_samples",
+           maxGapPrecedingIndex<10 || maxGapPrecedingIndex>=count-11)
       .put("intervals_over_50ms",stepsOver50ms)
       .put("intervals_over_100ms",stepsOver100ms)
       .put("finished_native4k_event_proven",true)
