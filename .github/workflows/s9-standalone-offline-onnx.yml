@@ -86,10 +86,14 @@ jobs:
           python3 -m py_compile "$area/s9_reid_capture_admission_v742.py" \
             "$area/s9_reid_open_set_release_gate_v743.py" \
             "$area/export_osnet_ain_verified_v744.py" \
-            "$area/s9_reid_manifest_integrity_v749.py"
+            "$area/s9_reid_manifest_integrity_v749.py" \
+            "$area/r754_diagnostic_pts_replay.py" \
+            "$area/r756_anonymous_original_pts_replay.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r754_diagnostic_pts_replay.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r756_anonymous_original_pts_replay.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
@@ -118,10 +122,18 @@ jobs:
             "$area/S9StandaloneDeadlineV374.java" \
             "$area/S9Original4KGapAuditV370.java" \
             "$area/S9DiagnosticPtsInspectorV751.java" \
-            "$area/S9ResearchVectorMetadataV752.java"
+            "$area/S9ResearchVectorMetadataV752.java" \
+            "$area/S9Original4KTimedDecoderV410.java" \
+            "$area/S9DiagnosticActualDecodedPtsV753.java" \
+            "$area/S9OriginalAnonymousPtsV755.java" \
+            "$area/S9AnonymousSourceToAinBenchV757.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPtsInspectorV751.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9ResearchVectorMetadataV752.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KTimedDecoderV410.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticActualDecodedPtsV753.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9OriginalAnonymousPtsV755.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9AnonymousSourceToAinBenchV757.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
           python3 - <<'PY'
           from pathlib import Path
@@ -162,6 +174,24 @@ jobs:
               assert marker in private,marker
           assert 'result.put("L2_normalized_embedding_phone_private"' not in private
           assert 'System.out.println("S9_REID_R752_METADATA_PROJECTION "' in private
+          decoder=Path('ops/c720p/s9-native-security/offline-worker/S9Original4KTimedDecoderV410.java').read_text()
+          for marker in ('info.presentationTimeUs','return new Frame(copy,pts,durationUs)',
+                         'static Bitmap yuvCrop(','roiW*roiH',
+                         'getOutputImage(idx)'):
+              assert marker in decoder,marker
+          for name in ('S9DiagnosticActualDecodedPtsV753.java',
+                       'S9OriginalAnonymousPtsV755.java',
+                       'S9AnonymousSourceToAinBenchV757.java'):
+              actual=Path('ops/c720p/s9-native-security/offline-worker')/name
+              source=actual.read_text()
+              assert 'S9Original4KTimedDecoderV410.decodeCrop' in source,name
+              assert 'automatic_people_folder_assignments",0' in source,name
+              assert 'PersonFolder' not in source,name
+              assert 'pm install' not in source,name
+              assert 'MediaMetadataRetriever' not in source,name
+          assert 'private_vector_values_exported",0' in Path(
+              'ops/c720p/s9-native-security/offline-worker/S9AnonymousSourceToAinBenchV757.java').read_text()
+          print('S9_R753_R755_R757_PHYSICAL_PTS_ROI_COMPILE_STATIC_PASS_NOT_EXECUTED')
           print('S9_PRIVATE_VECTOR_PROJECTION_V752_COMPILE_STATIC_PASS_NOT_EXECUTED')
           print('S9_DIAGNOSTIC_PTS_V751_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
           print('S9_PHONE_4K_V370_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
