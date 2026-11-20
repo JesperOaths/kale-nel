@@ -59,9 +59,23 @@ jobs:
           set -euo pipefail
           folder="$RUNNER_TEMP/s9-ort-validate"
           mkdir -p "$folder/classes"
-          url="https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar"
-          curl -fSsL --retry 2 --max-time 90 "$url" -o "$folder/ort.aar"
-          echo "04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2  $folder/ort.aar" | sha256sum -c -
+          suffix='com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar'
+          expected='04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2'
+          downloaded=0
+          # Maven Central can transiently return 404 through a regional edge.
+          # All mirrors must produce the SAME SHA-pinned official AAR.
+          for base in 'https://repo.maven.apache.org/maven2' \
+                      'https://repo1.maven.org/maven2' \
+                      'https://maven-central.storage-download.googleapis.com/maven2'; do
+            if curl --proto '=https' -fLsS --retry 2 --retry-all-errors \
+                 --connect-timeout 10 --max-time 90 "$base/$suffix" -o "$folder/ort.aar"; then
+              if echo "$expected  $folder/ort.aar" | sha256sum -c -; then
+                downloaded=1
+                break
+              fi
+            fi
+          done
+          test "$downloaded" -eq 1
           unzip -p "$folder/ort.aar" classes.jar > "$folder/ort.jar"
           javac -source 8 -target 8 -cp "$folder/ort.jar" -d "$folder/classes" \
             ops/c720p/s9-native-security/offline-worker/S9OnnxRuntimeWorker.java
