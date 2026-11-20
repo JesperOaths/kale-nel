@@ -1670,3 +1670,96 @@ and open-set gates are still blocking automatic People-folder
 assignment. An unforced live event will be needed to test
 R788's true capture-and-model overlap; no new scheduled
 check or hidden identity process was created.
+
+
+## R790–R791: synthetic on-S9 hubness correction + separate locked score-family calibration protocol — 20 November 2026
+
+### R790: phone-native synthetic math; do not confuse with real-person accuracy
+
+`S9SyntheticHubnessCalibrationV790.java` is an isolated
+phone-compatible Java implementation for synthetic **512D** toy
+vectors only. It computes:
+- **CSLS** at k=3:
+  `2*cos(query,template) - mean_top3_cos(query,all_templates) -
+  mean_top3_cos(template,independent_background_queries)`;
+- **per-template background z normalization**:
+  `(cos(query,template)-mean_background_cos) /
+  max(sd_background_cos,0.05)`;
+- **per-query t normalization** as a score standardization,
+  explicitly testing that it **cannot alter ranking** on
+  its own (a shared positive affine transform);
+- **reciprocal rank fusion**, offset 60, of the CSLS and
+  template z-normalized rankings.
+
+A deliberately contrived, unlabeled synthetic cohort has a
+frequently matched hub at vector index 0 and a rarer reference
+at index 1. Raw cosine ranks the hub first
+(`0.759962 > 0.649967`), while CSLS, per-template z
+normalization and their RRF rank the *rare toy reference*
+first. This demonstrates the **mathematical ability** to
+penalize hubness, not any measured camera/person accuracy.
+
+The exact source passed eight synthetic refusal tests
+(nonfinite/zero/dimension-mismatched vectors, identical
+reference/background cohort vectors, invalid rank fusion).
+The Java class was compiled to a standalone Android DEX
+(SHA-256 `0fa575fa2cfe7105f0cea1f6aca47f4697ea9e7ae4b753d0493dc20b0c2e2b24`)
+and independently executed on the **S9+** at low OS priority,
+with the same pass result. The camera remained
+**30.01FPS, original PID 31276, zero drops**.
+No real embeddings, person folders, labels, videos, images,
+gallery or production automatic matching were accessed.
+The synthetic-only Java test is included in the existing
+GitHub CI.
+
+### R791: separate pre-frozen calibration arm; primary R769 stays immutable
+
+A serious domain mismatch was caught before any promotion:
+the original **R769** protocol is frozen to raw cosine
+`scoring_metric=cosine_top1_normalized_feature_pair`, with
+a score range **[-1,1]**. CSLS has a mathematical range
+**[-4,4]**, per-template z-normalization with 0.05 SD
+floor has range **[-40,40]**, and RRF yields
+`(0, 2/61]`. A cosine threshold **cannot** be reused
+for any new family, even if they sometimes agree on rank.
+
+`r791_shadow_score_family_predeclaration.py` created an
+**independent**, exclusive-create 0600 immutable methods
+file on C720P, before any new post-R760-cutoff source
+appeared in the SHA-backed anonymous archive. It records
+three *separate shadow* score families, exact formulas,
+numeric domains, the original R769 method SHA and model
+SHA, and explicit source/person/day/outfit/cohort/test
+disjointness requirements. The existing R769 method file
+was **NOT** modified.
+
+Original locked cosine-method SHA:
+`f9f8a840a8131e05d43d7ef9a2c0589f8c83ef1d740d7691dff132e6fa356d4b`.
+
+New separately frozen shadow-method SHA:
+`e58b5e17cbb5ab1b32ad62e9b8ea53081cefbe5509f3731e7024add7c3612375`.
+
+With three potential familywise unknown-person decisions,
+the predeclaration conservatively uses **Bonferroni**
+`alpha_per_branch=0.005/3`, requiring at least
+**599 genuinely independent unknown calibration episode
+bags** for a finite conformal-like upper threshold
+per arm under exchangeability assumptions, versus the
+original R769 single-cosine-method **199**. It additionally
+forbids selecting the best method from the final holdout
+without a separate preregistered independent selection
+stage or proper multiplicity adjustment. The final
+unknown-person test cohort requirements remain
+independent and unfulfilled.
+
+**10 synthetic invalid-score/underpowered-threshold
+and method-mutation cases passed**. The synthetic self-test
+was made portable to existing CI; real verification
+checks both private frozen method digests and original
+cohort SHA on owner C720P.
+
+Neither method has a **real-person numeric rejection
+threshold**, actual independent person ground truth, nor
+permission for auto People-folder filing. The R759
+recognition release remains **BLOCKED**. No scheduled
+task, recording deletion or live S9 recorder change.
