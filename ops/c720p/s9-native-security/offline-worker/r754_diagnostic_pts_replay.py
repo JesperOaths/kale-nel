@@ -157,7 +157,7 @@ def self_test():
         (1,"physical_output_frame_pts_us",2061822,"same_seek_different_decoded_pts"),
         (1,"argb8888_pixel_sha256","3"*64,"same_seek_different_pixel_digest"),
         (2,"argb8888_pixel_sha256",base["argb8888_pixel_sha256"],"different_seek_duplicate_roi_pixels"),
-        (2,"physical_output_frame_pts_us",2031822,"different_seek_nonmonotonic_actual_pts")
+        (2,"physical_output_frame_pts_us",2031822,"decoded_output_pts_invalid")
     ):
         altered=[dict(x) for x in rows]
         altered[idx][key]=bad
