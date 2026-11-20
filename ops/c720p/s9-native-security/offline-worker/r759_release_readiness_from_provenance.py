@@ -22,6 +22,7 @@ import r758_capture_day_leakage_audit as r758
 import s9_reid_open_set_release_gate_v743 as r743
 import r760_freeze_blind_capture_cohort as r760
 import r763_research_quality_selection as r763
+import r769_predeclared_open_set_protocol as r769
 
 # Candidate R744 AIN x0.25 model does NOT equal the older TFLite model
 # that produced the existing 98 feature sidecars. Both happen to emit
@@ -413,6 +414,13 @@ def run():
     day_audit=r758.audit_rows(rows,catalog,summary,ledger,now)
     clean_mask=r763.select(rows,catalog,ledger,summary,now)
     frozen_cohort=r760.verify()
+    frozen_method=r769.verify()
+    need(frozen_method["source_freeze_epoch_ms"]==
+         frozen_cohort["cutoff_epoch_ms"] and
+         r769.CANDIDATE_SHA==CANDIDATE_ONNX_SHA and
+         frozen_method["real_person_threshold_already_calibrated"] is False and
+         frozen_method["automatic_people_filing_authorized"] is False,
+         "locked_future_test_method_cannot_prove_person_threshold")
     need(clean_mask["rejected_reference_crop_rows"]==
          integrity["reference_rows_failing_independent_geometry"],
          "research_quality_selector_does_not_exclude_all_bad_references")
@@ -439,6 +447,12 @@ def run():
             frozen_cohort["historical_exploratory_candidates"],
         "historical_candidates_are_valid_identity_accuracy_trial":False,
         "future_prospective_identity_trials_available_at_cutoff":0,
+        "prospective_open_set_method_frozen":True,
+        "prospective_open_set_method_sha256":
+            frozen_method["private_method_commitment_sha256"],
+        "future_unknown_calibration_episode_minimum":
+            frozen_method["future_unknown_calibration_bags_minimum"],
+        "real_person_score_threshold_currently_calibrated":False,
         "production_automatic_people_filing_enabled":False
     })
     print(json.dumps(output,sort_keys=True,indent=2))
