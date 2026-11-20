@@ -331,8 +331,8 @@ def live_once(seconds:int):
             current.get("recorded")==old["recorded"]+1):
             finish=current
             break
-        if current.get("failed",0)>old["failed"] or
-           current.get("preroll_dropped_frames",0)>old["preroll_dropped_frames"]:
+        if (current.get("failed",0)>old["failed"] or
+            current.get("preroll_dropped_frames",0)>old["preroll_dropped_frames"]):
             break
         time.sleep(.5)
     if finish is None:
