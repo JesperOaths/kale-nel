@@ -742,3 +742,21 @@ deletion, no refreshed person labels, no population of an identity
 gallery, no automatic People-folder filing and no newly created timer
 or ChatGPT scheduled task. This stage did not attempt to rerun or
 circumvent the earlier safety-denied identity-gallery builder.
+
+
+### R758 supplemental anonymous archive date-capacity scan
+
+Without reading any images, names, labels, embedding values or individual
+person descriptors, a metadata-only scan of the current original archive
+counted **756** recordings from **37** distinct local capture dates.
+The existing 39 research-reference sources occupy **17** dates; the
+remaining **20** capture dates include **412** other original recordings
+and **344** recordings occur on reference dates.
+
+The 412 recordings are only *potential exploratory source capacity*;
+they have NOT been screened for actually containing a person, correct
+person-count/crop geometry, owner-verified known/unknown truth, prior
+exposure to development/testing, clothing/outfit independence or
+prospective threshold predeclaration. They must never be silently
+promoted to independent prospective FAR or recognition-accuracy samples.
+No source files were copied, added to a gallery, or identity-labelled.
