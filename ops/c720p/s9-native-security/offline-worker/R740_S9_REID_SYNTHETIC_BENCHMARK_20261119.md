@@ -1413,3 +1413,71 @@ hardware codec backpressure accounting, a reliable independent
 rollback and completed 4K video event checks. The independent
 person recognition R759 release gate remains blocked;
 automatic person-folder filing is OFF.
+
+
+### R783: lossless synthetic YUV buffer-copy optimization staged, no new live camera build
+
+The current independent `GardenPreRoll.copyPlanes` repeatedly
+wrote every output YUV pixel using a bounds-checked indexed
+`ByteBuffer.put(index,value)` call. At 640×480 this incurs
+over 300,000 separate Java-level Y-plane writes per candidate
+preroll frame, potentially increasing `preRoll.busy()` skip
+frequency at a 30-FPS sensor feed.
+
+`GardenPreRollBulkCopyV783.java` implements a conservative
+fast path for **strictly packed** source AND destination
+pixel strides of 1: at most 480 direct row bulk copies for
+a 640×480 Y-plane. It uses a duplicate destination buffer
+so the source plane's original ByteBuffer position/limit
+are unchanged. For padded or interleaved UV planes,
+the original per-pixel addressing is preserved. The code
+prechecks source and destination region bounds before
+writing any pixels, and never reads user recordings.
+
+- **Six** deterministic packed, padded and interleaved
+  synthetic input-plane equivalence tests passed;
+  **two** out-of-bounds refusals passed.
+- On C720P host synthetic 40-frame Y-plane microbench,
+  the new copy ran at **11.616ms vs 108.854ms** baseline
+  (~9.37× speedup), and in an independent follow-up at
+  **15.046ms vs 71.041ms** (~4.72×). These are total
+  40-copy runtimes, not per-frame measured recordings.
+- The helper was wired into the **draft source-only**
+  `GardenPreRoll.java` path and registered in existing
+  Android camera CI; the R773 trial contract also verifies
+  the new helper call.
+- An isolated synthetically generated phone DEX was
+  prepared with SHA-256
+  `5028ac90a12a745c810baf1bbe7bc9d29306f39849a60601993daf9b45c27ba9`.
+  **No on-phone copy benchmark was run** because the
+  independent capture-priority guard refused model/worker
+  admission after camera app restart, rather than silently
+  bypassing it.
+- This synthetic result does NOT prove a physical
+  30FPS saved preroll or a new native4K event under load.
+  The production S9 APK is still the original verified
+  SHA `9aca447ce5e3e34a…`.
+
+### R784: distinguish post-APK-restart missing 4K diagnostic from capture failures
+
+After verified restoration of the exact old camera APK,
+`continuous_4k_last_result` returned `not_tested`
+because the one-shot diagnostic state resets on a process
+restart. The sensor and legacy AVC preroll were physically
+healthy (~30.02 FPS, ~7sec buffered, zero reported drops).
+However the R742 admission guard correctly refused the
+research helper, since a freshly completed native 4K event
+has NOT yet been verified in this process session.
+
+R742 was narrowly updated to return the explicit reason
+`post_restart_4k_event_diagnostic_not_yet_attested`
+for this case, while **still returning
+`REFUSE_MODEL_ADMISSION`**. Synthetic tests now pass 25
+refusal/continuity cases; actual two-second read-only
+observation confirmed 63 advancing sensor frames with this
+single post-restart refusal. No heavy onphone research task,
+Camera2 session or People-folder assignment was started.
+
+This separates a normal diagnostic reset from a genuine
+codec failure WITHOUT representing either as verified
+native-4K under-model-load readiness.
