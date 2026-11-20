@@ -760,3 +760,155 @@ exposure to development/testing, clothing/outfit independence or
 prospective threshold predeclaration. They must never be silently
 promoted to independent prospective FAR or recognition-accuracy samples.
 No source files were copied, added to a gallery, or identity-labelled.
+
+
+## R760–R763: protected evaluation freeze, physical 4K event timing and complete S9 source rehash, 20 Nov 2026
+
+### R760: immutable retrospective-vs-prospective boundary
+
+`r760_freeze_blind_capture_cohort.py` (three synthetic checks passed)
+froze an anonymous source-SHA **historical exploratory candidate set**
+in the owner-only `0600` research file
+`staging/recognition-r744-ain-small-model-assets-20261120/r760_anonymous_cohort_freeze.json`.
+The file can only be created once; repeated `--verify` refuses an
+incomplete, inconsistent or mutable replacement.
+
+- Freeze UTC: **2026-11-20 00:52:15.959**, cutoff epoch ms
+  **1795135935959**.
+- Original catalog: **756** files. Prior research originals
+  excluded: **71**, with a strict embargo on all 17 existing reference
+  capture dates. Historical exploratory candidates: **406** across
+  **19** remaining local dates.
+- Candidate existing ledger ages *at freeze*: **263** checked within
+  14 days, **143** older. (These are historical and are **not**
+  independent known/unknown person identities or prospective trials.)
+- Private freeze manifest SHA-256:
+  `7a5d9952d97519c3de162bf23f106b0818bb92b56bad68a30c4d03fc8828ccea`.
+- No person images, identities, pixel crops, embeddings, video bytes,
+  manual links or People-folder assignments were touched.
+- To become *prospective*, a new original source must be captured
+  strictly **after** this time boundary, excluded from prior model
+  development, source-verified and independently labelled. Nothing in
+  the frozen historical pool is silently promoted.
+
+### R761: on-S9 physical native-4K event sample timing
+
+`S9OriginalNative4KEventTimingV761.java` reads ONLY source SHA and
+`MediaExtractor`-provided encoded video sample PTS from a
+SHA-revision-pinned **completed** 3840x2160 H.264 motion MP4.
+It never decodes frames or reads image/identity data. The camera
+process remains untouched. This is a separate on-phone research
+`app_process`, not an APK install or new service.
+
+Six most recent source-verified native 4K recordings were checked.
+All had **0** nonmonotonic PTS and a **33.312ms** median sample interval.
+Full-file average encoded FPS ranged **29.705–29.934 FPS**. However,
+the initial sample-to-sample interval in *every* file ranged
+**106.355–153.311ms**, always at video sample index **0**.
+The original strict whole-event gap-free test therefore refused **6/6**.
+
+A follow-up measurement explicitly separated first-ten-sample startup
+from the steady portion (the startup gap is **not** erased or
+misrepresented):
+- **6/6** steady portions passed, with independently measured
+  **30.015 FPS** across all six;
+- **0** steady-state intervals >100ms;
+- maximum steady-state interval **33.334–33.367ms**;
+- **6/6** whole-file strict no-gap checks still **fail** due to the
+  repeatable first-sample startup gap.
+- All original checksums were verified on S9 before and after MP4
+  metadata inspection. Camera live FPS stayed ~30.01–30.02, stable
+  process PID, 0 new preroll drops.
+- The 4K diagnostic capture control reports
+  `preroll_diagnostic_used=true` in the current live CameraService
+  instance. Resetting/restarting the live camera to permit another
+  diagnostic capture was **not attempted**. This stage therefore does
+  **NOT** prove a freshly completed 4K event file while AIN x0.25
+  inference is concurrent with its actual camera capture.
+- The recorder's repeatable 106–153ms *first-frame gap* remains a
+  distinct timing defect requiring a future separately guarded
+  camera/encoder-start investigation; the steady encoder rate is not
+  the issue.
+
+Source-only research Java SHA:
+`c74f06e5aed665426a5c656602896496277cdf4bcf9dd3401a4d6c5f6761ebce`
+for the final staged standalone DEX. No Camera2 APK changes.
+
+### R762: COMPLETE research-source SHA currency refresh on the S9
+
+`r762_reverify_reid_original_ledger.py` is a bounded one-shot
+research-source-only extension to the **existing** independent
+`s9-original-hash-ledger-v1.json` format. Before any write it
+created an immutable `0600` backup of that **one changed file**:
+`state/s9-original-hash-ledger-v1.json.before-r762-20261120`,
+SHA prefix `4ad060e55347c9c1`.
+
+The script shares the original hash-ledger writer's fcntl lock and
+atomically updates only successful version/SHA checks, using bounded
+batches of at most 8, nice-19 SHA computation **on S9**, phone-status
+polling and instant capture-priority refusal. It copies **0** video
+bytes to C720P, updates no user labels or People folders, and
+never creates a recurring task.
+
+Actual progression: **64/64** previously overdue research source
+recordings were successfully rehashed, each matching its exact
+catalog source digest; **0 mismatches**. The earlier **7** already
+current sources remain verified. A final dry-run and independent R758
+audit both confirmed:
+
+- **71/71** source records SHA-verified within 14 days.
+- **0** older-than-14-day source checks.
+- Original catalog remains **756** current recordings, original
+  media files unchanged.
+- No camera restart, priority interruption, or increase in reported
+  AVC preroll drop counters. Camera stayed ~30.02 FPS.
+- Original ledger is backed up, original format preserved and
+  private permissions retained.
+
+This fully resolves the independent source-*byte* currency blocker
+for the **existing 71-source research split**. It does **not**
+verify the specific decoded-frame PTS of 99 historical crop plan
+rows, independent person identities or outfit disjointness.
+
+### R763: strict research-only quality mask
+
+`r763_research_quality_selection.py` performs one-shot **metadata
+only** selection with a conservative height:width range 1.25–3.6
+AND the existing strict-upright quality flag, joining source hashes to
+the newly current ledger and exact catalog version. Five synthetic
+adversarial tests pass; no identities or vector scores processed.
+
+Of the **98 unique existing research crop rows**:
+- **39** distinct reference crops, of which **5** are excluded,
+  leaving **34** reference crops and 34 original sources.
+- 34 quality-eligible reference sources occur on **15** local dates.
+- **59** geometry-eligible holdout crops, of which only **9** from
+  **6 source recordings across 3 dates** are date-disjoint from
+  all quality-eligible reference sources.
+- Research-only selection SHA-256 commitment:
+  `d7fff3cfecc0006055d3027559327ffb575d4e564b2bc388e2363a4dc112bbfa`.
+- This is an eligibility mask, not a person-labelled identity gallery;
+  excluded references remain preserved in original historical data.
+- Selected historical crops **still have no independently attested
+  decoded-frame PTS**. The prior batch manifest schema contains source
+  hashes, crop hashes, size, role, ratio and track-id but NO original
+  pixel bounding coordinates or physical decoder PTS. A source/crop
+  timing relation cannot be retroactively invented from those fields.
+
+R759 was extended to verify that R763 excludes all five bad
+reference rows and reproduces R758's nine date-exclusive holdout
+rows, and to verify that the R760 frozen set remains historical only.
+The real post-R762 release evidence status is
+**`RECOGNITION_RELEASE_BLOCKED` with 8 remaining blocks**:
+capture-day overlap in the historic raw split; poor reference crop
+quality still present in raw historic sources (but filtered from
+research selection); missing actual frame PTS; missing independently
+verified known/outfit truth; missing prospectively independent
+unknown-person truth and FAR; no completed event 4K output under
+concurrent model load; no independent predeclared threshold test;
+and no real person-accuracy evaluation of the *new* AIN x0.25 model.
+
+**Production unchanged:** automatic People-folder filing remains OFF;
+the CI/test evidence is about provenance and model compute
+compatibility only. The earlier owner-labelled identity gallery
+builder denial was not rerun or circumvented.
