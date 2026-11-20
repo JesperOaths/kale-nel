@@ -136,8 +136,11 @@ jobs:
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
           javac -source 8 -target 8 -cp "$folder/ort.jar" -d "$folder/classes" \
-            "$area/S9ReidSyntheticProbeV740.java"
+            "$area/S9ReidSyntheticProbeV740.java" \
+            "$area/S9SyntheticHubnessCalibrationV790.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9ReidSyntheticProbeV740.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9SyntheticHubnessCalibrationV790.class"
+          java -cp "$folder/classes" nl.kalenel.s9offline.S9SyntheticHubnessCalibrationV790 --synthetic-only-self-test
           echo 'S9_REID_GUARD_CI_SOURCE_SYNTHETIC_PASS'
 
       - name: Compile source-only phone-first original-4K probe (never run Android/inference)
