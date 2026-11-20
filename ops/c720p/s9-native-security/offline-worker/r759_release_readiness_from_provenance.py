@@ -353,6 +353,34 @@ def test():
         aa=dict(a);bb=dict(b);(aa if root=="a" else bb)[k]=v
         try:readiness(aa,bb);raise AssertionError("invalid_evidence_accepted")
         except ValueError:refusal_count+=1
+    historical_proof={
+        "schema":"s9_source_verified_recognition_quality_gate_v1",
+        "native_original_count":756,
+        "source_model_originals_sha_verified":True,
+        "assessable_leave_one_original_out":9,
+        "deployed_holdout_correct":1,
+        "read_only_deployment_gates":{"automatic_people_filing_authorized":False},
+        "independent_known_positive_validated":False,
+        "independent_unknown_FAR_validated":False,
+        "unknown_person_human_labels":0
+    }
+    stale=quality_snapshot_summary(historical_proof,758)
+    need(stale["unincorporated_post_quality_report_originals"]==2 and
+         stale["historical_quality_snapshot_current_to_archive"] is False and
+         stale["historical_accuracy_descriptive_only"]==0.1111 and
+         stale["production_people_filing_authorized_by_live_quality_gate"] is False,
+         "stale_historical_snapshot_must_not_be_freshened_or_released")
+    fresh=quality_snapshot_summary(historical_proof,756)
+    need(fresh["historical_quality_snapshot_current_to_archive"] is True,
+         "exact_catalog_snapshot_not_validated")
+    try:quality_snapshot_summary(historical_proof,755)
+    except ValueError:pass
+    else:raise AssertionError("quality_snapshot_count_ahead_of_catalog_accepted")
+    try:quality_snapshot_summary(
+        dict(historical_proof,
+             independent_unknown_FAR_validated=True),758)
+    except ValueError:pass
+    else:raise AssertionError("stale_snapshot_false_identity_proof_accepted")
     print(json.dumps({
         "status":"R759_RELEASE_READINESS_SYNTHETIC_PASS",
         "adversarial_evidence_cases_rejected":refusal_count,
@@ -360,14 +388,22 @@ def test():
         "automatic_filing_authorized":False
     },sort_keys=True))
 
-def quality_summary(metadata, days):
-    """Read ONLY approved aggregate keys of the existing live quality gate."""
-    proof=r758.load_json(QUALITY_METRICS)
+def quality_snapshot_summary(proof, current_count):
+    """Treat a historical quality report as a historical SNAPSHOT, not 758 live trials.
+
+    New 4K originals may arrive after the original immutable quality report.
+    Exact equality is not a defensible requirement for a descriptive,
+    older report, but a stale report may NEVER authorize recognition.
+    If an old count exceeds the live catalog, source provenance is invalid
+    and this read-only audit still fails closed.
+    """
     need(proof.get("schema")=="s9_source_verified_recognition_quality_gate_v1",
          "unrecognized_quality_gate_report")
-    need(proof.get("native_original_count")==days["current_catalog_originals"] and
+    old=proof.get("native_original_count")
+    need(type(old) is int and old>=1 and
+         type(current_count) is int and current_count>=old and
          proof.get("source_model_originals_sha_verified") is True,
-         "quality_gate_does_not_match_current_archive")
+         "quality_report_original_count_or_source_verification_invalid")
     total=proof.get("assessable_leave_one_original_out")
     correct=proof.get("deployed_holdout_correct")
     need(type(total) is int and total>=0 and
@@ -385,9 +421,19 @@ def quality_summary(metadata, days):
         "historical_correct_assessable_recordings":correct,
         "historical_accuracy_descriptive_only":round(correct/total,4) if total else None,
         "historical_trial_is_not_independent_prospective_evidence":True,
+        "historical_quality_report_original_count":old,
+        "current_archive_original_count":current_count,
+        "unincorporated_post_quality_report_originals":current_count-old,
+        "historical_quality_snapshot_current_to_archive":old==current_count,
+        "historical_quality_report_does_not_include_new_originals":old<current_count,
         "independent_unknown_person_ground_truth_count":0,
-        "production_people_filing_authorized_by_live_quality_gate":False
+        "production_people_filing_authorized_by_live_quality_gate":False,
     }
+
+def quality_summary(metadata, days):
+    """Read ONLY approved aggregate keys of the existing live quality gate."""
+    proof=r758.load_json(QUALITY_METRICS)
+    return quality_snapshot_summary(proof,days["current_catalog_originals"])
 
 def run():
     now=time.time()
@@ -439,7 +485,25 @@ def run():
          frozen_cohort["prospective_independent_recordings_observed_at_cutoff"]==0,
          "old_recordings_must_not_be_promoted_to_prospective_labels")
     output=readiness(integrity,day_audit,clean_mask)
-    output.update(quality_summary(integrity,day_audit))
+    historic=quality_summary(integrity,day_audit)
+    output.update(historic)
+    if not historic["historical_quality_snapshot_current_to_archive"]:
+        # The old report remains useful as DESCRIPTIVE historical data.
+        # It cannot claim the two newly captured recordings were evaluated.
+        # Refuse recognition release without editing the existing report,
+        # mixing new originals into its 9 assessable bags or making up labels.
+        output["blockers"].append({
+            "gate":"HISTORICAL_QUALITY_SNAPSHOT_STALE_AFTER_NEW_ORIGINALS",
+            "observed":{
+                "quality_snapshot_originals":historic["historical_quality_report_original_count"],
+                "current_catalog_originals":historic["current_archive_original_count"],
+                "unincorporated_originals":historic["unincorporated_post_quality_report_originals"],
+                "new_originals_prospectively_identity_verified":0
+            }})
+        output["blocker_count"]=len(output["blockers"])
+        need(output["automatic_filing_authorized"] is False and
+             output["status"]=="RECOGNITION_RELEASE_BLOCKED",
+             "new_originals_must_not_implicitly_release_filing")
     output.update({
         "research_selection_filter_verified":True,
         "excluded_bad_reference_crops_from_research_selection":
