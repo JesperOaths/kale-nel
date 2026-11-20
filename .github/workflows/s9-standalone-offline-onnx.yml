@@ -116,7 +116,8 @@ jobs:
             "$area/r786_post_restart_4k_diagnostic_attestation.py" \
             "$area/r788_natural_4k_model_overlap_once.py" \
             "$area/r791_shadow_score_family_predeclaration.py" \
-            "$area/r792_native_4k_startup_gap_audit.py"
+            "$area/r792_native_4k_startup_gap_audit.py" \
+            "$area/r794_shadow_rank_only_rejection_amendment.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
@@ -136,15 +137,19 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r788_natural_4k_model_overlap_once.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r791_shadow_score_family_predeclaration.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r792_native_4k_startup_gap_audit.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r794_shadow_rank_only_rejection_amendment.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
           javac -source 8 -target 8 -cp "$folder/ort.jar" -d "$folder/classes" \
             "$area/S9ReidSyntheticProbeV740.java" \
-            "$area/S9SyntheticHubnessCalibrationV790.java"
+            "$area/S9SyntheticHubnessCalibrationV790.java" \
+            "$area/S9SyntheticRankFusionUnknownGuardV793.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9ReidSyntheticProbeV740.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9SyntheticHubnessCalibrationV790.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9SyntheticRankFusionUnknownGuardV793.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9SyntheticHubnessCalibrationV790 --synthetic-only-self-test
+          java -cp "$folder/classes" nl.kalenel.s9offline.S9SyntheticRankFusionUnknownGuardV793 --synthetic-only
           echo 'S9_REID_GUARD_CI_SOURCE_SYNTHETIC_PASS'
 
       - name: Compile source-only phone-first original-4K probe (never run Android/inference)
