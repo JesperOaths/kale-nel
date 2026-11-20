@@ -117,9 +117,11 @@ jobs:
             "$area/S9Original4KTimedDecoderV371.java" \
             "$area/S9StandaloneDeadlineV374.java" \
             "$area/S9Original4KGapAuditV370.java" \
-            "$area/S9DiagnosticPtsInspectorV751.java"
+            "$area/S9DiagnosticPtsInspectorV751.java" \
+            "$area/S9ResearchVectorMetadataV752.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPtsInspectorV751.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9ResearchVectorMetadataV752.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
           python3 - <<'PY'
           from pathlib import Path
@@ -152,6 +154,15 @@ jobs:
                             'CameraService.java','getOutputImage(',
                             'BitmapFactory','MediaMetadataRetriever'):
               assert forbidden not in pts,forbidden
+          private=Path('ops/c720p/s9-native-security/offline-worker/S9ResearchVectorMetadataV752.java').read_text()
+          for marker in ('L2_normalized_embedding_phone_private',
+                         'vector_l2_norm_valid_on_s9','vector_component_count_on_s9',
+                         'raw_vector_elements_returned', 'identity_labels_read",false',
+                         'images_read",0','videos_decoded",0'):
+              assert marker in private,marker
+          assert 'result.put("L2_normalized_embedding_phone_private"' not in private
+          assert 'System.out.println("S9_REID_R752_METADATA_PROJECTION "' in private
+          print('S9_PRIVATE_VECTOR_PROJECTION_V752_COMPILE_STATIC_PASS_NOT_EXECUTED')
           print('S9_DIAGNOSTIC_PTS_V751_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
           print('S9_PHONE_4K_V370_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
           PY
