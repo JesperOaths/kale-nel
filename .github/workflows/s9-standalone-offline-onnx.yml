@@ -119,7 +119,9 @@ jobs:
             "$area/r792_native_4k_startup_gap_audit.py" \
             "$area/r794_shadow_rank_only_rejection_amendment.py" \
             "$area/r796_android_package_stop_provenance.py" \
-            "$area/r797_independent_truth_evidence_audit.py"
+            "$area/r797_independent_truth_evidence_audit.py" \
+            "$area/r798_direct_natural_4k_single_event_probe.py" \
+            "$area/r799_reference_day_disjoint_source_pool.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
@@ -142,6 +144,8 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r794_shadow_rank_only_rejection_amendment.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r796_android_package_stop_provenance.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r797_independent_truth_evidence_audit.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r798_direct_natural_4k_single_event_probe.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r799_reference_day_disjoint_source_pool.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
