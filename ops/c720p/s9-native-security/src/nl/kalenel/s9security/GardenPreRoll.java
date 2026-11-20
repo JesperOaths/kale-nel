@@ -26,6 +26,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class GardenPreRoll {
  static final String VERSION="s9_on_phone_avc_memory_ring_keyframe_5s_v4";
  static final int WIDTH=640,HEIGHT=480,FPS=24,BIT_RATE=1400000;
+ // The 30-FPS trial is explicit owner opt-in, never silently activated.
+ // Default constructor preserves the deployed MediaCodec configuration.
+ static final int OPT_IN_FPS=30;
+ private final int encoderConfiguredFps;
+ public GardenPreRoll(){this(false);}
+ public GardenPreRoll(boolean explicit30fpsTrial){
+  encoderConfiguredFps=explicit30fpsTrial?OPT_IN_FPS:FPS;
+ }
+ public int configuredEncoderFps(){return encoderConfiguredFps;}
  static final long RING_US=7000000L,DESIRED_US=5000000L,MIN_US=4400000L;
  private static final int MAX_BYTES=11000000;
  private final Object lock=new Object();
@@ -66,7 +75,7 @@ public final class GardenPreRoll {
   if(codec!=null)return;
   MediaFormat format=MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC,WIDTH,HEIGHT);
   format.setInteger(MediaFormat.KEY_BIT_RATE,BIT_RATE);
-  format.setInteger(MediaFormat.KEY_FRAME_RATE,FPS);
+  format.setInteger(MediaFormat.KEY_FRAME_RATE,encoderConfiguredFps);
   format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,1);
   format.setInteger(MediaFormat.KEY_COLOR_FORMAT,MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
   codec=MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
