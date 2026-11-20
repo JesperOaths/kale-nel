@@ -114,7 +114,8 @@ jobs:
             "$area/r773_preroll_30fps_trial_contract.py" \
             "$area/r779_installed_camera_abi_coverage_gate.py" \
             "$area/r786_post_restart_4k_diagnostic_attestation.py" \
-            "$area/r788_natural_4k_model_overlap_once.py"
+            "$area/r788_natural_4k_model_overlap_once.py" \
+            "$area/r791_shadow_score_family_predeclaration.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
@@ -132,6 +133,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r779_installed_camera_abi_coverage_gate.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r786_post_restart_4k_diagnostic_attestation.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r788_natural_4k_model_overlap_once.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r791_shadow_score_family_predeclaration.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
