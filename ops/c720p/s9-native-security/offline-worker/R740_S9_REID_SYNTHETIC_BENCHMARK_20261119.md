@@ -1285,3 +1285,131 @@ No 4K event was forced or overwritten. No on-phone model was run
 during original video capture. The draft 30-FPS preroll trial
 still has **not** been installed; tests only establish frame-offer
 cadence capacity and safe defaults.
+
+
+## R777–R782: exact-installed camera DEX preservation, signed off-device trial and rollback — 20 Nov 2026
+
+The currently installed native camera APK was independently backed up with
+byte-for-byte SHA-256 **9aca447ce5e3e34a2d8360f9c40d9c4631c130b7fdc50fda9aeac931e9ad77da**
+and owner release certificate **0ca669482a7b5bc4698eae4ba43897b913177f87907418a8231b95e830675bb5**.
+This backup is privately permission-0600 on C720P, NEVER in this GitHub PR.
+Existing 4K original videos, identity folders, person labels and camera APK
+source/signing secret were not uploaded.
+
+### R777: unsafe full-source APK rebuild positively refused
+
+All 23 GitHub camera Java sources were pinned by Git blob SHA-1 and
+successfully compiled in an isolated offline workspace. The generated
+Android DEX was compared with the exact installed binary.
+
+| Structural check | Installed live APK | Java source rebuild |
+| --- | ---: | ---: |
+| Complete DEX class descriptors | **166** | **160** |
+| Camera recovery fields | All installed | Missing **6** |
+| Missing installed class descriptors | None | **11** |
+
+Missing classes include `ContinuousAacRing`,
+`EncoderProgressPolicy`, `GardenBaseTrackGate` and synthetic
+lambda helpers. The experimental GitHub `CameraService.java`
+also omits important original recovery fields
+(`cameraOpenGeneration`, `cameraRecoveryGeneration`,
+`cameraRecoveryQueued`, `cameraSessionGeneration`,
+`continuous4KFence`, `retiring4K`).
+
+The new `r779_installed_camera_abi_coverage_gate.py` independently
+refuses such a camera APK replacement and runs synthetic fail-closed
+tests in the **existing CI**. The original live APK was NEVER replaced
+with the incomplete rebuild.
+
+### R780–R781: full original bytecode round-trip and minimally changed trial
+
+The official `baksmali/smali` **3.0.10** upstream release jars
+were independently SHA-256 verified against the published Github
+release asset checksums. The original installed APK's primary and
+secondary DEX were disassembled into **all 166 original class
+definitions**. Both were reassembled without altering source code:
+R779 reported `CLASS_AND_RECOVERY_FIELD_PRESERVATION_PASS`,
+with 166/166 classes, 0 duplicates and all six recovery fields.
+
+An isolated **experimental** primary DEX changed just three
+individual numeric literals relative to the unmodified reassembly:
+- `CameraService` preroll producer frame-admission interval
+  **44ms → 30ms**;
+- `GardenPreRoll` MediaCodec H.264 declared frame-rate
+  **24 → 30 FPS**;
+- corresponding static nominal FPS **24 → 30**.
+
+The assembled output was byte-compared to the unchanged assembly:
+**exactly 3 changed DEX payload bytes**, plus DEX signature/Adler
+checksum header bytes. The original secondary DEX, including its
+continuous-4K recovery/audio ring classes, is **bit-for-bit
+identical** to the installed version.
+
+A locally signed research APK was created from the exact original
+Android APK, with all non-DEX media libraries, model assets,
+AndroidManifest and SDK/package metadata unchanged. The only ZIP
+payload differences are primary DEX and regenerated APK signer
+metadata. Signer verified to match exact production certificate,
+with v2/v3 signatures passing Android verification. Local signed
+trial SHA-256:
+`ad864f5ee07d606363848f0bcd1a2bf736ff70821d7d037fde060c66b0505c33`.
+
+**Important distinction**: this 3-byte surgical APK would change
+preroll cadence every time it is installed; it does NOT have R773's
+separate false-by-default pref or 40°C fallback. It is a bounded
+hardware experiment, NOT the release-approved production candidate.
+
+### R782: brief actual hardware run, partial result and manual VERIFIED rollback
+
+A one-shot local script backed up the exact original, checked
+camera `mode=watching`, real sensor ~30.02FPS and cool temperature,
+then temporarily installed the matching-signer experimental 3-byte
+APK and relaunched the camera. During the first four partial
+observations the source recorder stayed **30.01–30.02FPS** and
+~**32.7°C**, and old preroll reported **0 drops**.
+
+Observed on-phone compressed preroll ring:
+- **60** buffered frames across **2,303ms**;
+- **101** buffered frames across **3,808ms**;
+- **138** buffered frames across **5,109ms**;
+- **187** buffered frames across **6,759ms**.
+
+The last buffered span corresponds to **(187−1)/6.759 =
+27.519 FPS**, significantly higher than the baseline ~15FPS,
+but **below a proven sustained 30FPS target**. This short
+partial measurement does not validate encoder backpressure,
+steady event recording or a production rollout.
+
+**Execution failure disclosed explicitly**: the script installed
+a `signal.alarm(29)` watchdog without registering a Python
+`SIGALRM` handler. The default handler **terminated the
+test process (exit 142) after the fourth sample**, before the
+`finally` rollback code could execute. The failure was a
+test-script control error, not evidence that Camera2 itself
+crashed. This is NOT described as successful automatic rollback.
+
+The assistant immediately executed a **separate** original APK
+reinstall, followed by CameraActivity launch, source SHA check
+and independent healthy camera polling. Final status:
+- installed APK SHA **exactly the pinned original**;
+- `watching`, **30.02FPS** sensor, **night mode ON**, no
+  capture failure, preroll ready, **0** preroll drops;
+- restored pre-event encoder rate measured ~**14.03FPS**
+  across a separate four-second post-restoration sample;
+- original clip files and labels unchanged; no autonomous
+  People-folder filing.
+
+The script's watchdog behavior was corrected **locally in
+staging** to register a Python exception-raising SIGALRM
+handler and synthetic self-test. A private JSON incident
+receipt `r782_transient_physical_preroll_trial.json`
+preserves the four observed samples, manual restoration
+and the failed test's limitations. **There has been NO
+second live installation after this error**.
+
+The experimental APK is NOT installed now. An opt-in safe
+production patch still requires the exact deployed codebase,
+hardware codec backpressure accounting, a reliable independent
+rollback and completed 4K video event checks. The independent
+person recognition R759 release gate remains blocked;
+automatic person-folder filing is OFF.
