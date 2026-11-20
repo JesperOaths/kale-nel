@@ -267,7 +267,11 @@ jobs:
           for marker in ('S9CropSourceProvenanceV768.transcript(',
                          'physical_source_to_input_transcript_sha256',
                          'source_to_input_transcript_is_signed_attestation",false',
-                         'phone_prematch_person_scoring_authorized'):
+                         'phone_prematch_person_scoring_authorized',
+                         'MODEL_X05_SHA',
+                         'osnet_ain_x0_5_r744.onnx',
+                         '--research-anonymous-source-x05',
+                         'osnet_ain_model_variant'):
               assert marker in anonymous,marker
           native=Path('ops/c720p/s9-native-security/offline-worker/S9OriginalNative4KEventTimingV761.java').read_text()
           for marker in ('first_eight_video_sample_pts_us',
