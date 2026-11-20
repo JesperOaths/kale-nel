@@ -146,6 +146,13 @@ public final class S9AnonymousSourceToAinBenchV757 {
       sample[2*PLANE+i]=(((pixel&255)/255f)-mean[2])/std[2];
     }
     String inputSha=floatDigest(sample);
+    // This is deterministic content binding, not an identity label or
+    // independently signed phone provenance. Source SHA and physical PTS
+    // were already verified by this SAME trusted one-shot decoder.
+    String sourceToTensorTranscript=
+        S9CropSourceProvenanceV768.transcript(
+            sourceSha,bytes,frame.actualPtsUs,X0,Y0,X1,Y1,
+            pixelsSha,inputSha,MODEL_SHA);
     long preprocessNs=System.nanoTime()-preprocessingStart;
     double firstNorm=0,lastNorm=0;
     long[] inferenceNs=new long[2];
@@ -226,6 +233,12 @@ public final class S9AnonymousSourceToAinBenchV757 {
       .put("requested_seek_ms",requestMs)
       .put("image_roi_argb_sha256",pixelsSha)
       .put("normalized_onnx_input_sha256",inputSha)
+      .put("physical_source_to_input_transcript_schema",
+           S9CropSourceProvenanceV768.SCHEMA)
+      .put("physical_source_to_input_transcript_sha256",
+           sourceToTensorTranscript)
+      .put("source_to_input_transcript_is_signed_attestation",false)
+      .put("source_to_input_transcript_contains_identity",false)
       .put("roi_dimensions","128x256")
       .put("roi_anonymous_scene_only",true)
       .put("model_sha256",MODEL_SHA)
