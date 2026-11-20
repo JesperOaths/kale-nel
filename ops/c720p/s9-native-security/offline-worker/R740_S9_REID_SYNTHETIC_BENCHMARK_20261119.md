@@ -1263,3 +1263,25 @@ admission frequency might reveal encoder backpressure or affect
 capture. A future rollback-safe installation and 4K event under
 trial load remain conditional and should not be attempted just
 to force a recording while the live camera is healthy.
+
+
+### Directly paired native 4K versus preroll from the SAME motion events
+
+Two November 19 source files, each paired with its own saved
+preroll companion, were checksum-verified **twice on the phone per
+file** and inspected during a live healthy 30.02FPS night session:
+
+| Exact matched recording | Native 4K steady FPS | Native 4K first gap | Same-event 640×480 preroll FPS |
+| --- | ---: | ---: | ---: |
+| `motion_1795111776348.mp4` | **30.015** | 127.377ms | **15.024** |
+| `motion_1795108992688.mp4` | **30.015** | 125.233ms | **9.996** |
+
+These exact source/companion pairs demonstrate that the same
+event can have a full-resolution 30-FPS recording alongside a
+distinct 10- or 15-FPS pre-event companion. Neither companion
+FPS value should be mistaken for the original 4K frame rate.
+
+No 4K event was forced or overwritten. No on-phone model was run
+during original video capture. The draft 30-FPS preroll trial
+still has **not** been installed; tests only establish frame-offer
+cadence capacity and safe defaults.
