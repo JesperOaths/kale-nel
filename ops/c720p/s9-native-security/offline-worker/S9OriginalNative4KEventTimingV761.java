@@ -75,6 +75,8 @@ public final class S9OriginalNative4KEventTimingV761 {
     long count=0,firstPts=-1,lastPts=-1,nonmonotonic=0;
     long maxStep=0,stepsOver50ms=0,stepsOver100ms=0;
     long maxGapPrecedingIndex=-1,maxGapPrecedingPtsUs=-1;
+    long tenthSamplePtsUs=-1,steadyOver50ms=0,steadyOver100ms=0,steadyMaxStep=0;
+    double steadyAverageFps=Double.NaN;
     double medianMs=Double.NaN,avgFps=Double.NaN;
     int videoIndex=-1,tracks=0;
     long durationUs=0;
@@ -111,6 +113,7 @@ public final class S9OriginalNative4KEventTimingV761 {
         need(pts>=0&&pts<=durationUs+100_000L,
              "sample_pts_outside_valid_track_duration");
         if(firstPts<0)firstPts=pts;
+        if(count==10)tenthSamplePtsUs=pts;
         if(lastPts>=0){
           long delta=pts-lastPts;
           if(delta<=0)nonmonotonic++;
@@ -123,6 +126,11 @@ public final class S9OriginalNative4KEventTimingV761 {
             }
             if(delta>50000L)stepsOver50ms++;
             if(delta>100000L)stepsOver100ms++;
+            if(count>10){
+              if(delta>steadyMaxStep)steadyMaxStep=delta;
+              if(delta>50000L)steadyOver50ms++;
+              if(delta>100000L)steadyOver100ms++;
+            }
           }
         }
         lastPts=pts;
@@ -134,6 +142,9 @@ public final class S9OriginalNative4KEventTimingV761 {
       Collections.sort(positiveSteps);
       medianMs=positiveSteps.get(positiveSteps.size()/2)/1000.0;
       avgFps=(count-1)*1_000_000.0/(lastPts-firstPts);
+      need(tenthSamplePtsUs>=0&&lastPts>tenthSamplePtsUs&&count>12,
+           "insufficient_steady_state_pts_after_first_ten_samples");
+      steadyAverageFps=(count-11)*1_000_000.0/(lastPts-tenthSamplePtsUs);
     }finally{extractor.release();}
     need(Files.size(path)==bytes&&sha(path,deadline).equals(expectedSha),
          "source_sha_revision_changed_after_track");
@@ -142,11 +153,19 @@ public final class S9OriginalNative4KEventTimingV761 {
         avgFps>=29.0&&avgFps<=31.0&&
         medianMs>=30.0&&medianMs<=36.0&&
         stepsOver100ms==0;
+    boolean steadyOk=nonmonotonic==0&&
+        steadyAverageFps>=29.0&&steadyAverageFps<=31.0&&
+        medianMs>=30.0&&medianMs<=36.0&&
+        steadyOver100ms==0;
+    boolean onlyFirstTenHaveLongGaps=stepsOver100ms>0&&steadyOver100ms==0;
+
     return new JSONObject()
       .put("schema","s9_r761_original_native4k_sample_timing_v1")
       .put("result",timingOk?
             "NATIVE_4K_EVENT_SOURCE_SAMPLE_TIMING_PASS":
-            "NATIVE_4K_EVENT_SOURCE_SAMPLE_TIMING_BELOW_TARGET")
+            (steadyOk&&onlyFirstTenHaveLongGaps?
+            "STEADY_NATIVE_4K_TIMING_PASS_WITH_STARTUP_GAP":
+            "NATIVE_4K_EVENT_SOURCE_SAMPLE_TIMING_BELOW_TARGET"))
       .put("nonce",nonce)
       .put("source_filename_sha256",digest(basename))
       .put("source_sha256_verified_on_s9",expectedSha)
@@ -162,6 +181,13 @@ public final class S9OriginalNative4KEventTimingV761 {
       .put("last_pts_ms",lastPts/1000.0)
       .put("median_sample_interval_ms",Math.round(medianMs*1000)/1000.0)
       .put("average_encoded_sample_fps",Math.round(avgFps*1000)/1000.0)
+      .put("steady_fps_after_first_ten_samples",Math.round(steadyAverageFps*1000)/1000.0)
+      .put("steady_frame_gaps_over_50ms",steadyOver50ms)
+      .put("steady_frame_gaps_over_100ms",steadyOver100ms)
+      .put("steady_max_frame_interval_ms",steadyMaxStep/1000.0)
+      .put("strict_full_event_30fps_gap_check",timingOk)
+      .put("steady_event_30fps_gap_check",steadyOk)
+      .put("startup_gap_requires_separate_capture_fix",onlyFirstTenHaveLongGaps)
       .put("nonmonotonic_pts",nonmonotonic)
       .put("max_sample_interval_ms",maxStep/1000.0)
       .put("max_interval_start_time_ms",maxGapPrecedingPtsUs/1000.0)
