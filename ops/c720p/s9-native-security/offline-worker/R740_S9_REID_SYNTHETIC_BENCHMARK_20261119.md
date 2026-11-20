@@ -912,3 +912,47 @@ and no real person-accuracy evaluation of the *new* AIN x0.25 model.
 the CI/test evidence is about provenance and model compute
 compatibility only. The earlier owner-labelled identity gallery
 builder denial was not rerun or circumvented.
+
+
+### R765: physical on-S9 fail-closed quality gate before person matching
+
+`S9PreMatchEvidenceGateV765.java` implements a **negative-only**
+admission boundary for future person model inputs, based solely on
+non-biometric evidence: current original/crop SHA+version, exact
+MediaCodec output frame PTS, physical pixel ROI coordinates and
+pixel/input provenance, 3840x2160 source geometry, candidate
+OSNet-AIN x0.25 model SHA and 512-D output dimensions, strict
+upright geometry, an independently verified single unambiguous person
+crop, and detector confidence >=0.8. Its output **never** permits
+automatic People-folder filing, even when research input metadata
+passes. The runtime treats all unverified fields as reasons to abstain;
+untrusted boolean attestations alone are not production proofs.
+
+Pure Java synthetic self-tests **15/15 passed on the host AND on S9**.
+Research-only phone DEX SHA
+`84358cd7cd1ed7924c9a26fc8bab91a89f85ce8e2a658f015b8b1bbff04f0678`.
+
+R757's source-verified real 4K ROI → actual decoder PTS →
+normalized ONNX input → AIN x0.25 was **integrated with R765**
+and rerun on S9 using one previously verified real original:
+- Actual decoder PTS **2,009,033 µs**, source SHA verified twice on S9.
+- Model produced a valid 512-D output, timed **20.31 ms**.
+- The anonymous scene ROI had no independently verified person track,
+  crop source-version attestation or person detector evidence;
+  the pre-match check therefore correctly returned
+  **`ABSTAIN_UNVERIFIED_SOURCE_OR_CROP`**, with 3 refusal reasons.
+- `phone_prematch_person_scoring_authorized=false` and
+  `phone_prematch_automatic_filing_authorized=false`.
+- Camera unchanged PID **7244**, sensor **30.02 FPS**, zero new
+  preroll drops; 0 biometric vector values exported, 0 person labels
+  read and 0 People-folder assignments.
+- Integrated standalone research DEX SHA
+  `e44466245769546b9879c212241a3a6adb14c488a73d57a5f1f52e6e5ebaf412`.
+- New standalone Java gate and R757 integration are source-compiled
+  and synthetic-tested in existing GitHub CI; no new device service,
+  timer, app installation or production matcher modification.
+
+**This demonstrates enforced abstention, not identity recognition
+accuracy.** No historical owner-verified person references had their
+missing original source-frame PTS silently changed, and the
+independent unknown FAR evidence remains absent.
