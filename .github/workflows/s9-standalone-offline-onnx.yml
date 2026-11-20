@@ -104,7 +104,8 @@ jobs:
             "$area/r754_diagnostic_pts_replay.py" \
             "$area/r756_anonymous_original_pts_replay.py" \
             "$area/r758_capture_day_leakage_audit.py" \
-            "$area/r759_release_readiness_from_provenance.py"
+            "$area/r759_release_readiness_from_provenance.py" \
+            "$area/r760_freeze_blind_capture_cohort.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
@@ -112,6 +113,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r756_anonymous_original_pts_replay.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r758_capture_day_leakage_audit.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r759_release_readiness_from_provenance.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r760_freeze_blind_capture_cohort.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
@@ -144,7 +146,8 @@ jobs:
             "$area/S9Original4KTimedDecoderV410.java" \
             "$area/S9DiagnosticActualDecodedPtsV753.java" \
             "$area/S9OriginalAnonymousPtsV755.java" \
-            "$area/S9AnonymousSourceToAinBenchV757.java"
+            "$area/S9AnonymousSourceToAinBenchV757.java" \
+            "$area/S9OriginalNative4KEventTimingV761.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPtsInspectorV751.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9ResearchVectorMetadataV752.class"
@@ -152,6 +155,7 @@ jobs:
           test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticActualDecodedPtsV753.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9OriginalAnonymousPtsV755.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9AnonymousSourceToAinBenchV757.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9OriginalNative4KEventTimingV761.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
           python3 - <<'PY'
           from pathlib import Path
@@ -210,6 +214,21 @@ jobs:
               assert 'MediaMetadataRetriever' not in source,name
           assert 'private_vector_values_exported",0' in Path(
               'ops/c720p/s9-native-security/offline-worker/S9AnonymousSourceToAinBenchV757.java').read_text()
+          native_4k=Path('ops/c720p/s9-native-security/offline-worker/S9OriginalNative4KEventTimingV761.java').read_text()
+          for marker in ('"video/avc".equals(type)', 'MediaExtractor',
+                         'getSampleTime()', 'getSampleTrackIndex()',
+                         'steady_fps_after_first_ten_samples',
+                         'strict_full_event_30fps_gap_check',
+                         'startup_gap_requires_separate_capture_fix',
+                         'candidate_model_inference_concurrent_with_original_capture_proven",false',
+                         'identity_or_folder_labels_read",false',
+                         'original_video_modified",false'):
+              assert marker in native_4k,marker
+          for forbidden in ('MediaCodec.createDecoder','MediaMetadataRetriever',
+                            'pm install','am force-stop','CameraService.java',
+                            'personIdentity','PeopleFolder'):
+              assert forbidden not in native_4k,forbidden
+          print('S9_R761_NON_BIOMETRIC_EVENT_SAMPLE_CONTINUITY_COMPILE_STATIC_PASS')
           print('S9_R753_R755_R757_PHYSICAL_PTS_ROI_COMPILE_STATIC_PASS_NOT_EXECUTED')
           print('S9_PRIVATE_VECTOR_PROJECTION_V752_COMPILE_STATIC_PASS_NOT_EXECUTED')
           print('S9_DIAGNOSTIC_PTS_V751_COMPILE_STATIC_GUARD_PASS_NOT_EXECUTED')
