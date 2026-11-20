@@ -108,7 +108,8 @@ jobs:
             "$area/r760_freeze_blind_capture_cohort.py" \
             "$area/r762_reverify_reid_original_ledger.py" \
             "$area/r763_research_quality_selection.py" \
-            "$area/r767_native4k_startup_regression.py"
+            "$area/r767_native4k_startup_regression.py" \
+            "$area/r769_predeclared_open_set_protocol.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
@@ -120,6 +121,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r762_reverify_reid_original_ledger.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r763_research_quality_selection.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r767_native4k_startup_regression.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r769_predeclared_open_set_protocol.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
