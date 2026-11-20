@@ -459,3 +459,40 @@ One newly added synthetic negative case deliberately marks an invalid
 - **0** reference crops become eligible with both geometry AND
   independently attested frame PTS (the missing-PTS blocker persists).
 - No image processing, person identity evaluation or automatic assignment.
+
+
+## R752 — S9-private vector integrity projection and R749 hardening
+
+R749 originally parsed complete JSON sidecars on C720P; although it
+never compared embeddings, that still transferred raw 512-D vectors
+over ADB unnecessarily. This was corrected.
+
+An isolated phone-native class `S9ResearchVectorMetadataV752.java`
+now reads **only** the existing 98 research JSON sidecars in
+`/data/local/tmp/s9-osnet-qualcomm-reid-shadow/vectors/` on the S9+.
+It verifies that each source vector has exactly 512 finite components
+and L2 norm within 0.03 of 1.0. Only whitelisted source/crop/model
+metadata, boolean quality/PTS attestations and **the SHA-256 of the crop
+filename** are returned. No raw vector floats or filename strings
+leave the phone in this projection. No identity or folder matching.
+
+The new R752 app_process DEX in the isolated research directory is
+SHA-256
+`2f52d881073cd612f2804e330d0ce17eb0f9fdfa761922a39b86f52d683586b0`.
+Physical owner-authorized check:
+- R742 live camera admission `PASS_OBSERVATION_ONLY`.
+- **98** source vectors inspected on the handset;
+  **0** invalid norm or dimension.
+- **0** raw vector elements exported; **0** image/video decodes,
+  **0** person labels examined, **0** People-folder assignments.
+- Camera PID **7244** remained unchanged.
+
+R749 host audit is now **required** to call the R752 phone-side
+sanitized projector rather than `adb cat` on any vector sidecars.
+Its revised synthetic tests pass **7** cases including model/hash
+mismatch, overlap/source leakage and invalid phone vector norm.
+The live anonymous audit still reports 98 sidecars, 40 reference rows
+and 59 heldout rows, 5 reference rows failing the independent geometry
+check and **all** 99 rows missing independently attested actual source
+frame PTS. Automatic filing remains prohibited. The new on-phone norm
+audit is numeric integrity, **not** proof of identity discrimination.
