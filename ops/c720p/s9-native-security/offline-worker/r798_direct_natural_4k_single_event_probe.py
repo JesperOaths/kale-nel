@@ -26,6 +26,77 @@ def ok(s,p,apk):
         reasons.append("installed_camera_apk_not_the_original_sha")
     return reasons
 
+def check_finished_natural_source(before, during, finish,
+                                  phone0, phone1, source, pts):
+    """R806: accept an exact completed FIRST original even if next event starts.
+
+    A continuous real motion stream may reenter 'recording' before the first
+    completed normal source is inspected. Require EXACTLY one new finalized
+    ordinary MP4 since the ONNX-overlap snapshot, a new last_file basename,
+    the SAME phone PID and all original physical SHA/PTS/fps/capture guards.
+    Never treat an in-progress .recording file or a second finalized source
+    as the earlier event. Strict startup-gap evidence remains separate.
+    """
+    if finish.get("mode")=="watching":
+        output=existing.check_final(
+            before,during,finish,phone0,phone1,source,pts)
+        output["next_natural_capture_already_active_at_completion"]=False
+        return output
+    existing.need(finish.get("mode")=="recording",
+                  "not_a_finished_or_followon_natural_capture")
+    existing.need(not existing.continuity(before,during,phone0,phone1),
+                  "concurrent_onnx_not_proven_during_uninterrupted_4k")
+    existing.need(phone0["pid"]==phone1["pid"] and
+                  not existing.preflight(finish,phone1),
+                  "followon_capture_not_healthy_or_same_original_pid")
+    existing.need(
+        type(finish.get("recorded")) is int and
+        finish["recorded"]==before["recorded"]+1 and
+        finish.get("last_file")!=before.get("last_file") and
+        finish.get("failed")==before.get("failed")==0 and
+        finish.get("last_error")=="" and
+        finish.get("preroll_dropped_frames")==before.get("preroll_dropped_frames")==0,
+        "one_exact_new_completed_file_not_proven")
+    name=finish.get("last_file")
+    existing.need(type(name) is str and
+                  existing.VIDEO.fullmatch(name) is not None and
+                  source.get("filename")==name and
+                  type(source.get("bytes")) is int and
+                  10_000_000<=source["bytes"]<=existing.MAX_FILE_BYTES and
+                  type(source.get("sha256")) is str and
+                  re.fullmatch("[0-9a-f]{64}",source["sha256"]) is not None,
+                  "ordinary_finished_original_name_or_size_not_proven")
+    existing.need(
+        pts.get("source_sha256_verified_on_s9")==source["sha256"] and
+        pts.get("sha_checked_before_and_after_on_phone") is True and
+        pts.get("original_source_bytes")==source["bytes"] and
+        pts.get("resolution_width")==3840 and
+        pts.get("resolution_height")==2160 and
+        pts.get("finished_native4k_event_proven") is True and
+        pts.get("steady_event_30fps_gap_check") is True and
+        pts.get("steady_frame_gaps_over_100ms")==0 and
+        29<=pts.get("steady_fps_after_first_ten_samples",-1)<=31 and
+        pts.get("identity_or_folder_labels_read") is False and
+        pts.get("people_folder_assignments")==0 and
+        pts.get("photos_or_video_frames_decoded")==0 and
+        pts.get("candidate_model_inference_concurrent_with_original_capture_proven") is False,
+        "finished_original_must_be_4k_h264_sha_and_encoded_pts_bound")
+    return {
+        "status":"PASS_NATIVE_4K_EVENT_AND_SYNTHETIC_MODEL_OVERLAP",
+        "model_inference_during_active_4k_event_attested":True,
+        "native_4k_steady_fps":pts["steady_fps_after_first_ten_samples"],
+        "strict_gap_free_4k":pts.get("strict_full_event_30fps_gap_check") is True,
+        "startup_gap_still_present":pts.get("startup_gap_requires_separate_capture_fix") is True,
+        "verified_native_source_sha256":source["sha256"],
+        "recording_name_sha256":hashlib.sha256(name.encode()).hexdigest(),
+        "next_natural_capture_already_active_at_completion":True,
+        "single_finalized_first_event_during_followon_capture":True,
+        "person_identity_accuracy_proven":False,
+        "people_folders_modified":False,
+        "automatic_people_filing_authorized":False
+    }
+
+
 def synthetic():
     s={"ok":True,"mode":"recording","native_4k_enabled":True,
        "recorder":"camera2_3840x2160_h264",
@@ -68,8 +139,56 @@ def synthetic():
     try:existing.verify_model_receipt(dict(receipt,real_crops_processed=1))
     except ValueError:pass
     else:raise AssertionError("real_identity_crop_was_not_rejected")
+    # Back-to-back natural event: first completed source is finalized,
+    # new capture already mode=recording. This must NOT be missed or
+    # mistakenly attributed to the second (.recording) source.
+    from copy import deepcopy
+    new_name="motion_1795157414458.mp4"
+    finished=dict(s,mode="recording",recorded=s["recorded"]+1,
+                  last_file=new_name,sensor_capture_result_frames=920)
+    source={"filename":new_name,"bytes":42_723_048,"sha256":"a"*64}
+    pts={
+        "source_sha256_verified_on_s9":"a"*64,
+        "sha_checked_before_and_after_on_phone":True,
+        "original_source_bytes":source["bytes"],
+        "resolution_width":3840,"resolution_height":2160,
+        "finished_native4k_event_proven":True,
+        "steady_event_30fps_gap_check":True,
+        "steady_frame_gaps_over_100ms":0,
+        "steady_fps_after_first_ten_samples":30.015,
+        "identity_or_folder_labels_read":False,
+        "people_folder_assignments":0,
+        "photos_or_video_frames_decoded":0,
+        "candidate_model_inference_concurrent_with_original_capture_proven":False,
+        "strict_full_event_30fps_gap_check":False,
+        "startup_gap_requires_separate_capture_fix":True
+    }
+    proof=check_finished_natural_source(
+        s,after,finished,phone,phone,source,pts)
+    assert proof["next_natural_capture_already_active_at_completion"] is True
+    assert proof["strict_gap_free_4k"] is False
+    negatives=0
+    corrupt=(
+        ("finish","recorded",s["recorded"]+2),
+        ("finish","last_file",s["last_file"]),
+        ("finish","mode","paused"),
+        ("finish","failed",1),
+        ("source","filename","motion_1795157414459.mp4"),
+        ("pts","source_sha256_verified_on_s9","b"*64),
+        ("pts","sha_checked_before_and_after_on_phone",False),
+        ("pts","steady_frame_gaps_over_100ms",1),
+        ("pts","photos_or_video_frames_decoded",1)
+    )
+    for target,key,value in corrupt:
+        ff=deepcopy(finished);ss=deepcopy(source);pp=deepcopy(pts)
+        {"finish":ff,"source":ss,"pts":pp}[target][key]=value
+        try:check_finished_natural_source(s,after,ff,phone,phone,ss,pp)
+        except (ValueError,KeyError,TypeError):negatives+=1
+        else:raise AssertionError("unsafe_back_to_back_source_accepted_"+key)
+    assert negatives==9
     print(json.dumps({"status":"R798_DIRECT_NATURAL_EVENT_SYNTHETIC_GUARDS_PASS",
          "unsafe_initial_states_rejected":len(invalid),
+         "back_to_back_source_attribution_faults_rejected":negatives,
          "additional_continuity_and_model_checks":4,
          "requires_a_prior_diagnostic_video":False,
          "requires_same_active_natural_event_source_mp4_double_sha_and_pts":True,
@@ -169,8 +288,12 @@ def live(wait_seconds,finish_wait):
     deadline=time.monotonic()+finish_wait
     while time.monotonic()<deadline:
         current=existing.status()
-        if current.get("mode")=="watching" and \
-           current.get("recorded")==first["recorded"]+1:
+        if (current.get("mode") in ("watching","recording") and
+            current.get("recorded")==first["recorded"]+1 and
+            current.get("last_file")!=first.get("last_file")):
+            # A fresh original may have finalized while the camera has
+            # already started the next natural 4K event. Its counter and
+            # basename must be the exactly next completed source.
             finish=current
             break
         if current.get("failed",0)>first["failed"] or \
@@ -189,7 +312,7 @@ def live(wait_seconds,finish_wait):
     filesize=int(existing.adb("shell","stat -c %s "+video,timeout=8))
     if filesize<10_000_000 or filesize>existing.MAX_FILE_BYTES:
         return abstain("FINISHED_VIDEO_NOT_BOUNDED",model_ran=True)
-    sha=existing.adb("shell","sha256sum "+video,timeout=19).split()[0]
+    sha=existing.adb("shell","nice -n 19 sha256sum "+video,timeout=19).split()[0]
     existing.need(bool(re.fullmatch("[0-9a-f]{64}",sha)),
                   "original_source_sha_invalid")
     nonce=os.urandom(16).hex()
@@ -213,7 +336,7 @@ def live(wait_seconds,finish_wait):
     if finish_pid["pid"]!=phone["pid"]:
         return abstain("SOURCE_VERIFIED_BUT_CAMERA_RESTARTED",
                        model_ran=True)
-    final=existing.check_final(
+    final=check_finished_natural_source(
         first,during,finish,phone,finish_pid,
         {"filename":filename,"bytes":filesize,"sha256":sha},pts)
     print(json.dumps({
