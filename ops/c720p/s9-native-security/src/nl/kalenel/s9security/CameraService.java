@@ -114,6 +114,15 @@ public final class CameraService extends Service {
  private String continuous4KStopReason="";
  private volatile String diagnosticPrerollClip="",diagnosticPrerollResult="not_tested";
  private volatile long preRollLastFrameAt=0;
+ // R773: camera-safe preroll cadence observability and off-by-default trial.
+ // Default 44ms gate and default 24fps codec remain exactly unchanged.
+ private volatile boolean preRoll30FpsTrialEnabled=false;
+ private volatile long preRollYuvFramesSeen=0,preRollCadenceSkipped=0;
+ private volatile long preRollWorkerBusySkipped=0,preRollOffersAccepted=0;
+ private volatile long preRollOffersRejected=0;
+ private static final long LEGACY_PREROLL_INTERVAL_MS=44L;
+ private static final long OPT_IN_PREROLL_INTERVAL_MS=30L;
+ private static final int TRIAL_PREROLL_FALLBACK_TEMP_TENTHS_C=400;
  private volatile boolean jpegBusy=false;
  private volatile long jpegRequestedAt=0,jpegEncoded=0,jpegErrors=0;
  private File folder,partial,finished;
@@ -216,7 +225,10 @@ public final class CameraService extends Service {
    return t;
   });
   // Failure of this independent worker never affects the native 4K recorder.
-  if(!pilotOnly)preRoll=new GardenPreRoll();
+  // This newly added key defaults false for every existing installation.
+  preRoll30FpsTrialEnabled=!pilotOnly&&getSharedPreferences("native",MODE_PRIVATE)
+      .getBoolean("preroll_30fps_trial_explicit",false);
+  if(!pilotOnly)preRoll=new GardenPreRoll(preRoll30FpsTrialEnabled);
   jpegEncoder=Executors.newSingleThreadExecutor(job->{
    Thread thread=new Thread(job,"s9-onphone-preview-jpeg");
    thread.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-2));
@@ -331,13 +343,35 @@ public final class CameraService extends Service {
      }
      // Store compressed PRE-EVENT video in phone RAM without writing any
      // untriggered clips to microSD. The encoder worker never blocks cameraHandler.
-     if(preRoll!=null&&!preRoll.failed()&&"watching".equals(mode)&&
-         temperature()<420&&lastFrameAt-preRollLastFrameAt>=44L){
-      preRollLastFrameAt=lastFrameAt;
-      if(!preRoll.busy()){
-       try{preRoll.offer(PreviewJpeg.snapshot(frame),
-                 SystemClock.elapsedRealtimeNanos()/1000L);}
-       catch(Throwable prerollFailure){Log.w(TAG,"prebuffer_frame_skipped",prerollFailure);}
+     if(preRoll!=null&&!preRoll.failed()&&"watching".equals(mode)){
+      int preRollTemp=temperature();
+      if(preRollTemp<420){
+       preRollYuvFramesSeen++;
+       // Fast cadence only after an explicit opt-in AND a cool thermal
+       // observation. Standard recording never depends on this worker.
+       long minPrerollIntervalMs=preRoll30FpsTrialEnabled&&
+           preRollTemp<TRIAL_PREROLL_FALLBACK_TEMP_TENTHS_C?
+           OPT_IN_PREROLL_INTERVAL_MS:LEGACY_PREROLL_INTERVAL_MS;
+       if(lastFrameAt-preRollLastFrameAt<minPrerollIntervalMs){
+        preRollCadenceSkipped++;
+       }else{
+        preRollLastFrameAt=lastFrameAt;
+        if(preRoll.busy()){
+         // The old code silently skipped these frames, so the previous
+         // 'preroll_dropped_frames=0' was NOT proof of 30fps preroll.
+         preRollWorkerBusySkipped++;
+        }else{
+         try{
+          if(preRoll.offer(PreviewJpeg.snapshot(frame),
+                    SystemClock.elapsedRealtimeNanos()/1000L))
+           preRollOffersAccepted++;
+          else preRollOffersRejected++;
+         }catch(Throwable prerollFailure){
+          preRollOffersRejected++;
+          Log.w(TAG,"prebuffer_frame_skipped",prerollFailure);
+         }
+        }
+       }
       }
      }
      boolean change=motion.analyze(frame);
@@ -439,7 +473,7 @@ public final class CameraService extends Service {
   }
   continuous4KTrial=false;
   if(continuous4K!=null){continuous4K.close();continuous4K=null;}
-  if(!pilotOnly&&preRoll==null)preRoll=new GardenPreRoll();
+  if(!pilotOnly&&preRoll==null)preRoll=new GardenPreRoll(preRoll30FpsTrialEnabled);
   closeSession();
   if(running&&camera!=null)cameraHandler.postDelayed(()->configurePreview(),450);
  }
@@ -1381,6 +1415,20 @@ public final class CameraService extends Service {
    d.put("face_review_4k_temperature_below_c",41.5);
    d.put("continuous_4k_last_result",continuous4KLastResult);
    d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
+   d.put("preroll_30fps_trial_explicit_enabled",preRoll30FpsTrialEnabled);
+   d.put("preroll_encoder_configured_fps",
+       preRoll==null?0:preRoll.configuredEncoderFps());
+   d.put("preroll_camera_yuv_frames_seen",preRollYuvFramesSeen);
+   d.put("preroll_cadence_interval_skips",preRollCadenceSkipped);
+   d.put("preroll_encoder_worker_busy_skips",preRollWorkerBusySkipped);
+   d.put("preroll_offers_accepted",preRollOffersAccepted);
+   d.put("preroll_offers_rejected",preRollOffersRejected);
+   long preRollBuffered=preRoll==null?0:preRoll.cachedDurationMs();
+   int preRollCount=preRoll==null?0:preRoll.cachedFrames();
+   d.put("preroll_observed_cached_fps",
+       preRollCount>=2&&preRollBuffered>0?
+         Math.round((preRollCount-1)*100000d/preRollBuffered)/100d:0d);
+   d.put("preroll_native_4k_recorder_preserved",true);
    d.put("preroll_ready",preRoll!=null&&preRoll.ready());
    d.put("preroll_buffered_frames",preRoll==null?0:preRoll.cachedFrames());
    d.put("preroll_buffered_ms",preRoll==null?0:preRoll.cachedDurationMs());
