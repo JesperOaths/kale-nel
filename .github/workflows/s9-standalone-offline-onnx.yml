@@ -199,7 +199,8 @@ jobs:
               actual=Path('ops/c720p/s9-native-security/offline-worker')/name
               source=actual.read_text()
               assert 'S9Original4KTimedDecoderV410.decodeCrop' in source,name
-              assert 'automatic_people_folder_assignments",0' in source,name
+              assert ('automatic_people_folder_assignments",0' in source or
+                      'automatic_person_folder_assignments",0' in source),name
               assert 'PersonFolder' not in source,name
               assert 'pm install' not in source,name
               assert 'MediaMetadataRetriever' not in source,name
