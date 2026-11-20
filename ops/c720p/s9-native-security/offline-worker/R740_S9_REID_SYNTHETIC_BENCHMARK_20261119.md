@@ -1481,3 +1481,120 @@ Camera2 session or People-folder assignment was started.
 This separates a normal diagnostic reset from a genuine
 codec failure WITHOUT representing either as verified
 native-4K under-model-load readiness.
+
+
+## R785–R787: first completed post-restore 4K diagnostic attested on S9+, then bounded synthetic model load — 20 November 2026
+
+### R785: normal original-APK one-shot native 4K + preroll
+
+After the previous R782 experimental APK was **manually restored** and
+the original package SHA-256 independently verified, the running
+production camera process was `watching`, 30.02FPS sensor, ~7sec
+preroll ready, 0 reported drops, ~33°C and had its explicitly
+excluded `preroll_diagnostic` one-shot available. The
+`record_once` camera control was invoked exactly **once**, not a
+forced garden person/motion event. Its native Camera2
+`MediaRecorder` path recorded for about **9 seconds**, finalized
+the MP4, saved a separate AVC preroll companion, and resumed
+`watching` at ~30.02FPS on the **same PID**, with 0 failed
+recordings and 0 ordinary `recorded` events. Both files were
+written only to S9+ microSD and their actual contents remained
+on-device; no video was copied to GitHub/C720P.
+
+Two separate narrowly scoped classes
+`S9DiagnosticNative4KTimingV785.java` and
+`S9DiagnosticPrerollTimingV785.java` attest **only**
+`diagnostic_preroll_<epoch>.mp4` and its exact companion,
+not arbitrary people-labelled surveillance recordings. Each
+read-only S9 pass double-checks source SHA-256 and uses the
+Android `MediaExtractor` encoded sample PTS; no image pixels,
+frames, embeddings or person identity labels are read.
+
+| Verified S9 sample output | Native 4K diagnostic | Separate preroll |
+| --- | ---: | ---: |
+| Width × height | **3840 × 2160** | **640 × 480** |
+| File bytes | **40,275,493** | **1,058,259** |
+| Encoded frames | **264** | **87** |
+| Track duration | **8,940.433ms** | **5,874.111ms** |
+| Full sample mean | **29.527FPS** | **14.820FPS** |
+| 4K steady sample FPS after first 10 frames | **30.015FPS** | — |
+| Median encoded frame step | **33.312ms** | **66.834ms** |
+| First recorded interval | **178.277ms** | **66.855ms** |
+| Samples with nonmonotonic PTS | **0** | **0** |
+| Frame intervals >100ms | **1** | **1** |
+| 4K steady interior >100ms intervals | **0** | — |
+
+The native 4K result is therefore
+`STEADY_NATIVE_4K_TIMING_PASS_WITH_STARTUP_GAP`, **NOT**
+strict gap-free 30FPS. The physical **178.277ms first-interval
+gap is still unresolved**; the separate ~15FPS pre-event AVC
+path remains distinct. This direct event evidence is newer
+and stronger than earlier status-only FPS checks.
+
+Both diagnostic files are excluded from the normal archive
+catalog, unknown/known person trial cohort, verified-person
+reference gallery and any identity score calculation.
+Their exact file names/checksums, pre- and post-camera
+receipt, and full sample metadata stay privately in
+`staging/recognition-r744-ain-small-model-assets-20261120/r785_native4k_post_restore_diagnostic/`
+on C720P; only non-identifying aggregate results are here.
+
+### R786: independent post-restart 4K baseline admission
+
+`r786_post_restart_4k_diagnostic_attestation.py` independently
+re-checks, **on the running S9+**, the previously SHA-backed
+diagnostic video and preroll, exact pinned installed original
+camera APK hash, original camera PID from a separate
+pre-capture receipt, process ID unchanged, diagnostic filename
+and result, source date freshness, and two advancing sensor/
+preroll counter samples. **12 synthetic adversarial refusals
+PASS**, including missing original PID, mislabeled future or
+historical video, altered source digest or missing frames.
+The method accepts only the explicitly excluded diagnostic
+format; it **cannot** authorize known- or unknown-person
+identity classification. A genuinely gap-free future
+diagnostic also has a separate truthful passing branch;
+a contradictory “strict gap-free” claim while the startup
+gap is still present is rejected.
+
+Physical on-phone result:
+`PASS_COMPLETED_NATIVE_4K_CAPTURE_BASELINE_FOR_SYNTHETIC_ONLY`,
+**118 new sensor frames** across observation, same camera
+PID, no drops, exact deployed APK/file SHA rechecked.
+The post-restart camera endpoint still reports
+`continuous_4k_last_result=not_tested` (an optional
+continuous-encoder diagnostic reset), so the original
+status-only R742 probe **still refuses model admission**
+absent this separate cryptographic source receipt.
+Nothing was falsely treated as continuous-encoder readiness.
+
+### R787: isolated synthetic-only ONNX model cost after fresh capture proof
+
+After the independent R786 attestation, two short, lower-priority
+Android `app_process` executions of the existing R740
+**synthetic-only** probe were performed on S9 while the
+full camera remained in `watching` mode, not while an
+event was recording:
+
+| On-S9 candidate | Timed ONNX model execution | Live sensor FPS |
+| --- | --- | --- |
+| OSNet-AIN x0.25 | **12.49ms, 13.55ms** | **30.02FPS** |
+| OSNet-AIN x0.5 | **33.01ms, 32.96ms** | **30.01FPS** |
+
+Each has 512-D output, but **zero actual person crops**
+read, no source media decoded for inference, no model
+embeddings exported, no identities predicted and no People
+folder updates. Both showed **22** advancing sensor frames
+across their respective bounded invocations, stable original
+S9 camera PID, ~7sec ready pre-event buffer and **0 new
+reported drops**.
+
+**The R759 production release gate is still blocked on
+all seven independent recognition requirements.** This
+test demonstrates (a) completed real 4K after an APK
+restore and (b) synthetic ONNX while camera preview/preroll
+runs. It does NOT demonstrate (c) completed 4K recording
+*while model inference is concurrently running* and does
+NOT demonstrate cross-day/outfit/unknown-person recognition
+accuracy. No new timers, recording deletions, user-labelled
+identities or production camera APK changes were made.
