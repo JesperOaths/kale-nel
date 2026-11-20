@@ -112,7 +112,8 @@ jobs:
             "$area/r769_predeclared_open_set_protocol.py" \
             "$area/r770_prospective_original_intake_gate.py" \
             "$area/r773_preroll_30fps_trial_contract.py" \
-            "$area/r779_installed_camera_abi_coverage_gate.py"
+            "$area/r779_installed_camera_abi_coverage_gate.py" \
+            "$area/r786_post_restart_4k_diagnostic_attestation.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
@@ -128,6 +129,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r770_prospective_original_intake_gate.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r773_preroll_30fps_trial_contract.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r779_installed_camera_abi_coverage_gate.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r786_post_restart_4k_diagnostic_attestation.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
@@ -164,7 +166,9 @@ jobs:
             "$area/S9OriginalNative4KEventTimingV761.java" \
             "$area/S9PreMatchEvidenceGateV765.java" \
             "$area/S9CropSourceProvenanceV768.java" \
-            "$area/S9PreRollCompanionTimingV772.java"
+            "$area/S9PreRollCompanionTimingV772.java" \
+            "$area/S9DiagnosticNative4KTimingV785.java" \
+            "$area/S9DiagnosticPrerollTimingV785.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPtsInspectorV751.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9ResearchVectorMetadataV752.class"
@@ -176,6 +180,8 @@ jobs:
           test -f "$folder/classes/nl/kalenel/s9offline/S9PreMatchEvidenceGateV765.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9CropSourceProvenanceV768.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9PreRollCompanionTimingV772.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticNative4KTimingV785.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPrerollTimingV785.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
           java -cp "$folder/classes" nl.kalenel.s9offline.S9PreMatchEvidenceGateV765 --self-test
           java -cp "$folder/classes" nl.kalenel.s9offline.S9CropSourceProvenanceV768 --self-test
@@ -305,6 +311,16 @@ jobs:
                          'static final int OPT_IN_FPS=30',
                          'MediaFormat.KEY_FRAME_RATE,encoderConfiguredFps'):
               assert marker in preroll,marker
+          native_diag=Path('ops/c720p/s9-native-security/offline-worker/S9DiagnosticNative4KTimingV785.java').read_text()
+          preroll_diag=Path('ops/c720p/s9-native-security/offline-worker/S9DiagnosticPrerollTimingV785.java').read_text()
+          for source in (native_diag,preroll_diag):
+              for required in ('diagnostic_preroll_[0-9]{13}',
+                               'security_archive_original_or_prospective_person_trial",false',
+                               'diagnostic_excluded_from_people_recognition",true'):
+                  assert required in source,required
+          assert '--diagnostic-native4k-only' in native_diag
+          assert '--read-diagnostic-preroll-only' in preroll_diag
+          print('S9_R785_DIAGNOSTIC_VIDEO_PHYSICAL_FILE_PROVENANCE_COMPILE_PASS')
           print('S9_R772_R773_PREROLL_PHYSICAL_AUDIT_AND_DEFAULT_OFF_TRIAL_STATIC_PASS')
           print('S9_R767_R768_NATIVE4K_AND_PHYSICAL_ROI_TRANSCRIPT_STATIC_PASS')
           print('S9_R765_PHONE_PREMATCH_FAIL_CLOSED_NEGATIVE_GATE_PASS')
