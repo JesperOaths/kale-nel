@@ -110,7 +110,8 @@ jobs:
             "$area/r763_research_quality_selection.py" \
             "$area/r767_native4k_startup_regression.py" \
             "$area/r769_predeclared_open_set_protocol.py" \
-            "$area/r770_prospective_original_intake_gate.py"
+            "$area/r770_prospective_original_intake_gate.py" \
+            "$area/r773_preroll_30fps_trial_contract.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
@@ -124,6 +125,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r767_native4k_startup_regression.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r769_predeclared_open_set_protocol.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r770_prospective_original_intake_gate.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r773_preroll_30fps_trial_contract.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
@@ -159,7 +161,8 @@ jobs:
             "$area/S9AnonymousSourceToAinBenchV757.java" \
             "$area/S9OriginalNative4KEventTimingV761.java" \
             "$area/S9PreMatchEvidenceGateV765.java" \
-            "$area/S9CropSourceProvenanceV768.java"
+            "$area/S9CropSourceProvenanceV768.java" \
+            "$area/S9PreRollCompanionTimingV772.java"
           test -f "$folder/classes/nl/kalenel/s9offline/S9Original4KGapAuditV370.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9DiagnosticPtsInspectorV751.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9ResearchVectorMetadataV752.class"
@@ -170,6 +173,7 @@ jobs:
           test -f "$folder/classes/nl/kalenel/s9offline/S9OriginalNative4KEventTimingV761.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9PreMatchEvidenceGateV765.class"
           test -f "$folder/classes/nl/kalenel/s9offline/S9CropSourceProvenanceV768.class"
+          test -f "$folder/classes/nl/kalenel/s9offline/S9PreRollCompanionTimingV772.class"
           java -cp "$folder/classes" nl.kalenel.s9offline.S9YuNetNativeQualityDecoderV370Test
           java -cp "$folder/classes" nl.kalenel.s9offline.S9PreMatchEvidenceGateV765 --self-test
           java -cp "$folder/classes" nl.kalenel.s9offline.S9CropSourceProvenanceV768 --self-test
@@ -279,6 +283,27 @@ jobs:
                          'first_eight_video_sample_flags',
                          'first_eight_sync_video_samples'):
               assert marker in native,marker
+          companion=Path('ops/c720p/s9-native-security/offline-worker/S9PreRollCompanionTimingV772.java').read_text()
+          for marker in ('motion_[0-9]{13}[.]mp4[.]preroll[.]mp4',
+                         'preroll_sha256_verified_before_after_on_s9',
+                         'average_sample_fps','first_eight_pts_us',
+                         'preroll_and_native_4k_event_have_same_encoding_path_proven",false',
+                         'source_videos_modified",false'):
+              assert marker in companion,marker
+          camera=Path('ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraService.java').read_text()
+          preroll=Path('ops/c720p/s9-native-security/src/nl/kalenel/s9security/GardenPreRoll.java').read_text()
+          for marker in ('getBoolean("preroll_30fps_trial_explicit",false)',
+                         'LEGACY_PREROLL_INTERVAL_MS=44L',
+                         'OPT_IN_PREROLL_INTERVAL_MS=30L',
+                         'TRIAL_PREROLL_FALLBACK_TEMP_TENTHS_C=400',
+                         'preroll_encoder_worker_busy_skips',
+                         'preroll_cadence_interval_skips'):
+              assert marker in camera,marker
+          for marker in ('public GardenPreRoll(){this(false);}',
+                         'static final int OPT_IN_FPS=30',
+                         'MediaFormat.KEY_FRAME_RATE,encoderConfiguredFps'):
+              assert marker in preroll,marker
+          print('S9_R772_R773_PREROLL_PHYSICAL_AUDIT_AND_DEFAULT_OFF_TRIAL_STATIC_PASS')
           print('S9_R767_R768_NATIVE4K_AND_PHYSICAL_ROI_TRANSCRIPT_STATIC_PASS')
           print('S9_R765_PHONE_PREMATCH_FAIL_CLOSED_NEGATIVE_GATE_PASS')
           print('S9_R761_NON_BIOMETRIC_EVENT_SAMPLE_CONTINUITY_COMPILE_STATIC_PASS')
