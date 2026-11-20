@@ -103,13 +103,15 @@ jobs:
             "$area/s9_reid_manifest_integrity_v749.py" \
             "$area/r754_diagnostic_pts_replay.py" \
             "$area/r756_anonymous_original_pts_replay.py" \
-            "$area/r758_capture_day_leakage_audit.py"
+            "$area/r758_capture_day_leakage_audit.py" \
+            "$area/r759_release_readiness_from_provenance.py"
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_capture_admission_v742.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_open_set_release_gate_v743.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/s9_reid_manifest_integrity_v749.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r754_diagnostic_pts_replay.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r756_anonymous_original_pts_replay.py" --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 "$area/r758_capture_day_leakage_audit.py" --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 "$area/r759_release_readiness_from_provenance.py" --self-test
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
