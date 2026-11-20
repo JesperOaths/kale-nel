@@ -1972,3 +1972,138 @@ the *current* process before any model/active-capture
 concurrency test. No recording or reference was deleted;
 no camera APK, thermal policy, or People-folder ID
 algorithm was installed in production.
+
+
+## R796–R799: identify shell-directed camera stop class; prepare direct natural-event proof; preserve independent person truth — 20 November 2026
+
+### R796 — external package-stop caller forensics
+
+The Android **system** log, separate from the ActivityManager events
+buffer, records the camera package force-stop caller *process IDs*:
+- **05:57:00.489 CET:** caller PID **2588**; background service and camera process stopped. One `user=150` action was a duplicate of the same stop.
+- **06:00:12.466 CET:** caller PID **4387**.
+- **06:03:48.563 CET:** caller PID **5642**.
+- **06:06:45.788 CET:** caller PID **7080**.
+
+Each of the four stops was followed, within two seconds, by an
+Android `CameraActivity` restart marked **from uid 2000** (Android
+shell). This strongly indicates an external ADB/shell-orchestrated
+stop/relaunch, **not an independently demonstrated camera encoder
+crash**. The stop record identifies the caller's *ephemeral PID*,
+but does **not** explicitly give its Linux UID or originating
+network IP. Do not conflate the shell UID on the subsequent activity
+start with cryptographically proven stop-caller identity.
+
+A read-only socket snapshot from the phone confirms **two concurrently
+connected ADB peers**: C720P `192.168.178.141` and an additional
+client `192.168.178.45`. The latter is a real investigative lead,
+but because it was observed *after* the stop events there is
+**no historical socket-to-command correlation**; attributing the
+force-stop to it would be fabricated. Existing C720P watchdog logs
+and source were inspected. None definitively identifies a matching
+`force-stop` command at those four instants. No services were
+disabled, firewall rules changed, or camera permission modified.
+
+`r796_android_package_stop_provenance.py --audit-live` saves the
+read-only forensic evidence to a private owner-only **0600**
+local file, and reports attribution as **consistent with
+external ADB/Android shell orchestration; exact originating
+computer/script NOT VERIFIED**. Its **six synthetic adversarial and
+misattribution tests** pass. No new timer/watchdog was introduced.
+
+### R797 — independent truth cannot be constructed from archival labels
+
+The owner evidence reports were read *only for anonymous counts*:
+- **756** SHA-backed original 4K files in archive
+- **11** clean historical owner-verified reference recordings,
+  distributed over **5** clean-reference folders
+  (per-folder counts `[1, 1, 2, 3, 4]`)
+- **5** historical unknown-person review candidates without
+  independent owner ground truth
+- **0** independently owner-verified future known-positive candidates
+- **0** evaluated independent future known positives
+- **0** independently verified unrepresented/unknown test originals
+- **0** new independent known capture dates
+
+`r797_independent_truth_evidence_audit.py` independently confirms
+the existing known/unknown quality reports and rejects all promotions
+of retrospective reference folders or unlabelled unknown candidates
+to independent prospective tests. The research release protocol
+still requires a correctly disjoint trial of **100 known source
+episodes / 8 distinct known people / 600 independent unknown
+episodes**. Until independent truth is available, no algorithm may
+generate its own evaluation labels from a high/low match score
+(circular validation), regardless of model/feature or scoring method.
+**10 synthetic adversarial cases pass**. No person names, faces,
+biometric vectors or original recordings were processed.
+
+### R798 — direct same-natural-event completed-4K and model proof
+
+Existing R788, with its strict current-process R786 baseline, was
+**left intact**. After the external camera forced stops, the
+former diagnostic baseline belongs to historical PID 31276 and
+is stale. `r798_direct_natural_4k_single_event_probe.py`
+provides an **independent one-shot alternative**, requiring:
+1. The production owner-pinned S9 APK SHA and an **already naturally
+   recording**, ordinary native `3840x2160 H264` event
+2. Healthy phone memory, thermal limits, 29–31FPS sensor,
+   exposure compatible with 30FPS, no camera or preroll drops,
+   no diagnostic/experimental recording, SD safety margin
+3. Two low-priority real ONNX **synthetic-only batch=1**
+   inferences ON PHONE while the exact current recording continues,
+   with advancing sensor capture result frames and **unchanged PID**
+4. That **same** new normal motion MP4 finishing successfully,
+   observed by the incremented normal recording counter,
+   unchanged error counters and exact filename
+5. A full on-phone original **SHA-256** check, followed by
+   `S9OriginalNative4KEventTimingV761` to **recheck SHA before
+   and after**, assert 3840×2160 H264 encoded sample PTS,
+   steady-state 30FPS (startup PTS gap must remain explicit),
+   and unchanged camera PID through the final evidence audit.
+
+This direct proof avoids using an **older process's** completed
+diagnostic as a prerequisite, without weakening the original R788
+release or source safeguards. It is **not** a new recurring job,
+Camera2 APK or People-folder ML inference. **12 unsafe-start
+conditions and additional model/camera continuity tests PASS**.
+The actual one-shot **10-second** natural-event observation
+reported `NO_NATURAL_ACTIVE_4K_EVENT_NO_ACTION` because
+`mode=watching`; no ONNX load or complete event proof was
+claimed. A longer initial R788 20-second natural-event check also
+abstained. The required real-world coincidence is **still missing**.
+
+### R799 — authenticated source-disjoint historical evaluation candidate pool
+
+An independent current 756-original catalog join to the source
+SHA ledger and 98-row research metadata produces **403 source
+originals over 19 capture days** with no existing research
+reference *capture day* in **either Amsterdam local or UTC time**
+and no exact source SHA in the reference/holdout research
+manifest. All 403 have a **version-matched SHA ledger** and
+exact original catalog H264 3840×2160 metadata; 260 SHA ledger
+checks are within 14 days, 143 older. The 403 items and their
+source digests are stored **only in a private mode-0600 local
+manifest**, never committed as names/images/identities.
+
+Using low-priority `nice -n 19 sha256sum` entirely on the S9+,
+**three distinct originals from three different capture days**
+were rehashed with exact digest matches. Before and after each
+S9+ checksum, production mode stayed `watching` at
+~**30.02FPS**, unchanged PID and zero dropped preroll
+frames/recording errors. **Five adversarial source-integrity
+tests PASS**.
+
+These are **historical, unlabelled research candidates**;
+being source- and day-disjoint does not imply that the people
+are new, that person/outfit distribution is independent, or
+that the data is *prospectively collected after the frozen
+protocol*. **No new known/unknown truth labels were obtained
+from these 403 recordings**. This pool may be used later for
+auditing sample provenance or review planning, not for
+claiming external person-recognition validation.
+
+All R796/R797/R798/R799 synthetic checks are included in
+the existing S9 offline GitHub workflow. R759's seven
+release blockers remain; automatic People-folder filing is
+OFF. No additional scheduled tasks, installations,
+user recordings or reference-folder modifications.
