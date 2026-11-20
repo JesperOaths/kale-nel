@@ -1167,3 +1167,99 @@ R771 two-model standalone DEX SHA
 `0fa67e437b4826c4c417429540037dbdec55fb0b7feda2c8238c492eacc23aac`.
 The existing CI now checks the alternate model SHA and explicit
 command-line selection without adding a new workflow or timer.
+
+
+## R772–R773: proven 10/15-FPS preroll bottleneck; default-off 30-FPS trial — 20 November 2026
+
+### Source-verified real physical outputs and root-cause isolation
+
+The independent camera currently has TWO distinct capture cadences:
+- The primary **3840x2160 MediaRecorder event** file was directly
+  inspected on S9 and has ~**30.015 FPS steady-state**, with a
+  separate first-frame startup timestamp gap in many events.
+- The accompanying **640x480 low-resolution in-RAM pre-event ring**
+  is a separate hardware `MediaCodec` path. A new
+  `S9PreRollCompanionTimingV772.java` worker (one-shot, separate,
+  no camera source changes, double phone SHA of companion before/after)
+  physically inspected seven existing companion MP4s from
+  **17–19 November**:
+  - **6/7** averaged **~9.98–10.00 FPS**;
+  - latest **1/7** averaged **15.024 FPS**;
+  - all were **640x480**, not native 4K.
+  - The 10-FPS companions had expected ~100ms frame intervals,
+    whereas the 15-FPS companion had a **66.567ms** median interval.
+  - No frame or image bytes, labels, embeddings or originals were
+    transferred/decoded/modified. Camera remained healthy.
+
+An additional **live 4-interval sampling while night mode was ON**
+showed independent Camera2 sensor FPS and YUV preview frame rate
+both **~30 FPS**, but encoded preroll only **14.96–15.24 FPS**,
+temperature ~**33.8°C**, and old `preroll_dropped_frames=0`.
+The on-phone ring held ~105 YUV/H264 samples in ~7 seconds.
+
+The exact current GitHub source `CameraService.java` used:
+`lastFrameAt-preRollLastFrameAt>=44L` on the YUV preview frame
+feed before enqueuing the preroll codec worker. At a 30-FPS preview
+(33.3ms per frame), **the first subsequent frame fails this gate**,
+so the maximum offered rate is one out of every two sensor frames,
+or about **15 FPS**, even with an idle encoder.
+
+Separately, existing source had a `!preRoll.busy()` condition
+that silently discards encoder-busy opportunities without
+incrementing `GardenPreRoll.dropped`. Thus a zero preroll dropped
+counter previously did NOT mean no missing preroll frames. Older
+~10FPS files may also reflect worker load or input cadence; the
+specific cause of those individual clips was NOT independently
+measured from historical runtime counters.
+
+The current `GardenPreRoll.java` advertises a nominal
+`MediaFormat.KEY_FRAME_RATE=24`, but observed sample PTS are
+determined by actual admitted YUV frames. The 24 setting alone
+does not raise a physically admitted 15-FPS feed.
+
+### R773 draft, off-by-default, reversible change only
+
+Two existing native Java source files were changed **on the draft
+research branch only**. The installed S9 camera APK and persistent
+settings were **NOT** modified:
+
+1. `GardenPreRoll.java`: retain exactly the legacy no-argument
+   constructor and 24-FPS codec setting by default. Add an
+   explicit boolean constructor that configures a trial 30-FPS
+   H264 codec rate ONLY on explicit opt-in.
+2. `CameraService.java`: the new persisted preference key
+   `preroll_30fps_trial_explicit` is **FALSE by default**.
+   The existing **44ms** frame interval is retained unless this
+   key is explicitly enabled and battery temp is **<40°C**;
+   trial cadence is then **30ms** and reverts to 44ms at
+   40–42°C, still subject to the unchanged upper 42°C
+   source admission hard-stop. The worker remains non-blocking;
+   no changes to Camera2 capture-session construction,
+   MediaRecorder 3840x2160/30FPS/36Mbps, recording rate limits,
+   event triggers, or microSD persistence.
+3. **New transparent status metrics** are provided in the
+   draft source: `preroll_encoder_configured_fps`,
+   `preroll_camera_yuv_frames_seen`,
+   `preroll_cadence_interval_skips`,
+   `preroll_encoder_worker_busy_skips`,
+   `preroll_offers_accepted`, `preroll_offers_rejected`
+   and `preroll_observed_cached_fps`, with the trial flag
+   visible separately. This avoids attributing intentional
+   skips to an unreliable zero drop counter.
+
+`r773_preroll_30fps_trial_contract.py` verifies by deterministic
+synthetic 30-FPS timestamp replay: **legacy 44ms -> 15 offered FPS**,
+the **explicit 30ms trial -> at most 30 offered FPS**, and
+the **40°C fallback -> 15 offered FPS**. It checks worker-busy
+skip accounting, 42°C hard stop, no encoder feed during
+full-4K recording, the default-off config, and source-level
+invariance of the production MediaRecorder settings. All synthetic
+cases PASS; existing S9 CI compiles/tests the research patch.
+
+**Release status: NO 30FPS PREROLL CLAIM.** The trial has
+not been installed, exercised on the actual hardware encoder,
+or validated with five completed verified MP4 events; higher
+admission frequency might reveal encoder backpressure or affect
+capture. A future rollback-safe installation and 4K event under
+trial load remain conditional and should not be attempted just
+to force a recording while the live camera is healthy.
