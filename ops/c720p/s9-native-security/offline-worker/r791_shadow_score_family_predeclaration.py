@@ -104,13 +104,8 @@ def proposal(cutoff):
         "new_scheduled_tasks_created":0
     }
 
-def validate(q):
-    frozen=r760.verify()
-    baseline=primary.verify()
-    need(baseline["private_method_commitment_sha256"]==PRIMARY_SHA,
-         "primary_scoring_protocol_changed")
-    expected=proposal(frozen["cutoff_epoch_ms"])
-    need(q==expected,"shadow_protocol_manifest_drift")
+def offline_contract(q,cutoff):
+    need(q==proposal(cutoff),"shadow_protocol_manifest_drift")
     need(q["locked_primary_method_sha256"]==PRIMARY_SHA and
          q["primary_scoring_metric_unmodified"]==
              "cosine_top1_normalized_feature_pair",
@@ -120,6 +115,13 @@ def validate(q):
          q["shadow_people_folder_filing_authorized"] is False,
          "shadow_release_condition_not_blocked")
     return True
+
+def validate(q):
+    frozen=r760.verify()
+    baseline=primary.verify()
+    need(baseline["private_method_commitment_sha256"]==PRIMARY_SHA,
+         "primary_scoring_protocol_changed")
+    return offline_contract(q,frozen["cutoff_epoch_ms"])
 
 def freeze():
     need(DEST.parent.is_dir() and not DEST.parent.is_symlink() and
@@ -210,11 +212,13 @@ def synthetic():
         try:order_statistic(badscores,FAMILIES[0])
         except ValueError:negative+=1
         else:raise AssertionError("invalid_calibration_distribution_accepted")
-    frozen=r760.verify()
-    q=proposal(frozen["cutoff_epoch_ms"])
-    validate(q)
+    # CI self-test must be fully portable: never read the owner-private
+    # R760/R769 frozen manifests or phone archive in a public runner.
+    synthetic_cutoff=1795135935959
+    q=proposal(synthetic_cutoff)
+    offline_contract(q,synthetic_cutoff)
     edited=dict(q,primary_scoring_metric_unmodified="csls_new")
-    try:validate(edited)
+    try:offline_contract(edited,synthetic_cutoff)
     except ValueError:negative+=1
     else:raise AssertionError("shadow_method_override_allowed")
     need(negative==10,"wrong_synthetic_refusal_count")
