@@ -154,15 +154,15 @@ jobs:
           # R809 only inspects an existing source on a live S9 with private
           # ADB camera/decoder guards; CI must NOT connect to a real phone.
           python3 - "$area/r809_true4k_face_pixel_candidate_shadow/PhoneFaceCandidateV1.java" <<'PY_R809'
-import pathlib,sys
-text=pathlib.Path(sys.argv[1]).read_text()
-assert "media.getFrameAtTime(" in text
-assert 'sourceFrame.getWidth()==3840&&sourceFrame.getHeight()==2160' in text
-assert "Math.min(ms.length(),2)" in text
-assert 's9-face-candidate-r809' in text
-assert 'automatic_folder_assignments' in text
-print("R809_SOURCE_ONLY_FULL_4K_SHADOW_CONTRACT_PASS")
-PY_R809
+          import pathlib,sys
+          text=pathlib.Path(sys.argv[1]).read_text()
+          assert "media.getFrameAtTime(" in text
+          assert 'sourceFrame.getWidth()==3840&&sourceFrame.getHeight()==2160' in text
+          assert "Math.min(ms.length(),2)" in text
+          assert 's9-face-candidate-r809' in text
+          assert 'automatic_folder_assignments' in text
+          print("R809_SOURCE_ONLY_FULL_4K_SHADOW_CONTRACT_PASS")
+          PY_R809
           python3 "$area/export_osnet_ain_verified_v744.py" --help >/dev/null
           folder="$RUNNER_TEMP/s9-ort-validate"
           test -s "$folder/ort.jar"
