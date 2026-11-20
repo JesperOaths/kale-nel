@@ -956,3 +956,170 @@ and rerun on S9 using one previously verified real original:
 accuracy.** No historical owner-verified person references had their
 missing original source-frame PTS silently changed, and the
 independent unknown FAR evidence remains absent.
+
+
+## R766–R770: cross-day 4K start fault, phone-verified crop transcript and locked future open-set test — 20 November 2026
+
+The live Camera2/MediaRecorder APK, source MP4s, People-folders,
+human-verified labels, preexisting recognition worker coordinator and
+scheduled tasks were **not modified** in this stage. All real video
+metadata and 4K pixel model preprocessing ran on S9+; C720P only
+joined small source-catalog/ledger metadata and compiled offline tests.
+
+### R766/R767: reproduce the native4K startup PTS gap across capture dates
+
+The R761 source-only H.264 `MediaExtractor` inspector was extended
+to read and report only the first 8 encoded sample PTS, sample sizes,
+sync flags and codec profile/level; this does not decode images or
+export video contents. The new R767 guarded metadata-only repeat
+runner verifies:
+- exact current original SHA and catalog bytes, checked again **twice
+  on S9+**, before and after extracting MP4 PTS metadata;
+- immutable source-name digest and nonce;
+- Camera2 watching, S9 recorder PID stable, >=~30 FPS and zero new
+  AVC preroll drops before/after each individual check;
+- first sample is a codec sync frame, all first eight timestamps
+  strictly increasing, and any gap >100ms is **NOT** converted to a
+  whole-file gap-free pass.
+- synthetic tests: **9** malformed/suspicious receipts rejected.
+
+Using 14 one-source-per-day verified archives from **3–19 November**:
+- **14/14** sustained approximately **30 FPS in steady state**,
+  with **zero interior sample intervals >100ms**;
+- **12/14** exhibited a >100ms gap exclusively after their FIRST
+  encoded video sample (different files' first gaps ranged
+  **~110.3–184.4ms**);
+- **2/14**, captured **3 and 10 November**, started without a gap,
+  with first intervals **33.311ms** and **33.322ms**;
+- All four physically inspected comparison clips (3, 10, 11, 19
+  November) used the **same reported H.264 profile 8 / level 32768**,
+  and each first frame carried the sync flag.
+- First 8 PTS on a gap-containing Nov 19 event:
+  `[0,127377,160688,194011,227322,260644,293955,327277]` µs.
+- First 8 PTS on a gap-free Nov 10 event:
+  `[0,33322,66633,99955,133266,166577,199900,233211]` µs.
+- Some first keyframes differed in encoded byte size, but that does
+  **not** prove a root cause or allow a safe live camera change.
+- The staged CameraService source creates a fresh Camera2
+  recorder surface and schedules a repeating capture request just
+  before `MediaRecorder.start()`. This is a **plausible** startup
+  transition source, NOT a proven causal explanation or an
+  independently verified exact deployed binary revision.
+- No risky Camera2 ordering or encoder initialization patch was
+  installed while the only diagnostic capture control remained used.
+  A new controlled A/B camera test would need a safe source
+  opportunity. The user-facing goal is gap-free native event output,
+  not merely masking the startup gap in aggregate FPS.
+
+The reusable R767 source/phone contract is now included in the
+existing CI, never in a new timer.
+
+### R768: true source-PTS-ROI-to-normalized-model-input content commitment
+
+`S9CropSourceProvenanceV768.java` implements domain-separated
+SHA-256 over a *canonical versioned transcript* containing:
+verified original source SHA and bytes, actual MediaCodec decoded
+output PTS in microseconds, original 3840x2160 ROI XYXY pixel
+coordinates, exact ARGB8888 pixel SHA, ImageNet-normalized 3x256x128
+NCHW input tensor SHA, and candidate AIN x0.25 ONNX SHA. It is
+**not a digital signature** or proof of device identity; the trusted
+on-S9 caller must itself establish the actual source/PTS/input values.
+
+- Host AND S9 Java synthetic tests: **7** changed-binding cases
+  produce different commitments and **5** bad source/PTS/ROI hashes
+  fail closed.
+- This helper was integrated into R757's isolated
+  original-SHA-verified actual MediaCodec 4K frame extraction and
+  S9 OSNet-AIN x0.25 inference path; R765's pre-match quality gate
+  still **abstains** because the anonymous center scene region has
+  no independently proven person track/identity.
+- Two separate REAL S9 runs of the same owner-authorized real
+  original at requested 2000ms reproduced the exact decoded PTS
+  **2,009,033µs**, pixel SHA, NCHW input SHA and
+  `physical_source_to_input_transcript_sha256`:
+  `841229fdc51a420a273ec7ccf119c6bb02308d3fc8205a1b72db7e55d8056437`.
+- Timed model passes: **19.04ms**, **18.60ms**. Stable live
+  recorder PID, **30.02FPS**, zero new preroll drops. No
+  512-dimensional model vector contents exported, no identity
+  comparison or folder assignment, no historical person crop
+  retroactively promoted.
+- Staged phone research DEX SHA:
+  `edae41f2facc9745de65b7e60892ffb26f2efcce97b6b264f2e11207ea1496f6`.
+- This is a tested **forward-only provenance component**, NOT proof
+  the old R749 research crop files had corresponding verified
+  original-frame PTS or that new untrusted source metadata is
+  automatically identity-approved.
+
+### R769: locked future evaluation method, before new person ground truth
+
+`r769_predeclared_open_set_protocol.py` produces a `0600`,
+exclusive-create immutable methodological freeze bound to the R760
+cohort cutoff, candidate AIN x0.25 model SHA and R743's conservative
+one-sided independent trial release targets. Private frozen path:
+`staging/recognition-r744-ain-small-model-assets-20261120/r769_statistical_protocol_freeze.json`.
+Commitment SHA:
+`f9f8a840a8131e05d43d7ef9a2c0589f8c83ef1d740d7691dff132e6fa356d4b`.
+
+The protocol prespecifies calibration on genuinely independent,
+unknown-person **source/episode bags** using a conservative
+conformal-like upper order statistic:
+`ceil((n+1)*(1-0.005))` of sorted independent unknown
+calibration best-match scores, with **strictly greater** decision
+required to accept an unfamiliar candidate. At least **199**
+truly independent unknown calibration episodes are needed even to
+obtain a finite threshold at this alpha, subject to **exchangeability**
+and truthful labels. Prospective **final test** samples cannot be
+reused for threshold selection. R743 separately requires at least
+**600** independent unknown final-test bags and **100** known bags
+with **8** known persons and a strong known-accuracy confidence
+bound; repeated frames/same episode do not multiply samples.
+Synthetic threshold test passes **5** invalid/underpowered refusals.
+
+**No real person unknown calibration dataset exists. No numeric
+real-person decision threshold has been calibrated.** The frozen
+method does not itself clear the prospective threshold-evidence
+release blocker, and no auto People-folder filing is allowed.
+
+### R770: future captured-original admissibility, no false prospectivity
+
+`r770_prospective_original_intake_gate.py` distinguishes original
+security MP4s whose filename timestamp is strictly after R760's
+locked cutoff from all older archive sources. It additionally
+requires current source catalog version/SHA, the independent
+on-S9 integrity ledger, real 4K dimensions and a finished video,
+and refuses reused earlier content hashes even when the new
+catalog iteration order is reversed. Synthetic tests: **5** pass,
+including missing current verification and future-dated spoofing.
+
+Real archive audit: **756** historical source MP4s, **ZERO**
+originals after the R760 freeze cutoff, **ZERO** independently
+qualified prospective known/unknown trial bags. Nothing was
+copied, decoded, relabelled or scheduled.
+
+### Corrected filtered-selection readiness statement
+
+R759 now consumes the **verified** R763 research crop mask and
+accepts the fact that the new candidate *research selection*
+does not reuse the five bad reference crops and does not contain
+source/day collisions. The old raw manifest still has five bad
+reference rows and five shared capture days; its history remains
+untouched. The corrected independent readiness audit replaces
+these two historical-selection-only blockers with the true
+**underpowered independent-bag** blocker: just **6** distinct
+disjoint original recording bags survive the quality/day mask.
+R769 future method and R770 prospective original intake must both
+verify before the readout is trusted.
+
+Current independent release status: **`RECOGNITION_RELEASE_BLOCKED`**
+with **7 remaining gates**: missing actual historical person-crop
+source-frame PTS; insufficient truly independent evaluation bags;
+no independent known-person/outfit truth; no independent unknown
+ground truth/FAR; no completed native 4K event while AIN inference
+is actually concurrent; a model-specific prospective threshold
+not yet calibrated from independent truth; and no AIN x0.25
+identity-accuracy assessment on genuinely independent person trials.
+
+**No production automation, scheduled job, camera restart,
+recognition identity gallery construction or source deletion.
+No previously denied source-to-identity gallery operation was
+repeated or worked around.**
