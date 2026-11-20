@@ -17,6 +17,11 @@ import json
 import math
 import statistics
 
+# The optional continuous encoder is NOT mandatory. The normal camera
+# legitimately uses native 3840x2160 MediaRecorder + AVC preroll.
+# A sensor FPS counter or a preroll ring is NOT evidence that an event MP4
+# was completed at 4K/30FPS while the model ran. Require independently
+# verified finished event-file dimensions, output timestamps and continuity.
 REQUIRED_TRUTHS = (
     "model_weights_provenance_verified",
     "model_runtime_verified_on_s9",
@@ -33,7 +38,7 @@ REQUIRED_TRUTHS = (
     "recordings_counted_as_bags_not_frames",
     "heldout_thresholds_predeclared",
     "camera_capture_30fps_under_model_load_verified",
-    "continuous_4k_output_healthy_under_load",
+    "native_4k_event_file_30fps_verified_under_model_load",
 )
 MIN_KNOWN_RECORDINGS = 100
 MIN_KNOWN_PEOPLE = 8
@@ -121,7 +126,7 @@ def synthetic_tests():
         ("heldout_outfit_episodes_disjoint",False,"heldout_outfit_episodes_disjoint_not_independently_proven"),
         ("only_human_approved_reference_labels",False,"only_human_approved_reference_labels_not_independently_proven"),
         ("camera_capture_30fps_under_model_load_verified",False,"camera_capture_30fps_under_model_load_verified_not_independently_proven"),
-        ("continuous_4k_output_healthy_under_load",False,"continuous_4k_output_healthy_under_load_not_independently_proven"),
+        ("native_4k_event_file_30fps_verified_under_model_load",False,"native_4k_event_file_30fps_verified_under_model_load_not_independently_proven"),
         ("known_distinct_people",3,"insufficient_distinct_known_people"),
         ("known_original_bags",30,"insufficient_known_source_bags"),
         ("known_wrong_accepts",1,"wrong_known_person_auto_accepts_observed"),
