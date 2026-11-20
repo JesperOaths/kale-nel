@@ -42,7 +42,12 @@ def inspect_camera(s):
         if drops is None or drops != 0:
             fail.append("4k_output_drops_not_zero")
     else:
-        if s.get("continuous_4k_last_result") != "fallback_control_disabled":
+        # Package restarts reset the one-shot native 4K diagnostic to
+        # 'not_tested'. This is neither a demonstrated camera failure
+        # nor sufficient evidence to admit model load. Keep fail-closed.
+        if s.get("continuous_4k_last_result") == "not_tested":
+            fail.append("post_restart_4k_event_diagnostic_not_yet_attested")
+        elif s.get("continuous_4k_last_result") != "fallback_control_disabled":
             fail.append("unverified_4k_fallback_reason")
         if s.get("continuous_4k_production_persisted") is not False:
             fail.append("4k_persistence_state_unverified")
@@ -191,6 +196,7 @@ def self_test():
         assert reason in inspect_camera(dict(base, **{key: value})), key
     legacy_faults = [
         ("continuous_4k_last_result", "fallback_codec_error", "unverified_4k_fallback_reason"),
+        ("continuous_4k_last_result", "not_tested", "post_restart_4k_event_diagnostic_not_yet_attested"),
         ("continuous_4k_production_persisted", True, "4k_persistence_state_unverified"),
         ("preroll_ready", False, "legacy_preroll_not_ready"),
         ("preroll_buffered_ms", 0, "legacy_avc_preroll_under_5s"),
