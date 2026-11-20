@@ -189,8 +189,9 @@ def readiness(integrity,days,selection=None):
            "holdout_rows_unverified":integrity["heldout_rows_without_independent_frame_pts"]})
     # Missing independently approved identity truth is UNKNOWN, not zero
     # wrong assignments. Its absence is itself an absolute blocker.
-    if mask_ok and selection["date_disjoint_holdout_original_sources"]<
-        r743.MIN_KNOWN_RECORDINGS:
+    if (mask_ok and
+        selection["date_disjoint_holdout_original_sources"]<
+            r743.MIN_KNOWN_RECORDINGS):
         blockers.append({
             "gate":"INDEPENDENT_ELIGIBLE_SOURCE_BAGS_UNDERPOWERED",
             "observed":{
