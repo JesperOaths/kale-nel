@@ -26,7 +26,14 @@ def audit(catalog,ledger,cutoff,now):
     checks=ledger.get("checks")
     need(type(recs) is dict and type(checks) is dict and
          1<=len(recs)<=4096,"untrusted_original_source_table")
-    historical_sha=set()
+    # The catalog is a dictionary, NOT a chronological sequence.
+    # Build the historical SHA set independently of iteration order.
+    historical_sha={
+        rec.get("manifest",{}).get("sha256")
+        for name,rec in recs.items()
+        if type(name) is str and sources.CLIP.fullmatch(name) and
+           int(name[7:20])<=cutoff
+    }
     new=[]
     duplicates=set()
     for name,entry in recs.items():
@@ -43,7 +50,6 @@ def audit(catalog,ledger,cutoff,now):
              entry.get("version") is not None,
              "incomplete_source_version_or_digest")
         if timestamp<=cutoff:
-            historical_sha.add(original)
             continue
         proof=checks.get(name,{})
         if original in historical_sha:duplicates.add(original)
@@ -115,13 +121,17 @@ def synthetic():
     try:audit(duplicate,ledger,start,now)
     except ValueError as e:need("reuses_historical_sha" in str(e),"wrong_dup_refusal")
     else:raise AssertionError("post_cutoff_reused_source_accepted")
+    reversed_duplicate={**cat,"records":{new:entry(new,a),old:entry(old,a)}}
+    try:audit(reversed_duplicate,ledger,start,now)
+    except ValueError as e:need("reuses_historical_sha" in str(e),"wrong_reversed_refusal")
+    else:raise AssertionError("catalog_sort_order_bypassed_source_reuse")
     future="motion_"+str(int((now+3600)*1000))+".mp4"
     invalid={**cat,"records":{old:entry(old,a),future:entry(future,b)}}
     try:audit(invalid,ledger,start,now)
     except ValueError as e:need("future_dated" in str(e),"wrong_future_refusal")
     else:raise AssertionError("future_source_clock_spoof_accepted")
     print(json.dumps({"status":"R770_ANONYMOUS_PROSPECTIVE_SOURCE_GATE_SYNTHETIC_PASS",
-                      "cases":4,
+                      "cases":5,
                       "independent_identity_bags_fabricated":False,
                       "automatic_people_filing_authorized":False},sort_keys=True))
 
